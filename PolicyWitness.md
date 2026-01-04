@@ -165,6 +165,7 @@ Notes:
 - Prefer `--profile <id[@variant]>` and omit the explicit bundle id.
 - High-concern variants emit a warning but do not require an extra flag.
 - `xpc run` is intentionally one-shot. For deterministic attach and multi-probe workflows, use `xpc session`.
+- All `xpc run`/`xpc session` flags (for example `--signposts`, `--capture-sandbox-logs`, `--correlation-id`) must appear **before** `<probe-id>`; anything after `<probe-id>` is treated as probe args.
 
 Common probes:
 
@@ -204,6 +205,7 @@ Notes:
 - If you want to issue extensions for a non-harness path, pass `--allow-unsafe-path` to `sandbox_extension --op issue_file`.
 - Tokens are returned in `data.details.token` and also in `data.stdout`.
 - If consume/release fails with invalid-token style errors, try `--token-format prefix` (default: `full`).
+- Consume/release are process-scoped; if you want a reliable before/after change, run consume + follow-up ops in a single `xpc session` so the service pid does not churn.
 - For read/write testing, issue `com.apple.app-sandbox.read-write` and use a write op (for example `fs_op --op open_write`) after consuming the token.
 - For a clear “denied → allowed” witness, use a world-readable file that App Sandbox blocks by default (for example `/private/var/db/launchd.db/com.apple.launchd/overrides.plist`). On Sonoma, `/etc/hosts` is often already readable, so it won’t show a before/after change.
 - If you need to keep a harness file across rename/truncate during `update_file_by_fileid` experiments, add `fs_op --no-cleanup` so the harness path isn’t removed.
@@ -325,11 +327,13 @@ Host-side sandbox log capture (single artifact):
 
 - Add `--capture-sandbox-logs` to `xpc run` to attach a lookback sandbox log excerpt under `data.host_sandbox_log_capture`.
 - For `inherit_child`, the excerpt is also summarized into the witness fields `sandbox_log_capture_status` and `sandbox_log_capture` so a run is self-contained.
+- `data.host_sandbox_log_capture` records `observed_lines`, `observed_deny`, and `pid_source` (`service_pid` vs `client_pid`) so you can see which process the log excerpt targets.
 
 Signposts (timeline, best-effort):
 
 - Add `--signposts` to enable Unified Logging signpost emission for the run (client/service/child helper where applicable).
 - Add `--capture-signposts` to `xpc run` to attach a lookback signpost timeline under `data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
+- `data.host_signpost_capture` includes the observer invocation (`observer_args`) and the parsed spans (`observer_report.data.spans`).
 
 How to interpret failures:
 
@@ -377,6 +381,7 @@ Lifecycle events you’ll commonly see:
 - `session_closed` — explicit close
 
 If a wait is configured, probes are refused until the trigger is received (you’ll get a normal `probe_response` with `normalized_outcome: session_not_triggered`).
+Wait for `event=trigger_received` before sending any `run_probe` commands to avoid a race where the probe is rejected even though the FIFO was written.
 
 Attach workflow (high level):
 
@@ -511,6 +516,10 @@ Signposts:
 
 - Add `--signposts` to emit Unified Logging signposts for the quarantine client/service.
 - Add `--capture-signposts` to attach a lookback signpost timeline under `data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
+
+Result shape:
+
+- `quarantine-lab` reports success under `result.normalized_outcome` (for example `wrote_new`); `data.normalized_outcome` is not set for this command.
 
 Payload classes:
 

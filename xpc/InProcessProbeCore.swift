@@ -6088,31 +6088,34 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
 	                }
 	            }
 
-	            if callVariant == "auto" {
-	                var attemptPlan: [(String, [String])] = []
-	                if callSymbolProvided {
-	                    let variants: [String]
-	                    switch callSymbol {
-	                    case "sandbox_extension_release":
-	                        var v: [String] = []
-	                        if handleValue != nil { v.append("handle_one_arg") }
-	                        if tokenUsedValue != nil { v.append(contentsOf: ["one_arg", "two_arg"]) }
-	                        variants = v.isEmpty ? ["handle_one_arg"] : v
-	                    case "sandbox_release_fs_extension":
-	                        variants = ["one_arg", "token_and_ptr"]
-	                    default:
-	                        variants = (handleValue != nil) ? ["handle_one_arg"] : ["one_arg", "two_arg"]
-	                    }
-	                    attemptPlan = [(callSymbol, variants)]
-	                } else {
-	                    if handleValue != nil {
-	                        attemptPlan.append(("sandbox_extension_release", ["handle_one_arg"]))
-	                    }
-	                    if tokenUsedValue != nil {
-	                        attemptPlan.append(("sandbox_extension_release", ["one_arg", "two_arg"]))
-	                        attemptPlan.append(("sandbox_release_fs_extension", ["one_arg", "token_and_ptr"]))
-	                    }
-	                }
+		            if callVariant == "auto" {
+		                var attemptPlan: [(String, [String])] = []
+		                if callSymbolProvided {
+		                    let variants: [String]
+		                    switch callSymbol {
+		                    case "sandbox_extension_release":
+		                        var v: [String] = []
+		                        if handleValue != nil { v.append("handle_one_arg") }
+		                        if tokenUsedValue != nil { v.append(contentsOf: ["one_arg", "two_arg"]) }
+		                        variants = v.isEmpty ? ["handle_one_arg"] : v
+		                    case "sandbox_extension_release_file":
+		                        variants = ["one_arg"]
+		                    case "sandbox_release_fs_extension":
+		                        variants = ["one_arg", "token_and_ptr"]
+		                    default:
+		                        variants = (handleValue != nil) ? ["handle_one_arg"] : ["one_arg", "two_arg"]
+		                    }
+		                    attemptPlan = [(callSymbol, variants)]
+		                } else {
+		                    if handleValue != nil {
+		                        attemptPlan.append(("sandbox_extension_release", ["handle_one_arg"]))
+		                    }
+		                    if tokenUsedValue != nil {
+		                        attemptPlan.append(("sandbox_extension_release_file", ["one_arg"]))
+		                        attemptPlan.append(("sandbox_extension_release", ["one_arg", "two_arg"]))
+		                        attemptPlan.append(("sandbox_release_fs_extension", ["one_arg", "token_and_ptr"]))
+		                    }
+		                }
 
 	                var resolvedAny = false
 	                outerLoop: for (symbolName, variants) in attemptPlan {
