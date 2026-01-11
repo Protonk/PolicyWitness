@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -1229,11 +1230,62 @@ def cmd_tui(args: argparse.Namespace) -> int:
     log_path = _tui_log_path()
     rows = _build_ledger_rows(summary)
     columns = _ledger_columns()
+    test_out = os.environ.get("PW_LAB_TUI_TEST_OUT")
+    script_spec = os.environ.get("PW_LAB_TUI_SCRIPT", "")
 
     scenario_id = summary.get("scenario_id") or "-"
     profile = summary.get("profile") or "-"
     variant = summary.get("variant") or "-"
     total_rows = len(rows)
+    selection_state: Dict[str, Any] = {
+        "selected_row": 0,
+        "selected_col": 0,
+        "total_rows": total_rows,
+        "total_cols": len(columns),
+        "field_key": None,
+        "field_label": None,
+        "field_value": None,
+    }
+
+    def _parse_script(spec: str) -> List[int]:
+        tokens = [t for t in re.split(r"[,\s]+", spec.strip()) if t]
+        keymap = {
+            "UP": curses.KEY_UP,
+            "DOWN": curses.KEY_DOWN,
+            "LEFT": curses.KEY_LEFT,
+            "RIGHT": curses.KEY_RIGHT,
+            "TAB": 9,
+            "BTAB": curses.KEY_BTAB,
+            "SHIFT+TAB": curses.KEY_BTAB,
+            "PGUP": curses.KEY_PPAGE,
+            "PGDN": curses.KEY_NPAGE,
+            "HOME": curses.KEY_HOME,
+            "END": curses.KEY_END,
+        }
+        keys = []
+        for token in tokens:
+            upper = token.upper()
+            if upper in keymap:
+                keys.append(keymap[upper])
+                continue
+            if len(token) == 1:
+                keys.append(ord(token))
+                continue
+            _tui_log(log_path, f"unknown script token: {token}")
+        return keys
+
+    def _update_selection_state(row_idx: int, col_idx: int) -> None:
+        selection_state["selected_row"] = row_idx
+        selection_state["selected_col"] = col_idx
+        if total_rows <= 0:
+            selection_state["field_key"] = None
+            selection_state["field_label"] = None
+            selection_state["field_value"] = None
+            return
+        col = columns[col_idx]
+        selection_state["field_key"] = col.get("key")
+        selection_state["field_label"] = col.get("label")
+        selection_state["field_value"] = rows[row_idx].get(col.get("key", ""), None)
 
     def _run(stdscr: Any) -> int:
         try:
@@ -1249,6 +1301,15 @@ def cmd_tui(args: argparse.Namespace) -> int:
         status_message = ""
         render_errors = 0
         last_error = ""
+        script_keys = _parse_script(script_spec) if script_spec else []
+        if script_keys:
+            for key in reversed(script_keys):
+                try:
+                    curses.ungetch(key)
+                except curses.error as exc:
+                    render_errors += 1
+                    last_error = str(exc) or "curses.error"
+                    _tui_log(log_path, f"ungetch error: {last_error}")
 
         while True:
             try:
@@ -1354,6 +1415,7 @@ def cmd_tui(args: argparse.Namespace) -> int:
                     status = f"{status} | {status_message}"
                 if render_errors > 0:
                     status = f"{status} | render_errs={render_errors}"
+                _update_selection_state(selected_row, selected_col)
                 safe_addstr(height - 1, 0, _truncate(status, width))
                 status_message = ""
 
@@ -1415,7 +1477,11 @@ def cmd_tui(args: argparse.Namespace) -> int:
 
         return 0
 
-    return curses.wrapper(_run)
+    _update_selection_state(0, 0)
+    exit_code = curses.wrapper(_run)
+    if test_out:
+        _write_json(Path(test_out), selection_state)
+    return exit_code
 
 
 def cmd_run(args: argparse.Namespace) -> int:
