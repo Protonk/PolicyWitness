@@ -37,17 +37,20 @@ public struct SessionOpenRequest: Codable {
     public var correlation_id: String?
     public var wait_spec: WaitSpec?
     public var enable_signposts: Bool?
+    public var lab_enabled: Bool?
 
     public init(
         plan_id: String? = nil,
         correlation_id: String? = nil,
         wait_spec: WaitSpec? = nil,
-        enable_signposts: Bool? = nil
+        enable_signposts: Bool? = nil,
+        lab_enabled: Bool? = nil
     ) {
         self.plan_id = plan_id
         self.correlation_id = correlation_id
         self.wait_spec = wait_spec
         self.enable_signposts = enable_signposts
+        self.lab_enabled = lab_enabled
     }
 }
 

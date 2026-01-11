@@ -1,0 +1,1401 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import platform
+import queue
+import shutil
+import subprocess
+import sys
+import threading
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+
+LABBOOK_VERSION = 1
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_PW = os.environ.get("PW") or str(REPO_ROOT / "PolicyWitness.app/Contents/MacOS/policy-witness")
+DEFAULT_SCENARIO_DIR = str(REPO_ROOT / "experiments/scenarios")
+DEFAULT_SUITE_DIR = str(REPO_ROOT / "experiments/suites")
+DEFAULT_OUT_ROOT = str(REPO_ROOT / ".pw_lab/out")
+
+
+def _die(message: str, code: int = 2) -> None:
+    sys.stderr.write(message + "\n")
+    raise SystemExit(code)
+
+
+def _now_unix_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _write_text(path: Path, data: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(data, encoding="utf-8", errors="replace")
+
+
+def _write_json(path: Path, obj: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _iter_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
+    if str(path) == "-":
+        fh = sys.stdin
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            yield json.loads(line)
+        return
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            yield json.loads(line)
+
+
+def _load_catalog(path: Path) -> Dict[str, Dict[str, Any]]:
+    data = _load_json(path)
+    spans = data.get("spans", [])
+    catalog = {}
+    for entry in spans:
+        name = entry.get("name")
+        if name:
+            catalog[name] = entry
+    return catalog
+
+
+def _strip_inline_comment(line: str) -> str:
+    in_single = False
+    in_double = False
+    for idx, ch in enumerate(line):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double:
+            return line[:idx].rstrip()
+    return line.rstrip()
+
+
+def _parse_scalar(raw: str) -> Any:
+    raw = raw.strip()
+    if raw == "":
+        return ""
+    if raw.startswith("{") or raw.startswith("["):
+        try:
+            return json.loads(raw)
+        except Exception:
+            return raw
+    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+        inner = raw[1:-1]
+        return bytes(inner, "utf-8").decode("unicode_escape")
+    if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
+        inner = raw[1:-1]
+        return inner.replace("''", "'")
+    if raw in ("null", "nil", "~"):
+        return None
+    if raw.lower() in ("true", "false"):
+        return raw.lower() == "true"
+    if raw.isdigit() or (raw.startswith("-") and raw[1:].isdigit()):
+        try:
+            return int(raw)
+        except Exception:
+            return raw
+    return raw
+
+
+def _split_kv(line: str) -> Tuple[Optional[str], Optional[str]]:
+    if ":" not in line:
+        return None, None
+    key, _, rest = line.partition(":")
+    key = key.strip()
+    if key == "":
+        return None, None
+    value = rest.strip()
+    if value == "":
+        return key, None
+    return key, value
+
+
+def _parse_yaml(text: str) -> Any:
+    lines: List[Tuple[int, str]] = []
+    for raw in text.splitlines():
+        if "\t" in raw:
+            _die("tabs are not supported in scenario YAML")
+        stripped = _strip_inline_comment(raw.rstrip("\n"))
+        if stripped.strip() == "":
+            continue
+        indent = len(stripped) - len(stripped.lstrip(" "))
+        content = stripped.lstrip(" ")
+        lines.append((indent, content))
+
+    def parse_block(start: int, indent: int) -> Tuple[Any, int]:
+        if start >= len(lines):
+            return None, start
+        current_indent, content = lines[start]
+        if current_indent < indent:
+            return None, start
+        if current_indent > indent:
+            _die(f"invalid indentation at line: {content}")
+
+        if content.startswith("- "):
+            items: List[Any] = []
+            idx = start
+            while idx < len(lines):
+                item_indent, item_content = lines[idx]
+                if item_indent != indent or not item_content.startswith("- "):
+                    break
+                item_text = item_content[2:].strip()
+                idx += 1
+                if item_text == "":
+                    child, idx = parse_block(idx, indent + 2)
+                    items.append(child)
+                    continue
+                key, value = _split_kv(item_text)
+                if key is not None:
+                    item: Dict[str, Any] = {}
+                    if value is None:
+                        child, idx = parse_block(idx, indent + 2)
+                        item[key] = child
+                    else:
+                        item[key] = _parse_scalar(value)
+                    if idx < len(lines) and lines[idx][0] > indent:
+                        child, idx = parse_block(idx, indent + 2)
+                        if isinstance(child, dict):
+                            item.update(child)
+                        else:
+                            _die("expected mapping after list item")
+                    items.append(item)
+                    continue
+                items.append(_parse_scalar(item_text))
+            return items, idx
+
+        mapping: Dict[str, Any] = {}
+        idx = start
+        while idx < len(lines):
+            item_indent, item_content = lines[idx]
+            if item_indent != indent or item_content.startswith("- "):
+                break
+            key, value = _split_kv(item_content)
+            if key is None:
+                _die(f"invalid mapping line: {item_content}")
+            idx += 1
+            if value is None:
+                child, idx = parse_block(idx, indent + 2)
+                mapping[key] = child
+            else:
+                mapping[key] = _parse_scalar(value)
+        return mapping, idx
+
+    result, idx = parse_block(0, lines[0][0] if lines else 0)
+    if idx < len(lines):
+        remaining = lines[idx][1]
+        _die(f"unparsed YAML content: {remaining}")
+    return result
+
+
+def _load_yaml_or_json(path: Path) -> Any:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if path.suffix.lower() == ".json":
+        return json.loads(text)
+    return _parse_yaml(text)
+
+
+def _resolve_scenario_path(value: str, scenario_dir: Path) -> Path:
+    candidate = Path(value)
+    if candidate.exists():
+        return candidate
+    for ext in (".yaml", ".yml", ".json"):
+        cand = scenario_dir / f"{value}{ext}"
+        if cand.exists():
+            return cand
+    _die(f"scenario not found: {value}")
+    return Path(value)
+
+
+def _resolve_suite_path(value: str, suite_dir: Path) -> Path:
+    candidate = Path(value)
+    if candidate.exists():
+        return candidate
+    for ext in (".yaml", ".yml", ".json"):
+        cand = suite_dir / f"{value}{ext}"
+        if cand.exists():
+            return cand
+    _die(f"suite not found: {value}")
+    return Path(value)
+
+
+def _normalize_steps(raw_steps: List[Any]) -> List[Dict[str, Any]]:
+    steps: List[Dict[str, Any]] = []
+    for idx, raw in enumerate(raw_steps):
+        if not isinstance(raw, dict):
+            _die("each step must be a mapping")
+        if "probe" not in raw:
+            _die("step missing required field: probe")
+        argv = raw.get("argv", [])
+        if argv is None:
+            argv = []
+        if not isinstance(argv, list):
+            _die("step argv must be a list")
+        step = dict(raw)
+        step["probe"] = str(raw["probe"])
+        step["argv"] = [str(item) for item in argv]
+        step.setdefault("id", f"step_{idx+1}")
+        steps.append(step)
+    return steps
+
+
+def _normalize_scenario(data: Any, path: Path) -> Dict[str, Any]:
+    if not isinstance(data, dict):
+        _die("scenario must be a mapping at top level")
+    scenario = dict(data)
+    scenario.setdefault("id", path.stem)
+    scenario.setdefault("driver", "xpc_session")
+    driver = scenario.get("driver")
+    if driver not in ("xpc_session", "shell"):
+        _die(f"unsupported driver: {driver}")
+    if driver == "shell":
+        command = scenario.get("command")
+        if command is None:
+            _die("shell scenarios require command")
+        if isinstance(command, str):
+            scenario["command"] = command
+        elif isinstance(command, list):
+            scenario["command"] = [str(x) for x in command]
+        else:
+            _die("command must be a string or list")
+        return scenario
+
+    if "profile" not in scenario:
+        _die("xpc_session scenario missing profile")
+    if "steps" not in scenario:
+        if "probe" in scenario:
+            scenario["steps"] = [{"probe": scenario["probe"], "argv": scenario.get("argv", [])}]
+        else:
+            _die("xpc_session scenario missing steps")
+    if not isinstance(scenario["steps"], list):
+        _die("steps must be a list")
+    scenario["steps"] = _normalize_steps(scenario["steps"])
+    return scenario
+
+
+def _load_scenario(path: Path) -> Dict[str, Any]:
+    data = _load_yaml_or_json(path)
+    return _normalize_scenario(data, path)
+
+
+def _load_suite(path: Path) -> Dict[str, Any]:
+    data = _load_yaml_or_json(path)
+    if not isinstance(data, dict):
+        _die("suite must be a mapping at top level")
+    suite = dict(data)
+    suite.setdefault("id", path.stem)
+    scenarios = suite.get("scenarios")
+    if not isinstance(scenarios, list) or not scenarios:
+        _die("suite requires a non-empty scenarios list")
+    suite["scenarios"] = scenarios
+    return suite
+
+
+def _collect_events(path: Path) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    signposts: List[Dict[str, Any]] = []
+    session_events: List[Dict[str, Any]] = []
+    for obj in _iter_jsonl(path):
+        kind = obj.get("kind")
+        if kind == "signpost_event":
+            data = obj.get("data") or {}
+            if isinstance(data, dict):
+                signposts.append(data)
+        elif kind == "xpc_session_event":
+            session_events.append(obj)
+    return signposts, session_events
+
+
+def _validate_signposts(
+    events: List[Dict[str, Any]],
+    catalog: Optional[Dict[str, Dict[str, Any]]] = None,
+    strict_catalog: bool = False
+) -> Tuple[List[str], List[str]]:
+    errors: List[str] = []
+    warnings: List[str] = []
+    spans: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+    for event in events:
+        name = event.get("name")
+        category = event.get("category")
+        phase = event.get("phase")
+        signpost_id = event.get("signpost_id")
+        pid = event.get("pid")
+        if name is None or category is None or phase is None or signpost_id is None or pid is None:
+            errors.append(f"missing required fields in event: {event}")
+            continue
+
+        if catalog is not None and name not in catalog:
+            msg = f"signpost name not in catalog: {name}"
+            if strict_catalog:
+                errors.append(msg)
+            else:
+                warnings.append(msg)
+
+        key = (int(pid), int(signpost_id))
+        entry = spans.setdefault(key, {"name": name, "begin": None, "end": None})
+        if entry["name"] != name:
+            errors.append(f"name mismatch for pid={pid} signpost_id={signpost_id}: {entry['name']} vs {name}")
+
+        if phase == "begin":
+            if entry["begin"] is not None:
+                errors.append(f"duplicate begin for pid={pid} signpost_id={signpost_id}")
+            else:
+                entry["begin"] = event
+        elif phase == "end":
+            if entry["end"] is not None:
+                errors.append(f"duplicate end for pid={pid} signpost_id={signpost_id}")
+            else:
+                entry["end"] = event
+        else:
+            errors.append(f"unknown phase {phase!r} for pid={pid} signpost_id={signpost_id}")
+
+    for key, entry in spans.items():
+        if entry["begin"] is None or entry["end"] is None:
+            pid, signpost_id = key
+            errors.append(f"incomplete span for pid={pid} signpost_id={signpost_id} name={entry['name']}")
+        else:
+            begin = entry["begin"]
+            end = entry["end"]
+            if begin.get("uptime_ns") is not None and end.get("uptime_ns") is not None:
+                if end["uptime_ns"] < begin["uptime_ns"]:
+                    pid, signpost_id = key
+                    errors.append(
+                        f"end before begin for pid={pid} signpost_id={signpost_id} name={entry['name']}"
+                    )
+
+    return errors, warnings
+
+
+def _format_ms(value: Optional[float]) -> str:
+    if value is None:
+        return "?"
+    return f"{value:.3f}ms"
+
+
+def _render_timeline(
+    events: List[Dict[str, Any]],
+    session_events: List[Dict[str, Any]]
+) -> None:
+    spans: List[Dict[str, Any]] = []
+    partial: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+    for event in events:
+        name = event.get("name")
+        phase = event.get("phase")
+        pid = event.get("pid")
+        signpost_id = event.get("signpost_id")
+        if name is None or phase is None or pid is None or signpost_id is None:
+            continue
+        key = (int(pid), int(signpost_id))
+        entry = partial.setdefault(key, {"name": name, "begin": None, "end": None})
+        if phase == "begin":
+            entry["begin"] = event
+        elif phase == "end":
+            entry["end"] = event
+
+    for entry in partial.values():
+        begin = entry.get("begin")
+        end = entry.get("end")
+        if begin and end:
+            spans.append({"begin": begin, "end": end, "name": entry["name"]})
+
+    spans.sort(key=lambda s: s["begin"].get("uptime_ns") or 0)
+
+    if session_events:
+        print("Session events:")
+        for obj in session_events:
+            data = obj.get("data") or {}
+            ts = obj.get("generated_at_unix_ms")
+            event = data.get("event")
+            pid = data.get("pid")
+            probe = data.get("probe_id")
+            msg = data.get("message") or ""
+            print(f"  {ts} event={event} pid={pid} probe_id={probe} {msg}".rstrip())
+        print("")
+
+    print("Signpost spans:")
+    for span in spans:
+        begin = span["begin"]
+        end = span["end"]
+        name = span["name"]
+        category = begin.get("category")
+        pid = begin.get("pid")
+        label = begin.get("label") or ""
+        begin_ts = begin.get("timestamp_unix_ms")
+        dur_ms = None
+        if begin.get("uptime_ns") is not None and end.get("uptime_ns") is not None:
+            dur_ms = (end["uptime_ns"] - begin["uptime_ns"]) / 1_000_000.0
+        elif begin_ts is not None and end.get("timestamp_unix_ms") is not None:
+            dur_ms = (end["timestamp_unix_ms"] - begin_ts)
+        label_part = f" label={label}" if label else ""
+        print(
+            f"  {begin_ts} { _format_ms(dur_ms) } pid={pid} category={category} name={name}{label_part}"
+        )
+
+
+class EventCollector:
+    def __init__(self) -> None:
+        self.events: List[Dict[str, Any]] = []
+        self.lock = threading.Lock()
+        self.queue: "queue.Queue[Dict[str, Any]]" = queue.Queue()
+
+    def add(self, obj: Dict[str, Any]) -> None:
+        with self.lock:
+            self.events.append(obj)
+        self.queue.put(obj)
+
+    def wait_for(self, predicate, timeout_s: float) -> Optional[Dict[str, Any]]:
+        deadline = time.time() + timeout_s
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return None
+            try:
+                obj = self.queue.get(timeout=remaining)
+            except queue.Empty:
+                return None
+            if predicate(obj):
+                return obj
+
+
+def _read_jsonl_stream(stream, collector: EventCollector, raw_path: Path) -> None:
+    with raw_path.open("w", encoding="utf-8", errors="replace") as raw:
+        for line in stream:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            raw.write(line + "\n")
+            raw.flush()
+            try:
+                obj = json.loads(line)
+            except Exception:
+                obj = {"kind": "parse_error", "raw": line}
+            collector.add(obj)
+
+
+def _read_stream_to_file(stream, path: Path) -> None:
+    with path.open("w", encoding="utf-8", errors="replace") as out:
+        for line in stream:
+            out.write(line)
+
+
+def _resolve_tool(pw_path: Path, tool_name: str) -> Optional[Path]:
+    if pw_path.name == "policy-witness":
+        candidate = pw_path.with_name(tool_name)
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _format_log_show_time(unix_ms: int) -> str:
+    ts = time.localtime(unix_ms / 1000.0)
+    return time.strftime("%Y-%m-%d %H:%M:%S", ts)
+
+
+def _capture_sandbox_logs(
+    tool_path: Path,
+    pid: int,
+    process_name: str,
+    start_ms: int,
+    end_ms: int,
+    out_dir: Path
+) -> Dict[str, Any]:
+    cmd = [
+        str(tool_path),
+        "--pid",
+        str(pid),
+        "--process-name",
+        process_name,
+        "--start",
+        _format_log_show_time(start_ms),
+        "--end",
+        _format_log_show_time(end_ms),
+        "--format",
+        "jsonl",
+    ]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout = result.stdout
+    stderr = result.stderr
+    exit_code = result.returncode
+    lines: List[Dict[str, Any]] = []
+    report: Optional[Dict[str, Any]] = None
+    for line in stdout.splitlines():
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        lines.append(obj)
+        if obj.get("kind") == "sandbox_log_observer_report":
+            report = obj
+    capture = {
+        "schema_version": 1,
+        "cmd": cmd,
+        "exit_code": exit_code,
+        "stderr": stderr,
+        "report": report,
+        "events": lines,
+    }
+    _write_json(out_dir / "sandbox_logs.json", capture)
+    return capture
+
+
+def _categorize_events(events: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    categorized = {
+        "session_events": [],
+        "session_errors": [],
+        "probe_responses": [],
+        "signpost_events": [],
+        "other_events": [],
+    }
+    for obj in events:
+        kind = obj.get("kind")
+        if kind == "xpc_session_event":
+            categorized["session_events"].append(obj)
+        elif kind == "xpc_session_error":
+            categorized["session_errors"].append(obj)
+        elif kind == "probe_response":
+            categorized["probe_responses"].append(obj)
+        elif kind == "signpost_event":
+            data = obj.get("data")
+            if isinstance(data, dict):
+                categorized["signpost_events"].append(data)
+            else:
+                categorized["other_events"].append(obj)
+        else:
+            categorized["other_events"].append(obj)
+    return categorized
+
+
+def _extract_session_events(session_events: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    by_event: Dict[str, List[Dict[str, Any]]] = {}
+    for obj in session_events:
+        data = obj.get("data") or {}
+        name = data.get("event")
+        if not name:
+            continue
+        by_event.setdefault(name, []).append(obj)
+    return by_event
+
+
+def _build_spans(signpost_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    spans: List[Dict[str, Any]] = []
+    partial: Dict[Tuple[int, int], Dict[str, Any]] = {}
+    for event in signpost_events:
+        name = event.get("name")
+        phase = event.get("phase")
+        pid = event.get("pid")
+        signpost_id = event.get("signpost_id")
+        if name is None or phase is None or pid is None or signpost_id is None:
+            continue
+        key = (int(pid), int(signpost_id))
+        entry = partial.setdefault(key, {"name": name, "begin": None, "end": None})
+        if phase == "begin":
+            entry["begin"] = event
+        elif phase == "end":
+            entry["end"] = event
+    for entry in partial.values():
+        begin = entry.get("begin")
+        end = entry.get("end")
+        if begin and end:
+            spans.append({"name": entry["name"], "begin": begin, "end": end})
+    return spans
+
+
+def _match_probe_windows(
+    session_events: List[Dict[str, Any]],
+    steps: List[Dict[str, Any]]
+) -> Dict[str, Dict[str, Any]]:
+    events = sorted(
+        session_events,
+        key=lambda e: e.get("generated_at_unix_ms") or 0,
+    )
+    windows: List[Dict[str, Any]] = []
+    pending: Optional[Dict[str, Any]] = None
+    for obj in events:
+        data = obj.get("data") or {}
+        name = data.get("event")
+        ts = obj.get("generated_at_unix_ms")
+        probe_id = data.get("probe_id")
+        if name == "probe_starting":
+            pending = {"probe_id": probe_id, "start_ms": ts, "end_ms": None}
+            windows.append(pending)
+        elif name == "probe_done":
+            if pending is not None and pending.get("end_ms") is None:
+                pending["end_ms"] = ts
+                pending = None
+            else:
+                windows.append({"probe_id": probe_id, "start_ms": None, "end_ms": ts})
+
+    matched: Dict[str, Dict[str, Any]] = {}
+    used = set()
+    for step in steps:
+        probe_id = step.get("probe")
+        step_id = step.get("id", probe_id)
+        found = None
+        for idx, win in enumerate(windows):
+            if idx in used:
+                continue
+            if win.get("probe_id") == probe_id:
+                found = win
+                used.add(idx)
+                break
+        if found:
+            matched[step_id] = found
+    return matched
+
+
+def _summarize_run(
+    scenario: Dict[str, Any],
+    run: Dict[str, Any],
+    sandbox_capture: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    session_events = run.get("session_events", [])
+    signpost_events = run.get("signpost_events", [])
+    probe_responses = run.get("probe_responses", [])
+
+    by_event = _extract_session_events(session_events)
+    wait_ready = by_event.get("wait_ready", [])
+    trigger_received = by_event.get("trigger_received", [])
+    session_ready = by_event.get("session_ready", [])
+
+    service_pid = None
+    service_name = None
+    service_bundle_id = None
+    if session_ready:
+        data = session_ready[0].get("data") or {}
+        service_pid = data.get("pid")
+        service_name = data.get("service_name")
+        service_bundle_id = data.get("service_bundle_id")
+
+    steps = scenario.get("steps", [])
+    probe_windows = _match_probe_windows(session_events, steps)
+
+    spans = _build_spans(signpost_events)
+    signpost_errors, signpost_warnings = _validate_signposts(signpost_events)
+    probe_exec_spans = [s for s in spans if s.get("name") == "pw.probe.exec"]
+
+    step_summaries: List[Dict[str, Any]] = []
+    for step in steps:
+        step_id = step.get("id")
+        probe_id = step.get("probe")
+        argv = step.get("argv", [])
+        response = None
+        for resp in probe_responses:
+            data = resp.get("data") or {}
+            if data.get("row_id") == step_id or data.get("probe_id") == probe_id:
+                response = resp
+                break
+        result_ok = None
+        normalized_outcome = None
+        rc = None
+        errno = None
+        if response:
+            result = response.get("result") or {}
+            data = response.get("data") or {}
+            result_ok = result.get("ok")
+            normalized_outcome = data.get("normalized_outcome") or result.get("normalized_outcome")
+            rc = data.get("rc")
+            errno = data.get("errno")
+        window = probe_windows.get(step_id)
+        overlap = None
+        if window and window.get("start_ms") is not None and window.get("end_ms") is not None:
+            overlap = any(
+                (span["begin"].get("timestamp_unix_ms") or 0) <= window["end_ms"]
+                and (span["end"].get("timestamp_unix_ms") or 0) >= window["start_ms"]
+                for span in probe_exec_spans
+            )
+        step_summaries.append(
+            {
+                "step_id": step_id,
+                "probe_id": probe_id,
+                "argv": argv,
+                "ok": result_ok,
+                "normalized_outcome": normalized_outcome,
+                "rc": rc,
+                "errno": errno,
+                "probe_window": window,
+                "probe_exec_overlap": overlap,
+            }
+        )
+
+    evidence_window = None
+    if probe_windows:
+        starts = [v.get("start_ms") for v in probe_windows.values() if v.get("start_ms") is not None]
+        ends = [v.get("end_ms") for v in probe_windows.values() if v.get("end_ms") is not None]
+        if starts and ends:
+            evidence_window = {"start_ms": min(starts), "end_ms": max(ends)}
+
+    signposts_health = "ok" if signpost_events and not signpost_errors else "missing"
+    if signpost_events and signpost_errors:
+        signposts_health = "invalid"
+
+    window_source = "fence" if evidence_window else "unknown"
+    sandbox_summary = {
+        "requested": sandbox_capture is not None,
+        "capture_status": "not_requested",
+        "observed_deny": None,
+        "window_source": window_source,
+    }
+    if sandbox_capture is not None:
+        report = sandbox_capture.get("report") or {}
+        if report:
+            data = report.get("data") or {}
+            sandbox_summary = {
+                "requested": True,
+                "capture_status": "captured" if sandbox_capture.get("exit_code") == 0 else "failed",
+                "observed_deny": data.get("observed_deny"),
+                "observed_lines": data.get("observed_lines"),
+                "window_source": window_source,
+            }
+        else:
+            sandbox_summary = {
+                "requested": True,
+                "capture_status": "failed",
+                "observed_deny": None,
+                "window_source": window_source,
+            }
+
+    confidence = "high"
+    reasons: List[str] = []
+    if signposts_health != "ok":
+        confidence = "low"
+        reasons.append("signposts_missing_or_invalid")
+    if sandbox_summary["requested"] and sandbox_summary["capture_status"] != "captured":
+        if confidence == "high":
+            confidence = "medium"
+        reasons.append("sandbox_logs_unavailable")
+    if any(step.get("probe_exec_overlap") is False for step in step_summaries):
+        if confidence == "high":
+            confidence = "medium"
+        reasons.append("probe_exec_span_missing")
+
+    summary = {
+        "labbook_version": LABBOOK_VERSION,
+        "scenario_id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": scenario.get("driver"),
+        "service": {
+            "pid": service_pid,
+            "name": service_name,
+            "bundle_id": service_bundle_id,
+        },
+        "fence": {
+            "wait_ready_ms": wait_ready[0].get("generated_at_unix_ms") if wait_ready else None,
+            "triggered_ms": trigger_received[0].get("generated_at_unix_ms") if trigger_received else None,
+            "wait_path": (wait_ready[0].get("data") or {}).get("wait_path") if wait_ready else None,
+        },
+        "evidence_window": evidence_window,
+        "steps": step_summaries,
+        "evidence": {
+            "signposts": {
+                "span_count": len(_build_spans(signpost_events)),
+                "event_count": len(signpost_events),
+                "well_formed": len(signpost_errors) == 0,
+                "errors": signpost_errors,
+                "warnings": signpost_warnings,
+                "window_source": "fence",
+            },
+            "sandbox_logs": sandbox_summary,
+        },
+        "uncertainty": {
+            "confidence": confidence,
+            "reasons": reasons,
+            "collector_health": {
+                "signposts": signposts_health,
+                "sandbox_logs": sandbox_summary.get("capture_status"),
+            },
+        },
+    }
+    summary["status"] = "pass" if all(s.get("ok") is True for s in step_summaries) else "fail"
+    return summary
+
+
+def _run_xpc_session_scenario(
+    scenario: Dict[str, Any],
+    out_dir: Path,
+    pw_path: Path,
+    signposts: bool,
+    wait_timeout_ms: int,
+    fence: bool,
+    capture_sandbox_logs: bool
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    steps = scenario.get("steps", [])
+    profile = scenario.get("profile")
+    variant = scenario.get("variant")
+    if profile and "@" in str(profile) and not variant:
+        profile, variant = str(profile).split("@", 1)
+    correlation_id = scenario.get("correlation_id") or uuid.uuid4().hex
+    plan_id = scenario.get("id")
+
+    cmd = [str(pw_path), "xpc", "session", "--profile", profile]
+    if variant:
+        cmd += ["--variant", str(variant)]
+    cmd += ["--plan-id", str(plan_id), "--correlation-id", correlation_id]
+    if signposts:
+        cmd += ["--signposts"]
+    if fence:
+        cmd += ["--wait", "fifo:auto"]
+        cmd += ["--wait-timeout-ms", str(wait_timeout_ms)]
+
+    env = os.environ.copy()
+    env["PW_LAB"] = "1"
+    if signposts:
+        env["PW_ENABLE_SIGNPOSTS"] = "1"
+
+    cmd_path = out_dir / "cmd.txt"
+    _write_text(cmd_path, " ".join(cmd) + "\n")
+
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        env=env,
+    )
+    if proc.stdin is None or proc.stdout is None or proc.stderr is None:
+        _die("failed to open subprocess pipes")
+
+    collector = EventCollector()
+    raw_jsonl = out_dir / "run.jsonl"
+    stderr_path = out_dir / "run.stderr.txt"
+
+    stdout_thread = threading.Thread(
+        target=_read_jsonl_stream, args=(proc.stdout, collector, raw_jsonl), daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=_read_stream_to_file, args=(proc.stderr, stderr_path), daemon=True
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+
+    wait_path = None
+    if fence:
+        wait_event = collector.wait_for(
+            lambda obj: obj.get("kind") == "xpc_session_event"
+            and (obj.get("data") or {}).get("event") == "wait_ready",
+            timeout_s=wait_timeout_ms / 1000.0,
+        )
+        if wait_event:
+            wait_path = (wait_event.get("data") or {}).get("wait_path")
+        if wait_path:
+            try:
+                with open(wait_path, "wb", buffering=0) as fh:
+                    fh.write(b"1")
+            except Exception as exc:
+                _die(f"failed to release fence: {exc}")
+            collector.wait_for(
+                lambda obj: obj.get("kind") == "xpc_session_event"
+                and (obj.get("data") or {}).get("event") == "trigger_received",
+                timeout_s=wait_timeout_ms / 1000.0,
+            )
+
+    for idx, step in enumerate(steps):
+        step_id = step.get("id", f"step_{idx+1}")
+        command = {
+            "command": "run_probe",
+            "probe_id": step.get("probe"),
+            "argv": step.get("argv", []),
+            "row_id": step_id,
+        }
+        if proc.stdin is None:
+            _die("session stdin closed before run_probe")
+        proc.stdin.write(json.dumps(command, sort_keys=True) + "\n")
+        proc.stdin.flush()
+        response = collector.wait_for(
+            lambda obj: obj.get("kind") == "probe_response"
+            and (obj.get("data") or {}).get("row_id") == step_id,
+            timeout_s=wait_timeout_ms / 1000.0,
+        )
+        if response is None:
+            collector.wait_for(
+                lambda obj: obj.get("kind") == "probe_response"
+                and (obj.get("data") or {}).get("probe_id") == step.get("probe"),
+                timeout_s=wait_timeout_ms / 1000.0,
+            )
+
+    if proc.stdin is not None:
+        proc.stdin.write(json.dumps({"command": "close_session"}) + "\n")
+        proc.stdin.flush()
+        proc.stdin.close()
+
+    try:
+        exit_code = proc.wait(timeout=wait_timeout_ms / 1000.0)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        exit_code = -1
+    stdout_thread.join(timeout=1.0)
+    stderr_thread.join(timeout=1.0)
+
+    categorized = _categorize_events(collector.events)
+    run = {
+        "schema_version": 1,
+        "run_type": "xpc_session",
+        "exit_code": exit_code,
+        "scenario": {
+            "id": scenario.get("id"),
+            "profile": scenario.get("profile"),
+            "variant": scenario.get("variant"),
+            "steps": steps,
+        },
+        "session_events": categorized["session_events"],
+        "session_errors": categorized["session_errors"],
+        "probe_responses": categorized["probe_responses"],
+        "signpost_events": categorized["signpost_events"],
+        "other_events": categorized["other_events"],
+        "raw_jsonl": str(raw_jsonl),
+        "stderr_path": str(stderr_path),
+    }
+    _write_json(out_dir / "run.json", run)
+
+    sandbox_capture = None
+    if capture_sandbox_logs:
+        by_event = _extract_session_events(categorized["session_events"])
+        session_ready = by_event.get("session_ready", [])
+        if session_ready:
+            data = session_ready[0].get("data") or {}
+            pid = data.get("pid")
+            process_name = data.get("service_name") or ""
+            summary = _summarize_run(scenario, run, None)
+            window = summary.get("evidence_window") or {}
+            start_ms = window.get("start_ms")
+            end_ms = window.get("end_ms")
+            if pid and start_ms and end_ms:
+                tool_path = _resolve_tool(pw_path, "sandbox-log-observer")
+                if tool_path is not None:
+                    sandbox_capture = _capture_sandbox_logs(
+                        tool_path, int(pid), str(process_name), int(start_ms), int(end_ms), out_dir
+                    )
+    return run, sandbox_capture
+
+
+def _run_shell_scenario(
+    scenario: Dict[str, Any],
+    out_dir: Path,
+    pw_path: Path
+) -> Dict[str, Any]:
+    command = scenario.get("command")
+    if command is None:
+        _die("shell scenario missing command")
+    env = os.environ.copy()
+    env["PW_BIN"] = str(pw_path)
+    env["PW_TEST_OUT_DIR"] = str(out_dir / "tests_out")
+    env["PW_TEST_RUN_ID"] = scenario.get("id", uuid.uuid4().hex)
+    env["PW_TEST_EVENTS"] = str(out_dir / "tests_out/events.jsonl")
+    if isinstance(command, str):
+        cmd = command
+        result = subprocess.run(
+            cmd, shell=True, text=True, capture_output=True, env=env, cwd=str(REPO_ROOT)
+        )
+    else:
+        cmd = [str(x) for x in command]
+        result = subprocess.run(cmd, text=True, capture_output=True, env=env, cwd=str(REPO_ROOT))
+    run = {
+        "schema_version": 1,
+        "run_type": "shell",
+        "scenario": {"id": scenario.get("id"), "driver": "shell"},
+        "command": cmd,
+        "exit_code": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
+    _write_json(out_dir / "run.json", run)
+    return run
+
+
+def _write_env(out_dir: Path, scenario: Dict[str, Any], pw_path: Path, run: Dict[str, Any]) -> None:
+    env: Dict[str, Any] = {
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "pw_path": str(pw_path),
+        "scenario_id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": scenario.get("driver"),
+    }
+    try:
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(Path.cwd()), text=True).strip()
+        env["git_head"] = head
+    except Exception:
+        env["git_head"] = None
+    if run.get("run_type") == "xpc_session":
+        session_events = run.get("session_events", [])
+        if session_events:
+            data = session_events[0].get("data") or {}
+            env["service_bundle_id"] = data.get("service_bundle_id")
+            env["service_name"] = data.get("service_name")
+            env["service_pid"] = data.get("pid")
+    _write_json(out_dir / "env.json", env)
+
+
+def _ensure_out_dir(out_dir: Path, force: bool) -> None:
+    if out_dir.exists() and any(out_dir.iterdir()):
+        if not force:
+            _die(f"output directory not empty: {out_dir}")
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+
+def cmd_signposts_catalog(args: argparse.Namespace) -> int:
+    catalog = _load_json(Path(args.catalog))
+    if args.json:
+        print(json.dumps(catalog, indent=2, sort_keys=True))
+    else:
+        spans = catalog.get("spans", [])
+        for entry in spans:
+            name = entry.get("name")
+            category = entry.get("category")
+            process = entry.get("process")
+            desc = entry.get("description") or ""
+            print(f"{name} [{category}/{process}] {desc}".rstrip())
+    return 0
+
+
+def cmd_signposts_validate(args: argparse.Namespace) -> int:
+    events, _ = _collect_events(Path(args.input))
+    catalog = _load_catalog(Path(args.catalog)) if args.catalog else None
+    errors, warnings = _validate_signposts(events, catalog=catalog, strict_catalog=args.strict_catalog)
+    for warning in warnings:
+        sys.stderr.write("warning: " + warning + "\n")
+    for error in errors:
+        sys.stderr.write("error: " + error + "\n")
+    return 0 if not errors else 1
+
+
+def cmd_timeline(args: argparse.Namespace) -> int:
+    events, session_events = _collect_events(Path(args.input))
+    _render_timeline(events, [] if args.signposts_only else session_events)
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    scenario_path = _resolve_scenario_path(args.scenario, Path(args.scenario_dir))
+    scenario = _load_scenario(scenario_path)
+
+    if args.outdir:
+        out_dir = Path(args.outdir)
+    else:
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        out_dir = Path(args.out_root) / f"{stamp}_{scenario.get('id')}"
+
+    _ensure_out_dir(out_dir, force=args.force)
+
+    plan = {
+        "scenario_id": scenario.get("id"),
+        "driver": scenario.get("driver"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "steps": scenario.get("steps"),
+    }
+    _write_json(out_dir / "plan.json", plan)
+
+    if args.dry_run:
+        return 0
+
+    pw_path = Path(args.pw)
+    if not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+    sandbox_capture = None
+
+    if scenario.get("driver") == "shell":
+        run = _run_shell_scenario(scenario, out_dir, pw_path)
+        summary = {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": "shell",
+            "status": "pass" if run.get("exit_code") == 0 else "fail",
+            "exit_code": run.get("exit_code"),
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["shell_driver"],
+                "collector_health": {},
+            },
+        }
+    else:
+        run, sandbox_capture = _run_xpc_session_scenario(
+            scenario,
+            out_dir,
+            pw_path,
+            signposts=not args.no_signposts,
+            wait_timeout_ms=args.wait_timeout_ms,
+            fence=not args.no_fence,
+            capture_sandbox_logs=args.capture_sandbox_logs,
+        )
+        summary = _summarize_run(scenario, run, sandbox_capture)
+
+    _write_json(out_dir / "lab_summary.json", summary)
+    _write_env(out_dir, scenario, pw_path, run)
+    return 0
+
+
+def cmd_batch(args: argparse.Namespace) -> int:
+    suite_path = _resolve_suite_path(args.suite, Path(args.suite_dir))
+    suite = _load_suite(suite_path)
+    pw_path = Path(args.pw)
+    if not args.dry_run and not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+    results = []
+    failures = 0
+    for entry in suite.get("scenarios", []):
+        if isinstance(entry, str):
+            scenario_ref = entry
+            overrides = {}
+        elif isinstance(entry, dict):
+            scenario_ref = entry.get("scenario") or entry.get("id")
+            overrides = dict(entry)
+        else:
+            _die("invalid scenario entry in suite")
+        if not scenario_ref:
+            _die("suite entry missing scenario id")
+        scenario_path = _resolve_scenario_path(scenario_ref, Path(args.scenario_dir))
+        scenario = _load_scenario(scenario_path)
+        scenario.update({k: v for k, v in overrides.items() if k not in ("scenario", "id")})
+
+        if args.outdir:
+            out_dir = Path(args.outdir) / scenario.get("id")
+        else:
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            out_dir = Path(args.out_root) / f"{stamp}_{scenario.get('id')}"
+        _ensure_out_dir(out_dir, force=args.force)
+
+        if args.dry_run:
+            _write_json(out_dir / "plan.json", {"scenario_id": scenario.get("id"), "driver": scenario.get("driver")})
+            results.append({"scenario_id": scenario.get("id"), "status": "planned", "out_dir": str(out_dir)})
+            continue
+
+        if scenario.get("driver") == "shell":
+            run = _run_shell_scenario(scenario, out_dir, pw_path)
+            summary = {
+                "labbook_version": LABBOOK_VERSION,
+                "scenario_id": scenario.get("id"),
+                "driver": "shell",
+                "status": "pass" if run.get("exit_code") == 0 else "fail",
+                "exit_code": run.get("exit_code"),
+                "uncertainty": {
+                    "confidence": "unknown",
+                    "reasons": ["shell_driver"],
+                    "collector_health": {},
+                },
+            }
+        else:
+            run, sandbox_capture = _run_xpc_session_scenario(
+                scenario,
+                out_dir,
+                pw_path,
+                signposts=not args.no_signposts,
+                wait_timeout_ms=args.wait_timeout_ms,
+                fence=not args.no_fence,
+                capture_sandbox_logs=args.capture_sandbox_logs,
+            )
+            summary = _summarize_run(scenario, run, sandbox_capture)
+        _write_json(out_dir / "lab_summary.json", summary)
+        _write_env(out_dir, scenario, pw_path, run)
+        results.append({"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)})
+        if summary.get("status") != "pass":
+            failures += 1
+            if not args.continue_on_fail:
+                break
+
+    batch_summary = {
+        "schema_version": 1,
+        "suite_id": suite.get("id"),
+        "failures": failures,
+        "results": results,
+    }
+    if args.outdir:
+        _write_json(Path(args.outdir) / "batch_summary.json", batch_summary)
+    return 0 if failures == 0 else 1
+
+
+def _load_summary(run_dir: Path) -> Dict[str, Any]:
+    summary_path = run_dir / "lab_summary.json"
+    if summary_path.exists():
+        return _load_json(summary_path)
+    run_path = run_dir / "run.json"
+    if not run_path.exists():
+        _die("missing run.json or lab_summary.json")
+    run = _load_json(run_path)
+    scenario = run.get("scenario") or {}
+    if scenario.get("driver") == "shell" or run.get("run_type") == "shell":
+        return {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": "shell",
+            "status": "pass" if run.get("exit_code") == 0 else "fail",
+            "exit_code": run.get("exit_code"),
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["shell_driver"],
+                "collector_health": {},
+            },
+        }
+    scenario_obj = {
+        "id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": "xpc_session",
+        "steps": scenario.get("steps", []),
+    }
+    return _summarize_run(scenario_obj, run, None)
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    summary = _load_summary(run_dir)
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print(f"scenario={summary.get('scenario_id')} status={summary.get('status')}")
+        for step in summary.get("steps", []):
+            print(
+                f"  step={step.get('step_id')} probe={step.get('probe_id')} ok={step.get('ok')} outcome={step.get('normalized_outcome')}"
+            )
+        unc = summary.get("uncertainty", {})
+        print(f"confidence={unc.get('confidence')} reasons={unc.get('reasons')}")
+    return 0
+
+
+def _diff_summaries(left: Dict[str, Any], right: Dict[str, Any]) -> List[Dict[str, Any]]:
+    changes: List[Dict[str, Any]] = []
+
+    def add(path: str, a: Any, b: Any) -> None:
+        if a != b:
+            changes.append({"path": path, "left": a, "right": b})
+
+    add("status", left.get("status"), right.get("status"))
+
+    l_steps = left.get("steps", [])
+    r_steps = right.get("steps", [])
+    for idx, step in enumerate(l_steps):
+        if idx >= len(r_steps):
+            add(f"steps[{idx}]", step, None)
+            continue
+        add(f"steps[{idx}].probe_id", step.get("probe_id"), r_steps[idx].get("probe_id"))
+        add(f"steps[{idx}].ok", step.get("ok"), r_steps[idx].get("ok"))
+        add(
+            f"steps[{idx}].normalized_outcome",
+            step.get("normalized_outcome"),
+            r_steps[idx].get("normalized_outcome"),
+        )
+
+    add(
+        "evidence.signposts.event_count",
+        (left.get("evidence", {}).get("signposts") or {}).get("event_count"),
+        (right.get("evidence", {}).get("signposts") or {}).get("event_count"),
+    )
+    add(
+        "evidence.signposts.well_formed",
+        (left.get("evidence", {}).get("signposts") or {}).get("well_formed"),
+        (right.get("evidence", {}).get("signposts") or {}).get("well_formed"),
+    )
+    add(
+        "evidence.sandbox_logs.capture_status",
+        (left.get("evidence", {}).get("sandbox_logs") or {}).get("capture_status"),
+        (right.get("evidence", {}).get("sandbox_logs") or {}).get("capture_status"),
+    )
+    return changes
+
+
+def cmd_diff(args: argparse.Namespace) -> int:
+    left = _load_summary(Path(args.left))
+    right = _load_summary(Path(args.right))
+    changes = _diff_summaries(left, right)
+    if args.json:
+        print(json.dumps({"changes": changes}, indent=2, sort_keys=True))
+    else:
+        for change in changes:
+            print(f"{change['path']}: {change['left']} -> {change['right']}")
+    return 0 if not changes else 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="pw-lab")
+    sub = parser.add_subparsers(dest="command")
+
+    signposts = sub.add_parser("signposts", help="signpost catalog and validation")
+    signposts_sub = signposts.add_subparsers(dest="signposts_cmd")
+
+    catalog_cmd = signposts_sub.add_parser("catalog", help="print the signpost catalog")
+    catalog_cmd.add_argument("--catalog", default="xpc/signpost_catalog.json")
+    catalog_cmd.add_argument("--json", action="store_true")
+    catalog_cmd.set_defaults(func=cmd_signposts_catalog)
+
+    validate_cmd = signposts_sub.add_parser("validate", help="validate signpost event stream")
+    validate_cmd.add_argument("--input", required=True, help="path to session JSONL (or '-')")
+    validate_cmd.add_argument("--catalog", default=None, help="optional catalog path")
+    validate_cmd.add_argument("--strict-catalog", action="store_true")
+    validate_cmd.set_defaults(func=cmd_signposts_validate)
+
+    timeline_cmd = sub.add_parser("timeline", help="render a signpost timeline")
+    timeline_cmd.add_argument("--input", required=True, help="path to session JSONL (or '-')")
+    timeline_cmd.add_argument("--signposts-only", action="store_true")
+    timeline_cmd.set_defaults(func=cmd_timeline)
+
+    run_cmd = sub.add_parser("run", help="run a lab scenario")
+    run_cmd.add_argument("scenario")
+    run_cmd.add_argument("--scenario-dir", default=DEFAULT_SCENARIO_DIR)
+    run_cmd.add_argument("--pw", default=DEFAULT_PW)
+    run_cmd.add_argument("--outdir", default=None)
+    run_cmd.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
+    run_cmd.add_argument("--wait-timeout-ms", type=int, default=30000)
+    run_cmd.add_argument("--no-signposts", action="store_true")
+    run_cmd.add_argument("--no-fence", action="store_true")
+    run_cmd.add_argument("--capture-sandbox-logs", action="store_true")
+    run_cmd.add_argument("--dry-run", action="store_true")
+    run_cmd.add_argument("--force", action="store_true")
+    run_cmd.set_defaults(func=cmd_run)
+
+    batch_cmd = sub.add_parser("batch", help="run a suite of scenarios")
+    batch_cmd.add_argument("suite")
+    batch_cmd.add_argument("--suite-dir", default=DEFAULT_SUITE_DIR)
+    batch_cmd.add_argument("--scenario-dir", default=DEFAULT_SCENARIO_DIR)
+    batch_cmd.add_argument("--pw", default=DEFAULT_PW)
+    batch_cmd.add_argument("--outdir", default=None)
+    batch_cmd.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
+    batch_cmd.add_argument("--wait-timeout-ms", type=int, default=30000)
+    batch_cmd.add_argument("--no-signposts", action="store_true")
+    batch_cmd.add_argument("--no-fence", action="store_true")
+    batch_cmd.add_argument("--capture-sandbox-logs", action="store_true")
+    batch_cmd.add_argument("--dry-run", action="store_true")
+    batch_cmd.add_argument("--force", action="store_true")
+    batch_cmd.add_argument("--continue-on-fail", action="store_true")
+    batch_cmd.set_defaults(func=cmd_batch)
+
+    inspect_cmd = sub.add_parser("inspect", help="inspect a lab run directory")
+    inspect_cmd.add_argument("run_dir")
+    inspect_cmd.add_argument("--json", action="store_true")
+    inspect_cmd.set_defaults(func=cmd_inspect)
+
+    diff_cmd = sub.add_parser("diff", help="diff two lab run directories")
+    diff_cmd.add_argument("left")
+    diff_cmd.add_argument("right")
+    diff_cmd.add_argument("--json", action="store_true")
+    diff_cmd.set_defaults(func=cmd_diff)
+
+    args = parser.parse_args()
+    if not getattr(args, "func", None):
+        parser.print_help()
+        return 2
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

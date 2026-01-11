@@ -247,6 +247,12 @@ Sandbox log capture:
 - The capture is attached under `data.host_sandbox_log_capture` and includes `capture_status`, `pid`/`pid_source`, window metadata, and the observer report.
 - For `inherit_child`, the launcher also attaches tri-state status to `data.witness` as `sandbox_log_capture_status` (`not_requested|requested_unavailable|captured`) and `sandbox_log_capture` (string map).
 
+Fenced runs (capture reliability):
+
+- When `--capture-sandbox-logs` or `--capture-signposts` is set, the launcher runs the probe in **fenced mode** (session wait → arm capture → release → probe) so evidence is time-bounded.
+- The JSON includes `data.fence` with `enabled`, `reason`, `status`, `armed_collectors`, `wait_path`, `arm_latency_ms`, and `evidence_window`.
+- Internal opt-out: set `PW_DISABLE_FENCE=1` to use the legacy one-shot path (this is intentionally not user-facing).
+
 Signpost capture:
 
 - `--signposts` enables Unified Logging signpost emission for this run (client/service/child helper where applicable).

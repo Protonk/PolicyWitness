@@ -1,0 +1,157 @@
+{
+  "exit_code": 0,
+  "other_events": [],
+  "probe_responses": [
+    {
+      "data": {
+        "argv": [],
+        "normalized_outcome": "ok",
+        "probe_id": "probe_catalog",
+        "rc": 0,
+        "row_id": "step_1",
+        "stderr": "",
+        "stdout": ""
+      },
+      "generated_at_unix_ms": 1700000000450,
+      "kind": "probe_response",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    }
+  ],
+  "raw_jsonl": "run.jsonl",
+  "run_type": "xpc_session",
+  "scenario": {
+    "id": "pw_lab_fixture_basic",
+    "profile": "minimal",
+    "steps": [
+      {
+        "argv": [],
+        "id": "step_1",
+        "probe": "probe_catalog"
+      }
+    ],
+    "variant": null
+  },
+  "schema_version": 1,
+  "session_errors": [],
+  "session_events": [
+    {
+      "data": {
+        "event": "session_ready",
+        "pid": 1234,
+        "service_bundle_id": "com.yourteam.policy-witness.ProbeService_minimal",
+        "service_name": "ProbeService_minimal"
+      },
+      "generated_at_unix_ms": 1700000000000,
+      "kind": "xpc_session_event",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    },
+    {
+      "data": {
+        "event": "wait_ready",
+        "pid": 1234,
+        "wait_path": "/tmp/pw_lab_wait.fifo"
+      },
+      "generated_at_unix_ms": 1700000000100,
+      "kind": "xpc_session_event",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    },
+    {
+      "data": {
+        "event": "trigger_received",
+        "pid": 1234
+      },
+      "generated_at_unix_ms": 1700000000200,
+      "kind": "xpc_session_event",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    },
+    {
+      "data": {
+        "event": "probe_starting",
+        "pid": 1234,
+        "probe_id": "probe_catalog"
+      },
+      "generated_at_unix_ms": 1700000000300,
+      "kind": "xpc_session_event",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    },
+    {
+      "data": {
+        "event": "probe_done",
+        "pid": 1234,
+        "probe_id": "probe_catalog"
+      },
+      "generated_at_unix_ms": 1700000000400,
+      "kind": "xpc_session_event",
+      "result": {
+        "exit_code": 0,
+        "normalized_outcome": "ok",
+        "ok": true,
+        "rc": 0
+      },
+      "schema_version": 1
+    }
+  ],
+  "signpost_events": [
+    {
+      "category": "xpc_service",
+      "correlation_id": "corr-1",
+      "label": "probe_id=probe_catalog",
+      "name": "pw.probe.exec",
+      "phase": "begin",
+      "pid": 1234,
+      "plan_id": "pw_lab_fixture_basic",
+      "probe_id": "probe_catalog",
+      "process_name": "ProbeService_minimal",
+      "row_id": "step_1",
+      "signpost_id": 1,
+      "timestamp_unix_ms": 1700000000305,
+      "uptime_ns": 100000
+    },
+    {
+      "category": "xpc_service",
+      "correlation_id": "corr-1",
+      "label": "probe_id=probe_catalog",
+      "name": "pw.probe.exec",
+      "phase": "end",
+      "pid": 1234,
+      "plan_id": "pw_lab_fixture_basic",
+      "probe_id": "probe_catalog",
+      "process_name": "ProbeService_minimal",
+      "row_id": "step_1",
+      "signpost_id": 1,
+      "timestamp_unix_ms": 1700000000350,
+      "uptime_ns": 150000
+    }
+  ],
+  "stderr_path": "run.stderr.txt"
+}

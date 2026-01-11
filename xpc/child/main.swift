@@ -535,6 +535,10 @@ func parseCapNameList(_ raw: String?) -> [String] {
 
 let expectedRightsCapIds = parseCapIdList(env["PW_RIGHTS_CAP_IDS"])
 let expectedEventCapIds = parseCapNameList(env["PW_EVENT_CAP_IDS"])
+// Diagnostic controls for validating log capture targeting/correlation.
+let childSyntheticDenyLog = env["PW_CHILD_SYNTHETIC_DENY_LOG"] == "1"
+let childNetworkDeny = env["PW_CHILD_NETWORK_DENY"] == "1"
+var syntheticDenyLogEmitted = false
 
 let sentinel = "\(InheritChildProtocol.sentinelPrefix) pid=\(getpid()) run_id=\(runId) scenario=\(scenario) path=\(path) event_fd=\(eventFd) rights_fd=\(rightsFd) \(InheritChildProtocol.sentinelKeyProtocolVersion)=\(InheritChildProtocol.version) \(InheritChildProtocol.sentinelKeyCapabilityNamespace)=\(InheritChildProtocol.capabilityNamespace)\n"
 _ = writeSentinel(STDERR_FILENO, sentinel)
@@ -589,6 +593,46 @@ if stopOnEntry {
 }
 
 emitEvent(eventFd, runId: runId, phase: "child_ready")
+// Diagnostic: force a child-side deny line for capture targeting checks.
+if childNetworkDeny {
+    let host = "127.0.0.1"
+    let port: UInt16 = 9
+    var rc = 1
+    var err: Int32? = nil
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    if fd < 0 {
+        err = errno
+    } else {
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = port.bigEndian
+        _ = host.withCString { inet_pton(AF_INET, $0, &addr.sin_addr) }
+        let connectRc = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        if connectRc == 0 {
+            rc = 0
+        } else {
+            err = errno
+        }
+        close(fd)
+    }
+    emitOpEvent(
+        eventFd,
+        runId: runId,
+        phase: "child_network_attempt",
+        capId: "net_op",
+        capType: "net_op",
+        op: "connect",
+        callsiteId: "child.net.connect",
+        rc: rc,
+        errno: err,
+        extra: ["host": host, "port": "\(port)"],
+        stopOnDeny: stopOnDeny
+    )
+}
 let capFileFd = InheritChildCapabilityId.fileFd.rawValue
 let capDirFd = InheritChildCapabilityId.dirFd.rawValue
 let capSocketFd = InheritChildCapabilityId.socketFd.rawValue
@@ -620,6 +664,16 @@ if preAcquire, scenario == "dynamic_extension", !path.isEmpty {
         extra: ["path": path, "pre_acquire": "true"],
         stopOnDeny: stopOnDeny
     )
+    if childSyntheticDenyLog && acquireRc != 0 {
+        let message = "PW_SYNTHETIC_DENY pid=\(getpid()) reason=pre_acquire_failed"
+        NSLog("%@", message)
+        emitEvent(eventFd, runId: runId, phase: "child_synthetic_deny_log", details: [
+            "synthetic": "true",
+            "reason": "pre_acquire_failed",
+            "message": message
+        ])
+        syntheticDenyLogEmitted = true
+    }
 }
 
 func failEventBus(_ err: Int32?, context: String) -> Never {
@@ -674,6 +728,21 @@ func failCapabilityRecv(
         mainSpan.end()
         exit(childProtocolViolationExit)
     }
+}
+
+func emitSyntheticDenyLog(reason: String) {
+    if syntheticDenyLogEmitted {
+        return
+    }
+    syntheticDenyLogEmitted = true
+    // This is a synthetic log marker used to validate log capture plumbing, not a seatbelt denial.
+    let message = "PW_SYNTHETIC_DENY pid=\(getpid()) reason=\(reason)"
+    NSLog("%@", message)
+    emitEvent(eventFd, runId: runId, phase: "child_synthetic_deny_log", details: [
+        "synthetic": "true",
+        "reason": reason,
+        "message": message
+    ])
 }
 
 if scenario == "lineage_basic", actorLabel == "child" {
@@ -837,6 +906,9 @@ for idx in 0..<rightsCapCount {
                 extra: ["path": path],
                 stopOnDeny: stopOnDeny
             )
+        }
+        if childSyntheticDenyLog && acquireResult.rc != 0 {
+            emitSyntheticDenyLog(reason: "child_acquire_failed")
         }
 
         if fd < 0 {

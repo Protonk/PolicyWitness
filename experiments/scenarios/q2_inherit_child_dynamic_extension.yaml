@@ -1,0 +1,6 @@
+id: q2_inherit_child_dynamic_extension
+driver: shell
+command:
+  - bash
+  - tests/suites/smoke/q2_inherit_child_dynamic_extension.sh
+notes: "Runs the Q2 inherit_child dynamic_extension smoke script under the lab wrapper."

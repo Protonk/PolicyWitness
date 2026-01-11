@@ -12,6 +12,7 @@ runner/target
 
 # local scratch
 .tmp/
+.pw_lab/
 
 # experiment harness artifacts
 experiments/bin/

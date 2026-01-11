@@ -1,0 +1,5 @@
+id: pw_lab_fixture_basic
+profile: minimal
+steps:
+  - probe: probe_catalog
+    argv: []

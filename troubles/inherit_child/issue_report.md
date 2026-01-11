@@ -10,9 +10,9 @@ The issue was resolved by eliminating the “probe calls probe” nesting in the
 
 PolicyWitness is a macOS research/teaching tool that keeps its control plane outside the sandbox (a host-side CLI) while executing probes inside separately signed, sandboxed XPC services. This issue sits on the critical path where the smoke suite drives `policy-witness xpc run … inherit_child --scenario dynamic_extension`, the CLI optionally enables and captures signposts, and a dedicated observer parses Unified Logging output for attachment to the probe JSON.
 
-* [inherit_child_fixtures.sh](sandbox:/mnt/data/inherit_child_fixtures.sh)  — Smoke fixture runner that executes each `inherit_child` scenario (including `dynamic_extension`), scrubs output deterministically, and fails with an extracted, high-signal JSON summary when the probe exits non‑zero.
-* [signpost-log-observer.rs](sandbox:/mnt/data/signpost-log-observer.rs) — Rust helper tool invoked for `--capture-signposts` that shells out to `/usr/bin/log show --signpost --style json`, then parses begin/end signpost events into span records keyed by correlation id.
-* [main.rs](sandbox:/mnt/data/main.rs) — Rust entry point for the `policy-witness` CLI that parses `--signposts`/`--capture-signposts`, propagates signpost enablement via `PW_ENABLE_SIGNPOSTS`, and injects host-side capture artifacts back into the JSON envelope.
+* `inherit_child_fixtures.sh` — Smoke fixture runner that executes each `inherit_child` scenario (including `dynamic_extension`), scrubs output deterministically, and fails with an extracted, high-signal JSON summary when the probe exits non‑zero.
+* `signpost-log-observer.rssignpost-log-observer.rs` — Rust helper tool invoked for `--capture-signposts` that shells out to `/usr/bin/log show --signpost --style json`, then parses begin/end signpost events into span records keyed by correlation id.
+* `main.rsmain.rs` — Rust entry point for the `policy-witness` CLI that parses `--signposts`/`--capture-signposts`, propagates signpost enablement via `PW_ENABLE_SIGNPOSTS`, and injects host-side capture artifacts back into the JSON envelope.
 
 ## 3. Impetus
 

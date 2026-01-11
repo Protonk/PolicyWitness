@@ -295,6 +295,12 @@ $PW xpc run --capture-sandbox-logs --profile minimal inherit_child \
   --scenario matrix_basic \
   --path-class tmp --target specimen_file --name pw_child.txt --create
 
+# B2b: Force a child-side deny line (diagnostic) to validate log targeting/correlation.
+$PW xpc run --capture-sandbox-logs --profile temporary_exception inherit_child \
+  --scenario dynamic_extension \
+  --path /private/var/db/launchd.db/com.apple.launchd/overrides.plist \
+  --allow-unsafe-path --child-network-deny
+
 # B3: Deliberate protocol failure injection (expected: child_protocol_violation).
 $PW xpc run --profile minimal inherit_child \
   --scenario matrix_basic \
@@ -323,9 +329,17 @@ Attach/inspection knobs:
 - `--stop-on-deny`: on `EPERM`/`EACCES`, emit op + `callsite_id` + best-effort backtrace, then stop.
 - `--stop-auto-resume`: parent sends `SIGCONT` after a stop (useful for scripting/tests without a debugger).
 
+Diagnostic flags (capture/attribution checks; not part of the capability matrix):
+
+- `--child-network-deny`: the child attempts a TCP connect to `127.0.0.1:9` and records a `child_network_attempt` event. This is a purposeful seatbelt-deny generator so `--capture-sandbox-logs` targeting can be validated.
+- `--child-synthetic-deny-log`: on child acquire failure, the child emits a synthetic log marker (`PW_SYNTHETIC_DENY ...`) and a `child_synthetic_deny_log` event. This is a control for the log capture pipeline and PID targeting; it is **not** a real sandbox denial.
+
 Host-side sandbox log capture (single artifact):
 
 - Add `--capture-sandbox-logs` to `xpc run` to attach a lookback sandbox log excerpt under `data.host_sandbox_log_capture`.
+- When `--capture-sandbox-logs` or `--capture-signposts` is set, `xpc run` performs an internal **fenced run** (session wait → arm capture → release → probe) so evidence is bounded to a deterministic window.
+  - The output includes `data.fence` with `enabled`, `reason`, `status`, `armed_collectors`, `wait_path`, `arm_latency_ms`, and an `evidence_window` (start/end unix ms).
+  - When present, `data.host_sandbox_log_capture.window_source` indicates whether the log window was derived from the fence (`fence`) or from the default/explicit window strategy (`run`/`env`).
 - For `inherit_child`, the excerpt is also summarized into the witness fields `sandbox_log_capture_status` and `sandbox_log_capture` so a run is self-contained.
 - `data.host_sandbox_log_capture` records `observed_lines`, `observed_deny`, and `pid_source` (`service_pid` vs `client_pid`) so you can see which process the log excerpt targets.
 
@@ -334,6 +348,7 @@ Signposts (timeline, best-effort):
 - Add `--signposts` to enable Unified Logging signpost emission for the run (client/service/child helper where applicable).
 - Add `--capture-signposts` to `xpc run` to attach a lookback signpost timeline under `data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
 - `data.host_signpost_capture` includes the observer invocation (`observer_args`) and the parsed spans (`observer_report.data.spans`).
+- Fenced runs add service-side spans `pw.fence.waiting` and `pw.probe.exec` so you can bracket the evidence window in a single capture.
 
 How to interpret failures:
 
@@ -452,6 +467,7 @@ Signposts:
 
 - Add `--signposts` to emit Unified Logging signposts for each underlying probe run.
 - Add `--capture-signposts` to attach a lookback signpost timeline under each run’s `response.data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
+- When `--capture-signposts` is set, each run is fenced (session wait → arm → release → probe) and includes `response.data.fence` so evidence is bounded per profile.
 
 Groups (use `list-profiles` as the source of truth):
 

@@ -31,6 +31,8 @@ BUILD_XPC="${BUILD_XPC:-1}"                            # set to 0 to skip buildi
 XPC_ROOT="xpc"
 XPC_API_FILE="${XPC_ROOT}/ProbeAPI.swift"
 XPC_SIGNPOSTS_FILE="${XPC_ROOT}/Signposts.swift"
+XPC_LAB_CONFIG_FILE="${XPC_ROOT}/LabConfig.swift"
+XPC_LAB_SIGNPOSTS_FILE="${XPC_ROOT}/LabSignposts.swift"
 XPC_PROBE_CORE_FILE="${XPC_ROOT}/InProcessProbeCore.swift"
 XPC_SESSION_HOST_FILE="${XPC_ROOT}/ProbeServiceSessionHost.swift"
 XPC_QUARANTINE_SERVICE_HOST_FILE="${XPC_ROOT}/QuarantineLabServiceHost.swift"
@@ -252,7 +254,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     exit 2
   fi
   SWIFTC=(/usr/bin/xcrun --sdk macosx swiftc)
-  if [[ ! -f "${XPC_API_FILE}" ]] || [[ ! -f "${XPC_SIGNPOSTS_FILE}" ]] || [[ ! -f "${XPC_PROBE_CORE_FILE}" ]] || [[ ! -f "${XPC_SESSION_HOST_FILE}" ]] || [[ ! -f "${XPC_QUARANTINE_SERVICE_HOST_FILE}" ]] || [[ ! -f "${XPC_CLIENT_MAIN}" ]] || [[ ! -f "${XPC_INHERIT_CHILD_MAIN}" ]]; then
+  if [[ ! -f "${XPC_API_FILE}" ]] || [[ ! -f "${XPC_SIGNPOSTS_FILE}" ]] || [[ ! -f "${XPC_LAB_CONFIG_FILE}" ]] || [[ ! -f "${XPC_LAB_SIGNPOSTS_FILE}" ]] || [[ ! -f "${XPC_PROBE_CORE_FILE}" ]] || [[ ! -f "${XPC_SESSION_HOST_FILE}" ]] || [[ ! -f "${XPC_QUARANTINE_SERVICE_HOST_FILE}" ]] || [[ ! -f "${XPC_CLIENT_MAIN}" ]] || [[ ! -f "${XPC_INHERIT_CHILD_MAIN}" ]]; then
     echo "ERROR: BUILD_XPC=1 but XPC sources are missing under ${XPC_ROOT}/" 1>&2
     exit 2
   fi
@@ -263,20 +265,23 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   if [[ -n "${SWIFT_DEBUG_FLAGS}" ]]; then
     SWIFT_FLAGS+=("${SWIFT_DEBUG_FLAGS}")
   fi
-  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/xpc-probe-client" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_CLIENT_MAIN}"
+  if [[ "${PW_LAB_BUILD:-}" == "1" ]]; then
+    SWIFT_FLAGS+=("-D" "PW_LAB_ENABLED")
+  fi
+  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/xpc-probe-client" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_CLIENT_MAIN}"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/xpc-probe-client"
 
   if [[ -f "${XPC_QUARANTINE_CLIENT_MAIN}" ]]; then
     echo "==> Building embedded XPC quarantine client"
-    "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/xpc-quarantine-client" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_QUARANTINE_CLIENT_MAIN}"
+    "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/xpc-quarantine-client" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_QUARANTINE_CLIENT_MAIN}"
     chmod +x "${APP_BUNDLE}/Contents/MacOS/xpc-quarantine-client"
   fi
 
   echo "==> Building inherit-child helper"
-  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_INHERIT_CHILD_MAIN}"
+  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_INHERIT_CHILD_MAIN}"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child"
   echo "==> Building inherit-child helper (bad entitlements)"
-  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child-bad" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_INHERIT_CHILD_MAIN}"
+  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child-bad" "${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_INHERIT_CHILD_MAIN}"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-inherit-child-bad"
 
   if [[ -d "${XPC_SERVICES_DIR}" ]]; then
@@ -299,9 +304,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
 
       svc_sources=()
       if [[ "${svc_name}" == ProbeService_* ]]; then
-        svc_sources=("${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_PROBE_CORE_FILE}" "${XPC_SESSION_HOST_FILE}" "${svc_main}")
+        svc_sources=("${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_PROBE_CORE_FILE}" "${XPC_SESSION_HOST_FILE}" "${svc_main}")
       elif [[ "${svc_name}" == QuarantineLab_* ]]; then
-        svc_sources=("${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_QUARANTINE_SERVICE_HOST_FILE}" "${svc_main}")
+        svc_sources=("${XPC_API_FILE}" "${XPC_SIGNPOSTS_FILE}" "${XPC_LAB_CONFIG_FILE}" "${XPC_LAB_SIGNPOSTS_FILE}" "${XPC_QUARANTINE_SERVICE_HOST_FILE}" "${svc_main}")
       else
         echo "ERROR: unknown XPC service family: ${svc_name} (expected ProbeService_* or QuarantineLab_*)" 1>&2
         exit 2

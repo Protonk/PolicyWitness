@@ -796,6 +796,7 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
               [--create] [--allow-unsafe-path]
               [--stop-on-entry] [--stop-on-deny] [--stop-auto-resume]
               [--bookmark-move] [--bookmark-invalid] [--protocol-bad-cap-id]
+              [--child-synthetic-deny-log] [--child-network-deny]
 """,
             required_args: [],
             optional_args: [
@@ -810,7 +811,9 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
                 "--stop-on-entry (child raises SIGSTOP early for debugger attach)",
                 "--stop-on-deny (child raises SIGSTOP on EPERM/EACCES)",
                 "--stop-auto-resume (parent sends SIGCONT after child stop)",
-                "--protocol-bad-cap-id (inject a bad cap_id for protocol tests)"
+                "--protocol-bad-cap-id (inject a bad cap_id for protocol tests)",
+                "--child-synthetic-deny-log (diagnostic: emit a synthetic log marker + witness event when child acquire fails; validates log capture targeting, not seatbelt evidence)",
+                "--child-network-deny (diagnostic: child attempts TCP connect to 127.0.0.1:9 to trigger a real seatbelt deny line for capture correlation)"
             ],
             examples: [
                 "inherit_child --scenario dynamic_extension --path /private/var/db/launchd.db/com.apple.launchd/overrides.plist --allow-unsafe-path",
@@ -826,7 +829,9 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
                 "Emits a structured witness payload under RunProbeResponse.witness.",
                 "dynamic_extension uses sandbox extension issuance for parent-only acquisition; matrix_basic skips tokens.",
                 "bookmark_ferry passes security-scoped bookmark bytes over the event bus; bookmark resolution is identity-sensitive, so the spawned helper must share the service bundle id.",
-                "lineage_basic spawns a grandchild."
+                "lineage_basic spawns a grandchild.",
+                "child_network_deny is a diagnostic control that forces a child-side deny line so --capture-sandbox-logs targeting can be validated (see child_network_attempt event).",
+                "child_synthetic_deny_log is a diagnostic marker: emits a PW_SYNTHETIC_DENY log line + child_synthetic_deny_log event on child acquire failure; it is not a seatbelt deny."
             ]
         ),
         ProbeSpec(
@@ -6254,7 +6259,10 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
         let stopOnEntry = args.has("--stop-on-entry")
         let stopOnDeny = args.has("--stop-on-deny")
         let stopAutoResume = args.has("--stop-auto-resume")
-	        let bookmarkMove = args.has("--bookmark-move")
+        // Diagnostic controls for log capture validation (not sandbox authority changes).
+        let childSyntheticDenyLog = args.has("--child-synthetic-deny-log")
+        let childNetworkDeny = args.has("--child-network-deny")
+        let bookmarkMove = args.has("--bookmark-move")
         let bookmarkInvalid = args.has("--bookmark-invalid")
         let protocolBadCapId = args.has("--protocol-bad-cap-id")
         let runId = UUID().uuidString
@@ -6859,6 +6867,8 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
             "stop_on_entry": stopOnEntry ? "true" : "false",
             "stop_on_deny": stopOnDeny ? "true" : "false",
             "stop_auto_resume": stopAutoResume ? "true" : "false",
+            "child_synthetic_deny_log": childSyntheticDenyLog ? "true" : "false",
+            "child_network_deny": childNetworkDeny ? "true" : "false",
             "protocol_bad_cap_id": protocolBadCapId ? "true" : "false",
             "bookmark_invalid": bookmarkInvalid ? "true" : "false",
             "capability_count": "\(capabilityPlan.count)",
@@ -7557,6 +7567,12 @@ inherit_child [--scenario <\(inheritChildScenarioListString)>]
         }
         if stopOnDeny {
             env["PW_STOP_ON_DENY"] = "1"
+        }
+        if childSyntheticDenyLog {
+            env["PW_CHILD_SYNTHETIC_DENY_LOG"] = "1"
+        }
+        if childNetworkDeny {
+            env["PW_CHILD_NETWORK_DENY"] = "1"
         }
 
         let envStrings = env.map { "\($0)=\($1)" }

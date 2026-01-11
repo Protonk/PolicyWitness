@@ -1,0 +1,6 @@
+id: pw_lab_signpost_fence
+profile: minimal
+steps:
+  - probe: probe_catalog
+    argv: []
+notes: "Minimal fenced session run to exercise signpost emission and session lifecycle."

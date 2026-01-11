@@ -5,10 +5,14 @@ mod profiles;
 
 use serde::Serialize;
 use std::ffi::OsString;
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::ExitStatusExt;
+use std::process::Stdio;
 use std::{env, process::Command};
 use std::path::{Component, Path, PathBuf};
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn print_usage() {
@@ -623,6 +627,416 @@ fn run_xpc_probe(
     Ok((stdout, exit_code, stderr))
 }
 
+struct FenceWindow {
+    start_ms: u64,
+    end_ms: u64,
+    source: &'static str,
+}
+
+struct FencedProbeRun {
+    value: serde_json::Value,
+    stderr: String,
+    client_pid: i64,
+    run_started_at_unix_ms: u64,
+    run_ended_at_unix_ms: u64,
+    fence_window: Option<FenceWindow>,
+}
+
+#[derive(Default)]
+struct FenceTimings {
+    session_ready_at_unix_ms: Option<u64>,
+    wait_ready_at_unix_ms: Option<u64>,
+    released_at_unix_ms: Option<u64>,
+    trigger_received_at_unix_ms: Option<u64>,
+    probe_start_at_unix_ms: Option<u64>,
+    probe_done_at_unix_ms: Option<u64>,
+}
+
+fn run_xpc_probe_fenced(
+    cmd_path: &Path,
+    service_id: &str,
+    probe_id: &str,
+    probe_args: &[OsString],
+    plan_id: Option<&str>,
+    row_id: Option<&str>,
+    correlation_id: Option<&str>,
+    enable_signposts: bool,
+    fence_reason: &str,
+    armed_collectors: &[&str],
+) -> Result<FencedProbeRun, String> {
+    let mut args: Vec<OsString> = Vec::new();
+    args.push(OsString::from("session"));
+    if let Some(plan_id) = plan_id {
+        args.push(OsString::from("--plan-id"));
+        args.push(OsString::from(plan_id));
+    }
+    if let Some(correlation_id) = correlation_id {
+        args.push(OsString::from("--correlation-id"));
+        args.push(OsString::from(correlation_id));
+    }
+    args.push(OsString::from("--wait"));
+    args.push(OsString::from("fifo:auto"));
+    args.push(OsString::from("--wait-timeout-ms"));
+    args.push(OsString::from(FENCE_WAIT_TIMEOUT_MS.to_string()));
+    args.push(OsString::from(service_id));
+
+    let mut cmd = Command::new(cmd_path);
+    cmd.args(&args);
+    if enable_signposts {
+        cmd.env("PW_ENABLE_SIGNPOSTS", "1");
+    }
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let run_started_at_unix_ms = now_unix_ms_u64();
+    let mut child = cmd
+        .spawn()
+        .map_err(|err| format!("spawn failed for {}: {err}", cmd_path.display()))?;
+    let client_pid = child.id() as i64;
+
+    let mut stdin = child.stdin.take();
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "missing stdout for xpc-probe-client session".to_string())?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "missing stderr for xpc-probe-client session".to_string())?;
+    let stderr_handle = thread::spawn(move || {
+        let mut buf = String::new();
+        let mut reader = BufReader::new(stderr);
+        let _ = reader.read_to_string(&mut buf);
+        buf
+    });
+
+    let mut reader = BufReader::new(stdout);
+    let mut line = String::new();
+    let mut timings = FenceTimings::default();
+    let mut wait_mode: Option<String> = None;
+    let mut wait_path: Option<String> = None;
+    let mut service_pid: Option<i64> = None;
+    let mut service_name: Option<String> = None;
+    let mut probe_value: Option<serde_json::Value> = None;
+    let mut session_error: Option<(String, String)> = None;
+    let mut release_error: Option<String> = None;
+    let mut trigger_written = false;
+    let mut run_probe_sent = false;
+    let mut close_sent = false;
+
+    let probe_argv: Vec<String> = probe_args.iter().map(|s| s.to_string_lossy().to_string()).collect();
+
+    let send_command = |stdin: &mut Option<std::process::ChildStdin>,
+                        command: &serde_json::Value|
+     -> Result<(), String> {
+        let input = stdin
+            .as_mut()
+            .ok_or_else(|| "xpc session stdin already closed".to_string())?;
+        let line = serde_json::to_string(command)
+            .map_err(|err| format!("failed to encode session command: {err}"))?;
+        input
+            .write_all(line.as_bytes())
+            .and_then(|_| input.write_all(b"\n"))
+            .and_then(|_| input.flush())
+            .map_err(|err| format!("failed to write session command: {err}"))?;
+        Ok(())
+    };
+
+    let trigger_fence = |wait_path: &str| -> Result<u64, String> {
+        let mut last_err: Option<String> = None;
+        for _ in 0..5 {
+            match OpenOptions::new().write(true).open(wait_path) {
+                Ok(mut file) => {
+                    file.write_all(b"x")
+                        .map_err(|err| format!("failed to write fence trigger: {err}"))?;
+                    return Ok(now_unix_ms_u64());
+                }
+                Err(err) => {
+                    last_err = Some(format!("failed to open fence fifo: {err}"));
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+            }
+        }
+        Err(last_err.unwrap_or_else(|| "failed to open fence fifo".to_string()))
+    };
+
+    while {
+        line.clear();
+        reader.read_line(&mut line).map_err(|err| format!("read failed: {err}"))? > 0
+    } {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let ts = now_unix_ms_u64();
+        let value: serde_json::Value = match serde_json::from_str(trimmed) {
+            Ok(value) => value,
+            Err(_) => {
+                continue;
+            }
+        };
+        let kind = value
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        match kind {
+            "xpc_session_event" => {
+                let event = value.pointer("/data/event").and_then(|v| v.as_str()).unwrap_or("");
+                if service_pid.is_none() {
+                    service_pid = value.pointer("/data/pid").and_then(|v| v.as_i64());
+                }
+                if service_name.is_none() {
+                    service_name = value
+                        .pointer("/data/service_name")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                if wait_mode.is_none() {
+                    wait_mode = value
+                        .pointer("/data/wait_mode")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                if wait_path.is_none() {
+                    wait_path = value
+                        .pointer("/data/wait_path")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                match event {
+                    "session_ready" => {
+                        timings.session_ready_at_unix_ms = Some(ts);
+                    }
+                    "wait_ready" => {
+                        timings.wait_ready_at_unix_ms = Some(ts);
+                    }
+                    "trigger_received" => {
+                        timings.trigger_received_at_unix_ms = Some(ts);
+                    }
+                    "probe_starting" => {
+                        timings.probe_start_at_unix_ms = Some(ts);
+                    }
+                    "probe_done" => {
+                        timings.probe_done_at_unix_ms = Some(ts);
+                    }
+                    _ => {}
+                }
+            }
+            "xpc_session_error" => {
+                let event = value.pointer("/data/event").and_then(|v| v.as_str()).unwrap_or("");
+                let error = value.pointer("/data/error").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                session_error = Some((event.to_string(), error));
+            }
+            "probe_response" => {
+                probe_value = Some(value);
+            }
+            _ => {}
+        }
+
+        if !trigger_written {
+            if let Some(wait_path) = wait_path.as_deref() {
+                match trigger_fence(wait_path) {
+                    Ok(ts) => {
+                        timings.released_at_unix_ms = Some(ts);
+                        trigger_written = true;
+                    }
+                    Err(err) => {
+                        release_error = Some(err);
+                    }
+                }
+            }
+        }
+
+        if trigger_written && !run_probe_sent && timings.trigger_received_at_unix_ms.is_some() {
+            let mut cmd = serde_json::Map::new();
+            cmd.insert("command".to_string(), serde_json::Value::String("run_probe".to_string()));
+            cmd.insert("probe_id".to_string(), serde_json::Value::String(probe_id.to_string()));
+            cmd.insert("argv".to_string(), serde_json::Value::Array(probe_argv.iter().map(|s| serde_json::Value::String(s.clone())).collect()));
+            if let Some(plan_id) = plan_id {
+                cmd.insert("plan_id".to_string(), serde_json::Value::String(plan_id.to_string()));
+            }
+            if let Some(row_id) = row_id {
+                cmd.insert("row_id".to_string(), serde_json::Value::String(row_id.to_string()));
+            }
+            if let Some(correlation_id) = correlation_id {
+                cmd.insert(
+                    "correlation_id".to_string(),
+                    serde_json::Value::String(correlation_id.to_string()),
+                );
+            }
+            send_command(&mut stdin, &serde_json::Value::Object(cmd))?;
+            run_probe_sent = true;
+        }
+
+        if probe_value.is_some() && !close_sent {
+            let cmd = serde_json::json!({ "command": "close_session" });
+            let _ = send_command(&mut stdin, &cmd);
+            stdin.take();
+            close_sent = true;
+        }
+    }
+
+    let _ = child.wait();
+    let run_ended_at_unix_ms = now_unix_ms_u64();
+    let stderr = stderr_handle.join().unwrap_or_default();
+
+    let mut value = match probe_value {
+        Some(value) => value,
+        None => {
+            let (event, message) = session_error.unwrap_or_else(|| {
+                ("session_failed".to_string(), "missing probe_response".to_string())
+            });
+            let error_message = if message.is_empty() {
+                event.clone()
+            } else {
+                message.clone()
+            };
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "probe_response",
+                "generated_at_unix_ms": now_unix_ms_u64(),
+                "result": {
+                    "ok": false,
+                    "rc": 1,
+                    "exit_code": 1,
+                    "normalized_outcome": "xpc_error",
+                    "error": error_message,
+                    "stderr": error_message,
+                },
+                "data": {
+                    "schema_version": 1,
+                    "plan_id": plan_id,
+                    "row_id": row_id,
+                    "correlation_id": correlation_id,
+                    "probe_id": probe_id,
+                    "argv": probe_argv,
+                    "service_bundle_id": service_id,
+                    "service_name": service_name,
+                    "rc": 1,
+                    "stdout": "",
+                    "stderr": error_message,
+                    "normalized_outcome": "xpc_error",
+                    "error": error_message,
+                    "details": {
+                        "session_error_event": event,
+                        "service_bundle_id": service_id,
+                    }
+                }
+            })
+        }
+    };
+
+    if service_pid.is_none() {
+        service_pid = value
+            .pointer("/data/details/service_pid")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i64>().ok())
+            .or_else(|| value.pointer("/data/details/pid").and_then(|v| v.as_str()).and_then(|s| s.parse::<i64>().ok()));
+    }
+    let window_start = timings.released_at_unix_ms.or(timings.trigger_received_at_unix_ms);
+    let window_end = timings
+        .probe_done_at_unix_ms
+        .or(Some(run_ended_at_unix_ms));
+    let fence_window = match (window_start, window_end) {
+        (Some(start_ms), Some(end_ms)) if end_ms >= start_ms => Some(FenceWindow {
+            start_ms,
+            end_ms,
+            source: "fence",
+        }),
+        _ => None,
+    };
+
+    let mut fence_value = serde_json::Map::new();
+    fence_value.insert("enabled".to_string(), serde_json::Value::Bool(true));
+    fence_value.insert("reason".to_string(), serde_json::Value::String(fence_reason.to_string()));
+    fence_value.insert(
+        "armed_collectors".to_string(),
+        serde_json::Value::Array(
+            armed_collectors
+                .iter()
+                .map(|c| serde_json::Value::String((*c).to_string()))
+                .collect(),
+        ),
+    );
+    fence_value.insert(
+        "status".to_string(),
+        serde_json::Value::String(if timings.released_at_unix_ms.is_some() { "released" } else { "failed" }.to_string()),
+    );
+    if let Some(service_pid) = service_pid {
+        fence_value.insert(
+            "service_pid".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(service_pid)),
+        );
+    }
+    if let Some(ref mode) = wait_mode {
+        fence_value.insert("wait_mode".to_string(), serde_json::Value::String(mode.clone()));
+    }
+    if let Some(ref path) = wait_path {
+        fence_value.insert("wait_path".to_string(), serde_json::Value::String(path.clone()));
+    }
+    if let (Some(wait_ready), Some(released)) = (timings.wait_ready_at_unix_ms, timings.released_at_unix_ms) {
+        if released >= wait_ready {
+            fence_value.insert(
+                "arm_latency_ms".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(released - wait_ready)),
+            );
+        }
+    }
+    if let Some(ts) = timings.released_at_unix_ms {
+        fence_value.insert(
+            "released_at_unix_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(ts)),
+        );
+    }
+    if let Some(ts) = timings.trigger_received_at_unix_ms {
+        fence_value.insert(
+            "trigger_received_at_unix_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(ts)),
+        );
+    }
+    if let Some(ts) = timings.probe_start_at_unix_ms {
+        fence_value.insert(
+            "probe_start_at_unix_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(ts)),
+        );
+    }
+    if let Some(ts) = timings.probe_done_at_unix_ms {
+        fence_value.insert(
+            "probe_done_at_unix_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(ts)),
+        );
+    }
+    if let Some(window) = &fence_window {
+        fence_value.insert(
+            "evidence_window".to_string(),
+            serde_json::json!({
+                "kind": "range",
+                "start_unix_ms": window.start_ms,
+                "end_unix_ms": window.end_ms,
+                "source": window.source,
+            }),
+        );
+    }
+    if let Some(err) = release_error {
+        fence_value.insert("error".to_string(), serde_json::Value::String(err));
+    }
+
+    if let serde_json::Value::Object(ref mut data) = value["data"] {
+        data.insert("fence".to_string(), serde_json::Value::Object(fence_value));
+    }
+
+    Ok(FencedProbeRun {
+        value,
+        stderr,
+        client_pid,
+        run_started_at_unix_ms,
+        run_ended_at_unix_ms,
+        fence_window,
+    })
+}
+
 fn parse_probe_response(stdout: &str) -> Result<(Option<i64>, Option<String>, Option<String>), String> {
     let value: serde_json::Value =
         serde_json::from_str(stdout).map_err(|e| format!("failed to parse probe JSON: {e}"))?;
@@ -666,6 +1080,9 @@ fn sort_json_value(value: &mut serde_json::Value) {
 const CAPTURE_SANDBOX_LOGS_WINDOW_ENV: &str = "PW_CAPTURE_SANDBOX_LOGS_WINDOW";
 const CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC: &str = "last_dynamic";
 const CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO: &str = "range_iso";
+const DISABLE_FENCE_ENV: &str = "PW_DISABLE_FENCE";
+const FENCE_WAIT_TIMEOUT_MS: u64 = 30_000;
+const FENCE_HEADROOM_MS: u64 = 2_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SandboxLogWindowStrategy {
@@ -693,6 +1110,20 @@ impl SandboxLogWindowStrategy {
             SandboxLogWindowStrategy::LastDynamic => CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC,
             SandboxLogWindowStrategy::RangeIso => CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO,
         }
+    }
+}
+
+fn sandbox_log_window_strategy_from_env() -> (SandboxLogWindowStrategy, bool) {
+    let from_env = std::env::var(CAPTURE_SANDBOX_LOGS_WINDOW_ENV).ok().is_some();
+    (SandboxLogWindowStrategy::from_env(), from_env)
+}
+
+fn fence_enabled() -> bool {
+    // Internal opt-out for fenced capture runs; intentionally not user-facing.
+    match std::env::var(DISABLE_FENCE_ENV).ok().as_deref() {
+        None => true,
+        Some("0") | Some("false") | Some("no") => true,
+        Some(_) => false,
     }
 }
 
@@ -741,9 +1172,11 @@ fn sandbox_log_predicate(pid: i64, process_name: Option<&str>) -> String {
         _ => {
             let term = format!("({})", pid);
             let escaped = term.replace('"', "\\\"");
+            let pid_str = pid.to_string();
+            let pid_escaped = pid_str.replace('"', "\\\"");
             format!(
-                r#"((eventMessage CONTAINS[c] "Sandbox:") AND (eventMessage CONTAINS[c] "{}"))"#,
-                escaped
+                r#"((eventMessage CONTAINS[c] "Sandbox:") AND (eventMessage CONTAINS[c] "{}")) OR ((eventMessage CONTAINS[c] "deny") AND (eventMessage CONTAINS[c] "{}"))"#,
+                escaped, pid_escaped
             )
         }
     }
@@ -1090,6 +1523,16 @@ fn exit_like_child(status: std::process::ExitStatus) -> ! {
         std::process::exit(128 + signal);
     }
     std::process::exit(128);
+}
+
+fn exit_like_probe_result(value: &serde_json::Value) -> ! {
+    let code = value
+        .pointer("/result/exit_code")
+        .and_then(|v| v.as_i64())
+        .or_else(|| value.pointer("/result/rc").and_then(|v| v.as_i64()))
+        .unwrap_or(1);
+    let code = code.max(0).min(255) as i32;
+    std::process::exit(code);
 }
 
 fn run_and_wait(cmd_path: PathBuf, cmd_args: Vec<OsString>) -> ! {
@@ -1881,6 +2324,22 @@ fn main() {
                 }
             }
 
+            let use_fence = capture_signposts_flag && fence_enabled();
+            let cmd_path = if use_fence {
+                let path = resolve_contents_macos_tool("xpc-probe-client").unwrap_or_else(|err| {
+                    eprintln!("{err}\n");
+                    eprintln!("note: xpc commands require the embedded `xpc-probe-client` tool under Contents/MacOS.");
+                    std::process::exit(2);
+                });
+                if let Err(err) = ensure_executable_file(&path) {
+                    eprintln!("{err}");
+                    std::process::exit(2);
+                }
+                Some(path)
+            } else {
+                None
+            };
+
             let group_id = match group_arg {
                 Some(group) => group,
                 None => {
@@ -1913,6 +2372,7 @@ fn main() {
                 .skip(idx + 1)
                 .map(|s| s.to_string_lossy().to_string())
                 .collect();
+            let probe_args_os: Vec<OsString> = probe_args.iter().map(OsString::from).collect();
             let probe_arg_refs: Vec<&str> = probe_args.iter().map(|s| s.as_str()).collect();
 
             let group_profiles = match resolve_matrix_group(&group_id) {
@@ -1974,6 +2434,119 @@ fn main() {
                 }
 
                 let start = std::time::Instant::now();
+                if use_fence {
+                    let fenced = match run_xpc_probe_fenced(
+                        cmd_path.as_ref().expect("missing xpc-probe-client path"),
+                        &resolved.variant.bundle_id,
+                        &probe_id,
+                        &probe_args_os,
+                        None,
+                        None,
+                        None,
+                        signposts_flag,
+                        "capture_signposts",
+                        &["signposts"],
+                    ) {
+                        Ok(run) => run,
+                        Err(err) => {
+                            runs.push(MatrixRun {
+                                profile_id: resolved.profile.profile_id.clone(),
+                                bundle_id: resolved.variant.bundle_id.clone(),
+                                label: resolved.profile.label.clone(),
+                                variant: resolved.variant.variant.clone(),
+                                risk_tier: resolved.variant.risk_tier,
+                                risk_reasons: resolved.variant.risk_reasons.clone(),
+                                exit_code: 127,
+                                duration_ms: start.elapsed().as_millis(),
+                                rc: None,
+                                normalized_outcome: None,
+                                error: Some(err),
+                                parse_error: None,
+                                response: None,
+                            });
+                            continue;
+                        }
+                    };
+                    let elapsed = start.elapsed();
+                    let mut value = fenced.value;
+
+                    if capture_signposts_flag {
+                        let correlation_id = value
+                            .pointer("/data/correlation_id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty());
+                        let plan_id = value
+                            .pointer("/data/plan_id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty());
+                        let row_id = value
+                            .pointer("/data/row_id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty());
+
+                        let capture = match correlation_id {
+                            Some(corr) => match capture_signposts(corr, plan_id, row_id) {
+                                Ok(capture) => capture,
+                                Err(err) => serde_json::json!({
+                                    "capture_status": "requested_unavailable",
+                                    "error": err,
+                                }),
+                            },
+                            None => serde_json::json!({
+                                "capture_status": "requested_unavailable",
+                                "error": "missing correlation_id for signpost capture",
+                            }),
+                        };
+
+                        if let serde_json::Value::Object(ref mut data) = value["data"] {
+                            data.insert("host_signpost_capture".to_string(), capture);
+                        }
+                    }
+
+                    let mut rc = None;
+                    let mut outcome = None;
+                    let mut error = None;
+                    if let Some(result) = value.get("result") {
+                        rc = result.get("rc").and_then(|v| v.as_i64());
+                        outcome = result
+                            .get("normalized_outcome")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        error = result
+                            .get("error")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                    }
+                    if !fenced.stderr.is_empty() && error.is_none() {
+                        error = Some(fenced.stderr);
+                    }
+
+                    let exit_code = value
+                        .pointer("/result/exit_code")
+                        .and_then(|v| v.as_i64())
+                        .or_else(|| value.pointer("/result/rc").and_then(|v| v.as_i64()))
+                        .unwrap_or(1)
+                        .max(0)
+                        .min(255) as i32;
+
+                    runs.push(MatrixRun {
+                        profile_id: resolved.profile.profile_id.clone(),
+                        bundle_id: resolved.variant.bundle_id.clone(),
+                        label: resolved.profile.label.clone(),
+                        variant: resolved.variant.variant.clone(),
+                        risk_tier: resolved.variant.risk_tier,
+                        risk_reasons: resolved.variant.risk_reasons.clone(),
+                        exit_code,
+                        duration_ms: elapsed.as_millis(),
+                        rc,
+                        normalized_outcome: outcome,
+                        error,
+                        parse_error: None,
+                        response: Some(value),
+                    });
+                    continue;
+                }
+
                 let result =
                     run_xpc_probe(&resolved.variant.bundle_id, &probe_id, &probe_arg_refs, signposts_flag);
                 let elapsed = start.elapsed();
@@ -2549,33 +3122,352 @@ fn main() {
                         }
                     };
                     let probe_args: Vec<OsString> = args.iter().skip(idx + 1).cloned().collect();
+                    let use_fence =
+                        (capture_sandbox_logs_flag || capture_signposts_flag) && fence_enabled();
 
                     let mut forward_args: Vec<OsString> = Vec::new();
                     forward_args.push(OsString::from("run"));
-                    if let Some(plan_id) = plan_id {
+                    if let Some(plan_id) = plan_id.as_ref() {
                         forward_args.push(OsString::from("--plan-id"));
                         forward_args.push(OsString::from(plan_id));
                     }
-                    if let Some(row_id) = row_id {
+                    if let Some(row_id) = row_id.as_ref() {
                         forward_args.push(OsString::from("--row-id"));
                         forward_args.push(OsString::from(row_id));
                     }
-                    if let Some(correlation_id) = correlation_id {
+                    if let Some(correlation_id) = correlation_id.as_ref() {
                         forward_args.push(OsString::from("--correlation-id"));
                         forward_args.push(OsString::from(correlation_id));
                     }
-                    forward_args.push(OsString::from(service_id));
-                    forward_args.push(OsString::from(probe_id));
-                    forward_args.extend(probe_args);
+                    forward_args.push(OsString::from(service_id.as_str()));
+                    forward_args.push(OsString::from(probe_id.as_str()));
+                    forward_args.extend(probe_args.iter().cloned());
 
                     if capture_sandbox_logs_flag || capture_signposts_flag {
-                        let mut cmd = Command::new(&cmd_path);
-                        cmd.args(&forward_args);
-                        if signposts_flag {
-                            cmd.env("PW_ENABLE_SIGNPOSTS", "1");
-                        }
-                        cmd.stdout(std::process::Stdio::piped());
-                        cmd.stderr(std::process::Stdio::piped());
+                        if use_fence {
+                            let mut fence_reasons = Vec::new();
+                            let mut fence_collectors = Vec::new();
+                            if capture_sandbox_logs_flag {
+                                fence_reasons.push("capture_sandbox_logs");
+                                fence_collectors.push("sandbox_logs");
+                            }
+                            if capture_signposts_flag {
+                                fence_reasons.push("capture_signposts");
+                                fence_collectors.push("signposts");
+                            }
+                            let fence_reason = fence_reasons.join("|");
+                            let fenced = run_xpc_probe_fenced(
+                                &cmd_path,
+                                &service_id,
+                                &probe_id,
+                                &probe_args,
+                                plan_id.as_deref(),
+                                row_id.as_deref(),
+                                correlation_id.as_deref(),
+                                signposts_flag,
+                                &fence_reason,
+                                &fence_collectors,
+                            )
+                            .unwrap_or_else(|err| {
+                                eprintln!("{err}");
+                                std::process::exit(127);
+                            });
+                            let mut value = fenced.value;
+                            let stderr = fenced.stderr;
+                            let client_pid = fenced.client_pid;
+                            let run_started_at_unix_ms = fenced.run_started_at_unix_ms;
+                            let run_ended_at_unix_ms = fenced.run_ended_at_unix_ms;
+                            let fence_window = fenced.fence_window;
+
+                            let child_pid = value
+                                .pointer("/data/details/child_pid")
+                                .and_then(|v| v.as_str())
+                                .and_then(|s| s.parse::<i64>().ok());
+                            let child_process_name = value
+                                .pointer("/data/details/child_path")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| value.pointer("/data/witness/child_path").and_then(|v| v.as_str()))
+                                .and_then(|s| Path::new(s).file_name().and_then(|n| n.to_str()))
+                                .map(|s| s.to_string());
+                            let service_pid = value
+                                .pointer("/data/details/service_pid")
+                                .and_then(|v| v.as_str())
+                                .and_then(|s| s.parse::<i64>().ok())
+                                .or_else(|| {
+                                    value.pointer("/data/details/pid")
+                                        .and_then(|v| v.as_str())
+                                        .and_then(|s| s.parse::<i64>().ok())
+                                });
+                            let service_process_name = value
+                                .pointer("/data/details/process_name")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| value.pointer("/data/service_name").and_then(|v| v.as_str()))
+                                .filter(|s| !s.is_empty());
+
+                            if capture_sandbox_logs_flag {
+                                let (window_strategy, window_strategy_from_env) =
+                                    sandbox_log_window_strategy_from_env();
+                                let headroom_ms = if fence_window.is_some() && !window_strategy_from_env {
+                                    FENCE_HEADROOM_MS
+                                } else {
+                                    10_000u64
+                                };
+                                let min_last_ms = 5_000u64;
+                                let max_last_ms = 120_000u64;
+                                let elapsed_ms =
+                                    run_ended_at_unix_ms.saturating_sub(run_started_at_unix_ms);
+                                let mut window_error: Option<String> = None;
+                                let mut window_source = if window_strategy_from_env { "env" } else { "run" };
+
+                                let window = if let Some(fence_window) = &fence_window {
+                                    if window_strategy_from_env {
+                                        match window_strategy {
+                                            SandboxLogWindowStrategy::LastDynamic => {
+                                                let last_ms = (elapsed_ms.saturating_add(headroom_ms))
+                                                    .clamp(min_last_ms, max_last_ms);
+                                                let last_s = (last_ms.saturating_add(999) / 1000).max(1);
+                                                SandboxLogWindow::Last(format!("{last_s}s"))
+                                            }
+                                            SandboxLogWindowStrategy::RangeIso => {
+                                                let start_ms = run_started_at_unix_ms.saturating_sub(headroom_ms);
+                                                let end_ms = run_ended_at_unix_ms.saturating_add(headroom_ms);
+                                                match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
+                                                    (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
+                                                    (Err(err), _) | (_, Err(err)) => {
+                                                        window_error = Some(err);
+                                                        let last_ms = (elapsed_ms.saturating_add(headroom_ms))
+                                                            .clamp(min_last_ms, max_last_ms);
+                                                        let last_s = (last_ms.saturating_add(999) / 1000).max(1);
+                                                        SandboxLogWindow::Last(format!("{last_s}s"))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        window_source = "fence";
+                                        let start_ms = fence_window.start_ms.saturating_sub(headroom_ms);
+                                        let end_ms = fence_window.end_ms.saturating_add(headroom_ms);
+                                        match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
+                                            (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
+                                            (Err(err), _) | (_, Err(err)) => {
+                                                window_error = Some(err);
+                                                let last_ms = (elapsed_ms.saturating_add(headroom_ms))
+                                                    .clamp(min_last_ms, max_last_ms);
+                                                let last_s = (last_ms.saturating_add(999) / 1000).max(1);
+                                                SandboxLogWindow::Last(format!("{last_s}s"))
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    match window_strategy {
+                                        SandboxLogWindowStrategy::LastDynamic => {
+                                            let last_ms =
+                                                (elapsed_ms.saturating_add(headroom_ms)).clamp(min_last_ms, max_last_ms);
+                                            let last_s = (last_ms.saturating_add(999) / 1000).max(1);
+                                            SandboxLogWindow::Last(format!("{last_s}s"))
+                                        }
+                                        SandboxLogWindowStrategy::RangeIso => {
+                                            let start_ms = run_started_at_unix_ms.saturating_sub(headroom_ms);
+                                            let end_ms = run_ended_at_unix_ms.saturating_add(headroom_ms);
+                                            match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
+                                                (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
+                                                (Err(err), _) | (_, Err(err)) => {
+                                                    window_error = Some(err);
+                                                    let last_ms = (elapsed_ms.saturating_add(headroom_ms))
+                                                        .clamp(min_last_ms, max_last_ms);
+                                                    let last_s = (last_ms.saturating_add(999) / 1000).max(1);
+                                                    SandboxLogWindow::Last(format!("{last_s}s"))
+                                                }
+                                            }
+                                        }
+                                    }
+                                };
+
+                                let (chosen_pid, chosen_process_name, pid_source): (Option<i64>, Option<&str>, &str) =
+                                    match capture_sandbox_logs_target {
+                                        CaptureSandboxLogsTarget::Auto => {
+                                            if child_pid.is_some() {
+                                                (child_pid, child_process_name.as_deref(), "child_pid")
+                                            } else if service_pid.is_some() {
+                                                (service_pid, service_process_name, "service_pid")
+                                            } else {
+                                                (Some(client_pid), Some("xpc-probe-client"), "client_pid")
+                                            }
+                                        }
+                                        CaptureSandboxLogsTarget::Child => {
+                                            (child_pid, child_process_name.as_deref(), "child_pid")
+                                        }
+                                        CaptureSandboxLogsTarget::Service => {
+                                            (service_pid, service_process_name, "service_pid")
+                                        }
+                                        CaptureSandboxLogsTarget::Client => {
+                                            (Some(client_pid), Some("xpc-probe-client"), "client_pid")
+                                        }
+                                        CaptureSandboxLogsTarget::Pid => (capture_sandbox_logs_pid, None, "explicit_pid"),
+                                    };
+
+                                let (capture_status, observer_capture) = match chosen_pid {
+                                    Some(pid) => match capture_sandbox_logs(pid, chosen_process_name, window.clone()) {
+                                        Ok(capture) => ("captured", capture),
+                                        Err(err) => (
+                                            "requested_unavailable",
+                                            serde_json::json!({ "error": err }),
+                                        ),
+                                    },
+                                    None => (
+                                        "requested_unavailable",
+                                        serde_json::json!({
+                                            "error": format!(
+                                                "missing pid for sandbox log capture (target={})",
+                                                capture_sandbox_logs_target.as_str()
+                                            )
+                                        }),
+                                    ),
+                                };
+
+                                let observer_capture_for_witness = observer_capture.clone();
+
+                                let mut capture_value = serde_json::json!({
+                                    "capture_status": capture_status,
+                                    "target": capture_sandbox_logs_target.as_str(),
+                                    "pid": chosen_pid,
+                                    "pid_source": pid_source,
+                                    "process_name": chosen_process_name.unwrap_or(""),
+                                    "client_pid": client_pid,
+                                    "run_started_at_unix_ms": run_started_at_unix_ms,
+                                    "run_ended_at_unix_ms": run_ended_at_unix_ms,
+                                    "window_strategy": window_strategy.as_str(),
+                                    "window_source": window_source,
+                                    "window": match &window {
+                                        SandboxLogWindow::Last(last) => serde_json::json!({ "kind": "last", "last": last }),
+                                        SandboxLogWindow::Range { start, end } => serde_json::json!({ "kind": "range", "start": start, "end": end }),
+                                    },
+                                });
+                                if let Some(window) = &fence_window {
+                                    if let serde_json::Value::Object(ref mut out) = capture_value {
+                                        out.insert(
+                                            "fence_window".to_string(),
+                                            serde_json::json!({
+                                                "start_unix_ms": window.start_ms,
+                                                "end_unix_ms": window.end_ms,
+                                                "source": window.source,
+                                            }),
+                                        );
+                                    }
+                                }
+                                if let Some(err) = window_error {
+                                    capture_value["window_error"] = serde_json::Value::String(err);
+                                }
+                                match observer_capture {
+                                    serde_json::Value::Object(map) => {
+                                        if let serde_json::Value::Object(ref mut out) = capture_value {
+                                            for (key, value) in map {
+                                                out.insert(key, value);
+                                            }
+                                        }
+                                    }
+                                    other => {
+                                        capture_value["observer_raw"] = other;
+                                    }
+                                }
+
+                                let capture_string_map = match observer_capture_for_witness {
+                                    serde_json::Value::Object(map) => {
+                                        let mut out = serde_json::Map::new();
+                                        for (key, value) in map {
+                                            let rendered = match value {
+                                                serde_json::Value::String(text) => text,
+                                                other => other.to_string(),
+                                            };
+                                            out.insert(key, serde_json::Value::String(rendered));
+                                        }
+                                        serde_json::Value::Object(out)
+                                    }
+                                    other => {
+                                        let mut out = serde_json::Map::new();
+                                        out.insert("raw".to_string(), serde_json::Value::String(other.to_string()));
+                                        serde_json::Value::Object(out)
+                                    }
+                                };
+
+                                if let serde_json::Value::Object(ref mut data) = value["data"] {
+                                    data.insert("host_sandbox_log_capture".to_string(), capture_value);
+
+                                    let probe_family = data
+                                        .get("details")
+                                        .and_then(|v| v.get("probe_family"))
+                                        .and_then(|v| v.as_str());
+                                    if probe_family == Some("inherit_child") {
+                                        if !matches!(data.get("witness"), Some(serde_json::Value::Object(_))) {
+                                            data.insert(
+                                                "witness".to_string(),
+                                                serde_json::Value::Object(serde_json::Map::new()),
+                                            );
+                                        }
+                                        if let Some(serde_json::Value::Object(witness)) = data.get_mut("witness") {
+                                            witness.insert(
+                                                "sandbox_log_capture_status".to_string(),
+                                                serde_json::Value::String(capture_status.to_string()),
+                                            );
+                                            witness.insert("sandbox_log_capture".to_string(), capture_string_map);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if capture_signposts_flag {
+                                let correlation_id = value
+                                    .pointer("/data/correlation_id")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty());
+                                let plan_id = value
+                                    .pointer("/data/plan_id")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty());
+                                let row_id = value
+                                    .pointer("/data/row_id")
+                                    .and_then(|v| v.as_str())
+                                    .filter(|s| !s.is_empty());
+
+                                let capture = match correlation_id {
+                                    Some(corr) => match capture_signposts(corr, plan_id, row_id) {
+                                        Ok(capture) => capture,
+                                        Err(err) => serde_json::json!({
+                                            "capture_status": "requested_unavailable",
+                                            "error": err,
+                                        }),
+                                    },
+                                    None => serde_json::json!({
+                                        "capture_status": "requested_unavailable",
+                                        "error": "missing correlation_id for signpost capture",
+                                    }),
+                                };
+
+                                if let serde_json::Value::Object(ref mut data) = value["data"] {
+                                    data.insert("host_signpost_capture".to_string(), capture);
+                                }
+                            }
+
+                            sort_json_value(&mut value);
+                            if let Ok(text) = serde_json::to_string(&value) {
+                                println!("{text}");
+                            } else {
+                                let fallback = value.to_string();
+                                println!("{fallback}");
+                            }
+                            if !stderr.is_empty() {
+                                eprint!("{stderr}");
+                            }
+
+                            exit_like_probe_result(&value)
+                        } else {
+                            let mut cmd = Command::new(&cmd_path);
+                            cmd.args(&forward_args);
+                            if signposts_flag {
+                                cmd.env("PW_ENABLE_SIGNPOSTS", "1");
+                            }
+                            cmd.stdout(std::process::Stdio::piped());
+                            cmd.stderr(std::process::Stdio::piped());
 
                         let run_started_at_unix_ms = now_unix_ms_u64();
                         let child = cmd.spawn().unwrap_or_else(|err| {
@@ -2608,6 +3500,12 @@ fn main() {
                             .pointer("/data/details/child_pid")
                             .and_then(|v| v.as_str())
                             .and_then(|s| s.parse::<i64>().ok());
+                        let child_process_name = value
+                            .pointer("/data/details/child_path")
+                            .and_then(|v| v.as_str())
+                            .or_else(|| value.pointer("/data/witness/child_path").and_then(|v| v.as_str()))
+                            .and_then(|s| Path::new(s).file_name().and_then(|n| n.to_str()))
+                            .map(|s| s.to_string());
                         let service_pid = value
                             .pointer("/data/details/service_pid")
                             .and_then(|v| v.as_str())
@@ -2658,14 +3556,16 @@ fn main() {
                                 match capture_sandbox_logs_target {
                                     CaptureSandboxLogsTarget::Auto => {
                                         if child_pid.is_some() {
-                                            (child_pid, None, "child_pid")
+                                            (child_pid, child_process_name.as_deref(), "child_pid")
                                         } else if service_pid.is_some() {
                                             (service_pid, service_process_name, "service_pid")
                                         } else {
                                             (Some(client_pid), Some("xpc-probe-client"), "client_pid")
                                         }
                                     }
-                                    CaptureSandboxLogsTarget::Child => (child_pid, None, "child_pid"),
+                                    CaptureSandboxLogsTarget::Child => {
+                                        (child_pid, child_process_name.as_deref(), "child_pid")
+                                    }
                                     CaptureSandboxLogsTarget::Service => {
                                         (service_pid, service_process_name, "service_pid")
                                     }
@@ -2815,6 +3715,7 @@ fn main() {
                         }
 
                         exit_like_child(status)
+                        }
                     } else {
                         if signposts_flag {
                             run_and_wait_with_env(

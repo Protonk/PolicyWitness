@@ -1,0 +1,6 @@
+id: q1_dlopen_external
+driver: shell
+command:
+  - bash
+  - tests/suites/smoke/q1_dlopen_external.sh
+notes: "Runs the Q1 dlopen_external smoke script under the lab wrapper."

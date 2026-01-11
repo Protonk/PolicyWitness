@@ -1,4 +1,5 @@
 import Foundation
+import Dispatch
 import os
 
 public enum PWTraceContext {
@@ -19,6 +20,18 @@ public enum PWTraceContext {
 
     public static func correlationId() -> String? {
         (Thread.current.threadDictionary[key] as? [String: String])?["correlation_id"]
+    }
+
+    public static func planId() -> String? {
+        (Thread.current.threadDictionary[key] as? [String: String])?["plan_id"]
+    }
+
+    public static func rowId() -> String? {
+        (Thread.current.threadDictionary[key] as? [String: String])?["row_id"]
+    }
+
+    public static func probeId() -> String? {
+        (Thread.current.threadDictionary[key] as? [String: String])?["probe_id"]
     }
 }
 
@@ -74,6 +87,8 @@ public struct PWSignpostSpan {
         let log: OSLog
         let signpostId: OSSignpostID
         let name: StaticString
+        let nameString: String
+        let category: String
         let label: String
         let correlationId: String
     }
@@ -89,7 +104,16 @@ public struct PWSignpostSpan {
         let log = PWSignposts.log(category: category)
         let signpostId = OSSignpostID(log: log)
         let correlationId = correlationId ?? PWTraceContext.correlationId() ?? "unknown"
-        self.state = State(log: log, signpostId: signpostId, name: name, label: label, correlationId: correlationId)
+        let nameString = String(describing: name)
+        self.state = State(
+            log: log,
+            signpostId: signpostId,
+            name: name,
+            nameString: nameString,
+            category: category,
+            label: label,
+            correlationId: correlationId
+        )
 
         os_signpost(
             .begin,
@@ -100,6 +124,27 @@ public struct PWSignpostSpan {
             correlationId,
             label
         )
+
+        #if PW_LAB_ENABLED
+        let pid = Int(getpid())
+        let processName = ProcessInfo.processInfo.processName
+        let event = PWLabSignpostEvent(
+            name: nameString,
+            category: category,
+            phase: "begin",
+            signpost_id: signpostId.rawValue,
+            timestamp_unix_ms: UInt64(Date().timeIntervalSince1970 * 1000.0),
+            uptime_ns: DispatchTime.now().uptimeNanoseconds,
+            pid: pid,
+            process_name: processName,
+            correlation_id: correlationId,
+            plan_id: PWTraceContext.planId(),
+            row_id: PWTraceContext.rowId(),
+            probe_id: PWTraceContext.probeId(),
+            label: label
+        )
+        PWLabSignposts.emit(event)
+        #endif
     }
 
     public func end() {
@@ -113,5 +158,26 @@ public struct PWSignpostSpan {
             state.correlationId,
             state.label
         )
+
+        #if PW_LAB_ENABLED
+        let pid = Int(getpid())
+        let processName = ProcessInfo.processInfo.processName
+        let event = PWLabSignpostEvent(
+            name: state.nameString,
+            category: state.category,
+            phase: "end",
+            signpost_id: state.signpostId.rawValue,
+            timestamp_unix_ms: UInt64(Date().timeIntervalSince1970 * 1000.0),
+            uptime_ns: DispatchTime.now().uptimeNanoseconds,
+            pid: pid,
+            process_name: processName,
+            correlation_id: state.correlationId,
+            plan_id: PWTraceContext.planId(),
+            row_id: PWTraceContext.rowId(),
+            probe_id: PWTraceContext.probeId(),
+            label: state.label
+        )
+        PWLabSignposts.emit(event)
+        #endif
     }
 }

@@ -14,6 +14,13 @@ Related docs:
 - XPC services as entitlement targets: [xpc/README.md](../xpc/README.md)
 - End-user workflows (matrix runs, log capture, evidence): [PolicyWitness.md](../PolicyWitness.md)
 - Build/sign the app bundle: [SIGNING.md](../SIGNING.md)
+- Dev-only lab tooling: [tools/pwlab/README.md](../tools/pwlab/README.md)
+
+## Lab scenarios and suites (dev-only)
+
+`experiments/scenarios/` and `experiments/suites/` are used by `pw-lab` to
+define internal experiment runs. These are not user-facing and are intended
+for deterministic lab runs and regression archetypes (Q1–Q8 style).
 
 ## What lives in `experiments/`
 

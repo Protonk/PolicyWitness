@@ -117,6 +117,18 @@ Shape:
 - Control plane: client → service (`ProbeServiceProtocol` session methods in `ProbeAPI.swift`)
 - Event plane: service → client (`SessionEventSinkProtocol`, emitting JSON envelopes)
 
+Service-side signpost spans (when signposts are enabled):
+
+- `pw.fence.waiting` — the session is waiting for its fence trigger (used by fenced runs).
+- `pw.probe.exec` — the in-process probe execution bracket.
+
+Lab-only signpost stream (dev builds):
+
+- When built with `PW_LAB_BUILD=1` and run with `PW_LAB=1`, `xpc session` JSONL
+  includes `kind=signpost_event` entries emitted from the same call sites as
+  Unified Logging signposts (no parallel runtime).
+- The canonical span list lives in `xpc/signpost_catalog.json`.
+
 Where to look:
 
 - Wire types/protocols: `xpc/ProbeAPI.swift`
@@ -283,6 +295,13 @@ When there are no child-emitted events, treat it as “child died before writing
 - `--stop-on-deny` — on `EPERM`/`EACCES` shaped failures, emit the denying op + `callsite_id` + best-effort backtrace, then stop.
 
 Backtraces are best-effort and must never be fatal; failures are recorded as `backtrace_error` rather than aborting the run.
+
+### Diagnostic flags (log capture controls)
+
+These flags exist to validate log capture targeting/correlation. They are not part of the capability matrix.
+
+- `--child-network-deny` — forces the child to attempt a TCP connect to `127.0.0.1:9` and records `child_network_attempt`. This is a reliable way to generate a child-side seatbelt deny line for `--capture-sandbox-logs` targeting checks.
+- `--child-synthetic-deny-log` — emits a synthetic log marker (`PW_SYNTHETIC_DENY ...`) and a `child_synthetic_deny_log` event when child acquire fails. This is a capture-pipeline control and must not be treated as a real sandbox denial.
 
 ### Signing/entitlements invariants (child helpers)
 

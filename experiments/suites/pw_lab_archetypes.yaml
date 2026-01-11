@@ -1,0 +1,10 @@
+id: pw_lab_archetypes
+scenarios:
+  - q1_dlopen_external
+  - q2_inherit_child_dynamic_extension
+  - q3_session_consume
+  - q4_capture_targeting
+  - q5_update_file_rename_delta
+  - q6_bookmark_ferry
+  - q7_gatekeeper_connection
+  - q8_attribution_bounds

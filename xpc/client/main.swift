@@ -40,6 +40,22 @@ private final class DiscardingSessionEventSink: NSObject, SessionEventSinkProtoc
     func emitEvent(_ event: Data) {}
 }
 
+private func emitLabSignpostEnvelope(
+    _ event: PWLabSignpostEvent,
+    stdout: LockedStdout
+) {
+    let result = JsonResult(ok: true, rc: 0, exit_code: 0, normalized_outcome: "ok")
+    let envelope = JsonEnvelope(
+        kind: "signpost_event",
+        generated_at_unix_ms: event.timestamp_unix_ms,
+        result: result,
+        data: event
+    )
+    if let encoded = try? encodeJSON(envelope) {
+        stdout.writeDataLine(encoded)
+    }
+}
+
 private func usage() -> String {
     """
     usage:
@@ -62,6 +78,8 @@ private func die(_ message: String, code: Int32) -> Never {
 
 private struct XpcCallError: Error, CustomStringConvertible {
     let message: String
+    let domain: String?
+    let code: Int?
 
     var description: String {
         message
@@ -97,7 +115,7 @@ private func xpcCall(
         replyError = error
         sema.signal()
     }) as? ProbeServiceProtocol else {
-        return .failure(XpcCallError(message: "failed to construct remote proxy (type mismatch)"))
+        return .failure(XpcCallError(message: "failed to construct remote proxy (type mismatch)", domain: nil, code: nil))
     }
 
     invoke(proxy) { data in
@@ -111,7 +129,7 @@ private func xpcCall(
 
     let deadline = DispatchTime.now() + .milliseconds(timeoutMs)
     if sema.wait(timeout: deadline) == .timedOut {
-        return .failure(XpcCallError(message: "xpc call timeout after \(timeoutMs)ms"))
+        return .failure(XpcCallError(message: "xpc call timeout after \(timeoutMs)ms", domain: nil, code: nil))
     }
 
     lock.lock()
@@ -120,12 +138,13 @@ private func xpcCall(
     lock.unlock()
 
     if let err {
-        return .failure(XpcCallError(message: "xpc error: \(err)"))
+        let nsError = err as NSError
+        return .failure(XpcCallError(message: "xpc error: \(err)", domain: nsError.domain, code: nsError.code))
     }
     if let data {
         return .success(data)
     }
-    return .failure(XpcCallError(message: "xpc call failed (no reply and no error)"))
+    return .failure(XpcCallError(message: "xpc call failed (no reply and no error)", domain: nil, code: nil))
 }
 
 private func emitProbeResponseEnvelope(_ response: RunProbeResponse, stdout: LockedStdout) -> Int32 {
@@ -293,6 +312,13 @@ private func runOneShot(args: [String]) -> Never {
     switch openReply {
     case .failure(let err):
         let errMessage = err.message
+        var details = ["service_bundle_id": serviceBundleId]
+        if let domain = err.domain {
+            details["xpc_error_domain"] = domain
+        }
+        if let code = err.code {
+            details["xpc_error_code"] = "\(code)"
+        }
         let response = RunProbeResponse(
             rc: 1,
             stdout: "",
@@ -300,7 +326,7 @@ private func runOneShot(args: [String]) -> Never {
             normalized_outcome: "xpc_error",
             errno: nil,
             error: errMessage,
-            details: ["service_bundle_id": serviceBundleId],
+            details: details,
             layer_attribution: LayerAttribution(other: "xpc:openSession_failed")
         )
         let code = emitProbeResponseEnvelope(response, stdout: stdout)
@@ -376,6 +402,13 @@ private func runOneShot(args: [String]) -> Never {
     switch runReply {
     case .failure(let err):
         let errMessage = err.message
+        var details = ["service_bundle_id": serviceBundleId]
+        if let domain = err.domain {
+            details["xpc_error_domain"] = domain
+        }
+        if let code = err.code {
+            details["xpc_error_code"] = "\(code)"
+        }
         probeResp = RunProbeResponse(
             rc: 1,
             stdout: "",
@@ -383,7 +416,7 @@ private func runOneShot(args: [String]) -> Never {
             normalized_outcome: "xpc_error",
             errno: nil,
             error: errMessage,
-            details: ["service_bundle_id": serviceBundleId],
+            details: details,
             layer_attribution: LayerAttribution(other: "xpc:runProbeInSession_failed")
         )
     case .success(let data):
@@ -491,7 +524,19 @@ private func runSession(args: [String]) -> Never {
         correlationId = UUID().uuidString
     }
     let enableSignposts = PWSignposts.isEnabled()
+    let labEnabled = PWLabConfig.isEnabled()
     PWTraceContext.set(correlationId: correlationId, planId: planId, rowId: nil, probeId: "session")
+
+    var labSessionToken: String? = nil
+    if labEnabled && enableSignposts {
+        PWLabSignposts.setSink { event in
+            var payload = event
+            payload.session_token = labSessionToken
+            payload.service_bundle_id = serviceBundleId
+            payload.service_name = ProcessInfo.processInfo.processName
+            emitLabSignpostEnvelope(payload, stdout: stdout)
+        }
+    }
 
     let connection = NSXPCConnection(serviceName: serviceBundleId)
     connection.remoteObjectInterface = NSXPCInterface(with: ProbeServiceProtocol.self)
@@ -542,7 +587,8 @@ private func runSession(args: [String]) -> Never {
         plan_id: planId,
         correlation_id: correlationId,
         wait_spec: wait,
-        enable_signposts: enableSignposts ? true : nil
+        enable_signposts: enableSignposts ? true : nil,
+        lab_enabled: labEnabled ? true : nil
     )
     let openReqData: Data
     do {
@@ -624,6 +670,7 @@ private func runSession(args: [String]) -> Never {
         )
         exit(Int32(max(1, min(255, openResp.rc))))
     }
+    labSessionToken = sessionToken
 
     func closeAndExit(code: Int32) -> Never {
         let closeReq = SessionCloseRequest(session_token: sessionToken)
@@ -632,6 +679,7 @@ private func runSession(args: [String]) -> Never {
                 proxy.closeSession(closeReqData, withReply: reply)
             }
         }
+        PWLabSignposts.setSink(nil)
         connection.invalidate()
         exit(code)
     }

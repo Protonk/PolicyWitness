@@ -1,0 +1,6 @@
+id: q3_session_consume
+driver: shell
+command:
+  - bash
+  - tests/suites/smoke/q3_session_consume.sh
+notes: "Runs the Q3 session consume smoke script under the lab wrapper."

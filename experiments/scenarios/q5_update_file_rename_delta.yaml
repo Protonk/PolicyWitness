@@ -1,0 +1,6 @@
+id: q5_update_file_rename_delta
+driver: shell
+command:
+  - bash
+  - tests/suites/smoke/q5_update_file_rename_delta.sh
+notes: "Runs the Q5 update_file_rename_delta smoke script under the lab wrapper."

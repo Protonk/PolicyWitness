@@ -271,6 +271,7 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
         var waitConfig: WaitConfig?
         var triggered: Bool
         var enableSignposts: Bool
+        var labEnabled: Bool
     }
 
     private let lock = NSLock()
@@ -282,6 +283,11 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
         self.eventSink = connection.remoteObjectProxyWithErrorHandler { error in
             fputs("event sink error: \(error)\n", stderr)
         } as? SessionEventSinkProtocol
+    }
+
+    deinit {
+        PWLabConfig.setOverride(nil)
+        PWLabSignposts.setSink(nil)
     }
 
     private func emitSessionEvent(
@@ -370,6 +376,33 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
         }
     }
 
+    private func emitLabSignpostEvent(
+        _ event: PWLabSignpostEvent,
+        sessionToken: String?,
+        planId: String?,
+        correlationId: String?
+    ) {
+        guard let eventSink else { return }
+
+        var payload = event
+        payload.session_token = sessionToken
+        payload.plan_id = payload.plan_id ?? planId
+        payload.correlation_id = payload.correlation_id ?? correlationId
+        payload.service_bundle_id = Bundle.main.bundleIdentifier ?? ""
+        payload.service_name = ProcessInfo.processInfo.processName
+
+        let result = JsonResult(ok: true, rc: 0, exit_code: 0, normalized_outcome: "ok")
+        let envelope = JsonEnvelope(
+            kind: "signpost_event",
+            generated_at_unix_ms: payload.timestamp_unix_ms,
+            result: result,
+            data: payload
+        )
+        if let encoded = try? encodeJSON(envelope) {
+            eventSink.emitEvent(encoded)
+        }
+    }
+
     private func startWait(
         sessionToken: String,
         planId: String?,
@@ -379,13 +412,13 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
     ) {
         DispatchQueue.global(qos: .userInitiated).async {
             PWSignposts.withEnabled(enableSignposts) {
-                let waitSpan = PWSignpostSpan(
+                let fenceSpan = PWSignpostSpan(
                     category: PWSignposts.categoryXpcService,
-                    name: "wait",
-                    label: "session_wait mode=\(config.mode)",
+                    name: "pw.fence.waiting",
+                    label: "fence_wait mode=\(config.mode)",
                     correlationId: correlationId
                 )
-                defer { waitSpan.end() }
+                defer { fenceSpan.end() }
 
                 let result: WaitTriggerResult
                 if config.mode == "fifo" {
@@ -454,6 +487,7 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
 
         let correlationId = decoded.correlation_id ?? UUID().uuidString
         let enableSignposts = decoded.enable_signposts == true
+        let labEnabled = decoded.lab_enabled == true
 
         PWSignposts.withEnabled(enableSignposts) {
             PWTraceContext.set(
@@ -513,9 +547,22 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
                 correlationId: correlationId,
                 waitConfig: resolvedWait,
                 triggered: resolvedWait == nil,
-                enableSignposts: enableSignposts
+                enableSignposts: enableSignposts,
+                labEnabled: labEnabled
             )
             lock.unlock()
+
+            PWLabConfig.setOverride(labEnabled)
+            if labEnabled && enableSignposts {
+                PWLabSignposts.setSink { [weak self] event in
+                    self?.emitLabSignpostEvent(
+                        event,
+                        sessionToken: token,
+                        planId: decoded.plan_id,
+                        correlationId: correlationId
+                    )
+                }
+            }
 
             emitSessionEvent(
                 event: "session_ready",
@@ -682,6 +729,14 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
             )
             defer { runProbeSpan.end() }
 
+            let probeExecSpan = PWSignpostSpan(
+                category: PWSignposts.categoryXpcService,
+                name: "pw.probe.exec",
+                label: "probe_id=\(probeReq.probe_id)",
+                correlationId: probeReq.correlation_id
+            )
+            defer { probeExecSpan.end() }
+
             let probeEventSink: InProcessProbeCore.ProbeEventSink = { event, childPid, runId, message in
                 self.emitSessionEvent(
                     event: event,
@@ -726,12 +781,16 @@ final class ProbeServiceSessionHost: NSObject, ProbeServiceProtocol {
 
         lock.lock()
         let current = session
-        if let current, current.token == decoded.session_token {
-            session = nil
-        }
+            if let current, current.token == decoded.session_token {
+                session = nil
+            }
         lock.unlock()
 
         if let current, current.token == decoded.session_token {
+            if current.labEnabled {
+                PWLabConfig.setOverride(nil)
+            }
+            PWLabSignposts.setSink(nil)
             PWSignposts.withEnabled(current.enableSignposts) {
                 let closeSpan = PWSignpostSpan(
                     category: PWSignposts.categoryXpcService,
