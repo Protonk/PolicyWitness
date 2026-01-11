@@ -1391,8 +1391,22 @@ def cmd_tui(args: argparse.Namespace) -> int:
                     status_message = msg
             elif key == curses.KEY_RESIZE:
                 try:
-                    new_h, new_w = stdscr.getmaxyx()
-                    curses.resizeterm(new_h, new_w)
+                    stdscr.nodelay(True)
+                    while True:
+                        ch = stdscr.getch()
+                        if ch == curses.KEY_RESIZE:
+                            continue
+                        if ch == -1:
+                            break
+                        try:
+                            curses.ungetch(ch)
+                        except curses.error:
+                            pass
+                        break
+                finally:
+                    stdscr.nodelay(False)
+                try:
+                    curses.clearok(stdscr, True)
                 except curses.error as exc:
                     render_errors += 1
                     last_error = str(exc) or "curses.error"
