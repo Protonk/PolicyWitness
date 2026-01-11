@@ -70,6 +70,21 @@ Diff two run directories:
 tools/pwlab/pw-lab diff run_a run_b
 ```
 
+## Evidence ledger TUI
+
+Render a minimal, non-timeline view of evidence per step:
+
+```
+tools/pwlab/pw-lab tui .pw_lab/out/20250110-101010_pw_lab_signpost_fence
+```
+
+Keys:
+
+- `j`/`k` or arrows: move row
+- `tab` / `shift+tab`: move field
+- `y`: copy the active cell via `pbcopy`
+- `q`: quit
+
 ## Scenario format (YAML or JSON)
 
 Minimal XPC session scenario:

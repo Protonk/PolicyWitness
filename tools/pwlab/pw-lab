@@ -46,6 +46,53 @@ def _load_json(path: Path) -> Any:
         return json.load(fh)
 
 
+def _format_tri(value: Optional[bool]) -> str:
+    if value is True:
+        return "Y"
+    if value is False:
+        return "N"
+    return "?"
+
+
+def _format_val(value: Any) -> str:
+    if value is None:
+        return "-"
+    return str(value)
+
+
+def _truncate(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    if len(text) <= width:
+        return text.ljust(width)
+    if width <= 3:
+        return text[:width]
+    return text[: width - 3] + "..."
+
+
+def _pbcopy_available() -> bool:
+    return sys.platform == "darwin" and shutil.which("pbcopy") is not None
+
+
+def _pbcopy(text: str) -> Tuple[bool, str]:
+    if not _pbcopy_available():
+        return False, "pbcopy unavailable"
+    try:
+        proc = subprocess.run(
+            ["pbcopy"],
+            input=text,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception as exc:
+        return False, f"pbcopy error: {exc}"
+    if proc.returncode != 0:
+        return False, "pbcopy failed"
+    return True, "copied"
+
+
 def _iter_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
     if str(path) == "-":
         fh = sys.stdin
@@ -1086,6 +1133,209 @@ def cmd_timeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def _ledger_columns() -> List[Dict[str, Any]]:
+    return [
+        {"key": "step_id", "label": "step", "min": 6, "max": 16, "flex": 1},
+        {"key": "probe_id", "label": "probe", "min": 10, "max": 26, "flex": 2},
+        {"key": "ok", "label": "ok", "min": 2, "max": 2, "flex": 0},
+        {"key": "normalized_outcome", "label": "outcome", "min": 10, "max": 18, "flex": 2},
+        {"key": "rc", "label": "rc", "min": 3, "max": 6, "flex": 1},
+        {"key": "errno", "label": "errno", "min": 5, "max": 6, "flex": 1},
+        {"key": "probe_exec_overlap", "label": "overlap", "min": 7, "max": 7, "flex": 0},
+        {"key": "observed_deny", "label": "deny", "min": 4, "max": 4, "flex": 0},
+        {"key": "confidence", "label": "conf", "min": 4, "max": 7, "flex": 0},
+    ]
+
+
+def _assign_column_widths(columns: List[Dict[str, Any]], total_width: int) -> Optional[int]:
+    sep_len = 3
+    total_sep = sep_len * (len(columns) - 1)
+    min_total = sum(col["min"] for col in columns) + total_sep
+    if total_width < min_total:
+        return None
+    for col in columns:
+        col["width"] = col["min"]
+    extra = total_width - min_total
+    while extra > 0:
+        progressed = False
+        for col in columns:
+            if col.get("flex", 0) <= 0:
+                continue
+            if col["width"] >= col["max"]:
+                continue
+            col["width"] += 1
+            extra -= 1
+            progressed = True
+            if extra == 0:
+                break
+        if not progressed:
+            break
+    return min_total
+
+
+def _build_ledger_rows(summary: Dict[str, Any]) -> List[Dict[str, str]]:
+    steps = summary.get("steps", []) or []
+    evidence = summary.get("evidence", {}) or {}
+    sandbox_logs = evidence.get("sandbox_logs", {}) or {}
+    observed_deny = sandbox_logs.get("observed_deny")
+    uncertainty = summary.get("uncertainty", {}) or {}
+    confidence = uncertainty.get("confidence")
+
+    rows = []
+    for step in steps:
+        rows.append(
+            {
+                "step_id": _format_val(step.get("step_id")),
+                "probe_id": _format_val(step.get("probe_id")),
+                "ok": _format_tri(step.get("ok")),
+                "normalized_outcome": _format_val(step.get("normalized_outcome")),
+                "rc": _format_val(step.get("rc")),
+                "errno": _format_val(step.get("errno")),
+                "probe_exec_overlap": _format_tri(step.get("probe_exec_overlap")),
+                "observed_deny": _format_tri(observed_deny),
+                "confidence": _format_val(confidence),
+            }
+        )
+    return rows
+
+
+def cmd_tui(args: argparse.Namespace) -> int:
+    try:
+        import curses
+    except Exception as exc:  # pragma: no cover - import failure is platform-specific
+        _die(f"curses is unavailable: {exc}")
+
+    summary = _load_summary(Path(args.run_dir))
+    rows = _build_ledger_rows(summary)
+    columns = _ledger_columns()
+
+    scenario_id = summary.get("scenario_id") or "-"
+    profile = summary.get("profile") or "-"
+    variant = summary.get("variant") or "-"
+    total_rows = len(rows)
+
+    def _run(stdscr: Any) -> int:
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
+        stdscr.nodelay(False)
+        stdscr.keypad(True)
+
+        selected_row = 0
+        selected_col = 0
+        row_offset = 0
+        status_message = ""
+
+        while True:
+            stdscr.erase()
+            height, width = stdscr.getmaxyx()
+            view_height = height - 1
+            if view_height < 4:
+                stdscr.addstr(0, 0, "window too small")
+                stdscr.addstr(height - 1, 0, "q quit")
+                stdscr.refresh()
+                key = stdscr.getch()
+                if key in (ord("q"), ord("Q")):
+                    return 0
+                continue
+
+            min_total = _assign_column_widths(columns, width)
+            if min_total is None:
+                stdscr.addstr(0, 0, f"window too small")
+                stdscr.addstr(height - 1, 0, "q quit")
+                stdscr.refresh()
+                key = stdscr.getch()
+                if key in (ord("q"), ord("Q")):
+                    return 0
+                continue
+
+            header = f"Evidence Ledger | scenario={scenario_id} profile={profile} variant={variant} steps={total_rows}"
+            stdscr.addstr(0, 0, _truncate(header, width))
+
+            # Column header
+            x = 0
+            for idx, col in enumerate(columns):
+                cell = _truncate(col["label"], col["width"])
+                stdscr.addstr(1, x, cell)
+                x += col["width"]
+                if idx != len(columns) - 1:
+                    stdscr.addstr(1, x, " | ")
+                    x += 3
+
+            # Separator
+            stdscr.addstr(
+                2,
+                0,
+                "-" * min(width, sum(c["width"] for c in columns) + 3 * (len(columns) - 1)),
+            )
+
+            visible_rows = view_height - 3
+            if selected_row < row_offset:
+                row_offset = selected_row
+            if selected_row >= row_offset + visible_rows:
+                row_offset = max(0, selected_row - visible_rows + 1)
+
+            for idx in range(visible_rows):
+                row_index = row_offset + idx
+                if row_index >= total_rows:
+                    break
+                row = rows[row_index]
+                y = 3 + idx
+                x = 0
+                for col_idx, col in enumerate(columns):
+                    value = row.get(col["key"], "-")
+                    cell = _truncate(value, col["width"])
+                    attr = curses.A_REVERSE if (row_index == selected_row and col_idx == selected_col) else 0
+                    stdscr.addstr(y, x, cell, attr)
+                    x += col["width"]
+                    if col_idx != len(columns) - 1:
+                        stdscr.addstr(y, x, " | ")
+                        x += 3
+
+            if total_rows == 0:
+                stdscr.addstr(3, 0, "no steps")
+
+            status = "tab field  arrows row  y copy  q quit"
+            if total_rows > 0:
+                field = columns[selected_col]["label"]
+                value = rows[selected_row].get(columns[selected_col]["key"], "-")
+                status = f"field={field} value={value} | {status}"
+            if status_message:
+                status = f"{status} | {status_message}"
+            stdscr.addstr(height - 1, 0, _truncate(status, width))
+            status_message = ""
+
+            stdscr.refresh()
+            key = stdscr.getch()
+
+            if key in (ord("q"), ord("Q")):
+                return 0
+            if key in (curses.KEY_UP, ord("k")):
+                selected_row = max(0, selected_row - 1)
+            elif key in (curses.KEY_DOWN, ord("j")):
+                selected_row = min(max(total_rows - 1, 0), selected_row + 1)
+            elif key in (curses.KEY_LEFT, ord("h"), curses.KEY_BTAB):
+                selected_col = (selected_col - 1) % len(columns)
+            elif key in (curses.KEY_RIGHT, ord("l"), 9):
+                selected_col = (selected_col + 1) % len(columns)
+            elif key in (ord("g"),):
+                selected_row = 0
+            elif key in (ord("G"),):
+                selected_row = max(total_rows - 1, 0)
+            elif key in (ord("y"),):
+                if total_rows > 0:
+                    value = rows[selected_row].get(columns[selected_col]["key"], "")
+                    ok, msg = _pbcopy(value)
+                    status_message = msg
+            elif key == curses.KEY_RESIZE:
+                continue
+
+        return 0
+
+    return curses.wrapper(_run)
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     scenario_path = _resolve_scenario_path(args.scenario, Path(args.scenario_dir))
     scenario = _load_scenario(scenario_path)
@@ -1348,6 +1598,10 @@ def main() -> int:
     timeline_cmd.add_argument("--input", required=True, help="path to session JSONL (or '-')")
     timeline_cmd.add_argument("--signposts-only", action="store_true")
     timeline_cmd.set_defaults(func=cmd_timeline)
+
+    tui_cmd = sub.add_parser("tui", help="render a minimal evidence ledger")
+    tui_cmd.add_argument("run_dir")
+    tui_cmd.set_defaults(func=cmd_tui)
 
     run_cmd = sub.add_parser("run", help="run a lab scenario")
     run_cmd.add_argument("scenario")
