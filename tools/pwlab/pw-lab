@@ -93,6 +93,26 @@ def _pbcopy(text: str) -> Tuple[bool, str]:
     return True, "copied"
 
 
+def _tui_log_path() -> Optional[Path]:
+    if not os.environ.get("PW_LAB_TUI_DEBUG"):
+        return None
+    override = os.environ.get("PW_LAB_TUI_LOG")
+    if override:
+        return Path(override)
+    return REPO_ROOT / ".pw_lab" / "tui.log"
+
+
+def _tui_log(path: Optional[Path], message: str) -> None:
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(message + "\n")
+    except Exception:
+        pass
+
+
 def _iter_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
     if str(path) == "-":
         fh = sys.stdin
@@ -1206,6 +1226,7 @@ def cmd_tui(args: argparse.Namespace) -> int:
         _die(f"curses is unavailable: {exc}")
 
     summary = _load_summary(Path(args.run_dir))
+    log_path = _tui_log_path()
     rows = _build_ledger_rows(summary)
     columns = _ledger_columns()
 
@@ -1226,110 +1247,128 @@ def cmd_tui(args: argparse.Namespace) -> int:
         selected_col = 0
         row_offset = 0
         status_message = ""
+        render_errors = 0
+        last_error = ""
 
         while True:
-            stdscr.erase()
-            height, width = stdscr.getmaxyx()
-            view_height = height - 1
-            if view_height < 4:
-                try:
-                    stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
-                    stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
-                except curses.error:
-                    pass
-                stdscr.refresh()
-                key = stdscr.getch()
-                if key in (ord("q"), ord("Q")):
-                    return 0
-                continue
+            try:
+                stdscr.erase()
+                height, width = stdscr.getmaxyx()
+                view_height = height - 1
+                if view_height < 4:
+                    try:
+                        stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
+                        stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                    except curses.error:
+                        pass
+                    stdscr.refresh()
+                    key = stdscr.getch()
+                    if key in (ord("q"), ord("Q")):
+                        return 0
+                    continue
 
-            min_total = _assign_column_widths(columns, width)
-            if min_total is None:
-                try:
-                    stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
-                    stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
-                except curses.error:
-                    pass
-                stdscr.refresh()
-                key = stdscr.getch()
-                if key in (ord("q"), ord("Q")):
-                    return 0
-                continue
+                min_total = _assign_column_widths(columns, width)
+                if min_total is None:
+                    try:
+                        stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
+                        stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                    except curses.error:
+                        pass
+                    stdscr.refresh()
+                    key = stdscr.getch()
+                    if key in (ord("q"), ord("Q")):
+                        return 0
+                    continue
 
-            def safe_addstr(y: int, x: int, text: str, attr: int = 0) -> None:
-                if y < 0 or y >= height:
-                    return
-                if x < 0 or x >= width:
-                    return
-                max_width = max(0, width - x - 1)
-                if max_width <= 0:
-                    return
-                try:
-                    if attr:
-                        stdscr.addnstr(y, x, text, max_width, attr)
-                    else:
-                        stdscr.addnstr(y, x, text, max_width)
-                except curses.error:
-                    pass
+                def safe_addstr(y: int, x: int, text: str, attr: int = 0) -> None:
+                    nonlocal render_errors, last_error
+                    if y < 0 or y >= height:
+                        return
+                    if x < 0 or x >= width:
+                        return
+                    max_width = max(0, width - x - 1)
+                    if max_width <= 0:
+                        return
+                    try:
+                        if attr:
+                            stdscr.addnstr(y, x, text, max_width, attr)
+                        else:
+                            stdscr.addnstr(y, x, text, max_width)
+                    except curses.error as exc:
+                        render_errors += 1
+                        last_error = str(exc) or "curses.error"
+                        _tui_log(log_path, f"render error: {last_error}")
 
-            header = f"Evidence Ledger | scenario={scenario_id} profile={profile} variant={variant} steps={total_rows}"
-            safe_addstr(0, 0, _truncate(header, width))
+                header = f"Evidence Ledger | scenario={scenario_id} profile={profile} variant={variant} steps={total_rows}"
+                safe_addstr(0, 0, _truncate(header, width))
 
-            # Column header
-            x = 0
-            for idx, col in enumerate(columns):
-                cell = _truncate(col["label"], col["width"])
-                safe_addstr(1, x, cell)
-                x += col["width"]
-                if idx != len(columns) - 1:
-                    safe_addstr(1, x, " | ")
-                    x += 3
-
-            # Separator
-            safe_addstr(
-                2,
-                0,
-                "-" * min(width, sum(c["width"] for c in columns) + 3 * (len(columns) - 1)),
-            )
-
-            visible_rows = view_height - 3
-            if selected_row < row_offset:
-                row_offset = selected_row
-            if selected_row >= row_offset + visible_rows:
-                row_offset = max(0, selected_row - visible_rows + 1)
-
-            for idx in range(visible_rows):
-                row_index = row_offset + idx
-                if row_index >= total_rows:
-                    break
-                row = rows[row_index]
-                y = 3 + idx
+                # Column header
                 x = 0
-                for col_idx, col in enumerate(columns):
-                    value = row.get(col["key"], "-")
-                    cell = _truncate(value, col["width"])
-                    attr = curses.A_REVERSE if (row_index == selected_row and col_idx == selected_col) else 0
-                    safe_addstr(y, x, cell, attr)
+                for idx, col in enumerate(columns):
+                    cell = _truncate(col["label"], col["width"])
+                    safe_addstr(1, x, cell)
                     x += col["width"]
-                    if col_idx != len(columns) - 1:
-                        safe_addstr(y, x, " | ")
+                    if idx != len(columns) - 1:
+                        safe_addstr(1, x, " | ")
                         x += 3
 
-            if total_rows == 0:
-                safe_addstr(3, 0, "no steps")
+                # Separator
+                safe_addstr(
+                    2,
+                    0,
+                    "-" * min(width, sum(c["width"] for c in columns) + 3 * (len(columns) - 1)),
+                )
 
-            status = "tab field  arrows row  y copy  q quit"
-            if total_rows > 0:
-                field = columns[selected_col]["label"]
-                value = rows[selected_row].get(columns[selected_col]["key"], "-")
-                status = f"field={field} value={value} | {status}"
-            if status_message:
-                status = f"{status} | {status_message}"
-            safe_addstr(height - 1, 0, _truncate(status, width))
-            status_message = ""
+                visible_rows = view_height - 3
+                if selected_row < row_offset:
+                    row_offset = selected_row
+                if selected_row >= row_offset + visible_rows:
+                    row_offset = max(0, selected_row - visible_rows + 1)
 
-            stdscr.refresh()
-            key = stdscr.getch()
+                for idx in range(visible_rows):
+                    row_index = row_offset + idx
+                    if row_index >= total_rows:
+                        break
+                    row = rows[row_index]
+                    y = 3 + idx
+                    x = 0
+                    for col_idx, col in enumerate(columns):
+                        value = row.get(col["key"], "-")
+                        cell = _truncate(value, col["width"])
+                        attr = curses.A_REVERSE if (row_index == selected_row and col_idx == selected_col) else 0
+                        safe_addstr(y, x, cell, attr)
+                        x += col["width"]
+                        if col_idx != len(columns) - 1:
+                            safe_addstr(y, x, " | ")
+                            x += 3
+
+                if total_rows == 0:
+                    safe_addstr(3, 0, "no steps")
+
+                status = "tab field  arrows row  y copy  q quit"
+                if total_rows > 0:
+                    field = columns[selected_col]["label"]
+                    value = rows[selected_row].get(columns[selected_col]["key"], "-")
+                    status = f"field={field} value={value} | {status}"
+                if status_message:
+                    status = f"{status} | {status_message}"
+                if render_errors > 0:
+                    status = f"{status} | render_errs={render_errors}"
+                safe_addstr(height - 1, 0, _truncate(status, width))
+                status_message = ""
+
+                stdscr.refresh()
+                key = stdscr.getch()
+            except curses.error as exc:
+                render_errors += 1
+                last_error = str(exc) or "curses.error"
+                _tui_log(log_path, f"render loop error: {last_error}")
+                try:
+                    stdscr.erase()
+                    stdscr.refresh()
+                except curses.error:
+                    pass
+                continue
 
             if key in (ord("q"), ord("Q")):
                 return 0
@@ -1351,6 +1390,13 @@ def cmd_tui(args: argparse.Namespace) -> int:
                     ok, msg = _pbcopy(value)
                     status_message = msg
             elif key == curses.KEY_RESIZE:
+                try:
+                    new_h, new_w = stdscr.getmaxyx()
+                    curses.resizeterm(new_h, new_w)
+                except curses.error as exc:
+                    render_errors += 1
+                    last_error = str(exc) or "curses.error"
+                    _tui_log(log_path, f"resize error: {last_error}")
                 continue
 
         return 0
