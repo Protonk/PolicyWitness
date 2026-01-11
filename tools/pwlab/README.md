@@ -3,6 +3,10 @@
 This directory contains dev-only tooling for lab experiments. It is not shipped
 with the notarized `.app`, and it is not documented in the user guide.
 
+The **labbook** (run directory) is the primary artifact for dev analysis. Treat
+`lab_summary.json` as the canonical evidence surface; other files are raw or
+derived views.
+
 ## Build gating
 
 Lab features require a lab-enabled build plus a runtime opt-in:
@@ -122,6 +126,9 @@ Each run directory includes:
 - `run.stderr.txt` (stderr capture)
 - `lab_summary.json` (evidence summary + uncertainty)
 - `env.json` (host/build metadata)
+
+Deterministic replay will consume a replay bundle derived from the labbook; the
+draft schema lives in `RFC-PolicyWitness-Lab.md`.
 
 ## Inputs
 

@@ -22,6 +22,10 @@ Related docs:
 define internal experiment runs. These are not user-facing and are intended
 for deterministic lab runs and regression archetypes (Q1–Q8 style).
 
+Lab runs emit a **labbook** under `.pw_lab/out/<timestamp>_<scenario_id>/`.
+Treat `lab_summary.json` as the canonical evidence surface for dev analysis
+and for future deterministic replay tooling (drafted in the lab RFC).
+
 ## What lives in `experiments/`
 
 Build outputs:

@@ -210,7 +210,7 @@ Tests:
 
 Deliverables:
 
-- Timeline viewer improvements (TUI or HTML)
+- Evidence ledger TUI (minimal, non-timeline view)
 - Experiment replay with deterministic inputs
 - Automated "delta alarms" for key witness changes
 
@@ -218,6 +218,197 @@ Tests:
 
 - Stable diff output for repeated runs
 - Playback consistency checks
+
+Draft: Replay bundle schema (v0)
+
+Goal: make a lab run replayable without relying on ambient host state, while
+failing closed on identity drift.
+
+```
+{
+  "schema_version": 0,
+  "run_id": "<uuid>",
+  "recorded_at_unix_ms": 0,
+  "scenario_id": "<id>",
+  "profile": "<profile_id>",
+  "variant": "<base|injectable|null>",
+  "hermeticity": "portable|strict_path",
+  "paths": {
+    "workspace_root": "workspace://",
+    "original_input_path": "/abs/path/used/at/record",
+    "original_resolved_path": "/abs/realpath/at/record",
+    "replay_materialized_path": "/tmp/policy-witness-harness/replay/<run-id>/specimens/<file>"
+  },
+  "artifacts": [
+    {"id": "specimen_file", "logical_path": "workspace://specimens/foo.txt", "hash": "sha256:..."}
+  ],
+  "steps": [
+    {
+      "step_id": "s1",
+      "kind": "probe|external",
+      "action": "xpc_run|rename|move|wait_for_trigger|token_issue|token_consume",
+      "target": {
+        "logical_path": "workspace://specimens/foo.txt",
+        "identity": {
+          "type": "file|dir",
+          "st_dev": 0,
+          "st_ino": 0,
+          "st_gen": 0,
+          "birthtime_unix_ms": 0,
+          "size_bytes": 0,
+          "mtime_unix_ms": 0,
+          "sha256": "optional"
+        },
+        "no_symlink": true
+      },
+      "preconditions": [
+        "exists",
+        "identity_match",
+        "type_match"
+      ],
+      "postconditions": [
+        "identity_match",
+        "access_delta_expected"
+      ],
+      "strictness": "fail_closed|weak_ok",
+      "expected": {
+        "normalized_outcome": "<expected>",
+        "changed_access": true
+      }
+    }
+  ],
+  "environment_contract": {
+    "os_build": "macOS 14.x (build)",
+    "kernel_version": "23.x",
+    "pw_build": {
+      "bundle_id": "com.yourteam.policy-witness",
+      "app_version": "2.x",
+      "profiles_manifest_hash": "sha256:..."
+    },
+    "sandbox_profile": {
+      "profile_id": "<profile_id>",
+      "variant": "<base|injectable>",
+      "entitlements_hash": "sha256:..."
+    },
+    "locale": "en_US.UTF-8",
+    "timezone": "UTC",
+    "env_allowlist": ["PATH", "HOME", "TMPDIR"],
+    "network_policy": "disabled|loopback_only|allow",
+    "notes": "non-hermetic: external OS file used"
+  }
+}
+```
+
+Example replay bundle (v0, minimal)
+
+```
+{
+  "schema_version": 0,
+  "run_id": "c8f0b7d0-1d6b-4b9f-9a1c-3ad4f4d2b111",
+  "recorded_at_unix_ms": 1768080000000,
+  "scenario_id": "q5_update_file_rename_delta",
+  "profile": "temporary_exception",
+  "variant": "base",
+  "hermeticity": "portable",
+  "paths": {
+    "workspace_root": "workspace://",
+    "original_input_path": "/Users/me/Desktop/pw_old.txt",
+    "original_resolved_path": "/Users/me/Desktop/pw_old.txt",
+    "replay_materialized_path": "/tmp/policy-witness-harness/replay/c8f0b7d0/specimens/pw_old.txt"
+  },
+  "artifacts": [
+    {
+      "id": "specimen_file",
+      "logical_path": "workspace://specimens/pw_old.txt",
+      "hash": "sha256:5d0f2b5b7f1b0a52..."
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "s1",
+      "kind": "probe",
+      "action": "xpc_run",
+      "target": {
+        "logical_path": "workspace://specimens/pw_old.txt",
+        "identity": {
+          "type": "file",
+          "st_dev": 16777233,
+          "st_ino": 105553154,
+          "st_gen": 0,
+          "birthtime_unix_ms": 1768080000000,
+          "size_bytes": 28,
+          "mtime_unix_ms": 1768080000000
+        },
+        "no_symlink": true
+      },
+      "preconditions": ["exists", "identity_match", "type_match"],
+      "postconditions": ["access_delta_expected"],
+      "strictness": "fail_closed",
+      "expected": {
+        "normalized_outcome": "expected",
+        "changed_access": true
+      }
+    },
+    {
+      "step_id": "s2",
+      "kind": "external",
+      "action": "rename",
+      "target": {
+        "logical_path": "workspace://specimens/pw_old.txt",
+        "identity": {
+          "type": "file",
+          "st_dev": 16777233,
+          "st_ino": 105553154,
+          "st_gen": 0
+        },
+        "no_symlink": true
+      },
+      "preconditions": ["exists", "identity_match"],
+      "postconditions": ["identity_moved"],
+      "strictness": "fail_closed",
+      "expected": {
+        "new_logical_path": "workspace://specimens/pw_new.txt"
+      }
+    }
+  ],
+  "environment_contract": {
+    "os_build": "macOS 14.4.1 (23E224)",
+    "kernel_version": "23.4.0",
+    "pw_build": {
+      "bundle_id": "com.yourteam.policy-witness",
+      "app_version": "2.0.0",
+      "profiles_manifest_hash": "sha256:9f0f..."
+    },
+    "sandbox_profile": {
+      "profile_id": "temporary_exception",
+      "variant": "base",
+      "entitlements_hash": "sha256:1a2b..."
+    },
+    "locale": "en_US.UTF-8",
+    "timezone": "UTC",
+    "env_allowlist": ["PATH", "HOME", "TMPDIR"],
+    "network_policy": "disabled",
+    "notes": ""
+  }
+}
+```
+
+Draft: Environment contract list (v0)
+
+- OS version/build + kernel version (gate replay by default)
+- PolicyWitness identity (bundle id, version, profiles manifest hash)
+- Profile/variant entitlements hash (evidence-driven; fail closed if mismatched)
+- Locale + timezone (stabilize string and time formatting)
+- Environment allowlist (explicitly record what matters; ignore the rest)
+- Network policy (disabled/loopback/allow)
+- Hermeticity label (portable vs strict_path) + any non-hermetic notes
+
+Replay rules (draft)
+
+- Identity-first: path is a locator, identity bundle is the authority.
+- Fail closed on identity mismatch unless `strictness=weak_ok`.
+- Prefer FD-based verification (open + fstat) to avoid TOCTOU.
+- Postconditions use evidence deltas (not return codes) for success.
 
 ## Impact on user-facing surface
 
