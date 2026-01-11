@@ -1232,8 +1232,11 @@ def cmd_tui(args: argparse.Namespace) -> int:
             height, width = stdscr.getmaxyx()
             view_height = height - 1
             if view_height < 4:
-                stdscr.addstr(0, 0, "window too small")
-                stdscr.addstr(height - 1, 0, "q quit")
+                try:
+                    stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
+                    stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                except curses.error:
+                    pass
                 stdscr.refresh()
                 key = stdscr.getch()
                 if key in (ord("q"), ord("Q")):
@@ -1242,29 +1245,48 @@ def cmd_tui(args: argparse.Namespace) -> int:
 
             min_total = _assign_column_widths(columns, width)
             if min_total is None:
-                stdscr.addstr(0, 0, f"window too small")
-                stdscr.addstr(height - 1, 0, "q quit")
+                try:
+                    stdscr.addnstr(0, 0, "window too small", max(0, width - 1))
+                    stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                except curses.error:
+                    pass
                 stdscr.refresh()
                 key = stdscr.getch()
                 if key in (ord("q"), ord("Q")):
                     return 0
                 continue
 
+            def safe_addstr(y: int, x: int, text: str, attr: int = 0) -> None:
+                if y < 0 or y >= height:
+                    return
+                if x < 0 or x >= width:
+                    return
+                max_width = max(0, width - x - 1)
+                if max_width <= 0:
+                    return
+                try:
+                    if attr:
+                        stdscr.addnstr(y, x, text, max_width, attr)
+                    else:
+                        stdscr.addnstr(y, x, text, max_width)
+                except curses.error:
+                    pass
+
             header = f"Evidence Ledger | scenario={scenario_id} profile={profile} variant={variant} steps={total_rows}"
-            stdscr.addstr(0, 0, _truncate(header, width))
+            safe_addstr(0, 0, _truncate(header, width))
 
             # Column header
             x = 0
             for idx, col in enumerate(columns):
                 cell = _truncate(col["label"], col["width"])
-                stdscr.addstr(1, x, cell)
+                safe_addstr(1, x, cell)
                 x += col["width"]
                 if idx != len(columns) - 1:
-                    stdscr.addstr(1, x, " | ")
+                    safe_addstr(1, x, " | ")
                     x += 3
 
             # Separator
-            stdscr.addstr(
+            safe_addstr(
                 2,
                 0,
                 "-" * min(width, sum(c["width"] for c in columns) + 3 * (len(columns) - 1)),
@@ -1287,14 +1309,14 @@ def cmd_tui(args: argparse.Namespace) -> int:
                     value = row.get(col["key"], "-")
                     cell = _truncate(value, col["width"])
                     attr = curses.A_REVERSE if (row_index == selected_row and col_idx == selected_col) else 0
-                    stdscr.addstr(y, x, cell, attr)
+                    safe_addstr(y, x, cell, attr)
                     x += col["width"]
                     if col_idx != len(columns) - 1:
-                        stdscr.addstr(y, x, " | ")
+                        safe_addstr(y, x, " | ")
                         x += 3
 
             if total_rows == 0:
-                stdscr.addstr(3, 0, "no steps")
+                safe_addstr(3, 0, "no steps")
 
             status = "tab field  arrows row  y copy  q quit"
             if total_rows > 0:
@@ -1303,7 +1325,7 @@ def cmd_tui(args: argparse.Namespace) -> int:
                 status = f"field={field} value={value} | {status}"
             if status_message:
                 status = f"{status} | {status_message}"
-            stdscr.addstr(height - 1, 0, _truncate(status, width))
+            safe_addstr(height - 1, 0, _truncate(status, width))
             status_message = ""
 
             stdscr.refresh()
