@@ -14,7 +14,8 @@ The approach relies on:
 - A dylib signed with the same Team ID as the app/services.
 - Explicit opt-in in instrumented variants only.
 - A minimal, stable C ABI that emits telemetry.
-- Strict load gating and auditable witness records.
+- Strict path gating and auditable witness records; signature enforcement is
+  optional in MVP.
 
 This is a design sketch. Some details may be adjusted during implementation.
 
@@ -38,9 +39,9 @@ optimization is auditability and minimization, not runtime policing.
 
 Default policy: servicebundle only.
 
-- Recommended: embed the dylib inside each XPC service bundle, for example
-  `ProbeService_minimal.xpc/Contents/Frameworks/PWInstrumentation.dylib`.
-  In this mode, `servicebundle:` resolves relative to the XPC service bundle.
+- Embed the dylib inside each XPC service bundle at
+  `Contents/Frameworks/PWInstrumentation.dylib`. In this mode, `servicebundle:`
+  resolves relative to the XPC service bundle.
 - `servicebundle:` is the only supported scheme in shipping builds.
 - External paths (absolute) are dev-only and gated by both build config and an
   explicit flag (`--allow-external-paths`). External loads must be allowlisted
@@ -55,14 +56,22 @@ If external paths are allowed:
 
 - Canonicalize with `realpath` and enforce root allowlists.
 - Open with `O_NOFOLLOW`, `fstat`, and record `(dev, inode, size, mtime)`.
-- Compute a content hash (sha256) before loading.
+- Compute a content hash (sha256) only when required or explicitly requested.
 - After `dlopen`, resolve the loaded image path (`dladdr`/`dlinfo`) and
   re-verify it matches the verified target. If not, fail with
   `post_load_verification_failed`.
 
-## Signature gating (strong and maintainable)
+## Signature gating (optional strictness)
 
-Prefer a designated requirement over ad hoc comparisons.
+In MVP, signature checks are optional: if no `--require-*` flags are provided,
+the loader records signature metadata but does not enforce it. When strict
+flags are set, prefer a designated requirement over ad hoc comparisons.
+
+Minimal computation baseline:
+
+- Always resolve the path and collect `stat` + signature metadata.
+- Do not compute a content hash unless `--require-sha256` (or an explicit
+  `--compute-sha256` flag, if added) is set.
 
 Suggested checks:
 
@@ -74,8 +83,10 @@ Record in the witness:
 
 - `signature_team_id`, `signature_identifier`, `signature_cdhash`
 - `requirement_string` and `check_mode` (requirement vs ad_hoc)
-- `file_hash_sha256`
+- `file_hash_sha256` (only when computed)
+- `hash_computed` (true/false)
 - `resolved_path` and `path_scheme` (servicebundle/abs)
+- `signature_checks_enforced` (true/false)
 
 ## Minimal API (C ABI)
 
@@ -191,12 +202,17 @@ instrumentation_load --path <servicebundle:...|/abs>
                       [--require-identifier <id>]
                       [--require-cdhash <hex>]
                       [--require-sha256 <hex>]
+                      [--compute-sha256]
                       [--mode <dlopen>]
 ```
 
 Suggested behavior:
 
 - Refuse on base variants (`normalized_outcome: "not_allowed"`).
+- Require `xpc session` (refuse when invoked via `xpc run`).
+- If no `--require-*` flags are provided, record signature metadata without
+  enforcing it (MVP behavior). Only compute a hash when `--require-sha256` or
+  `--compute-sha256` is set.
 - Default to `servicebundle:` only. External absolute paths require build-time
   permission plus `--allow-external-paths`.
 - Verify code signature using a designated requirement when possible.
@@ -245,6 +261,16 @@ Suggested additions:
 - `start_failed`
 - `post_load_verification_failed`
 
+## Build and distribution
+
+- The instrumentation dylib is built in this repo as a separate build artifact.
+- Canonical install path: `Contents/Frameworks/PWInstrumentation.dylib` inside
+  each XPC service bundle.
+- Users can optionally drop the dylib into the service bundle at the documented
+  `servicebundle:` location.
+- If the dylib is missing, `instrumentation_load` should return a clear
+  `not_found` or `path_not_allowed` outcome rather than failing silently.
+
 ## Optional observability features (narrow but high value)
 
 - Dyld image inventory: emit a full image list at start, then
@@ -261,8 +287,7 @@ Use a dedicated `@instrumented` variant as the only supported target for
 - `@instrumented` is a minimal delta variant (ideally only the entitlements
   required to load the dylib and attach a debugger).
 - `@injectable` stays a separate dev-power surface for broader experiments.
-- `instrumentation_load` should refuse on `@injectable` unless an explicit
-  dev-only override is set and recorded in the witness.
+- `instrumentation_load` should refuse on `@injectable` and `base`.
 
 ## Minimal entitlements sketch for `@instrumented`
 
@@ -274,7 +299,7 @@ Proposed delta (add to the base service entitlements):
 
 - `com.apple.security.get-task-allow` = true
 - `com.apple.security.cs.disable-library-validation` = true (required for
-  loading the instrumentation dylib)
+  `@instrumented`)
 
 Notarization note: Apple will fail notarization for `get-task-allow` and other
 debug-style entitlements (including `disable-library-validation`,
@@ -331,8 +356,8 @@ instrumentation.
 
 ## Open questions (to resolve when implementing)
 
-- Exact embed location inside the service bundle (Frameworks vs Resources) and
-  how to version it.
+- How to version the instrumentation dylib and surface that in metadata.
 - Final entitlement set for `@instrumented`.
 - How strict to make signature gating (requirement string vs cdhash pinning).
-- Whether to emit telemetry as JSONL, signposts, or both.
+- Whether to emit telemetry as JSONL, signposts, or both (and how to coalesce
+  them into a single stream).
