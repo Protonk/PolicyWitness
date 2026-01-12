@@ -33,6 +33,8 @@ For usage/behavior contracts, see:
 
 `xpc/` is built and embedded by [build.sh](../build.sh) when `BUILD_XPC=1` (default).
 
+Agent-only note (sandboxed harnesses): When the caller is already sandboxed by the host (common in agent harnesses), XPC lookup can fail with NSCocoaErrorDomain 4099 / error 159 "Sandbox restriction" before any service starts. This is a nested-sandbox limitation, not a normal developer environment issue. The exact harness sandbox “profile name” is often not observable; prefer operational evidence (“lookup denied for <name>”) over named-profile claims. Reproduce outside the harness before diagnosing the XPC service.
+
 The build script finds `swiftc` via `xcrun` (Xcode Command Line Tools are required).
 
 Note: `xcrun dyld_info` (not `dyldinfo`) is the tool for dyld cache inspection on this host.

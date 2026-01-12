@@ -34,6 +34,9 @@ Direct runner (useful for local iteration / agent loops):
 ./tests/run.sh --suite smoke
 ```
 
+Opt-in tests (non-default, dev-only) live under `tests/suites/opt_in/` and are
+listed in `tests/OPT_IN_TESTS.md`.
+
 Notes:
 
 - Preflight is inspection-only (codesign/entitlements); unit tests are pure logic; integration/smoke tests will execute the CLI and launch XPC services.
