@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 import argparse
+import ctypes
+import ctypes.util
+import hashlib
 import json
 import os
 import platform
+import plistlib
 import queue
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -21,6 +26,7 @@ DEFAULT_PW = os.environ.get("PW") or str(REPO_ROOT / "PolicyWitness.app/Contents
 DEFAULT_SCENARIO_DIR = str(REPO_ROOT / "experiments/scenarios")
 DEFAULT_SUITE_DIR = str(REPO_ROOT / "experiments/suites")
 DEFAULT_OUT_ROOT = str(REPO_ROOT / ".pw_lab/out")
+DEFAULT_LABBOOK_ROOT = str(REPO_ROOT / ".pw_lab/runs")
 
 
 def _die(message: str, code: int = 2) -> None:
@@ -32,9 +38,124 @@ def _now_unix_ms() -> int:
     return int(time.time() * 1000)
 
 
+def _write_env_snapshot(path: Path) -> Dict[str, Any]:
+    try:
+        lines = [f"{k}={v}" for k, v in sorted(os.environ.items())]
+        _write_text(path, "\n".join(lines) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def _run_capture_text(cmd: List[str], *, timeout_s: int = 10) -> Tuple[int, str, str]:
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout_s)
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def _write_process_snapshot(path: Path) -> Dict[str, Any]:
+    chunks: List[str] = []
+    chunks.append(f"cwd: {os.getcwd()}")
+    chunks.append(f"pid: {os.getpid()}")
+    chunks.append(f"uid: {os.getuid()}")
+    chunks.append(f"gid: {os.getgid()}")
+    try:
+        chunks.append(f"euid: {os.geteuid()}")
+        chunks.append(f"egid: {os.getegid()}")
+    except Exception:
+        pass
+
+    # Umask: best-effort without mutating process state.
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/env", "sh", "-c", "umask"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"umask: {out.strip()}")
+        else:
+            chunks.append(f"umask: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"umask: <error> {exc}")
+
+    # Parent chain: best-effort (don’t fail capsule emission if blocked).
+    try:
+        pid = os.getpid()
+        chain: List[str] = []
+        seen = set()
+        for _ in range(10):
+            if pid in seen or pid <= 1:
+                break
+            seen.add(pid)
+            rc, out, err = _run_capture_text(
+                ["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,comm=,args="],
+                timeout_s=2,
+            )
+            if rc != 0:
+                chain.append(f"<ps failed for pid={pid} rc={rc}> {err.strip()}")
+                break
+            line = out.strip().splitlines()[0] if out.strip().splitlines() else ""
+            chain.append(line)
+            # Extract ppid from the columns; tolerate format drift.
+            parts = line.split(None, 2)
+            if len(parts) < 2:
+                break
+            try:
+                pid = int(parts[1])
+            except Exception:
+                break
+        if chain:
+            chunks.append("parent_chain:")
+            chunks.extend([f"  {c}" for c in chain])
+    except Exception as exc:
+        chunks.append(f"parent_chain: <error> {exc}")
+
+    try:
+        _write_text(path, "\n".join(chunks) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def _write_host_snapshot(path: Path) -> Dict[str, Any]:
+    chunks: List[str] = []
+    chunks.append(f"platform: {platform.platform()}")
+    chunks.append(f"python: {sys.version.split()[0]}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/sw_vers"], timeout_s=2)
+        if rc == 0:
+            chunks.append("sw_vers:")
+            chunks.extend([f"  {line}" for line in out.strip().splitlines()])
+        else:
+            chunks.append(f"sw_vers: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"sw_vers: <error> {exc}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/uname", "-a"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"uname: {out.strip()}")
+        else:
+            chunks.append(f"uname: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"uname: <error> {exc}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/csrutil", "status"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"sip: {out.strip()}")
+        else:
+            chunks.append(f"sip: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"sip: <error> {exc}")
+    try:
+        _write_text(path, "\n".join(chunks) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
 def _write_text(path: Path, data: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(data, encoding="utf-8", errors="replace")
+
+
+def _format_cmd(argv: List[str]) -> str:
+    return " ".join(shlex.quote(a) for a in argv)
 
 
 def _write_json(path: Path, obj: Any) -> None:
@@ -45,6 +166,1104 @@ def _write_json(path: Path, obj: Any) -> None:
 def _load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def _sha256_bytes(data: bytes) -> str:
+    h = hashlib.sha256()
+    h.update(data)
+    return h.hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _stable_json_dumps(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _run_id_from_key(run_key: Dict[str, Any]) -> str:
+    return _sha256_bytes(_stable_json_dumps(run_key).encode("utf-8"))
+
+
+def _load_plist(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        with path.open("rb") as fh:
+            obj = plistlib.load(fh)
+    except Exception:
+        return None
+    if isinstance(obj, dict):
+        return obj
+    return None
+
+
+def _compute_app_identity(pw_path: Path) -> Dict[str, Any]:
+    """
+    Stable-ish app identity based on the shipped Evidence substrate, plus
+    human-readable bundle metadata.
+
+    We prefer hashing Evidence/{manifest,profiles,symbols}.json rather than
+    hashing the entire .app bundle (which can be large and can include build
+    timestamps / nondeterministic metadata).
+    """
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        return {
+            "status": "unavailable",
+            "reason": "could not resolve app root from policy-witness path",
+            "pw_path": str(pw_path),
+        }
+
+    evidence_dir = app_root / "Contents/Resources/Evidence"
+    evidence_files = [
+        evidence_dir / "manifest.json",
+        evidence_dir / "profiles.json",
+        evidence_dir / "symbols.json",
+    ]
+    file_meta: List[Dict[str, Any]] = []
+    missing = []
+    for f in evidence_files:
+        if not f.exists():
+            missing.append(str(f))
+            continue
+        try:
+            file_meta.append(
+                {
+                    "path": str(f),
+                    "sha256": _sha256_file(f),
+                    "size_bytes": f.stat().st_size,
+                }
+            )
+        except Exception as exc:
+            file_meta.append({"path": str(f), "error": str(exc)})
+    if missing:
+        return {
+            "status": "unavailable",
+            "reason": "missing evidence files",
+            "missing": missing,
+            "app_root": str(app_root),
+        }
+
+    digest_input = _stable_json_dumps(file_meta).encode("utf-8")
+    evidence_digest = _sha256_bytes(digest_input)
+
+    info = _load_plist(app_root / "Contents/Info.plist") or {}
+    bundle_id = info.get("CFBundleIdentifier")
+    bundle_version = info.get("CFBundleVersion")
+    bundle_short = info.get("CFBundleShortVersionString")
+
+    pw_sha = None
+    try:
+        pw_sha = _sha256_file(pw_path)
+    except Exception:
+        pw_sha = None
+
+    return {
+        "status": "ok",
+        "evidence_sha256": evidence_digest,
+        "evidence_files": file_meta,
+        "bundle_id": bundle_id,
+        "bundle_version": bundle_version,
+        "bundle_short_version": bundle_short,
+        "app_root": str(app_root),
+        "policy_witness_sha256": pw_sha,
+    }
+
+
+def _copy_file_best_effort(src: Path, dst: Path) -> Dict[str, Any]:
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        return {"status": "ok", "src": str(src), "dst": str(dst)}
+    except Exception as exc:
+        return {"status": "error", "src": str(src), "dst": str(dst), "error": str(exc)}
+
+
+def _write_run_capsule(
+    out_dir: Path,
+    *,
+    run_key: Dict[str, Any],
+    run_id: str,
+    pw_path: Path,
+    argv: List[str],
+    app_identity: Dict[str, Any],
+    caller_context: Dict[str, Any],
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Emit the minimal per-run capsule directory structure for later replay/diff:
+    capsule.json (authoritative) plus a few text snapshots and evidence copies.
+    """
+    collectors: Dict[str, Any] = {}
+
+    collectors["env.snapshot"] = _write_env_snapshot(out_dir / "env.snapshot")
+    collectors["process.txt"] = _write_process_snapshot(out_dir / "process.txt")
+    collectors["host.txt"] = _write_host_snapshot(out_dir / "host.txt")
+
+    app_root = _app_root_from_pw(pw_path)
+    if app_root is not None:
+        evidence_dir = app_root / "Contents/Resources/Evidence"
+        for name in ("manifest.json", "profiles.json", "symbols.json"):
+            src = evidence_dir / name
+            dst = out_dir / "evidence" / name
+            if src.exists():
+                collectors[f"evidence/{name}"] = _copy_file_best_effort(src, dst)
+            else:
+                collectors[f"evidence/{name}"] = {"status": "missing", "src": str(src), "dst": str(dst)}
+
+        app_info_src = app_root / "Contents/Info.plist"
+        if app_info_src.exists():
+            collectors["bundle/PolicyWitness.app/Info.plist"] = _copy_file_best_effort(
+                app_info_src, out_dir / "bundle" / "PolicyWitness.app.Info.plist"
+            )
+    else:
+        collectors["evidence"] = {"status": "unavailable", "reason": "app root not resolved"}
+
+    capsule: Dict[str, Any] = {
+        "schema_version": 1,
+        "created_at_unix_ms": _now_unix_ms(),
+        "run_id": run_id,
+        "run_key": run_key,
+        "argv": argv,
+        "pw_path": str(pw_path),
+        "cwd": os.getcwd(),
+        "app_identity": app_identity,
+        "caller_context": caller_context,
+        "collectors": collectors,
+    }
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/env", "sh", "-c", "umask"], timeout_s=2)
+        capsule["umask"] = out.strip() if rc == 0 else f"<error rc={rc}> {err.strip()}"
+    except Exception:
+        capsule["umask"] = None
+    if extra:
+        capsule["extra"] = extra
+
+    _write_json(out_dir / "capsule.json", capsule)
+    return capsule
+
+
+def _load_sandbox_check() -> Optional[Any]:
+    """
+    Best-effort access to libsystem_sandbox's `sandbox_check`.
+
+    This is intentionally used only for a conservative "inside" preflight:
+    if `sandbox_check(..., "mach-lookup", ..., <name>)` is denied, then running
+    PolicyWitness XPC probes will often fail at open-session boundaries (before
+    any service code runs).
+    """
+    candidates: List[Optional[str]] = [
+        ctypes.util.find_library("sandbox"),
+        "/usr/lib/libsandbox.dylib",
+    ]
+    for cand in candidates:
+        if not cand:
+            continue
+        try:
+            lib = ctypes.CDLL(cand)
+            fn = getattr(lib, "sandbox_check", None)
+            if fn is not None:
+                fn.restype = ctypes.c_int
+                return fn
+        except Exception:
+            continue
+    try:
+        lib = ctypes.CDLL(None)
+        fn = getattr(lib, "sandbox_check", None)
+        if fn is not None:
+            fn.restype = ctypes.c_int
+            return fn
+    except Exception:
+        return None
+    return None
+
+
+def _sandbox_check_mach_lookup(fn: Any, target_name: str) -> Optional[bool]:
+    """
+    Return True if allowed, False if denied, None if the call failed.
+
+    We intentionally use `type=0` and pass the target name as the 4th arg.
+    Empirically on this host:
+      - return 0 => allow
+      - return 1 => deny
+    """
+    try:
+        rc = int(fn(os.getpid(), b"mach-lookup", 0, target_name.encode("utf-8")))
+    except Exception:
+        return None
+    return rc == 0
+
+
+def _inside_probe(service_names: List[str]) -> Dict[str, Any]:
+    """
+    Fail-closed "inside" preflight: quick-fire on the first strong signal that
+    the caller is sandboxed in a way that will invalidate XPC lookup and/or
+    deny-evidence capture.
+    """
+    checked: List[Dict[str, Any]] = []
+
+    # Sensor 1: harness marker env var (best-effort; not authoritative).
+    env_marker = os.environ.get("CODEX_SANDBOX")
+    if env_marker:
+        return {
+            "inside": True,
+            "trigger": "env:CODEX_SANDBOX",
+            "checked": [
+                {"sensor": "env:CODEX_SANDBOX", "status": "triggered", "details": {"value": env_marker}}
+            ],
+            "service_names": service_names,
+        }
+    checked.append({"sensor": "env:CODEX_SANDBOX", "status": "pass"})
+
+    # Sensor 2+: operational allow/deny checks via sandbox_check, when available.
+    fn = _load_sandbox_check()
+    if fn is None:
+        checked.append({"sensor": "sandbox_check", "status": "unavailable"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:unavailable",
+            "checked": checked,
+            "service_names": service_names,
+        }
+
+    # Always check logd lookup: if this is denied, unified-log based collectors
+    # are often blocked and "no denies observed" becomes uninterpretable.
+    allow = _sandbox_check_mach_lookup(fn, "com.apple.logd")
+    if allow is False:
+        checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "triggered"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:mach-lookup:com.apple.logd",
+            "checked": checked,
+            "service_names": service_names,
+        }
+    if allow is None:
+        checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "error"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:error:com.apple.logd",
+            "checked": checked,
+            "service_names": service_names,
+        }
+    checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "pass"})
+
+    for name in service_names:
+        allow = _sandbox_check_mach_lookup(fn, name)
+        if allow is False:
+            checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "triggered"})
+            return {
+                "inside": True,
+                "trigger": f"sandbox_check:mach-lookup:{name}",
+                "checked": checked,
+                "service_names": service_names,
+            }
+        if allow is None:
+            checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "error"})
+            return {
+                "inside": True,
+                "trigger": f"sandbox_check:error:{name}",
+                "checked": checked,
+                "service_names": service_names,
+            }
+        checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "pass"})
+
+    return {"inside": False, "trigger": None, "checked": checked, "service_names": service_names}
+
+
+def _app_root_from_pw(pw_path: Path) -> Optional[Path]:
+    # Expected layout: PolicyWitness.app/Contents/MacOS/policy-witness
+    if pw_path.name != "policy-witness":
+        return None
+    try:
+        app_root = pw_path.parents[2]
+    except IndexError:
+        return None
+    if not (app_root / "Contents/Resources/Evidence/profiles.json").exists():
+        return None
+    return app_root
+
+
+def _resolve_bundle_id(app_root: Path, profile: str, variant: str) -> Optional[str]:
+    try:
+        obj = _load_json(app_root / "Contents/Resources/Evidence/profiles.json")
+    except Exception:
+        return None
+    for prof in obj.get("profiles", []):
+        if prof.get("profile_id") != profile:
+            continue
+        for v in prof.get("variants", []):
+            if v.get("variant") == variant:
+                return v.get("bundle_id")
+    return None
+
+
+def _resolve_variant_info(app_root: Path, profile: str, variant: str) -> Optional[Dict[str, Any]]:
+    try:
+        obj = _load_json(app_root / "Contents/Resources/Evidence/profiles.json")
+    except Exception:
+        return None
+    for prof in obj.get("profiles", []):
+        if prof.get("profile_id") != profile:
+            continue
+        for v in prof.get("variants", []):
+            if v.get("variant") != variant:
+                continue
+            return {
+                "profile_id": profile,
+                "variant": variant,
+                "bundle_id": v.get("bundle_id"),
+                "service_name": v.get("service_name"),
+                "risk_tier": v.get("risk_tier"),
+                "risk_reasons": v.get("risk_reasons"),
+            }
+    return None
+
+
+def cmd_inside(args: argparse.Namespace) -> int:
+    service_names: List[str] = list(args.service_name or [])
+
+    pw_path = Path(args.pw)
+    profile = args.profile
+    variant = args.variant or "base"
+    if profile and "@" in profile and not args.variant:
+        profile, variant = profile.split("@", 1)
+    if profile:
+        app_root = _app_root_from_pw(pw_path)
+        bundle_id = _resolve_bundle_id(app_root, profile, variant) if app_root else None
+        if bundle_id:
+            service_names.append(bundle_id)
+
+    result = _inside_probe(service_names=service_names)
+    if args.bare:
+        print("true" if result.get("inside") else "false")
+    else:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _ensure_clean_dir(path: Path, *, force: bool) -> None:
+    if path.exists() and any(path.iterdir()):
+        if not force:
+            _die(f"output directory not empty: {path}")
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _write_json_stub(path: Path, obj: Dict[str, Any]) -> None:
+    _write_json(path, obj)
+
+
+def _run_xpc_run(
+    pw_path: Path,
+    *,
+    argv: List[str],
+    out_dir: Path,
+    timeout_s: int = 240,
+) -> Dict[str, Any]:
+    cmd_path = out_dir / "cmd.txt"
+    stdout_path = out_dir / "outputs" / "stdout.json"
+    stderr_path = out_dir / "outputs" / "stderr.txt"
+    rc_path = out_dir / "outputs" / "exit_code.txt"
+
+    _write_text(cmd_path, _format_cmd(argv) + "\n")
+    proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout_s)
+    _write_text(stdout_path, proc.stdout)
+    _write_text(stderr_path, proc.stderr)
+    _write_text(rc_path, str(proc.returncode) + "\n")
+
+    parsed = None
+    parse_error = None
+    try:
+        parsed = json.loads(proc.stdout) if proc.stdout.strip() else None
+    except Exception as exc:
+        parse_error = str(exc)
+
+    normalized_outcome = None
+    ok = None
+    if isinstance(parsed, dict):
+        result = parsed.get("result") or {}
+        normalized_outcome = result.get("normalized_outcome")
+        ok = result.get("ok")
+
+    run_result = {
+        "schema_version": 1,
+        "run_type": "xpc_run",
+        "argv": argv,
+        "exit_code": proc.returncode,
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+        "normalized_outcome": normalized_outcome,
+        "ok": ok,
+        "parse_error": parse_error,
+    }
+    if parsed is not None:
+        run_result["parsed_kind"] = parsed.get("kind") if isinstance(parsed, dict) else None
+    _write_json(out_dir / "run_result.json", run_result)
+    if parsed is None:
+        _write_json_stub(
+            out_dir / "outputs" / "stdout.parse_error.json",
+            {"status": "error", "error": parse_error or "stdout not json"},
+        )
+    return run_result
+
+
+def _find_clang() -> Optional[List[str]]:
+    if shutil.which("clang"):
+        return ["clang"]
+    if shutil.which("xcrun"):
+        return ["xcrun", "clang"]
+    return None
+
+
+def _build_dlopen_specimen(out_dir: Path) -> Dict[str, Any]:
+    """
+    Build one unsigned dylib specimen (bytes pinned for the sweep) that writes a
+    marker file alongside the loaded dylib path (via dladdr).
+    """
+    clang = _find_clang()
+    if clang is None:
+        return {"status": "unavailable", "reason": "clang/xcrun not found"}
+
+    specimen_dir = out_dir / "specimen"
+    specimen_dir.mkdir(parents=True, exist_ok=True)
+    c_path = specimen_dir / "pw_lvtest.c"
+    dylib_path = specimen_dir / "pw_lvtest.dylib"
+    cmd_path = specimen_dir / "compile.cmd.txt"
+    stderr_path = specimen_dir / "compile.stderr.txt"
+
+    _write_text(
+        c_path,
+        (
+            "#include <dlfcn.h>\n"
+            "#include <fcntl.h>\n"
+            "#include <limits.h>\n"
+            "#include <stdio.h>\n"
+            "#include <string.h>\n"
+            "#include <unistd.h>\n"
+            "\n"
+            "__attribute__((constructor))\n"
+            "static void pw_init(void) {\n"
+            "  Dl_info info;\n"
+            "  if (dladdr((void*)&pw_init, &info) == 0 || info.dli_fname == NULL) {\n"
+            "    return;\n"
+            "  }\n"
+            "  char marker[PATH_MAX];\n"
+            "  int n = snprintf(marker, sizeof(marker), \"%s.ran.txt\", info.dli_fname);\n"
+            "  if (n <= 0 || n >= (int)sizeof(marker)) {\n"
+            "    return;\n"
+            "  }\n"
+            "  int fd = open(marker, O_WRONLY|O_CREAT|O_TRUNC, 0644);\n"
+            "  if (fd >= 0) {\n"
+            "    dprintf(fd, \"pw_lvtest constructor pid=%d\\n\", getpid());\n"
+            "    close(fd);\n"
+            "  }\n"
+            "  fprintf(stderr, \"pw_lvtest constructor pid=%d\\n\", getpid());\n"
+            "}\n"
+        ),
+    )
+
+    compile_cmd = clang + ["-dynamiclib", "-o", str(dylib_path), str(c_path)]
+    _write_text(cmd_path, _format_cmd(compile_cmd) + "\n")
+    proc = subprocess.run(compile_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _write_text(stderr_path, proc.stderr)
+    if proc.returncode != 0:
+        return {
+            "status": "error",
+            "reason": f"compile failed rc={proc.returncode}",
+            "compile_cmd": compile_cmd,
+            "compile_stderr_path": str(stderr_path),
+        }
+    sha = _sha256_file(dylib_path)
+    return {
+        "status": "ok",
+        "specimen_path": str(dylib_path),
+        "sha256": sha,
+        "compile_cmd": compile_cmd,
+        "compile_stderr_path": str(stderr_path),
+    }
+
+
+def _extract_file_path_from_fs_op(stdout_json_path: Path) -> Optional[str]:
+    try:
+        obj = json.loads(stdout_json_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return None
+    if not isinstance(obj, dict):
+        return None
+    details = (obj.get("data") or {}).get("details") or {}
+    file_path = details.get("file_path")
+    if file_path:
+        return str(file_path)
+    return None
+
+
+def _write_file_bytes(path: Path, data: bytes) -> Dict[str, Any]:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def cmd_sweep(args: argparse.Namespace) -> int:
+    pw_path = Path(args.pw)
+    if not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+
+    runs_root = Path(args.runs_root)
+    runs_root.mkdir(parents=True, exist_ok=True)
+
+    app_identity = _compute_app_identity(pw_path)
+    if app_identity.get("status") != "ok":
+        _die(f"failed to compute app identity: {app_identity}")
+
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        _die("could not resolve app root")
+
+    # Resolve the set of mach service names we expect to look up during the sweep.
+    service_names: List[str] = []
+    for prof, var in (("minimal", "base"), ("minimal", "injectable"), ("temporary_exception", "base")):
+        info = _resolve_variant_info(app_root, prof, var)
+        if info and info.get("bundle_id"):
+            service_names.append(str(info["bundle_id"]))
+
+    inside = _inside_probe(service_names)
+    caller_context = _collect_caller_context(pw_path, service_names, inside=inside)
+    caller_context_key = _caller_context_key(caller_context)
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    if inside.get("inside") and not allow_inside:
+        _die("blocked: inside=true (rerun outside the harness / with escalation)", code=3)
+
+    deny_path = args.deny_sentinel
+    deny_exists = Path(deny_path).exists()
+
+    # Build a pinned dylib specimen for the dlopen lane (bytes stable within the sweep).
+    specimen = _build_dlopen_specimen(runs_root / "_scratch")
+
+    sweep_runs: List[Dict[str, Any]] = []
+
+    def run_xpc(
+        lane: str,
+        profile: str,
+        variant: str,
+        capture: Dict[str, Any],
+        probe_id: str,
+        probe_argv: List[str],
+        *,
+        run_key_extra: Optional[Dict[str, Any]] = None,
+        capsule_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        capture_flags = dict(capture)
+        run_key = {
+            "schema_version": 1,
+            "caller_context": caller_context_key,
+            "profile_id": profile,
+            "variant_id": variant,
+            "probe_id": probe_id,
+            "probe_args": probe_argv,
+            "capture_flags": capture_flags,
+            "app_identity": {"evidence_sha256": app_identity.get("evidence_sha256"), "bundle_id": app_identity.get("bundle_id")},
+        }
+        if run_key_extra:
+            run_key.update(run_key_extra)
+        run_id = _run_id_from_key(run_key)
+        run_dir = runs_root / run_id
+        _ensure_clean_dir(run_dir, force=args.force)
+        argv = [str(pw_path), "xpc", "run", "--profile", profile]
+        if variant != "base":
+            argv += ["--variant", variant]
+        if capture_flags.get("capture_sandbox_logs"):
+            argv.append("--capture-sandbox-logs")
+            target = capture_flags.get("capture_sandbox_logs_target")
+            if target:
+                argv += ["--capture-sandbox-logs-target", target]
+        argv += [probe_id] + probe_argv
+
+        capsule_extra_out = {"lane": lane}
+        if capsule_extra:
+            capsule_extra_out.update(capsule_extra)
+        _write_run_capsule(
+            run_dir,
+            run_key=run_key,
+            run_id=run_id,
+            pw_path=pw_path,
+            argv=argv,
+            app_identity=app_identity,
+            caller_context=caller_context,
+            extra=capsule_extra_out,
+        )
+        run_result = _run_xpc_run(pw_path, argv=argv, out_dir=run_dir, timeout_s=args.timeout_s)
+        sweep_runs.append({"lane": lane, "run_id": run_id, "run_dir": str(run_dir), "result": run_result})
+
+    # 1) Transport lane.
+    run_xpc("transport_world_shape", "minimal", "base", {"capture_sandbox_logs": False}, "world_shape", [])
+
+    # 2) Capture health lane (failure is evidence).
+    run_xpc(
+        "capture_health_world_shape_client",
+        "minimal",
+        "base",
+        {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "client"},
+        "world_shape",
+        [],
+    )
+
+    # 3) Deliberate deny lane (service vs client targeting).
+    if deny_exists:
+        for target in ("service", "client"):
+            run_xpc(
+                f"deny_lane_open_read_{target}",
+                "minimal",
+                "base",
+                {"capture_sandbox_logs": True, "capture_sandbox_logs_target": target},
+                "fs_op",
+                ["--op", "open_read", "--path", deny_path, "--allow-unsafe-path"],
+            )
+    else:
+        sweep_runs.append({"lane": "deny_lane_open_read", "status": "skipped", "reason": "deny sentinel missing"})
+
+    # 4) Session lane: minimal, two probes in one session (PID stability).
+    session_lane = "session_world_shape_probe_catalog"
+    session_key = {
+        "schema_version": 1,
+        "caller_context": caller_context_key,
+        "profile_id": "minimal",
+        "variant_id": "base",
+        "probe_id": "xpc_session",
+        "probe_args": [
+            {"probe_id": "world_shape", "argv": []},
+            {"probe_id": "probe_catalog", "argv": []},
+        ],
+        "capture_flags": {"capture_signposts": True},
+        "app_identity": {"evidence_sha256": app_identity.get("evidence_sha256"), "bundle_id": app_identity.get("bundle_id")},
+    }
+    session_run_id = _run_id_from_key(session_key)
+    session_dir = runs_root / session_run_id
+    _ensure_clean_dir(session_dir, force=args.force)
+    scenario = {
+        "id": session_lane,
+        "profile": "minimal",
+        "variant": "base",
+        "steps": [
+            {"id": "world_shape", "probe": "world_shape", "argv": []},
+            {"id": "probe_catalog", "probe": "probe_catalog", "argv": []},
+        ],
+    }
+    _write_run_capsule(
+        session_dir,
+        run_key=session_key,
+        run_id=session_run_id,
+        pw_path=pw_path,
+        argv=[str(pw_path), "xpc", "session", "--profile", "minimal", "--wait", "fifo:auto", "--signposts"],
+        app_identity=app_identity,
+        caller_context=caller_context,
+        extra={"lane": session_lane},
+    )
+    run, sandbox_capture = _run_xpc_session_scenario(
+        scenario,
+        session_dir,
+        pw_path,
+        signposts=True,
+        wait_timeout_ms=args.timeout_s * 1000,
+        fence=True,
+        capture_sandbox_logs=False,
+    )
+    summary = _summarize_run(scenario, run, sandbox_capture)
+    _write_json(session_dir / "lab_summary.json", summary)
+    sweep_runs.append({"lane": session_lane, "run_id": session_run_id, "run_dir": str(session_dir), "result": summary})
+
+    # 5) dlopen lane (pinned specimen; base vs injectable).
+    if specimen.get("status") == "ok":
+        dylib_bytes = Path(specimen["specimen_path"]).read_bytes()
+
+        def prepare_dylib_path(profile: str, variant: str, name: str, lane: str) -> Optional[str]:
+            prep_dir = runs_root / "_scratch" / "dlopen_paths"
+            prep_dir.mkdir(parents=True, exist_ok=True)
+            out = prep_dir / f"{lane}.json"
+            argv = [str(pw_path), "xpc", "run", "--profile", profile]
+            if variant != "base":
+                argv += ["--variant", variant]
+            argv += [
+                "fs_op",
+                "--op",
+                "create",
+                "--path-class",
+                "tmp",
+                "--target",
+                "specimen_file",
+                "--name",
+                name,
+                "--no-cleanup",
+            ]
+            proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=args.timeout_s)
+            _write_text(out, proc.stdout)
+            return _extract_file_path_from_fs_op(out)
+
+        dylib_name = f"pw_lvtest_{uuid.uuid4().hex}.dylib"
+        base_path = prepare_dylib_path("minimal", "base", dylib_name, "base_create")
+        inj_path = prepare_dylib_path("minimal", "injectable", dylib_name, "inj_create")
+
+        if base_path and inj_path:
+            _write_file_bytes(Path(base_path), dylib_bytes)
+            _write_file_bytes(Path(inj_path), dylib_bytes)
+
+            run_xpc(
+                "dlopen_base",
+                "minimal",
+                "base",
+                {"capture_sandbox_logs": True},
+                "dlopen_external",
+                ["--path", base_path],
+                run_key_extra={"specimen_sha256": specimen.get("sha256")},
+                capsule_extra={
+                    "specimen_sha256": specimen.get("sha256"),
+                    "specimen_source": specimen.get("specimen_path"),
+                    "copied_to": base_path,
+                    "expected_marker_path": f"{base_path}.ran.txt",
+                },
+            )
+            run_xpc(
+                "dlopen_injectable",
+                "minimal",
+                "injectable",
+                {"capture_sandbox_logs": True},
+                "dlopen_external",
+                ["--path", inj_path],
+                run_key_extra={"specimen_sha256": specimen.get("sha256")},
+                capsule_extra={
+                    "specimen_sha256": specimen.get("sha256"),
+                    "specimen_source": specimen.get("specimen_path"),
+                    "copied_to": inj_path,
+                    "expected_marker_path": f"{inj_path}.ran.txt",
+                },
+            )
+    else:
+        sweep_runs.append({"lane": "dlopen_lane", "status": "skipped", "reason": specimen.get("reason")})
+
+    # 6) inherit_child lane: dynamic_extension (must use temporary_exception) + targeting cross-check.
+    if deny_exists:
+        run_xpc(
+            "inherit_child_dynamic_extension_auto",
+            "temporary_exception",
+            "base",
+            {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "auto"},
+            "inherit_child",
+            ["--scenario", "dynamic_extension", "--path", deny_path, "--allow-unsafe-path"],
+        )
+        run_xpc(
+            "inherit_child_dynamic_extension_client",
+            "temporary_exception",
+            "base",
+            {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "client"},
+            "inherit_child",
+            ["--scenario", "dynamic_extension", "--path", deny_path, "--allow-unsafe-path"],
+        )
+    else:
+        sweep_runs.append({"lane": "inherit_child_dynamic_extension", "status": "skipped", "reason": "deny sentinel missing"})
+
+    sweep_index = {
+        "schema_version": 1,
+        "created_at_unix_ms": _now_unix_ms(),
+        "runs_root": str(runs_root),
+        "app_identity": app_identity,
+        "caller_context": caller_context,
+        "runs": sweep_runs,
+    }
+    _write_json(runs_root / "sweep_index.json", sweep_index)
+    print(json.dumps(sweep_index, indent=2, sort_keys=True))
+    return 0
+
+
+def _parse_env_snapshot(path: Path) -> Dict[str, str]:
+    env: Dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        env[k] = v
+    return env
+
+
+def _normalize_for_digest_strict(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        out: Dict[str, Any] = {}
+        for k, v in obj.items():
+            if k == "generated_at_unix_ms":
+                continue
+            if k in ("host_sandbox_log_capture", "host_signpost_capture"):
+                continue
+            if k == "fence":
+                continue
+            if k in ("stdout", "stderr"):
+                out[k] = "<output>"
+                continue
+            if k == "wait_path":
+                out[k] = "<path>"
+                continue
+            if k.endswith("_unix_ms") or k.endswith("_ns"):
+                out[k] = "<time>"
+                continue
+            if k.endswith("_at_iso8601"):
+                out[k] = "<time>"
+                continue
+            if k == "correlation_id":
+                out[k] = "<id>"
+                continue
+            if k == "thread_id":
+                out[k] = "<thread>"
+                continue
+            if k == "session_token":
+                out[k] = "<token>"
+                continue
+            if k == "token":
+                out[k] = "<token>"
+                continue
+            if k == "pid" or k.endswith("_pid"):
+                out[k] = "<pid>"
+                continue
+            out[k] = _normalize_for_digest_strict(v)
+        return out
+    if isinstance(obj, list):
+        return [_normalize_for_digest_strict(v) for v in obj]
+    return obj
+
+
+def _digest_json(obj: Any) -> str:
+    return _sha256_bytes(_stable_json_dumps(obj).encode("utf-8"))
+
+
+def _digest_stdout_strict(stdout_text: str) -> Optional[str]:
+    stdout_text = stdout_text.strip()
+    if not stdout_text:
+        return None
+    # JSON object
+    if stdout_text.startswith("{"):
+        try:
+            obj = json.loads(stdout_text)
+        except Exception:
+            return None
+        return _digest_json(_normalize_for_digest_strict(obj))
+    # JSONL transcript
+    digests: List[str] = []
+    for line in stdout_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        digests.append(_digest_json(_normalize_for_digest_strict(obj)))
+    return _digest_json(digests) if digests else None
+
+
+_UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def _normalize_for_digest_relaxed(obj: Any) -> Any:
+    """
+    Relaxed normalization: builds on strict, then normalizes common path-shaped
+    noise (UUIDs, user-homed absolute paths). This is intentionally conservative
+    and is only used for secondary diffing.
+    """
+    if isinstance(obj, dict):
+        return {k: _normalize_for_digest_relaxed(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_normalize_for_digest_relaxed(v) for v in obj]
+    if isinstance(obj, str):
+        s = _UUID_RE.sub("<uuid>", obj)
+        s = re.sub(r"^/Users/[^/]+/", "/Users/<user>/", s)
+        return s
+    return obj
+
+
+def _digest_stdout_relaxed(stdout_text: str) -> Optional[str]:
+    stdout_text = stdout_text.strip()
+    if not stdout_text:
+        return None
+    if stdout_text.startswith("{"):
+        try:
+            obj = json.loads(stdout_text)
+        except Exception:
+            return None
+        strict = _normalize_for_digest_strict(obj)
+        relaxed = _normalize_for_digest_relaxed(strict)
+        return _digest_json(relaxed)
+    digests: List[str] = []
+    for line in stdout_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        strict = _normalize_for_digest_strict(obj)
+        relaxed = _normalize_for_digest_relaxed(strict)
+        digests.append(_digest_json(relaxed))
+    return _digest_json(digests) if digests else None
+
+
+def cmd_replay(args: argparse.Namespace) -> int:
+    run_dir = Path(args.capsule)
+    capsule_path = run_dir / "capsule.json"
+    if not capsule_path.exists():
+        _die(f"missing capsule.json at {capsule_path}")
+    capsule = _load_json(capsule_path)
+    if not isinstance(capsule, dict):
+        _die("capsule.json malformed")
+
+    argv = capsule.get("argv")
+    if not isinstance(argv, list) or not argv:
+        _die("capsule.json missing argv list")
+    argv = [str(x) for x in argv]
+
+    run_key = capsule.get("run_key") or {}
+
+    env_path = run_dir / "env.snapshot"
+    if not env_path.exists():
+        _die(f"missing env.snapshot at {env_path}")
+    env = _parse_env_snapshot(env_path)
+
+    cwd = capsule.get("cwd") or None
+
+    if isinstance(run_key, dict) and run_key.get("probe_id") == "xpc_session":
+        profile = str(run_key.get("profile_id") or "")
+        variant = str(run_key.get("variant_id") or "base")
+        probes = run_key.get("probe_args") or []
+        if not profile or not isinstance(probes, list):
+            _die("xpc_session replay: missing profile_id or probe_args in run_key")
+
+        steps = []
+        for idx, entry in enumerate(probes):
+            if not isinstance(entry, dict):
+                continue
+            probe_id = entry.get("probe_id")
+            probe_argv = entry.get("argv") or []
+            if not probe_id:
+                continue
+            steps.append({"id": entry.get("id") or f"step_{idx+1}", "probe": probe_id, "argv": probe_argv})
+        if not steps:
+            _die("xpc_session replay: no steps found")
+
+        pw_path = Path(str(capsule.get("pw_path") or argv[0]))
+        matrix: List[Dict[str, Any]] = []
+        replay_root = run_dir / "replay_runs"
+        replay_root.mkdir(parents=True, exist_ok=True)
+        for i in range(args.n):
+            iter_dir = replay_root / f"iter_{i+1:03d}"
+            _ensure_clean_dir(iter_dir, force=True)
+            scenario = {"id": f"replay_iter_{i+1}", "profile": profile, "variant": variant, "steps": steps}
+            run, sandbox_capture = _run_xpc_session_scenario(
+                scenario,
+                iter_dir,
+                pw_path,
+                signposts=True,
+                wait_timeout_ms=args.timeout_s * 1000,
+                fence=True,
+                capture_sandbox_logs=False,
+                env_override=env,
+                cwd_override=cwd,
+            )
+            raw_path = Path(run.get("raw_jsonl") or (iter_dir / "run.jsonl"))
+            text = raw_path.read_text(encoding="utf-8", errors="replace") if raw_path.exists() else ""
+            digest_strict = _digest_stdout_strict(text)
+            digest_relaxed = _digest_stdout_relaxed(text)
+            summary = _summarize_run(scenario, run, sandbox_capture)
+            ok_steps = all(step.get("ok") is True for step in summary.get("steps", []) if step.get("ok") is not None)
+            normalized_outcome = "ok" if ok_steps and not run.get("session_errors") else "session_error"
+            matrix.append(
+                {
+                    "iteration": i + 1,
+                    "exit_code": run.get("exit_code"),
+                    "normalized_outcome": normalized_outcome,
+                    "witness_digest_strict": digest_strict,
+                    "witness_digest_relaxed": digest_relaxed,
+                    "iter_dir": str(iter_dir),
+                }
+            )
+
+        classes = sorted({(m.get("normalized_outcome"), m.get("witness_digest_strict")) for m in matrix})
+        classification = "stable" if len(classes) <= 1 else "nondeterministic"
+        replay = {
+            "schema_version": 1,
+            "run_dir": str(run_dir),
+            "n": args.n,
+            "classes": [{"normalized_outcome": a, "witness_digest_strict": b} for a, b in classes],
+            "classification": classification,
+            "matrix": matrix,
+        }
+        _write_json(run_dir / "replay_matrix.json", replay)
+        print(json.dumps(replay, indent=2, sort_keys=True))
+        return 0 if classification == "stable" else 1
+
+    matrix: List[Dict[str, Any]] = []
+    for i in range(args.n):
+        proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, cwd=cwd)
+        digest_strict = _digest_stdout_strict(proc.stdout)
+        digest_relaxed = _digest_stdout_relaxed(proc.stdout)
+        normalized_outcome = None
+        try:
+            obj = json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else None
+            if isinstance(obj, dict):
+                result = obj.get("result") or {}
+                normalized_outcome = result.get("normalized_outcome")
+        except Exception:
+            pass
+        matrix.append(
+            {
+                "iteration": i + 1,
+                "exit_code": proc.returncode,
+                "normalized_outcome": normalized_outcome,
+                "witness_digest_strict": digest_strict,
+                "witness_digest_relaxed": digest_relaxed,
+            }
+        )
+
+    # Classification: number of equivalence classes across outcome+digest.
+    classes = sorted({(m.get("normalized_outcome"), m.get("witness_digest_strict")) for m in matrix})
+    classification = "stable" if len(classes) <= 1 else "nondeterministic"
+    replay = {
+        "schema_version": 1,
+        "run_dir": str(run_dir),
+        "n": args.n,
+        "classes": [{"normalized_outcome": a, "witness_digest_strict": b} for a, b in classes],
+        "classification": classification,
+        "matrix": matrix,
+    }
+    _write_json(run_dir / "replay_matrix.json", replay)
+    print(json.dumps(replay, indent=2, sort_keys=True))
+    return 0 if classification == "stable" else 1
+
+
+def _service_names_for_scenario(pw_path: Path, scenario: Dict[str, Any]) -> List[str]:
+    """
+    Best-effort mapping from a lab scenario to the XPC service bundle id(s) that
+    will be looked up at runtime.
+
+    This is used only for the "inside" preflight so we can detect `mach-lookup`
+    denial for the specific service name before attempting to open the session.
+    """
+    profile = scenario.get("profile")
+    variant = scenario.get("variant") or "base"
+    if profile and "@" in str(profile) and not scenario.get("variant"):
+        profile, variant = str(profile).split("@", 1)
+    if not profile:
+        return []
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        return []
+    bundle_id = _resolve_bundle_id(app_root, str(profile), str(variant))
+    return [bundle_id] if bundle_id else []
 
 
 def _format_tri(value: Optional[bool]) -> str:
@@ -571,6 +1790,121 @@ def _resolve_tool(pw_path: Path, tool_name: str) -> Optional[Path]:
     return None
 
 
+def _check_ps_available() -> Dict[str, Any]:
+    pid = os.getpid()
+    cmd = ["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,comm="]
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except Exception as exc:
+        return {"ok": False, "rc": None, "error": str(exc)}
+    return {
+        "ok": proc.returncode == 0,
+        "rc": proc.returncode,
+        "stderr": proc.stderr.strip(),
+    }
+
+
+def _check_log_show_available(pw_path: Path) -> Dict[str, Any]:
+    """
+    Best-effort probe for whether unified log access is permitted for the caller.
+    We intentionally do not treat "no matching log entries" as a failure; this
+    check is about whether log queries are blocked by sandboxing.
+    """
+    tool = _resolve_tool(pw_path, "sandbox-log-observer")
+    if tool is not None and os.access(tool, os.X_OK):
+        cmd = [
+            str(tool),
+            "--pid",
+            str(os.getpid()),
+            "--process-name",
+            "pw-lab",
+            "--last",
+            "1s",
+            "--format",
+            "json",
+        ]
+        try:
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except Exception as exc:
+            return {"ok": False, "rc": None, "error": str(exc), "method": "sandbox-log-observer"}
+        stderr = proc.stderr.strip()
+        return {
+            "ok": proc.returncode == 0,
+            "rc": proc.returncode,
+            "stderr": stderr,
+            "method": "sandbox-log-observer",
+        }
+
+    cmd = [
+        "/usr/bin/log",
+        "show",
+        "--style",
+        "syslog",
+        "--info",
+        "--debug",
+        "--last",
+        "1s",
+        "--predicate",
+        'process == "launchd"',
+    ]
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    except Exception as exc:
+        return {"ok": False, "rc": None, "error": str(exc), "method": "/usr/bin/log show"}
+    return {
+        "ok": proc.returncode == 0,
+        "rc": proc.returncode,
+        "stderr": proc.stderr.strip(),
+        "method": "/usr/bin/log show",
+    }
+
+
+def _collect_caller_context(
+    pw_path: Path,
+    service_names: List[str],
+    *,
+    inside: Dict[str, Any],
+) -> Dict[str, Any]:
+    env_markers = {}
+    if os.environ.get("CODEX_SANDBOX"):
+        env_markers["CODEX_SANDBOX"] = os.environ.get("CODEX_SANDBOX")
+
+    return {
+        "schema_version": 1,
+        "env_markers": env_markers,
+        "inside": inside,
+        "service_names": service_names,
+        "introspection": {
+            "ps": _check_ps_available(),
+            "log_show": _check_log_show_available(pw_path),
+        },
+    }
+
+
+def _caller_context_key(caller_context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    A reduced, stable key for RunKey hashing.
+
+    We intentionally exclude volatile outputs (PIDs, command lines, timestamps).
+    """
+    intro = caller_context.get("introspection") or {}
+    ps = intro.get("ps") or {}
+    log_show = intro.get("log_show") or {}
+    inside = caller_context.get("inside") or {}
+    return {
+        "schema_version": 1,
+        "env_markers": caller_context.get("env_markers") or {},
+        "inside": {
+            "inside": inside.get("inside"),
+            "trigger": inside.get("trigger"),
+        },
+        "introspection": {
+            "ps_ok": ps.get("ok"),
+            "log_show_ok": log_show.get("ok"),
+        },
+    }
+
+
 def _format_log_show_time(unix_ms: int) -> str:
     ts = time.localtime(unix_ms / 1000.0)
     return time.strftime("%Y-%m-%d %H:%M:%S", ts)
@@ -902,7 +2236,9 @@ def _run_xpc_session_scenario(
     signposts: bool,
     wait_timeout_ms: int,
     fence: bool,
-    capture_sandbox_logs: bool
+    capture_sandbox_logs: bool,
+    env_override: Optional[Dict[str, str]] = None,
+    cwd_override: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     steps = scenario.get("steps", [])
     profile = scenario.get("profile")
@@ -922,7 +2258,7 @@ def _run_xpc_session_scenario(
         cmd += ["--wait", "fifo:auto"]
         cmd += ["--wait-timeout-ms", str(wait_timeout_ms)]
 
-    env = os.environ.copy()
+    env = dict(env_override) if env_override is not None else os.environ.copy()
     env["PW_LAB"] = "1"
     if signposts:
         env["PW_ENABLE_SIGNPOSTS"] = "1"
@@ -938,6 +2274,7 @@ def _run_xpc_session_scenario(
         text=True,
         bufsize=1,
         env=env,
+        cwd=cwd_override,
     )
     if proc.stdin is None or proc.stdout is None or proc.stderr is None:
         _die("failed to open subprocess pipes")
@@ -1089,7 +2426,13 @@ def _run_shell_scenario(
     return run
 
 
-def _write_env(out_dir: Path, scenario: Dict[str, Any], pw_path: Path, run: Dict[str, Any]) -> None:
+def _write_env(
+    out_dir: Path,
+    scenario: Dict[str, Any],
+    pw_path: Path,
+    run: Dict[str, Any],
+    inside: Optional[Dict[str, Any]] = None,
+) -> None:
     env: Dict[str, Any] = {
         "platform": platform.platform(),
         "python": sys.version.split()[0],
@@ -1111,6 +2454,11 @@ def _write_env(out_dir: Path, scenario: Dict[str, Any], pw_path: Path, run: Dict
             env["service_bundle_id"] = data.get("service_bundle_id")
             env["service_name"] = data.get("service_name")
             env["service_pid"] = data.get("pid")
+    if inside is not None:
+        env["inside"] = {
+            "inside": inside.get("inside"),
+            "trigger": inside.get("trigger"),
+        }
     _write_json(out_dir / "env.json", env)
 
 
@@ -1513,6 +2861,38 @@ def cmd_run(args: argparse.Namespace) -> int:
         _die(f"PolicyWitness binary not found: {pw_path}")
     sandbox_capture = None
 
+    service_names = _service_names_for_scenario(pw_path, scenario)
+    inside = _inside_probe(service_names)
+    _write_json(out_dir / "inside.json", inside)
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    if inside.get("inside") and not allow_inside:
+        run = {
+            "schema_version": 1,
+            "run_type": "preflight",
+            "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+            "inside": inside,
+            "exit_code": 3,
+            "stdout": "",
+            "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+        }
+        _write_json(out_dir / "run.json", run)
+        summary = {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": scenario.get("driver"),
+            "status": "blocked",
+            "exit_code": 3,
+            "inside": inside,
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["inside"],
+                "collector_health": {},
+            },
+        }
+        _write_json(out_dir / "lab_summary.json", summary)
+        _write_env(out_dir, scenario, pw_path, run, inside=inside)
+        return 3
+
     if scenario.get("driver") == "shell":
         run = _run_shell_scenario(scenario, out_dir, pw_path)
         summary = {
@@ -1527,6 +2907,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 "collector_health": {},
             },
         }
+        summary["inside"] = inside
     else:
         run, sandbox_capture = _run_xpc_session_scenario(
             scenario,
@@ -1538,9 +2919,10 @@ def cmd_run(args: argparse.Namespace) -> int:
             capture_sandbox_logs=args.capture_sandbox_logs,
         )
         summary = _summarize_run(scenario, run, sandbox_capture)
+        summary["inside"] = inside
 
     _write_json(out_dir / "lab_summary.json", summary)
-    _write_env(out_dir, scenario, pw_path, run)
+    _write_env(out_dir, scenario, pw_path, run, inside=inside)
     return 0
 
 
@@ -1552,6 +2934,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
         _die(f"PolicyWitness binary not found: {pw_path}")
     results = []
     failures = 0
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
     for entry in suite.get("scenarios", []):
         if isinstance(entry, str):
             scenario_ref = entry
@@ -1580,6 +2963,43 @@ def cmd_batch(args: argparse.Namespace) -> int:
             continue
 
         if scenario.get("driver") == "shell":
+            service_names = _service_names_for_scenario(pw_path, scenario)
+            inside = _inside_probe(service_names)
+            _write_json(out_dir / "inside.json", inside)
+            if inside.get("inside") and not allow_inside:
+                run = {
+                    "schema_version": 1,
+                    "run_type": "preflight",
+                    "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+                    "inside": inside,
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+                }
+                _write_json(out_dir / "run.json", run)
+                summary = {
+                    "labbook_version": LABBOOK_VERSION,
+                    "scenario_id": scenario.get("id"),
+                    "driver": "shell",
+                    "status": "blocked",
+                    "exit_code": 3,
+                    "inside": inside,
+                    "uncertainty": {
+                        "confidence": "unknown",
+                        "reasons": ["inside"],
+                        "collector_health": {},
+                    },
+                }
+                _write_json(out_dir / "lab_summary.json", summary)
+                _write_env(out_dir, scenario, pw_path, run, inside=inside)
+                results.append(
+                    {"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)}
+                )
+                failures += 1
+                if not args.continue_on_fail:
+                    break
+                continue
+
             run = _run_shell_scenario(scenario, out_dir, pw_path)
             summary = {
                 "labbook_version": LABBOOK_VERSION,
@@ -1587,6 +3007,7 @@ def cmd_batch(args: argparse.Namespace) -> int:
                 "driver": "shell",
                 "status": "pass" if run.get("exit_code") == 0 else "fail",
                 "exit_code": run.get("exit_code"),
+                "inside": inside,
                 "uncertainty": {
                     "confidence": "unknown",
                     "reasons": ["shell_driver"],
@@ -1594,6 +3015,43 @@ def cmd_batch(args: argparse.Namespace) -> int:
                 },
             }
         else:
+            service_names = _service_names_for_scenario(pw_path, scenario)
+            inside = _inside_probe(service_names)
+            _write_json(out_dir / "inside.json", inside)
+            if inside.get("inside") and not allow_inside:
+                run = {
+                    "schema_version": 1,
+                    "run_type": "preflight",
+                    "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+                    "inside": inside,
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+                }
+                _write_json(out_dir / "run.json", run)
+                summary = {
+                    "labbook_version": LABBOOK_VERSION,
+                    "scenario_id": scenario.get("id"),
+                    "driver": scenario.get("driver"),
+                    "status": "blocked",
+                    "exit_code": 3,
+                    "inside": inside,
+                    "uncertainty": {
+                        "confidence": "unknown",
+                        "reasons": ["inside"],
+                        "collector_health": {},
+                    },
+                }
+                _write_json(out_dir / "lab_summary.json", summary)
+                _write_env(out_dir, scenario, pw_path, run, inside=inside)
+                results.append(
+                    {"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)}
+                )
+                failures += 1
+                if not args.continue_on_fail:
+                    break
+                continue
+
             run, sandbox_capture = _run_xpc_session_scenario(
                 scenario,
                 out_dir,
@@ -1604,8 +3062,9 @@ def cmd_batch(args: argparse.Namespace) -> int:
                 capture_sandbox_logs=args.capture_sandbox_logs,
             )
             summary = _summarize_run(scenario, run, sandbox_capture)
+            summary["inside"] = inside
         _write_json(out_dir / "lab_summary.json", summary)
-        _write_env(out_dir, scenario, pw_path, run)
+        _write_env(out_dir, scenario, pw_path, run, inside=inside)
         results.append({"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)})
         if summary.get("status") != "pass":
             failures += 1
@@ -1750,6 +3209,37 @@ def main() -> int:
     tui_cmd = sub.add_parser("tui", help="render a minimal evidence ledger")
     tui_cmd.add_argument("run_dir")
     tui_cmd.set_defaults(func=cmd_tui)
+
+    inside_cmd = sub.add_parser("inside", help="detect whether the caller is sandboxed (fail-closed)")
+    inside_cmd.add_argument("--pw", default=DEFAULT_PW)
+    inside_cmd.add_argument("--profile", default=None, help="optional profile id (or id@variant) to check")
+    inside_cmd.add_argument("--variant", default=None, help="variant to check (default: base)")
+    inside_cmd.add_argument(
+        "--service-name",
+        action="append",
+        default=[],
+        help="additional mach service name(s) to check via sandbox_check",
+    )
+    inside_cmd.add_argument("--bare", action="store_true", help="print true/false only")
+    inside_cmd.set_defaults(func=cmd_inside)
+
+    sweep_cmd = sub.add_parser("sweep", help="run the fixed diagnostic sweep (labbook)")
+    sweep_cmd.add_argument("--pw", default=DEFAULT_PW)
+    sweep_cmd.add_argument("--runs-root", default=DEFAULT_LABBOOK_ROOT)
+    sweep_cmd.add_argument(
+        "--deny-sentinel",
+        default="/private/var/db/launchd.db/com.apple.launchd/overrides.plist",
+        help="path expected to be denied under minimal (for deliberate deny lanes)",
+    )
+    sweep_cmd.add_argument("--timeout-s", type=int, default=240)
+    sweep_cmd.add_argument("--force", action="store_true")
+    sweep_cmd.set_defaults(func=cmd_sweep)
+
+    replay_cmd = sub.add_parser("replay", help="replay one capsule directory N times")
+    replay_cmd.add_argument("capsule", help="path to a run directory containing capsule.json")
+    replay_cmd.add_argument("-n", type=int, default=25)
+    replay_cmd.add_argument("--timeout-s", type=int, default=240)
+    replay_cmd.set_defaults(func=cmd_replay)
 
     run_cmd = sub.add_parser("run", help="run a lab scenario")
     run_cmd.add_argument("scenario")

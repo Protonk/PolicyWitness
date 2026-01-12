@@ -251,6 +251,7 @@ over the existing `dlopen_external` probe with added gating.
 Suggested additions:
 
 - `path_not_allowed`
+- `session_required`
 - `path_resolution_failed`
 - `signature_check_failed`
 - `identifier_mismatch`

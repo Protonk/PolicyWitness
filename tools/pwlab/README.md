@@ -16,6 +16,64 @@ Lab features require a lab-enabled build plus a runtime opt-in:
 
 Release builds ignore `PW_LAB`.
 
+## Preflight: `inside` (sandboxed harness detection)
+
+In some automation harnesses, the *caller* is already sandboxed by the host.
+In that situation, XPC service lookup can fail at the bootstrap boundary
+(`error 159: Sandbox restriction`) before any service code runs, and unified-log
+based evidence capture may also be blocked.
+
+The lab tool provides a fail-closed preflight called `inside`:
+
+```
+tools/pwlab/pw-lab inside --pw PolicyWitness.app/Contents/MacOS/policy-witness --profile minimal
+```
+
+- If any sensor indicates the caller is sandboxed (or a sensor is unavailable),
+  `inside=true` is emitted and the tool exits immediately.
+- Only if all sensors pass does it emit `inside=false`.
+
+By default, `pw-lab run` / `pw-lab batch` perform this preflight before starting
+the scenario. If `inside=true`, the run is recorded as `status=blocked` and the
+tool exits non-zero so agents can request escalation / rerun outside the harness.
+
+Internal override (dev-only): set `PW_LAB_ALLOW_INSIDE=1` to bypass the preflight.
+This is intentionally not user-facing; prefer rerunning outside the harness.
+
+## Default diagnostic sweep (RunKey → capsules → replay)
+
+When debugging drift/flakiness, the recommended workflow is:
+
+1. **Run the fixed sweep** to produce a set of per-run capsule directories
+   keyed by a stable `RunKey` hash (the directory name is the `run_id`).
+2. **Replay an individual capsule N times** and compare outcomes via witness
+   digests (strict/relaxed) instead of eyeballing raw JSON.
+
+Run the sweep:
+
+```
+tools/pwlab/pw-lab sweep --pw PolicyWitness.app/Contents/MacOS/policy-witness --runs-root .pw_lab/runs --force
+```
+
+- The sweep writes `.pw_lab/runs/sweep_index.json` (authoritative index), plus
+  one run directory per `run_id`.
+- Each run directory contains `capsule.json`, `env.snapshot`, `process.txt`,
+  `host.txt`, `evidence/…`, and raw outputs under `outputs/`.
+
+Replay a single capsule:
+
+```
+tools/pwlab/pw-lab replay -n 25 .pw_lab/runs/<run_id>
+```
+
+- Writes `replay_matrix.json` into the run directory.
+- For `xpc_session` capsules, per-iteration artifacts are written under `replay_runs/iter_*/`.
+- Classification is based on `(normalized_outcome, witness_digest_strict)`
+  equivalence classes.
+- The digest normalization intentionally ignores timestamps/PIDs and excludes
+  evidence attachments (sandbox log excerpts, fence timing) so “stable” means
+  “semantic witness stability”, not “identical clocks/logs”.
+
 ## Signpost lab tools
 
 Print catalog:

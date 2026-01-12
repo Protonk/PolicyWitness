@@ -7,7 +7,6 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_scenarios"
 
-OUT_DIR="${PW_TEST_OUT_DIR}/suites/${PW_TEST_SUITE}/${PW_TEST_ID}"
 LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
 SCENARIO_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/scenario_basic.yaml"
 RUN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/run_basic"
@@ -15,14 +14,16 @@ RUN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/run_basic"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "dry_run" "parse scenario fixture and emit plan"
 
+OUT_DIR="${PW_TEST_ARTIFACTS}"
+DRY_RUN_DIR="${OUT_DIR}/dry_run"
+
 if [[ ! -x "${LAB_TOOL}" ]]; then
   test_fail "pw-lab tool is missing or not executable: ${LAB_TOOL}"
 fi
 
-mkdir -p "${OUT_DIR}/dry_run"
-"${LAB_TOOL}" run "${SCENARIO_FIXTURE}" --dry-run --outdir "${OUT_DIR}/dry_run"
+"${LAB_TOOL}" run "${SCENARIO_FIXTURE}" --dry-run --force --outdir "${DRY_RUN_DIR}"
 
-if [[ ! -f "${OUT_DIR}/dry_run/plan.json" ]]; then
+if [[ ! -f "${DRY_RUN_DIR}/plan.json" ]]; then
   test_fail "dry-run did not emit plan.json"
 fi
 

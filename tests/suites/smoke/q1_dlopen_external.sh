@@ -39,27 +39,19 @@ else
 fi
 
 step "create_dylib_paths" "create dylib paths (base + injectable)"
-BASE_UUID="$(/usr/bin/python3 - <<'PY'
-import uuid
-print(uuid.uuid4().hex)
-PY
-)"
-INJ_UUID="$(/usr/bin/python3 - <<'PY'
+UUID="$(/usr/bin/python3 - <<'PY'
 import uuid
 print(uuid.uuid4().hex)
 PY
 )"
 
-BASE_DYLIB="pw_lvtest_${BASE_UUID}.dylib"
-INJ_DYLIB="pw_lvtest_${INJ_UUID}.dylib"
-BASE_MARKER="pw_lvtest_${BASE_UUID}_ran.txt"
-INJ_MARKER="pw_lvtest_${INJ_UUID}_ran.txt"
+DYLIB_NAME="pw_lvtest_${UUID}.dylib"
 
 BASE_CREATE_JSON="${OUT_DIR}/dlopen-base-create.json"
 INJ_CREATE_JSON="${OUT_DIR}/dlopen-inj-create.json"
 
-"${PW}" xpc run --profile minimal fs_op --op create --path-class tmp --target specimen_file --name "${BASE_DYLIB}" --no-cleanup >"${BASE_CREATE_JSON}"
-"${PW}" xpc run --profile minimal --variant injectable fs_op --op create --path-class tmp --target specimen_file --name "${INJ_DYLIB}" --no-cleanup >"${INJ_CREATE_JSON}"
+"${PW}" xpc run --profile minimal fs_op --op create --path-class tmp --target specimen_file --name "${DYLIB_NAME}" --no-cleanup >"${BASE_CREATE_JSON}"
+"${PW}" xpc run --profile minimal --variant injectable fs_op --op create --path-class tmp --target specimen_file --name "${DYLIB_NAME}" --no-cleanup >"${INJ_CREATE_JSON}"
 
 BASE_PATH="$(/usr/bin/plutil -extract data.details.file_path raw -o - "${BASE_CREATE_JSON}")"
 INJ_PATH="$(/usr/bin/plutil -extract data.details.file_path raw -o - "${INJ_CREATE_JSON}")"
@@ -68,61 +60,54 @@ if [[ -z "${BASE_PATH}" || -z "${INJ_PATH}" ]]; then
   test_fail "failed to resolve dylib paths from fs_op output"
 fi
 
-BASE_MARKER_PATH="$(dirname "${BASE_PATH}")/${BASE_MARKER}"
-INJ_MARKER_PATH="$(dirname "${INJ_PATH}")/${INJ_MARKER}"
+BASE_MARKER_PATH="${BASE_PATH}.ran.txt"
+INJ_MARKER_PATH="${INJ_PATH}.ran.txt"
 
-cat >"${OUT_DIR}/dlopen_base.c" <<'EOF_BASE'
+cat >"${OUT_DIR}/dlopen_specimen.c" <<'EOF'
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 __attribute__((constructor))
 static void pw_init(void) {
-  int fd = open("__MARKER_PATH__", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  Dl_info info;
+  if (dladdr((void*)&pw_init, &info) == 0 || info.dli_fname == NULL) {
+    return;
+  }
+  char marker[PATH_MAX];
+  int n = snprintf(marker, sizeof(marker), "%s.ran.txt", info.dli_fname);
+  if (n <= 0 || n >= (int)sizeof(marker)) {
+    return;
+  }
+  int fd = open(marker, O_WRONLY|O_CREAT|O_TRUNC, 0644);
   if (fd >= 0) {
     dprintf(fd, "pw_lvtest constructor pid=%d\n", getpid());
     close(fd);
   }
   fprintf(stderr, "pw_lvtest constructor pid=%d\n", getpid());
 }
-EOF_BASE
-
-cat >"${OUT_DIR}/dlopen_inj.c" <<'EOF_INJ'
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-__attribute__((constructor))
-static void pw_init(void) {
-  int fd = open("__MARKER_PATH__", O_WRONLY|O_CREAT|O_TRUNC, 0644);
-  if (fd >= 0) {
-    dprintf(fd, "pw_lvtest constructor pid=%d\n", getpid());
-    close(fd);
-  }
-  fprintf(stderr, "pw_lvtest constructor pid=%d\n", getpid());
-}
-EOF_INJ
-
-/usr/bin/sed -i '' "s#__MARKER_PATH__#${BASE_MARKER_PATH}#g" "${OUT_DIR}/dlopen_base.c"
-/usr/bin/sed -i '' "s#__MARKER_PATH__#${INJ_MARKER_PATH}#g" "${OUT_DIR}/dlopen_inj.c"
+EOF
 
 step "compile_dylibs" "compile unsigned dylibs"
 set +e
 if [[ "${CLANG_MODE}" == "clang" ]]; then
-  clang -dynamiclib -o "${BASE_PATH}" "${OUT_DIR}/dlopen_base.c" >"${OUT_DIR}/dlopen-base-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-base-compile.stderr.txt"
+  clang -dynamiclib -o "${BASE_PATH}" "${OUT_DIR}/dlopen_specimen.c" >"${OUT_DIR}/dlopen-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-compile.stderr.txt"
   BASE_RC=$?
-  clang -dynamiclib -o "${INJ_PATH}" "${OUT_DIR}/dlopen_inj.c" >"${OUT_DIR}/dlopen-inj-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-inj-compile.stderr.txt"
-  INJ_RC=$?
 else
-  xcrun clang -dynamiclib -o "${BASE_PATH}" "${OUT_DIR}/dlopen_base.c" >"${OUT_DIR}/dlopen-base-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-base-compile.stderr.txt"
+  xcrun clang -dynamiclib -o "${BASE_PATH}" "${OUT_DIR}/dlopen_specimen.c" >"${OUT_DIR}/dlopen-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-compile.stderr.txt"
   BASE_RC=$?
-  xcrun clang -dynamiclib -o "${INJ_PATH}" "${OUT_DIR}/dlopen_inj.c" >"${OUT_DIR}/dlopen-inj-compile.stdout.txt" 2>"${OUT_DIR}/dlopen-inj-compile.stderr.txt"
-  INJ_RC=$?
 fi
 set -e
 
-if [[ ${BASE_RC} -ne 0 || ${INJ_RC} -ne 0 ]]; then
-  test_fail "failed to compile dylib(s); see ${OUT_DIR}/dlopen-*-compile.stderr.txt"
+if [[ ${BASE_RC} -ne 0 ]]; then
+  test_fail "failed to compile dylib; see ${OUT_DIR}/dlopen-compile.stderr.txt"
+fi
+
+# Pin the specimen bytes: copy the exact same dylib into both target locations.
+if ! /bin/cp -f "${BASE_PATH}" "${INJ_PATH}"; then
+  test_fail "failed to copy dylib specimen into injectable target path"
 fi
 
 step "dlopen_base" "dlopen_external (base)"

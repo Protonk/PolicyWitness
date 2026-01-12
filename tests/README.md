@@ -41,6 +41,8 @@ Notes:
 
 - Preflight is inspection-only (codesign/entitlements); unit tests are pure logic; integration/smoke tests will execute the CLI and launch XPC services.
 - Most integration/smoke tests assume a built `PolicyWitness.app` at the repo root. Build via the signed pipeline in [CONTRIBUTING.md](../CONTRIBUTING.md) / [SIGNING.md](../SIGNING.md).
+- Agent/harness note: if the caller is already sandboxed by the host, XPC lookup can fail before any service starts (for example `error 159: Sandbox restriction`) and unified-log based observers may be blocked. In that environment, run `tools/pwlab/pw-lab inside ...` first and request escalation / rerun outside the harness sandbox before diagnosing XPC behavior.
+- Drift/noise debugging: prefer producing a fixed sweep of “capsule” run directories via `tools/pwlab/pw-lab sweep ...`, then replay one capsule N times via `tools/pwlab/pw-lab replay ...` and classify stability by witness digests (rather than diffing raw JSON with timestamps/PIDs/log excerpts).
 
 ## Suite layout
 

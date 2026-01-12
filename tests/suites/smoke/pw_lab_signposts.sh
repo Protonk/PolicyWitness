@@ -7,12 +7,13 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_signposts"
 
-OUT_DIR="${PW_TEST_OUT_DIR}/suites/${PW_TEST_SUITE}/${PW_TEST_ID}"
 FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/signpost_stream.jsonl"
 LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "validate" "validate lab signpost stream fixture"
+
+OUT_DIR="${PW_TEST_ARTIFACTS}"
 
 if [[ ! -x "${LAB_TOOL}" ]]; then
   test_fail "pw-lab tool is missing or not executable: ${LAB_TOOL}"
