@@ -4,8 +4,8 @@ PolicyWitness is a research/teaching tool. Contributions are welcome, but “the
 
 Related docs:
 
-- CLI contract: `runner/README.md`
-- Runner architecture: `xpc/README.md`
+- CLI contract: `controller/README.md`
+- Runner architecture: `runner/README.md`
 - Signing/build: `SIGNING.md`
 - Tests: `tests/README.md`
 
@@ -18,7 +18,7 @@ If a change affects behavior, outputs, or safety boundaries, it needs matching w
 Preferred coverage options (in roughly increasing integration cost):
 
 - Rust unit tests for pure logic
-- Rust integration tests in `runner/tests/`
+- Rust integration tests in `controller/tests/`
 - Smoke scripts in `tests/suites/smoke/` against a built `PolicyWitness.app`
 
 ### Write Swift like you want it trivially reverse-engineered
@@ -26,7 +26,7 @@ Preferred coverage options (in roughly increasing integration cost):
 The Swift runner is intentionally inspection-friendly. Optimize for clarity over cleverness:
 
 - Prefer explicit types and straightforward control flow.
-- Keep the JSON wire types small and stable (`xpc/PWRunnerAPI.swift`).
+- Keep the JSON wire types small and stable (`runner/PWRunnerAPI.swift`).
 - Avoid metaprogramming / reflection that makes traces and disassembly noisy.
 
 ## Building
@@ -50,11 +50,11 @@ If you add/remove embedded executables, update `build.sh`, Evidence generation (
 
 ### Add a new probe attempt type (runner)
 
-1. Extend the request/response types in `xpc/PWRunnerAPI.swift` (attempt kind/action, and the matching sandbox_check filter semantics).
-2. Implement the attempt in `xpc/PWRunnerServiceHost.swift`.
+1. Extend the request/response types in `runner/PWRunnerAPI.swift` (attempt kind/action, and the matching sandbox_check filter semantics).
+2. Implement the attempt in `runner/PWRunnerServiceHost.swift`.
 3. Add a specimen fixture under `tests/fixtures/pw_runner/`.
 4. Add at least one check:
-   - `runner/tests/cli_integration.rs` (integration), or
+   - `controller/tests/cli_integration.rs` (integration), or
    - a smoke script under `tests/suites/smoke/`.
 
 ### Improve run inspection (TUI)

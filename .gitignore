@@ -7,8 +7,8 @@ PolicyWitness.zip
 # da mac
 .DS_Store
 
-# runner
-runner/target
+# controller (Rust)
+controller/target
 
 # local scratch
 .tmp/
@@ -22,5 +22,5 @@ experiments/out/
 tests/out/
 tests/__pycache__/
 
-# python bytecode (tools)
-tools/pwlab/__pycache__/
+# python bytecode (lab tooling)
+laboratory/__pycache__/

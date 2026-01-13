@@ -10,8 +10,8 @@ The tri-run witnesses are:
 
 Related docs:
 
-- CLI behavior and JSON envelopes: [runner/README.md](../runner/README.md)
-- XPC services as entitlement targets: [xpc/README.md](../xpc/README.md)
+- CLI behavior and JSON envelopes: [controller/README.md](../controller/README.md)
+- XPC services as entitlement targets: [runner/README.md](../runner/README.md)
 - End-user workflows (matrix runs, log capture, evidence): [PolicyWitness.md](../PolicyWitness.md)
 - Build/sign the app bundle: [SIGNING.md](../SIGNING.md)
 - Dev-only lab tooling: [laboratory/README.md](../laboratory/README.md)
@@ -338,7 +338,7 @@ The harness computes a `parity.parity_class` for each row/node comparing **polic
 
 1. Add a new node to one of the lattices under `experiments/nodes/`.
 2. Ensure the corresponding XPC service exists under `xpc/services/` and is embedded/signed into `PolicyWitness.app`.
-   - See [xpc/README.md](../xpc/README.md) and [CONTRIBUTING.md](../CONTRIBUTING.md#toy-example-adding-a-new-xpc-service).
+   - See [runner/README.md](../runner/README.md) and [CONTRIBUTING.md](../CONTRIBUTING.md#toy-example-adding-a-new-xpc-service).
 3. Rebuild the app (`make build`) so the service exists and Evidence is regenerated.
 
 ### Add or modify a policy profile

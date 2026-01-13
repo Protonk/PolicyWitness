@@ -3935,7 +3935,7 @@ def main() -> int:
     signposts_sub = signposts.add_subparsers(dest="signposts_cmd")
 
     catalog_cmd = signposts_sub.add_parser("catalog", help="print the signpost catalog")
-    catalog_cmd.add_argument("--catalog", default="xpc/signpost_catalog.json")
+    catalog_cmd.add_argument("--catalog", default="runner/signpost_catalog.json")
     catalog_cmd.add_argument("--json", action="store_true")
     catalog_cmd.set_defaults(func=cmd_signposts_catalog)
 

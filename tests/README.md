@@ -9,8 +9,8 @@ The harness is machine-readable: every test writes structured JSONL events and a
 
 Related docs:
 
-- CLI contract: `runner/README.md`
-- Runner architecture: `xpc/README.md`
+- CLI contract: `controller/README.md`
+- Runner architecture: `runner/README.md`
 - Signing/build: `SIGNING.md`
 - Lab tooling (TUI): `laboratory/README.md`
 
@@ -40,7 +40,7 @@ Opt-in tests live under `tests/suites/opt_in/` and are listed in `tests/OPT_IN_T
 
 - `preflight`: codesign/entitlements inspection only (no execution)
 - `unit`: Rust unit tests (`cargo test --bins`)
-- `integration`: Rust integration tests (`cargo test --tests`), primarily `runner/tests/cli_integration.rs`
+- `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/tests/cli_integration.rs`
 - `smoke`: end-to-end scripts against a built `PolicyWitness.app`
 
 ## Harness note: sandboxed automation environments (“inside”)

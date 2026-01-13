@@ -69,7 +69,7 @@ Optional standard overrides:
 - **Opt-in reason:** Requires Unified Logging access and an unsandboxed caller
   (in sandboxed harnesses, XPC lookup and log capture can be blocked).
 - **Resource dependency:** `PolicyWitness.app` built + `log show` access.
-- **When to run:** After changing `xpc/PWRunner*` runner behavior or `pw-lab specimen`.
+- **When to run:** After changing `runner/PWRunner*` runner behavior or `pw-lab specimen`.
 - **Artifacts:** `tests/out/suites/opt_in/pw_runner_specimen/artifacts/*`
 
 ## Adding a new opt-in test

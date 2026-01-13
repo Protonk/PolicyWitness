@@ -56,7 +56,7 @@ fi
 mkdir -p "$(dirname "${OUT_PATH}")"
 
 APP_PATH="${ROOT_DIR}/PolicyWitness.app"
-INSPECTOR_PATH="${PW_INSPECTOR_BIN:-${ROOT_DIR}/runner/target/debug/pw-inspector}"
+INSPECTOR_PATH="${PW_INSPECTOR_BIN:-${ROOT_DIR}/controller/target/debug/pw-inspector}"
 DYLIB_PATH="${ROOT_DIR}/tests/fixtures/TestDylib/out/testdylib.dylib"
 
 step "codesign_inspection" "inspect codesign metadata"

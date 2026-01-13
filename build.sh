@@ -15,7 +15,7 @@ APP_BUNDLE="${APP_NAME}.app"
 ZIP_NAME="${APP_NAME}.zip"
 
 # Paths in this repo
-RUNNER_MANIFEST="runner/Cargo.toml"
+RUNNER_MANIFEST="controller/Cargo.toml"
 ENTITLEMENTS_PLIST="PolicyWitness.entitlements"
 INHERIT_ENTITLEMENTS_PLIST="PolicyWitness.inherit.entitlements"
 BAD_INHERIT_ENTITLEMENTS_PLIST="PolicyWitness.inherit.bad.entitlements"
@@ -27,8 +27,8 @@ EMBED_FENCERUNNER_PATH="${EMBED_FENCERUNNER_PATH:-}"   # e.g. /path/to/fencerunn
 EMBED_PROBES_DIR="${EMBED_PROBES_DIR:-}"               # e.g. /path/to/probes
 BUILD_XPC="${BUILD_XPC:-1}"                            # set to 0 to skip building embedded XPC services/client
 
-# XPC source layout (in this repo)
-XPC_ROOT="xpc"
+# Runner source layout (in this repo)
+XPC_ROOT="runner"
 XPC_RUNNER_API_FILE="${XPC_ROOT}/PWRunnerAPI.swift"
 XPC_RUNNER_SERVICE_HOST_FILE="${XPC_ROOT}/PWRunnerServiceHost.swift"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
@@ -107,7 +107,7 @@ sys.exit(0 if len(data.keys()) == 0 else 1)
 PY
 }
 
-echo "==> Building Rust runner + tools"
+echo "==> Building Rust controller + tools"
 cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin policy-witness \
   --bin quarantine-observer \
@@ -116,27 +116,27 @@ cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin pw-inspector
 
 # Find the built binary. (Assumes standard Cargo layout.)
-RUNNER_BIN="runner/target/release/policy-witness"
+RUNNER_BIN="controller/target/release/policy-witness"
 if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2
 fi
-QUARANTINE_OBSERVER_BIN="runner/target/release/quarantine-observer"
+QUARANTINE_OBSERVER_BIN="controller/target/release/quarantine-observer"
 if [[ ! -x "${QUARANTINE_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected quarantine-observer binary at ${QUARANTINE_OBSERVER_BIN}" 1>&2
   exit 2
 fi
-SANDBOX_LOG_OBSERVER_BIN="runner/target/release/sandbox-log-observer"
+SANDBOX_LOG_OBSERVER_BIN="controller/target/release/sandbox-log-observer"
 if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
   exit 2
 fi
-SIGNPOST_LOG_OBSERVER_BIN="runner/target/release/signpost-log-observer"
+SIGNPOST_LOG_OBSERVER_BIN="controller/target/release/signpost-log-observer"
 if [[ ! -x "${SIGNPOST_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected signpost-log-observer binary at ${SIGNPOST_LOG_OBSERVER_BIN}" 1>&2
   exit 2
 fi
-PW_INSPECTOR_BIN="runner/target/release/pw-inspector"
+PW_INSPECTOR_BIN="controller/target/release/pw-inspector"
 if [[ ! -x "${PW_INSPECTOR_BIN}" ]]; then
   echo "ERROR: expected pw-inspector binary at ${PW_INSPECTOR_BIN}" 1>&2
   exit 2

@@ -1,67 +1,48 @@
-# `runner/` (Rust launcher: specimen-first CLI)
+# `runner/` (Swift runner: specimen-first sandbox witness)
 
-This is developer documentation for the Rust code in `runner/`. It builds the command-line launcher that ships as:
+This directory contains the Swift implementation of the **ephemeral sandbox runner** shipped inside `PolicyWitness.app`.
 
-- `PolicyWitness.app/Contents/MacOS/policy-witness`
+PolicyWitness is now **specimen-first**:
 
-PolicyWitness is now **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to produce stable, evidence-oriented artifacts for each run.
+- The controller (`policy-witness`) starts a fresh XPC runner instance per specimen.
+- The runner starts unsandboxed, applies a requested seatbelt profile exactly once (SBPL source + parameters, or compiled profile bytes), executes a probe plan, replies with JSON, and exits.
 
-For the XPC runner implementation details, see `xpc/README.md`.
+## Key files
 
-## What lives in `runner/`
+- `runner/PWRunnerAPI.swift`
+  - `PWRunnerProtocol` (`runSpecimen(Data) -> Data`)
+  - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
 
-- `runner/src/main.rs` — CLI parsing and specimen evaluation orchestration
-- `runner/src/json_contract.rs` — JSON key sorting helper (used by other bins)
+- `runner/PWRunnerServiceHost.swift`
+  - Runner implementation:
+    - loads libsandbox dynamically (`dlopen` + `dlsym`)
+    - applies the requested policy (`sandbox_compile_*` + `sandbox_apply`)
+    - confirms sandbox state via `sandbox_check`
+    - executes a small set of probe attempts (file + mach-lookup)
 
-Standalone helper tools (embedded into the `.app`):
+- `runner/runner-client/main.swift` → builds `PolicyWitness.app/Contents/MacOS/pw-runner-client`
+  - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
 
-- `runner/src/bin/sandbox-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
-  - Captures unified-log sandbox deny lines by PID + process name
-- `runner/src/bin/signpost-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/signpost-log-observer`
-  - Captures signpost spans from unified logging (supporting evidence channel)
+- `runner/services/PWRunner/`
+  - `Info.plist`, `Entitlements.plist`, `main.swift` for the runner XPC service bundle.
 
-## CLI surface (contract)
+## Entitlements and sandboxing (important distinction)
 
-The launcher intentionally exposes a minimal surface:
+The runner’s **codesign entitlements** are fixed hardened-runtime exceptions (debug attach / dynamic loading / dyld env / executable memory). They enable inspection and controlled extensibility, but they do **not** make sandbox policy “dynamic”.
 
-```text
-policy-witness inside [--service-name <mach-service-name> ...] [--bare]
-policy-witness specimen <specimen.json> [--outdir <dir>] [--timeout-ms <n>] [--log-last <dur>] [--force]
-```
+Sandbox policy variation is driven by the specimen itself:
 
-### `inside`
+- the controller supplies SBPL (or compiled profile bytes),
+- the runner applies it once to itself,
+- the runner’s witness is defined by mandatory multi-channel evidence (see the controller docs).
 
-Fail-closed preflight for “am I running inside a sandboxed harness that will invalidate XPC lookup and/or evidence capture?”
+## Agent note: “nested sandbox” harnesses
 
-- If `--bare` is set, prints `true`/`false`.
-- Otherwise prints a JSON object with `inside`, `trigger`, and a `checked` sensor list.
+Some development harnesses run tools inside an OS sandbox. In those environments:
 
-This is primarily used by agents and CI harnesses.
+- XPC lookup can fail early with `NSCocoaErrorDomain` 4099 / error 159 `"Sandbox restriction"` (before the service launches).
+- Unified Logging access can also be restricted, making deny-evidence capture impossible from inside the harness.
 
-### `specimen`
+Treat this as an environment constraint, not a PolicyWitness regression.
 
-Runs a **single specimen evaluation** against the embedded `PWRunner.xpc` runner:
-
-- Reads a specimen JSON file that contains:
-  - a sandbox policy (`sbpl` source or compiled bytes),
-  - and a probe plan (steps with `sandbox_check` + an attempted operation).
-- Executes two runs:
-  - **canonical**: applies the policy as provided
-  - **instrumented**: for SBPL policies, automatically injects a `message` marker into each `(deny …)` form so denies can be correlated deterministically in unified logs
-- Captures supporting evidence (best-effort) using `sandbox-log-observer`.
-- Writes a labbook-style output directory (`lab_summary.json` + raw artifacts) and prints the summary JSON to stdout.
-
-Exit codes:
-
-- `0`: run completed (`lab_summary.status=pass`)
-- `1`: run failed (`lab_summary.status=fail`)
-- `3`: blocked (`inside=true`)
-
-## Why the Rust launcher still shells out
-
-The launcher does not speak NSXPC directly. It drives the Swift client helper embedded in the app bundle:
-
-- `PolicyWitness.app/Contents/MacOS/pw-runner-client`
-
-The Swift client is responsible for `NSXPCConnection` wiring; the Rust launcher owns run orchestration and evidence capture.
-
+Preflight with `policy-witness inside` (or `laboratory/pw-lab inside`). If `inside=true`, ask for approval/escalation and re-run once outside the harness sandbox to confirm the behavior.

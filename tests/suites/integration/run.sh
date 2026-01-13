@@ -16,7 +16,7 @@ LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-integration.log"
 
 test_step "cargo_test_integration" "cargo test --tests (cli integration)"
 set +e
-cargo test --manifest-path "${ROOT_DIR}/runner/Cargo.toml" --tests >"${LOG_PATH}" 2>&1
+cargo test --manifest-path "${ROOT_DIR}/controller/Cargo.toml" --tests >"${LOG_PATH}" 2>&1
 status=$?
 set -e
 

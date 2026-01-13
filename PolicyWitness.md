@@ -1,35 +1,16 @@
 # PolicyWitness.app (User Guide)
 
-PolicyWitness is a macOS research/teaching tool for exploring **App Sandbox + entitlements** while keeping “what happened” separate from “why it happened”.
+PolicyWitness is a macOS tool to run seatbelt/App Sandbox experiments without hand‑waving about what happened.
 
-It ships as an app bundle containing:
-
-- a host-side CLI launcher (plain-signed; not sandboxed), and
-- a process zoo of separately signed sandboxed XPC services (each with its own entitlement profile).
+PolicyWitness is **specimen-first**: you supply sandbox variation at runtime (SBPL or compiled profile bytes) plus a probe plan. Each specimen is executed by a fresh **ephemeral runner process** that starts unsandboxed, applies the requested policy **once**, runs the plan, returns a JSON witness, and exits.
 
 This guide assumes you have only `PolicyWitness.app` and this file (`PolicyWitness.md`).
 
-## Contents
-
-- Router (start here)
-- Quick start
-- Concepts
-- Workflows
-- Output format (JSON)
-- Safety notes
-
 ## Router (start here)
 
-- Sanity check: `health-check`
-- Discovery: `list-profiles`, `list-services`, `show-profile`, `describe-service`
-- Run one probe (one-shot): `xpc run --profile <id[@variant]> <probe-id> [probe-args...]`
-- Deterministic debugger attach + multiple probes: `xpc session --profile minimal@injectable ...`
-- Compare across profiles: `run-matrix --group <...> [--variant <base|injectable>] <probe-id> [probe-args...]`
-- Sandbox extension flow: `sandbox_extension` (issue/consume/release)
-- Evidence bundle: `bundle-evidence` (plus `verify-evidence`, `inspect-macho`)
-- Quarantine/Gatekeeper deltas (no execution): `quarantine-lab`
-- Deny evidence (outside the sandbox boundary): `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
-- Timeline evidence (Unified Logging signposts): `xpc run --signposts ...` (capture: `--capture-signposts`; helper: `PolicyWitness.app/Contents/MacOS/signpost-log-observer`)
+- Preflight (am I in a sandboxed harness?): `PolicyWitness.app/Contents/MacOS/policy-witness inside`
+- Run one specimen (writes a run directory): `... policy-witness specimen <specimen.json>`
+- Read results: open the run directory and start from `lab_summary.json`
 
 ## Quick start
 
@@ -39,560 +20,246 @@ Set a convenience variable:
 PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
 ```
 
-All invocations are subcommands (for example `$PW xpc run ...`). To run a platform binary, use `run-system /bin/ls ...`; to run an embedded helper, use `run-embedded <tool-name> ...`.
-
-Discover what’s inside:
+Confirm you’re not running inside an OS sandboxed harness (this should print `false` in a normal Terminal):
 
 ```sh
-$PW list-profiles
-$PW list-services
-$PW show-profile minimal
+$PW inside --bare
 ```
 
-Run a probe in the baseline sandbox profile:
+Create a specimen that denies reading `/etc/hosts`:
 
 ```sh
-$PW xpc run --profile minimal capabilities_snapshot
-```
-
-Compare the same probe across a curated group:
-
-```sh
-$PW run-matrix --group baseline capabilities_snapshot
-```
-
-Create a harness file and set an xattr (extract `data.details.file_path` without `jq`):
-
-```sh
-$PW xpc run --profile minimal fs_op --op create --path-class tmp --target specimen_file --name pw_xattr.txt > /tmp/pw_fs_op.json
-FILE_PATH=$(plutil -extract data.details.file_path raw -o - /tmp/pw_fs_op.json)
-$PW xpc run --profile minimal fs_xattr --op set --path "$FILE_PATH" --name user.pw --value test
-```
-
-## Concepts
-
-### Process zoo
-
-- A **profile** is a short base id (like `minimal` or `temporary_exception`) that maps to one XPC service family.
-- Each profile has two **variants**: `base` (the canonical entitlements) and `injectable` (an auto-generated twin with a fixed instrumentation overlay).
-- Each XPC service is a separate **signed Mach‑O** with its own entitlements.
-- Probes run **in-process** inside the service. This avoids the common “exec from a writable/container path” failure mode that dominates many sandbox demos.
-
-### Witness records (and attribution)
-
-PolicyWitness records *what happened* (return codes, errno, resolved paths, timing) and may attach attribution hints, but it avoids overclaiming:
-
-- A permission-shaped failure (often `EPERM`/`EACCES`) is **not automatically** a sandbox denial.
-- “Seatbelt/App Sandbox denial” is an attribution claim that requires evidence (for example, a matching unified-log denial line for the service PID).
-- Quarantine/Gatekeeper behavior is measured separately (Quarantine Lab does not execute anything).
-
-### Two XPC modes: one-shot vs session
-
-- `xpc run` is one-shot (open session → run one probe → close session).
-- `xpc session` keeps the service alive across multiple probes and emits explicit lifecycle events so attach/debug tooling can coordinate deterministically.
-
-## Workflows
-
-All workflows use the CLI at `PolicyWitness.app/Contents/MacOS/policy-witness` (the quick start sets `PW` to this path). Run `$PW --help` to see the command list and the canonical invocation shapes.
-
-### Discover profiles and services
-
-Profiles are the ergonomic interface for the process zoo.
-
-List them:
-
-```sh
-$PW list-profiles
-$PW list-services
-```
-
-`list-profiles` shows base profile ids; `list-services` shows both base and injectable service variants.
-
-Inspect a profile (entitlements, risk signals, tags):
-
-```sh
-$PW show-profile minimal
-$PW show-profile minimal@injectable
-```
-
-Inspect a service “statically” (what the profile says it should have):
-
-```sh
-$PW describe-service minimal@injectable
-```
-
-**Risk signals**
-
-Some profiles carry higher-concern entitlements. The CLI emits warnings and proceeds (choosing `injectable` is treated as explicit intent).
-
-This is about guardrails, not morality: some profiles intentionally carry entitlements that widen instrumentation/injection surface.
-
-Profile ids can include `@variant` (for example `minimal@injectable`).
-
-**Profiles you’ll likely see**
-
-Use `list-profiles` as the source of truth. Some common base ids include: `minimal`, `net_client`, `downloads_rw`, `bookmarks_app_scope`, `user_selected_executable`, and `temporary_exception`.
-
-**Variants (base vs injectable)**
-
-Each base profile has two variants:
-
-- `base` (default): the canonical entitlements for that service.
-- `injectable`: an auto-generated twin that adds the fixed instrumentation overlay (`get-task-allow`, `disable-library-validation`, `allow-dyld-environment-variables`, `allow-unsigned-executable-memory`). This is high concern.
-
-Select a variant with `--variant injectable` or `profile@injectable`.
-
-For sandbox extension issuance, use:
-
-- `temporary_exception`: App Sandbox + `com.apple.security.temporary-exception.sbpl` for `file-issue-extension` (high concern).
-
-There are also Quarantine Lab profiles (kind `quarantine`) such as `quarantine_default`, `quarantine_downloads_rw`, and `quarantine_user_selected_executable`.
-
-### Run probes in a service (`xpc run`)
-
-Pick a profile/service, run one probe, and get a JSON witness record.
-
-Usage:
-
-```sh
-$PW xpc run (--profile <id[@variant]> [--variant <base|injectable>] | --service <bundle-id>)
-            [--plan-id <id>] [--row-id <id>] [--correlation-id <id>]
-            <probe-id> [probe-args...]
-```
-
-Notes:
-
-- Prefer `--profile <id[@variant]>` and omit the explicit bundle id.
-- High-concern variants emit a warning but do not require an extra flag.
-- `xpc run` is intentionally one-shot. For deterministic attach and multi-probe workflows, use `xpc session`.
-- All `xpc run`/`xpc session` flags (for example `--signposts`, `--capture-sandbox-logs`, `--correlation-id`) must appear **before** `<probe-id>`; anything after `<probe-id>` is treated as probe args.
-
-Common probes:
-
-```sh
-$PW xpc run --profile minimal probe_catalog
-$PW xpc run --profile minimal capabilities_snapshot
-$PW xpc run --profile minimal fs_op --op stat --path-class tmp
-$PW xpc run --profile net_client net_op --op tcp_connect --host 127.0.0.1 --port 9
-$PW xpc run --profile minimal --variant injectable sandbox_check --operation file-read-data --path /etc/hosts
-$PW xpc run --profile temporary_exception sandbox_extension --op issue_file --class com.apple.app-sandbox.read --path /etc/hosts --allow-unsafe-path
-$PW xpc run --profile temporary_exception inherit_child --scenario dynamic_extension --path /private/var/db/launchd.db/com.apple.launchd/overrides.plist --allow-unsafe-path
-```
-
-Use `probe_catalog` as the source of truth for per-probe usage; it also lists `fs_op_wait`, `bookmark_make`, `bookmark_op`, `bookmark_roundtrip`, `userdefaults_op`, `fs_coordinated_op`, and `network_tcp_connect`.
-
-### Sandbox extension flow (issue -> consume -> release)
-
-`sandbox_extension` uses the private sandbox extension SPI to issue/consume/release file extensions. Issuance requires a profile that allows `file-issue-extension` (see `temporary_exception`), and the issued token is returned in `data.stdout`.
-
-Example: issue a read extension for a harness file, consume it in `minimal`, then re-run the read:
-
-```sh
-$PW xpc run --profile temporary_exception sandbox_extension \
-  --op issue_file --class com.apple.app-sandbox.read \
-  --path-class tmp --target specimen_file --name pw_extension.txt --create > /tmp/pw_issue_token.json
-FILE_PATH=$(plutil -extract data.details.file_path raw -o - /tmp/pw_issue_token.json)
-TOKEN=$(plutil -extract data.details.token raw -o - /tmp/pw_issue_token.json)
-
-$PW xpc run --profile minimal fs_op --op open_read --path "$FILE_PATH"
-$PW xpc run --profile minimal sandbox_extension --op consume --token "$TOKEN"
-$PW xpc run --profile minimal fs_op --op open_read --path "$FILE_PATH"
-$PW xpc run --profile minimal sandbox_extension --op release --token "$TOKEN"
-```
-
-Notes:
-
-- If you want to issue extensions for a non-harness path, pass `--allow-unsafe-path` to `sandbox_extension --op issue_file`.
-- Tokens are returned in `data.details.token` and also in `data.stdout`.
-- If consume/release fails with invalid-token style errors, try `--token-format prefix` (default: `full`).
-- Consume/release are process-scoped; if you want a reliable before/after change, run consume + follow-up ops in a single `xpc session` so the service pid does not churn.
-- For read/write testing, issue `com.apple.app-sandbox.read-write` and use a write op (for example `fs_op --op open_write`) after consuming the token.
-- For a clear “denied → allowed” witness, use a world-readable file that App Sandbox blocks by default (for example `/private/var/db/launchd.db/com.apple.launchd/overrides.plist`). On Sonoma, `/etc/hosts` is often already readable, so it won’t show a before/after change.
-- If you need to keep a harness file across rename/truncate during `update_file_by_fileid` experiments, add `fs_op --no-cleanup` so the harness path isn’t removed.
-- To issue directly to a target process, use `sandbox_extension --op issue_file_to_pid --pid <pid|self>`; the service pid is included as `data.details.service_pid` on every probe response.
-- Consume/release auto-try wrapper symbols when available; use `--call-symbol`/`--call-variant` to pin a specific ABI path for debugging.
-- Use `--introspect` to emit symbol presence and image paths in `data.details` for extension calls.
-- On Sonoma 14.4.1, `release`/`release_file` did not revoke access inside the same process; access cleared after the process exited. Treat release as best-effort cleanup and verify on your target OS.
-- Advanced: `issue_extension`/`issue_fs_extension`/`issue_fs_rw_extension` are wrapper issue calls. `update_file` (path + flags) and `update_file_by_fileid` (token + file id + flags; some hosts expect a fileid pointer, try `--call-variant fileid_ptr_token`, or a selector via `--call-variant payload_ptr_selector --selector <u64>`) are experimental maintenance calls that may not affect access in-process. On Sonoma 14.4.1, kernel disassembly suggests `update_file_by_fileid` expects an internal id (low 32 bits of an 8-byte payload) and requires field2 = 0, so success may require a handle not exposed via the public token string.
-
-#### Rename retarget semantics harness (`update_file_rename_delta`)
-
-`update_file_rename_delta` is the canonical “rename can silently change meaning” harness: it defines success as an **access delta observed**, not “`rc==0`”.
-
-Facts it records/enforces (read these literally when interpreting the witness):
-
-- Before consume, `open_read` can fail with `EPERM` for a denied Desktop read; issue + consume flips `open_read` to success in the same process context.
-- The grant is path-scoped: an inode-preserving rename does not transfer the grant to the new path (`open_read` produces `EPERM`).
-- `sandbox_extension_update_file(path)` can retarget access across renames in the same durable session; `sandbox_extension_update_file_by_fileid` can return `rc==0` without restoring access (return codes are not evidence).
-- The witness records post-call access checks and `*_changed_access` (per-candidate) so success is an observable policy transition.
-- The probe gates on uncheatable premises (destination non-existent, inode-preserving rename on the same device) and stops early with distinct normalized outcomes when the premise fails.
-- When `--wait-for-external-rename` is used, wait/poll observations are recorded in the witness so host choreography is reproducible.
-
-Example (host-side rename choreography):
-
-```sh
-old_path="/tmp/policy-witness-harness/pw_old.txt"
-new_path="/tmp/policy-witness-harness/pw_new.txt"
-printf 'pw rename-retarget demo\n' >"${old_path}"
-
-$PW xpc run --profile temporary_exception sandbox_extension \
-  --op update_file_rename_delta --class com.apple.app-sandbox.read \
-  --path "${old_path}" --new-path "${new_path}" --wait-for-external-rename > /tmp/pw_update_file_rename_delta.json &
-pid=$!
-sleep 1
-mv "${old_path}" "${new_path}"
-wait "${pid}"
-```
-
-Reading the output:
-
-- Phase transcript: `data.details.delta_old_open_transition` / `data.details.delta_new_open_transition` plus per-phase `access_*_open_outcome`.
-- Candidate sweep evidence: `access_after_update_by_fileid_<candidate>_new_open_outcome` and `update_by_fileid_<candidate>_changed_access` (not the raw `rc`).
-
-### Paired-process capability ferry (`inherit_child`)
-
-`inherit_child` is the “capability ferry” harness: a cooperative parent/child probe that turns sandbox inheritance into a repeatable **acquire vs use** experiment.
-
-Execution model (matrix-shaped):
-
-1. parent **acquires** a capability (and ferries it to the child when relevant),
-2. child attempts to **acquire** the same capability independently,
-3. child attempts to **use** the ferried capability.
-
-Transport model (frozen contract surface):
-
-- **Event bus**: child→parent JSONL `events[]` plus a single sentinel line; parent→child byte payloads (bookmark bytes).
-- **Rights bus**: dedicated `SCM_RIGHTS` FD passing for file/dir/socket capabilities (no FDs are ever passed over the event bus).
-
-The response includes a structured witness under `data.witness`. It is present even when the child never emits any structured events.
-
-**Scenarios** (use `probe_catalog` as the source of truth; names are stable):
-
-| `--scenario` | What it exercises |
-|---|---|
-| `dynamic_extension` | parent-only sandbox extension + `file_fd` ferry |
-| `matrix_basic` | `file_fd` + `dir_fd` + `socket_fd` ferries |
-| `bookmark_ferry` | security-scoped bookmark bytes over the event bus (resolve + startAccessing + access attempt) |
-| `lineage_basic` | child spawns a grandchild and re-ferries the event bus (lineage metadata) |
-| `inherit_bad_entitlements` | expected abort canary (wrong child entitlements) |
-
-Examples:
-
-```sh
-# A: Parent acquires via sandbox extension; child compares acquire vs use.
-$PW xpc run --profile temporary_exception inherit_child \
-  --scenario dynamic_extension \
-  --path /private/var/db/launchd.db/com.apple.launchd/overrides.plist \
-  --allow-unsafe-path
-
-# B: File/dir/socket FD ferries (no tokens).
-$PW xpc run --profile minimal inherit_child \
-  --scenario matrix_basic \
-  --path-class tmp --target specimen_file --name pw_child.txt --create
-
-# B2: Same run, but attach sandbox log excerpt to the same JSON artifact.
-$PW xpc run --capture-sandbox-logs --profile minimal inherit_child \
-  --scenario matrix_basic \
-  --path-class tmp --target specimen_file --name pw_child.txt --create
-
-# B2b: Force a child-side deny line (diagnostic) to validate log targeting/correlation.
-$PW xpc run --capture-sandbox-logs --profile temporary_exception inherit_child \
-  --scenario dynamic_extension \
-  --path /private/var/db/launchd.db/com.apple.launchd/overrides.plist \
-  --allow-unsafe-path --child-network-deny
-
-# B3: Deliberate protocol failure injection (expected: child_protocol_violation).
-$PW xpc run --profile minimal inherit_child \
-  --scenario matrix_basic \
-  --path-class tmp --target specimen_file --name pw_child.txt --create \
-  --protocol-bad-cap-id
-
-# C: Bookmark ferry (success path) + a deliberate move to exercise resolution behavior.
-$PW xpc run --profile bookmarks_app_scope inherit_child \
-  --scenario bookmark_ferry \
-  --path-class tmp --target specimen_file --name pw_child.txt --create \
-  --bookmark-move
-
-# D: Bookmark ferry (invalid payload) — a deterministic “expected failure” diagnostic.
-$PW xpc run --profile bookmarks_app_scope inherit_child \
-  --scenario bookmark_ferry \
-  --path-class tmp --target specimen_file --name pw_child_bad.txt --create \
-  --bookmark-invalid
-
-# E: Inheritance contract canary — the OS is expected to abort the child.
-$PW xpc run --profile minimal inherit_child --scenario inherit_bad_entitlements
-```
-
-Attach/inspection knobs:
-
-- `--stop-on-entry`: child stops ultra-early for deterministic attach.
-- `--stop-on-deny`: on `EPERM`/`EACCES`, emit op + `callsite_id` + best-effort backtrace, then stop.
-- `--stop-auto-resume`: parent sends `SIGCONT` after a stop (useful for scripting/tests without a debugger).
-
-Diagnostic flags (capture/attribution checks; not part of the capability matrix):
-
-- `--child-network-deny`: the child attempts a TCP connect to `127.0.0.1:9` and records a `child_network_attempt` event. This is a purposeful seatbelt-deny generator so `--capture-sandbox-logs` targeting can be validated.
-- `--child-synthetic-deny-log`: on child acquire failure, the child emits a synthetic log marker (`PW_SYNTHETIC_DENY ...`) and a `child_synthetic_deny_log` event. This is a control for the log capture pipeline and PID targeting; it is **not** a real sandbox denial.
-
-Host-side sandbox log capture (single artifact):
-
-- Add `--capture-sandbox-logs` to `xpc run` to attach a lookback sandbox log excerpt under `data.host_sandbox_log_capture`.
-- When `--capture-sandbox-logs` or `--capture-signposts` is set, `xpc run` performs an internal **fenced run** (session wait → arm capture → release → probe) so evidence is bounded to a deterministic window.
-  - The output includes `data.fence` with `enabled`, `reason`, `status`, `armed_collectors`, `wait_path`, `arm_latency_ms`, and an `evidence_window` (start/end unix ms).
-  - When present, `data.host_sandbox_log_capture.window_source` indicates whether the log window was derived from the fence (`fence`) or from the default/explicit window strategy (`run`/`env`).
-- For `inherit_child`, the excerpt is also summarized into the witness fields `sandbox_log_capture_status` and `sandbox_log_capture` so a run is self-contained.
-- `data.host_sandbox_log_capture` records `observed_lines`, `observed_deny`, and `pid_source` (`service_pid` vs `client_pid`) so you can see which process the log excerpt targets.
-
-Signposts (timeline, best-effort):
-
-- Add `--signposts` to enable Unified Logging signpost emission for the run (client/service/child helper where applicable).
-- Add `--capture-signposts` to `xpc run` to attach a lookback signpost timeline under `data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
-- `data.host_signpost_capture` includes the observer invocation (`observer_args`) and the parsed spans (`observer_report.data.spans`).
-- Fenced runs add service-side spans `pw.fence.waiting` and `pw.probe.exec` so you can bracket the evidence window in a single capture.
-
-How to interpret failures:
-
-- `result.normalized_outcome=child_protocol_violation` / `child_*_bus_io_error` → harness/protocol bug (not sandbox behavior).
-- `result.normalized_outcome=child_abort_expected` → expected canary abort (entitlements contract failure).
-- Per-capability rc/errno lives in `data.witness.capability_results[]`; the deterministic scan view is `data.witness.outcome_summary`.
-
-### Deterministic debugger attach (`xpc session`)
-
-`xpc session` is a session-based XPC control plane intended for tooling like lldb/dtrace/Frida. It provides explicit lifecycle events and keeps the service alive across multiple probes so you can attach once and then iterate.
-
-Usage:
-
-```sh
-$PW xpc session (--profile <id[@variant]> [--variant <base|injectable>] | --service <bundle-id>)
-                [--plan-id <id>] [--correlation-id <id>]
-                [--signposts]
-                [--wait <fifo:auto|fifo:/abs|exists:/abs>]
-                [--wait-timeout-ms <n>] [--wait-interval-ms <n>]
-                [--xpc-timeout-ms <n>]
-```
-
-Signposts:
-
-- Add `--signposts` to emit Unified Logging signposts for session lifecycle + probe execution.
-- To extract a timeline after the fact, run `PolicyWitness.app/Contents/MacOS/signpost-log-observer --correlation-id <id> --last 2m`.
-
-I/O contract:
-
-- Stdout is JSONL (one JSON envelope per line):
-  - Lifecycle: `kind: xpc_session_event` / `kind: xpc_session_error`
-  - Probes: `kind: probe_response` (one per `run_probe` command)
-- Stdin is JSONL commands (one object per line):
-  - `{"command":"run_probe","probe_id":"...","argv":[...]}`
-  - `{"command":"keepalive"}`
-  - `{"command":"close_session"}`
-
-Lifecycle events you’ll commonly see:
-
-- `session_ready` — session opened; includes `data.pid` and an opaque `data.session_token`
-- `wait_ready` — wait barrier configured; includes `data.wait_path`
-- `trigger_received` — wait barrier satisfied; safe point to start probes
-- `child_spawned` / `child_stopped` / `child_exited` — emitted by `inherit_child` with `data.child_pid` + `data.run_id`
-- `probe_starting` / `probe_done` — per-probe execution bracketing
-- `session_closed` — explicit close
-
-If a wait is configured, probes are refused until the trigger is received (you’ll get a normal `probe_response` with `normalized_outcome: session_not_triggered`).
-Wait for `event=trigger_received` before sending any `run_probe` commands to avoid a race where the probe is rejected even though the FIFO was written.
-
-Attach workflow (high level):
-
-1. Start a session with `--wait fifo:auto`.
-2. Watch stdout for `data.event == "wait_ready"` and capture `data.pid` + `data.wait_path`.
-3. Attach your tooling to `data.pid` and install hooks (before any probe runs).
-4. Trigger the wait by writing to the FIFO at `data.wait_path` (for example `printf go > "$WAIT_PATH"`).
-5. Send `run_probe` commands over stdin JSONL.
-
-### Deny evidence (`sandbox-log-observer`)
-
-Some probes return permission-shaped failures. If you want deny evidence, run the embedded observer tool outside the sandbox boundary and treat its output as an *evidence attachment*.
-
-For `inherit_child`, prefer `xpc run --capture-sandbox-logs` so the log excerpt is attached to the same JSON output artifact (see the `inherit_child` section).
-
-Capture target:
-
-- `--capture-sandbox-logs` defaults to `--capture-sandbox-logs-target auto`:
-  - uses `child_pid` when present (for example `inherit_child`),
-  - otherwise uses the probe service pid (so capture works for non-child probes),
-  - otherwise falls back to the client pid (useful for bootstrap failures like `openSession`).
-- Override with `--capture-sandbox-logs-target <child|service|client|pid>` (and `--capture-sandbox-logs-pid <pid>` for `target=pid`).
-
-The observer requires a PID and process name. You can get them from:
-
-- a `probe_response` (`data.details.service_pid` + `data.details.process_name`, or `data.details.pid` on older outputs), or
-- an `xpc_session_event` (`data.pid` + `data.service_name`).
-
-One-shot pairing example:
-
-```sh
-$PW xpc run --profile minimal fs_op --op stat --path-class tmp > /tmp/pw_probe.json
-PID=$(plutil -extract data.details.service_pid raw -o - /tmp/pw_probe.json)
-NAME=$(plutil -extract data.details.process_name raw -o - /tmp/pw_probe.json)
-PolicyWitness.app/Contents/MacOS/sandbox-log-observer --pid "$PID" --process-name "$NAME" --last 10s
-```
-
-Observer usage (summary):
-
-- Windowed (`log show`, default): `--last 5s` or explicit `--start`/`--end`
-- Live (`log stream`): `--duration <seconds>` or `--follow` (optionally `--until-pid-exit`)
-- Output: `--format json` (default) or `--format jsonl` (events + final report); optional copy via `--output <path>`
-- Optional override: `--predicate <predicate>` to customize the log filter
-
-### Compare a probe across a group (`run-matrix`)
-
-`run-matrix` runs one probe across a named group of profiles and writes:
-
-- a compare table (`run-matrix.table.txt`)
-- a full JSON report (`run-matrix.json`)
-
-Usage:
-
-```sh
-$PW run-matrix --group <baseline|probe> [--variant <base|injectable>] [--out <dir>] [--signposts] [--capture-signposts] <probe-id> [probe-args...]
-```
-
-Examples:
-
-```sh
-$PW run-matrix --group baseline capabilities_snapshot
-$PW run-matrix --group probe --variant injectable capabilities_snapshot
-```
-
-High-concern variants are included without extra flags.
-
-Signposts:
-
-- Add `--signposts` to emit Unified Logging signposts for each underlying probe run.
-- Add `--capture-signposts` to attach a lookback signpost timeline under each run’s `response.data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
-- When `--capture-signposts` is set, each run is fenced (session wait → arm → release → probe) and includes `response.data.fence` so evidence is bounded per profile.
-
-Groups (use `list-profiles` as the source of truth):
-
-- `baseline`: `minimal`
-- `probe`: `minimal`, `net_client`, `downloads_rw`, `user_selected_executable`, `bookmarks_app_scope`, `temporary_exception`
-
-Default output directory (per group, overwritten each run; see `data.output_dir`):
-
-```
-~/Library/Application Support/policy-witness/matrix/<group>/<variant>/latest
-```
-
-### Evidence and inspection
-
-PolicyWitness ships “static evidence” inside the app bundle:
-
-- `Contents/Resources/Evidence/manifest.json` (hashes + entitlements for key Mach‑Os)
-- `Contents/Resources/Evidence/symbols.json` (stable `pw_*` marker symbols for tooling)
-- `Contents/Resources/Evidence/profiles.json` (the process zoo profiles and entitlements)
-
-Commands:
-
-```sh
-$PW verify-evidence
-$PW inspect-macho main
-$PW inspect-macho evidence.symbols
-$PW inspect-macho evidence.profiles
-$PW bundle-evidence
-```
-
-Default evidence bundle output directory (overwritten each run; see `data.output_dir`):
-
-```
-~/Library/Application Support/policy-witness/evidence/latest
-```
-
-### Quarantine Lab (`quarantine-lab`)
-
-Quarantine Lab writes/opens/copies payloads and reports `com.apple.quarantine` deltas.
-
-Hard rule: it does **not** *run* payloads (no `execve`, no `posix_spawn`). Note that the `--exec` flag (shown in `xpc-quarantine-client --help`) means “mark the written file executable” (`chmod +x`), not “execute it”.
-
-Usage:
-
-```sh
-$PW quarantine-lab [--correlation-id <id>] [--signposts] [--capture-signposts] <xpc-service-bundle-id> <payload-class> [options...]
-```
-
-Choosing a service id:
-
-- Run `$PW list-profiles` and look for Quarantine Lab profiles (often `quarantine_*`).
-- Run `$PW show-profile <id>` and copy `data.variant.bundle_id` into the `quarantine-lab` invocation.
-
-Example:
-
-```sh
-$PW show-profile quarantine_default
-$PW quarantine-lab <bundle_id_from_show_profile> shell_script --dir tmp
-```
-
-Signposts:
-
-- Add `--signposts` to emit Unified Logging signposts for the quarantine client/service.
-- Add `--capture-signposts` to attach a lookback signpost timeline under `data.host_signpost_capture` (`--capture-signposts` implies `--signposts`).
-
-Result shape:
-
-- `quarantine-lab` reports success under `result.normalized_outcome` (for example `wrote_new`); `data.normalized_outcome` is not set for this command.
-
-Payload classes:
-
-- `shell_script` | `command_file` | `text` | `webarchive_like`
-
-For the full option list, run:
-
-```sh
-PolicyWitness.app/Contents/MacOS/xpc-quarantine-client --help
-```
-
-## Output format (JSON)
-
-All commands that emit JSON use the same top-level envelope:
-
-```json
+cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 1,
-  "kind": "probe_response",
-  "generated_at_unix_ms": 1700000000000,
-  "result": {
-    "ok": true,
-    "normalized_outcome": "ok",
-    "rc": 0
+  "specimen_id": "file_read_deny",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny file-read-data)"
   },
-  "data": {}
+  "probe_plan": [
+    {
+      "step_id": "fr1",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": { "kind": "path", "value": "/etc/hosts" }
+      },
+      "attempt": { "kind": "file", "action": "open_read", "target": "/etc/hosts" }
+    }
+  ]
 }
+JSON
 ```
 
-Note: Rust-emitted CLI reports use `schema_version: 1`. XPC probe/quarantine responses emitted by the embedded Swift clients use `schema_version: 1`.
-Some per-probe witness payloads also carry their own `schema_version` fields (for example `inherit_child` witness `schema_version: 1`).
-
-Rules:
-
-- Keys are lexicographically sorted for stability.
-- `xpc run` and `quarantine-lab` use `result.rc`; report-style commands use `result.exit_code`.
-- Some `result` fields are omitted when empty/not-applicable (for example `errno`, `stderr`, `stdout`), and some reports include them as `null`.
-- Command-specific fields live under `data` (no extra top-level keys).
-- `xpc session` emits one envelope per line (JSONL): lifecycle events (`xpc_session_event` / `xpc_session_error`) plus `probe_response` lines for each probe you run in the session.
-
-What to read first:
-
-- Outcome: `result.ok`, `result.normalized_outcome`, plus `result.errno`/`result.error` if not ok.
-- Service identity: `data.service_bundle_id`, `data.service_name`, `data.service_version`, `data.service_build` (probe responses), `data.details.service_pid`/`data.details.process_name`, and `data.pid` (session events).
-- “What path did it use?”: `data.details.file_path` (common for filesystem probes like `fs_op`/`fs_xattr`).
-
-Quick extraction without `jq` (macOS ships `plutil`):
+Run it (this writes a run directory under `.pw_lab/out/...` by default):
 
 ```sh
-plutil -extract result.normalized_outcome raw -o - report.json
-plutil -extract data.details.service_pid raw -o - report.json
-plutil -extract data.details.process_name raw -o - report.json
+$PW specimen /tmp/pw_specimen_file_read_deny.json --force
 ```
+
+Open the run directory and read `lab_summary.json` first.
+
+## Core model (what PolicyWitness is trying to prove)
+
+### Two runs per specimen
+
+Each `specimen` evaluation produces two runs:
+
+- **canonical**: apply the policy exactly as provided
+- **instrumented**: for SBPL, PolicyWitness adds a deterministic `(with message "...")` marker to each `(deny ...)` form so deny evidence can be correlated reliably
+
+Treat the instrumented run as evidence-collection support. Interpret allow/deny semantics from the canonical run.
+
+### A specimen is a list of steps
+
+Each step contains:
+
+- a **Channel D** prediction (`sandbox_check`), and
+- a **Channel A** operation attempt (file op, mach lookup, etc.)
+
+PolicyWitness treats “permission-shaped failure” as ambiguous unless it can attach supporting evidence.
+
+### Evidence channels (A–D)
+
+- **A**: in-band attempt result (return code + `errno`/Mach return, plus a normalized outcome)
+- **B**: deterministic deny marker (instrumented run only; SBPL `message` marker on deny)
+- **C**: unified-log deny evidence correlated by PID + window (captured outside the sandbox boundary)
+- **D**: `sandbox_check` prediction (and a post-apply “am I sandboxed?” check)
+
+## CLI (what you can run)
+
+The shipped CLI surface is intentionally small:
+
+```text
+policy-witness inside [--service-name <mach-service-name> ...] [--bare]
+policy-witness specimen <specimen.json> [--outdir <dir>] [--timeout-ms <n>] [--log-last <dur>] [--force]
+```
+
+### `inside` (preflight)
+
+`inside` is a fail-closed “am I running inside a sandboxed automation harness?” probe.
+
+- `--bare` prints `true`/`false`
+- without `--bare`, it prints JSON describing which sensor triggered
+
+If `inside` reports `true`, `specimen` will refuse to run (status `blocked`) because:
+
+- XPC lookup can fail before the runner launches, and/or
+- unified log access can be restricted (making deny evidence capture meaningless).
+
+### `specimen` (run one specimen and write a labbook)
+
+Usage:
+
+```sh
+$PW specimen <specimen.json> [--outdir <dir>] [--timeout-ms <n>] [--log-last <dur>] [--force]
+```
+
+Key flags:
+
+- `--outdir <dir>`: where to write the run directory (default: `.pw_lab/out/<timestamp>_specimen_<specimen_id>`)
+- `--force`: allows deleting/recreating an existing non-empty `--outdir`
+- `--timeout-ms`: runner RPC timeout (default: `240000`)
+- `--log-last`: unified log lookback window for deny capture (default: `10s`)
+
+Exit codes:
+
+- `0`: summary status `pass`
+- `1`: summary status `fail`
+- `3`: summary status `blocked` (inside harness sandbox)
+
+## Specimen format (JSON)
+
+A specimen file has these top-level keys:
+
+```text
+specimen_id: string
+policy: { ... }
+instrumented_policy: { ... }   (optional)
+probe_plan: [ ... ]
+```
+
+### Policy (`policy` / `instrumented_policy`)
+
+Two policy formats are supported:
+
+- `format: "sbpl"`
+  - `sbpl_source`: the SBPL source string
+  - `params` (optional): map of parameter key/value strings
+
+- `format: "compiled_bytes"`
+  - `compiled_profile_b64`: base64 of compiled profile bytes
+  - `params` (optional): map of parameter key/value strings
+
+If `instrumented_policy` is omitted and `policy.format == "sbpl"`, PolicyWitness auto-generates an instrumented policy by adding a `(with message "PW_LAB_DENY_MARKER:<specimen_id>")` marker to each `(deny ...)` form.
+
+If `policy.format != "sbpl"`, you must provide `instrumented_policy` explicitly.
+
+### Steps (`probe_plan`)
+
+Each step has:
+
+- `step_id`: string
+- `sandbox_check`: `{ operation, filter }`
+- `attempt`: `{ kind, action, target }`
+
+Supported `sandbox_check.filter.kind` values:
+
+- `none`
+- `path` (use `filter.value` as a path string)
+- `global_name` (for `mach-lookup`, use `filter.value` as the Mach service name)
+
+Supported attempts:
+
+- `attempt.kind: "file"`
+  - `action: "open_read" | "open_write" | "create" | "unlink"`
+  - `target: <path>`
+
+- `attempt.kind: "mach_lookup"`
+  - `action: "bootstrap_look_up"`
+  - `target: <mach-service-name>` (for example `com.apple.logd`)
+
+**Path canonicalization note**
+
+The runner canonicalizes file paths for the attempted operation (`realpath` when possible). For best results, use canonical paths in `sandbox_check.filter.value` too (avoid `/tmp` vs `/private/tmp` mismatches).
+
+## Labbook output (what `specimen` writes)
+
+The run directory contains:
+
+- `inside.json`: the preflight result captured for this run
+- `specimen.json`: a copy of your input specimen
+- `canonical.request.json` / `instrumented.request.json`: the exact requests sent to the runner
+- `canonical/` and `instrumented/`:
+  - `run.json`: runner client envelope (argv, timestamps, parsed runner JSON)
+  - `outputs.stdout.json`: raw runner stdout (JSON)
+  - `outputs.stderr.txt`: raw runner stderr
+- `canonical_sandbox_logs.json` / `instrumented_sandbox_logs.json`: unified-log deny capture results (best-effort)
+- `lab_summary.json`: the stable “overview” summary for the run
+
+### Reading `lab_summary.json`
+
+Key fields:
+
+- `status`: `pass` / `fail` / `blocked`
+- `inside.inside`: whether PolicyWitness detected a harness sandbox
+- `uncertainty.confidence`: `high` only when deny evidence was observed and steps were recorded
+- `uncertainty.reasons`: why confidence is not high (for example `sandbox_deny_not_observed`)
+- `steps[]`: per-step outcomes derived from Channel A + D
+  - `normalized_outcome` includes:
+    - `ok`
+    - `failed_predicted_deny`
+    - `failed_predicted_allow`
+    - `mismatch_allow_but_predicted_deny`
+
+## Additional example: deny `mach-lookup`
+
+This specimen denies all `mach-lookup` operations and then attempts to look up `com.apple.logd`:
+
+```sh
+cat > /tmp/pw_specimen_mach_deny.json <<'JSON'
+{
+  "specimen_id": "mach_deny",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny mach-lookup)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "ml1",
+      "sandbox_check": {
+        "operation": "mach-lookup",
+        "filter": { "kind": "none" }
+      },
+      "attempt": { "kind": "mach_lookup", "action": "bootstrap_look_up", "target": "com.apple.logd" }
+    }
+  ]
+}
+JSON
+
+$PW specimen /tmp/pw_specimen_mach_deny.json --force
+```
+
+## Troubleshooting
+
+### `specimen` is `blocked` / exit code 3
+
+Run `$PW inside` to see which sensor triggered. If `inside=true`, rerun PolicyWitness outside the harness sandbox.
+
+### Log capture is unavailable
+
+If `*_sandbox_logs.json` reports `capture_status: "requested_unavailable"`, unified-log evidence could not be collected from this environment. You can still use the runner’s `sandbox_check` predictions and operation results, but attribution confidence stays low.
+
+### `sandbox_check` and the attempt disagree
+
+- If the attempt failed but `sandbox_check` said `allow`, treat it as “not confirmed sandbox denial” and inspect the attempt error (`errno` / Mach return).
+- If the attempt succeeded but `sandbox_check` said `deny`, treat it as a probe mismatch (wrong operation/filter, non-canonical path, or an operation that isn’t governed by the policy string you checked).
+
+### `specimen` refuses to auto-instrument
+
+If you use `policy.format: "compiled_bytes"`, you must provide `instrumented_policy` explicitly (PolicyWitness cannot safely edit compiled profile bytes).
 
 ## Safety notes
 
-- `run-system` runs **platform binaries only** (allowlisted to standard system prefixes). It exists for specific demonstrations; most work should use XPC services (`xpc run` / `xpc session`).
-- `run-embedded` runs signed helper tools embedded in the app bundle. It does not run arbitrary on-disk tools by path.
-- `dlopen_external` executes dylib initializers by design. Treat it as code execution and use it intentionally.
-- If you did not capture deny evidence, do not claim “sandbox denied”; keep attribution explicit.
+- PolicyWitness does not execute arbitrary paths; the runner only performs a small, explicit set of operations.
+- SBPL / compiled-profile inputs can deny broad classes of behavior. Run PolicyWitness in a controlled environment and expect specimens to fail loudly.
+- Treat missing deny evidence as uncertainty: if you did not capture deny evidence, do not claim “sandbox denied.”
