@@ -1,6 +1,0 @@
-id: q4_capture_targeting
-driver: shell
-command:
-  - bash
-  - tests/suites/smoke/q4_capture_targeting.sh
-notes: "Runs the Q4 capture targeting smoke script under the lab wrapper."

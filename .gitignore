@@ -1,6 +1,4 @@
 # build artifacts
-EntitlementJail.app/
-EntitlementJail.zip
 PolicyWitness.app/
 PolicyWitness.zip
 
@@ -12,15 +10,7 @@ controller/target
 
 # local scratch
 .tmp/
-.pw_lab/
-
-# experiment harness artifacts
-experiments/bin/
-experiments/out/
 
 # tests artifacts
 tests/out/
 tests/__pycache__/
-
-# python bytecode (lab tooling)
-laboratory/__pycache__/

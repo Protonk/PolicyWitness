@@ -1,0 +1,28 @@
+(version 1)
+
+; RunnerSmoke v1
+;
+; Blacklist-style: keep the runner stable while still producing crisp denials.
+; This fixture is intended to validate:
+;   - SBPL parameter plumbing via (param "...") substitution
+;   - deterministic deny side-effect via (with send-signal SIGUSR1) on a FILE denial
+;   - mach-lookup allow/deny behavior without relying on file-only probes
+
+(allow default)
+
+; Explicit allow for the "allowed write" directory used by the smoke harness.
+(allow file-write* (subpath (param "ALLOW_WRITE_DIR")))
+
+; Channel B: deterministic in-process signal on a denied FILE write.
+; Note: send-signal is not expected to apply to mach-* operations.
+(deny file-write* (subpath (param "DENY_WRITE_DIR"))
+     (with send-signal SIGUSR1))
+
+; Deny one Mach service lookup (no signal expected here).
+; Note: use a literal name here. Parameter substitution via (param "...") is
+; validated by the file-write* rule above, and this keeps the fixture stable
+; across libsandbox parser quirks.
+(deny mach-lookup (global-name "com.apple.cfprefsd.xpc.daemon"))
+
+; Explicit allow (default allow already covers it, but this makes intent visible).
+(allow mach-lookup (global-name "com.apple.logd"))

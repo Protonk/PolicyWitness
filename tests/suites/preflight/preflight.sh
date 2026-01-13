@@ -56,19 +56,17 @@ fi
 mkdir -p "$(dirname "${OUT_PATH}")"
 
 APP_PATH="${ROOT_DIR}/PolicyWitness.app"
-INSPECTOR_PATH="${PW_INSPECTOR_BIN:-${ROOT_DIR}/controller/target/debug/pw-inspector}"
-DYLIB_PATH="${ROOT_DIR}/tests/fixtures/TestDylib/out/testdylib.dylib"
 
 step "codesign_inspection" "inspect codesign metadata"
 
-/usr/bin/python3 - "${OUT_PATH}" "${APP_PATH}" "${INSPECTOR_PATH}" "${DYLIB_PATH}" <<'PY'
+/usr/bin/python3 - "${OUT_PATH}" "${APP_PATH}" <<'PY'
 import json
 import os
 import plistlib
 import subprocess
 import sys
 
-out_path, app_path, inspector_path, dylib_path = sys.argv[1:5]
+out_path, app_path = sys.argv[1:3]
 
 def run(cmd):
     return subprocess.run(cmd, capture_output=True, text=False)
@@ -175,14 +173,6 @@ if os.path.isdir(xpc_services_dir):
 app_exists = os.path.exists(app_path)
 app_signed, app_error = codesign_verify(app_path, deep=True) if app_exists else (False, "missing")
 
-inspector_exists = os.path.exists(inspector_path)
-inspector_signed, inspector_error = codesign_verify(inspector_path) if inspector_exists else (False, "missing")
-inspector_entitlements, inspector_ent_error = codesign_entitlements(inspector_path) if inspector_exists else (None, "missing")
-inspector_cs_debugger = bool(inspector_entitlements.get(ENT_KEYS["cs_debugger"])) if inspector_entitlements else False
-
-dylib_exists = os.path.exists(dylib_path)
-dylib_signed, dylib_error = codesign_verify(dylib_path) if dylib_exists else (False, "missing")
-
 report = {
     "schema_version": 1,
     "app": {
@@ -192,20 +182,6 @@ report = {
         "sign_error": app_error,
     },
     "services": services,
-    "inspector": {
-        "path": inspector_path,
-        "exists": inspector_exists,
-        "signed": inspector_signed,
-        "sign_error": inspector_error,
-        "cs_debugger": inspector_cs_debugger,
-        "entitlements_error": inspector_ent_error if inspector_entitlements is None else None,
-    },
-    "test_dylib": {
-        "path": dylib_path,
-        "exists": dylib_exists,
-        "signed": dylib_signed,
-        "sign_error": dylib_error,
-    },
 }
 
 with open(out_path, "w", encoding="utf-8") as fh:

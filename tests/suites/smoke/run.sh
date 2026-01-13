@@ -17,9 +17,7 @@ run_test() {
 }
 
 run_test "${ROOT_DIR}/tests/suites/smoke/pw_specimen_smoke.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_lab_signposts.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_lab_inside.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_lab_tui_ungetch.sh"
+run_test "${ROOT_DIR}/tests/suites/smoke/pw_runner_smoke_v1.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1

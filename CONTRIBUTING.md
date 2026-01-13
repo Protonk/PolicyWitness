@@ -57,6 +57,10 @@ If you add/remove embedded executables, update `build.sh`, Evidence generation (
    - `controller/tests/cli_integration.rs` (integration), or
    - a smoke script under `tests/suites/smoke/`.
 
-### Improve run inspection (TUI)
+### Improve run inspection
 
-The repository ships a minimal evidence-ledger TUI under `laboratory/`. If you change the `lab_summary.json` schema, update the TUI and its fixtures under `tests/fixtures/pw_lab/`.
+`policy-witness run` prints a single JSON envelope to stdout. If you change the output schema, update:
+
+- `PolicyWitness.md` (user guide),
+- `controller/tests/cli_integration.rs` (integration assertions),
+- smoke scripts under `tests/suites/smoke/`.

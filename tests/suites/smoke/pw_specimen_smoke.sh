@@ -11,7 +11,7 @@ PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
 SPECIMEN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_runner/specimen_file_read_deny.json"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "specimen_eval" "run specimen evaluation via policy-witness"
+test_step "run" "run request via policy-witness"
 
 if [[ ! -x "${PW_BIN}" ]]; then
   test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
@@ -22,53 +22,43 @@ if [[ ! -f "${SPECIMEN_FIXTURE}" ]]; then
   test_fail "specimen fixture missing: ${SPECIMEN_FIXTURE}"
 fi
 
-# If we are running inside a sandboxed harness, specimen execution is expected
-# to be blocked (nested-sandbox + unified log access constraints).
-INSIDE="$("${PW_BIN}" inside --bare 2>/dev/null || true)"
-if [[ "${INSIDE}" == "true" ]]; then
-  test_skip "blocked: inside=true (rerun outside harness / with escalation)"
+# Some automation harnesses run commands inside an OS sandbox. In that context,
+# specimen execution can fail for reasons unrelated to PolicyWitness itself
+# (XPC lookup restrictions, unified log access restrictions).
+if [[ -n "${CODEX_SANDBOX:-}" ]]; then
+  test_skip "sandboxed automation harness detected (CODEX_SANDBOX is set); rerun from a normal Terminal"
   exit 0
 fi
 
-OUTDIR="${PW_TEST_ARTIFACTS}/specimen_run"
-mkdir -p "${OUTDIR}"
-
-SPECIMEN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.specimen.stdout.txt"
-SPECIMEN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.specimen.stderr.txt"
+RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"
+RUN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.run.stderr.txt"
 
 set +e
-"${PW_BIN}" specimen "${SPECIMEN_FIXTURE}" --outdir "${OUTDIR}" --force >"${SPECIMEN_STDOUT}" 2>"${SPECIMEN_STDERR}"
+"${PW_BIN}" run "${SPECIMEN_FIXTURE}" >"${RUN_STDOUT}" 2>"${RUN_STDERR}"
 RC=$?
 set -e
 
-if [[ "${RC}" -eq 3 ]]; then
-  test_skip "blocked: inside=true (rerun outside harness / with escalation)"
-  exit 0
-fi
 if [[ "${RC}" -ne 0 ]]; then
-  test_fail "policy-witness specimen failed (rc=${RC}); see ${OUTDIR}"
+  test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-SUMMARY_JSON="${OUTDIR}/lab_summary.json"
-if [[ ! -f "${SUMMARY_JSON}" ]]; then
-  test_fail "missing lab_summary.json at ${SUMMARY_JSON}"
-fi
-
-/usr/bin/python3 - "${SUMMARY_JSON}" <<'PY'
+/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-obj = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert obj.get("driver") == "pw_runner"
-assert obj.get("profile") == "PWRunner"
-steps = obj.get("steps") or []
+env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert env.get("kind") == "run"
+assert env.get("result", {}).get("ok") is True
+
+runner = env.get("data", {}).get("runner_result") or {}
+steps = runner.get("steps") or []
 if len(steps) != 1:
     raise SystemExit(f"expected 1 step (got {len(steps)})")
 step = steps[0]
-if step.get("sandbox_check_outcome") != "deny":
-    raise SystemExit(f"expected sandbox_check_outcome=deny (got {step.get('sandbox_check_outcome')!r})")
+sb = step.get("sandbox_check") or {}
+if sb.get("outcome") != "deny":
+    raise SystemExit(f"expected sandbox_check.outcome=deny (got {sb.get('outcome')!r})")
 PY
 
-test_pass "specimen smoke ok" "{}"
-
+test_pass "run smoke ok" "{}"

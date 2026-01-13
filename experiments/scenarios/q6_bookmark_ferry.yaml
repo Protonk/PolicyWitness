@@ -1,6 +1,0 @@
-id: q6_bookmark_ferry
-driver: shell
-command:
-  - bash
-  - tests/suites/smoke/q6_bookmark_ferry.sh
-notes: "Runs the Q6 bookmark ferry smoke script under the lab wrapper."

@@ -47,29 +47,18 @@ Optional standard overrides:
 
 ## Registry (current opt-in tests)
 
-### pw_lab_tui_pty
-
-- **Location:** `tests/suites/opt_in/pw_lab_tui_pty.sh`
-- **Purpose:** Validate that the TUI can launch under a pseudo-terminal, survive
-  resize storms, and exit cleanly (process-level stability).
-- **Opt-in reason:** Requires a PTY, terminal ioctls, and timing-sensitive resize
-  behavior that is known to be flaky in CI.
-- **Resource dependency:** PTY + TTY window sizing + SIGWINCH handling.
-- **When to run:** After TUI resize logic changes or when debugging TUI crashes.
-- **Artifacts:** `tests/out/suites/opt_in/pw_lab_tui_pty/artifacts/*`
-
 ### pw_runner_specimen
 
 - **Location:** `tests/suites/opt_in/pw_runner_specimen.sh`
-- **Purpose:** Validate the PWRunner “specimen” execution lane:
-  - canonical SBPL apply + probe execution,
+- **Purpose:** Validate the PWRunner “run” execution lane:
+  - SBPL apply + probe execution (single runner instance),
   - Channel D (`sandbox_check`) vs Channel A (attempt outcome) consistency,
-  - Channel B deny markers (SBPL `message` marker emitted on deny),
+  - Channel B deny-signal accounting (only if the policy uses SBPL `send-signal`),
   - Channel C unified-log correlation via `sandbox-log-observer`.
 - **Opt-in reason:** Requires Unified Logging access and an unsandboxed caller
   (in sandboxed harnesses, XPC lookup and log capture can be blocked).
 - **Resource dependency:** `PolicyWitness.app` built + `log show` access.
-- **When to run:** After changing `runner/PWRunner*` runner behavior or `pw-lab specimen`.
+- **When to run:** After changing `runner/PWRunner*` runner behavior or `policy-witness run`.
 - **Artifacts:** `tests/out/suites/opt_in/pw_runner_specimen/artifacts/*`
 
 ## Adding a new opt-in test

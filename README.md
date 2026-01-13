@@ -4,9 +4,9 @@ PolicyWitness is a sandbox runner instrumentation harness. Variation is supplied
 
 - The controller starts a fresh `PWRunner.xpc` instance per specimen.
 - The runner starts unsandboxed, applies the requested sandbox profile **exactly once**, runs the probe plan, returns a structured result, and exits.
-- The controller correlates supporting evidence (unified-log deny lines, signposts, etc.) by PID and window.
+- The controller correlates supporting evidence (unified-log deny lines) by PID and window.
 
-What’s hard in computing security is making correct claims about boundaries. The sandbox is an especially hard boundary to make a claim about because it often collapses into ambiguous signals, depends on identity and context, and frequently requires external evidence to attribute a denial. PolicyWitness makes claims by producing per-phase, per-process witnesses with durable-session context and explicit lifecycle signals.
+What’s hard in computing security is making correct claims about boundaries. The sandbox is an especially hard boundary to make a claim about because it often collapses into ambiguous signals, depends on identity and context, and frequently requires external evidence to attribute a denial. PolicyWitness makes claims by producing per-step, per-process witnesses with explicit lifecycle boundaries.
 
 ## The Core Model
 
@@ -15,16 +15,9 @@ What’s hard in computing security is making correct claims about boundaries. T
 Each specimen evaluation records mandatory, multi-channel evidence:
 
 - **A**: in-band operation attempt result (rc/errno/kr)
-- **B**: deterministic deny marker (SBPL `message` on deny for the instrumented run)
+- **B**: deterministic deny side-effect (SBPL `send-signal` if the policy uses it)
 - **C**: unified-log correlation (captured outside the sandbox boundary)
 - **D**: `sandbox_check` prediction / “am I sandboxed” confirmation
-
-The preferred execution surface is in-process probes dispatched by `probe_id` (not arbitrary path execution). If you want a three-way comparison (baseline vs `sandbox-exec` vs XPC), the tri-run harness under `experiments/` produces a mismatch atlas.
-
-## Commitments
-
-* **Specimen-first**: sandbox variation is SBPL / compiled bytes + parameters + plan.
-* **One-way sandbox**: the runner applies one profile per process instance; a new specimen means a new runner instance.
 
 ## What ships
 
@@ -33,6 +26,7 @@ This repo builds a single distributable specimen:
 - `PolicyWitness.app` — the bundle you run and inspect
   - `Contents/MacOS/policy-witness` (Rust launcher; host-side)
   - `Contents/MacOS/pw-runner-client` (Swift; NSXPCConnection wrapper for `PWRunner.xpc`)
+  - `Contents/MacOS/sandbox-log-observer` (Rust; unified-log deny capture helper)
   - `Contents/XPCServices/PWRunner.xpc` (Swift runner; self-applies sandbox per specimen)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 - `PolicyWitness.md` — the user guide shipped alongside the app

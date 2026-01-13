@@ -1,6 +1,0 @@
-id: q8_attribution_bounds
-driver: shell
-command:
-  - bash
-  - tests/suites/smoke/q8_attribution_bounds.sh
-notes: "Runs the Q8 attribution bounds smoke script under the lab wrapper."

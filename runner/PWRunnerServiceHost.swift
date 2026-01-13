@@ -382,24 +382,49 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
     }
 
     private func applySandboxPolicy(_ policy: PWRunnerPolicySpec, sandboxLib: SandboxLib) -> Result<Void, ApplyError> {
-        // Create params if present.
-        let paramsObj: SandboxLib.SandboxParams? = {
-            guard let params = policy.params, !params.isEmpty else { return nil }
-            guard let obj = sandboxLib.createParams() else { return nil }
-            for (k, v) in params.sorted(by: { $0.key < $1.key }) {
-                _ = k.withCString { kPtr in
-                    v.withCString { vPtr in
-                        sandboxLib.setParam(obj, kPtr, vPtr)
-                    }
-                }
-            }
-            return obj
-        }()
+        // `sandbox_set_param` is an underspecified private API. Keep the key/value C strings alive
+        // until compilation completes to avoid relying on whether libsandbox copies the strings.
+        var paramCStringAllocs: [UnsafeMutablePointer<CChar>] = []
         defer {
-            if let paramsObj {
-                sandboxLib.freeParams(paramsObj)
+            for ptr in paramCStringAllocs {
+                free(ptr)
             }
         }
+
+        // Create params if present.
+        let paramsObj: SandboxLib.SandboxParams?
+        if let params = policy.params, !params.isEmpty {
+            guard let obj = sandboxLib.createParams() else {
+                return .failure(ApplyError(message: "sandbox_create_params failed (returned NULL)"))
+            }
+            for (key, value) in params.sorted(by: { $0.key < $1.key }) {
+                guard let keyDup = strdup(key) else {
+                    sandboxLib.freeParams(obj)
+                    return .failure(ApplyError(message: "strdup failed for param key"))
+                }
+                guard let valueDup = strdup(value) else {
+                    free(keyDup)
+                    sandboxLib.freeParams(obj)
+                    return .failure(ApplyError(message: "strdup failed for param value"))
+                }
+                paramCStringAllocs.append(keyDup)
+                paramCStringAllocs.append(valueDup)
+
+                let rc: Int32 = sandboxLib.setParam(obj, keyDup, valueDup)
+                if rc != 0 {
+                    sandboxLib.freeParams(obj)
+                    return .failure(
+                        ApplyError(
+                            message: "sandbox_set_param failed for key \(key): rc=\(rc)"
+                        )
+                    )
+                }
+            }
+            paramsObj = obj
+        } else {
+            paramsObj = nil
+        }
+        defer { sandboxLib.freeParams(paramsObj) }
 
         switch policy.format {
         case "sbpl":

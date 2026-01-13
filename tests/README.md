@@ -3,7 +3,7 @@
 This directory contains the repository test harness. The test suite is organized to answer two questions:
 
 1. Does the built `PolicyWitness.app` basically work end-to-end?
-2. Did we break a contract (CLI shape, evidence artifacts, labbook outputs)?
+2. Did we break a contract (CLI shape, evidence artifacts, JSON output schema)?
 
 The harness is machine-readable: every test writes structured JSONL events and a per-run summary under `tests/out/`.
 
@@ -12,7 +12,6 @@ Related docs:
 - CLI contract: `controller/README.md`
 - Runner architecture: `runner/README.md`
 - Signing/build: `SIGNING.md`
-- Lab tooling (TUI): `laboratory/README.md`
 
 ## How to run
 
@@ -43,18 +42,9 @@ Opt-in tests live under `tests/suites/opt_in/` and are listed in `tests/OPT_IN_T
 - `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/tests/cli_integration.rs`
 - `smoke`: end-to-end scripts against a built `PolicyWitness.app`
 
-## Harness note: sandboxed automation environments (“inside”)
+## Harness note: sandboxed automation environments
 
-Some automation harnesses run commands inside an OS sandbox. In that situation, specimen execution may be blocked (nested sandbox) and unified-log based evidence capture may be restricted.
-
-Both the shipped CLI and the lab tool provide a fail-closed preflight:
-
-```sh
-PolicyWitness.app/Contents/MacOS/policy-witness inside --bare
-laboratory/pw-lab inside --pw PolicyWitness.app/Contents/MacOS/policy-witness
-```
-
-If `inside=true`, re-run outside the harness (or with escalation) before diagnosing PolicyWitness itself.
+Some automation harnesses run commands inside an OS sandbox. In that situation, specimen execution and unified-log based evidence capture can fail for reasons unrelated to PolicyWitness; re-run from a normal Terminal (or with escalation) before diagnosing PolicyWitness itself.
 
 ## Output contract (`tests/out/`)
 

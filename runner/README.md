@@ -45,4 +45,4 @@ Some development harnesses run tools inside an OS sandbox. In those environments
 
 Treat this as an environment constraint, not a PolicyWitness regression.
 
-Preflight with `policy-witness inside` (or `laboratory/pw-lab inside`). If `inside=true`, ask for approval/escalation and re-run once outside the harness sandbox to confirm the behavior.
+If you suspect you are running under a sandboxed automation harness, re-run from a normal Terminal (or with escalation) before debugging PolicyWitness itself.

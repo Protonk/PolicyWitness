@@ -1,6 +1,0 @@
-id: q7_gatekeeper_connection
-driver: shell
-command:
-  - bash
-  - tests/suites/smoke/q7_gatekeeper_connection.sh
-notes: "Runs the Q7 gatekeeper connection smoke script under the lab wrapper."

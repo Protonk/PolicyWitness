@@ -221,7 +221,6 @@ def main() -> int:
     helper_names = [
         "pw-runner-client",
         "sandbox-log-observer",
-        "signpost-log-observer",
     ]
     for name in helper_names:
         helper_path = contents_dir / "MacOS" / name
@@ -329,4 +328,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "specimen_id": "runner_smoke_v1",
+  "policy": {
+    "format": "sbpl",
+    "params": {
+      "ALLOW_WRITE_DIR": "__ALLOW_WRITE_DIR__",
+      "DENY_WRITE_DIR": "__DENY_WRITE_DIR__"
+    },
+    "sbpl_source": "__PROFILE_SBPL_SOURCE__"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_write",
+        "kind": "file",
+        "target": "__ALLOW_WRITE_FILE__"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "__ALLOW_WRITE_FILE__"
+        },
+        "operation": "file-write-data"
+      },
+      "step_id": "fs_write_allowed"
+    },
+    {
+      "attempt": {
+        "action": "open_write",
+        "kind": "file",
+        "target": "__DENY_WRITE_FILE__"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "__DENY_WRITE_FILE__"
+        },
+        "operation": "file-write-data"
+      },
+      "step_id": "fs_write_denied"
+    },
+    {
+      "attempt": {
+        "action": "bootstrap_look_up",
+        "kind": "mach_lookup",
+        "target": "com.apple.logd"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "global_name",
+          "value": "com.apple.logd"
+        },
+        "operation": "mach-lookup"
+      },
+      "step_id": "mach_lookup_allowed"
+    },
+    {
+      "attempt": {
+        "action": "bootstrap_look_up",
+        "kind": "mach_lookup",
+        "target": "com.apple.cfprefsd.xpc.daemon"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "global_name",
+          "value": "com.apple.cfprefsd.xpc.daemon"
+        },
+        "operation": "mach-lookup"
+      },
+      "step_id": "mach_lookup_denied"
+    }
+  ]
+}

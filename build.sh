@@ -17,9 +17,6 @@ ZIP_NAME="${APP_NAME}.zip"
 # Paths in this repo
 RUNNER_MANIFEST="controller/Cargo.toml"
 ENTITLEMENTS_PLIST="PolicyWitness.entitlements"
-INHERIT_ENTITLEMENTS_PLIST="PolicyWitness.inherit.entitlements"
-BAD_INHERIT_ENTITLEMENTS_PLIST="PolicyWitness.inherit.bad.entitlements"
-INSPECTOR_ENTITLEMENTS_PLIST="Inspector.entitlements"
 INFO_PLIST_TEMPLATE="Info.plist"
 
 # Optional: embed extra payloads if present
@@ -110,10 +107,7 @@ PY
 echo "==> Building Rust controller + tools"
 cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin policy-witness \
-  --bin quarantine-observer \
-  --bin sandbox-log-observer \
-  --bin signpost-log-observer \
-  --bin pw-inspector
+  --bin sandbox-log-observer
 
 # Find the built binary. (Assumes standard Cargo layout.)
 RUNNER_BIN="controller/target/release/policy-witness"
@@ -121,24 +115,9 @@ if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2
 fi
-QUARANTINE_OBSERVER_BIN="controller/target/release/quarantine-observer"
-if [[ ! -x "${QUARANTINE_OBSERVER_BIN}" ]]; then
-  echo "ERROR: expected quarantine-observer binary at ${QUARANTINE_OBSERVER_BIN}" 1>&2
-  exit 2
-fi
 SANDBOX_LOG_OBSERVER_BIN="controller/target/release/sandbox-log-observer"
 if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
-  exit 2
-fi
-SIGNPOST_LOG_OBSERVER_BIN="controller/target/release/signpost-log-observer"
-if [[ ! -x "${SIGNPOST_LOG_OBSERVER_BIN}" ]]; then
-  echo "ERROR: expected signpost-log-observer binary at ${SIGNPOST_LOG_OBSERVER_BIN}" 1>&2
-  exit 2
-fi
-PW_INSPECTOR_BIN="controller/target/release/pw-inspector"
-if [[ ! -x "${PW_INSPECTOR_BIN}" ]]; then
-  echo "ERROR: expected pw-inspector binary at ${PW_INSPECTOR_BIN}" 1>&2
   exit 2
 fi
 
@@ -162,8 +141,6 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 # Embed observer tooling (runs outside the App Sandbox boundary when launched from Terminal)
 cp "${SANDBOX_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
-cp "${SIGNPOST_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/signpost-log-observer"
-chmod +x "${APP_BUNDLE}/Contents/MacOS/signpost-log-observer"
 
 # Optional: embed fencerunner
 if [[ -n "${EMBED_FENCERUNNER_PATH}" ]]; then
@@ -236,54 +213,6 @@ if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then
   echo "ERROR: missing entitlements plist: ${ENTITLEMENTS_PLIST}" 1>&2
   exit 2
 fi
-if [[ ! -f "${INHERIT_ENTITLEMENTS_PLIST}" ]]; then
-  echo "ERROR: missing inherit entitlements plist: ${INHERIT_ENTITLEMENTS_PLIST}" 1>&2
-  exit 2
-fi
-if [[ ! -f "${BAD_INHERIT_ENTITLEMENTS_PLIST}" ]]; then
-  echo "ERROR: missing bad inherit entitlements plist: ${BAD_INHERIT_ENTITLEMENTS_PLIST}" 1>&2
-  exit 2
-fi
-if [[ ! -f "${INSPECTOR_ENTITLEMENTS_PLIST}" ]]; then
-  echo "ERROR: missing inspector entitlements plist: ${INSPECTOR_ENTITLEMENTS_PLIST}" 1>&2
-  exit 2
-fi
-
-sign_macho_inherit() {
-  local target="$1"
-  local identifier="${2:-}"
-  if [[ ! -e "${target}" ]]; then
-    return 0
-  fi
-  if /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
-    codesign \
-      --force \
-      --options runtime \
-      --timestamp \
-      --entitlements "${INHERIT_ENTITLEMENTS_PLIST}" \
-      ${identifier:+--identifier "${identifier}"} \
-      -s "${IDENTITY}" \
-      "${target}"
-  fi
-}
-
-sign_macho_inherit_bad() {
-  local target="$1"
-  local identifier="${2:-}"
-  if [[ ! -e "${target}" ]]; then
-    return 0
-  fi
-  if /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
-    codesign \
-      --force \
-      --options runtime \
-      --timestamp \
-      --entitlements "${BAD_INHERIT_ENTITLEMENTS_PLIST}" \
-      ${identifier:+--identifier "${identifier}"} \
-      -s "${IDENTITY}" \
-      "${target}"
-  fi
-}
 
 sign_macho_plain() {
   local target="$1"
@@ -300,22 +229,6 @@ sign_macho_plain() {
   fi
 }
 
-sign_macho_entitlements() {
-  local target="$1"
-  local entitlements="$2"
-  if [[ ! -e "${target}" ]]; then
-    return 0
-  fi
-  if /usr/bin/file -b "${target}" | /usr/bin/grep -q "Mach-O"; then
-    codesign \
-      --force \
-      --options runtime \
-      --timestamp \
-      --entitlements "${entitlements}" \
-      -s "${IDENTITY}" \
-      "${target}"
-  fi
-}
 
 echo "==> Codesigning embedded helper tools (plain; unsandboxed host-side)"
 if [[ -d "${APP_BUNDLE}/Contents/Helpers" ]]; then
@@ -327,7 +240,6 @@ fi
 echo "==> Codesigning embedded MacOS tools (plain; unsandboxed host-side)"
 sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
-sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/signpost-log-observer"
 
 echo "==> Codesigning embedded XPC services"
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
@@ -371,10 +283,7 @@ codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}"
 codesign --display --entitlements - "${APP_BUNDLE}" >/dev/null
 
 echo "==> Codesigning observer tools (not embedded)"
-sign_macho_plain "${QUARANTINE_OBSERVER_BIN}"
 sign_macho_plain "${SANDBOX_LOG_OBSERVER_BIN}"
-sign_macho_plain "${SIGNPOST_LOG_OBSERVER_BIN}"
-sign_macho_entitlements "${PW_INSPECTOR_BIN}" "${INSPECTOR_ENTITLEMENTS_PLIST}"
 
 echo "==> Creating zip (for notarization): ${ZIP_NAME}"
 rm -f "${ZIP_NAME}"
@@ -384,10 +293,7 @@ echo
 echo "DONE:"
 echo "  - ${APP_BUNDLE}"
 echo "  - ${ZIP_NAME}"
-echo "  - ${QUARANTINE_OBSERVER_BIN}"
 echo "  - ${SANDBOX_LOG_OBSERVER_BIN}"
-echo "  - ${SIGNPOST_LOG_OBSERVER_BIN}"
-echo "  - ${PW_INSPECTOR_BIN}"
 echo
 echo "Next (notarize with your saved profile):"
 cat <<EOF
