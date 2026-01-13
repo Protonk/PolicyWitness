@@ -1,0 +1,24 @@
+{
+  "specimen_id": "file_read_deny",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny file-read-data)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "fr1",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/etc/hosts"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "/etc/hosts"
+      }
+    }
+  ]
+}

@@ -58,6 +58,20 @@ Optional standard overrides:
 - **When to run:** After TUI resize logic changes or when debugging TUI crashes.
 - **Artifacts:** `tests/out/suites/opt_in/pw_lab_tui_pty/artifacts/*`
 
+### pw_runner_specimen
+
+- **Location:** `tests/suites/opt_in/pw_runner_specimen.sh`
+- **Purpose:** Validate the PWRunner “specimen” execution lane:
+  - canonical SBPL apply + probe execution,
+  - Channel D (`sandbox_check`) vs Channel A (attempt outcome) consistency,
+  - Channel B deny markers (SBPL `message` marker emitted on deny),
+  - Channel C unified-log correlation via `sandbox-log-observer`.
+- **Opt-in reason:** Requires Unified Logging access and an unsandboxed caller
+  (in sandboxed harnesses, XPC lookup and log capture can be blocked).
+- **Resource dependency:** `PolicyWitness.app` built + `log show` access.
+- **When to run:** After changing `xpc/PWRunner*` runner behavior or `pw-lab specimen`.
+- **Artifacts:** `tests/out/suites/opt_in/pw_runner_specimen/artifacts/*`
+
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:

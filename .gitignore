@@ -21,3 +21,6 @@ experiments/out/
 # tests artifacts
 tests/out/
 tests/__pycache__/
+
+# python bytecode (tools)
+tools/pwlab/__pycache__/

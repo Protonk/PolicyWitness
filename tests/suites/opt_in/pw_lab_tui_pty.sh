@@ -14,7 +14,7 @@ PW_TEST_SUITE="opt_in"
 # Stable test id for reporting.
 PW_TEST_ID="pw_lab_tui_pty"
 # pw-lab entrypoint.
-LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
+LAB_TOOL="${ROOT_DIR}/laboratory/pw-lab"
 # Small fixture bundle for the TUI to render.
 RUN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/run_basic"
 

@@ -1,1458 +1,47 @@
-mod debug_entitlements_probe;
-mod evidence;
-mod json_contract;
-mod profiles;
-
-use serde::Serialize;
-use std::ffi::OsString;
-use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::os::unix::fs::PermissionsExt;
-use std::os::unix::process::ExitStatusExt;
-use std::process::Stdio;
-use std::{env, process::Command};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
+use std::ffi::{c_char, c_void, CString, OsString};
 use std::path::{Component, Path, PathBuf};
-use std::thread;
+use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+const LABBOOK_VERSION: u32 = 1;
+
+const PW_RUNNER_SERVICE_DIR: &str = "PWRunner";
+
+const SANDBOX_FILTER_GLOBAL_NAME: i32 = 16;
+
+const DEFAULT_TIMEOUT_MS: u64 = 240_000;
+const DEFAULT_LOG_LAST: &str = "10s";
+
+// RTLD_DEFAULT in C is ((void *) -2)
+const RTLD_DEFAULT: *mut c_void = (-2isize) as *mut c_void;
+
+type SandboxCheckNoArgFn = unsafe extern "C" fn(pid: i32, operation: *const c_char, filter: i32) -> i32;
+type SandboxCheckOneArgFn =
+    unsafe extern "C" fn(pid: i32, operation: *const c_char, filter: i32, arg: *const c_char) -> i32;
+
+unsafe extern "C" {
+    fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
+}
 
 fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run-system <absolute-platform-binary> [args...]
-  policy-witness run-embedded <tool-name> [args...]
-  policy-witness xpc run (--profile <id[@variant]> [--variant <base|injectable>] | --service <bundle-id>) [--plan-id <id>] [--row-id <id>] [--correlation-id <id>] [--signposts] [--capture-sandbox-logs] [--capture-sandbox-logs-target <auto|child|service|client|pid>] [--capture-sandbox-logs-pid <pid>] [--capture-signposts] <probe-id> [probe-args...]
-  policy-witness xpc session (--profile <id[@variant]> [--variant <base|injectable>] | --service <bundle-id>) [--plan-id <id>] [--correlation-id <id>] [--signposts] [--wait <fifo:auto|fifo:/abs|exists:/abs>] [--wait-timeout-ms <n>] [--wait-interval-ms <n>] [--xpc-timeout-ms <n>]
-  policy-witness quarantine-lab [--correlation-id <id>] [--signposts] [--capture-signposts] <xpc-service-bundle-id> <payload-class> [options...]
-  policy-witness verify-evidence
-  policy-witness inspect-macho <service-id|main|path>
-  policy-witness list-profiles
-  policy-witness list-services
-  policy-witness show-profile <id[@variant]> [--variant <base|injectable>]
-  policy-witness describe-service <id[@variant]> [--variant <base|injectable>]
-  policy-witness health-check [--profile <id[@variant]>] [--variant <base|injectable>]
-  policy-witness bundle-evidence [--out <dir>] [--include-health-check]
-  policy-witness run-matrix --group <name> [--variant <base|injectable>] [--out <dir>] [--signposts] [--capture-signposts] <probe-id> [probe-args...]
+  policy-witness inside [--service-name <mach-service-name> ...] [--bare]
+  policy-witness specimen <specimen.json> [--outdir <dir>] [--timeout-ms <n>] [--log-last <dur>] [--force]
 
 notes:
-  - run-system only allows platform-style paths (/bin, /usr/bin, /sbin, /usr/sbin, /usr/libexec, /System/Library)
-  - run-embedded looks for signed helper tools in this app bundle (Contents/Helpers and Contents/Helpers/Probes)"
+  - `specimen` runs a canonical run plus an instrumented run (SBPL `message` marker on deny) and writes a labbook directory."
     );
 }
 
-#[derive(Serialize)]
-struct InspectEntry {
-    id: String,
-    kind: String,
-    bundle_id: Option<String>,
-    rel_path: String,
-    abs_path: String,
-    sha256: Option<String>,
-    lc_uuid: Option<String>,
-    entitlements: Option<serde_json::Value>,
-    entitlements_error: Option<String>,
-}
-
-#[derive(Serialize)]
-struct InspectReport {
-    selector: String,
-    app_root: String,
-    manifest_path: String,
-    entry: InspectEntry,
-}
-
-#[derive(Serialize)]
-struct ProfilesReport {
-    profiles_path: String,
-    generated_at: Option<String>,
-    profiles: Vec<profiles::ProfileEntry>,
-}
-
-#[derive(Serialize)]
-struct ProfileReport {
-    profiles_path: String,
-    profile: profiles::ProfileEntry,
-    variant: profiles::ProfileVariant,
-}
-
-#[derive(Serialize)]
-struct HealthProbeResult {
-    probe_id: String,
-    rc: Option<i64>,
-    normalized_outcome: Option<String>,
-    error: Option<String>,
-    exit_code: i32,
-    parse_error: Option<String>,
-    stderr: Option<String>,
-}
-
-#[derive(Serialize)]
-struct HealthProfileResult {
-    profile_id: String,
-    bundle_id: String,
-    kind: String,
-    variant: String,
-    ok: bool,
-    probes: Vec<HealthProbeResult>,
-}
-
-#[derive(Serialize)]
-struct HealthCheckReport {
-    ok: bool,
-    profiles_path: String,
-    profiles: Vec<HealthProfileResult>,
-}
-
-#[derive(Serialize)]
-struct ServicesReport {
-    profiles_path: String,
-    generated_at: Option<String>,
-    services: Vec<ServiceEntry>,
-}
-
-#[derive(Serialize)]
-struct ServiceEntry {
-    profile_id: String,
-    kind: String,
-    label: Option<String>,
-    variant: String,
-    bundle_id: String,
-    service_name: String,
-    tags: Option<Vec<String>>,
-    risk_tier: Option<u8>,
-    risk_reasons: Option<Vec<String>>,
-    entitlements: Option<serde_json::Value>,
-    entitlements_error: Option<String>,
-}
-
-#[derive(Serialize)]
-struct ServiceCapabilities {
-    has_app_sandbox: bool,
-    has_get_task_allow: bool,
-    has_disable_library_validation: bool,
-    has_allow_dyld_env: bool,
-    has_allow_jit: bool,
-    has_allow_unsigned_exec_mem: bool,
-    has_network_client: bool,
-    has_downloads_rw: bool,
-    has_bookmarks_app_scope: bool,
-    has_user_selected_read_only: bool,
-    has_user_selected_read_write: bool,
-    has_user_selected_executable: bool,
-    home_dir: String,
-    tmp_dir: String,
-    downloads_dir: String,
-    desktop_dir: String,
-    documents_dir: String,
-    app_support_dir: String,
-    caches_dir: String,
-    prefs_path_guess: String,
-}
-
-#[derive(Serialize)]
-struct DescribeServiceReport {
-    profile: profiles::ProfileEntry,
-    variant: String,
-    service: profiles::ProfileVariant,
-    capabilities_source: String,
-    capabilities: ServiceCapabilities,
-}
-
-#[derive(Serialize, Clone)]
-struct MatrixRun {
-    profile_id: String,
-    bundle_id: String,
-    label: Option<String>,
-    variant: String,
-    risk_tier: Option<u8>,
-    risk_reasons: Option<Vec<String>>,
-    exit_code: i32,
-    duration_ms: u128,
-    rc: Option<i64>,
-    normalized_outcome: Option<String>,
-    error: Option<String>,
-    parse_error: Option<String>,
-    response: Option<serde_json::Value>,
-}
-
-#[derive(Serialize, Clone)]
-struct MatrixSkip {
-    profile_id: String,
-    bundle_id: String,
-    variant: String,
-    reason: String,
-    risk_tier: Option<u8>,
-    risk_reasons: Option<Vec<String>>,
-}
-
-#[derive(Serialize)]
-struct RunMatrixReport {
-    group_id: String,
-    probe_id: String,
-    probe_argv: Vec<String>,
-    generated_at_unix_ms: u128,
-    output_dir: String,
-    variant: String,
-    profiles: Vec<String>,
-    runs: Vec<MatrixRun>,
-    skipped: Vec<MatrixSkip>,
-}
-
-#[derive(Serialize)]
-struct BundleProfileSkip {
-    profile_id: String,
-    bundle_id: String,
-    variant: String,
-    reason: String,
-    risk_tier: Option<u8>,
-    risk_reasons: Option<Vec<String>>,
-}
-
-#[derive(Serialize)]
-struct BundleMeta {
-    generated_at_unix_ms: u128,
-    app_root: String,
-    app_bundle_id: Option<String>,
-    output_dir: String,
-    args: Vec<String>,
-    include_health_check: bool,
-    verify_ok: bool,
-    health_ok: Option<bool>,
-    profiles_included: Vec<String>,
-    profiles_skipped: Vec<BundleProfileSkip>,
-}
-
-#[derive(Clone, Copy)]
-enum RiskGate {
-    Allow,
-    Warn,
-}
-
-const VARIANT_BASE: &str = "base";
-const VARIANT_INJECTABLE: &str = "injectable";
-
-fn parse_variant(value: &str) -> Result<&'static str, String> {
-    match value {
-        VARIANT_BASE => Ok(VARIANT_BASE),
-        VARIANT_INJECTABLE => Ok(VARIANT_INJECTABLE),
-        _ => Err(format!(
-            "invalid variant {value:?} (expected: {VARIANT_BASE}|{VARIANT_INJECTABLE})"
-        )),
-    }
-}
-
-const CAPTURE_SANDBOX_LOGS_TARGET_AUTO: &str = "auto";
-const CAPTURE_SANDBOX_LOGS_TARGET_CHILD: &str = "child";
-const CAPTURE_SANDBOX_LOGS_TARGET_SERVICE: &str = "service";
-const CAPTURE_SANDBOX_LOGS_TARGET_CLIENT: &str = "client";
-const CAPTURE_SANDBOX_LOGS_TARGET_PID: &str = "pid";
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CaptureSandboxLogsTarget {
-    Auto,
-    Child,
-    Service,
-    Client,
-    Pid,
-}
-
-impl CaptureSandboxLogsTarget {
-    fn as_str(&self) -> &'static str {
-        match self {
-            CaptureSandboxLogsTarget::Auto => CAPTURE_SANDBOX_LOGS_TARGET_AUTO,
-            CaptureSandboxLogsTarget::Child => CAPTURE_SANDBOX_LOGS_TARGET_CHILD,
-            CaptureSandboxLogsTarget::Service => CAPTURE_SANDBOX_LOGS_TARGET_SERVICE,
-            CaptureSandboxLogsTarget::Client => CAPTURE_SANDBOX_LOGS_TARGET_CLIENT,
-            CaptureSandboxLogsTarget::Pid => CAPTURE_SANDBOX_LOGS_TARGET_PID,
-        }
-    }
-}
-
-fn parse_capture_sandbox_logs_target(value: &str) -> Result<CaptureSandboxLogsTarget, String> {
-    match value {
-        CAPTURE_SANDBOX_LOGS_TARGET_AUTO => Ok(CaptureSandboxLogsTarget::Auto),
-        CAPTURE_SANDBOX_LOGS_TARGET_CHILD => Ok(CaptureSandboxLogsTarget::Child),
-        CAPTURE_SANDBOX_LOGS_TARGET_SERVICE => Ok(CaptureSandboxLogsTarget::Service),
-        CAPTURE_SANDBOX_LOGS_TARGET_CLIENT => Ok(CaptureSandboxLogsTarget::Client),
-        CAPTURE_SANDBOX_LOGS_TARGET_PID => Ok(CaptureSandboxLogsTarget::Pid),
-        _ => Err(format!(
-            "invalid capture target {value:?} (expected: {CAPTURE_SANDBOX_LOGS_TARGET_AUTO}|{CAPTURE_SANDBOX_LOGS_TARGET_CHILD}|{CAPTURE_SANDBOX_LOGS_TARGET_SERVICE}|{CAPTURE_SANDBOX_LOGS_TARGET_CLIENT}|{CAPTURE_SANDBOX_LOGS_TARGET_PID})"
-        )),
-    }
-}
-
-fn split_profile_selector(selector: &str) -> Result<(String, Option<&'static str>), String> {
-    if let Some((profile_id, variant)) = selector.split_once('@') {
-        if profile_id.is_empty() || variant.is_empty() {
-            return Err(format!(
-                "invalid profile selector {selector:?} (expected <profile>@<variant>)"
-            ));
-        }
-        return Ok((profile_id.to_string(), Some(parse_variant(variant)?)));
-    }
-    Ok((selector.to_string(), None))
-}
-
-fn resolve_profile_variant<'a>(
-    manifest: &'a profiles::ProfilesManifest,
-    selector: &str,
-    variant: Option<&'static str>,
-) -> Result<profiles::ResolvedProfileVariant<'a>, String> {
-    if let Some(profile) = profiles::find_profile_by_id(manifest, selector) {
-        let chosen = variant.unwrap_or(VARIANT_BASE);
-        let chosen_variant = profiles::find_variant(profile, chosen)
-            .ok_or_else(|| format!("profile {selector} missing variant {chosen}"))?;
-        return Ok(profiles::ResolvedProfileVariant {
-            profile,
-            variant: chosen_variant,
-        });
-    }
-
-    if variant.is_some() {
-        return Err(format!(
-            "variant can only be used with profile ids (got selector {selector:?})"
-        ));
-    }
-
-    if let Some(found) = profiles::find_variant_by_bundle_id(manifest, selector) {
-        return Ok(found);
-    }
-    if let Some(found) = profiles::find_variant_by_service_name(manifest, selector) {
-        return Ok(found);
-    }
-
-    Err(format!("unknown profile or service: {selector}"))
-}
-
-fn variant_rank(variant: &str) -> u8 {
-    if variant == VARIANT_BASE {
-        0
-    } else {
-        1
-    }
-}
-
-fn risk_gate_for_variant(
-    profile: Option<&profiles::ProfileEntry>,
-    variant: Option<&profiles::ProfileVariant>,
-) -> (RiskGate, Vec<String>, Option<String>) {
-    match variant {
-        None => (
-            RiskGate::Warn,
-            vec!["unknown_profile".to_string()],
-            None,
-        ),
-        Some(variant) => {
-            let risk_level = variant.risk_tier.unwrap_or(2);
-            let reasons = variant.risk_reasons.clone().unwrap_or_else(Vec::new);
-            let label = profile.and_then(|entry| entry.label.clone());
-            match risk_level {
-                0 => (RiskGate::Allow, reasons, label),
-                _ => (RiskGate::Warn, reasons, label),
-            }
-        }
-    }
-}
-
-fn entitlement_bool(entitlements: &Option<serde_json::Value>, key: &str) -> bool {
-    match entitlements {
-        Some(serde_json::Value::Object(map)) => match map.get(key) {
-            Some(serde_json::Value::Bool(v)) => *v,
-            Some(serde_json::Value::String(v)) => v == "true",
-            _ => false,
-        },
-        _ => false,
-    }
-}
-
-fn container_base_dir(bundle_id: &str) -> Option<PathBuf> {
-    let home = env::var("HOME").ok()?;
-    if home.is_empty() {
-        return None;
-    }
-    Some(
-        PathBuf::from(home)
-            .join("Library")
-            .join("Containers")
-            .join(bundle_id)
-            .join("Data"),
-    )
-}
-
-fn container_path(base: &Option<PathBuf>, parts: &[&str]) -> String {
-    let mut path = match base {
-        Some(base) => base.clone(),
-        None => return String::new(),
-    };
-    for part in parts {
-        path = path.join(part);
-    }
-    path.display().to_string()
-}
-
-fn build_static_capabilities(variant: &profiles::ProfileVariant) -> ServiceCapabilities {
-    let base = container_base_dir(&variant.bundle_id);
-    let prefs_name = format!("{}.plist", variant.bundle_id);
-    ServiceCapabilities {
-        has_app_sandbox: entitlement_bool(&variant.entitlements, "com.apple.security.app-sandbox"),
-        has_get_task_allow: entitlement_bool(&variant.entitlements, "com.apple.security.get-task-allow"),
-        has_disable_library_validation: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.cs.disable-library-validation",
-        ),
-        has_allow_dyld_env: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.cs.allow-dyld-environment-variables",
-        ),
-        has_allow_jit: entitlement_bool(&variant.entitlements, "com.apple.security.cs.allow-jit"),
-        has_allow_unsigned_exec_mem: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.cs.allow-unsigned-executable-memory",
-        ),
-        has_network_client: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.network.client",
-        ),
-        has_downloads_rw: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.files.downloads.read-write",
-        ),
-        has_bookmarks_app_scope: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.files.bookmarks.app-scope",
-        ),
-        has_user_selected_read_only: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.files.user-selected.read-only",
-        ),
-        has_user_selected_read_write: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.files.user-selected.read-write",
-        ),
-        has_user_selected_executable: entitlement_bool(
-            &variant.entitlements,
-            "com.apple.security.files.user-selected.executable",
-        ),
-        home_dir: container_path(&base, &[]),
-        tmp_dir: container_path(&base, &["tmp"]),
-        downloads_dir: container_path(&base, &["Downloads"]),
-        desktop_dir: container_path(&base, &["Desktop"]),
-        documents_dir: container_path(&base, &["Documents"]),
-        app_support_dir: container_path(&base, &["Library", "Application Support"]),
-        caches_dir: container_path(&base, &["Library", "Caches"]),
-        prefs_path_guess: container_path(&base, &["Library", "Preferences", &prefs_name]),
-    }
-}
-
-fn matrix_groups() -> Vec<(&'static str, &'static [&'static str])> {
-    vec![
-        ("baseline", &["minimal"]),
-        (
-            "probe",
-            &[
-                "minimal",
-                "net_client",
-                "downloads_rw",
-                "user_selected_executable",
-                "bookmarks_app_scope",
-                "temporary_exception",
-            ],
-        ),
-    ]
-}
-
-fn resolve_matrix_group(name: &str) -> Option<&'static [&'static str]> {
-    matrix_groups()
-        .into_iter()
-        .find(|(group, _)| *group == name)
-        .map(|(_, profiles)| profiles)
-}
-
-fn emit_envelope<T: Serialize>(kind: &str, result: json_contract::JsonResult, data: &T) {
-    if let Err(err) = json_contract::print_envelope(kind, result, data) {
-        eprintln!("{err}");
-        std::process::exit(1);
-    }
-}
-
-fn write_envelope<T: Serialize>(
-    path: &Path,
-    kind: &str,
-    result: json_contract::JsonResult,
-    data: &T,
-) -> Result<(), String> {
-    json_contract::write_envelope(path, kind, result, data)
-}
-
-fn ensure_single_component(label: &str, value: &str) -> Result<(), String> {
-    let mut components = Path::new(value).components();
-    match (components.next(), components.next()) {
-        (Some(Component::Normal(_)), None) => Ok(()),
-        _ => Err(format!(
-            "invalid {label} {value:?} (must be a single path component)"
-        )),
-    }
-}
-
-fn expand_tilde_path(path: &str) -> Result<PathBuf, String> {
-    if path == "~" {
-        let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-        return Ok(PathBuf::from(home));
-    }
-    if let Some(rest) = path.strip_prefix("~/") {
-        let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-        return Ok(PathBuf::from(home).join(rest));
-    }
-    Ok(PathBuf::from(path))
-}
-
-fn default_bundle_output_dir() -> Result<PathBuf, String> {
-    let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-    Ok(PathBuf::from(home)
-        .join("Library")
-        .join("Application Support")
-        .join("policy-witness")
-        .join("evidence")
-        .join("latest"))
-}
-
-fn default_matrix_output_dir(group_id: &str, variant: &str) -> Result<PathBuf, String> {
-    let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-    Ok(PathBuf::from(home)
-        .join("Library")
-        .join("Application Support")
-        .join("policy-witness")
-        .join("matrix")
-        .join(group_id)
-        .join(variant)
-        .join("latest"))
-}
-
-fn ensure_clean_dir(path: &Path) -> Result<(), String> {
-    if path == Path::new("/") {
-        return Err("refusing to remove root directory".to_string());
-    }
-    if path.exists() {
-        let meta = std::fs::symlink_metadata(path)
-            .map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-        if meta.file_type().is_symlink() {
-            return Err(format!(
-                "refusing to remove symlink output path: {}",
-                path.display()
-            ));
-        }
-        if meta.is_file() {
-            return Err(format!(
-                "output path exists and is a file: {}",
-                path.display()
-            ));
-        }
-        if meta.is_dir() {
-            std::fs::remove_dir_all(path).map_err(|e| {
-                let mut msg = format!("failed to remove {}: {e}", path.display());
-                if e.kind() == std::io::ErrorKind::PermissionDenied {
-                    msg.push_str(" (permission denied; if sandboxed, choose a path under your container home)");
-                }
-                msg
-            })?;
-        }
-    }
-    std::fs::create_dir_all(path).map_err(|e| {
-        let mut msg = format!("failed to create {}: {e}", path.display());
-        if e.kind() == std::io::ErrorKind::PermissionDenied {
-            msg.push_str(" (permission denied; if sandboxed, choose a path under your container home)");
-        }
-        msg
-    })
-}
-
-fn copy_evidence_file(src_dir: &Path, dst_dir: &Path, name: &str) -> Result<(), String> {
-    let src = src_dir.join(name);
-    let dst = dst_dir.join(name);
-    if !src.exists() {
-        return Err(format!("missing evidence file: {}", src.display()));
-    }
-    std::fs::copy(&src, &dst)
-        .map_err(|e| format!("failed to copy {}: {e}", src.display()))?;
-    Ok(())
-}
-
-fn resolve_app_root() -> PathBuf {
-    let exe = env::current_exe().unwrap_or_else(|e| {
-        eprintln!("current_exe() failed: {e}");
-        std::process::exit(2);
-    });
-    evidence::app_root_from_exe(&exe).unwrap_or_else(|err| {
-        eprintln!("{err}");
-        std::process::exit(2);
-    })
-}
-
-fn load_manifest(app_root: &Path) -> (evidence::EvidenceManifest, PathBuf) {
-    let manifest_path = evidence::manifest_path_from_app_root(app_root);
-    let manifest = evidence::load_manifest(&manifest_path).unwrap_or_else(|err| {
-        eprintln!("{err}");
-        std::process::exit(2);
-    });
-    (manifest, manifest_path)
-}
-
-fn load_profiles_manifest(app_root: &Path) -> (profiles::ProfilesManifest, PathBuf) {
-    let profiles_path = profiles::profiles_path_from_app_root(app_root);
-    let manifest = profiles::load_profiles(&profiles_path).unwrap_or_else(|err| {
-        eprintln!("{err}");
-        std::process::exit(2);
-    });
-    (manifest, profiles_path)
-}
-
-fn run_xpc_probe(
-    service_id: &str,
-    probe_id: &str,
-    probe_args: &[&str],
-    enable_signposts: bool,
-) -> Result<(String, i32, String), String> {
-    let cmd_path = resolve_contents_macos_tool("xpc-probe-client")?;
-    let mut cmd = Command::new(&cmd_path);
-    cmd.arg("run").arg(service_id).arg(probe_id).args(probe_args);
-    if enable_signposts {
-        cmd.env("PW_ENABLE_SIGNPOSTS", "1");
-    }
-    let output = cmd
-        .output()
-        .map_err(|e| format!("spawn failed for {}: {e}", cmd_path.display()))?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(1);
-    Ok((stdout, exit_code, stderr))
-}
-
-struct FenceWindow {
-    start_ms: u64,
-    end_ms: u64,
-    source: &'static str,
-}
-
-struct FencedProbeRun {
-    value: serde_json::Value,
-    stderr: String,
-    client_pid: i64,
-    run_started_at_unix_ms: u64,
-    run_ended_at_unix_ms: u64,
-    fence_window: Option<FenceWindow>,
-}
-
-#[derive(Default)]
-struct FenceTimings {
-    session_ready_at_unix_ms: Option<u64>,
-    wait_ready_at_unix_ms: Option<u64>,
-    released_at_unix_ms: Option<u64>,
-    trigger_received_at_unix_ms: Option<u64>,
-    probe_start_at_unix_ms: Option<u64>,
-    probe_done_at_unix_ms: Option<u64>,
-}
-
-fn run_xpc_probe_fenced(
-    cmd_path: &Path,
-    service_id: &str,
-    probe_id: &str,
-    probe_args: &[OsString],
-    plan_id: Option<&str>,
-    row_id: Option<&str>,
-    correlation_id: Option<&str>,
-    enable_signposts: bool,
-    fence_reason: &str,
-    armed_collectors: &[&str],
-) -> Result<FencedProbeRun, String> {
-    let mut args: Vec<OsString> = Vec::new();
-    args.push(OsString::from("session"));
-    if let Some(plan_id) = plan_id {
-        args.push(OsString::from("--plan-id"));
-        args.push(OsString::from(plan_id));
-    }
-    if let Some(correlation_id) = correlation_id {
-        args.push(OsString::from("--correlation-id"));
-        args.push(OsString::from(correlation_id));
-    }
-    args.push(OsString::from("--wait"));
-    args.push(OsString::from("fifo:auto"));
-    args.push(OsString::from("--wait-timeout-ms"));
-    args.push(OsString::from(FENCE_WAIT_TIMEOUT_MS.to_string()));
-    args.push(OsString::from(service_id));
-
-    let mut cmd = Command::new(cmd_path);
-    cmd.args(&args);
-    if enable_signposts {
-        cmd.env("PW_ENABLE_SIGNPOSTS", "1");
-    }
-    cmd.stdin(Stdio::piped());
-    cmd.stdout(Stdio::piped());
-    cmd.stderr(Stdio::piped());
-
-    let run_started_at_unix_ms = now_unix_ms_u64();
-    let mut child = cmd
-        .spawn()
-        .map_err(|err| format!("spawn failed for {}: {err}", cmd_path.display()))?;
-    let client_pid = child.id() as i64;
-
-    let mut stdin = child.stdin.take();
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "missing stdout for xpc-probe-client session".to_string())?;
-    let stderr = child
-        .stderr
-        .take()
-        .ok_or_else(|| "missing stderr for xpc-probe-client session".to_string())?;
-    let stderr_handle = thread::spawn(move || {
-        let mut buf = String::new();
-        let mut reader = BufReader::new(stderr);
-        let _ = reader.read_to_string(&mut buf);
-        buf
-    });
-
-    let mut reader = BufReader::new(stdout);
-    let mut line = String::new();
-    let mut timings = FenceTimings::default();
-    let mut wait_mode: Option<String> = None;
-    let mut wait_path: Option<String> = None;
-    let mut service_pid: Option<i64> = None;
-    let mut service_name: Option<String> = None;
-    let mut probe_value: Option<serde_json::Value> = None;
-    let mut session_error: Option<(String, String)> = None;
-    let mut release_error: Option<String> = None;
-    let mut trigger_written = false;
-    let mut run_probe_sent = false;
-    let mut close_sent = false;
-
-    let probe_argv: Vec<String> = probe_args.iter().map(|s| s.to_string_lossy().to_string()).collect();
-
-    let send_command = |stdin: &mut Option<std::process::ChildStdin>,
-                        command: &serde_json::Value|
-     -> Result<(), String> {
-        let input = stdin
-            .as_mut()
-            .ok_or_else(|| "xpc session stdin already closed".to_string())?;
-        let line = serde_json::to_string(command)
-            .map_err(|err| format!("failed to encode session command: {err}"))?;
-        input
-            .write_all(line.as_bytes())
-            .and_then(|_| input.write_all(b"\n"))
-            .and_then(|_| input.flush())
-            .map_err(|err| format!("failed to write session command: {err}"))?;
-        Ok(())
-    };
-
-    let trigger_fence = |wait_path: &str| -> Result<u64, String> {
-        let mut last_err: Option<String> = None;
-        for _ in 0..5 {
-            match OpenOptions::new().write(true).open(wait_path) {
-                Ok(mut file) => {
-                    file.write_all(b"x")
-                        .map_err(|err| format!("failed to write fence trigger: {err}"))?;
-                    return Ok(now_unix_ms_u64());
-                }
-                Err(err) => {
-                    last_err = Some(format!("failed to open fence fifo: {err}"));
-                    std::thread::sleep(std::time::Duration::from_millis(20));
-                }
-            }
-        }
-        Err(last_err.unwrap_or_else(|| "failed to open fence fifo".to_string()))
-    };
-
-    while {
-        line.clear();
-        reader.read_line(&mut line).map_err(|err| format!("read failed: {err}"))? > 0
-    } {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let ts = now_unix_ms_u64();
-        let value: serde_json::Value = match serde_json::from_str(trimmed) {
-            Ok(value) => value,
-            Err(_) => {
-                continue;
-            }
-        };
-        let kind = value
-            .get("kind")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-
-        match kind {
-            "xpc_session_event" => {
-                let event = value.pointer("/data/event").and_then(|v| v.as_str()).unwrap_or("");
-                if service_pid.is_none() {
-                    service_pid = value.pointer("/data/pid").and_then(|v| v.as_i64());
-                }
-                if service_name.is_none() {
-                    service_name = value
-                        .pointer("/data/service_name")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                }
-                if wait_mode.is_none() {
-                    wait_mode = value
-                        .pointer("/data/wait_mode")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                }
-                if wait_path.is_none() {
-                    wait_path = value
-                        .pointer("/data/wait_path")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                }
-                match event {
-                    "session_ready" => {
-                        timings.session_ready_at_unix_ms = Some(ts);
-                    }
-                    "wait_ready" => {
-                        timings.wait_ready_at_unix_ms = Some(ts);
-                    }
-                    "trigger_received" => {
-                        timings.trigger_received_at_unix_ms = Some(ts);
-                    }
-                    "probe_starting" => {
-                        timings.probe_start_at_unix_ms = Some(ts);
-                    }
-                    "probe_done" => {
-                        timings.probe_done_at_unix_ms = Some(ts);
-                    }
-                    _ => {}
-                }
-            }
-            "xpc_session_error" => {
-                let event = value.pointer("/data/event").and_then(|v| v.as_str()).unwrap_or("");
-                let error = value.pointer("/data/error").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                session_error = Some((event.to_string(), error));
-            }
-            "probe_response" => {
-                probe_value = Some(value);
-            }
-            _ => {}
-        }
-
-        if !trigger_written {
-            if let Some(wait_path) = wait_path.as_deref() {
-                match trigger_fence(wait_path) {
-                    Ok(ts) => {
-                        timings.released_at_unix_ms = Some(ts);
-                        trigger_written = true;
-                    }
-                    Err(err) => {
-                        release_error = Some(err);
-                    }
-                }
-            }
-        }
-
-        if trigger_written && !run_probe_sent && timings.trigger_received_at_unix_ms.is_some() {
-            let mut cmd = serde_json::Map::new();
-            cmd.insert("command".to_string(), serde_json::Value::String("run_probe".to_string()));
-            cmd.insert("probe_id".to_string(), serde_json::Value::String(probe_id.to_string()));
-            cmd.insert("argv".to_string(), serde_json::Value::Array(probe_argv.iter().map(|s| serde_json::Value::String(s.clone())).collect()));
-            if let Some(plan_id) = plan_id {
-                cmd.insert("plan_id".to_string(), serde_json::Value::String(plan_id.to_string()));
-            }
-            if let Some(row_id) = row_id {
-                cmd.insert("row_id".to_string(), serde_json::Value::String(row_id.to_string()));
-            }
-            if let Some(correlation_id) = correlation_id {
-                cmd.insert(
-                    "correlation_id".to_string(),
-                    serde_json::Value::String(correlation_id.to_string()),
-                );
-            }
-            send_command(&mut stdin, &serde_json::Value::Object(cmd))?;
-            run_probe_sent = true;
-        }
-
-        if probe_value.is_some() && !close_sent {
-            let cmd = serde_json::json!({ "command": "close_session" });
-            let _ = send_command(&mut stdin, &cmd);
-            stdin.take();
-            close_sent = true;
-        }
-    }
-
-    let _ = child.wait();
-    let run_ended_at_unix_ms = now_unix_ms_u64();
-    let stderr = stderr_handle.join().unwrap_or_default();
-
-    let mut value = match probe_value {
-        Some(value) => value,
-        None => {
-            let (event, message) = session_error.unwrap_or_else(|| {
-                ("session_failed".to_string(), "missing probe_response".to_string())
-            });
-            let error_message = if message.is_empty() {
-                event.clone()
-            } else {
-                message.clone()
-            };
-            serde_json::json!({
-                "schema_version": 1,
-                "kind": "probe_response",
-                "generated_at_unix_ms": now_unix_ms_u64(),
-                "result": {
-                    "ok": false,
-                    "rc": 1,
-                    "exit_code": 1,
-                    "normalized_outcome": "xpc_error",
-                    "error": error_message,
-                    "stderr": error_message,
-                },
-                "data": {
-                    "schema_version": 1,
-                    "plan_id": plan_id,
-                    "row_id": row_id,
-                    "correlation_id": correlation_id,
-                    "probe_id": probe_id,
-                    "argv": probe_argv,
-                    "service_bundle_id": service_id,
-                    "service_name": service_name,
-                    "rc": 1,
-                    "stdout": "",
-                    "stderr": error_message,
-                    "normalized_outcome": "xpc_error",
-                    "error": error_message,
-                    "details": {
-                        "session_error_event": event,
-                        "service_bundle_id": service_id,
-                    }
-                }
-            })
-        }
-    };
-
-    if service_pid.is_none() {
-        service_pid = value
-            .pointer("/data/details/service_pid")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<i64>().ok())
-            .or_else(|| value.pointer("/data/details/pid").and_then(|v| v.as_str()).and_then(|s| s.parse::<i64>().ok()));
-    }
-    let window_start = timings.released_at_unix_ms.or(timings.trigger_received_at_unix_ms);
-    let window_end = timings
-        .probe_done_at_unix_ms
-        .or(Some(run_ended_at_unix_ms));
-    let fence_window = match (window_start, window_end) {
-        (Some(start_ms), Some(end_ms)) if end_ms >= start_ms => Some(FenceWindow {
-            start_ms,
-            end_ms,
-            source: "fence",
-        }),
-        _ => None,
-    };
-
-    let mut fence_value = serde_json::Map::new();
-    fence_value.insert("enabled".to_string(), serde_json::Value::Bool(true));
-    fence_value.insert("reason".to_string(), serde_json::Value::String(fence_reason.to_string()));
-    fence_value.insert(
-        "armed_collectors".to_string(),
-        serde_json::Value::Array(
-            armed_collectors
-                .iter()
-                .map(|c| serde_json::Value::String((*c).to_string()))
-                .collect(),
-        ),
-    );
-    fence_value.insert(
-        "status".to_string(),
-        serde_json::Value::String(if timings.released_at_unix_ms.is_some() { "released" } else { "failed" }.to_string()),
-    );
-    if let Some(service_pid) = service_pid {
-        fence_value.insert(
-            "service_pid".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(service_pid)),
-        );
-    }
-    if let Some(ref mode) = wait_mode {
-        fence_value.insert("wait_mode".to_string(), serde_json::Value::String(mode.clone()));
-    }
-    if let Some(ref path) = wait_path {
-        fence_value.insert("wait_path".to_string(), serde_json::Value::String(path.clone()));
-    }
-    if let (Some(wait_ready), Some(released)) = (timings.wait_ready_at_unix_ms, timings.released_at_unix_ms) {
-        if released >= wait_ready {
-            fence_value.insert(
-                "arm_latency_ms".to_string(),
-                serde_json::Value::Number(serde_json::Number::from(released - wait_ready)),
-            );
-        }
-    }
-    if let Some(ts) = timings.released_at_unix_ms {
-        fence_value.insert(
-            "released_at_unix_ms".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(ts)),
-        );
-    }
-    if let Some(ts) = timings.trigger_received_at_unix_ms {
-        fence_value.insert(
-            "trigger_received_at_unix_ms".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(ts)),
-        );
-    }
-    if let Some(ts) = timings.probe_start_at_unix_ms {
-        fence_value.insert(
-            "probe_start_at_unix_ms".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(ts)),
-        );
-    }
-    if let Some(ts) = timings.probe_done_at_unix_ms {
-        fence_value.insert(
-            "probe_done_at_unix_ms".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(ts)),
-        );
-    }
-    if let Some(window) = &fence_window {
-        fence_value.insert(
-            "evidence_window".to_string(),
-            serde_json::json!({
-                "kind": "range",
-                "start_unix_ms": window.start_ms,
-                "end_unix_ms": window.end_ms,
-                "source": window.source,
-            }),
-        );
-    }
-    if let Some(err) = release_error {
-        fence_value.insert("error".to_string(), serde_json::Value::String(err));
-    }
-
-    if let serde_json::Value::Object(ref mut data) = value["data"] {
-        data.insert("fence".to_string(), serde_json::Value::Object(fence_value));
-    }
-
-    Ok(FencedProbeRun {
-        value,
-        stderr,
-        client_pid,
-        run_started_at_unix_ms,
-        run_ended_at_unix_ms,
-        fence_window,
-    })
-}
-
-fn parse_probe_response(stdout: &str) -> Result<(Option<i64>, Option<String>, Option<String>), String> {
-    let value: serde_json::Value =
-        serde_json::from_str(stdout).map_err(|e| format!("failed to parse probe JSON: {e}"))?;
-    let result = value
-        .get("result")
-        .ok_or_else(|| "missing result in probe JSON".to_string())?;
-    let rc = result.get("rc").and_then(|v| v.as_i64());
-    let normalized_outcome = result
-        .get("normalized_outcome")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let error = result
-        .get("error")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    Ok((rc, normalized_outcome, error))
-}
-
-fn sort_json_value(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Array(items) => {
-            for item in items {
-                sort_json_value(item);
-            }
-        }
-        serde_json::Value::Object(map) => {
-            let mut entries: Vec<(String, serde_json::Value)> =
-                map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            entries.sort_by(|a, b| a.0.cmp(&b.0));
-            let mut sorted = serde_json::Map::new();
-            for (key, mut val) in entries {
-                sort_json_value(&mut val);
-                sorted.insert(key, val);
-            }
-            *map = sorted;
-        }
-        _ => {}
-    }
-}
-
-const CAPTURE_SANDBOX_LOGS_WINDOW_ENV: &str = "PW_CAPTURE_SANDBOX_LOGS_WINDOW";
-const CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC: &str = "last_dynamic";
-const CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO: &str = "range_iso";
-const DISABLE_FENCE_ENV: &str = "PW_DISABLE_FENCE";
-const FENCE_WAIT_TIMEOUT_MS: u64 = 30_000;
-const FENCE_HEADROOM_MS: u64 = 2_000;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SandboxLogWindowStrategy {
-    LastDynamic,
-    RangeIso,
-}
-
-impl SandboxLogWindowStrategy {
-    fn from_env() -> Self {
-        match std::env::var(CAPTURE_SANDBOX_LOGS_WINDOW_ENV).ok().as_deref() {
-            Some(CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO) => SandboxLogWindowStrategy::RangeIso,
-            Some(CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC) | None => SandboxLogWindowStrategy::LastDynamic,
-            Some(other) => {
-                eprintln!(
-                    "warning: ignoring {}={other:?} (expected: {CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC}|{CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO})",
-                    CAPTURE_SANDBOX_LOGS_WINDOW_ENV
-                );
-                SandboxLogWindowStrategy::LastDynamic
-            }
-        }
-    }
-
-    fn as_str(&self) -> &'static str {
-        match self {
-            SandboxLogWindowStrategy::LastDynamic => CAPTURE_SANDBOX_LOGS_WINDOW_LAST_DYNAMIC,
-            SandboxLogWindowStrategy::RangeIso => CAPTURE_SANDBOX_LOGS_WINDOW_RANGE_ISO,
-        }
-    }
-}
-
-fn sandbox_log_window_strategy_from_env() -> (SandboxLogWindowStrategy, bool) {
-    let from_env = std::env::var(CAPTURE_SANDBOX_LOGS_WINDOW_ENV).ok().is_some();
-    (SandboxLogWindowStrategy::from_env(), from_env)
-}
-
-fn fence_enabled() -> bool {
-    // Internal opt-out for fenced capture runs; intentionally not user-facing.
-    match std::env::var(DISABLE_FENCE_ENV).ok().as_deref() {
-        None => true,
-        Some("0") | Some("false") | Some("no") => true,
-        Some(_) => false,
-    }
-}
-
-#[derive(Clone, Debug)]
-enum SandboxLogWindow {
-    Last(String),
-    Range { start: String, end: String },
-}
-
-fn now_unix_ms_u64() -> u64 {
+fn now_unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64
-}
-
-fn format_log_show_time(unix_ms: u64) -> Result<String, String> {
-    let seconds = (unix_ms / 1000) as i64;
-    let output = Command::new("/bin/date")
-        .arg("-r")
-        .arg(seconds.to_string())
-        .arg("+%Y-%m-%d %H:%M:%S")
-        .output()
-        .map_err(|e| format!("spawn failed for /bin/date: {e}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        return Err(format!(
-            "date failed (exit={:?}): {}",
-            output.status.code(),
-            stderr.trim()
-        ));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-}
-
-fn sandbox_log_predicate(pid: i64, process_name: Option<&str>) -> String {
-    match process_name {
-        Some(name) if !name.is_empty() => {
-            let term = format!("Sandbox: {}({})", name, pid);
-            let escaped = term.replace('"', "\\\"");
-            format!(
-                r#"((eventMessage CONTAINS[c] "{}") OR ((eventMessage CONTAINS[c] "deny") AND (eventMessage CONTAINS[c] "{}")))"#,
-                escaped, pid
-            )
-        }
-        _ => {
-            let term = format!("({})", pid);
-            let escaped = term.replace('"', "\\\"");
-            let pid_str = pid.to_string();
-            let pid_escaped = pid_str.replace('"', "\\\"");
-            format!(
-                r#"((eventMessage CONTAINS[c] "Sandbox:") AND (eventMessage CONTAINS[c] "{}")) OR ((eventMessage CONTAINS[c] "deny") AND (eventMessage CONTAINS[c] "{}"))"#,
-                escaped, pid_escaped
-            )
-        }
-    }
-}
-
-fn capture_sandbox_logs(
-    pid: i64,
-    process_name: Option<&str>,
-    window: SandboxLogWindow,
-) -> Result<serde_json::Value, String> {
-    let observer = resolve_contents_macos_tool("sandbox-log-observer")?;
-    let predicate = sandbox_log_predicate(pid, process_name);
-
-    let mut args = vec!["--pid".to_string(), pid.to_string()];
-    if let Some(name) = process_name {
-        args.push("--process-name".to_string());
-        args.push(name.to_string());
-    }
-    args.push("--predicate".to_string());
-    args.push(predicate);
-    match window {
-        SandboxLogWindow::Last(last) => {
-            args.push("--last".to_string());
-            args.push(last);
-        }
-        SandboxLogWindow::Range { start, end } => {
-            args.push("--start".to_string());
-            args.push(start);
-            args.push("--end".to_string());
-            args.push(end);
-        }
-    }
-    args.push("--format".to_string());
-    args.push("jsonl".to_string());
-
-    let output = Command::new(&observer)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("spawn failed for {}: {e}", observer.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(1);
-
-    let report_line = stdout
-        .lines()
-        .rev()
-        .find(|line| line.contains("\"sandbox_log_observer_report\""));
-    let report_json = report_line.and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok());
-
-    let mut capture = serde_json::json!({
-        "observer_path": observer.display().to_string(),
-        "observer_args": args,
-        "observer_exit_code": exit_code,
-    });
-    if let Some(report_json) = report_json {
-        capture["observer_report"] = report_json;
-    } else {
-        capture["observer_stdout"] = serde_json::Value::String(stdout);
-    }
-    if !stderr.is_empty() {
-        capture["observer_stderr"] = serde_json::Value::String(stderr);
-    }
-
-    Ok(capture)
-}
-
-fn capture_signposts(
-    correlation_id: &str,
-    plan_id: Option<&str>,
-    row_id: Option<&str>,
-) -> Result<serde_json::Value, String> {
-    let observer = resolve_contents_macos_tool("signpost-log-observer")?;
-    let mut args = vec![
-        "--correlation-id".to_string(),
-        correlation_id.to_string(),
-        "--last".to_string(),
-        "2m".to_string(),
-        "--format".to_string(),
-        "jsonl".to_string(),
-    ];
-    if let Some(plan_id) = plan_id {
-        args.push("--plan-id".to_string());
-        args.push(plan_id.to_string());
-    }
-    if let Some(row_id) = row_id {
-        args.push("--row-id".to_string());
-        args.push(row_id.to_string());
-    }
-
-    let output = Command::new(&observer)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("spawn failed for {}: {e}", observer.display()))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(1);
-
-    let report_line = stdout
-        .lines()
-        .rev()
-        .find(|line| line.contains("\"signpost_log_observer_report\""));
-    let report_json = report_line.and_then(|line| serde_json::from_str::<serde_json::Value>(line).ok());
-
-    let mut capture = serde_json::json!({
-        "capture_status": if report_json.is_some() { "captured" } else { "requested_unavailable" },
-        "observer_path": observer.display().to_string(),
-        "observer_args": args,
-        "observer_exit_code": exit_code,
-    });
-    if let Some(report_json) = report_json {
-        capture["observer_report"] = report_json;
-    } else {
-        capture["observer_stdout"] = serde_json::Value::String(stdout);
-    }
-    if !stderr.is_empty() {
-        capture["observer_stderr"] = serde_json::Value::String(stderr);
-    }
-
-    Ok(capture)
-}
-
-fn build_health_check_report<'a>(
-    profiles_path: &Path,
-    selected: Vec<profiles::ResolvedProfileVariant<'a>>,
-) -> Result<HealthCheckReport, String> {
-
-    let probe_plan: [(&str, &[&str]); 3] = [
-        ("capabilities_snapshot", &[]),
-        ("world_shape", &[]),
-        ("fs_op", &["--op", "stat", "--path-class", "tmp"]),
-    ];
-
-    let mut profile_reports = Vec::new();
-    for resolved in selected {
-        let profile = resolved.profile;
-        let variant = resolved.variant;
-        let mut probes = Vec::new();
-        let mut profile_ok = true;
-        for (probe_id, probe_args) in probe_plan {
-            let (stdout, exit_code, stderr) =
-                match run_xpc_probe(&variant.bundle_id, probe_id, probe_args, false) {
-                    Ok(result) => result,
-                    Err(err) => {
-                        profile_ok = false;
-                        probes.push(HealthProbeResult {
-                            probe_id: probe_id.to_string(),
-                            rc: None,
-                            normalized_outcome: None,
-                            error: Some(err),
-                            exit_code: 127,
-                            parse_error: None,
-                            stderr: None,
-                        });
-                        continue;
-                    }
-                };
-
-            let mut parse_error = None;
-            let mut rc = None;
-            let mut outcome = None;
-            let mut error = None;
-            match parse_probe_response(&stdout) {
-                Ok((parsed_rc, parsed_outcome, parsed_error)) => {
-                    rc = parsed_rc;
-                    outcome = parsed_outcome;
-                    error = parsed_error;
-                }
-                Err(err) => {
-                    parse_error = Some(err);
-                }
-            }
-
-            let ok = exit_code == 0 && parse_error.is_none() && rc == Some(0);
-            if !ok {
-                profile_ok = false;
-            }
-
-            probes.push(HealthProbeResult {
-                probe_id: probe_id.to_string(),
-                rc,
-                normalized_outcome: outcome,
-                error,
-                exit_code,
-                parse_error,
-                stderr: if stderr.is_empty() { None } else { Some(stderr) },
-            });
-        }
-
-        profile_reports.push(HealthProfileResult {
-            profile_id: profile.profile_id.clone(),
-            bundle_id: variant.bundle_id.clone(),
-            kind: profile.kind.clone(),
-            variant: variant.variant.clone(),
-            ok: profile_ok,
-            probes,
-        });
-    }
-
-    let ok = profile_reports.iter().all(|profile| profile.ok);
-    Ok(HealthCheckReport {
-        ok,
-        profiles_path: profiles_path.display().to_string(),
-        profiles: profile_reports,
-    })
-}
-
-fn build_inspect_entry(entry: &evidence::EvidenceEntry, abs_path: &Path) -> InspectEntry {
-    InspectEntry {
-        id: entry.id.clone(),
-        kind: entry.kind.clone(),
-        bundle_id: entry.bundle_id.clone(),
-        rel_path: entry.rel_path.clone(),
-        abs_path: abs_path.display().to_string(),
-        sha256: entry.sha256.clone(),
-        lc_uuid: entry.lc_uuid.clone(),
-        entitlements: entry.entitlements.clone(),
-        entitlements_error: entry.entitlements_error.clone(),
-    }
-}
-
-fn is_allowed_system_path(cmd_path: &Path) -> bool {
-    let allowed_prefixes = [
-        Path::new("/bin"),
-        Path::new("/usr/bin"),
-        Path::new("/sbin"),
-        Path::new("/usr/sbin"),
-        Path::new("/usr/libexec"),
-        Path::new("/System/Library"),
-    ];
-    allowed_prefixes.iter().any(|prefix| cmd_path.starts_with(prefix))
-}
-
-fn ensure_executable_file(path: &Path) -> Result<(), String> {
-    let meta = std::fs::metadata(path)
-        .map_err(|e| format!("expected executable at {}: {e}", path.display()))?;
-    if !meta.is_file() {
-        return Err(format!("expected file at {}", path.display()));
-    }
-    if meta.permissions().mode() & 0o111 == 0 {
-        return Err(format!("expected executable file at {}", path.display()));
-    }
-    Ok(())
-}
-
-fn embedded_search_paths() -> Result<Vec<PathBuf>, String> {
-    let exe = env::current_exe().map_err(|e| format!("current_exe() failed: {e}"))?;
-    let contents_dir = exe
-        .parent()
-        .and_then(|p| p.parent())
-        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
-
-    Ok(vec![
-        contents_dir.join("Helpers"),
-        contents_dir.join("Helpers").join("Probes"),
-    ])
-}
-
-fn resolve_contents_macos_tool(tool_name: &str) -> Result<PathBuf, String> {
-    validate_tool_name(tool_name)?;
-    let exe = env::current_exe().map_err(|e| format!("current_exe() failed: {e}"))?;
-    let contents_dir = exe
-        .parent()
-        .and_then(|p| p.parent())
-        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
-
-    let candidate = contents_dir.join("MacOS").join(tool_name);
-    if candidate.exists() {
-        return Ok(candidate);
-    }
-
-    Err(format!(
-        "embedded tool not found in Contents/MacOS: {tool_name:?} (expected: {})",
-        candidate.display()
-    ))
 }
 
 fn validate_tool_name(tool_name: &str) -> Result<(), String> {
@@ -1465,2720 +54,1041 @@ fn validate_tool_name(tool_name: &str) -> Result<(), String> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn allows_platform_system_paths() {
-        assert!(is_allowed_system_path(Path::new("/bin/ls")));
-        assert!(is_allowed_system_path(Path::new("/usr/bin/env")));
-        assert!(is_allowed_system_path(Path::new("/System/Library/CoreServices")));
-        assert!(!is_allowed_system_path(Path::new("/usr/local/bin/ls")));
-        assert!(!is_allowed_system_path(Path::new("/tmp/ls")));
-        assert!(!is_allowed_system_path(Path::new("relative/path")));
-    }
-
-    #[test]
-    fn validates_tool_name_single_component() {
-        assert!(validate_tool_name("tool").is_ok());
-        assert!(validate_tool_name("xpc-probe-client").is_ok());
-    }
-
-    #[test]
-    fn rejects_tool_name_traversal_or_subpaths() {
-        assert!(validate_tool_name("../tool").is_err());
-        assert!(validate_tool_name("./tool").is_err());
-        assert!(validate_tool_name("tools/tool").is_err());
-        assert!(validate_tool_name("tool/../x").is_err());
-    }
+fn app_root_from_current_exe() -> Result<PathBuf, String> {
+    let exe = std::env::current_exe().map_err(|e| format!("current_exe() failed: {e}"))?;
+    // Expected layout: PolicyWitness.app/Contents/MacOS/policy-witness
+    let contents_dir = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
+    let app_root = contents_dir
+        .parent()
+        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
+    Ok(app_root.to_path_buf())
 }
 
-fn resolve_embedded_tool(tool_name: &str) -> Result<PathBuf, String> {
+fn resolve_contents_macos_tool(tool_name: &str) -> Result<PathBuf, String> {
     validate_tool_name(tool_name)?;
-    let search_paths = embedded_search_paths()?;
-
-    for dir in search_paths {
-        let candidate = dir.join(tool_name);
-        if candidate.exists() {
-            return Ok(candidate);
-        }
+    let exe = std::env::current_exe().map_err(|e| format!("current_exe() failed: {e}"))?;
+    let contents_dir = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
+    let candidate = contents_dir.join("MacOS").join(tool_name);
+    if candidate.exists() {
+        return Ok(candidate);
     }
-
     Err(format!(
-        "embedded tool not found: {tool_name:?} (searched: {})",
-        embedded_search_paths()?
-            .iter()
-            .map(|p| p.display().to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
+        "embedded tool not found in Contents/MacOS: {tool_name:?} (expected: {})",
+        candidate.display()
     ))
 }
 
-fn exit_like_child(status: std::process::ExitStatus) -> ! {
-    if let Some(code) = status.code() {
-        std::process::exit(code);
+fn ensure_clean_dir(path: &Path, force: bool) -> Result<(), String> {
+    if path.exists() {
+        let mut entries = std::fs::read_dir(path)
+            .map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+        if entries.next().is_some() {
+            if !force {
+                return Err(format!("output directory not empty: {}", path.display()));
+            }
+            std::fs::remove_dir_all(path)
+                .map_err(|e| format!("failed to remove {}: {e}", path.display()))?;
+        }
     }
-    if let Some(signal) = status.signal() {
-        std::process::exit(128 + signal);
-    }
-    std::process::exit(128);
+    std::fs::create_dir_all(path)
+        .map_err(|e| format!("failed to create {}: {e}", path.display()))?;
+    Ok(())
 }
 
-fn exit_like_probe_result(value: &serde_json::Value) -> ! {
-    let code = value
-        .pointer("/result/exit_code")
-        .and_then(|v| v.as_i64())
-        .or_else(|| value.pointer("/result/rc").and_then(|v| v.as_i64()))
-        .unwrap_or(1);
-    let code = code.max(0).min(255) as i32;
-    std::process::exit(code);
-}
-
-fn run_and_wait(cmd_path: PathBuf, cmd_args: Vec<OsString>) -> ! {
-    run_and_wait_with_env(cmd_path, cmd_args, &[])
-}
-
-fn run_and_wait_with_env(
-    cmd_path: PathBuf,
-    cmd_args: Vec<OsString>,
-    extra_env: &[(OsString, OsString)],
-) -> ! {
-    let mut cmd = Command::new(&cmd_path);
-    cmd.args(cmd_args);
-    for (key, value) in extra_env {
-        cmd.env(key, value);
+fn write_text(path: &Path, content: &str) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() && parent != Path::new(".") {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
+        }
     }
+    std::fs::write(path, content).map_err(|e| format!("failed to write {}: {e}", path.display()))
+}
 
-    let status = match cmd.status() {
-        Ok(status) => status,
-        Err(err) => {
-            eprintln!("spawn failed for {}: {err}", cmd_path.display());
-            std::process::exit(127);
+fn write_json_pretty(path: &Path, mut value: Value) -> Result<(), String> {
+    sort_json_value(&mut value);
+    let text = serde_json::to_string_pretty(&value)
+        .map_err(|e| format!("failed to encode JSON: {e}"))?;
+    write_text(path, &(text + "\n"))
+}
+
+fn sort_json_value(value: &mut Value) {
+    match value {
+        Value::Array(items) => {
+            for item in items {
+                sort_json_value(item);
+            }
+        }
+        Value::Object(map) => {
+            let mut entries: Vec<(String, Value)> =
+                map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut sorted = Map::new();
+            for (key, mut val) in entries {
+                sort_json_value(&mut val);
+                sorted.insert(key, val);
+            }
+            *map = sorted;
+        }
+        _ => {}
+    }
+}
+
+fn plist_key_string(plist_path: &Path, key: &str) -> Result<String, String> {
+    let plist = plist_path
+        .to_str()
+        .ok_or_else(|| format!("non-utf8 plist path: {}", plist_path.display()))?;
+    let cmd = "/usr/libexec/PlistBuddy";
+    let out = Command::new(cmd)
+        .args(["-c", &format!("Print :{key}"), plist])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run {cmd}: {e}"))?;
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        let msg = if !stderr.is_empty() { stderr } else { stdout };
+        return Err(format!(
+            "PlistBuddy failed for {} key {}: {}",
+            plist_path.display(),
+            key,
+            msg
+        ));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+#[derive(Clone)]
+struct PWRunnerBundleInfo {
+    bundle_id: String,
+    executable: String,
+}
+
+fn resolve_pw_runner_bundle_info(app_root: &Path) -> Result<PWRunnerBundleInfo, String> {
+    let plist = app_root
+        .join("Contents")
+        .join("XPCServices")
+        .join(format!("{PW_RUNNER_SERVICE_DIR}.xpc"))
+        .join("Contents")
+        .join("Info.plist");
+    if !plist.exists() {
+        return Err(format!("missing PWRunner Info.plist: {}", plist.display()));
+    }
+    let bundle_id = plist_key_string(&plist, "CFBundleIdentifier")?;
+    let executable = plist_key_string(&plist, "CFBundleExecutable")?;
+    Ok(PWRunnerBundleInfo {
+        bundle_id,
+        executable,
+    })
+}
+
+fn load_sandbox_check_symbol() -> Option<*mut c_void> {
+    let sym = CString::new("sandbox_check").ok()?;
+    let ptr = unsafe { dlsym(RTLD_DEFAULT, sym.as_ptr()) };
+    if ptr.is_null() {
+        None
+    } else {
+        Some(ptr)
+    }
+}
+
+fn sandbox_check_mach_lookup(symbol: *mut c_void, name: &str) -> Option<bool> {
+    let pid = std::process::id() as i32;
+    let op = CString::new("mach-lookup").ok()?;
+    let arg = CString::new(name).ok()?;
+    let fn_ptr: SandboxCheckOneArgFn = unsafe { std::mem::transmute(symbol) };
+    let rc = unsafe { fn_ptr(pid, op.as_ptr(), SANDBOX_FILTER_GLOBAL_NAME, arg.as_ptr()) };
+    match rc {
+        0 => Some(true),
+        1 => Some(false),
+        _ => None,
+    }
+}
+
+fn sandbox_check_am_i_sandboxed(symbol: *mut c_void) -> Option<bool> {
+    let pid = std::process::id() as i32;
+    let fn_ptr: SandboxCheckNoArgFn = unsafe { std::mem::transmute(symbol) };
+    let rc = unsafe { fn_ptr(pid, std::ptr::null(), 0) };
+    match rc {
+        0 => Some(false),
+        1 => Some(true),
+        _ => None,
+    }
+}
+
+fn inside_probe(service_names: &[String]) -> Value {
+    let mut checked: Vec<Value> = Vec::new();
+
+    if let Ok(marker) = std::env::var("CODEX_SANDBOX") {
+        if !marker.is_empty() {
+            return json!({
+                "inside": true,
+                "trigger": "env:CODEX_SANDBOX",
+                "checked": [
+                    {"sensor": "env:CODEX_SANDBOX", "status": "triggered", "details": {"value": marker}}
+                ],
+                "service_names": service_names,
+            });
+        }
+    }
+    checked.push(json!({"sensor": "env:CODEX_SANDBOX", "status": "pass"}));
+
+    let symbol = match load_sandbox_check_symbol() {
+        Some(ptr) => ptr,
+        None => {
+            checked.push(json!({"sensor": "sandbox_check", "status": "unavailable"}));
+            return json!({
+                "inside": true,
+                "trigger": "sandbox_check:unavailable",
+                "checked": checked,
+                "service_names": service_names,
+            });
         }
     };
 
-    exit_like_child(status)
+    if let Some(true) = sandbox_check_am_i_sandboxed(symbol) {
+        checked.push(json!({"sensor": "sandbox_check:self", "status": "triggered"}));
+        return json!({
+            "inside": true,
+            "trigger": "sandbox_check:self",
+            "checked": checked,
+            "service_names": service_names,
+        });
+    }
+    checked.push(json!({"sensor": "sandbox_check:self", "status": "pass"}));
+
+    // Always check logd lookup: if this is denied, unified-log collectors are often blocked.
+    match sandbox_check_mach_lookup(symbol, "com.apple.logd") {
+        Some(true) => checked.push(json!({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "pass"})),
+        Some(false) => {
+            checked.push(json!({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "triggered"}));
+            return json!({
+                "inside": true,
+                "trigger": "sandbox_check:mach-lookup:com.apple.logd",
+                "checked": checked,
+                "service_names": service_names,
+            });
+        }
+        None => {
+            checked.push(json!({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "error"}));
+            return json!({
+                "inside": true,
+                "trigger": "sandbox_check:error:com.apple.logd",
+                "checked": checked,
+                "service_names": service_names,
+            });
+        }
+    }
+
+    for name in service_names {
+        match sandbox_check_mach_lookup(symbol, name) {
+            Some(true) => checked.push(json!({"sensor": format!("sandbox_check:mach-lookup:{name}"), "status": "pass"})),
+            Some(false) => {
+                checked.push(json!({"sensor": format!("sandbox_check:mach-lookup:{name}"), "status": "triggered"}));
+                return json!({
+                    "inside": true,
+                    "trigger": format!("sandbox_check:mach-lookup:{name}"),
+                    "checked": checked,
+                    "service_names": service_names,
+                });
+            }
+            None => {
+                checked.push(json!({"sensor": format!("sandbox_check:mach-lookup:{name}"), "status": "error"}));
+                return json!({
+                    "inside": true,
+                    "trigger": format!("sandbox_check:error:{name}"),
+                    "checked": checked,
+                    "service_names": service_names,
+                });
+            }
+        }
+    }
+
+    json!({
+        "inside": false,
+        "trigger": null,
+        "checked": checked,
+        "service_names": service_names,
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SpecimenFile {
+    specimen_id: Option<String>,
+    policy: PWRunnerPolicySpec,
+    #[serde(default)]
+    instrumented_policy: Option<PWRunnerPolicySpec>,
+    probe_plan: Vec<PWRunnerProbeStep>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PWRunnerPolicySpec {
+    format: String,
+    #[serde(default)]
+    sbpl_source: Option<String>,
+    #[serde(default)]
+    params: Option<Map<String, Value>>,
+    #[serde(default)]
+    compiled_profile_b64: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PWRunnerSandboxFilter {
+    kind: String,
+    #[serde(default)]
+    value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PWRunnerSandboxCheck {
+    operation: String,
+    filter: PWRunnerSandboxFilter,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PWRunnerAttempt {
+    kind: String,
+    action: String,
+    target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PWRunnerProbeStep {
+    step_id: String,
+    sandbox_check: PWRunnerSandboxCheck,
+    attempt: PWRunnerAttempt,
+}
+
+#[derive(Serialize)]
+struct PWRunnerRunRequest {
+    schema_version: u32,
+    specimen_id: String,
+    run_kind: String,
+    policy: PWRunnerPolicySpec,
+    probe_plan: Vec<PWRunnerProbeStep>,
+}
+
+fn load_specimen(path: &Path) -> Result<SpecimenFile, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| format!("failed to read specimen {}: {e}", path.display()))?;
+    serde_json::from_str(&text)
+        .map_err(|e| format!("failed to parse specimen JSON {}: {e}", path.display()))
+}
+
+fn escape_sbpl_string(input: &str) -> String {
+    input.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn instrument_sbpl_message_marker(sbpl: &str, message: &str) -> String {
+    // Best-effort transformation: add `(with message "...")` to each `(deny ...)` form.
+    // Keep this intentionally narrow: SBPL is ASCII; refuse to reason about complex cases.
+    let bytes = sbpl.as_bytes();
+    let mut spans: Vec<(usize, usize)> = Vec::new();
+
+    let mut in_string = false;
+    let mut escape = false;
+
+    fn is_sym_char(b: u8) -> bool {
+        matches!(b, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.')
+    }
+
+    let mut i = 0usize;
+    while i < bytes.len() {
+        let ch = bytes[i];
+        if in_string {
+            if escape {
+                escape = false;
+            } else if ch == b'\\' {
+                escape = true;
+            } else if ch == b'"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+
+        if ch == b'"' {
+            in_string = true;
+            i += 1;
+            continue;
+        }
+
+        if ch == b'(' {
+            let mut j = i + 1;
+            while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            let mut k = j;
+            while k < bytes.len() && is_sym_char(bytes[k]) {
+                k += 1;
+            }
+            if j < k && &sbpl[j..k] == "deny" {
+                let mut form_depth = 1i32;
+                let mut m = k;
+                let mut local_in_string = false;
+                let mut local_escape = false;
+                while m < bytes.len() {
+                    let c2 = bytes[m];
+                    if local_in_string {
+                        if local_escape {
+                            local_escape = false;
+                        } else if c2 == b'\\' {
+                            local_escape = true;
+                        } else if c2 == b'"' {
+                            local_in_string = false;
+                        }
+                        m += 1;
+                        continue;
+                    }
+                    if c2 == b'"' {
+                        local_in_string = true;
+                        m += 1;
+                        continue;
+                    }
+                    if c2 == b'(' {
+                        form_depth += 1;
+                    } else if c2 == b')' {
+                        form_depth -= 1;
+                        if form_depth == 0 {
+                            spans.push((i, m));
+                            break;
+                        }
+                    }
+                    m += 1;
+                }
+            }
+            i += 1;
+            continue;
+        }
+
+        i += 1;
+    }
+
+    if spans.is_empty() {
+        return sbpl.to_string();
+    }
+
+    let escaped = escape_sbpl_string(message);
+    let suffix = format!(" (with message \"{escaped}\")");
+    let mut out = sbpl.to_string();
+    for (start, end) in spans.into_iter().rev() {
+        if end >= out.len() || start >= out.len() || start > end {
+            continue;
+        }
+        let segment = &out[start..=end];
+        if segment.contains("with message") {
+            continue;
+        }
+        out.insert_str(end, &suffix);
+    }
+    out
+}
+
+#[derive(Serialize)]
+struct ClientRunArtifact {
+    exit_code: i32,
+    started_at_unix_ms: u64,
+    ended_at_unix_ms: u64,
+    parse_error: Option<String>,
+    parsed: Option<Value>,
+}
+
+fn run_pw_runner_client(
+    service_bundle_id: &str,
+    request_path: &Path,
+    out_dir: &Path,
+    timeout_ms: u64,
+) -> Result<ClientRunArtifact, String> {
+    let tool = resolve_contents_macos_tool("pw-runner-client")?;
+    ensure_clean_dir(out_dir, true)?;
+
+    let cmd = vec![
+        tool.into_os_string(),
+        OsString::from("run"),
+        OsString::from("--timeout-ms"),
+        OsString::from(format!("{timeout_ms}")),
+        OsString::from(service_bundle_id),
+        request_path.as_os_str().to_os_string(),
+    ];
+    write_text(out_dir.join("cmd.txt").as_path(), &(format_cmd(&cmd) + "\n"))?;
+
+    let start_ms = now_unix_ms();
+    let out = Command::new(&cmd[0])
+        .args(&cmd[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
+    let end_ms = now_unix_ms();
+
+    write_text(out_dir.join("outputs.stdout.json").as_path(), &String::from_utf8_lossy(&out.stdout))?;
+    write_text(out_dir.join("outputs.stderr.txt").as_path(), &String::from_utf8_lossy(&out.stderr))?;
+    write_text(
+        out_dir.join("outputs.exit_code.txt").as_path(),
+        &format!("{}\n", out.status.code().unwrap_or(1)),
+    )?;
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let mut parsed: Option<Value> = None;
+    let mut parse_error: Option<String> = None;
+    if !stdout.trim().is_empty() {
+        match serde_json::from_str::<Value>(&stdout) {
+            Ok(v) => parsed = Some(v),
+            Err(e) => parse_error = Some(format!("{e}")),
+        }
+    }
+
+    let run_json = json!({
+        "schema_version": 1,
+        "driver": "pw-runner-client",
+        "started_at_unix_ms": start_ms,
+        "ended_at_unix_ms": end_ms,
+        "argv": cmd.iter().map(|s| s.to_string_lossy().to_string()).collect::<Vec<_>>(),
+        "exit_code": out.status.code().unwrap_or(1),
+        "parse_error": parse_error,
+        "parsed": parsed,
+    });
+    write_json_pretty(out_dir.join("run.json").as_path(), run_json)?;
+
+    Ok(ClientRunArtifact {
+        exit_code: out.status.code().unwrap_or(1),
+        started_at_unix_ms: start_ms,
+        ended_at_unix_ms: end_ms,
+        parse_error,
+        parsed,
+    })
+}
+
+fn format_cmd(argv: &[OsString]) -> String {
+    argv.iter()
+        .map(|s| shell_escape(s))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn shell_escape(s: &OsString) -> String {
+    let text = s.to_string_lossy();
+    if text.is_empty() {
+        return "''".to_string();
+    }
+    if text.chars().all(|c| c.is_ascii_alphanumeric() || "-_./:@".contains(c)) {
+        return text.to_string();
+    }
+    format!("'{}'", text.replace('\'', "'\\''"))
+}
+
+fn capture_sandbox_logs_last(
+    pid: i64,
+    process_name: &str,
+    out_dir: &Path,
+    last: &str,
+) -> Result<Value, String> {
+    let tool = resolve_contents_macos_tool("sandbox-log-observer")?;
+    ensure_clean_dir(out_dir, true)?;
+
+    let cmd = vec![
+        tool.into_os_string(),
+        OsString::from("--pid"),
+        OsString::from(format!("{pid}")),
+        OsString::from("--process-name"),
+        OsString::from(process_name),
+        OsString::from("--last"),
+        OsString::from(last),
+        OsString::from("--format"),
+        OsString::from("json"),
+    ];
+    write_text(out_dir.join("cmd.txt").as_path(), &(format_cmd(&cmd) + "\n"))?;
+
+    let out = Command::new(&cmd[0])
+        .args(&cmd[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run sandbox-log-observer: {e}"))?;
+
+    write_text(out_dir.join("outputs.stdout.json").as_path(), &String::from_utf8_lossy(&out.stdout))?;
+    write_text(out_dir.join("outputs.stderr.txt").as_path(), &String::from_utf8_lossy(&out.stderr))?;
+    write_text(
+        out_dir.join("outputs.exit_code.txt").as_path(),
+        &format!("{}\n", out.status.code().unwrap_or(1)),
+    )?;
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let mut parsed: Option<Value> = None;
+    let mut parse_error: Option<String> = None;
+    if !stdout.trim().is_empty() {
+        match serde_json::from_str::<Value>(&stdout) {
+            Ok(v) => parsed = Some(v),
+            Err(e) => parse_error = Some(format!("{e}")),
+        }
+    }
+
+    let parse_error_clone = parse_error.clone();
+    let mut out_obj = match parsed {
+        Some(Value::Object(map)) => Value::Object(map),
+        _ => json!({"capture_status": "requested_unavailable", "error": parse_error_clone.unwrap_or_else(|| "stdout not json".to_string())}),
+    };
+
+    if let Value::Object(map) = &mut out_obj {
+        map.insert(
+            "capture_status".to_string(),
+            Value::String(if out.status.success() {
+                "captured".to_string()
+            } else {
+                "requested_unavailable".to_string()
+            }),
+        );
+        map.insert(
+            "capture_parse_error".to_string(),
+            parse_error.map(Value::String).unwrap_or(Value::Null),
+        );
+    }
+
+    Ok(out_obj)
+}
+
+fn observed_deny_from_capture(obj: &Value) -> Option<bool> {
+    if let Some(v) = obj.get("observed_deny").and_then(|v| v.as_bool()) {
+        return Some(v);
+    }
+    obj.get("data")
+        .and_then(|v| v.get("observed_deny"))
+        .and_then(|v| v.as_bool())
+}
+
+fn summary_for_specimen_eval(
+    specimen_id: &str,
+    probe_plan: &[PWRunnerProbeStep],
+    canonical: Option<&Value>,
+    canonical_logs: Option<&Value>,
+    instrumented_logs: Option<&Value>,
+    deny_marker: &str,
+    inside: &Value,
+) -> Value {
+    let mut plan_by_step: std::collections::HashMap<String, &PWRunnerProbeStep> = std::collections::HashMap::new();
+    for entry in probe_plan {
+        plan_by_step.insert(entry.step_id.clone(), entry);
+    }
+
+    let canon_steps = canonical.and_then(|v| v.get("steps")).and_then(|v| v.as_array());
+
+    let mut marker_observed: Option<bool> = None;
+    if !deny_marker.is_empty() {
+        let logs_obj = instrumented_logs.or(canonical_logs);
+        if let Some(logs_obj) = logs_obj {
+            if let Some(log_stdout) = logs_obj
+                .get("data")
+                .and_then(|d| d.get("log_stdout"))
+                .and_then(|v| v.as_str())
+            {
+                marker_observed = Some(log_stdout.contains(deny_marker));
+            }
+        }
+    }
+
+    let mut steps: Vec<Value> = Vec::new();
+    if let Some(canon_steps) = canon_steps {
+        for s in canon_steps {
+            let sid = s.get("step_id").and_then(|v| v.as_str()).unwrap_or("-");
+            let probe_id = plan_by_step
+                .get(sid)
+                .map(|entry| format!("{}:{}", entry.attempt.kind, entry.attempt.action))
+                .unwrap_or_else(|| "-".to_string());
+
+            let attempt = s.get("attempt").cloned().unwrap_or(Value::Null);
+            let sb = s.get("sandbox_check").cloned().unwrap_or(Value::Null);
+            let rc = attempt.get("rc").and_then(|v| v.as_i64());
+            let err = attempt.get("errno").and_then(|v| v.as_i64());
+            let sb_outcome = sb.get("outcome").and_then(|v| v.as_str()).unwrap_or("");
+
+            let mut outcome = "ok".to_string();
+            let mut ok = rc == Some(0);
+            if rc != Some(0) && sb_outcome == "deny" {
+                outcome = "failed_predicted_deny".to_string();
+                ok = false;
+            }
+            if rc != Some(0) && sb_outcome == "allow" {
+                outcome = "failed_predicted_allow".to_string();
+                ok = false;
+            }
+            if rc == Some(0) && sb_outcome == "deny" {
+                outcome = "mismatch_allow_but_predicted_deny".to_string();
+                ok = false;
+            }
+
+            steps.push(json!({
+                "step_id": sid,
+                "probe_id": probe_id,
+                "ok": ok,
+                "normalized_outcome": outcome,
+                "rc": rc,
+                "errno": err,
+                "probe_exec_overlap": null,
+                "sandbox_check_outcome": sb_outcome,
+                "deny_marker_observed": marker_observed,
+            }));
+        }
+    }
+
+    let mut observed_deny = canonical_logs.and_then(observed_deny_from_capture);
+    if observed_deny != Some(true) {
+        observed_deny = instrumented_logs.and_then(observed_deny_from_capture);
+    }
+
+    let mut confidence = "unknown".to_string();
+    let mut reasons: Vec<String> = Vec::new();
+    if observed_deny != Some(true) {
+        reasons.push("sandbox_deny_not_observed".to_string());
+    }
+    if marker_observed != Some(true) {
+        reasons.push("deny_marker_not_observed".to_string());
+    }
+    if observed_deny == Some(true) && marker_observed == Some(true) && !steps.is_empty() {
+        confidence = "high".to_string();
+    }
+
+    let canonical_ok = canonical
+        .and_then(|v| v.get("normalized_outcome"))
+        .and_then(|v| v.as_str())
+        == Some("ok");
+    let status = if canonical_ok { "pass" } else { "fail" };
+
+    json!({
+        "labbook_version": LABBOOK_VERSION,
+        "scenario_id": format!("specimen:{specimen_id}"),
+        "driver": "pw_runner",
+        "profile": "PWRunner",
+        "variant": "default",
+        "status": status,
+        "exit_code": if status == "pass" { 0 } else { 1 },
+        "inside": inside,
+        "uncertainty": {
+            "confidence": confidence,
+            "reasons": reasons,
+            "collector_health": {},
+        },
+        "steps": steps,
+        "evidence": {
+            "sandbox_logs": { "observed_deny": observed_deny },
+            "deny_marker": { "value": deny_marker, "observed": marker_observed },
+        }
+    })
+}
+
+fn cmd_inside(args: &[OsString]) -> Result<i32, String> {
+    let mut bare = false;
+    let mut service_names: Vec<String> = Vec::new();
+
+    let mut idx = 0usize;
+    while idx < args.len() {
+        let arg = args[idx].to_string_lossy();
+        match arg.as_ref() {
+            "-h" | "--help" => {
+                print_usage();
+                return Ok(0);
+            }
+            "--bare" => {
+                bare = true;
+                idx += 1;
+            }
+            "--service-name" => {
+                let name = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --service-name".to_string())?;
+                service_names.push(name.to_string());
+                idx += 2;
+            }
+            _ => return Err(format!("unknown argument: {arg}")),
+        }
+    }
+
+    let result = inside_probe(&service_names);
+    if bare {
+        let inside = result.get("inside").and_then(|v| v.as_bool()).unwrap_or(true);
+        println!("{}", if inside { "true" } else { "false" });
+    } else {
+        let mut v = result;
+        sort_json_value(&mut v);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&v).map_err(|e| format!("failed to encode JSON: {e}"))?
+        );
+    }
+    Ok(0)
+}
+
+fn cmd_specimen(args: &[OsString]) -> Result<i32, String> {
+    let mut specimen_path: Option<PathBuf> = None;
+    let mut out_dir: Option<PathBuf> = None;
+    let mut timeout_ms = DEFAULT_TIMEOUT_MS;
+    let mut log_last = DEFAULT_LOG_LAST.to_string();
+    let mut force = false;
+
+    let mut idx = 0usize;
+    while idx < args.len() {
+        let arg = args[idx].to_string_lossy();
+        if arg == "--" {
+            break;
+        }
+        if !arg.starts_with('-') {
+            specimen_path = Some(PathBuf::from(args[idx].clone()));
+            idx += 1;
+            continue;
+        }
+        match arg.as_ref() {
+            "-h" | "--help" => {
+                print_usage();
+                return Ok(0);
+            }
+            "--outdir" => {
+                let v = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --outdir".to_string())?;
+                out_dir = Some(PathBuf::from(v));
+                idx += 2;
+            }
+            "--timeout-ms" => {
+                let v = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --timeout-ms".to_string())?;
+                timeout_ms = v
+                    .parse::<u64>()
+                    .map_err(|_| "invalid --timeout-ms".to_string())?
+                    .max(1);
+                idx += 2;
+            }
+            "--log-last" => {
+                let v = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --log-last".to_string())?;
+                log_last = v.to_string();
+                idx += 2;
+            }
+            "--force" => {
+                force = true;
+                idx += 1;
+            }
+            _ => return Err(format!("unknown argument: {arg}")),
+        }
+    }
+
+    let specimen_path = specimen_path.ok_or_else(|| "missing <specimen.json>".to_string())?;
+
+    let app_root = app_root_from_current_exe()?;
+    let runner_info = resolve_pw_runner_bundle_info(&app_root)?;
+
+    let inside = inside_probe(&[runner_info.bundle_id.clone()]);
+
+    let allow_inside = std::env::var("PW_LAB_ALLOW_INSIDE").ok().as_deref() == Some("1");
+    if inside.get("inside").and_then(|v| v.as_bool()).unwrap_or(true) && !allow_inside {
+        let blocked_dir = out_dir.unwrap_or_else(|| {
+            let stamp = chrono_stamp();
+            PathBuf::from(".pw_lab/out").join(format!("{stamp}_specimen_blocked"))
+        });
+        ensure_clean_dir(&blocked_dir, force)?;
+        write_json_pretty(&blocked_dir.join("inside.json"), inside.clone())?;
+        let blocked_summary = json!({
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": "specimen",
+            "driver": "pw_runner",
+            "profile": "PWRunner",
+            "variant": "default",
+            "status": "blocked",
+            "exit_code": 3,
+            "inside": inside,
+            "uncertainty": {"confidence": "unknown", "reasons": ["inside"], "collector_health": {}},
+            "steps": [],
+            "evidence": {},
+        });
+        write_json_pretty(&blocked_dir.join("lab_summary.json"), blocked_summary)?;
+        return Ok(3);
+    }
+
+    let spec_obj = load_specimen(&specimen_path)?;
+    let specimen_id = spec_obj
+        .specimen_id
+        .clone()
+        .unwrap_or_else(|| "specimen".to_string());
+
+    let deny_marker = format!("PW_LAB_DENY_MARKER:{specimen_id}");
+
+    let canonical_policy = spec_obj.policy.clone();
+    let instrumented_policy = if let Some(p) = spec_obj.instrumented_policy.clone() {
+        p
+    } else if canonical_policy.format == "sbpl" {
+        let src = canonical_policy
+            .sbpl_source
+            .clone()
+            .ok_or_else(|| "policy.format=sbpl requires sbpl_source".to_string())?;
+        let mut p = canonical_policy.clone();
+        p.sbpl_source = Some(instrument_sbpl_message_marker(&src, &deny_marker));
+        p
+    } else {
+        return Err("missing instrumented_policy (and canonical policy cannot be auto-instrumented)".to_string());
+    };
+
+    let out_dir = out_dir.unwrap_or_else(|| {
+        let stamp = chrono_stamp();
+        PathBuf::from(".pw_lab/out").join(format!("{stamp}_specimen_{specimen_id}"))
+    });
+    ensure_clean_dir(&out_dir, force)?;
+
+    write_json_pretty(&out_dir.join("inside.json"), inside.clone())?;
+    write_json_pretty(
+        &out_dir.join("specimen.json"),
+        serde_json::to_value(&spec_obj).map_err(|e| format!("failed to encode specimen.json: {e}"))?,
+    )?;
+
+    let canonical_req = PWRunnerRunRequest {
+        schema_version: 1,
+        specimen_id: specimen_id.clone(),
+        run_kind: "canonical".to_string(),
+        policy: canonical_policy,
+        probe_plan: spec_obj.probe_plan.clone(),
+    };
+    let canonical_req_path = out_dir.join("canonical.request.json");
+    write_json_pretty(
+        &canonical_req_path,
+        serde_json::to_value(canonical_req).map_err(|e| format!("failed to encode request: {e}"))?,
+    )?;
+
+    let instr_req = PWRunnerRunRequest {
+        schema_version: 1,
+        specimen_id: specimen_id.clone(),
+        run_kind: "instrumented".to_string(),
+        policy: instrumented_policy,
+        probe_plan: spec_obj.probe_plan.clone(),
+    };
+    let instr_req_path = out_dir.join("instrumented.request.json");
+    write_json_pretty(
+        &instr_req_path,
+        serde_json::to_value(instr_req).map_err(|e| format!("failed to encode request: {e}"))?,
+    )?;
+
+    let canonical_run = run_pw_runner_client(
+        &runner_info.bundle_id,
+        &canonical_req_path,
+        &out_dir.join("canonical"),
+        timeout_ms,
+    )?;
+
+    let instrumented_run = run_pw_runner_client(
+        &runner_info.bundle_id,
+        &instr_req_path,
+        &out_dir.join("instrumented"),
+        timeout_ms,
+    )?;
+
+    // Channel C: unified-log deny capture (best-effort but required for high confidence).
+    let canonical_pid = canonical_run
+        .parsed
+        .as_ref()
+        .and_then(|v| v.get("pid"))
+        .and_then(|v| v.as_i64());
+    let instr_pid = instrumented_run
+        .parsed
+        .as_ref()
+        .and_then(|v| v.get("pid"))
+        .and_then(|v| v.as_i64());
+
+    let mut canonical_logs: Option<Value> = None;
+    if let Some(pid) = canonical_pid {
+        let logs = capture_sandbox_logs_last(
+            pid,
+            &runner_info.executable,
+            &out_dir.join("canonical_sandbox_logs"),
+            &log_last,
+        )?;
+        write_json_pretty(&out_dir.join("canonical_sandbox_logs.json"), logs.clone())?;
+        canonical_logs = Some(logs);
+    }
+
+    let mut instrumented_logs: Option<Value> = None;
+    if let Some(pid) = instr_pid {
+        let logs = capture_sandbox_logs_last(
+            pid,
+            &runner_info.executable,
+            &out_dir.join("instrumented_sandbox_logs"),
+            &log_last,
+        )?;
+        write_json_pretty(
+            &out_dir.join("instrumented_sandbox_logs.json"),
+            logs.clone(),
+        )?;
+        instrumented_logs = Some(logs);
+    }
+
+    let summary = summary_for_specimen_eval(
+        &specimen_id,
+        &spec_obj.probe_plan,
+        canonical_run.parsed.as_ref(),
+        canonical_logs.as_ref(),
+        instrumented_logs.as_ref(),
+        &deny_marker,
+        &inside,
+    );
+    write_json_pretty(&out_dir.join("lab_summary.json"), summary.clone())?;
+
+    let mut out_summary = summary;
+    sort_json_value(&mut out_summary);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&out_summary).map_err(|e| format!("failed to encode JSON: {e}"))?
+    );
+
+    let exit_code = out_summary
+        .get("exit_code")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(1)
+        .clamp(0, 255) as i32;
+    Ok(exit_code)
+}
+
+fn chrono_stamp() -> String {
+    // YYYYMMDD-HHMMSS, local time (stable enough for run dirs).
+    // Avoid external dependencies: use `date` for portability.
+    let out = Command::new("/bin/date")
+        .arg("+%Y%m%d-%H%M%S")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_else(|| "00000000-000000".to_string());
+    out.trim().to_string()
 }
 
 fn main() {
-    if env::var("PW_DEBUG_DLOPEN").ok().as_deref() == Some("1") {
-        debug_entitlements_probe::try_dlopen_external_library();
-    }
-
-    let args: Vec<OsString> = env::args_os().skip(1).collect();
-    if args.is_empty() {
+    let argv: Vec<OsString> = std::env::args_os().skip(1).collect();
+    if argv.is_empty() {
         print_usage();
         std::process::exit(2);
     }
+    let sub = argv[0].to_string_lossy().to_string();
+    let rest = &argv[1..];
 
-    let subcommand = args[0].to_str();
-    match subcommand {
-        Some("help") | Some("-h") | Some("--help") => {
+    let result = match sub.as_str() {
+        "inside" => cmd_inside(rest),
+        "specimen" => cmd_specimen(rest),
+        "-h" | "--help" | "help" => {
             print_usage();
-            return;
+            Ok(0)
         }
-        Some("verify-evidence") => {
-            let app_root = resolve_app_root();
-            let (manifest, manifest_path) = load_manifest(&app_root);
-            let report = evidence::verify_manifest(&manifest, &app_root, &manifest_path);
-            let ok = report.ok;
-            emit_envelope("verify_evidence_report", json_contract::JsonResult::from_ok(ok), &report);
-            std::process::exit(if ok { 0 } else { 3 });
-        }
-        Some("inspect-macho") => {
-            let selector = match args.get(1).and_then(|s| s.to_str()) {
-                Some("-h") | Some("--help") => {
-                    print_usage();
-                    std::process::exit(0);
-                }
-                Some(s) => s,
-                None => {
-                    eprintln!("missing selector for inspect-macho\n");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-
-            let app_root = resolve_app_root();
-            let (manifest, manifest_path) = load_manifest(&app_root);
-
-            let entry = if selector == "main" {
-                let rel = manifest.app_binary_rel_path.clone().unwrap_or_else(|| {
-                    eprintln!("manifest is missing app_binary_rel_path");
-                    std::process::exit(2);
-                });
-                let abs_path = app_root.join(&rel);
-                InspectEntry {
-                    id: "main".to_string(),
-                    kind: "main".to_string(),
-                    bundle_id: manifest.app_bundle_id.clone(),
-                    rel_path: rel,
-                    abs_path: abs_path.display().to_string(),
-                    sha256: None,
-                    lc_uuid: None,
-                    entitlements: manifest.app_entitlements.clone(),
-                    entitlements_error: None,
-                }
-            } else {
-                let mut entry = evidence::find_entry_by_id(&manifest, selector);
-                if entry.is_none() {
-                    entry = evidence::find_entry_by_rel_path(&manifest, selector);
-                }
-                if entry.is_none() {
-                    let selector_path = Path::new(selector);
-                    if selector_path.is_absolute() {
-                        if let Some(rel) = evidence::rel_path_from_absolute(&app_root, selector_path) {
-                            entry = evidence::find_entry_by_rel_path(&manifest, &rel);
-                        }
-                    }
-                }
-                let entry = entry.unwrap_or_else(|| {
-                    eprintln!("unknown entry for selector: {selector}");
-                    std::process::exit(2);
-                });
-                let abs_path = app_root.join(&entry.rel_path);
-                build_inspect_entry(entry, &abs_path)
-            };
-
-            let report = InspectReport {
-                selector: selector.to_string(),
-                app_root: app_root.display().to_string(),
-                manifest_path: manifest_path.display().to_string(),
-                entry,
-            };
-            emit_envelope("inspect_macho_report", json_contract::JsonResult::from_ok(true), &report);
-            return;
-        }
-        Some("list-profiles") => {
-            let app_root = resolve_app_root();
-            let (manifest, profiles_path) = load_profiles_manifest(&app_root);
-            let mut profiles = manifest.profiles.clone();
-            profiles.sort_by(|a, b| a.profile_id.cmp(&b.profile_id));
-            let report = ProfilesReport {
-                profiles_path: profiles_path.display().to_string(),
-                generated_at: manifest.generated_at,
-                profiles,
-            };
-            emit_envelope("profiles_report", json_contract::JsonResult::from_ok(true), &report);
-            return;
-        }
-        Some("list-services") => {
-            let app_root = resolve_app_root();
-            let (manifest, profiles_path) = load_profiles_manifest(&app_root);
-            let mut services = Vec::new();
-            for profile in &manifest.profiles {
-                for variant in &profile.variants {
-                    services.push(ServiceEntry {
-                        profile_id: profile.profile_id.clone(),
-                        kind: profile.kind.clone(),
-                        label: profile.label.clone(),
-                        variant: variant.variant.clone(),
-                        bundle_id: variant.bundle_id.clone(),
-                        service_name: variant.service_name.clone(),
-                        tags: variant.tags.clone(),
-                        risk_tier: variant.risk_tier,
-                        risk_reasons: variant.risk_reasons.clone(),
-                        entitlements: variant.entitlements.clone(),
-                        entitlements_error: variant.entitlements_error.clone(),
-                    });
-                }
-            }
-            services.sort_by(|a, b| {
-                a.profile_id
-                    .cmp(&b.profile_id)
-                    .then_with(|| variant_rank(&a.variant).cmp(&variant_rank(&b.variant)))
-                    .then_with(|| a.service_name.cmp(&b.service_name))
-            });
-            let report = ServicesReport {
-                profiles_path: profiles_path.display().to_string(),
-                generated_at: manifest.generated_at,
-                services,
-            };
-            emit_envelope("services_report", json_contract::JsonResult::from_ok(true), &report);
-            return;
-        }
-        Some("show-profile") => {
-            let mut selector: Option<String> = None;
-            let mut variant_arg: Option<&'static str> = None;
-            let mut idx = 1usize;
-            while idx < args.len() {
-                let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                    Some(value) => value,
-                    None => break,
-                };
-                match arg {
-                    "-h" | "--help" => {
-                        print_usage();
-                        return;
-                    }
-                    "--variant" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --variant".to_string());
-                        match value {
-                            Ok(v) => {
-                                if variant_arg.is_some() {
-                                    eprintln!("--variant specified multiple times");
-                                    print_usage();
-                                    std::process::exit(2);
-                                }
-                                variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                    eprintln!("{err}");
-                                    std::process::exit(2);
-                                }));
-                            }
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    other if other.starts_with('-') => {
-                        eprintln!("unknown argument for show-profile: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    _ => {
-                        if selector.is_some() {
-                            eprintln!("show-profile expects a single selector");
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        selector = Some(arg.to_string());
-                        idx += 1;
-                    }
-                }
-            }
-
-            let selector = match selector {
-                Some(value) => value,
-                None => {
-                    eprintln!("missing selector for show-profile\n");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            let (profile_id, selector_variant) = split_profile_selector(&selector).unwrap_or_else(|err| {
-                eprintln!("{err}");
-                std::process::exit(2);
-            });
-            let variant = match (variant_arg, selector_variant) {
-                (Some(flag_variant), Some(selector_variant)) if flag_variant != selector_variant => {
-                    eprintln!("conflicting variant selection for show-profile");
-                    std::process::exit(2);
-                }
-                (Some(flag_variant), _) => Some(flag_variant),
-                (None, selector_variant) => selector_variant,
-            };
-
-            let app_root = resolve_app_root();
-            let (manifest, profiles_path) = load_profiles_manifest(&app_root);
-            let resolved = resolve_profile_variant(&manifest, &profile_id, variant).unwrap_or_else(|err| {
-                eprintln!("{err}");
-                std::process::exit(2);
-            });
-            let report = ProfileReport {
-                profiles_path: profiles_path.display().to_string(),
-                profile: resolved.profile.clone(),
-                variant: resolved.variant.clone(),
-            };
-            emit_envelope("profile_report", json_contract::JsonResult::from_ok(true), &report);
-            return;
-        }
-        Some("describe-service") => {
-            let mut selector: Option<String> = None;
-            let mut variant_arg: Option<&'static str> = None;
-            let mut idx = 1usize;
-            while idx < args.len() {
-                let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                    Some(value) => value,
-                    None => break,
-                };
-                match arg {
-                    "-h" | "--help" => {
-                        print_usage();
-                        return;
-                    }
-                    "--variant" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --variant".to_string());
-                        match value {
-                            Ok(v) => {
-                                if variant_arg.is_some() {
-                                    eprintln!("--variant specified multiple times");
-                                    print_usage();
-                                    std::process::exit(2);
-                                }
-                                variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                    eprintln!("{err}");
-                                    std::process::exit(2);
-                                }));
-                            }
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    other if other.starts_with('-') => {
-                        eprintln!("unknown argument for describe-service: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    _ => {
-                        if selector.is_some() {
-                            eprintln!("describe-service expects a single selector");
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                        selector = Some(arg.to_string());
-                        idx += 1;
-                    }
-                }
-            }
-
-            let selector = match selector {
-                Some(value) => value,
-                None => {
-                    eprintln!("missing selector for describe-service\n");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            let (profile_id, selector_variant) = split_profile_selector(&selector).unwrap_or_else(|err| {
-                eprintln!("{err}");
-                std::process::exit(2);
-            });
-            let variant = match (variant_arg, selector_variant) {
-                (Some(flag_variant), Some(selector_variant)) if flag_variant != selector_variant => {
-                    eprintln!("conflicting variant selection for describe-service");
-                    std::process::exit(2);
-                }
-                (Some(flag_variant), _) => Some(flag_variant),
-                (None, selector_variant) => selector_variant,
-            };
-
-            let app_root = resolve_app_root();
-            let (manifest, _) = load_profiles_manifest(&app_root);
-            let resolved = resolve_profile_variant(&manifest, &profile_id, variant).unwrap_or_else(|err| {
-                eprintln!("{err}");
-                std::process::exit(2);
-            });
-            let report = DescribeServiceReport {
-                profile: resolved.profile.clone(),
-                variant: resolved.variant.variant.clone(),
-                service: resolved.variant.clone(),
-                capabilities_source: "static".to_string(),
-                capabilities: build_static_capabilities(resolved.variant),
-            };
-            emit_envelope("describe_service_report", json_contract::JsonResult::from_ok(true), &report);
-            return;
-        }
-        Some("health-check") => {
-            let mut profile_filter: Option<String> = None;
-            let mut variant_arg: Option<&'static str> = None;
-            let mut idx = 1;
-            while idx < args.len() {
-                match args.get(idx).and_then(|s| s.to_str()) {
-                    Some("--profile") => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| {
-                                "missing value for --profile".to_string()
-                            });
-                        match value {
-                            Ok(v) => profile_filter = Some(v.to_string()),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    Some("--variant") => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --variant".to_string());
-                        match value {
-                            Ok(v) => {
-                                if variant_arg.is_some() {
-                                    eprintln!("--variant specified multiple times");
-                                    print_usage();
-                                    std::process::exit(2);
-                                }
-                                variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                    eprintln!("{err}");
-                                    std::process::exit(2);
-                                }));
-                            }
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    Some("-h") | Some("--help") => {
-                        print_usage();
-                        return;
-                    }
-                    Some(other) => {
-                        eprintln!("unknown argument for health-check: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    None => break,
-                }
-            }
-
-            let app_root = resolve_app_root();
-            let (manifest, profiles_path) = load_profiles_manifest(&app_root);
-            let mut selected = Vec::new();
-            if let Some(filter) = profile_filter.as_deref() {
-                let (profile_id, selector_variant) =
-                    split_profile_selector(filter).unwrap_or_else(|err| {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    });
-                let variant = match (variant_arg, selector_variant) {
-                    (Some(flag_variant), Some(selector_variant)) if flag_variant != selector_variant => {
-                        eprintln!("conflicting variant selection for health-check");
-                        std::process::exit(2);
-                    }
-                    (Some(flag_variant), _) => Some(flag_variant),
-                    (None, selector_variant) => selector_variant,
-                };
-                let resolved =
-                    resolve_profile_variant(&manifest, &profile_id, variant).unwrap_or_else(|err| {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    });
-                if resolved.profile.kind != "probe" {
-                    eprintln!(
-                        "health-check only supports probe profiles (profile {} is kind={})",
-                        resolved.profile.profile_id, resolved.profile.kind
-                    );
-                    std::process::exit(2);
-                }
-                selected.push(resolved);
-            } else {
-                let variant = variant_arg.unwrap_or(VARIANT_BASE);
-                for profile in profiles::filter_profiles(&manifest, Some("probe")) {
-                    let selected_variant = profiles::find_variant(profile, variant).unwrap_or_else(|| {
-                        eprintln!(
-                            "profile {} missing variant {}",
-                            profile.profile_id, variant
-                        );
-                        std::process::exit(2);
-                    });
-                    selected.push(profiles::ResolvedProfileVariant {
-                        profile,
-                        variant: selected_variant,
-                    });
-                }
-            }
-            let report = match build_health_check_report(&profiles_path, selected) {
-                Ok(report) => report,
-                Err(err) => {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-            };
-            let ok = report.ok;
-            emit_envelope(
-                "health_check_report",
-                json_contract::JsonResult::from_ok(ok),
-                &report,
-            );
-            std::process::exit(if ok { 0 } else { 3 });
-        }
-        Some("bundle-evidence") => {
-            let mut out_arg: Option<String> = None;
-            let mut include_health_check = false;
-            let mut idx = 1;
-            while idx < args.len() {
-                match args.get(idx).and_then(|s| s.to_str()) {
-                    Some("-h") | Some("--help") => {
-                        print_usage();
-                        return;
-                    }
-                    Some("--out") => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --out".to_string());
-                        match value {
-                            Ok(v) => out_arg = Some(v.to_string()),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    Some("--include-health-check") => {
-                        include_health_check = true;
-                        idx += 1;
-                    }
-                    Some(other) => {
-                        eprintln!("unknown argument for bundle-evidence: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    None => break,
-                }
-            }
-
-            let out_dir = match out_arg {
-                Some(value) => match expand_tilde_path(&value) {
-                    Ok(path) => path,
-                    Err(err) => {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    }
-                },
-                None => match default_bundle_output_dir() {
-                    Ok(path) => path,
-                    Err(err) => {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    }
-                },
-            };
-
-            if let Err(err) = ensure_clean_dir(&out_dir) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let app_root = resolve_app_root();
-            let (manifest, manifest_path) = load_manifest(&app_root);
-            let (profiles_manifest, profiles_path) = load_profiles_manifest(&app_root);
-
-            let evidence_src = app_root.join("Contents").join("Resources").join("Evidence");
-            let evidence_out = out_dir.join("Evidence");
-            if let Err(err) = std::fs::create_dir_all(&evidence_out) {
-                eprintln!("failed to create {}: {err}", evidence_out.display());
-                std::process::exit(2);
-            }
-            if let Err(err) = copy_evidence_file(&evidence_src, &evidence_out, "manifest.json") {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-            if let Err(err) = copy_evidence_file(&evidence_src, &evidence_out, "symbols.json") {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-            if let Err(err) = copy_evidence_file(&evidence_src, &evidence_out, "profiles.json") {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let verify_report = evidence::verify_manifest(&manifest, &app_root, &manifest_path);
-            let verify_path = out_dir.join("verify-evidence.json");
-            if let Err(err) = write_envelope(
-                &verify_path,
-                "verify_evidence_report",
-                json_contract::JsonResult::from_ok(verify_report.ok),
-                &verify_report,
-            ) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let mut profiles_sorted = profiles_manifest.profiles.clone();
-            profiles_sorted.sort_by(|a, b| a.profile_id.cmp(&b.profile_id));
-            let list_report = ProfilesReport {
-                profiles_path: profiles_path.display().to_string(),
-                generated_at: profiles_manifest.generated_at.clone(),
-                profiles: profiles_sorted.clone(),
-            };
-            let list_path = out_dir.join("list-profiles.json");
-            if let Err(err) = write_envelope(
-                &list_path,
-                "profiles_report",
-                json_contract::JsonResult::from_ok(true),
-                &list_report,
-            ) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let profiles_out_dir = out_dir.join("profiles");
-            if let Err(err) = std::fs::create_dir_all(&profiles_out_dir) {
-                eprintln!("failed to create {}: {err}", profiles_out_dir.display());
-                std::process::exit(2);
-            }
-
-            let mut included_profiles = Vec::new();
-            let skipped_profiles = Vec::new();
-            for profile in profiles_sorted {
-                let base_variant = profiles::find_variant(&profile, VARIANT_BASE).unwrap_or_else(|| {
-                    eprintln!(
-                        "profile {} missing variant {}",
-                        profile.profile_id, VARIANT_BASE
-                    );
-                    std::process::exit(2);
-                });
-                if let Err(err) = ensure_single_component("profile id", &profile.profile_id) {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-                let report = ProfileReport {
-                    profiles_path: profiles_path.display().to_string(),
-                    profile: profile.clone(),
-                    variant: base_variant.clone(),
-                };
-                let out_path = profiles_out_dir.join(format!("{}.json", profile.profile_id));
-                if let Err(err) = write_envelope(
-                    &out_path,
-                    "profile_report",
-                    json_contract::JsonResult::from_ok(true),
-                    &report,
-                ) {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-                included_profiles.push(profile.profile_id.clone());
-            }
-
-            let mut health_ok = None;
-            if include_health_check {
-                let resolved =
-                    resolve_profile_variant(&profiles_manifest, "minimal", Some(VARIANT_BASE))
-                        .unwrap_or_else(|err| {
-                            eprintln!("{err}");
-                            std::process::exit(2);
-                        });
-                let report = match build_health_check_report(&profiles_path, vec![resolved]) {
-                    Ok(report) => report,
-                    Err(err) => {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    }
-                };
-                health_ok = Some(report.ok);
-                let health_path = out_dir.join("health-check.json");
-                if let Err(err) = write_envelope(
-                    &health_path,
-                    "health_check_report",
-                    json_contract::JsonResult::from_ok(report.ok),
-                    &report,
-                ) {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-            }
-
-            let now = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis();
-            let args_list: Vec<String> = env::args().collect();
-            let meta = BundleMeta {
-                generated_at_unix_ms: now,
-                app_root: app_root.display().to_string(),
-                app_bundle_id: manifest.app_bundle_id.clone(),
-                output_dir: out_dir.display().to_string(),
-                args: args_list,
-                include_health_check,
-                verify_ok: verify_report.ok,
-                health_ok,
-                profiles_included: included_profiles,
-                profiles_skipped: skipped_profiles,
-            };
-            let meta_path = out_dir.join("bundle_meta.json");
-            let ok = verify_report.ok && health_ok.unwrap_or(true);
-            if let Err(err) = write_envelope(
-                &meta_path,
-                "bundle_evidence_report",
-                json_contract::JsonResult::from_ok(ok),
-                &meta,
-            ) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let mut exit_code = 0;
-            if !verify_report.ok {
-                exit_code = 3;
-            }
-            if let Some(ok) = health_ok {
-                if !ok {
-                    exit_code = 3;
-                }
-            }
-            emit_envelope(
-                "bundle_evidence_report",
-                json_contract::JsonResult::from_ok(ok),
-                &meta,
-            );
-            std::process::exit(exit_code);
-        }
-        Some("run-matrix") => {
-            let mut group_arg: Option<String> = None;
-            let mut out_arg: Option<String> = None;
-            let mut variant_arg: Option<&'static str> = None;
-            let mut signposts_flag = false;
-            let mut capture_signposts_flag = false;
-            let mut idx = 1;
-            while idx < args.len() {
-                let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                    Some(value) => value,
-                    None => break,
-                };
-                if arg == "--" {
-                    idx += 1;
-                    break;
-                }
-                if !arg.starts_with('-') {
-                    break;
-                }
-                match arg {
-                    "-h" | "--help" => {
-                        print_usage();
-                        return;
-                    }
-                    "--group" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --group".to_string());
-                        match value {
-                            Ok(v) => group_arg = Some(v.to_string()),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    "--out" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --out".to_string());
-                        match value {
-                            Ok(v) => out_arg = Some(v.to_string()),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    "--variant" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --variant".to_string());
-                        match value {
-                            Ok(v) => {
-                                if variant_arg.is_some() {
-                                    eprintln!("--variant specified multiple times");
-                                    print_usage();
-                                    std::process::exit(2);
-                                }
-                                variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                    eprintln!("{err}");
-                                    std::process::exit(2);
-                                }));
-                            }
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    "--signposts" => {
-                        signposts_flag = true;
-                        idx += 1;
-                    }
-                    "--capture-signposts" => {
-                        capture_signposts_flag = true;
-                        signposts_flag = true;
-                        idx += 1;
-                    }
-                    other => {
-                        eprintln!("unknown argument for run-matrix: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-            }
-
-            let use_fence = capture_signposts_flag && fence_enabled();
-            let cmd_path = if use_fence {
-                let path = resolve_contents_macos_tool("xpc-probe-client").unwrap_or_else(|err| {
-                    eprintln!("{err}\n");
-                    eprintln!("note: xpc commands require the embedded `xpc-probe-client` tool under Contents/MacOS.");
-                    std::process::exit(2);
-                });
-                if let Err(err) = ensure_executable_file(&path) {
-                    eprintln!("{err}");
-                    std::process::exit(2);
-                }
-                Some(path)
-            } else {
-                None
-            };
-
-            let group_id = match group_arg {
-                Some(group) => group,
-                None => {
-                    let names = matrix_groups()
-                        .into_iter()
-                        .map(|(name, _)| name)
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    eprintln!("missing --group (available: {names})");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            if let Err(err) = ensure_single_component("group id", &group_id) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-            let variant = variant_arg.unwrap_or(VARIANT_BASE);
-
-            let probe_id = match args.get(idx).and_then(|s| s.to_str()) {
-                Some(probe) => probe.to_string(),
-                None => {
-                    eprintln!("missing probe id for run-matrix");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            let probe_args: Vec<String> = args
-                .iter()
-                .skip(idx + 1)
-                .map(|s| s.to_string_lossy().to_string())
-                .collect();
-            let probe_args_os: Vec<OsString> = probe_args.iter().map(OsString::from).collect();
-            let probe_arg_refs: Vec<&str> = probe_args.iter().map(|s| s.as_str()).collect();
-
-            let group_profiles = match resolve_matrix_group(&group_id) {
-                Some(profiles) => profiles,
-                None => {
-                    let names = matrix_groups()
-                        .into_iter()
-                        .map(|(name, _)| name)
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    eprintln!("unknown group {group_id} (available: {names})");
-                    std::process::exit(2);
-                }
-            };
-
-            let out_dir = match out_arg {
-                Some(value) => match expand_tilde_path(&value) {
-                    Ok(path) => path,
-                    Err(err) => {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    }
-                },
-                None => match default_matrix_output_dir(&group_id, variant) {
-                    Ok(path) => path,
-                    Err(err) => {
-                        eprintln!("{err}");
-                        std::process::exit(2);
-                    }
-                },
-            };
-
-            if let Err(err) = ensure_clean_dir(&out_dir) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let app_root = resolve_app_root();
-            let (profiles_manifest, _) = load_profiles_manifest(&app_root);
-
-            let mut runs = Vec::new();
-            let skipped = Vec::new();
-            let group_profiles_vec: Vec<String> =
-                group_profiles.iter().map(|s| s.to_string()).collect();
-
-            for profile_id in group_profiles {
-                let resolved =
-                    resolve_profile_variant(&profiles_manifest, profile_id, Some(variant))
-                        .unwrap_or_else(|err| {
-                            eprintln!("{err}");
-                            std::process::exit(2);
-                        });
-                if resolved.profile.kind != "probe" {
-                    eprintln!(
-                        "run-matrix only supports probe profiles (profile {} is kind={})",
-                        resolved.profile.profile_id, resolved.profile.kind
-                    );
-                    std::process::exit(2);
-                }
-
-                let start = std::time::Instant::now();
-                if use_fence {
-                    let fenced = match run_xpc_probe_fenced(
-                        cmd_path.as_ref().expect("missing xpc-probe-client path"),
-                        &resolved.variant.bundle_id,
-                        &probe_id,
-                        &probe_args_os,
-                        None,
-                        None,
-                        None,
-                        signposts_flag,
-                        "capture_signposts",
-                        &["signposts"],
-                    ) {
-                        Ok(run) => run,
-                        Err(err) => {
-                            runs.push(MatrixRun {
-                                profile_id: resolved.profile.profile_id.clone(),
-                                bundle_id: resolved.variant.bundle_id.clone(),
-                                label: resolved.profile.label.clone(),
-                                variant: resolved.variant.variant.clone(),
-                                risk_tier: resolved.variant.risk_tier,
-                                risk_reasons: resolved.variant.risk_reasons.clone(),
-                                exit_code: 127,
-                                duration_ms: start.elapsed().as_millis(),
-                                rc: None,
-                                normalized_outcome: None,
-                                error: Some(err),
-                                parse_error: None,
-                                response: None,
-                            });
-                            continue;
-                        }
-                    };
-                    let elapsed = start.elapsed();
-                    let mut value = fenced.value;
-
-                    if capture_signposts_flag {
-                        let correlation_id = value
-                            .pointer("/data/correlation_id")
-                            .and_then(|v| v.as_str())
-                            .filter(|s| !s.is_empty());
-                        let plan_id = value
-                            .pointer("/data/plan_id")
-                            .and_then(|v| v.as_str())
-                            .filter(|s| !s.is_empty());
-                        let row_id = value
-                            .pointer("/data/row_id")
-                            .and_then(|v| v.as_str())
-                            .filter(|s| !s.is_empty());
-
-                        let capture = match correlation_id {
-                            Some(corr) => match capture_signposts(corr, plan_id, row_id) {
-                                Ok(capture) => capture,
-                                Err(err) => serde_json::json!({
-                                    "capture_status": "requested_unavailable",
-                                    "error": err,
-                                }),
-                            },
-                            None => serde_json::json!({
-                                "capture_status": "requested_unavailable",
-                                "error": "missing correlation_id for signpost capture",
-                            }),
-                        };
-
-                        if let serde_json::Value::Object(ref mut data) = value["data"] {
-                            data.insert("host_signpost_capture".to_string(), capture);
-                        }
-                    }
-
-                    let mut rc = None;
-                    let mut outcome = None;
-                    let mut error = None;
-                    if let Some(result) = value.get("result") {
-                        rc = result.get("rc").and_then(|v| v.as_i64());
-                        outcome = result
-                            .get("normalized_outcome")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
-                        error = result
-                            .get("error")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
-                    }
-                    if !fenced.stderr.is_empty() && error.is_none() {
-                        error = Some(fenced.stderr);
-                    }
-
-                    let exit_code = value
-                        .pointer("/result/exit_code")
-                        .and_then(|v| v.as_i64())
-                        .or_else(|| value.pointer("/result/rc").and_then(|v| v.as_i64()))
-                        .unwrap_or(1)
-                        .max(0)
-                        .min(255) as i32;
-
-                    runs.push(MatrixRun {
-                        profile_id: resolved.profile.profile_id.clone(),
-                        bundle_id: resolved.variant.bundle_id.clone(),
-                        label: resolved.profile.label.clone(),
-                        variant: resolved.variant.variant.clone(),
-                        risk_tier: resolved.variant.risk_tier,
-                        risk_reasons: resolved.variant.risk_reasons.clone(),
-                        exit_code,
-                        duration_ms: elapsed.as_millis(),
-                        rc,
-                        normalized_outcome: outcome,
-                        error,
-                        parse_error: None,
-                        response: Some(value),
-                    });
-                    continue;
-                }
-
-                let result =
-                    run_xpc_probe(&resolved.variant.bundle_id, &probe_id, &probe_arg_refs, signposts_flag);
-                let elapsed = start.elapsed();
-
-                let (stdout, exit_code, stderr) = match result {
-                    Ok(v) => v,
-                    Err(err) => {
-                        runs.push(MatrixRun {
-                            profile_id: resolved.profile.profile_id.clone(),
-                            bundle_id: resolved.variant.bundle_id.clone(),
-                            label: resolved.profile.label.clone(),
-                            variant: resolved.variant.variant.clone(),
-                            risk_tier: resolved.variant.risk_tier,
-                            risk_reasons: resolved.variant.risk_reasons.clone(),
-                            exit_code: 127,
-                            duration_ms: elapsed.as_millis(),
-                            rc: None,
-                            normalized_outcome: None,
-                            error: Some(err),
-                            parse_error: None,
-                            response: None,
-                        });
-                        continue;
-                    }
-                };
-
-                let mut parse_error = None;
-                let mut rc = None;
-                let mut outcome = None;
-                let mut error = None;
-                let mut response_json = None;
-                match serde_json::from_str::<serde_json::Value>(&stdout) {
-                    Ok(value) => {
-                        let mut value = value;
-                        if capture_signposts_flag {
-                            let correlation_id = value
-                                .pointer("/data/correlation_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-                            let plan_id = value
-                                .pointer("/data/plan_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-                            let row_id = value
-                                .pointer("/data/row_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-
-                            let capture = match correlation_id {
-                                Some(corr) => match capture_signposts(corr, plan_id, row_id) {
-                                    Ok(capture) => capture,
-                                    Err(err) => serde_json::json!({
-                                        "capture_status": "requested_unavailable",
-                                        "error": err,
-                                    }),
-                                },
-                                None => serde_json::json!({
-                                    "capture_status": "requested_unavailable",
-                                    "error": "missing correlation_id for signpost capture",
-                                }),
-                            };
-
-                            if let serde_json::Value::Object(ref mut data) = value["data"] {
-                                data.insert("host_signpost_capture".to_string(), capture);
-                            }
-                        }
-
-                        if let Some(result) = value.get("result") {
-                            rc = result.get("rc").and_then(|v| v.as_i64());
-                            outcome = result
-                                .get("normalized_outcome")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
-                            error = result
-                                .get("error")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
-                        } else {
-                            parse_error = Some("missing result in probe JSON".to_string());
-                        }
-                        response_json = Some(value);
-                    }
-                    Err(err) => {
-                        parse_error = Some(format!("failed to parse probe JSON: {err}"));
-                    }
-                }
-
-                if !stderr.is_empty() && error.is_none() {
-                    error = Some(stderr);
-                }
-
-                runs.push(MatrixRun {
-                    profile_id: resolved.profile.profile_id.clone(),
-                    bundle_id: resolved.variant.bundle_id.clone(),
-                    label: resolved.profile.label.clone(),
-                    variant: resolved.variant.variant.clone(),
-                    risk_tier: resolved.variant.risk_tier,
-                    risk_reasons: resolved.variant.risk_reasons.clone(),
-                    exit_code,
-                    duration_ms: elapsed.as_millis(),
-                    rc,
-                    normalized_outcome: outcome,
-                    error,
-                    parse_error,
-                    response: response_json,
-                });
-            }
-
-            let generated = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis();
-
-            let report = RunMatrixReport {
-                group_id: group_id.clone(),
-                probe_id: probe_id.clone(),
-                probe_argv: probe_args.clone(),
-                generated_at_unix_ms: generated,
-                output_dir: out_dir.display().to_string(),
-                variant: variant.to_string(),
-                profiles: group_profiles_vec.clone(),
-                runs: runs.clone(),
-                skipped: skipped.clone(),
-            };
-
-            let json_path = out_dir.join("run-matrix.json");
-            if let Err(err) = write_envelope(
-                &json_path,
-                "run_matrix_report",
-                json_contract::JsonResult::from_ok(true),
-                &report,
-            ) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let mut lines = Vec::new();
-            lines.push("profile_id\tvariant\tbundle_id\texit_code\trc\tnormalized_outcome\tduration_ms\tnote".to_string());
-            for run in &runs {
-                let note = run
-                    .parse_error
-                    .clone()
-                    .unwrap_or_else(|| "".to_string());
-                lines.push(format!(
-                    "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-                    run.profile_id,
-                    run.variant,
-                    run.bundle_id,
-                    run.exit_code,
-                    run.rc.map(|v| v.to_string()).unwrap_or_else(|| "-".to_string()),
-                    run.normalized_outcome.clone().unwrap_or_else(|| "-".to_string()),
-                    run.duration_ms,
-                    note,
-                ));
-            }
-            for skip in &skipped {
-                lines.push(format!(
-                    "{}\t{}\t{}\t-\t-\t-\t-\tskipped: {}",
-                    skip.profile_id, skip.variant, skip.bundle_id, skip.reason
-                ));
-            }
-
-            let table_path = out_dir.join("run-matrix.table.txt");
-            if let Err(err) = std::fs::write(&table_path, lines.join("\n")) {
-                eprintln!("failed to write {}: {err}", table_path.display());
-                std::process::exit(2);
-            }
-
-            emit_envelope(
-                "run_matrix_report",
-                json_contract::JsonResult::from_ok(true),
-                &report,
-            );
-            std::process::exit(0);
-        }
-        Some("run-system") => {
-            let cmd_path = match args.get(1) {
-                Some(p) => PathBuf::from(p),
-                None => {
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            if !cmd_path.is_absolute() || !is_allowed_system_path(&cmd_path) {
-                eprintln!(
-                    "refusing to exec non-platform path: {}\n\nmacOS App Sandbox generally denies process-exec* from writable locations (including the app container).\nUse `run-system` with an in-place platform binary, or embed/sign your probe and use `run-embedded`.",
-                    cmd_path.display()
-                );
-                std::process::exit(2);
-            }
-            if let Err(err) = ensure_executable_file(&cmd_path) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-            run_and_wait(cmd_path, args[2..].to_vec());
-        }
-        Some("run-embedded") => {
-            let tool_name = match args.get(1).and_then(|s| s.to_str()) {
-                Some(s) => s,
-                None => {
-                    eprintln!("missing or non-utf8 tool name\n");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            let cmd_path = match resolve_embedded_tool(tool_name) {
-                Ok(p) => p,
-                Err(err) => {
-                    eprintln!("{err}\n");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-            if let Err(err) = ensure_executable_file(&cmd_path) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-            run_and_wait(cmd_path, args[2..].to_vec());
-        }
-        Some("xpc") => {
-            let mode = match args.get(1).and_then(|s| s.to_str()) {
-                Some("-h") | Some("--help") => {
-                    print_usage();
-                    return;
-                }
-                Some("run") => "run",
-                Some("session") => "session",
-                Some(other) => {
-                    eprintln!("unknown xpc subcommand: {other}");
-                    print_usage();
-                    std::process::exit(2);
-                }
-                None => {
-                    eprintln!("missing xpc subcommand (expected: run|session)");
-                    print_usage();
-                    std::process::exit(2);
-                }
-            };
-
-            let cmd_path = match resolve_contents_macos_tool("xpc-probe-client") {
-                Ok(p) => p,
-                Err(err) => {
-                    eprintln!("{err}\n");
-                    eprintln!("note: xpc commands require the embedded `xpc-probe-client` tool under Contents/MacOS.");
-                    std::process::exit(2);
-                }
-            };
-            if let Err(err) = ensure_executable_file(&cmd_path) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let app_root = resolve_app_root();
-            let (profiles_manifest, _) = load_profiles_manifest(&app_root);
-
-            match mode {
-                "run" => {
-                    let mut profile_arg: Option<String> = None;
-                    let mut service_arg: Option<String> = None;
-                    let mut variant_arg: Option<&'static str> = None;
-                    let mut plan_id: Option<String> = None;
-                    let mut row_id: Option<String> = None;
-                    let mut correlation_id: Option<String> = None;
-                    let mut capture_sandbox_logs_flag = false;
-                    let mut capture_sandbox_logs_target: Option<CaptureSandboxLogsTarget> = None;
-                    let mut capture_sandbox_logs_pid: Option<i64> = None;
-                    let mut capture_signposts_flag = false;
-                    let mut signposts_flag = false;
-
-                    let mut idx = 2usize;
-                    while idx < args.len() {
-                        let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                            Some(value) => value,
-                            None => break,
-                        };
-                        if arg == "--" {
-                            idx += 1;
-                            break;
-                        }
-                        if !arg.starts_with('-') {
-                            break;
-                        }
-                        match arg {
-                            "-h" | "--help" => {
-                                print_usage();
-                                return;
-                            }
-                            "--profile" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --profile".to_string());
-                                match value {
-                                    Ok(v) => {
-                                        if profile_arg.is_some() {
-                                            eprintln!("--profile specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        profile_arg = Some(v.to_string());
-                                    }
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--service" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --service".to_string());
-                                match value {
-                                    Ok(v) => {
-                                        if service_arg.is_some() {
-                                            eprintln!("--service specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        service_arg = Some(v.to_string());
-                                    }
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--variant" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --variant".to_string());
-                                match value {
-                                    Ok(v) => {
-                                        if variant_arg.is_some() {
-                                            eprintln!("--variant specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                            eprintln!("{err}");
-                                            std::process::exit(2);
-                                        }));
-                                    }
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--plan-id" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --plan-id".to_string());
-                                match value {
-                                    Ok(v) => plan_id = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--row-id" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --row-id".to_string());
-                                match value {
-                                    Ok(v) => row_id = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--correlation-id" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value =
-                                    value.ok_or_else(|| "missing value for --correlation-id".to_string());
-                                match value {
-                                    Ok(v) => correlation_id = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--capture-sandbox-logs" => {
-                                capture_sandbox_logs_flag = true;
-                                idx += 1;
-                            }
-                            "--capture-sandbox-logs-target" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| {
-                                    "missing value for --capture-sandbox-logs-target".to_string()
-                                });
-                                match value {
-                                    Ok(v) => {
-                                        if capture_sandbox_logs_target.is_some() {
-                                            eprintln!("--capture-sandbox-logs-target specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        capture_sandbox_logs_target =
-                                            Some(parse_capture_sandbox_logs_target(v).unwrap_or_else(|err| {
-                                                eprintln!("{err}");
-                                                std::process::exit(2);
-                                            }));
-                                    }
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--capture-sandbox-logs-pid" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                match value.and_then(|v| v.parse::<i64>().ok()) {
-                                    Some(v) => {
-                                        if capture_sandbox_logs_pid.is_some() {
-                                            eprintln!("--capture-sandbox-logs-pid specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        capture_sandbox_logs_pid = Some(v);
-                                    }
-                                    None => {
-                                        eprintln!("invalid value for --capture-sandbox-logs-pid");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--signposts" => {
-                                signposts_flag = true;
-                                idx += 1;
-                            }
-                            "--capture-signposts" => {
-                                capture_signposts_flag = true;
-                                signposts_flag = true;
-                                idx += 1;
-                            }
-                            other => {
-                                eprintln!("unknown argument for xpc run: {other}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                    }
-
-                    if !capture_sandbox_logs_flag
-                        && (capture_sandbox_logs_target.is_some() || capture_sandbox_logs_pid.is_some())
-                    {
-                        eprintln!(
-                            "--capture-sandbox-logs-target/--capture-sandbox-logs-pid require --capture-sandbox-logs"
-                        );
-                        print_usage();
-                        std::process::exit(2);
-                    }
-
-                    let capture_sandbox_logs_target =
-                        capture_sandbox_logs_target.unwrap_or(CaptureSandboxLogsTarget::Auto);
-                    if capture_sandbox_logs_flag {
-                        match capture_sandbox_logs_target {
-                            CaptureSandboxLogsTarget::Pid if capture_sandbox_logs_pid.is_none() => {
-                                eprintln!("--capture-sandbox-logs-target pid requires --capture-sandbox-logs-pid");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                            CaptureSandboxLogsTarget::Pid => {}
-                            _ if capture_sandbox_logs_pid.is_some() => {
-                                eprintln!(
-                                    "--capture-sandbox-logs-pid requires --capture-sandbox-logs-target pid"
-                                );
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                            _ => {}
-                        }
-                    }
-
-                    if profile_arg.is_some() && service_arg.is_some() {
-                        eprintln!("--profile cannot be combined with --service");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    if variant_arg.is_some() && service_arg.is_some() {
-                        eprintln!("--variant cannot be combined with --service");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-
-                    let resolved = if let Some(profile_value) = profile_arg.as_ref() {
-                        let (profile_id, selector_variant) =
-                            split_profile_selector(profile_value).unwrap_or_else(|err| {
-                                eprintln!("{err}");
-                                std::process::exit(2);
-                            });
-                        let variant = match (variant_arg, selector_variant) {
-                            (Some(flag_variant), Some(selector_variant))
-                                if flag_variant != selector_variant =>
-                            {
-                                eprintln!("conflicting variant selection for xpc run");
-                                std::process::exit(2);
-                            }
-                            (Some(flag_variant), _) => Some(flag_variant),
-                            (None, selector_variant) => selector_variant,
-                        };
-                        resolve_profile_variant(&profiles_manifest, &profile_id, variant)
-                            .unwrap_or_else(|err| {
-                                eprintln!("{err}");
-                                std::process::exit(2);
-                            })
-                    } else if let Some(service_id) = service_arg.as_ref() {
-                        resolve_profile_variant(&profiles_manifest, service_id, None).unwrap_or_else(|err| {
-                            eprintln!("{err}");
-                            std::process::exit(2);
-                        })
-                    } else {
-                        eprintln!("missing --profile or --service");
-                        print_usage();
-                        std::process::exit(2);
-                    };
-
-                    if resolved.profile.kind != "probe" {
-                        eprintln!(
-                            "service is not a probe profile: {} (kind={})",
-                            resolved.profile.profile_id, resolved.profile.kind
-                        );
-                        std::process::exit(2);
-                    }
-
-                    let service_id = resolved.variant.bundle_id.clone();
-                    let (gate, reasons, label) =
-                        risk_gate_for_variant(Some(resolved.profile), Some(resolved.variant));
-                    let warn_only = matches!(gate, RiskGate::Warn);
-
-                    if warn_only {
-                        let profile_id = Some(resolved.profile.profile_id.clone());
-                        let name_base = label
-                            .clone()
-                            .or_else(|| profile_id.clone())
-                            .unwrap_or_else(|| service_id.clone());
-                        let name = format!("{}@{}", name_base, resolved.variant.variant);
-                        let risk_level = resolved.variant.risk_tier.unwrap_or(2);
-                        let risk_label = if risk_level >= 2 {
-                            "high concern"
-                        } else {
-                            "some concern"
-                        };
-                        if reasons.is_empty() {
-                            eprintln!("warning: profile {name} is {risk_label}");
-                        } else {
-                            eprintln!(
-                                "warning: profile {name} is {risk_label} (reasons: {})",
-                                reasons.join(", ")
-                            );
-                        }
-                    }
-
-                    let probe_id = match args.get(idx).and_then(|s| s.to_str()) {
-                        Some(probe) => probe.to_string(),
-                        None => {
-                            eprintln!("missing probe id for xpc run");
-                            print_usage();
-                            std::process::exit(2);
-                        }
-                    };
-                    let probe_args: Vec<OsString> = args.iter().skip(idx + 1).cloned().collect();
-                    let use_fence =
-                        (capture_sandbox_logs_flag || capture_signposts_flag) && fence_enabled();
-
-                    let mut forward_args: Vec<OsString> = Vec::new();
-                    forward_args.push(OsString::from("run"));
-                    if let Some(plan_id) = plan_id.as_ref() {
-                        forward_args.push(OsString::from("--plan-id"));
-                        forward_args.push(OsString::from(plan_id));
-                    }
-                    if let Some(row_id) = row_id.as_ref() {
-                        forward_args.push(OsString::from("--row-id"));
-                        forward_args.push(OsString::from(row_id));
-                    }
-                    if let Some(correlation_id) = correlation_id.as_ref() {
-                        forward_args.push(OsString::from("--correlation-id"));
-                        forward_args.push(OsString::from(correlation_id));
-                    }
-                    forward_args.push(OsString::from(service_id.as_str()));
-                    forward_args.push(OsString::from(probe_id.as_str()));
-                    forward_args.extend(probe_args.iter().cloned());
-
-                    if capture_sandbox_logs_flag || capture_signposts_flag {
-                        if use_fence {
-                            let mut fence_reasons = Vec::new();
-                            let mut fence_collectors = Vec::new();
-                            if capture_sandbox_logs_flag {
-                                fence_reasons.push("capture_sandbox_logs");
-                                fence_collectors.push("sandbox_logs");
-                            }
-                            if capture_signposts_flag {
-                                fence_reasons.push("capture_signposts");
-                                fence_collectors.push("signposts");
-                            }
-                            let fence_reason = fence_reasons.join("|");
-                            let fenced = run_xpc_probe_fenced(
-                                &cmd_path,
-                                &service_id,
-                                &probe_id,
-                                &probe_args,
-                                plan_id.as_deref(),
-                                row_id.as_deref(),
-                                correlation_id.as_deref(),
-                                signposts_flag,
-                                &fence_reason,
-                                &fence_collectors,
-                            )
-                            .unwrap_or_else(|err| {
-                                eprintln!("{err}");
-                                std::process::exit(127);
-                            });
-                            let mut value = fenced.value;
-                            let stderr = fenced.stderr;
-                            let client_pid = fenced.client_pid;
-                            let run_started_at_unix_ms = fenced.run_started_at_unix_ms;
-                            let run_ended_at_unix_ms = fenced.run_ended_at_unix_ms;
-                            let fence_window = fenced.fence_window;
-
-                            let child_pid = value
-                                .pointer("/data/details/child_pid")
-                                .and_then(|v| v.as_str())
-                                .and_then(|s| s.parse::<i64>().ok());
-                            let child_process_name = value
-                                .pointer("/data/details/child_path")
-                                .and_then(|v| v.as_str())
-                                .or_else(|| value.pointer("/data/witness/child_path").and_then(|v| v.as_str()))
-                                .and_then(|s| Path::new(s).file_name().and_then(|n| n.to_str()))
-                                .map(|s| s.to_string());
-                            let service_pid = value
-                                .pointer("/data/details/service_pid")
-                                .and_then(|v| v.as_str())
-                                .and_then(|s| s.parse::<i64>().ok())
-                                .or_else(|| {
-                                    value.pointer("/data/details/pid")
-                                        .and_then(|v| v.as_str())
-                                        .and_then(|s| s.parse::<i64>().ok())
-                                });
-                            let service_process_name = value
-                                .pointer("/data/details/process_name")
-                                .and_then(|v| v.as_str())
-                                .or_else(|| value.pointer("/data/service_name").and_then(|v| v.as_str()))
-                                .filter(|s| !s.is_empty());
-
-                            if capture_sandbox_logs_flag {
-                                let (window_strategy, window_strategy_from_env) =
-                                    sandbox_log_window_strategy_from_env();
-                                let headroom_ms = if fence_window.is_some() && !window_strategy_from_env {
-                                    FENCE_HEADROOM_MS
-                                } else {
-                                    10_000u64
-                                };
-                                let min_last_ms = 5_000u64;
-                                let max_last_ms = 120_000u64;
-                                let elapsed_ms =
-                                    run_ended_at_unix_ms.saturating_sub(run_started_at_unix_ms);
-                                let mut window_error: Option<String> = None;
-                                let mut window_source = if window_strategy_from_env { "env" } else { "run" };
-
-                                let window = if let Some(fence_window) = &fence_window {
-                                    if window_strategy_from_env {
-                                        match window_strategy {
-                                            SandboxLogWindowStrategy::LastDynamic => {
-                                                let last_ms = (elapsed_ms.saturating_add(headroom_ms))
-                                                    .clamp(min_last_ms, max_last_ms);
-                                                let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                                SandboxLogWindow::Last(format!("{last_s}s"))
-                                            }
-                                            SandboxLogWindowStrategy::RangeIso => {
-                                                let start_ms = run_started_at_unix_ms.saturating_sub(headroom_ms);
-                                                let end_ms = run_ended_at_unix_ms.saturating_add(headroom_ms);
-                                                match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
-                                                    (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
-                                                    (Err(err), _) | (_, Err(err)) => {
-                                                        window_error = Some(err);
-                                                        let last_ms = (elapsed_ms.saturating_add(headroom_ms))
-                                                            .clamp(min_last_ms, max_last_ms);
-                                                        let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                                        SandboxLogWindow::Last(format!("{last_s}s"))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        window_source = "fence";
-                                        let start_ms = fence_window.start_ms.saturating_sub(headroom_ms);
-                                        let end_ms = fence_window.end_ms.saturating_add(headroom_ms);
-                                        match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
-                                            (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
-                                            (Err(err), _) | (_, Err(err)) => {
-                                                window_error = Some(err);
-                                                let last_ms = (elapsed_ms.saturating_add(headroom_ms))
-                                                    .clamp(min_last_ms, max_last_ms);
-                                                let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                                SandboxLogWindow::Last(format!("{last_s}s"))
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    match window_strategy {
-                                        SandboxLogWindowStrategy::LastDynamic => {
-                                            let last_ms =
-                                                (elapsed_ms.saturating_add(headroom_ms)).clamp(min_last_ms, max_last_ms);
-                                            let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                            SandboxLogWindow::Last(format!("{last_s}s"))
-                                        }
-                                        SandboxLogWindowStrategy::RangeIso => {
-                                            let start_ms = run_started_at_unix_ms.saturating_sub(headroom_ms);
-                                            let end_ms = run_ended_at_unix_ms.saturating_add(headroom_ms);
-                                            match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
-                                                (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
-                                                (Err(err), _) | (_, Err(err)) => {
-                                                    window_error = Some(err);
-                                                    let last_ms = (elapsed_ms.saturating_add(headroom_ms))
-                                                        .clamp(min_last_ms, max_last_ms);
-                                                    let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                                    SandboxLogWindow::Last(format!("{last_s}s"))
-                                                }
-                                            }
-                                        }
-                                    }
-                                };
-
-                                let (chosen_pid, chosen_process_name, pid_source): (Option<i64>, Option<&str>, &str) =
-                                    match capture_sandbox_logs_target {
-                                        CaptureSandboxLogsTarget::Auto => {
-                                            if child_pid.is_some() {
-                                                (child_pid, child_process_name.as_deref(), "child_pid")
-                                            } else if service_pid.is_some() {
-                                                (service_pid, service_process_name, "service_pid")
-                                            } else {
-                                                (Some(client_pid), Some("xpc-probe-client"), "client_pid")
-                                            }
-                                        }
-                                        CaptureSandboxLogsTarget::Child => {
-                                            (child_pid, child_process_name.as_deref(), "child_pid")
-                                        }
-                                        CaptureSandboxLogsTarget::Service => {
-                                            (service_pid, service_process_name, "service_pid")
-                                        }
-                                        CaptureSandboxLogsTarget::Client => {
-                                            (Some(client_pid), Some("xpc-probe-client"), "client_pid")
-                                        }
-                                        CaptureSandboxLogsTarget::Pid => (capture_sandbox_logs_pid, None, "explicit_pid"),
-                                    };
-
-                                let (capture_status, observer_capture) = match chosen_pid {
-                                    Some(pid) => match capture_sandbox_logs(pid, chosen_process_name, window.clone()) {
-                                        Ok(capture) => ("captured", capture),
-                                        Err(err) => (
-                                            "requested_unavailable",
-                                            serde_json::json!({ "error": err }),
-                                        ),
-                                    },
-                                    None => (
-                                        "requested_unavailable",
-                                        serde_json::json!({
-                                            "error": format!(
-                                                "missing pid for sandbox log capture (target={})",
-                                                capture_sandbox_logs_target.as_str()
-                                            )
-                                        }),
-                                    ),
-                                };
-
-                                let observer_capture_for_witness = observer_capture.clone();
-
-                                let mut capture_value = serde_json::json!({
-                                    "capture_status": capture_status,
-                                    "target": capture_sandbox_logs_target.as_str(),
-                                    "pid": chosen_pid,
-                                    "pid_source": pid_source,
-                                    "process_name": chosen_process_name.unwrap_or(""),
-                                    "client_pid": client_pid,
-                                    "run_started_at_unix_ms": run_started_at_unix_ms,
-                                    "run_ended_at_unix_ms": run_ended_at_unix_ms,
-                                    "window_strategy": window_strategy.as_str(),
-                                    "window_source": window_source,
-                                    "window": match &window {
-                                        SandboxLogWindow::Last(last) => serde_json::json!({ "kind": "last", "last": last }),
-                                        SandboxLogWindow::Range { start, end } => serde_json::json!({ "kind": "range", "start": start, "end": end }),
-                                    },
-                                });
-                                if let Some(window) = &fence_window {
-                                    if let serde_json::Value::Object(ref mut out) = capture_value {
-                                        out.insert(
-                                            "fence_window".to_string(),
-                                            serde_json::json!({
-                                                "start_unix_ms": window.start_ms,
-                                                "end_unix_ms": window.end_ms,
-                                                "source": window.source,
-                                            }),
-                                        );
-                                    }
-                                }
-                                if let Some(err) = window_error {
-                                    capture_value["window_error"] = serde_json::Value::String(err);
-                                }
-                                match observer_capture {
-                                    serde_json::Value::Object(map) => {
-                                        if let serde_json::Value::Object(ref mut out) = capture_value {
-                                            for (key, value) in map {
-                                                out.insert(key, value);
-                                            }
-                                        }
-                                    }
-                                    other => {
-                                        capture_value["observer_raw"] = other;
-                                    }
-                                }
-
-                                let capture_string_map = match observer_capture_for_witness {
-                                    serde_json::Value::Object(map) => {
-                                        let mut out = serde_json::Map::new();
-                                        for (key, value) in map {
-                                            let rendered = match value {
-                                                serde_json::Value::String(text) => text,
-                                                other => other.to_string(),
-                                            };
-                                            out.insert(key, serde_json::Value::String(rendered));
-                                        }
-                                        serde_json::Value::Object(out)
-                                    }
-                                    other => {
-                                        let mut out = serde_json::Map::new();
-                                        out.insert("raw".to_string(), serde_json::Value::String(other.to_string()));
-                                        serde_json::Value::Object(out)
-                                    }
-                                };
-
-                                if let serde_json::Value::Object(ref mut data) = value["data"] {
-                                    data.insert("host_sandbox_log_capture".to_string(), capture_value);
-
-                                    let probe_family = data
-                                        .get("details")
-                                        .and_then(|v| v.get("probe_family"))
-                                        .and_then(|v| v.as_str());
-                                    if probe_family == Some("inherit_child") {
-                                        if !matches!(data.get("witness"), Some(serde_json::Value::Object(_))) {
-                                            data.insert(
-                                                "witness".to_string(),
-                                                serde_json::Value::Object(serde_json::Map::new()),
-                                            );
-                                        }
-                                        if let Some(serde_json::Value::Object(witness)) = data.get_mut("witness") {
-                                            witness.insert(
-                                                "sandbox_log_capture_status".to_string(),
-                                                serde_json::Value::String(capture_status.to_string()),
-                                            );
-                                            witness.insert("sandbox_log_capture".to_string(), capture_string_map);
-                                        }
-                                    }
-                                }
-                            }
-
-                            if capture_signposts_flag {
-                                let correlation_id = value
-                                    .pointer("/data/correlation_id")
-                                    .and_then(|v| v.as_str())
-                                    .filter(|s| !s.is_empty());
-                                let plan_id = value
-                                    .pointer("/data/plan_id")
-                                    .and_then(|v| v.as_str())
-                                    .filter(|s| !s.is_empty());
-                                let row_id = value
-                                    .pointer("/data/row_id")
-                                    .and_then(|v| v.as_str())
-                                    .filter(|s| !s.is_empty());
-
-                                let capture = match correlation_id {
-                                    Some(corr) => match capture_signposts(corr, plan_id, row_id) {
-                                        Ok(capture) => capture,
-                                        Err(err) => serde_json::json!({
-                                            "capture_status": "requested_unavailable",
-                                            "error": err,
-                                        }),
-                                    },
-                                    None => serde_json::json!({
-                                        "capture_status": "requested_unavailable",
-                                        "error": "missing correlation_id for signpost capture",
-                                    }),
-                                };
-
-                                if let serde_json::Value::Object(ref mut data) = value["data"] {
-                                    data.insert("host_signpost_capture".to_string(), capture);
-                                }
-                            }
-
-                            sort_json_value(&mut value);
-                            if let Ok(text) = serde_json::to_string(&value) {
-                                println!("{text}");
-                            } else {
-                                let fallback = value.to_string();
-                                println!("{fallback}");
-                            }
-                            if !stderr.is_empty() {
-                                eprint!("{stderr}");
-                            }
-
-                            exit_like_probe_result(&value)
-                        } else {
-                            let mut cmd = Command::new(&cmd_path);
-                            cmd.args(&forward_args);
-                            if signposts_flag {
-                                cmd.env("PW_ENABLE_SIGNPOSTS", "1");
-                            }
-                            cmd.stdout(std::process::Stdio::piped());
-                            cmd.stderr(std::process::Stdio::piped());
-
-                        let run_started_at_unix_ms = now_unix_ms_u64();
-                        let child = cmd.spawn().unwrap_or_else(|err| {
-                            eprintln!("spawn failed for {}: {err}", cmd_path.display());
-                            std::process::exit(127);
-                        });
-                        let client_pid = child.id() as i64;
-                        let output = child.wait_with_output().unwrap_or_else(|err| {
-                            eprintln!("wait failed for {}: {err}", cmd_path.display());
-                            std::process::exit(127);
-                        });
-                        let run_ended_at_unix_ms = now_unix_ms_u64();
-                        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                        let status = output.status;
-
-                        let mut value: serde_json::Value = match serde_json::from_str(&stdout) {
-                            Ok(value) => value,
-                            Err(err) => {
-                                eprintln!("failed to parse probe JSON: {err}");
-                                print!("{stdout}");
-                                if !stderr.is_empty() {
-                                    eprint!("{stderr}");
-                                }
-                                exit_like_child(status);
-                            }
-                        };
-
-                        let child_pid = value
-                            .pointer("/data/details/child_pid")
-                            .and_then(|v| v.as_str())
-                            .and_then(|s| s.parse::<i64>().ok());
-                        let child_process_name = value
-                            .pointer("/data/details/child_path")
-                            .and_then(|v| v.as_str())
-                            .or_else(|| value.pointer("/data/witness/child_path").and_then(|v| v.as_str()))
-                            .and_then(|s| Path::new(s).file_name().and_then(|n| n.to_str()))
-                            .map(|s| s.to_string());
-                        let service_pid = value
-                            .pointer("/data/details/service_pid")
-                            .and_then(|v| v.as_str())
-                            .and_then(|s| s.parse::<i64>().ok())
-                            .or_else(|| {
-                                value.pointer("/data/details/pid")
-                                    .and_then(|v| v.as_str())
-                                    .and_then(|s| s.parse::<i64>().ok())
-                            });
-                        let service_process_name = value
-                            .pointer("/data/details/process_name")
-                            .and_then(|v| v.as_str())
-                            .or_else(|| value.pointer("/data/service_name").and_then(|v| v.as_str()))
-                            .filter(|s| !s.is_empty());
-
-                        if capture_sandbox_logs_flag {
-                            let window_strategy = SandboxLogWindowStrategy::from_env();
-                            let headroom_ms = 10_000u64;
-                            let min_last_ms = 5_000u64;
-                            let max_last_ms = 120_000u64;
-                            let elapsed_ms = run_ended_at_unix_ms.saturating_sub(run_started_at_unix_ms);
-
-                            let mut window_error: Option<String> = None;
-                            let window = match window_strategy {
-                                SandboxLogWindowStrategy::LastDynamic => {
-                                    let last_ms =
-                                        (elapsed_ms.saturating_add(headroom_ms)).clamp(min_last_ms, max_last_ms);
-                                    let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                    SandboxLogWindow::Last(format!("{last_s}s"))
-                                }
-                                SandboxLogWindowStrategy::RangeIso => {
-                                    let start_ms = run_started_at_unix_ms.saturating_sub(headroom_ms);
-                                    let end_ms = run_ended_at_unix_ms.saturating_add(headroom_ms);
-                                    match (format_log_show_time(start_ms), format_log_show_time(end_ms)) {
-                                        (Ok(start), Ok(end)) => SandboxLogWindow::Range { start, end },
-                                        (Err(err), _) | (_, Err(err)) => {
-                                            window_error = Some(err);
-                                            let last_ms = (elapsed_ms.saturating_add(headroom_ms))
-                                                .clamp(min_last_ms, max_last_ms);
-                                            let last_s = (last_ms.saturating_add(999) / 1000).max(1);
-                                            SandboxLogWindow::Last(format!("{last_s}s"))
-                                        }
-                                    }
-                                }
-                            };
-
-                            let (chosen_pid, chosen_process_name, pid_source): (Option<i64>, Option<&str>, &str) =
-                                match capture_sandbox_logs_target {
-                                    CaptureSandboxLogsTarget::Auto => {
-                                        if child_pid.is_some() {
-                                            (child_pid, child_process_name.as_deref(), "child_pid")
-                                        } else if service_pid.is_some() {
-                                            (service_pid, service_process_name, "service_pid")
-                                        } else {
-                                            (Some(client_pid), Some("xpc-probe-client"), "client_pid")
-                                        }
-                                    }
-                                    CaptureSandboxLogsTarget::Child => {
-                                        (child_pid, child_process_name.as_deref(), "child_pid")
-                                    }
-                                    CaptureSandboxLogsTarget::Service => {
-                                        (service_pid, service_process_name, "service_pid")
-                                    }
-                                    CaptureSandboxLogsTarget::Client => {
-                                        (Some(client_pid), Some("xpc-probe-client"), "client_pid")
-                                    }
-                                    CaptureSandboxLogsTarget::Pid => (capture_sandbox_logs_pid, None, "explicit_pid"),
-                                };
-
-                            let (capture_status, observer_capture) = match chosen_pid {
-                                Some(pid) => match capture_sandbox_logs(pid, chosen_process_name, window.clone()) {
-                                    Ok(capture) => ("captured", capture),
-                                    Err(err) => (
-                                        "requested_unavailable",
-                                        serde_json::json!({ "error": err }),
-                                    ),
-                                },
-                                None => (
-                                    "requested_unavailable",
-                                    serde_json::json!({
-                                        "error": format!(
-                                            "missing pid for sandbox log capture (target={})",
-                                            capture_sandbox_logs_target.as_str()
-                                        )
-                                    }),
-                                ),
-                            };
-
-                            let observer_capture_for_witness = observer_capture.clone();
-
-                            let mut capture_value = serde_json::json!({
-                                "capture_status": capture_status,
-                                "target": capture_sandbox_logs_target.as_str(),
-                                "pid": chosen_pid,
-                                "pid_source": pid_source,
-                                "process_name": chosen_process_name.unwrap_or(""),
-                                "client_pid": client_pid,
-                                "run_started_at_unix_ms": run_started_at_unix_ms,
-                                "run_ended_at_unix_ms": run_ended_at_unix_ms,
-                                "window_strategy": window_strategy.as_str(),
-                                "window": match &window {
-                                    SandboxLogWindow::Last(last) => serde_json::json!({ "kind": "last", "last": last }),
-                                    SandboxLogWindow::Range { start, end } => serde_json::json!({ "kind": "range", "start": start, "end": end }),
-                                },
-                            });
-                            if let Some(err) = window_error {
-                                capture_value["window_error"] = serde_json::Value::String(err);
-                            }
-                            match observer_capture {
-                                serde_json::Value::Object(map) => {
-                                    if let serde_json::Value::Object(ref mut out) = capture_value {
-                                        for (key, value) in map {
-                                            out.insert(key, value);
-                                        }
-                                    }
-                                }
-                                other => {
-                                    capture_value["observer_raw"] = other;
-                                }
-                            }
-
-                            let capture_string_map = match observer_capture_for_witness {
-                                serde_json::Value::Object(map) => {
-                                    let mut out = serde_json::Map::new();
-                                    for (key, value) in map {
-                                        let rendered = match value {
-                                            serde_json::Value::String(text) => text,
-                                            other => other.to_string(),
-                                        };
-                                        out.insert(key, serde_json::Value::String(rendered));
-                                    }
-                                    serde_json::Value::Object(out)
-                                }
-                                other => {
-                                    let mut out = serde_json::Map::new();
-                                    out.insert("raw".to_string(), serde_json::Value::String(other.to_string()));
-                                    serde_json::Value::Object(out)
-                                }
-                            };
-
-                            if let serde_json::Value::Object(ref mut data) = value["data"] {
-                                data.insert("host_sandbox_log_capture".to_string(), capture_value);
-
-                                let probe_family = data
-                                    .get("details")
-                                    .and_then(|v| v.get("probe_family"))
-                                    .and_then(|v| v.as_str());
-                                if probe_family == Some("inherit_child") {
-                                    if !matches!(data.get("witness"), Some(serde_json::Value::Object(_))) {
-                                        data.insert(
-                                            "witness".to_string(),
-                                            serde_json::Value::Object(serde_json::Map::new()),
-                                        );
-                                    }
-                                    if let Some(serde_json::Value::Object(witness)) = data.get_mut("witness") {
-                                        witness.insert(
-                                            "sandbox_log_capture_status".to_string(),
-                                            serde_json::Value::String(capture_status.to_string()),
-                                        );
-                                        witness.insert("sandbox_log_capture".to_string(), capture_string_map);
-                                    }
-                                }
-                            }
-                        }
-
-                        if capture_signposts_flag {
-                            let correlation_id = value
-                                .pointer("/data/correlation_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-                            let plan_id = value
-                                .pointer("/data/plan_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-                            let row_id = value
-                                .pointer("/data/row_id")
-                                .and_then(|v| v.as_str())
-                                .filter(|s| !s.is_empty());
-
-                            let capture = match correlation_id {
-                                Some(corr) => match capture_signposts(corr, plan_id, row_id) {
-                                    Ok(capture) => capture,
-                                    Err(err) => serde_json::json!({
-                                        "capture_status": "requested_unavailable",
-                                        "error": err,
-                                    }),
-                                },
-                                None => serde_json::json!({
-                                    "capture_status": "requested_unavailable",
-                                    "error": "missing correlation_id for signpost capture",
-                                }),
-                            };
-
-                            if let serde_json::Value::Object(ref mut data) = value["data"] {
-                                data.insert("host_signpost_capture".to_string(), capture);
-                            }
-                        }
-
-                        sort_json_value(&mut value);
-                        if let Ok(text) = serde_json::to_string(&value) {
-                            println!("{text}");
-                        } else {
-                            print!("{stdout}");
-                        }
-                        if !stderr.is_empty() {
-                            eprint!("{stderr}");
-                        }
-
-                        exit_like_child(status)
-                        }
-                    } else {
-                        if signposts_flag {
-                            run_and_wait_with_env(
-                                cmd_path,
-                                forward_args,
-                                &[(OsString::from("PW_ENABLE_SIGNPOSTS"), OsString::from("1"))],
-                            );
-                        } else {
-                            run_and_wait(cmd_path, forward_args);
-                        }
-                    }
-                }
-                "session" => {
-                    let mut profile_arg: Option<String> = None;
-                    let mut service_arg: Option<String> = None;
-                    let mut variant_arg: Option<&'static str> = None;
-                    let mut plan_id: Option<String> = None;
-                    let mut correlation_id: Option<String> = None;
-                    let mut signposts_flag = false;
-                    let mut wait_spec: Option<String> = None;
-                    let mut wait_timeout_ms: Option<String> = None;
-                    let mut wait_interval_ms: Option<String> = None;
-                    let mut xpc_timeout_ms: Option<String> = None;
-
-                    let mut idx = 2usize;
-                    while idx < args.len() {
-                        let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                            Some(value) => value,
-                            None => break,
-                        };
-                        if arg == "--" {
-                            idx += 1;
-                            break;
-                        }
-                        if !arg.starts_with('-') {
-                            break;
-                        }
-                        match arg {
-                            "-h" | "--help" => {
-                                print_usage();
-                                return;
-                            }
-                            "--profile" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --profile".to_string());
-                                match value {
-                                    Ok(v) => profile_arg = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--service" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --service".to_string());
-                                match value {
-                                    Ok(v) => service_arg = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--variant" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --variant".to_string());
-                                match value {
-                                    Ok(v) => {
-                                        if variant_arg.is_some() {
-                                            eprintln!("--variant specified multiple times");
-                                            print_usage();
-                                            std::process::exit(2);
-                                        }
-                                        variant_arg = Some(parse_variant(v).unwrap_or_else(|err| {
-                                            eprintln!("{err}");
-                                            std::process::exit(2);
-                                        }));
-                                    }
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--plan-id" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --plan-id".to_string());
-                                match value {
-                                    Ok(v) => plan_id = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--correlation-id" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value =
-                                    value.ok_or_else(|| "missing value for --correlation-id".to_string());
-                                match value {
-                                    Ok(v) => correlation_id = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--signposts" => {
-                                signposts_flag = true;
-                                idx += 1;
-                            }
-                            "--wait" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value = value.ok_or_else(|| "missing value for --wait".to_string());
-                                match value {
-                                    Ok(v) => wait_spec = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--wait-timeout-ms" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value =
-                                    value.ok_or_else(|| "missing value for --wait-timeout-ms".to_string());
-                                match value {
-                                    Ok(v) => wait_timeout_ms = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--wait-interval-ms" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value =
-                                    value.ok_or_else(|| "missing value for --wait-interval-ms".to_string());
-                                match value {
-                                    Ok(v) => wait_interval_ms = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            "--xpc-timeout-ms" => {
-                                let value = args.get(idx + 1).and_then(|s| s.to_str());
-                                let value =
-                                    value.ok_or_else(|| "missing value for --xpc-timeout-ms".to_string());
-                                match value {
-                                    Ok(v) => xpc_timeout_ms = Some(v.to_string()),
-                                    Err(err) => {
-                                        eprintln!("{err}");
-                                        print_usage();
-                                        std::process::exit(2);
-                                    }
-                                }
-                                idx += 2;
-                            }
-                            other => {
-                                eprintln!("unknown argument for xpc session: {other}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                    }
-
-                    if idx != args.len() {
-                        eprintln!("xpc session does not take positional arguments (commands are read from stdin)");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    if profile_arg.is_some() && service_arg.is_some() {
-                        eprintln!("--profile cannot be combined with --service");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                    if variant_arg.is_some() && service_arg.is_some() {
-                        eprintln!("--variant cannot be combined with --service");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-
-                    let resolved = if let Some(profile_value) = profile_arg.as_ref() {
-                        let (profile_id, selector_variant) =
-                            split_profile_selector(profile_value).unwrap_or_else(|err| {
-                                eprintln!("{err}");
-                                std::process::exit(2);
-                            });
-                        let variant = match (variant_arg, selector_variant) {
-                            (Some(flag_variant), Some(selector_variant))
-                                if flag_variant != selector_variant =>
-                            {
-                                eprintln!("conflicting variant selection for xpc session");
-                                std::process::exit(2);
-                            }
-                            (Some(flag_variant), _) => Some(flag_variant),
-                            (None, selector_variant) => selector_variant,
-                        };
-                        resolve_profile_variant(&profiles_manifest, &profile_id, variant)
-                            .unwrap_or_else(|err| {
-                                eprintln!("{err}");
-                                std::process::exit(2);
-                            })
-                    } else if let Some(service_id) = service_arg.as_ref() {
-                        resolve_profile_variant(&profiles_manifest, service_id, None).unwrap_or_else(|err| {
-                            eprintln!("{err}");
-                            std::process::exit(2);
-                        })
-                    } else {
-                        eprintln!("missing --profile or --service");
-                        print_usage();
-                        std::process::exit(2);
-                    };
-
-                    if resolved.profile.kind != "probe" {
-                        eprintln!(
-                            "service is not a probe profile: {} (kind={})",
-                            resolved.profile.profile_id, resolved.profile.kind
-                        );
-                        std::process::exit(2);
-                    }
-
-                    let service_id = resolved.variant.bundle_id.clone();
-                    let (gate, reasons, label) =
-                        risk_gate_for_variant(Some(resolved.profile), Some(resolved.variant));
-                    let warn_only = matches!(gate, RiskGate::Warn);
-
-                    if warn_only {
-                        let profile_id = Some(resolved.profile.profile_id.clone());
-                        let name_base = label
-                            .clone()
-                            .or_else(|| profile_id.clone())
-                            .unwrap_or_else(|| service_id.clone());
-                        let name = format!("{}@{}", name_base, resolved.variant.variant);
-                        let risk_level = resolved.variant.risk_tier.unwrap_or(2);
-                        let risk_label = if risk_level >= 2 {
-                            "high concern"
-                        } else {
-                            "some concern"
-                        };
-                        if reasons.is_empty() {
-                            eprintln!("warning: profile {name} is {risk_label}");
-                        } else {
-                            eprintln!(
-                                "warning: profile {name} is {risk_label} (reasons: {})",
-                                reasons.join(", ")
-                            );
-                        }
-                    }
-
-                    let mut forward_args: Vec<OsString> = Vec::new();
-                    forward_args.push(OsString::from("session"));
-                    if let Some(plan_id) = plan_id {
-                        forward_args.push(OsString::from("--plan-id"));
-                        forward_args.push(OsString::from(plan_id));
-                    }
-                    if let Some(correlation_id) = correlation_id {
-                        forward_args.push(OsString::from("--correlation-id"));
-                        forward_args.push(OsString::from(correlation_id));
-                    }
-                    if let Some(wait_spec) = wait_spec {
-                        forward_args.push(OsString::from("--wait"));
-                        forward_args.push(OsString::from(wait_spec));
-                    }
-                    if let Some(wait_timeout_ms) = wait_timeout_ms {
-                        forward_args.push(OsString::from("--wait-timeout-ms"));
-                        forward_args.push(OsString::from(wait_timeout_ms));
-                    }
-                    if let Some(wait_interval_ms) = wait_interval_ms {
-                        forward_args.push(OsString::from("--wait-interval-ms"));
-                        forward_args.push(OsString::from(wait_interval_ms));
-                    }
-                    if let Some(xpc_timeout_ms) = xpc_timeout_ms {
-                        forward_args.push(OsString::from("--xpc-timeout-ms"));
-                        forward_args.push(OsString::from(xpc_timeout_ms));
-                    }
-                    forward_args.push(OsString::from(service_id));
-
-                    if signposts_flag {
-                        run_and_wait_with_env(
-                            cmd_path,
-                            forward_args,
-                            &[(OsString::from("PW_ENABLE_SIGNPOSTS"), OsString::from("1"))],
-                        );
-                    } else {
-                        run_and_wait(cmd_path, forward_args);
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-        Some("quarantine-lab") => {
-            let cmd_path = match resolve_contents_macos_tool("xpc-quarantine-client") {
-                Ok(p) => p,
-                Err(err) => {
-                    eprintln!("{err}\n");
-                    eprintln!("note: quarantine-lab mode requires the embedded `xpc-quarantine-client` tool under Contents/MacOS.");
-                    std::process::exit(2);
-                }
-            };
-            if let Err(err) = ensure_executable_file(&cmd_path) {
-                eprintln!("{err}");
-                std::process::exit(2);
-            }
-
-            let mut correlation_id: Option<String> = None;
-            let mut signposts_flag = false;
-            let mut capture_signposts_flag = false;
-
-            let mut idx = 1usize;
-            while idx < args.len() {
-                let arg = match args.get(idx).and_then(|s| s.to_str()) {
-                    Some(value) => value,
-                    None => break,
-                };
-                if arg == "--" {
-                    idx += 1;
-                    break;
-                }
-                if !arg.starts_with('-') {
-                    break;
-                }
-                match arg {
-                    "-h" | "--help" => {
-                        print_usage();
-                        std::process::exit(0);
-                    }
-                    "--correlation-id" => {
-                        let value = args
-                            .get(idx + 1)
-                            .and_then(|s| s.to_str())
-                            .ok_or_else(|| "missing value for --correlation-id".to_string());
-                        match value {
-                            Ok(v) => correlation_id = Some(v.to_string()),
-                            Err(err) => {
-                                eprintln!("{err}");
-                                print_usage();
-                                std::process::exit(2);
-                            }
-                        }
-                        idx += 2;
-                    }
-                    "--signposts" => {
-                        signposts_flag = true;
-                        idx += 1;
-                    }
-                    "--capture-signposts" => {
-                        capture_signposts_flag = true;
-                        signposts_flag = true;
-                        idx += 1;
-                    }
-                    other => {
-                        eprintln!("unknown argument for quarantine-lab: {other}");
-                        print_usage();
-                        std::process::exit(2);
-                    }
-                }
-            }
-
-            if idx + 1 >= args.len() {
-                eprintln!("missing required arguments for quarantine-lab");
-                print_usage();
-                std::process::exit(2);
-            }
-
-            let forward_args: Vec<OsString> = args.iter().skip(idx).cloned().collect();
-            let mut extra_env: Vec<(OsString, OsString)> = Vec::new();
-            if signposts_flag {
-                extra_env.push((OsString::from("PW_ENABLE_SIGNPOSTS"), OsString::from("1")));
-            }
-            if let Some(corr) = correlation_id.as_ref() {
-                extra_env.push((OsString::from("PW_CORRELATION_ID"), OsString::from(corr)));
-            }
-
-            if capture_signposts_flag {
-                let mut cmd = Command::new(&cmd_path);
-                cmd.args(&forward_args);
-                for (key, value) in &extra_env {
-                    cmd.env(key, value);
-                }
-                let output = cmd.output().unwrap_or_else(|err| {
-                    eprintln!("spawn failed for {}: {err}", cmd_path.display());
-                    std::process::exit(127);
-                });
-
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                let status = output.status;
-
-                let mut value: serde_json::Value = match serde_json::from_str(&stdout) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        eprintln!("failed to parse quarantine JSON: {err}");
-                        print!("{stdout}");
-                        if !stderr.is_empty() {
-                            eprint!("{stderr}");
-                        }
-                        exit_like_child(status);
-                    }
-                };
-
-                let correlation_id = value
-                    .pointer("/data/correlation_id")
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| correlation_id.as_deref());
-
-                let capture = match correlation_id {
-                    Some(corr) => match capture_signposts(corr, None, None) {
-                        Ok(capture) => capture,
-                        Err(err) => serde_json::json!({
-                            "capture_status": "requested_unavailable",
-                            "error": err,
-                        }),
-                    },
-                    None => serde_json::json!({
-                        "capture_status": "requested_unavailable",
-                        "error": "missing correlation_id for signpost capture",
-                    }),
-                };
-
-                if let serde_json::Value::Object(ref mut data) = value["data"] {
-                    data.insert("host_signpost_capture".to_string(), capture);
-                }
-
-                sort_json_value(&mut value);
-                if let Ok(text) = serde_json::to_string(&value) {
-                    println!("{text}");
-                } else {
-                    print!("{stdout}");
-                }
-                if !stderr.is_empty() {
-                    eprint!("{stderr}");
-                }
-
-                exit_like_child(status)
-            } else if extra_env.is_empty() {
-                run_and_wait(cmd_path, forward_args);
-            } else {
-                run_and_wait_with_env(cmd_path, forward_args, &extra_env);
-            }
-        }
-        _ => {
-            print_usage();
+        _ => Err(format!("unknown subcommand: {sub}")),
+    };
+
+    match result {
+        Ok(code) => std::process::exit(code),
+        Err(err) => {
+            eprintln!("{err}");
             std::process::exit(2);
         }
     }

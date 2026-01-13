@@ -1,0 +1,24 @@
+{
+  "specimen_id": "mach_deny",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny mach-lookup)"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "bootstrap_look_up",
+        "kind": "mach_lookup",
+        "target": "com.apple.logd"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "none"
+        },
+        "operation": "mach-lookup"
+      },
+      "step_id": "ml1"
+    }
+  ]
+}
+

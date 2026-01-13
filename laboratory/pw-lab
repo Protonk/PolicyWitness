@@ -1,0 +1,3999 @@
+#!/usr/bin/env python3
+import argparse
+import ctypes
+import ctypes.util
+import hashlib
+import json
+import os
+import platform
+import plistlib
+import queue
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import threading
+import textwrap
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+
+LABBOOK_VERSION = 1
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_PW = os.environ.get("PW") or str(REPO_ROOT / "PolicyWitness.app/Contents/MacOS/policy-witness")
+DEFAULT_SCENARIO_DIR = str(REPO_ROOT / "experiments/scenarios")
+DEFAULT_SUITE_DIR = str(REPO_ROOT / "experiments/suites")
+DEFAULT_OUT_ROOT = str(REPO_ROOT / ".pw_lab/out")
+DEFAULT_LABBOOK_ROOT = str(REPO_ROOT / ".pw_lab/runs")
+
+
+def _die(message: str, code: int = 2) -> None:
+    sys.stderr.write(message + "\n")
+    raise SystemExit(code)
+
+
+def _now_unix_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _write_env_snapshot(path: Path) -> Dict[str, Any]:
+    try:
+        lines = [f"{k}={v}" for k, v in sorted(os.environ.items())]
+        _write_text(path, "\n".join(lines) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def _run_capture_text(cmd: List[str], *, timeout_s: int = 10) -> Tuple[int, str, str]:
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout_s)
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def _write_process_snapshot(path: Path) -> Dict[str, Any]:
+    chunks: List[str] = []
+    chunks.append(f"cwd: {os.getcwd()}")
+    chunks.append(f"pid: {os.getpid()}")
+    chunks.append(f"uid: {os.getuid()}")
+    chunks.append(f"gid: {os.getgid()}")
+    try:
+        chunks.append(f"euid: {os.geteuid()}")
+        chunks.append(f"egid: {os.getegid()}")
+    except Exception:
+        pass
+
+    # Umask: best-effort without mutating process state.
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/env", "sh", "-c", "umask"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"umask: {out.strip()}")
+        else:
+            chunks.append(f"umask: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"umask: <error> {exc}")
+
+    # Parent chain: best-effort (don’t fail capsule emission if blocked).
+    try:
+        pid = os.getpid()
+        chain: List[str] = []
+        seen = set()
+        for _ in range(10):
+            if pid in seen or pid <= 1:
+                break
+            seen.add(pid)
+            rc, out, err = _run_capture_text(
+                ["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,comm=,args="],
+                timeout_s=2,
+            )
+            if rc != 0:
+                chain.append(f"<ps failed for pid={pid} rc={rc}> {err.strip()}")
+                break
+            line = out.strip().splitlines()[0] if out.strip().splitlines() else ""
+            chain.append(line)
+            # Extract ppid from the columns; tolerate format drift.
+            parts = line.split(None, 2)
+            if len(parts) < 2:
+                break
+            try:
+                pid = int(parts[1])
+            except Exception:
+                break
+        if chain:
+            chunks.append("parent_chain:")
+            chunks.extend([f"  {c}" for c in chain])
+    except Exception as exc:
+        chunks.append(f"parent_chain: <error> {exc}")
+
+    try:
+        _write_text(path, "\n".join(chunks) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def _write_host_snapshot(path: Path) -> Dict[str, Any]:
+    chunks: List[str] = []
+    chunks.append(f"platform: {platform.platform()}")
+    chunks.append(f"python: {sys.version.split()[0]}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/sw_vers"], timeout_s=2)
+        if rc == 0:
+            chunks.append("sw_vers:")
+            chunks.extend([f"  {line}" for line in out.strip().splitlines()])
+        else:
+            chunks.append(f"sw_vers: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"sw_vers: <error> {exc}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/uname", "-a"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"uname: {out.strip()}")
+        else:
+            chunks.append(f"uname: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"uname: <error> {exc}")
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/csrutil", "status"], timeout_s=2)
+        if rc == 0:
+            chunks.append(f"sip: {out.strip()}")
+        else:
+            chunks.append(f"sip: <error rc={rc}> {err.strip()}")
+    except Exception as exc:
+        chunks.append(f"sip: <error> {exc}")
+    try:
+        _write_text(path, "\n".join(chunks) + "\n")
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def _write_text(path: Path, data: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(data, encoding="utf-8", errors="replace")
+
+
+def _format_cmd(argv: List[str]) -> str:
+    return " ".join(shlex.quote(a) for a in argv)
+
+
+def _write_json(path: Path, obj: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _sha256_bytes(data: bytes) -> str:
+    h = hashlib.sha256()
+    h.update(data)
+    return h.hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _stable_json_dumps(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _run_id_from_key(run_key: Dict[str, Any]) -> str:
+    return _sha256_bytes(_stable_json_dumps(run_key).encode("utf-8"))
+
+
+def _load_plist(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        with path.open("rb") as fh:
+            obj = plistlib.load(fh)
+    except Exception:
+        return None
+    if isinstance(obj, dict):
+        return obj
+    return None
+
+
+def _compute_app_identity(pw_path: Path) -> Dict[str, Any]:
+    """
+    Stable-ish app identity based on the shipped Evidence substrate, plus
+    human-readable bundle metadata.
+
+    We prefer hashing Evidence/{manifest,symbols}.json rather than
+    hashing the entire .app bundle (which can be large and can include build
+    timestamps / nondeterministic metadata).
+    """
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        return {
+            "status": "unavailable",
+            "reason": "could not resolve app root from policy-witness path",
+            "pw_path": str(pw_path),
+        }
+
+    evidence_dir = app_root / "Contents/Resources/Evidence"
+    evidence_files = [
+        evidence_dir / "manifest.json",
+        evidence_dir / "symbols.json",
+    ]
+    file_meta: List[Dict[str, Any]] = []
+    missing = []
+    for f in evidence_files:
+        if not f.exists():
+            missing.append(str(f))
+            continue
+        try:
+            file_meta.append(
+                {
+                    "path": str(f),
+                    "sha256": _sha256_file(f),
+                    "size_bytes": f.stat().st_size,
+                }
+            )
+        except Exception as exc:
+            file_meta.append({"path": str(f), "error": str(exc)})
+    if missing:
+        return {
+            "status": "unavailable",
+            "reason": "missing evidence files",
+            "missing": missing,
+            "app_root": str(app_root),
+        }
+
+    digest_input = _stable_json_dumps(file_meta).encode("utf-8")
+    evidence_digest = _sha256_bytes(digest_input)
+
+    info = _load_plist(app_root / "Contents/Info.plist") or {}
+    bundle_id = info.get("CFBundleIdentifier")
+    bundle_version = info.get("CFBundleVersion")
+    bundle_short = info.get("CFBundleShortVersionString")
+
+    pw_sha = None
+    try:
+        pw_sha = _sha256_file(pw_path)
+    except Exception:
+        pw_sha = None
+
+    return {
+        "status": "ok",
+        "evidence_sha256": evidence_digest,
+        "evidence_files": file_meta,
+        "bundle_id": bundle_id,
+        "bundle_version": bundle_version,
+        "bundle_short_version": bundle_short,
+        "app_root": str(app_root),
+        "policy_witness_sha256": pw_sha,
+    }
+
+
+def _copy_file_best_effort(src: Path, dst: Path) -> Dict[str, Any]:
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        return {"status": "ok", "src": str(src), "dst": str(dst)}
+    except Exception as exc:
+        return {"status": "error", "src": str(src), "dst": str(dst), "error": str(exc)}
+
+
+def _write_run_capsule(
+    out_dir: Path,
+    *,
+    run_key: Dict[str, Any],
+    run_id: str,
+    pw_path: Path,
+    argv: List[str],
+    app_identity: Dict[str, Any],
+    caller_context: Dict[str, Any],
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Emit the minimal per-run capsule directory structure for later replay/diff:
+    capsule.json (authoritative) plus a few text snapshots and evidence copies.
+    """
+    collectors: Dict[str, Any] = {}
+
+    collectors["env.snapshot"] = _write_env_snapshot(out_dir / "env.snapshot")
+    collectors["process.txt"] = _write_process_snapshot(out_dir / "process.txt")
+    collectors["host.txt"] = _write_host_snapshot(out_dir / "host.txt")
+
+    app_root = _app_root_from_pw(pw_path)
+    if app_root is not None:
+        evidence_dir = app_root / "Contents/Resources/Evidence"
+        for name in ("manifest.json", "symbols.json"):
+            src = evidence_dir / name
+            dst = out_dir / "evidence" / name
+            if src.exists():
+                collectors[f"evidence/{name}"] = _copy_file_best_effort(src, dst)
+            else:
+                collectors[f"evidence/{name}"] = {"status": "missing", "src": str(src), "dst": str(dst)}
+
+        app_info_src = app_root / "Contents/Info.plist"
+        if app_info_src.exists():
+            collectors["bundle/PolicyWitness.app/Info.plist"] = _copy_file_best_effort(
+                app_info_src, out_dir / "bundle" / "PolicyWitness.app.Info.plist"
+            )
+    else:
+        collectors["evidence"] = {"status": "unavailable", "reason": "app root not resolved"}
+
+    capsule: Dict[str, Any] = {
+        "schema_version": 1,
+        "created_at_unix_ms": _now_unix_ms(),
+        "run_id": run_id,
+        "run_key": run_key,
+        "argv": argv,
+        "pw_path": str(pw_path),
+        "cwd": os.getcwd(),
+        "app_identity": app_identity,
+        "caller_context": caller_context,
+        "collectors": collectors,
+    }
+    try:
+        rc, out, err = _run_capture_text(["/usr/bin/env", "sh", "-c", "umask"], timeout_s=2)
+        capsule["umask"] = out.strip() if rc == 0 else f"<error rc={rc}> {err.strip()}"
+    except Exception:
+        capsule["umask"] = None
+    if extra:
+        capsule["extra"] = extra
+
+    _write_json(out_dir / "capsule.json", capsule)
+    return capsule
+
+
+def _load_sandbox_check() -> Optional[Any]:
+    """
+    Best-effort access to libsystem_sandbox's `sandbox_check`.
+
+    This is intentionally used only for a conservative "inside" preflight:
+    if `sandbox_check(..., "mach-lookup", ..., <name>)` is denied, then running
+    PolicyWitness XPC probes will often fail at open-session boundaries (before
+    any service code runs).
+    """
+    candidates: List[Optional[str]] = [
+        ctypes.util.find_library("sandbox"),
+        "/usr/lib/libsandbox.dylib",
+    ]
+    for cand in candidates:
+        if not cand:
+            continue
+        try:
+            lib = ctypes.CDLL(cand)
+            fn = getattr(lib, "sandbox_check", None)
+            if fn is not None:
+                fn.restype = ctypes.c_int
+                return fn
+        except Exception:
+            continue
+    try:
+        lib = ctypes.CDLL(None)
+        fn = getattr(lib, "sandbox_check", None)
+        if fn is not None:
+            fn.restype = ctypes.c_int
+            return fn
+    except Exception:
+        return None
+    return None
+
+
+def _sandbox_check_mach_lookup(fn: Any, target_name: str) -> Optional[bool]:
+    """
+    Return True if allowed, False if denied, None if the call failed.
+
+    We intentionally use `type=0` and pass the target name as the 4th arg.
+    Empirically on this host:
+      - return 0 => allow
+      - return 1 => deny
+    """
+    try:
+        rc = int(fn(os.getpid(), b"mach-lookup", 0, target_name.encode("utf-8")))
+    except Exception:
+        return None
+    return rc == 0
+
+
+def _inside_probe(service_names: List[str]) -> Dict[str, Any]:
+    """
+    Fail-closed "inside" preflight: quick-fire on the first strong signal that
+    the caller is sandboxed in a way that will invalidate XPC lookup and/or
+    deny-evidence capture.
+    """
+    checked: List[Dict[str, Any]] = []
+
+    # Sensor 1: harness marker env var (best-effort; not authoritative).
+    env_marker = os.environ.get("CODEX_SANDBOX")
+    if env_marker:
+        return {
+            "inside": True,
+            "trigger": "env:CODEX_SANDBOX",
+            "checked": [
+                {"sensor": "env:CODEX_SANDBOX", "status": "triggered", "details": {"value": env_marker}}
+            ],
+            "service_names": service_names,
+        }
+    checked.append({"sensor": "env:CODEX_SANDBOX", "status": "pass"})
+
+    # Sensor 2+: operational allow/deny checks via sandbox_check, when available.
+    fn = _load_sandbox_check()
+    if fn is None:
+        checked.append({"sensor": "sandbox_check", "status": "unavailable"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:unavailable",
+            "checked": checked,
+            "service_names": service_names,
+        }
+
+    # Always check logd lookup: if this is denied, unified-log based collectors
+    # are often blocked and "no denies observed" becomes uninterpretable.
+    allow = _sandbox_check_mach_lookup(fn, "com.apple.logd")
+    if allow is False:
+        checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "triggered"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:mach-lookup:com.apple.logd",
+            "checked": checked,
+            "service_names": service_names,
+        }
+    if allow is None:
+        checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "error"})
+        return {
+            "inside": True,
+            "trigger": "sandbox_check:error:com.apple.logd",
+            "checked": checked,
+            "service_names": service_names,
+        }
+    checked.append({"sensor": "sandbox_check:mach-lookup:com.apple.logd", "status": "pass"})
+
+    for name in service_names:
+        allow = _sandbox_check_mach_lookup(fn, name)
+        if allow is False:
+            checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "triggered"})
+            return {
+                "inside": True,
+                "trigger": f"sandbox_check:mach-lookup:{name}",
+                "checked": checked,
+                "service_names": service_names,
+            }
+        if allow is None:
+            checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "error"})
+            return {
+                "inside": True,
+                "trigger": f"sandbox_check:error:{name}",
+                "checked": checked,
+                "service_names": service_names,
+            }
+        checked.append({"sensor": f"sandbox_check:mach-lookup:{name}", "status": "pass"})
+
+    return {"inside": False, "trigger": None, "checked": checked, "service_names": service_names}
+
+
+def _app_root_from_pw(pw_path: Path) -> Optional[Path]:
+    # Expected layout: PolicyWitness.app/Contents/MacOS/policy-witness
+    if pw_path.name != "policy-witness":
+        return None
+    try:
+        app_root = pw_path.parents[2]
+    except IndexError:
+        return None
+    if not (app_root / "Contents/Resources/Evidence/manifest.json").exists():
+        return None
+    return app_root
+
+
+def _resolve_bundle_id(app_root: Path, profile: str, variant: str) -> Optional[str]:
+    try:
+        obj = _load_json(app_root / "Contents/Resources/Evidence/profiles.json")
+    except Exception:
+        return None
+    for prof in obj.get("profiles", []):
+        if prof.get("profile_id") != profile:
+            continue
+        for v in prof.get("variants", []):
+            if v.get("variant") == variant:
+                return v.get("bundle_id")
+    return None
+
+
+def _resolve_variant_info(app_root: Path, profile: str, variant: str) -> Optional[Dict[str, Any]]:
+    try:
+        obj = _load_json(app_root / "Contents/Resources/Evidence/profiles.json")
+    except Exception:
+        return None
+    for prof in obj.get("profiles", []):
+        if prof.get("profile_id") != profile:
+            continue
+        for v in prof.get("variants", []):
+            if v.get("variant") != variant:
+                continue
+            return {
+                "profile_id": profile,
+                "variant": variant,
+                "bundle_id": v.get("bundle_id"),
+                "service_name": v.get("service_name"),
+                "risk_tier": v.get("risk_tier"),
+                "risk_reasons": v.get("risk_reasons"),
+            }
+    return None
+
+
+def cmd_inside(args: argparse.Namespace) -> int:
+    service_names: List[str] = list(args.service_name or [])
+
+    pw_path = Path(args.pw)
+    profile = args.profile
+    variant = args.variant or "base"
+    if profile and "@" in profile and not args.variant:
+        profile, variant = profile.split("@", 1)
+    if profile:
+        app_root = _app_root_from_pw(pw_path)
+        bundle_id = _resolve_bundle_id(app_root, profile, variant) if app_root else None
+        if bundle_id:
+            service_names.append(bundle_id)
+
+    result = _inside_probe(service_names=service_names)
+    if args.bare:
+        print("true" if result.get("inside") else "false")
+    else:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _ensure_clean_dir(path: Path, *, force: bool) -> None:
+    if path.exists() and any(path.iterdir()):
+        if not force:
+            _die(f"output directory not empty: {path}")
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _write_json_stub(path: Path, obj: Dict[str, Any]) -> None:
+    _write_json(path, obj)
+
+
+def _run_xpc_run(
+    pw_path: Path,
+    *,
+    argv: List[str],
+    out_dir: Path,
+    timeout_s: int = 240,
+) -> Dict[str, Any]:
+    cmd_path = out_dir / "cmd.txt"
+    stdout_path = out_dir / "outputs" / "stdout.json"
+    stderr_path = out_dir / "outputs" / "stderr.txt"
+    rc_path = out_dir / "outputs" / "exit_code.txt"
+
+    _write_text(cmd_path, _format_cmd(argv) + "\n")
+    proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout_s)
+    _write_text(stdout_path, proc.stdout)
+    _write_text(stderr_path, proc.stderr)
+    _write_text(rc_path, str(proc.returncode) + "\n")
+
+    parsed = None
+    parse_error = None
+    try:
+        parsed = json.loads(proc.stdout) if proc.stdout.strip() else None
+    except Exception as exc:
+        parse_error = str(exc)
+
+    normalized_outcome = None
+    ok = None
+    if isinstance(parsed, dict):
+        result = parsed.get("result") or {}
+        normalized_outcome = result.get("normalized_outcome")
+        ok = result.get("ok")
+
+    run_result = {
+        "schema_version": 1,
+        "run_type": "xpc_run",
+        "argv": argv,
+        "exit_code": proc.returncode,
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+        "normalized_outcome": normalized_outcome,
+        "ok": ok,
+        "parse_error": parse_error,
+    }
+    if parsed is not None:
+        run_result["parsed_kind"] = parsed.get("kind") if isinstance(parsed, dict) else None
+    _write_json(out_dir / "run_result.json", run_result)
+    if parsed is None:
+        _write_json_stub(
+            out_dir / "outputs" / "stdout.parse_error.json",
+            {"status": "error", "error": parse_error or "stdout not json"},
+        )
+    return run_result
+
+
+def _find_clang() -> Optional[List[str]]:
+    if shutil.which("clang"):
+        return ["clang"]
+    if shutil.which("xcrun"):
+        return ["xcrun", "clang"]
+    return None
+
+
+def _build_dlopen_specimen(out_dir: Path) -> Dict[str, Any]:
+    """
+    Build one unsigned dylib specimen (bytes pinned for the sweep) that writes a
+    marker file alongside the loaded dylib path (via dladdr).
+    """
+    clang = _find_clang()
+    if clang is None:
+        return {"status": "unavailable", "reason": "clang/xcrun not found"}
+
+    specimen_dir = out_dir / "specimen"
+    specimen_dir.mkdir(parents=True, exist_ok=True)
+    c_path = specimen_dir / "pw_lvtest.c"
+    dylib_path = specimen_dir / "pw_lvtest.dylib"
+    cmd_path = specimen_dir / "compile.cmd.txt"
+    stderr_path = specimen_dir / "compile.stderr.txt"
+
+    _write_text(
+        c_path,
+        (
+            "#include <dlfcn.h>\n"
+            "#include <fcntl.h>\n"
+            "#include <limits.h>\n"
+            "#include <stdio.h>\n"
+            "#include <string.h>\n"
+            "#include <unistd.h>\n"
+            "\n"
+            "__attribute__((constructor))\n"
+            "static void pw_init(void) {\n"
+            "  Dl_info info;\n"
+            "  if (dladdr((void*)&pw_init, &info) == 0 || info.dli_fname == NULL) {\n"
+            "    return;\n"
+            "  }\n"
+            "  char marker[PATH_MAX];\n"
+            "  int n = snprintf(marker, sizeof(marker), \"%s.ran.txt\", info.dli_fname);\n"
+            "  if (n <= 0 || n >= (int)sizeof(marker)) {\n"
+            "    return;\n"
+            "  }\n"
+            "  int fd = open(marker, O_WRONLY|O_CREAT|O_TRUNC, 0644);\n"
+            "  if (fd >= 0) {\n"
+            "    dprintf(fd, \"pw_lvtest constructor pid=%d\\n\", getpid());\n"
+            "    close(fd);\n"
+            "  }\n"
+            "  fprintf(stderr, \"pw_lvtest constructor pid=%d\\n\", getpid());\n"
+            "}\n"
+        ),
+    )
+
+    compile_cmd = clang + ["-dynamiclib", "-o", str(dylib_path), str(c_path)]
+    _write_text(cmd_path, _format_cmd(compile_cmd) + "\n")
+    proc = subprocess.run(compile_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _write_text(stderr_path, proc.stderr)
+    if proc.returncode != 0:
+        return {
+            "status": "error",
+            "reason": f"compile failed rc={proc.returncode}",
+            "compile_cmd": compile_cmd,
+            "compile_stderr_path": str(stderr_path),
+        }
+    sha = _sha256_file(dylib_path)
+    return {
+        "status": "ok",
+        "specimen_path": str(dylib_path),
+        "sha256": sha,
+        "compile_cmd": compile_cmd,
+        "compile_stderr_path": str(stderr_path),
+    }
+
+
+def _extract_file_path_from_fs_op(stdout_json_path: Path) -> Optional[str]:
+    try:
+        obj = json.loads(stdout_json_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return None
+    if not isinstance(obj, dict):
+        return None
+    details = (obj.get("data") or {}).get("details") or {}
+    file_path = details.get("file_path")
+    if file_path:
+        return str(file_path)
+    return None
+
+
+def _write_file_bytes(path: Path, data: bytes) -> Dict[str, Any]:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        return {"status": "ok", "path": str(path)}
+    except Exception as exc:
+        return {"status": "error", "path": str(path), "error": str(exc)}
+
+
+def cmd_sweep(args: argparse.Namespace) -> int:
+    pw_path = Path(args.pw)
+    if not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+
+    runs_root = Path(args.runs_root)
+    runs_root.mkdir(parents=True, exist_ok=True)
+
+    app_identity = _compute_app_identity(pw_path)
+    if app_identity.get("status") != "ok":
+        _die(f"failed to compute app identity: {app_identity}")
+
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        _die("could not resolve app root")
+
+    # Resolve the set of mach service names we expect to look up during the sweep.
+    service_names: List[str] = []
+    for prof, var in (("minimal", "base"), ("minimal", "injectable"), ("temporary_exception", "base")):
+        info = _resolve_variant_info(app_root, prof, var)
+        if info and info.get("bundle_id"):
+            service_names.append(str(info["bundle_id"]))
+
+    inside = _inside_probe(service_names)
+    caller_context = _collect_caller_context(pw_path, service_names, inside=inside)
+    caller_context_key = _caller_context_key(caller_context)
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    if inside.get("inside") and not allow_inside:
+        _die("blocked: inside=true (rerun outside the harness / with escalation)", code=3)
+
+    deny_path = args.deny_sentinel
+    deny_exists = Path(deny_path).exists()
+
+    # Build a pinned dylib specimen for the dlopen lane (bytes stable within the sweep).
+    specimen = _build_dlopen_specimen(runs_root / "_scratch")
+
+    sweep_runs: List[Dict[str, Any]] = []
+
+    def run_xpc(
+        lane: str,
+        profile: str,
+        variant: str,
+        capture: Dict[str, Any],
+        probe_id: str,
+        probe_argv: List[str],
+        *,
+        run_key_extra: Optional[Dict[str, Any]] = None,
+        capsule_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        capture_flags = dict(capture)
+        run_key = {
+            "schema_version": 1,
+            "caller_context": caller_context_key,
+            "profile_id": profile,
+            "variant_id": variant,
+            "probe_id": probe_id,
+            "probe_args": probe_argv,
+            "capture_flags": capture_flags,
+            "app_identity": {"evidence_sha256": app_identity.get("evidence_sha256"), "bundle_id": app_identity.get("bundle_id")},
+        }
+        if run_key_extra:
+            run_key.update(run_key_extra)
+        run_id = _run_id_from_key(run_key)
+        run_dir = runs_root / run_id
+        _ensure_clean_dir(run_dir, force=args.force)
+        argv = [str(pw_path), "xpc", "run", "--profile", profile]
+        if variant != "base":
+            argv += ["--variant", variant]
+        if capture_flags.get("capture_sandbox_logs"):
+            argv.append("--capture-sandbox-logs")
+            target = capture_flags.get("capture_sandbox_logs_target")
+            if target:
+                argv += ["--capture-sandbox-logs-target", target]
+        argv += [probe_id] + probe_argv
+
+        capsule_extra_out = {"lane": lane}
+        if capsule_extra:
+            capsule_extra_out.update(capsule_extra)
+        _write_run_capsule(
+            run_dir,
+            run_key=run_key,
+            run_id=run_id,
+            pw_path=pw_path,
+            argv=argv,
+            app_identity=app_identity,
+            caller_context=caller_context,
+            extra=capsule_extra_out,
+        )
+        run_result = _run_xpc_run(pw_path, argv=argv, out_dir=run_dir, timeout_s=args.timeout_s)
+        sweep_runs.append({"lane": lane, "run_id": run_id, "run_dir": str(run_dir), "result": run_result})
+
+    # 1) Transport lane.
+    run_xpc("transport_world_shape", "minimal", "base", {"capture_sandbox_logs": False}, "world_shape", [])
+
+    # 2) Capture health lane (failure is evidence).
+    run_xpc(
+        "capture_health_world_shape_client",
+        "minimal",
+        "base",
+        {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "client"},
+        "world_shape",
+        [],
+    )
+
+    # 3) Deliberate deny lane (service vs client targeting).
+    if deny_exists:
+        for target in ("service", "client"):
+            run_xpc(
+                f"deny_lane_open_read_{target}",
+                "minimal",
+                "base",
+                {"capture_sandbox_logs": True, "capture_sandbox_logs_target": target},
+                "fs_op",
+                ["--op", "open_read", "--path", deny_path, "--allow-unsafe-path"],
+            )
+    else:
+        sweep_runs.append({"lane": "deny_lane_open_read", "status": "skipped", "reason": "deny sentinel missing"})
+
+    # 4) Session lane: minimal, two probes in one session (PID stability).
+    session_lane = "session_world_shape_probe_catalog"
+    session_key = {
+        "schema_version": 1,
+        "caller_context": caller_context_key,
+        "profile_id": "minimal",
+        "variant_id": "base",
+        "probe_id": "xpc_session",
+        "probe_args": [
+            {"probe_id": "world_shape", "argv": []},
+            {"probe_id": "probe_catalog", "argv": []},
+        ],
+        "capture_flags": {"capture_signposts": True},
+        "app_identity": {"evidence_sha256": app_identity.get("evidence_sha256"), "bundle_id": app_identity.get("bundle_id")},
+    }
+    session_run_id = _run_id_from_key(session_key)
+    session_dir = runs_root / session_run_id
+    _ensure_clean_dir(session_dir, force=args.force)
+    scenario = {
+        "id": session_lane,
+        "profile": "minimal",
+        "variant": "base",
+        "steps": [
+            {"id": "world_shape", "probe": "world_shape", "argv": []},
+            {"id": "probe_catalog", "probe": "probe_catalog", "argv": []},
+        ],
+    }
+    _write_run_capsule(
+        session_dir,
+        run_key=session_key,
+        run_id=session_run_id,
+        pw_path=pw_path,
+        argv=[str(pw_path), "xpc", "session", "--profile", "minimal", "--wait", "fifo:auto", "--signposts"],
+        app_identity=app_identity,
+        caller_context=caller_context,
+        extra={"lane": session_lane},
+    )
+    run, sandbox_capture = _run_xpc_session_scenario(
+        scenario,
+        session_dir,
+        pw_path,
+        signposts=True,
+        wait_timeout_ms=args.timeout_s * 1000,
+        fence=True,
+        capture_sandbox_logs=False,
+    )
+    summary = _summarize_run(scenario, run, sandbox_capture)
+    _write_json(session_dir / "lab_summary.json", summary)
+    sweep_runs.append({"lane": session_lane, "run_id": session_run_id, "run_dir": str(session_dir), "result": summary})
+
+    # 5) dlopen lane (pinned specimen; base vs injectable).
+    if specimen.get("status") == "ok":
+        dylib_bytes = Path(specimen["specimen_path"]).read_bytes()
+
+        def prepare_dylib_path(profile: str, variant: str, name: str, lane: str) -> Optional[str]:
+            prep_dir = runs_root / "_scratch" / "dlopen_paths"
+            prep_dir.mkdir(parents=True, exist_ok=True)
+            out = prep_dir / f"{lane}.json"
+            argv = [str(pw_path), "xpc", "run", "--profile", profile]
+            if variant != "base":
+                argv += ["--variant", variant]
+            argv += [
+                "fs_op",
+                "--op",
+                "create",
+                "--path-class",
+                "tmp",
+                "--target",
+                "specimen_file",
+                "--name",
+                name,
+                "--no-cleanup",
+            ]
+            proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=args.timeout_s)
+            _write_text(out, proc.stdout)
+            return _extract_file_path_from_fs_op(out)
+
+        dylib_name = f"pw_lvtest_{uuid.uuid4().hex}.dylib"
+        base_path = prepare_dylib_path("minimal", "base", dylib_name, "base_create")
+        inj_path = prepare_dylib_path("minimal", "injectable", dylib_name, "inj_create")
+
+        if base_path and inj_path:
+            _write_file_bytes(Path(base_path), dylib_bytes)
+            _write_file_bytes(Path(inj_path), dylib_bytes)
+
+            run_xpc(
+                "dlopen_base",
+                "minimal",
+                "base",
+                {"capture_sandbox_logs": True},
+                "dlopen_external",
+                ["--path", base_path],
+                run_key_extra={"specimen_sha256": specimen.get("sha256")},
+                capsule_extra={
+                    "specimen_sha256": specimen.get("sha256"),
+                    "specimen_source": specimen.get("specimen_path"),
+                    "copied_to": base_path,
+                    "expected_marker_path": f"{base_path}.ran.txt",
+                },
+            )
+            run_xpc(
+                "dlopen_injectable",
+                "minimal",
+                "injectable",
+                {"capture_sandbox_logs": True},
+                "dlopen_external",
+                ["--path", inj_path],
+                run_key_extra={"specimen_sha256": specimen.get("sha256")},
+                capsule_extra={
+                    "specimen_sha256": specimen.get("sha256"),
+                    "specimen_source": specimen.get("specimen_path"),
+                    "copied_to": inj_path,
+                    "expected_marker_path": f"{inj_path}.ran.txt",
+                },
+            )
+    else:
+        sweep_runs.append({"lane": "dlopen_lane", "status": "skipped", "reason": specimen.get("reason")})
+
+    # 6) inherit_child lane: dynamic_extension (must use temporary_exception) + targeting cross-check.
+    if deny_exists:
+        run_xpc(
+            "inherit_child_dynamic_extension_auto",
+            "temporary_exception",
+            "base",
+            {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "auto"},
+            "inherit_child",
+            ["--scenario", "dynamic_extension", "--path", deny_path, "--allow-unsafe-path"],
+        )
+        run_xpc(
+            "inherit_child_dynamic_extension_client",
+            "temporary_exception",
+            "base",
+            {"capture_sandbox_logs": True, "capture_sandbox_logs_target": "client"},
+            "inherit_child",
+            ["--scenario", "dynamic_extension", "--path", deny_path, "--allow-unsafe-path"],
+        )
+    else:
+        sweep_runs.append({"lane": "inherit_child_dynamic_extension", "status": "skipped", "reason": "deny sentinel missing"})
+
+    sweep_index = {
+        "schema_version": 1,
+        "created_at_unix_ms": _now_unix_ms(),
+        "runs_root": str(runs_root),
+        "app_identity": app_identity,
+        "caller_context": caller_context,
+        "runs": sweep_runs,
+    }
+    _write_json(runs_root / "sweep_index.json", sweep_index)
+    print(json.dumps(sweep_index, indent=2, sort_keys=True))
+    return 0
+
+
+def _parse_env_snapshot(path: Path) -> Dict[str, str]:
+    env: Dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        env[k] = v
+    return env
+
+
+def _normalize_for_digest_strict(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        out: Dict[str, Any] = {}
+        for k, v in obj.items():
+            if k == "generated_at_unix_ms":
+                continue
+            if k in ("host_sandbox_log_capture", "host_signpost_capture"):
+                continue
+            if k == "fence":
+                continue
+            if k in ("stdout", "stderr"):
+                out[k] = "<output>"
+                continue
+            if k == "wait_path":
+                out[k] = "<path>"
+                continue
+            if k.endswith("_unix_ms") or k.endswith("_ns"):
+                out[k] = "<time>"
+                continue
+            if k.endswith("_at_iso8601"):
+                out[k] = "<time>"
+                continue
+            if k == "correlation_id":
+                out[k] = "<id>"
+                continue
+            if k == "thread_id":
+                out[k] = "<thread>"
+                continue
+            if k == "session_token":
+                out[k] = "<token>"
+                continue
+            if k == "token":
+                out[k] = "<token>"
+                continue
+            if k == "pid" or k.endswith("_pid"):
+                out[k] = "<pid>"
+                continue
+            out[k] = _normalize_for_digest_strict(v)
+        return out
+    if isinstance(obj, list):
+        return [_normalize_for_digest_strict(v) for v in obj]
+    return obj
+
+
+def _digest_json(obj: Any) -> str:
+    return _sha256_bytes(_stable_json_dumps(obj).encode("utf-8"))
+
+
+def _digest_stdout_strict(stdout_text: str) -> Optional[str]:
+    stdout_text = stdout_text.strip()
+    if not stdout_text:
+        return None
+    # JSON object
+    if stdout_text.startswith("{"):
+        try:
+            obj = json.loads(stdout_text)
+        except Exception:
+            return None
+        return _digest_json(_normalize_for_digest_strict(obj))
+    # JSONL transcript
+    digests: List[str] = []
+    for line in stdout_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        digests.append(_digest_json(_normalize_for_digest_strict(obj)))
+    return _digest_json(digests) if digests else None
+
+
+_UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def _normalize_for_digest_relaxed(obj: Any) -> Any:
+    """
+    Relaxed normalization: builds on strict, then normalizes common path-shaped
+    noise (UUIDs, user-homed absolute paths). This is intentionally conservative
+    and is only used for secondary diffing.
+    """
+    if isinstance(obj, dict):
+        return {k: _normalize_for_digest_relaxed(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_normalize_for_digest_relaxed(v) for v in obj]
+    if isinstance(obj, str):
+        s = _UUID_RE.sub("<uuid>", obj)
+        s = re.sub(r"^/Users/[^/]+/", "/Users/<user>/", s)
+        return s
+    return obj
+
+
+def _digest_stdout_relaxed(stdout_text: str) -> Optional[str]:
+    stdout_text = stdout_text.strip()
+    if not stdout_text:
+        return None
+    if stdout_text.startswith("{"):
+        try:
+            obj = json.loads(stdout_text)
+        except Exception:
+            return None
+        strict = _normalize_for_digest_strict(obj)
+        relaxed = _normalize_for_digest_relaxed(strict)
+        return _digest_json(relaxed)
+    digests: List[str] = []
+    for line in stdout_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        strict = _normalize_for_digest_strict(obj)
+        relaxed = _normalize_for_digest_relaxed(strict)
+        digests.append(_digest_json(relaxed))
+    return _digest_json(digests) if digests else None
+
+
+def cmd_replay(args: argparse.Namespace) -> int:
+    run_dir = Path(args.capsule)
+    capsule_path = run_dir / "capsule.json"
+    if not capsule_path.exists():
+        _die(f"missing capsule.json at {capsule_path}")
+    capsule = _load_json(capsule_path)
+    if not isinstance(capsule, dict):
+        _die("capsule.json malformed")
+
+    argv = capsule.get("argv")
+    if not isinstance(argv, list) or not argv:
+        _die("capsule.json missing argv list")
+    argv = [str(x) for x in argv]
+
+    run_key = capsule.get("run_key") or {}
+
+    env_path = run_dir / "env.snapshot"
+    if not env_path.exists():
+        _die(f"missing env.snapshot at {env_path}")
+    env = _parse_env_snapshot(env_path)
+
+    cwd = capsule.get("cwd") or None
+
+    if isinstance(run_key, dict) and run_key.get("probe_id") == "xpc_session":
+        profile = str(run_key.get("profile_id") or "")
+        variant = str(run_key.get("variant_id") or "base")
+        probes = run_key.get("probe_args") or []
+        if not profile or not isinstance(probes, list):
+            _die("xpc_session replay: missing profile_id or probe_args in run_key")
+
+        steps = []
+        for idx, entry in enumerate(probes):
+            if not isinstance(entry, dict):
+                continue
+            probe_id = entry.get("probe_id")
+            probe_argv = entry.get("argv") or []
+            if not probe_id:
+                continue
+            steps.append({"id": entry.get("id") or f"step_{idx+1}", "probe": probe_id, "argv": probe_argv})
+        if not steps:
+            _die("xpc_session replay: no steps found")
+
+        pw_path = Path(str(capsule.get("pw_path") or argv[0]))
+        matrix: List[Dict[str, Any]] = []
+        replay_root = run_dir / "replay_runs"
+        replay_root.mkdir(parents=True, exist_ok=True)
+        for i in range(args.n):
+            iter_dir = replay_root / f"iter_{i+1:03d}"
+            _ensure_clean_dir(iter_dir, force=True)
+            scenario = {"id": f"replay_iter_{i+1}", "profile": profile, "variant": variant, "steps": steps}
+            run, sandbox_capture = _run_xpc_session_scenario(
+                scenario,
+                iter_dir,
+                pw_path,
+                signposts=True,
+                wait_timeout_ms=args.timeout_s * 1000,
+                fence=True,
+                capture_sandbox_logs=False,
+                env_override=env,
+                cwd_override=cwd,
+            )
+            raw_path = Path(run.get("raw_jsonl") or (iter_dir / "run.jsonl"))
+            text = raw_path.read_text(encoding="utf-8", errors="replace") if raw_path.exists() else ""
+            digest_strict = _digest_stdout_strict(text)
+            digest_relaxed = _digest_stdout_relaxed(text)
+            summary = _summarize_run(scenario, run, sandbox_capture)
+            ok_steps = all(step.get("ok") is True for step in summary.get("steps", []) if step.get("ok") is not None)
+            normalized_outcome = "ok" if ok_steps and not run.get("session_errors") else "session_error"
+            matrix.append(
+                {
+                    "iteration": i + 1,
+                    "exit_code": run.get("exit_code"),
+                    "normalized_outcome": normalized_outcome,
+                    "witness_digest_strict": digest_strict,
+                    "witness_digest_relaxed": digest_relaxed,
+                    "iter_dir": str(iter_dir),
+                }
+            )
+
+        classes = sorted({(m.get("normalized_outcome"), m.get("witness_digest_strict")) for m in matrix})
+        classification = "stable" if len(classes) <= 1 else "nondeterministic"
+        replay = {
+            "schema_version": 1,
+            "run_dir": str(run_dir),
+            "n": args.n,
+            "classes": [{"normalized_outcome": a, "witness_digest_strict": b} for a, b in classes],
+            "classification": classification,
+            "matrix": matrix,
+        }
+        _write_json(run_dir / "replay_matrix.json", replay)
+        print(json.dumps(replay, indent=2, sort_keys=True))
+        return 0 if classification == "stable" else 1
+
+    matrix: List[Dict[str, Any]] = []
+    for i in range(args.n):
+        proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, cwd=cwd)
+        digest_strict = _digest_stdout_strict(proc.stdout)
+        digest_relaxed = _digest_stdout_relaxed(proc.stdout)
+        normalized_outcome = None
+        try:
+            obj = json.loads(proc.stdout) if proc.stdout.strip().startswith("{") else None
+            if isinstance(obj, dict):
+                result = obj.get("result") or {}
+                normalized_outcome = result.get("normalized_outcome")
+        except Exception:
+            pass
+        matrix.append(
+            {
+                "iteration": i + 1,
+                "exit_code": proc.returncode,
+                "normalized_outcome": normalized_outcome,
+                "witness_digest_strict": digest_strict,
+                "witness_digest_relaxed": digest_relaxed,
+            }
+        )
+
+    # Classification: number of equivalence classes across outcome+digest.
+    classes = sorted({(m.get("normalized_outcome"), m.get("witness_digest_strict")) for m in matrix})
+    classification = "stable" if len(classes) <= 1 else "nondeterministic"
+    replay = {
+        "schema_version": 1,
+        "run_dir": str(run_dir),
+        "n": args.n,
+        "classes": [{"normalized_outcome": a, "witness_digest_strict": b} for a, b in classes],
+        "classification": classification,
+        "matrix": matrix,
+    }
+    _write_json(run_dir / "replay_matrix.json", replay)
+    print(json.dumps(replay, indent=2, sort_keys=True))
+    return 0 if classification == "stable" else 1
+
+
+def _service_names_for_scenario(pw_path: Path, scenario: Dict[str, Any]) -> List[str]:
+    """
+    Best-effort mapping from a lab scenario to the XPC service bundle id(s) that
+    will be looked up at runtime.
+
+    This is used only for the "inside" preflight so we can detect `mach-lookup`
+    denial for the specific service name before attempting to open the session.
+    """
+    profile = scenario.get("profile")
+    variant = scenario.get("variant") or "base"
+    if profile and "@" in str(profile) and not scenario.get("variant"):
+        profile, variant = str(profile).split("@", 1)
+    if not profile:
+        return []
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        return []
+    bundle_id = _resolve_bundle_id(app_root, str(profile), str(variant))
+    return [bundle_id] if bundle_id else []
+
+
+def _format_tri(value: Optional[bool]) -> str:
+    if value is True:
+        return "Y"
+    if value is False:
+        return "N"
+    return "?"
+
+
+def _format_val(value: Any) -> str:
+    if value is None:
+        return "-"
+    return str(value)
+
+
+def _truncate(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    if len(text) <= width:
+        return text.ljust(width)
+    if width <= 3:
+        return text[:width]
+    return text[: width - 3] + "..."
+
+
+def _pbcopy_available() -> bool:
+    return sys.platform == "darwin" and shutil.which("pbcopy") is not None
+
+
+def _pbcopy(text: str) -> Tuple[bool, str]:
+    if not _pbcopy_available():
+        return False, "pbcopy unavailable"
+    try:
+        proc = subprocess.run(
+            ["pbcopy"],
+            input=text,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception as exc:
+        return False, f"pbcopy error: {exc}"
+    if proc.returncode != 0:
+        return False, "pbcopy failed"
+    return True, "copied"
+
+
+def _tui_log_path() -> Optional[Path]:
+    if not os.environ.get("PW_LAB_TUI_DEBUG"):
+        return None
+    override = os.environ.get("PW_LAB_TUI_LOG")
+    if override:
+        return Path(override)
+    return REPO_ROOT / ".pw_lab" / "tui.log"
+
+
+def _tui_log(path: Optional[Path], message: str) -> None:
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(message + "\n")
+    except Exception:
+        pass
+
+
+def _iter_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
+    if str(path) == "-":
+        fh = sys.stdin
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            yield json.loads(line)
+        return
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            yield json.loads(line)
+
+
+def _load_catalog(path: Path) -> Dict[str, Dict[str, Any]]:
+    data = _load_json(path)
+    spans = data.get("spans", [])
+    catalog = {}
+    for entry in spans:
+        name = entry.get("name")
+        if name:
+            catalog[name] = entry
+    return catalog
+
+
+def _strip_inline_comment(line: str) -> str:
+    in_single = False
+    in_double = False
+    for idx, ch in enumerate(line):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double:
+            return line[:idx].rstrip()
+    return line.rstrip()
+
+
+def _parse_scalar(raw: str) -> Any:
+    raw = raw.strip()
+    if raw == "":
+        return ""
+    if raw.startswith("{") or raw.startswith("["):
+        try:
+            return json.loads(raw)
+        except Exception:
+            return raw
+    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+        inner = raw[1:-1]
+        return bytes(inner, "utf-8").decode("unicode_escape")
+    if raw.startswith("'") and raw.endswith("'") and len(raw) >= 2:
+        inner = raw[1:-1]
+        return inner.replace("''", "'")
+    if raw in ("null", "nil", "~"):
+        return None
+    if raw.lower() in ("true", "false"):
+        return raw.lower() == "true"
+    if raw.isdigit() or (raw.startswith("-") and raw[1:].isdigit()):
+        try:
+            return int(raw)
+        except Exception:
+            return raw
+    return raw
+
+
+def _split_kv(line: str) -> Tuple[Optional[str], Optional[str]]:
+    if ":" not in line:
+        return None, None
+    key, _, rest = line.partition(":")
+    key = key.strip()
+    if key == "":
+        return None, None
+    value = rest.strip()
+    if value == "":
+        return key, None
+    return key, value
+
+
+def _parse_yaml(text: str) -> Any:
+    lines: List[Tuple[int, str]] = []
+    for raw in text.splitlines():
+        if "\t" in raw:
+            _die("tabs are not supported in scenario YAML")
+        stripped = _strip_inline_comment(raw.rstrip("\n"))
+        if stripped.strip() == "":
+            continue
+        indent = len(stripped) - len(stripped.lstrip(" "))
+        content = stripped.lstrip(" ")
+        lines.append((indent, content))
+
+    def parse_block(start: int, indent: int) -> Tuple[Any, int]:
+        if start >= len(lines):
+            return None, start
+        current_indent, content = lines[start]
+        if current_indent < indent:
+            return None, start
+        if current_indent > indent:
+            _die(f"invalid indentation at line: {content}")
+
+        if content.startswith("- "):
+            items: List[Any] = []
+            idx = start
+            while idx < len(lines):
+                item_indent, item_content = lines[idx]
+                if item_indent != indent or not item_content.startswith("- "):
+                    break
+                item_text = item_content[2:].strip()
+                idx += 1
+                if item_text == "":
+                    child, idx = parse_block(idx, indent + 2)
+                    items.append(child)
+                    continue
+                key, value = _split_kv(item_text)
+                if key is not None:
+                    item: Dict[str, Any] = {}
+                    if value is None:
+                        child, idx = parse_block(idx, indent + 2)
+                        item[key] = child
+                    else:
+                        item[key] = _parse_scalar(value)
+                    if idx < len(lines) and lines[idx][0] > indent:
+                        child, idx = parse_block(idx, indent + 2)
+                        if isinstance(child, dict):
+                            item.update(child)
+                        else:
+                            _die("expected mapping after list item")
+                    items.append(item)
+                    continue
+                items.append(_parse_scalar(item_text))
+            return items, idx
+
+        mapping: Dict[str, Any] = {}
+        idx = start
+        while idx < len(lines):
+            item_indent, item_content = lines[idx]
+            if item_indent != indent or item_content.startswith("- "):
+                break
+            key, value = _split_kv(item_content)
+            if key is None:
+                _die(f"invalid mapping line: {item_content}")
+            idx += 1
+            if value is None:
+                child, idx = parse_block(idx, indent + 2)
+                mapping[key] = child
+            else:
+                mapping[key] = _parse_scalar(value)
+        return mapping, idx
+
+    result, idx = parse_block(0, lines[0][0] if lines else 0)
+    if idx < len(lines):
+        remaining = lines[idx][1]
+        _die(f"unparsed YAML content: {remaining}")
+    return result
+
+
+def _load_yaml_or_json(path: Path) -> Any:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if path.suffix.lower() == ".json":
+        return json.loads(text)
+    return _parse_yaml(text)
+
+
+def _resolve_scenario_path(value: str, scenario_dir: Path) -> Path:
+    candidate = Path(value)
+    if candidate.exists():
+        return candidate
+    for ext in (".yaml", ".yml", ".json"):
+        cand = scenario_dir / f"{value}{ext}"
+        if cand.exists():
+            return cand
+    _die(f"scenario not found: {value}")
+    return Path(value)
+
+
+def _resolve_suite_path(value: str, suite_dir: Path) -> Path:
+    candidate = Path(value)
+    if candidate.exists():
+        return candidate
+    for ext in (".yaml", ".yml", ".json"):
+        cand = suite_dir / f"{value}{ext}"
+        if cand.exists():
+            return cand
+    _die(f"suite not found: {value}")
+    return Path(value)
+
+
+def _normalize_steps(raw_steps: List[Any]) -> List[Dict[str, Any]]:
+    steps: List[Dict[str, Any]] = []
+    for idx, raw in enumerate(raw_steps):
+        if not isinstance(raw, dict):
+            _die("each step must be a mapping")
+        if "probe" not in raw:
+            _die("step missing required field: probe")
+        argv = raw.get("argv", [])
+        if argv is None:
+            argv = []
+        if not isinstance(argv, list):
+            _die("step argv must be a list")
+        step = dict(raw)
+        step["probe"] = str(raw["probe"])
+        step["argv"] = [str(item) for item in argv]
+        step.setdefault("id", f"step_{idx+1}")
+        steps.append(step)
+    return steps
+
+
+def _normalize_scenario(data: Any, path: Path) -> Dict[str, Any]:
+    if not isinstance(data, dict):
+        _die("scenario must be a mapping at top level")
+    scenario = dict(data)
+    scenario.setdefault("id", path.stem)
+    scenario.setdefault("driver", "xpc_session")
+    driver = scenario.get("driver")
+    if driver not in ("xpc_session", "shell"):
+        _die(f"unsupported driver: {driver}")
+    if driver == "shell":
+        command = scenario.get("command")
+        if command is None:
+            _die("shell scenarios require command")
+        if isinstance(command, str):
+            scenario["command"] = command
+        elif isinstance(command, list):
+            scenario["command"] = [str(x) for x in command]
+        else:
+            _die("command must be a string or list")
+        return scenario
+
+    if "profile" not in scenario:
+        _die("xpc_session scenario missing profile")
+    if "steps" not in scenario:
+        if "probe" in scenario:
+            scenario["steps"] = [{"probe": scenario["probe"], "argv": scenario.get("argv", [])}]
+        else:
+            _die("xpc_session scenario missing steps")
+    if not isinstance(scenario["steps"], list):
+        _die("steps must be a list")
+    scenario["steps"] = _normalize_steps(scenario["steps"])
+    return scenario
+
+
+def _load_scenario(path: Path) -> Dict[str, Any]:
+    data = _load_yaml_or_json(path)
+    return _normalize_scenario(data, path)
+
+
+def _load_suite(path: Path) -> Dict[str, Any]:
+    data = _load_yaml_or_json(path)
+    if not isinstance(data, dict):
+        _die("suite must be a mapping at top level")
+    suite = dict(data)
+    suite.setdefault("id", path.stem)
+    scenarios = suite.get("scenarios")
+    if not isinstance(scenarios, list) or not scenarios:
+        _die("suite requires a non-empty scenarios list")
+    suite["scenarios"] = scenarios
+    return suite
+
+
+def _collect_events(path: Path) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    signposts: List[Dict[str, Any]] = []
+    session_events: List[Dict[str, Any]] = []
+    for obj in _iter_jsonl(path):
+        kind = obj.get("kind")
+        if kind == "signpost_event":
+            data = obj.get("data") or {}
+            if isinstance(data, dict):
+                signposts.append(data)
+        elif kind == "xpc_session_event":
+            session_events.append(obj)
+    return signposts, session_events
+
+
+def _validate_signposts(
+    events: List[Dict[str, Any]],
+    catalog: Optional[Dict[str, Dict[str, Any]]] = None,
+    strict_catalog: bool = False
+) -> Tuple[List[str], List[str]]:
+    errors: List[str] = []
+    warnings: List[str] = []
+    spans: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+    for event in events:
+        name = event.get("name")
+        category = event.get("category")
+        phase = event.get("phase")
+        signpost_id = event.get("signpost_id")
+        pid = event.get("pid")
+        if name is None or category is None or phase is None or signpost_id is None or pid is None:
+            errors.append(f"missing required fields in event: {event}")
+            continue
+
+        if catalog is not None and name not in catalog:
+            msg = f"signpost name not in catalog: {name}"
+            if strict_catalog:
+                errors.append(msg)
+            else:
+                warnings.append(msg)
+
+        key = (int(pid), int(signpost_id))
+        entry = spans.setdefault(key, {"name": name, "begin": None, "end": None})
+        if entry["name"] != name:
+            errors.append(f"name mismatch for pid={pid} signpost_id={signpost_id}: {entry['name']} vs {name}")
+
+        if phase == "begin":
+            if entry["begin"] is not None:
+                errors.append(f"duplicate begin for pid={pid} signpost_id={signpost_id}")
+            else:
+                entry["begin"] = event
+        elif phase == "end":
+            if entry["end"] is not None:
+                errors.append(f"duplicate end for pid={pid} signpost_id={signpost_id}")
+            else:
+                entry["end"] = event
+        else:
+            errors.append(f"unknown phase {phase!r} for pid={pid} signpost_id={signpost_id}")
+
+    for key, entry in spans.items():
+        if entry["begin"] is None or entry["end"] is None:
+            pid, signpost_id = key
+            errors.append(f"incomplete span for pid={pid} signpost_id={signpost_id} name={entry['name']}")
+        else:
+            begin = entry["begin"]
+            end = entry["end"]
+            if begin.get("uptime_ns") is not None and end.get("uptime_ns") is not None:
+                if end["uptime_ns"] < begin["uptime_ns"]:
+                    pid, signpost_id = key
+                    errors.append(
+                        f"end before begin for pid={pid} signpost_id={signpost_id} name={entry['name']}"
+                    )
+
+    return errors, warnings
+
+
+def _format_ms(value: Optional[float]) -> str:
+    if value is None:
+        return "?"
+    return f"{value:.3f}ms"
+
+
+def _render_timeline(
+    events: List[Dict[str, Any]],
+    session_events: List[Dict[str, Any]]
+) -> None:
+    spans: List[Dict[str, Any]] = []
+    partial: Dict[Tuple[int, int], Dict[str, Any]] = {}
+
+    for event in events:
+        name = event.get("name")
+        phase = event.get("phase")
+        pid = event.get("pid")
+        signpost_id = event.get("signpost_id")
+        if name is None or phase is None or pid is None or signpost_id is None:
+            continue
+        key = (int(pid), int(signpost_id))
+        entry = partial.setdefault(key, {"name": name, "begin": None, "end": None})
+        if phase == "begin":
+            entry["begin"] = event
+        elif phase == "end":
+            entry["end"] = event
+
+    for entry in partial.values():
+        begin = entry.get("begin")
+        end = entry.get("end")
+        if begin and end:
+            spans.append({"begin": begin, "end": end, "name": entry["name"]})
+
+    spans.sort(key=lambda s: s["begin"].get("uptime_ns") or 0)
+
+    if session_events:
+        print("Session events:")
+        for obj in session_events:
+            data = obj.get("data") or {}
+            ts = obj.get("generated_at_unix_ms")
+            event = data.get("event")
+            pid = data.get("pid")
+            probe = data.get("probe_id")
+            msg = data.get("message") or ""
+            print(f"  {ts} event={event} pid={pid} probe_id={probe} {msg}".rstrip())
+        print("")
+
+    print("Signpost spans:")
+    for span in spans:
+        begin = span["begin"]
+        end = span["end"]
+        name = span["name"]
+        category = begin.get("category")
+        pid = begin.get("pid")
+        label = begin.get("label") or ""
+        begin_ts = begin.get("timestamp_unix_ms")
+        dur_ms = None
+        if begin.get("uptime_ns") is not None and end.get("uptime_ns") is not None:
+            dur_ms = (end["uptime_ns"] - begin["uptime_ns"]) / 1_000_000.0
+        elif begin_ts is not None and end.get("timestamp_unix_ms") is not None:
+            dur_ms = (end["timestamp_unix_ms"] - begin_ts)
+        label_part = f" label={label}" if label else ""
+        print(
+            f"  {begin_ts} { _format_ms(dur_ms) } pid={pid} category={category} name={name}{label_part}"
+        )
+
+
+class EventCollector:
+    def __init__(self) -> None:
+        self.events: List[Dict[str, Any]] = []
+        self.lock = threading.Lock()
+        self.queue: "queue.Queue[Dict[str, Any]]" = queue.Queue()
+
+    def add(self, obj: Dict[str, Any]) -> None:
+        with self.lock:
+            self.events.append(obj)
+        self.queue.put(obj)
+
+    def wait_for(self, predicate, timeout_s: float) -> Optional[Dict[str, Any]]:
+        deadline = time.time() + timeout_s
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return None
+            try:
+                obj = self.queue.get(timeout=remaining)
+            except queue.Empty:
+                return None
+            if predicate(obj):
+                return obj
+
+
+def _read_jsonl_stream(stream, collector: EventCollector, raw_path: Path) -> None:
+    with raw_path.open("w", encoding="utf-8", errors="replace") as raw:
+        for line in stream:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            raw.write(line + "\n")
+            raw.flush()
+            try:
+                obj = json.loads(line)
+            except Exception:
+                obj = {"kind": "parse_error", "raw": line}
+            collector.add(obj)
+
+
+def _read_stream_to_file(stream, path: Path) -> None:
+    with path.open("w", encoding="utf-8", errors="replace") as out:
+        for line in stream:
+            out.write(line)
+
+
+def _resolve_tool(pw_path: Path, tool_name: str) -> Optional[Path]:
+    if pw_path.name == "policy-witness":
+        candidate = pw_path.with_name(tool_name)
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _check_ps_available() -> Dict[str, Any]:
+    pid = os.getpid()
+    cmd = ["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,comm="]
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except Exception as exc:
+        return {"ok": False, "rc": None, "error": str(exc)}
+    return {
+        "ok": proc.returncode == 0,
+        "rc": proc.returncode,
+        "stderr": proc.stderr.strip(),
+    }
+
+
+def _check_log_show_available(pw_path: Path) -> Dict[str, Any]:
+    """
+    Best-effort probe for whether unified log access is permitted for the caller.
+    We intentionally do not treat "no matching log entries" as a failure; this
+    check is about whether log queries are blocked by sandboxing.
+    """
+    tool = _resolve_tool(pw_path, "sandbox-log-observer")
+    if tool is not None and os.access(tool, os.X_OK):
+        cmd = [
+            str(tool),
+            "--pid",
+            str(os.getpid()),
+            "--process-name",
+            "pw-lab",
+            "--last",
+            "1s",
+            "--format",
+            "json",
+        ]
+        try:
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except Exception as exc:
+            return {"ok": False, "rc": None, "error": str(exc), "method": "sandbox-log-observer"}
+        stderr = proc.stderr.strip()
+        return {
+            "ok": proc.returncode == 0,
+            "rc": proc.returncode,
+            "stderr": stderr,
+            "method": "sandbox-log-observer",
+        }
+
+    cmd = [
+        "/usr/bin/log",
+        "show",
+        "--style",
+        "syslog",
+        "--info",
+        "--debug",
+        "--last",
+        "1s",
+        "--predicate",
+        'process == "launchd"',
+    ]
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    except Exception as exc:
+        return {"ok": False, "rc": None, "error": str(exc), "method": "/usr/bin/log show"}
+    return {
+        "ok": proc.returncode == 0,
+        "rc": proc.returncode,
+        "stderr": proc.stderr.strip(),
+        "method": "/usr/bin/log show",
+    }
+
+
+def _collect_caller_context(
+    pw_path: Path,
+    service_names: List[str],
+    *,
+    inside: Dict[str, Any],
+) -> Dict[str, Any]:
+    env_markers = {}
+    if os.environ.get("CODEX_SANDBOX"):
+        env_markers["CODEX_SANDBOX"] = os.environ.get("CODEX_SANDBOX")
+
+    return {
+        "schema_version": 1,
+        "env_markers": env_markers,
+        "inside": inside,
+        "service_names": service_names,
+        "introspection": {
+            "ps": _check_ps_available(),
+            "log_show": _check_log_show_available(pw_path),
+        },
+    }
+
+
+def _caller_context_key(caller_context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    A reduced, stable key for RunKey hashing.
+
+    We intentionally exclude volatile outputs (PIDs, command lines, timestamps).
+    """
+    intro = caller_context.get("introspection") or {}
+    ps = intro.get("ps") or {}
+    log_show = intro.get("log_show") or {}
+    inside = caller_context.get("inside") or {}
+    return {
+        "schema_version": 1,
+        "env_markers": caller_context.get("env_markers") or {},
+        "inside": {
+            "inside": inside.get("inside"),
+            "trigger": inside.get("trigger"),
+        },
+        "introspection": {
+            "ps_ok": ps.get("ok"),
+            "log_show_ok": log_show.get("ok"),
+        },
+    }
+
+
+def _format_log_show_time(unix_ms: int) -> str:
+    ts = time.localtime(unix_ms / 1000.0)
+    return time.strftime("%Y-%m-%d %H:%M:%S", ts)
+
+
+def _capture_sandbox_logs(
+    tool_path: Path,
+    pid: int,
+    process_name: str,
+    start_ms: int,
+    end_ms: int,
+    out_dir: Path
+) -> Dict[str, Any]:
+    cmd = [
+        str(tool_path),
+        "--pid",
+        str(pid),
+        "--process-name",
+        process_name,
+        "--start",
+        _format_log_show_time(start_ms),
+        "--end",
+        _format_log_show_time(end_ms),
+        "--format",
+        "jsonl",
+    ]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout = result.stdout
+    stderr = result.stderr
+    exit_code = result.returncode
+    lines: List[Dict[str, Any]] = []
+    report: Optional[Dict[str, Any]] = None
+    for line in stdout.splitlines():
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        lines.append(obj)
+        if obj.get("kind") == "sandbox_log_observer_report":
+            report = obj
+    capture = {
+        "schema_version": 1,
+        "cmd": cmd,
+        "exit_code": exit_code,
+        "stderr": stderr,
+        "report": report,
+        "events": lines,
+    }
+    _write_json(out_dir / "sandbox_logs.json", capture)
+    return capture
+
+
+def _categorize_events(events: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    categorized = {
+        "session_events": [],
+        "session_errors": [],
+        "probe_responses": [],
+        "signpost_events": [],
+        "other_events": [],
+    }
+    for obj in events:
+        kind = obj.get("kind")
+        if kind == "xpc_session_event":
+            categorized["session_events"].append(obj)
+        elif kind == "xpc_session_error":
+            categorized["session_errors"].append(obj)
+        elif kind == "probe_response":
+            categorized["probe_responses"].append(obj)
+        elif kind == "signpost_event":
+            data = obj.get("data")
+            if isinstance(data, dict):
+                categorized["signpost_events"].append(data)
+            else:
+                categorized["other_events"].append(obj)
+        else:
+            categorized["other_events"].append(obj)
+    return categorized
+
+
+def _extract_session_events(session_events: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    by_event: Dict[str, List[Dict[str, Any]]] = {}
+    for obj in session_events:
+        data = obj.get("data") or {}
+        name = data.get("event")
+        if not name:
+            continue
+        by_event.setdefault(name, []).append(obj)
+    return by_event
+
+
+def _build_spans(signpost_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    spans: List[Dict[str, Any]] = []
+    partial: Dict[Tuple[int, int], Dict[str, Any]] = {}
+    for event in signpost_events:
+        name = event.get("name")
+        phase = event.get("phase")
+        pid = event.get("pid")
+        signpost_id = event.get("signpost_id")
+        if name is None or phase is None or pid is None or signpost_id is None:
+            continue
+        key = (int(pid), int(signpost_id))
+        entry = partial.setdefault(key, {"name": name, "begin": None, "end": None})
+        if phase == "begin":
+            entry["begin"] = event
+        elif phase == "end":
+            entry["end"] = event
+    for entry in partial.values():
+        begin = entry.get("begin")
+        end = entry.get("end")
+        if begin and end:
+            spans.append({"name": entry["name"], "begin": begin, "end": end})
+    return spans
+
+
+def _match_probe_windows(
+    session_events: List[Dict[str, Any]],
+    steps: List[Dict[str, Any]]
+) -> Dict[str, Dict[str, Any]]:
+    events = sorted(
+        session_events,
+        key=lambda e: e.get("generated_at_unix_ms") or 0,
+    )
+    windows: List[Dict[str, Any]] = []
+    pending: Optional[Dict[str, Any]] = None
+    for obj in events:
+        data = obj.get("data") or {}
+        name = data.get("event")
+        ts = obj.get("generated_at_unix_ms")
+        probe_id = data.get("probe_id")
+        if name == "probe_starting":
+            pending = {"probe_id": probe_id, "start_ms": ts, "end_ms": None}
+            windows.append(pending)
+        elif name == "probe_done":
+            if pending is not None and pending.get("end_ms") is None:
+                pending["end_ms"] = ts
+                pending = None
+            else:
+                windows.append({"probe_id": probe_id, "start_ms": None, "end_ms": ts})
+
+    matched: Dict[str, Dict[str, Any]] = {}
+    used = set()
+    for step in steps:
+        probe_id = step.get("probe")
+        step_id = step.get("id", probe_id)
+        found = None
+        for idx, win in enumerate(windows):
+            if idx in used:
+                continue
+            if win.get("probe_id") == probe_id:
+                found = win
+                used.add(idx)
+                break
+        if found:
+            matched[step_id] = found
+    return matched
+
+
+def _summarize_run(
+    scenario: Dict[str, Any],
+    run: Dict[str, Any],
+    sandbox_capture: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    session_events = run.get("session_events", [])
+    signpost_events = run.get("signpost_events", [])
+    probe_responses = run.get("probe_responses", [])
+
+    by_event = _extract_session_events(session_events)
+    wait_ready = by_event.get("wait_ready", [])
+    trigger_received = by_event.get("trigger_received", [])
+    session_ready = by_event.get("session_ready", [])
+
+    service_pid = None
+    service_name = None
+    service_bundle_id = None
+    if session_ready:
+        data = session_ready[0].get("data") or {}
+        service_pid = data.get("pid")
+        service_name = data.get("service_name")
+        service_bundle_id = data.get("service_bundle_id")
+
+    steps = scenario.get("steps", [])
+    probe_windows = _match_probe_windows(session_events, steps)
+
+    spans = _build_spans(signpost_events)
+    signpost_errors, signpost_warnings = _validate_signposts(signpost_events)
+    probe_exec_spans = [s for s in spans if s.get("name") == "pw.probe.exec"]
+
+    step_summaries: List[Dict[str, Any]] = []
+    for step in steps:
+        step_id = step.get("id")
+        probe_id = step.get("probe")
+        argv = step.get("argv", [])
+        response = None
+        for resp in probe_responses:
+            data = resp.get("data") or {}
+            if data.get("row_id") == step_id or data.get("probe_id") == probe_id:
+                response = resp
+                break
+        result_ok = None
+        normalized_outcome = None
+        rc = None
+        errno = None
+        if response:
+            result = response.get("result") or {}
+            data = response.get("data") or {}
+            result_ok = result.get("ok")
+            normalized_outcome = data.get("normalized_outcome") or result.get("normalized_outcome")
+            rc = data.get("rc")
+            errno = data.get("errno")
+        window = probe_windows.get(step_id)
+        overlap = None
+        if window and window.get("start_ms") is not None and window.get("end_ms") is not None:
+            overlap = any(
+                (span["begin"].get("timestamp_unix_ms") or 0) <= window["end_ms"]
+                and (span["end"].get("timestamp_unix_ms") or 0) >= window["start_ms"]
+                for span in probe_exec_spans
+            )
+        step_summaries.append(
+            {
+                "step_id": step_id,
+                "probe_id": probe_id,
+                "argv": argv,
+                "ok": result_ok,
+                "normalized_outcome": normalized_outcome,
+                "rc": rc,
+                "errno": errno,
+                "probe_window": window,
+                "probe_exec_overlap": overlap,
+            }
+        )
+
+    evidence_window = None
+    if probe_windows:
+        starts = [v.get("start_ms") for v in probe_windows.values() if v.get("start_ms") is not None]
+        ends = [v.get("end_ms") for v in probe_windows.values() if v.get("end_ms") is not None]
+        if starts and ends:
+            evidence_window = {"start_ms": min(starts), "end_ms": max(ends)}
+
+    signposts_health = "ok" if signpost_events and not signpost_errors else "missing"
+    if signpost_events and signpost_errors:
+        signposts_health = "invalid"
+
+    window_source = "fence" if evidence_window else "unknown"
+    sandbox_summary = {
+        "requested": sandbox_capture is not None,
+        "capture_status": "not_requested",
+        "observed_deny": None,
+        "window_source": window_source,
+    }
+    if sandbox_capture is not None:
+        report = sandbox_capture.get("report") or {}
+        if report:
+            data = report.get("data") or {}
+            sandbox_summary = {
+                "requested": True,
+                "capture_status": "captured" if sandbox_capture.get("exit_code") == 0 else "failed",
+                "observed_deny": data.get("observed_deny"),
+                "observed_lines": data.get("observed_lines"),
+                "window_source": window_source,
+            }
+        else:
+            sandbox_summary = {
+                "requested": True,
+                "capture_status": "failed",
+                "observed_deny": None,
+                "window_source": window_source,
+            }
+
+    confidence = "high"
+    reasons: List[str] = []
+    if signposts_health != "ok":
+        confidence = "low"
+        reasons.append("signposts_missing_or_invalid")
+    if sandbox_summary["requested"] and sandbox_summary["capture_status"] != "captured":
+        if confidence == "high":
+            confidence = "medium"
+        reasons.append("sandbox_logs_unavailable")
+    if any(step.get("probe_exec_overlap") is False for step in step_summaries):
+        if confidence == "high":
+            confidence = "medium"
+        reasons.append("probe_exec_span_missing")
+
+    summary = {
+        "labbook_version": LABBOOK_VERSION,
+        "scenario_id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": scenario.get("driver"),
+        "service": {
+            "pid": service_pid,
+            "name": service_name,
+            "bundle_id": service_bundle_id,
+        },
+        "fence": {
+            "wait_ready_ms": wait_ready[0].get("generated_at_unix_ms") if wait_ready else None,
+            "triggered_ms": trigger_received[0].get("generated_at_unix_ms") if trigger_received else None,
+            "wait_path": (wait_ready[0].get("data") or {}).get("wait_path") if wait_ready else None,
+        },
+        "evidence_window": evidence_window,
+        "steps": step_summaries,
+        "evidence": {
+            "signposts": {
+                "span_count": len(_build_spans(signpost_events)),
+                "event_count": len(signpost_events),
+                "well_formed": len(signpost_errors) == 0,
+                "errors": signpost_errors,
+                "warnings": signpost_warnings,
+                "window_source": "fence",
+            },
+            "sandbox_logs": sandbox_summary,
+        },
+        "uncertainty": {
+            "confidence": confidence,
+            "reasons": reasons,
+            "collector_health": {
+                "signposts": signposts_health,
+                "sandbox_logs": sandbox_summary.get("capture_status"),
+            },
+        },
+    }
+    summary["status"] = "pass" if all(s.get("ok") is True for s in step_summaries) else "fail"
+    return summary
+
+
+def _run_xpc_session_scenario(
+    scenario: Dict[str, Any],
+    out_dir: Path,
+    pw_path: Path,
+    signposts: bool,
+    wait_timeout_ms: int,
+    fence: bool,
+    capture_sandbox_logs: bool,
+    env_override: Optional[Dict[str, str]] = None,
+    cwd_override: Optional[str] = None,
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    steps = scenario.get("steps", [])
+    profile = scenario.get("profile")
+    variant = scenario.get("variant")
+    if profile and "@" in str(profile) and not variant:
+        profile, variant = str(profile).split("@", 1)
+    correlation_id = scenario.get("correlation_id") or uuid.uuid4().hex
+    plan_id = scenario.get("id")
+
+    cmd = [str(pw_path), "xpc", "session", "--profile", profile]
+    if variant:
+        cmd += ["--variant", str(variant)]
+    cmd += ["--plan-id", str(plan_id), "--correlation-id", correlation_id]
+    if signposts:
+        cmd += ["--signposts"]
+    if fence:
+        cmd += ["--wait", "fifo:auto"]
+        cmd += ["--wait-timeout-ms", str(wait_timeout_ms)]
+
+    env = dict(env_override) if env_override is not None else os.environ.copy()
+    env["PW_LAB"] = "1"
+    if signposts:
+        env["PW_ENABLE_SIGNPOSTS"] = "1"
+
+    cmd_path = out_dir / "cmd.txt"
+    _write_text(cmd_path, " ".join(cmd) + "\n")
+
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        env=env,
+        cwd=cwd_override,
+    )
+    if proc.stdin is None or proc.stdout is None or proc.stderr is None:
+        _die("failed to open subprocess pipes")
+
+    collector = EventCollector()
+    raw_jsonl = out_dir / "run.jsonl"
+    stderr_path = out_dir / "run.stderr.txt"
+
+    stdout_thread = threading.Thread(
+        target=_read_jsonl_stream, args=(proc.stdout, collector, raw_jsonl), daemon=True
+    )
+    stderr_thread = threading.Thread(
+        target=_read_stream_to_file, args=(proc.stderr, stderr_path), daemon=True
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+
+    wait_path = None
+    if fence:
+        wait_event = collector.wait_for(
+            lambda obj: obj.get("kind") == "xpc_session_event"
+            and (obj.get("data") or {}).get("event") == "wait_ready",
+            timeout_s=wait_timeout_ms / 1000.0,
+        )
+        if wait_event:
+            wait_path = (wait_event.get("data") or {}).get("wait_path")
+        if wait_path:
+            try:
+                with open(wait_path, "wb", buffering=0) as fh:
+                    fh.write(b"1")
+            except Exception as exc:
+                _die(f"failed to release fence: {exc}")
+            collector.wait_for(
+                lambda obj: obj.get("kind") == "xpc_session_event"
+                and (obj.get("data") or {}).get("event") == "trigger_received",
+                timeout_s=wait_timeout_ms / 1000.0,
+            )
+
+    for idx, step in enumerate(steps):
+        step_id = step.get("id", f"step_{idx+1}")
+        command = {
+            "command": "run_probe",
+            "probe_id": step.get("probe"),
+            "argv": step.get("argv", []),
+            "row_id": step_id,
+        }
+        if proc.stdin is None:
+            _die("session stdin closed before run_probe")
+        proc.stdin.write(json.dumps(command, sort_keys=True) + "\n")
+        proc.stdin.flush()
+        response = collector.wait_for(
+            lambda obj: obj.get("kind") == "probe_response"
+            and (obj.get("data") or {}).get("row_id") == step_id,
+            timeout_s=wait_timeout_ms / 1000.0,
+        )
+        if response is None:
+            collector.wait_for(
+                lambda obj: obj.get("kind") == "probe_response"
+                and (obj.get("data") or {}).get("probe_id") == step.get("probe"),
+                timeout_s=wait_timeout_ms / 1000.0,
+            )
+
+    if proc.stdin is not None:
+        proc.stdin.write(json.dumps({"command": "close_session"}) + "\n")
+        proc.stdin.flush()
+        proc.stdin.close()
+
+    try:
+        exit_code = proc.wait(timeout=wait_timeout_ms / 1000.0)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        exit_code = -1
+    stdout_thread.join(timeout=1.0)
+    stderr_thread.join(timeout=1.0)
+
+    categorized = _categorize_events(collector.events)
+    run = {
+        "schema_version": 1,
+        "run_type": "xpc_session",
+        "exit_code": exit_code,
+        "scenario": {
+            "id": scenario.get("id"),
+            "profile": scenario.get("profile"),
+            "variant": scenario.get("variant"),
+            "steps": steps,
+        },
+        "session_events": categorized["session_events"],
+        "session_errors": categorized["session_errors"],
+        "probe_responses": categorized["probe_responses"],
+        "signpost_events": categorized["signpost_events"],
+        "other_events": categorized["other_events"],
+        "raw_jsonl": str(raw_jsonl),
+        "stderr_path": str(stderr_path),
+    }
+    _write_json(out_dir / "run.json", run)
+
+    sandbox_capture = None
+    if capture_sandbox_logs:
+        by_event = _extract_session_events(categorized["session_events"])
+        session_ready = by_event.get("session_ready", [])
+        if session_ready:
+            data = session_ready[0].get("data") or {}
+            pid = data.get("pid")
+            process_name = data.get("service_name") or ""
+            summary = _summarize_run(scenario, run, None)
+            window = summary.get("evidence_window") or {}
+            start_ms = window.get("start_ms")
+            end_ms = window.get("end_ms")
+            if pid and start_ms and end_ms:
+                tool_path = _resolve_tool(pw_path, "sandbox-log-observer")
+                if tool_path is not None:
+                    sandbox_capture = _capture_sandbox_logs(
+                        tool_path, int(pid), str(process_name), int(start_ms), int(end_ms), out_dir
+                    )
+    return run, sandbox_capture
+
+
+def _run_shell_scenario(
+    scenario: Dict[str, Any],
+    out_dir: Path,
+    pw_path: Path
+) -> Dict[str, Any]:
+    command = scenario.get("command")
+    if command is None:
+        _die("shell scenario missing command")
+    env = os.environ.copy()
+    env["PW_BIN"] = str(pw_path)
+    env["PW_TEST_OUT_DIR"] = str(out_dir / "tests_out")
+    env["PW_TEST_RUN_ID"] = scenario.get("id", uuid.uuid4().hex)
+    env["PW_TEST_EVENTS"] = str(out_dir / "tests_out/events.jsonl")
+    if isinstance(command, str):
+        cmd = command
+        result = subprocess.run(
+            cmd, shell=True, text=True, capture_output=True, env=env, cwd=str(REPO_ROOT)
+        )
+    else:
+        cmd = [str(x) for x in command]
+        result = subprocess.run(cmd, text=True, capture_output=True, env=env, cwd=str(REPO_ROOT))
+    run = {
+        "schema_version": 1,
+        "run_type": "shell",
+        "scenario": {"id": scenario.get("id"), "driver": "shell"},
+        "command": cmd,
+        "exit_code": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
+    _write_json(out_dir / "run.json", run)
+    return run
+
+
+def _write_env(
+    out_dir: Path,
+    scenario: Dict[str, Any],
+    pw_path: Path,
+    run: Dict[str, Any],
+    inside: Optional[Dict[str, Any]] = None,
+) -> None:
+    env: Dict[str, Any] = {
+        "platform": platform.platform(),
+        "python": sys.version.split()[0],
+        "pw_path": str(pw_path),
+        "scenario_id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": scenario.get("driver"),
+    }
+    try:
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(Path.cwd()), text=True).strip()
+        env["git_head"] = head
+    except Exception:
+        env["git_head"] = None
+    if run.get("run_type") == "xpc_session":
+        session_events = run.get("session_events", [])
+        if session_events:
+            data = session_events[0].get("data") or {}
+            env["service_bundle_id"] = data.get("service_bundle_id")
+            env["service_name"] = data.get("service_name")
+            env["service_pid"] = data.get("pid")
+    if inside is not None:
+        env["inside"] = {
+            "inside": inside.get("inside"),
+            "trigger": inside.get("trigger"),
+        }
+    _write_json(out_dir / "env.json", env)
+
+
+def _ensure_out_dir(out_dir: Path, force: bool) -> None:
+    if out_dir.exists() and any(out_dir.iterdir()):
+        if not force:
+            _die(f"output directory not empty: {out_dir}")
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+
+def cmd_signposts_catalog(args: argparse.Namespace) -> int:
+    catalog = _load_json(Path(args.catalog))
+    if args.json:
+        print(json.dumps(catalog, indent=2, sort_keys=True))
+    else:
+        spans = catalog.get("spans", [])
+        for entry in spans:
+            name = entry.get("name")
+            category = entry.get("category")
+            process = entry.get("process")
+            desc = entry.get("description") or ""
+            print(f"{name} [{category}/{process}] {desc}".rstrip())
+    return 0
+
+
+def cmd_signposts_validate(args: argparse.Namespace) -> int:
+    events, _ = _collect_events(Path(args.input))
+    catalog = _load_catalog(Path(args.catalog)) if args.catalog else None
+    errors, warnings = _validate_signposts(events, catalog=catalog, strict_catalog=args.strict_catalog)
+    for warning in warnings:
+        sys.stderr.write("warning: " + warning + "\n")
+    for error in errors:
+        sys.stderr.write("error: " + error + "\n")
+    return 0 if not errors else 1
+
+
+def cmd_timeline(args: argparse.Namespace) -> int:
+    events, session_events = _collect_events(Path(args.input))
+    _render_timeline(events, [] if args.signposts_only else session_events)
+    return 0
+
+
+def _ledger_columns() -> List[Dict[str, Any]]:
+    return [
+        {"key": "step_id", "label": "step", "min": 6, "max": 16, "flex": 1},
+        {"key": "probe_id", "label": "probe", "min": 10, "max": 26, "flex": 2},
+        {"key": "ok", "label": "ok", "min": 2, "max": 2, "flex": 0},
+        {"key": "normalized_outcome", "label": "outcome", "min": 10, "max": 18, "flex": 2},
+        {"key": "rc", "label": "rc", "min": 3, "max": 6, "flex": 1},
+        {"key": "errno", "label": "errno", "min": 5, "max": 6, "flex": 1},
+        {"key": "probe_exec_overlap", "label": "overlap", "min": 7, "max": 7, "flex": 0},
+        {"key": "observed_deny", "label": "deny", "min": 4, "max": 4, "flex": 0},
+        {"key": "confidence", "label": "conf", "min": 4, "max": 7, "flex": 0},
+        {"key": "sandbox_check_outcome", "label": "sb", "min": 4, "max": 5, "flex": 0},
+        {"key": "deny_marker_observed", "label": "b", "min": 3, "max": 4, "flex": 0},
+    ]
+
+
+def _assign_column_widths(columns: List[Dict[str, Any]], total_width: int) -> Optional[int]:
+    sep_len = 3
+    total_sep = sep_len * (len(columns) - 1)
+    min_total = sum(col["min"] for col in columns) + total_sep
+    if total_width < min_total:
+        return None
+    for col in columns:
+        col["width"] = col["min"]
+    extra = total_width - min_total
+    while extra > 0:
+        progressed = False
+        for col in columns:
+            if col.get("flex", 0) <= 0:
+                continue
+            if col["width"] >= col["max"]:
+                continue
+            col["width"] += 1
+            extra -= 1
+            progressed = True
+            if extra == 0:
+                break
+        if not progressed:
+            break
+    return min_total
+
+
+def _build_ledger_rows(summary: Dict[str, Any]) -> List[Dict[str, str]]:
+    steps = summary.get("steps", []) or []
+    evidence = summary.get("evidence", {}) or {}
+    sandbox_logs = evidence.get("sandbox_logs", {}) or {}
+    observed_deny = sandbox_logs.get("observed_deny")
+    deny_marker_obj = evidence.get("deny_marker")
+    deny_marker = None
+    if isinstance(deny_marker_obj, dict) and "observed" in deny_marker_obj:
+        deny_marker = deny_marker_obj.get("observed")
+    uncertainty = summary.get("uncertainty", {}) or {}
+    confidence = uncertainty.get("confidence")
+
+    rows = []
+    for step in steps:
+        rows.append(
+            {
+                "step_id": _format_val(step.get("step_id")),
+                "probe_id": _format_val(step.get("probe_id")),
+                "ok": _format_tri(step.get("ok")),
+                "normalized_outcome": _format_val(step.get("normalized_outcome")),
+                "rc": _format_val(step.get("rc")),
+                "errno": _format_val(step.get("errno")),
+                "probe_exec_overlap": _format_tri(step.get("probe_exec_overlap")),
+                "observed_deny": _format_tri(observed_deny),
+                "confidence": _format_val(confidence),
+                "sandbox_check_outcome": _format_val(step.get("sandbox_check_outcome")),
+                "deny_marker_observed": "-" if not isinstance(deny_marker_obj, dict) else _format_tri(deny_marker),
+            }
+        )
+    return rows
+
+
+def _resolve_embedded_xpc_bundle_info(app_root: Path, *, service_dir: str, variant: str) -> Optional[Dict[str, str]]:
+    if variant == "injectable":
+        bundle_name = f"{service_dir}__injectable.xpc"
+    else:
+        bundle_name = f"{service_dir}.xpc"
+    plist_path = app_root / "Contents/XPCServices" / bundle_name / "Contents/Info.plist"
+    if not plist_path.exists():
+        return None
+    try:
+        with plist_path.open("rb") as fh:
+            data = plistlib.load(fh)
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    bundle_id = data.get("CFBundleIdentifier")
+    exe = data.get("CFBundleExecutable")
+    if not isinstance(bundle_id, str) or not isinstance(exe, str):
+        return None
+    return {"bundle_id": bundle_id, "executable": exe, "info_plist": str(plist_path)}
+
+
+def _run_pw_runner_client(
+    app_root: Path,
+    *,
+    service_bundle_id: str,
+    request_path: Path,
+    out_dir: Path,
+    timeout_s: int,
+) -> Dict[str, Any]:
+    tool = app_root / "Contents/MacOS/pw-runner-client"
+    if not tool.exists():
+        _die(f"missing pw-runner-client at {tool}")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [str(tool), "run", "--timeout-ms", str(max(1, timeout_s * 1000)), service_bundle_id, str(request_path)]
+    _write_text(out_dir / "cmd.txt", _format_cmd(cmd) + "\n")
+
+    start_ms = _now_unix_ms()
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout_s)
+    end_ms = _now_unix_ms()
+
+    _write_text(out_dir / "outputs.stdout.json", proc.stdout)
+    _write_text(out_dir / "outputs.stderr.txt", proc.stderr)
+    _write_text(out_dir / "outputs.exit_code.txt", str(proc.returncode) + "\n")
+
+    parsed = None
+    parse_error = None
+    try:
+        parsed = json.loads(proc.stdout) if proc.stdout.strip() else None
+    except Exception as exc:
+        parse_error = str(exc)
+
+    _write_json(
+        out_dir / "run.json",
+        {
+            "schema_version": 1,
+            "driver": "pw-runner-client",
+            "started_at_unix_ms": start_ms,
+            "ended_at_unix_ms": end_ms,
+            "argv": cmd,
+            "exit_code": proc.returncode,
+            "parse_error": parse_error,
+            "parsed": parsed,
+        },
+    )
+    return {
+        "exit_code": proc.returncode,
+        "started_at_unix_ms": start_ms,
+        "ended_at_unix_ms": end_ms,
+        "parse_error": parse_error,
+        "parsed": parsed,
+    }
+
+
+def _capture_sandbox_logs_last(
+    app_root: Path,
+    *,
+    pid: int,
+    process_name: str,
+    out_dir: Path,
+    last: str,
+) -> Dict[str, Any]:
+    tool = app_root / "Contents/MacOS/sandbox-log-observer"
+    if not tool.exists():
+        return {"capture_status": "requested_unavailable", "error": f"missing {tool}"}
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        str(tool),
+        "--pid",
+        str(pid),
+        "--process-name",
+        process_name,
+        "--last",
+        last,
+        "--format",
+        "json",
+    ]
+    _write_text(out_dir / "cmd.txt", _format_cmd(cmd) + "\n")
+
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _write_text(out_dir / "outputs.stdout.json", proc.stdout)
+    _write_text(out_dir / "outputs.stderr.txt", proc.stderr)
+    _write_text(out_dir / "outputs.exit_code.txt", str(proc.returncode) + "\n")
+
+    parsed = None
+    parse_error = None
+    try:
+        parsed = json.loads(proc.stdout) if proc.stdout.strip() else None
+    except Exception as exc:
+        parse_error = str(exc)
+    if not isinstance(parsed, dict):
+        return {"capture_status": "requested_unavailable", "error": parse_error or "stdout not json"}
+    parsed["capture_status"] = "captured" if proc.returncode == 0 else "requested_unavailable"
+    parsed["capture_parse_error"] = parse_error
+    return parsed
+
+
+def _instrument_sbpl_message_marker(sbpl: str, message: str) -> str:
+    """
+    Best-effort transformation: add `(with message "...")` to each `(deny ...)` form.
+
+    This intentionally does not try to be a general SBPL rewriter; it is a narrow
+    lab helper and will refuse to transform if it cannot safely identify `deny`
+    forms without getting confused by quoted strings.
+    """
+    text = sbpl
+    spans: List[Tuple[int, int]] = []
+    in_string = False
+    escape = False
+    depth = 0
+
+    def is_sym_char(ch: str) -> bool:
+        return ch.isalnum() or ch in ("-", "_", ".")
+
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            i += 1
+            continue
+        if ch == "(":
+            depth += 1
+            # Look for `(deny` token.
+            j = i + 1
+            while j < len(text) and text[j].isspace():
+                j += 1
+            k = j
+            while k < len(text) and is_sym_char(text[k]):
+                k += 1
+            if text[j:k] == "deny":
+                # Find the matching closing paren for this form.
+                form_depth = 1
+                m = k
+                local_in_string = False
+                local_escape = False
+                while m < len(text):
+                    c2 = text[m]
+                    if local_in_string:
+                        if local_escape:
+                            local_escape = False
+                        elif c2 == "\\":
+                            local_escape = True
+                        elif c2 == '"':
+                            local_in_string = False
+                        m += 1
+                        continue
+                    if c2 == '"':
+                        local_in_string = True
+                        m += 1
+                        continue
+                    if c2 == "(":
+                        form_depth += 1
+                    elif c2 == ")":
+                        form_depth -= 1
+                        if form_depth == 0:
+                            spans.append((i, m))
+                            break
+                    m += 1
+            i += 1
+            continue
+        if ch == ")":
+            depth = max(0, depth - 1)
+            i += 1
+            continue
+        i += 1
+
+    # Apply insertions from right-to-left so offsets remain valid.
+    out = text
+    escaped = message.replace("\\", "\\\\").replace('"', '\\"')
+    suffix = f' (with message "{escaped}")'
+    for start, end in reversed(spans):
+        segment = out[start : end + 1]
+        if "with message" in segment:
+            continue
+        out = out[:end] + suffix + out[end:]
+    return out
+
+
+def cmd_specimen(args: argparse.Namespace) -> int:
+    pw_path = Path(args.pw)
+    if not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+
+    app_root = _app_root_from_pw(pw_path)
+    if not app_root:
+        _die("failed to resolve app root from --pw (expected PolicyWitness.app/Contents/MacOS/policy-witness)")
+
+    runner_info = _resolve_embedded_xpc_bundle_info(app_root, service_dir="PWRunner", variant="base")
+    if not runner_info:
+        _die("failed to resolve embedded PWRunner bundle info")
+
+    service_bundle_id = runner_info["bundle_id"]
+    process_name = runner_info["executable"]
+
+    inside = _inside_probe(service_names=[service_bundle_id])
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    if inside.get("inside") and not allow_inside:
+        out_dir = Path(args.outdir) if args.outdir else Path(args.out_root) / f"{time.strftime('%Y%m%d-%H%M%S')}_specimen_blocked"
+        _ensure_clean_dir(out_dir, force=args.force)
+        _write_json(out_dir / "inside.json", inside)
+        _write_json(
+            out_dir / "lab_summary.json",
+            {
+                "labbook_version": LABBOOK_VERSION,
+                "scenario_id": "specimen",
+                "driver": "pw_runner",
+                "profile": "PWRunner",
+                "variant": "default",
+                "status": "blocked",
+                "exit_code": 3,
+                "inside": inside,
+                "uncertainty": {"confidence": "unknown", "reasons": ["inside"], "collector_health": {}},
+                "steps": [],
+                "evidence": {},
+            },
+        )
+        return 3
+
+    spec_path = Path(args.specimen)
+    spec_obj = _load_yaml_or_json(spec_path)
+    if not isinstance(spec_obj, dict):
+        _die("specimen file must be an object")
+
+    specimen_id = str(spec_obj.get("specimen_id") or "specimen")
+    deny_marker = f"PW_LAB_DENY_MARKER:{specimen_id}"
+    canonical_policy = spec_obj.get("policy")
+    probe_plan = spec_obj.get("probe_plan")
+    if not isinstance(canonical_policy, dict) or not isinstance(probe_plan, list):
+        _die("specimen file must include {policy: {...}, probe_plan: [...]}")
+
+    instrumented_policy = spec_obj.get("instrumented_policy")
+    if instrumented_policy is None:
+        fmt = canonical_policy.get("format")
+        if fmt == "sbpl" and isinstance(canonical_policy.get("sbpl_source"), str):
+            instrumented_policy = dict(canonical_policy)
+            instrumented_policy["sbpl_source"] = _instrument_sbpl_message_marker(
+                canonical_policy["sbpl_source"], deny_marker
+            )
+        else:
+            _die("missing instrumented_policy (and canonical policy cannot be auto-instrumented)")
+
+    if args.outdir:
+        out_dir = Path(args.outdir)
+    else:
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        out_dir = Path(args.out_root) / f"{stamp}_specimen_{specimen_id}"
+    _ensure_clean_dir(out_dir, force=args.force)
+
+    _write_json(out_dir / "inside.json", inside)
+    _write_json(out_dir / "specimen.json", spec_obj if isinstance(spec_obj, dict) else {"raw": spec_obj})
+
+    # Canonical run
+    canonical_req = {
+        "schema_version": 1,
+        "specimen_id": specimen_id,
+        "run_kind": "canonical",
+        "policy": canonical_policy,
+        "probe_plan": probe_plan,
+    }
+    canonical_req_path = out_dir / "canonical.request.json"
+    _write_json(canonical_req_path, canonical_req)
+    canonical_run = _run_pw_runner_client(
+        app_root,
+        service_bundle_id=service_bundle_id,
+        request_path=canonical_req_path,
+        out_dir=out_dir / "canonical",
+        timeout_s=args.timeout_s,
+    )
+
+    # Instrumented run (for deterministic deny markers via SBPL `message`).
+    instr_req = {
+        "schema_version": 1,
+        "specimen_id": specimen_id,
+        "run_kind": "instrumented",
+        "policy": instrumented_policy,
+        "probe_plan": probe_plan,
+    }
+    instr_req_path = out_dir / "instrumented.request.json"
+    _write_json(instr_req_path, instr_req)
+    instrumented_run = _run_pw_runner_client(
+        app_root,
+        service_bundle_id=service_bundle_id,
+        request_path=instr_req_path,
+        out_dir=out_dir / "instrumented",
+        timeout_s=args.timeout_s,
+    )
+
+    # Channel C: unified-log deny capture (best-effort, but required for high confidence).
+    canonical_pid = (canonical_run.get("parsed") or {}).get("pid") if isinstance(canonical_run.get("parsed"), dict) else None
+    instrumented_pid = (instrumented_run.get("parsed") or {}).get("pid") if isinstance(instrumented_run.get("parsed"), dict) else None
+
+    canonical_logs = None
+    if isinstance(canonical_pid, int):
+        canonical_logs = _capture_sandbox_logs_last(
+            app_root, pid=canonical_pid, process_name=process_name, out_dir=out_dir / "canonical_sandbox_logs", last=args.log_last
+        )
+        _write_json(out_dir / "canonical_sandbox_logs.json", canonical_logs)
+
+    instrumented_logs = None
+    if isinstance(instrumented_pid, int):
+        instrumented_logs = _capture_sandbox_logs_last(
+            app_root,
+            pid=instrumented_pid,
+            process_name=process_name,
+            out_dir=out_dir / "instrumented_sandbox_logs",
+            last=args.log_last,
+        )
+        _write_json(out_dir / "instrumented_sandbox_logs.json", instrumented_logs)
+
+    summary = _summarize_specimen_eval(
+        specimen_id=specimen_id,
+        variant="default",
+        probe_plan=probe_plan,
+        canonical=canonical_run.get("parsed"),
+        instrumented=instrumented_run.get("parsed"),
+        canonical_logs=canonical_logs,
+        instrumented_logs=instrumented_logs,
+        deny_marker=deny_marker,
+        inside=inside,
+    )
+    _write_json(out_dir / "lab_summary.json", summary)
+    return 0 if summary.get("status") == "pass" else 1
+
+
+def _summarize_specimen_eval(
+    *,
+    specimen_id: str,
+    variant: str,
+    probe_plan: List[Any],
+    canonical: Any,
+    instrumented: Any,
+    canonical_logs: Optional[Dict[str, Any]],
+    instrumented_logs: Optional[Dict[str, Any]],
+    deny_marker: str,
+    inside: Dict[str, Any],
+) -> Dict[str, Any]:
+    steps: List[Dict[str, Any]] = []
+    plan_by_step: Dict[str, Dict[str, Any]] = {}
+    for entry in probe_plan:
+        if not isinstance(entry, dict):
+            continue
+        sid = entry.get("step_id")
+        if isinstance(sid, str):
+            plan_by_step[sid] = entry
+
+    canon_steps = (canonical or {}).get("steps") if isinstance(canonical, dict) else None
+    instr_steps = (instrumented or {}).get("steps") if isinstance(instrumented, dict) else None
+
+    # Channel B: deterministic marker emitted by SBPL `message` on deny.
+    marker_observed = None
+    if deny_marker:
+        logs_obj = instrumented_logs if isinstance(instrumented_logs, dict) else canonical_logs
+        if isinstance(logs_obj, dict):
+            data = logs_obj.get("data") if isinstance(logs_obj.get("data"), dict) else {}
+            log_stdout = data.get("log_stdout")
+            if isinstance(log_stdout, str):
+                marker_observed = deny_marker in log_stdout
+
+    if isinstance(canon_steps, list):
+        for s in canon_steps:
+            if not isinstance(s, dict):
+                continue
+            sid = s.get("step_id")
+            plan = plan_by_step.get(sid) if isinstance(sid, str) else None
+            plan_attempt = (plan or {}).get("attempt") if isinstance(plan, dict) else None
+            probe_id = "-"
+            if isinstance(plan_attempt, dict):
+                kind = plan_attempt.get("kind")
+                action = plan_attempt.get("action")
+                if isinstance(kind, str) and isinstance(action, str):
+                    probe_id = f"{kind}:{action}"
+
+            attempt = s.get("attempt") or {}
+            sb = s.get("sandbox_check") or {}
+            rc = attempt.get("rc")
+            err = attempt.get("errno")
+            sb_outcome = sb.get("outcome")
+
+            # Classification: avoid concluding "sandbox denied" without multi-channel support.
+            outcome = "ok"
+            ok = rc == 0
+            if rc != 0 and sb_outcome == "deny":
+                outcome = "failed_predicted_deny"
+                ok = False
+            if rc != 0 and sb_outcome == "allow":
+                outcome = "failed_predicted_allow"
+                ok = False
+            if rc == 0 and sb_outcome == "deny":
+                outcome = "mismatch_allow_but_predicted_deny"
+                ok = False
+
+            steps.append(
+                {
+                    "step_id": sid,
+                    "probe_id": probe_id,
+                    "ok": ok,
+                    "normalized_outcome": outcome,
+                    "rc": rc,
+                    "errno": err,
+                    "probe_exec_overlap": None,
+                    "sandbox_check_outcome": sb_outcome,
+                    "deny_marker_observed": marker_observed,
+                }
+            )
+
+    def _observed_deny_from_capture(obj: Any) -> Any:
+        if not isinstance(obj, dict):
+            return None
+        if "observed_deny" in obj:
+            return obj.get("observed_deny")
+        data = obj.get("data")
+        if isinstance(data, dict) and "observed_deny" in data:
+            return data.get("observed_deny")
+        return None
+
+    observed_deny = _observed_deny_from_capture(canonical_logs)
+    if observed_deny is not True:
+        observed_deny = _observed_deny_from_capture(instrumented_logs)
+
+    confidence = "unknown"
+    reasons: List[str] = []
+    if observed_deny is not True:
+        reasons.append("sandbox_deny_not_observed")
+    if marker_observed is not True:
+        reasons.append("deny_marker_not_observed")
+    if observed_deny is True and marker_observed is True and steps:
+        confidence = "high"
+
+    status = "pass" if (isinstance(canonical, dict) and canonical.get("normalized_outcome") == "ok") else "fail"
+    return {
+        "labbook_version": LABBOOK_VERSION,
+        "scenario_id": f"specimen:{specimen_id}",
+        "driver": "pw_runner",
+        "profile": "PWRunner",
+        "variant": variant,
+        "status": status,
+        "exit_code": 0 if status == "pass" else 1,
+        "inside": inside,
+        "uncertainty": {"confidence": confidence, "reasons": reasons, "collector_health": {}},
+        "steps": steps,
+        "evidence": {
+            "sandbox_logs": {"observed_deny": observed_deny},
+            "deny_marker": {"value": deny_marker, "observed": marker_observed},
+        },
+    }
+
+
+def cmd_tui(args: argparse.Namespace) -> int:
+    try:
+        import curses
+    except Exception as exc:  # pragma: no cover - import failure is platform-specific
+        _die(f"curses is unavailable: {exc}")
+
+    run_dir = Path(args.run_dir)
+    summary = _load_summary(run_dir)
+    log_path = _tui_log_path()
+    test_out = os.environ.get("PW_LAB_TUI_TEST_OUT")
+    script_spec = os.environ.get("PW_LAB_TUI_SCRIPT", "")
+
+    def _load_optional_json(path: Path) -> Optional[Any]:
+        if not path.exists():
+            return None
+        try:
+            return _load_json(path)
+        except Exception as exc:
+            return {"_error": f"failed to parse {path.name}: {exc}"}
+
+    specimen = _load_optional_json(run_dir / "specimen.json")
+    canonical_run = _load_optional_json(run_dir / "canonical" / "run.json")
+    instrumented_run = _load_optional_json(run_dir / "instrumented" / "run.json")
+    canonical_logs = _load_optional_json(run_dir / "canonical_sandbox_logs.json")
+    instrumented_logs = _load_optional_json(run_dir / "instrumented_sandbox_logs.json")
+
+    def _json_pretty(value: Any) -> str:
+        if value is None:
+            return "-"
+        if isinstance(value, (dict, list)):
+            try:
+                return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False)
+            except Exception:
+                return str(value)
+        return str(value)
+
+    def _preview_text(value: Any, *, max_len: int = 120) -> str:
+        text = _json_pretty(value)
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = " ".join(text.splitlines())
+        if len(text) <= max_len:
+            return text
+        return text[: max(0, max_len - 3)] + "..."
+
+    def _row(key: str, label: str, value: Any, *, preview: Optional[str] = None) -> Dict[str, str]:
+        full = _json_pretty(value)
+        if preview is None:
+            preview = _preview_text(value)
+        return {"key": key, "label": label, "value": full, "preview": preview}
+
+    def _extract_pid(client_run: Any) -> Any:
+        if not isinstance(client_run, dict):
+            return None
+        parsed = client_run.get("parsed")
+        if isinstance(parsed, dict) and "pid" in parsed:
+            return parsed.get("pid")
+        return None
+
+    def _extract_parse_error(client_run: Any) -> Any:
+        if not isinstance(client_run, dict):
+            return None
+        if client_run.get("parse_error"):
+            return client_run.get("parse_error")
+        parsed = client_run.get("parsed")
+        if isinstance(parsed, dict) and parsed.get("error"):
+            return parsed.get("error")
+        return None
+
+    def _build_pages() -> List[Dict[str, Any]]:
+        pages: List[Dict[str, Any]] = []
+
+        profile_rows: List[Dict[str, str]] = []
+        profile_rows.append(_row("specimen.path", "specimen", str(run_dir / "specimen.json")))
+        if isinstance(specimen, dict):
+            profile_rows.append(_row("specimen.specimen_id", "specimen_id", specimen.get("specimen_id") or "-"))
+            policy = specimen.get("policy") or {}
+            profile_rows.append(
+                _row("policy.format", "policy.format", (policy.get("format") if isinstance(policy, dict) else None))
+            )
+            if isinstance(policy, dict) and policy.get("params") is not None:
+                profile_rows.append(_row("policy.params", "policy.params", policy.get("params")))
+            if isinstance(policy, dict) and policy.get("sbpl_source") is not None:
+                src = policy.get("sbpl_source") or ""
+                if isinstance(src, str):
+                    profile_rows.append(
+                        _row(
+                            "policy.sbpl_source",
+                            "policy.sbpl_source",
+                            src,
+                            preview=f"SBPL source ({len(src)} chars)",
+                        )
+                    )
+            if isinstance(policy, dict) and policy.get("compiled_profile_b64") is not None:
+                b64 = policy.get("compiled_profile_b64") or ""
+                if isinstance(b64, str):
+                    profile_rows.append(
+                        _row(
+                            "policy.compiled_profile_b64",
+                            "policy.compiled_profile_b64",
+                            b64,
+                            preview=f"compiled b64 ({len(b64)} chars)",
+                        )
+                    )
+
+            plan = specimen.get("probe_plan") or []
+            if isinstance(plan, list):
+                profile_rows.append(_row("probe_plan.count", "probe_plan.count", len(plan)))
+                for entry in plan:
+                    if not isinstance(entry, dict):
+                        continue
+                    step_id = str(entry.get("step_id") or "-")
+                    attempt = entry.get("attempt") or {}
+                    sb = entry.get("sandbox_check") or {}
+                    label = f"step {step_id}"
+                    preview = _preview_text({"attempt": attempt, "sandbox_check": sb}, max_len=140)
+                    profile_rows.append(_row(f"probe_plan.{step_id}", label, entry, preview=preview))
+        else:
+            profile_rows.append(_row("specimen.missing", "note", "specimen.json missing (older run format?)"))
+        pages.append({"id": "profile", "title": "Profile", "rows": profile_rows})
+
+        program_rows: List[Dict[str, str]] = []
+        program_rows.append(_row("run_dir", "run_dir", str(run_dir)))
+        program_rows.append(_row("labbook_version", "labbook_version", summary.get("labbook_version")))
+        program_rows.append(_row("scenario_id", "scenario_id", summary.get("scenario_id")))
+        program_rows.append(_row("driver", "driver", summary.get("driver")))
+        program_rows.append(_row("status", "status", summary.get("status")))
+        program_rows.append(_row("exit_code", "exit_code", summary.get("exit_code")))
+
+        inside = summary.get("inside")
+        if inside is not None:
+            program_rows.append(_row("inside", "inside", inside))
+            if isinstance(inside, dict):
+                program_rows.append(_row("inside.inside", "inside.inside", inside.get("inside")))
+                program_rows.append(_row("inside.trigger", "inside.trigger", inside.get("trigger")))
+
+        if canonical_run is not None:
+            program_rows.append(
+                _row(
+                    "canonical.exit_code",
+                    "canonical.exit_code",
+                    (canonical_run.get("exit_code") if isinstance(canonical_run, dict) else None),
+                )
+            )
+            program_rows.append(_row("canonical.pid", "canonical.pid", _extract_pid(canonical_run)))
+            pe = _extract_parse_error(canonical_run)
+            if pe:
+                program_rows.append(_row("canonical.parse_error", "canonical.parse_error", pe))
+        if instrumented_run is not None:
+            program_rows.append(
+                _row(
+                    "instrumented.exit_code",
+                    "instrumented.exit_code",
+                    (instrumented_run.get("exit_code") if isinstance(instrumented_run, dict) else None),
+                )
+            )
+            program_rows.append(_row("instrumented.pid", "instrumented.pid", _extract_pid(instrumented_run)))
+            pe = _extract_parse_error(instrumented_run)
+            if pe:
+                program_rows.append(_row("instrumented.parse_error", "instrumented.parse_error", pe))
+
+        if canonical_logs is not None:
+            program_rows.append(_row("canonical_sandbox_logs", "canonical_sandbox_logs", canonical_logs))
+        if instrumented_logs is not None:
+            program_rows.append(_row("instrumented_sandbox_logs", "instrumented_sandbox_logs", instrumented_logs))
+
+        evidence = summary.get("evidence") or {}
+        if evidence:
+            program_rows.append(_row("evidence", "evidence", evidence))
+        pages.append({"id": "program", "title": "Program", "rows": program_rows})
+
+        result_rows: List[Dict[str, str]] = []
+        result_rows.append(_row("status", "status", summary.get("status")))
+        result_rows.append(_row("uncertainty", "uncertainty", summary.get("uncertainty")))
+        steps = summary.get("steps") or []
+        if isinstance(steps, list):
+            result_rows.append(_row("steps.count", "steps.count", len(steps)))
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                sid = str(step.get("step_id") or "-")
+                probe = str(step.get("probe_id") or "-")
+                ok = _format_tri(step.get("ok"))
+                outcome = str(step.get("normalized_outcome") or "-")
+                rc = step.get("rc")
+                err = step.get("errno")
+                sb = str(step.get("sandbox_check_outcome") or "-")
+                marker = _format_tri(step.get("deny_marker_observed"))
+                preview = f"{probe} ok={ok} outcome={outcome} rc={rc} errno={err} sb={sb} marker={marker}"
+                result_rows.append(_row(f"step.{sid}", sid, step, preview=preview))
+        pages.append({"id": "results", "title": "Results", "rows": result_rows})
+
+        return pages
+
+    pages = _build_pages()
+
+    def _rows_for_page(page_idx: int) -> List[Dict[str, str]]:
+        if not pages:
+            return []
+        return pages[page_idx].get("rows") or []
+
+    selection_state: Dict[str, Any] = {
+        "page": pages[0]["id"] if pages else None,
+        "mode": "list",
+        "selected_row": 0,
+        "selected_col": 0,
+        "total_rows": len(_rows_for_page(0)),
+        "total_cols": 1,
+        "field_key": None,
+        "field_label": None,
+        "field_value": None,
+    }
+
+    def _parse_script(spec: str) -> List[int]:
+        tokens = [t for t in re.split(r"[,\s]+", spec.strip()) if t]
+        keymap = {
+            "UP": curses.KEY_UP,
+            "DOWN": curses.KEY_DOWN,
+            "TAB": 9,
+            "BTAB": curses.KEY_BTAB,
+            "SHIFT+TAB": curses.KEY_BTAB,
+            "PGUP": curses.KEY_PPAGE,
+            "PGDN": curses.KEY_NPAGE,
+            "HOME": curses.KEY_HOME,
+            "END": curses.KEY_END,
+            "ENTER": 10,
+            "ESC": 27,
+        }
+        keys = []
+        for token in tokens:
+            upper = token.upper()
+            if upper in keymap:
+                keys.append(keymap[upper])
+                continue
+            if len(token) == 1:
+                keys.append(ord(token))
+                continue
+            _tui_log(log_path, f"unknown script token: {token}")
+        return keys
+
+    def _update_selection_state(page_idx: int, mode: str, row_idx: int) -> None:
+        page = pages[page_idx] if pages else {"id": None, "title": None}
+        rows = _rows_for_page(page_idx)
+        selection_state["page"] = page.get("id")
+        selection_state["mode"] = mode
+        selection_state["selected_row"] = row_idx
+        selection_state["selected_col"] = 0
+        selection_state["total_rows"] = len(rows)
+        selection_state["total_cols"] = 1
+        if not rows:
+            selection_state["field_key"] = None
+            selection_state["field_label"] = None
+            selection_state["field_value"] = None
+            return
+        row = rows[row_idx]
+        selection_state["field_key"] = row.get("key")
+        selection_state["field_label"] = row.get("label")
+        selection_state["field_value"] = row.get("value")
+
+    def _run(stdscr: Any) -> int:
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
+        stdscr.nodelay(False)
+        stdscr.keypad(True)
+
+        page_idx = 0
+        selected_row = 0
+        row_offset = 0
+        mode = "list"  # list | detail
+        detail_scroll = 0
+        status_message = ""
+        render_errors = 0
+        last_error = ""
+        script_keys = _parse_script(script_spec) if script_spec else []
+        if script_keys:
+            for key in reversed(script_keys):
+                try:
+                    curses.ungetch(key)
+                except curses.error as exc:
+                    render_errors += 1
+                    last_error = str(exc) or "curses.error"
+                    _tui_log(log_path, f"ungetch error: {last_error}")
+
+        while True:
+            try:
+                stdscr.erase()
+                height, width = stdscr.getmaxyx()
+                view_height = height - 2  # header + status
+                if height < 4 or width < 20 or view_height < 1:
+                    try:
+                        stdscr.addnstr(0, 0, "window too small (resize to continue)", max(0, width - 1))
+                        if height > 1:
+                            stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                    except curses.error:
+                        pass
+                    stdscr.refresh()
+                    key = stdscr.getch()
+                    if key in (ord("q"), ord("Q")):
+                        return 0
+                    continue
+
+                if not pages:
+                    stdscr.addnstr(0, 0, "pw-lab tui: no pages", max(0, width - 1))
+                    stdscr.addnstr(height - 1, 0, "q quit", max(0, width - 1))
+                    stdscr.refresh()
+                    key = stdscr.getch()
+                    if key in (ord("q"), ord("Q")):
+                        return 0
+                    continue
+
+                def safe_addstr(y: int, x: int, text: str, attr: int = 0) -> None:
+                    nonlocal render_errors, last_error
+                    if y < 0 or y >= height:
+                        return
+                    if x < 0 or x >= width:
+                        return
+                    max_width = max(0, width - x - 1)
+                    if max_width <= 0:
+                        return
+                    try:
+                        if attr:
+                            stdscr.addnstr(y, x, text, max_width, attr)
+                        else:
+                            stdscr.addnstr(y, x, text, max_width)
+                    except curses.error as exc:
+                        render_errors += 1
+                        last_error = str(exc) or "curses.error"
+                        _tui_log(log_path, f"render error: {last_error}")
+
+                page = pages[page_idx]
+                rows = _rows_for_page(page_idx)
+                total_rows = len(rows)
+
+                header = f"{page['title']} [{page_idx+1}/3]  {run_dir.name}"
+                safe_addstr(0, 0, _truncate(header, width))
+
+                if mode == "list":
+                    if total_rows > 0:
+                        selected_row = max(0, min(selected_row, total_rows - 1))
+                        row_offset = max(0, min(row_offset, max(total_rows - view_height, 0)))
+                        if selected_row < row_offset:
+                            row_offset = selected_row
+                        if selected_row >= row_offset + view_height:
+                            row_offset = selected_row - view_height + 1
+                    else:
+                        selected_row = 0
+                        row_offset = 0
+
+                    max_label = max((len(r.get("label", "")) for r in rows), default=0)
+                    label_w = min(max(10, width // 3), min(max_label, 24))
+                    value_w = max(0, width - label_w - 2)
+
+                    for idx in range(view_height):
+                        row_index = row_offset + idx
+                        if row_index >= total_rows:
+                            break
+                        row = rows[row_index]
+                        y = 1 + idx
+                        label = str(row.get("label") or "")
+                        preview = str(row.get("preview") or row.get("value") or "")
+                        preview = preview.replace("\r\n", "\n").replace("\r", "\n")
+                        preview = " ".join(preview.splitlines())
+                        line = label.ljust(label_w)[:label_w] + "  " + _truncate(preview, value_w).rstrip()
+                        attr = curses.A_REVERSE if row_index == selected_row else 0
+                        safe_addstr(y, 0, _truncate(line, width), attr)
+
+                    if total_rows == 0:
+                        safe_addstr(2, 0, "no rows")
+
+                    _update_selection_state(page_idx, mode, selected_row)
+                    sel_label = selection_state.get("field_label") or "-"
+                    sel_value = selection_state.get("field_value") or "-"
+                    status = f"{page['title']} {selected_row+1}/{max(total_rows,1)}  {sel_label}={_preview_text(sel_value, max_len=80)}  |  1/2/3 pages  ↑↓ PgUp/PgDn  Enter detail  y copy  q quit"
+                else:
+                    _update_selection_state(page_idx, mode, selected_row)
+                    sel_label = selection_state.get("field_label") or "-"
+                    sel_value = selection_state.get("field_value") or "-"
+                    wrapped = textwrap.wrap(
+                        str(sel_value),
+                        width=max(1, width - 1),
+                        replace_whitespace=False,
+                        drop_whitespace=False,
+                        break_long_words=True,
+                        break_on_hyphens=False,
+                    )
+                    wrapped = wrapped or [""]
+                    detail_scroll = max(0, min(detail_scroll, max(len(wrapped) - view_height, 0)))
+                    for idx in range(view_height):
+                        li = detail_scroll + idx
+                        if li >= len(wrapped):
+                            break
+                        safe_addstr(1 + idx, 0, _truncate(wrapped[li], width))
+                    status = f"detail {sel_label}  line {detail_scroll+1}/{len(wrapped)}  |  ↑↓ PgUp/PgDn  Esc back  y copy  q quit"
+
+                if status_message:
+                    status = f"{status}  |  {status_message}"
+                if render_errors > 0:
+                    status = f"{status}  |  render_errs={render_errors}"
+
+                safe_addstr(height - 1, 0, _truncate(status, width))
+                status_message = ""
+
+                stdscr.refresh()
+                key = stdscr.getch()
+            except curses.error as exc:
+                render_errors += 1
+                last_error = str(exc) or "curses.error"
+                _tui_log(log_path, f"render loop error: {last_error}")
+                try:
+                    stdscr.erase()
+                    stdscr.refresh()
+                except curses.error:
+                    pass
+                continue
+
+            if key in (ord("q"), ord("Q")):
+                return 0
+            if key == curses.KEY_RESIZE:
+                try:
+                    stdscr.nodelay(True)
+                    while True:
+                        ch = stdscr.getch()
+                        if ch == curses.KEY_RESIZE:
+                            continue
+                        if ch == -1:
+                            break
+                        try:
+                            curses.ungetch(ch)
+                        except curses.error:
+                            pass
+                        break
+                finally:
+                    stdscr.nodelay(False)
+                try:
+                    curses.clearok(stdscr, True)
+                except curses.error as exc:
+                    render_errors += 1
+                    last_error = str(exc) or "curses.error"
+                    _tui_log(log_path, f"resize error: {last_error}")
+                continue
+
+            if mode == "list":
+                if key in (ord("1"), ord("2"), ord("3")):
+                    page_idx = int(chr(key)) - 1
+                    page_idx = max(0, min(page_idx, len(pages) - 1))
+                    selected_row = 0
+                    row_offset = 0
+                    detail_scroll = 0
+                    continue
+                if key in (9, ord("\t")):
+                    page_idx = (page_idx + 1) % len(pages)
+                    selected_row = 0
+                    row_offset = 0
+                    detail_scroll = 0
+                    continue
+                if key == curses.KEY_BTAB:
+                    page_idx = (page_idx - 1) % len(pages)
+                    selected_row = 0
+                    row_offset = 0
+                    detail_scroll = 0
+                    continue
+
+                rows = _rows_for_page(page_idx)
+                total_rows = len(rows)
+                if key in (curses.KEY_UP, ord("k")):
+                    selected_row = max(0, selected_row - 1)
+                elif key in (curses.KEY_DOWN, ord("j")):
+                    selected_row = min(max(total_rows - 1, 0), selected_row + 1)
+                elif key in (curses.KEY_PPAGE,):
+                    selected_row = max(0, selected_row - view_height)
+                elif key in (curses.KEY_NPAGE,):
+                    selected_row = min(max(total_rows - 1, 0), selected_row + view_height)
+                elif key in (curses.KEY_HOME, ord("g")):
+                    selected_row = 0
+                elif key in (curses.KEY_END, ord("G")):
+                    selected_row = max(total_rows - 1, 0)
+                elif key in (ord("y"),):
+                    if total_rows > 0:
+                        value = rows[selected_row].get("value", "")
+                        ok, msg = _pbcopy(value)
+                        status_message = msg
+                elif key in (curses.KEY_ENTER, 10, 13):
+                    if total_rows > 0:
+                        mode = "detail"
+                        detail_scroll = 0
+                continue
+
+            # detail mode
+            if key in (27,):  # esc
+                mode = "list"
+                detail_scroll = 0
+                continue
+            if key in (ord("y"),):
+                value = selection_state.get("field_value") or ""
+                ok, msg = _pbcopy(str(value))
+                status_message = msg
+                continue
+            if key in (curses.KEY_UP, ord("k")):
+                detail_scroll = max(0, detail_scroll - 1)
+            elif key in (curses.KEY_DOWN, ord("j")):
+                detail_scroll = detail_scroll + 1
+            elif key in (curses.KEY_PPAGE,):
+                detail_scroll = max(0, detail_scroll - view_height)
+            elif key in (curses.KEY_NPAGE,):
+                detail_scroll = detail_scroll + view_height
+            elif key in (curses.KEY_HOME, ord("g")):
+                detail_scroll = 0
+            elif key in (curses.KEY_END, ord("G")):
+                detail_scroll = 1_000_000_000
+
+        return 0
+
+    _update_selection_state(0, "list", 0)
+    exit_code = curses.wrapper(_run)
+    if test_out:
+        _write_json(Path(test_out), selection_state)
+    return exit_code
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    scenario_path = _resolve_scenario_path(args.scenario, Path(args.scenario_dir))
+    scenario = _load_scenario(scenario_path)
+
+    if args.outdir:
+        out_dir = Path(args.outdir)
+    else:
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        out_dir = Path(args.out_root) / f"{stamp}_{scenario.get('id')}"
+
+    _ensure_out_dir(out_dir, force=args.force)
+
+    plan = {
+        "scenario_id": scenario.get("id"),
+        "driver": scenario.get("driver"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "steps": scenario.get("steps"),
+    }
+    _write_json(out_dir / "plan.json", plan)
+
+    if args.dry_run:
+        return 0
+
+    pw_path = Path(args.pw)
+    if not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+    sandbox_capture = None
+
+    service_names = _service_names_for_scenario(pw_path, scenario)
+    inside = _inside_probe(service_names)
+    _write_json(out_dir / "inside.json", inside)
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    if inside.get("inside") and not allow_inside:
+        run = {
+            "schema_version": 1,
+            "run_type": "preflight",
+            "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+            "inside": inside,
+            "exit_code": 3,
+            "stdout": "",
+            "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+        }
+        _write_json(out_dir / "run.json", run)
+        summary = {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": scenario.get("driver"),
+            "status": "blocked",
+            "exit_code": 3,
+            "inside": inside,
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["inside"],
+                "collector_health": {},
+            },
+        }
+        _write_json(out_dir / "lab_summary.json", summary)
+        _write_env(out_dir, scenario, pw_path, run, inside=inside)
+        return 3
+
+    if scenario.get("driver") == "shell":
+        run = _run_shell_scenario(scenario, out_dir, pw_path)
+        summary = {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": "shell",
+            "status": "pass" if run.get("exit_code") == 0 else "fail",
+            "exit_code": run.get("exit_code"),
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["shell_driver"],
+                "collector_health": {},
+            },
+        }
+        summary["inside"] = inside
+    else:
+        run, sandbox_capture = _run_xpc_session_scenario(
+            scenario,
+            out_dir,
+            pw_path,
+            signposts=not args.no_signposts,
+            wait_timeout_ms=args.wait_timeout_ms,
+            fence=not args.no_fence,
+            capture_sandbox_logs=args.capture_sandbox_logs,
+        )
+        summary = _summarize_run(scenario, run, sandbox_capture)
+        summary["inside"] = inside
+
+    _write_json(out_dir / "lab_summary.json", summary)
+    _write_env(out_dir, scenario, pw_path, run, inside=inside)
+    return 0
+
+
+def cmd_batch(args: argparse.Namespace) -> int:
+    suite_path = _resolve_suite_path(args.suite, Path(args.suite_dir))
+    suite = _load_suite(suite_path)
+    pw_path = Path(args.pw)
+    if not args.dry_run and not pw_path.exists():
+        _die(f"PolicyWitness binary not found: {pw_path}")
+    results = []
+    failures = 0
+    allow_inside = os.environ.get("PW_LAB_ALLOW_INSIDE") == "1"
+    for entry in suite.get("scenarios", []):
+        if isinstance(entry, str):
+            scenario_ref = entry
+            overrides = {}
+        elif isinstance(entry, dict):
+            scenario_ref = entry.get("scenario") or entry.get("id")
+            overrides = dict(entry)
+        else:
+            _die("invalid scenario entry in suite")
+        if not scenario_ref:
+            _die("suite entry missing scenario id")
+        scenario_path = _resolve_scenario_path(scenario_ref, Path(args.scenario_dir))
+        scenario = _load_scenario(scenario_path)
+        scenario.update({k: v for k, v in overrides.items() if k not in ("scenario", "id")})
+
+        if args.outdir:
+            out_dir = Path(args.outdir) / scenario.get("id")
+        else:
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            out_dir = Path(args.out_root) / f"{stamp}_{scenario.get('id')}"
+        _ensure_out_dir(out_dir, force=args.force)
+
+        if args.dry_run:
+            _write_json(out_dir / "plan.json", {"scenario_id": scenario.get("id"), "driver": scenario.get("driver")})
+            results.append({"scenario_id": scenario.get("id"), "status": "planned", "out_dir": str(out_dir)})
+            continue
+
+        if scenario.get("driver") == "shell":
+            service_names = _service_names_for_scenario(pw_path, scenario)
+            inside = _inside_probe(service_names)
+            _write_json(out_dir / "inside.json", inside)
+            if inside.get("inside") and not allow_inside:
+                run = {
+                    "schema_version": 1,
+                    "run_type": "preflight",
+                    "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+                    "inside": inside,
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+                }
+                _write_json(out_dir / "run.json", run)
+                summary = {
+                    "labbook_version": LABBOOK_VERSION,
+                    "scenario_id": scenario.get("id"),
+                    "driver": "shell",
+                    "status": "blocked",
+                    "exit_code": 3,
+                    "inside": inside,
+                    "uncertainty": {
+                        "confidence": "unknown",
+                        "reasons": ["inside"],
+                        "collector_health": {},
+                    },
+                }
+                _write_json(out_dir / "lab_summary.json", summary)
+                _write_env(out_dir, scenario, pw_path, run, inside=inside)
+                results.append(
+                    {"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)}
+                )
+                failures += 1
+                if not args.continue_on_fail:
+                    break
+                continue
+
+            run = _run_shell_scenario(scenario, out_dir, pw_path)
+            summary = {
+                "labbook_version": LABBOOK_VERSION,
+                "scenario_id": scenario.get("id"),
+                "driver": "shell",
+                "status": "pass" if run.get("exit_code") == 0 else "fail",
+                "exit_code": run.get("exit_code"),
+                "inside": inside,
+                "uncertainty": {
+                    "confidence": "unknown",
+                    "reasons": ["shell_driver"],
+                    "collector_health": {},
+                },
+            }
+        else:
+            service_names = _service_names_for_scenario(pw_path, scenario)
+            inside = _inside_probe(service_names)
+            _write_json(out_dir / "inside.json", inside)
+            if inside.get("inside") and not allow_inside:
+                run = {
+                    "schema_version": 1,
+                    "run_type": "preflight",
+                    "scenario": {"id": scenario.get("id"), "driver": scenario.get("driver")},
+                    "inside": inside,
+                    "exit_code": 3,
+                    "stdout": "",
+                    "stderr": "blocked: inside=true (rerun outside the harness / with escalation)",
+                }
+                _write_json(out_dir / "run.json", run)
+                summary = {
+                    "labbook_version": LABBOOK_VERSION,
+                    "scenario_id": scenario.get("id"),
+                    "driver": scenario.get("driver"),
+                    "status": "blocked",
+                    "exit_code": 3,
+                    "inside": inside,
+                    "uncertainty": {
+                        "confidence": "unknown",
+                        "reasons": ["inside"],
+                        "collector_health": {},
+                    },
+                }
+                _write_json(out_dir / "lab_summary.json", summary)
+                _write_env(out_dir, scenario, pw_path, run, inside=inside)
+                results.append(
+                    {"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)}
+                )
+                failures += 1
+                if not args.continue_on_fail:
+                    break
+                continue
+
+            run, sandbox_capture = _run_xpc_session_scenario(
+                scenario,
+                out_dir,
+                pw_path,
+                signposts=not args.no_signposts,
+                wait_timeout_ms=args.wait_timeout_ms,
+                fence=not args.no_fence,
+                capture_sandbox_logs=args.capture_sandbox_logs,
+            )
+            summary = _summarize_run(scenario, run, sandbox_capture)
+            summary["inside"] = inside
+        _write_json(out_dir / "lab_summary.json", summary)
+        _write_env(out_dir, scenario, pw_path, run, inside=inside)
+        results.append({"scenario_id": scenario.get("id"), "status": summary.get("status"), "out_dir": str(out_dir)})
+        if summary.get("status") != "pass":
+            failures += 1
+            if not args.continue_on_fail:
+                break
+
+    batch_summary = {
+        "schema_version": 1,
+        "suite_id": suite.get("id"),
+        "failures": failures,
+        "results": results,
+    }
+    if args.outdir:
+        _write_json(Path(args.outdir) / "batch_summary.json", batch_summary)
+    return 0 if failures == 0 else 1
+
+
+def _load_summary(run_dir: Path) -> Dict[str, Any]:
+    summary_path = run_dir / "lab_summary.json"
+    if summary_path.exists():
+        return _load_json(summary_path)
+    run_path = run_dir / "run.json"
+    if not run_path.exists():
+        _die("missing run.json or lab_summary.json")
+    run = _load_json(run_path)
+    scenario = run.get("scenario") or {}
+    if scenario.get("driver") == "shell" or run.get("run_type") == "shell":
+        return {
+            "labbook_version": LABBOOK_VERSION,
+            "scenario_id": scenario.get("id"),
+            "driver": "shell",
+            "status": "pass" if run.get("exit_code") == 0 else "fail",
+            "exit_code": run.get("exit_code"),
+            "uncertainty": {
+                "confidence": "unknown",
+                "reasons": ["shell_driver"],
+                "collector_health": {},
+            },
+        }
+    scenario_obj = {
+        "id": scenario.get("id"),
+        "profile": scenario.get("profile"),
+        "variant": scenario.get("variant"),
+        "driver": "xpc_session",
+        "steps": scenario.get("steps", []),
+    }
+    return _summarize_run(scenario_obj, run, None)
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    summary = _load_summary(run_dir)
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print(f"scenario={summary.get('scenario_id')} status={summary.get('status')}")
+        for step in summary.get("steps", []):
+            print(
+                f"  step={step.get('step_id')} probe={step.get('probe_id')} ok={step.get('ok')} outcome={step.get('normalized_outcome')}"
+            )
+        unc = summary.get("uncertainty", {})
+        print(f"confidence={unc.get('confidence')} reasons={unc.get('reasons')}")
+    return 0
+
+
+def _diff_summaries(left: Dict[str, Any], right: Dict[str, Any]) -> List[Dict[str, Any]]:
+    changes: List[Dict[str, Any]] = []
+
+    def add(path: str, a: Any, b: Any) -> None:
+        if a != b:
+            changes.append({"path": path, "left": a, "right": b})
+
+    add("status", left.get("status"), right.get("status"))
+
+    l_steps = left.get("steps", [])
+    r_steps = right.get("steps", [])
+    for idx, step in enumerate(l_steps):
+        if idx >= len(r_steps):
+            add(f"steps[{idx}]", step, None)
+            continue
+        add(f"steps[{idx}].probe_id", step.get("probe_id"), r_steps[idx].get("probe_id"))
+        add(f"steps[{idx}].ok", step.get("ok"), r_steps[idx].get("ok"))
+        add(
+            f"steps[{idx}].normalized_outcome",
+            step.get("normalized_outcome"),
+            r_steps[idx].get("normalized_outcome"),
+        )
+
+    add(
+        "evidence.signposts.event_count",
+        (left.get("evidence", {}).get("signposts") or {}).get("event_count"),
+        (right.get("evidence", {}).get("signposts") or {}).get("event_count"),
+    )
+    add(
+        "evidence.signposts.well_formed",
+        (left.get("evidence", {}).get("signposts") or {}).get("well_formed"),
+        (right.get("evidence", {}).get("signposts") or {}).get("well_formed"),
+    )
+    add(
+        "evidence.sandbox_logs.capture_status",
+        (left.get("evidence", {}).get("sandbox_logs") or {}).get("capture_status"),
+        (right.get("evidence", {}).get("sandbox_logs") or {}).get("capture_status"),
+    )
+    return changes
+
+
+def cmd_diff(args: argparse.Namespace) -> int:
+    left = _load_summary(Path(args.left))
+    right = _load_summary(Path(args.right))
+    changes = _diff_summaries(left, right)
+    if args.json:
+        print(json.dumps({"changes": changes}, indent=2, sort_keys=True))
+    else:
+        for change in changes:
+            print(f"{change['path']}: {change['left']} -> {change['right']}")
+    return 0 if not changes else 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="pw-lab")
+    sub = parser.add_subparsers(dest="command")
+
+    signposts = sub.add_parser("signposts", help="signpost catalog and validation")
+    signposts_sub = signposts.add_subparsers(dest="signposts_cmd")
+
+    catalog_cmd = signposts_sub.add_parser("catalog", help="print the signpost catalog")
+    catalog_cmd.add_argument("--catalog", default="xpc/signpost_catalog.json")
+    catalog_cmd.add_argument("--json", action="store_true")
+    catalog_cmd.set_defaults(func=cmd_signposts_catalog)
+
+    validate_cmd = signposts_sub.add_parser("validate", help="validate signpost event stream")
+    validate_cmd.add_argument("--input", required=True, help="path to session JSONL (or '-')")
+    validate_cmd.add_argument("--catalog", default=None, help="optional catalog path")
+    validate_cmd.add_argument("--strict-catalog", action="store_true")
+    validate_cmd.set_defaults(func=cmd_signposts_validate)
+
+    timeline_cmd = sub.add_parser("timeline", help="render a signpost timeline")
+    timeline_cmd.add_argument("--input", required=True, help="path to session JSONL (or '-')")
+    timeline_cmd.add_argument("--signposts-only", action="store_true")
+    timeline_cmd.set_defaults(func=cmd_timeline)
+
+    tui_cmd = sub.add_parser("tui", help="render a minimal evidence ledger")
+    tui_cmd.add_argument("run_dir")
+    tui_cmd.set_defaults(func=cmd_tui)
+
+    inside_cmd = sub.add_parser("inside", help="detect whether the caller is sandboxed (fail-closed)")
+    inside_cmd.add_argument("--pw", default=DEFAULT_PW)
+    inside_cmd.add_argument("--profile", default=None, help="optional profile id (or id@variant) to check")
+    inside_cmd.add_argument("--variant", default=None, help="variant to check (default: base)")
+    inside_cmd.add_argument(
+        "--service-name",
+        action="append",
+        default=[],
+        help="additional mach service name(s) to check via sandbox_check",
+    )
+    inside_cmd.add_argument("--bare", action="store_true", help="print true/false only")
+    inside_cmd.set_defaults(func=cmd_inside)
+
+    specimen_cmd = sub.add_parser("specimen", help="run a PWRunner specimen evaluation (canonical + instrumented)")
+    specimen_cmd.add_argument("specimen", help="path to specimen JSON/YAML")
+    specimen_cmd.add_argument("--pw", default=DEFAULT_PW)
+    specimen_cmd.add_argument("--timeout-s", type=int, default=240)
+    specimen_cmd.add_argument("--log-last", default="10s", help="log show lookback window (sandbox-log-observer --last)")
+    specimen_cmd.add_argument("--outdir", default=None)
+    specimen_cmd.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
+    specimen_cmd.add_argument("--force", action="store_true")
+    specimen_cmd.set_defaults(func=cmd_specimen)
+
+    inspect_cmd = sub.add_parser("inspect", help="inspect a lab run directory")
+    inspect_cmd.add_argument("run_dir")
+    inspect_cmd.add_argument("--json", action="store_true")
+    inspect_cmd.set_defaults(func=cmd_inspect)
+
+    diff_cmd = sub.add_parser("diff", help="diff two lab run directories")
+    diff_cmd.add_argument("left")
+    diff_cmd.add_argument("right")
+    diff_cmd.add_argument("--json", action="store_true")
+    diff_cmd.set_defaults(func=cmd_diff)
+
+    args = parser.parse_args()
+    if not getattr(args, "func", None):
+        parser.print_help()
+        return 2
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

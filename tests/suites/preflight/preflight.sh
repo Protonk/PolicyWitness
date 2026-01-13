@@ -124,7 +124,7 @@ ENT_KEYS = {
     "cs_debugger": "com.apple.security.cs.debugger",
 }
 
-def service_record(profile_id, service_name, kind=None, bundle_id=None, variant=None):
+def service_record(service_name, bundle_id=None):
     bin_path = os.path.join(
         app_path,
         "Contents",
@@ -143,9 +143,6 @@ def service_record(profile_id, service_name, kind=None, bundle_id=None, variant=
             if key in entitlements:
                 ent_map[alias] = bool(entitlements.get(key))
     return {
-        "profile_id": profile_id,
-        "variant": variant,
-        "kind": kind,
         "bundle_id": bundle_id,
         "service_name": service_name,
         "path": bin_path,
@@ -157,60 +154,23 @@ def service_record(profile_id, service_name, kind=None, bundle_id=None, variant=
     }
 
 services = {}
-profiles_manifest_path = os.path.join(app_path, "Contents", "Resources", "Evidence", "profiles.json")
-profiles_manifest_error = None
-if os.path.exists(profiles_manifest_path):
-    try:
-        with open(profiles_manifest_path, "r", encoding="utf-8") as fh:
-            manifest = json.load(fh)
-        profiles = manifest.get("profiles")
-        if isinstance(profiles, list):
-            for entry in profiles:
-                profile_id = entry.get("profile_id")
-                variants = entry.get("variants")
-                if not profile_id or not isinstance(variants, list):
-                    continue
-                services.setdefault(profile_id, {})
-                for variant in variants:
-                    variant_name = variant.get("variant")
-                    service_name = variant.get("service_name")
-                    if not variant_name or not service_name:
-                        continue
-                    services[profile_id][variant_name] = service_record(
-                        profile_id=profile_id,
-                        service_name=service_name,
-                        kind=entry.get("kind"),
-                        bundle_id=variant.get("bundle_id"),
-                        variant=variant_name,
-                    )
-        else:
-            profiles_manifest_error = "profiles.json missing 'profiles' array"
-    except Exception as e:
-        profiles_manifest_error = str(e)
-else:
-    profiles_manifest_error = "missing"
-
-if not services:
-    services = {
-        "minimal": {
-            "base": service_record("minimal", "ProbeService_minimal", "probe", variant="base"),
-            "injectable": service_record(
-                "minimal",
-                "ProbeService_minimal__injectable",
-                "probe",
-                variant="injectable",
-            ),
-        },
-        "net_client": {
-            "base": service_record("net_client", "ProbeService_net_client", "probe", variant="base"),
-            "injectable": service_record(
-                "net_client",
-                "ProbeService_net_client__injectable",
-                "probe",
-                variant="injectable",
-            ),
-        },
-    }
+xpc_services_dir = os.path.join(app_path, "Contents", "XPCServices")
+if os.path.isdir(xpc_services_dir):
+    for entry in sorted(os.listdir(xpc_services_dir)):
+        if not entry.endswith(".xpc"):
+            continue
+        svc_name = entry[:-4]
+        info_path = os.path.join(xpc_services_dir, entry, "Contents", "Info.plist")
+        bundle_id = None
+        if os.path.exists(info_path):
+            try:
+                with open(info_path, "rb") as fh:
+                    info = plistlib.load(fh)
+                if isinstance(info, dict):
+                    bundle_id = info.get("CFBundleIdentifier")
+            except Exception:
+                bundle_id = None
+        services[svc_name] = service_record(service_name=svc_name, bundle_id=bundle_id)
 
 app_exists = os.path.exists(app_path)
 app_signed, app_error = codesign_verify(app_path, deep=True) if app_exists else (False, "missing")
@@ -225,11 +185,6 @@ dylib_signed, dylib_error = codesign_verify(dylib_path) if dylib_exists else (Fa
 
 report = {
     "schema_version": 1,
-    "profiles_manifest": {
-        "path": profiles_manifest_path,
-        "exists": os.path.exists(profiles_manifest_path),
-        "error": profiles_manifest_error,
-    },
     "app": {
         "path": app_path,
         "exists": app_exists,

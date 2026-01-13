@@ -8,7 +8,7 @@ PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_signposts"
 
 FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/signpost_stream.jsonl"
-LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
+LAB_TOOL="${ROOT_DIR}/laboratory/pw-lab"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "validate" "validate lab signpost stream fixture"

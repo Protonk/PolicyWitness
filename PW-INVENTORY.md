@@ -1,5 +1,7 @@
 # PolicyWitness Inventory (evidence-first)
 
+**Status:** This inventory was written for the legacy profile/variant-based design. PolicyWitness is now specimen-first (single `PWRunner.xpc` runner applying SBPL/compiled bytes per run), so treat the contents below as historical context until this document is rewritten.
+
 This document is a lab-notebook style inventory: it records what PolicyWitness
 actually did on this machine, and the concrete artifacts that support each
 claim. It is deliberately “evidence-first”: when something is unproven, it is

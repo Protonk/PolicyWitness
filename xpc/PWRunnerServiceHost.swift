@@ -1,0 +1,611 @@
+import Foundation
+import CryptoKit
+import Darwin
+
+private let PW_RUNNER_DENY_SIGNAL: Int32 = SIGUSR1
+
+// Empirical sandbox_check filter kind values that are stable on current macOS:
+// - PATH filter: 1 (already used elsewhere in this repo)
+// - mach-lookup global name filter: 16 (used for "mach-lookup" + service name)
+private let PW_SANDBOX_FILTER_PATH: Int32 = 1
+private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 16
+
+private func nowUnixMs() -> UInt64 {
+    UInt64(Date().timeIntervalSince1970 * 1000.0)
+}
+
+private func bundleString(_ key: String) -> String? {
+    Bundle.main.object(forInfoDictionaryKey: key) as? String
+}
+
+private func sha256Hex(_ data: Data) -> String {
+    let digest = SHA256.hash(data: data)
+    return digest.map { String(format: "%02x", $0) }.joined()
+}
+
+// MARK: - libsandbox bindings (dlopen/dlsym)
+
+private struct SandboxLib {
+    typealias SandboxParams = UnsafeMutableRawPointer
+    typealias SandboxProfile = UnsafeMutableRawPointer
+
+    typealias CreateParamsFn = @convention(c) () -> SandboxParams?
+    typealias FreeParamsFn = @convention(c) (SandboxParams?) -> Void
+    typealias SetParamFn = @convention(c) (SandboxParams?, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32
+
+    typealias CompileStringFn = @convention(c) (UnsafePointer<CChar>?, SandboxParams?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> SandboxProfile?
+    typealias CompileNamedFn = @convention(c) (UnsafePointer<CChar>?, SandboxParams?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> SandboxProfile?
+    typealias FreeProfileFn = @convention(c) (SandboxProfile?) -> Void
+    typealias FreeErrorFn = @convention(c) (UnsafeMutablePointer<CChar>?) -> Void
+
+    typealias ApplyFn = @convention(c) (SandboxProfile?) -> Int32
+    typealias RegisterProfileFn = @convention(c) (UnsafePointer<CChar>?, UnsafeRawPointer?, size_t) -> Int32
+    typealias UnregisterProfileFn = @convention(c) (UnsafePointer<CChar>?) -> Int32
+
+    let createParams: CreateParamsFn
+    let freeParams: FreeParamsFn
+    let setParam: SetParamFn
+    let compileString: CompileStringFn
+    let compileNamed: CompileNamedFn
+    let freeProfile: FreeProfileFn
+    let freeError: FreeErrorFn
+    let apply: ApplyFn
+    let registerProfile: RegisterProfileFn
+    let unregisterProfile: UnregisterProfileFn?
+
+    struct LoadError: Error, CustomStringConvertible {
+        var message: String
+
+        var description: String { message }
+    }
+
+    static func load() -> Result<SandboxLib, LoadError> {
+        guard let handle = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW) else {
+            return .failure(LoadError(message: "dlopen(/usr/lib/libsandbox.dylib) failed"))
+        }
+        func sym<T>(_ name: String, _ type: T.Type) -> Result<T, LoadError> {
+            let ptr = name.withCString { dlsym(handle, $0) }
+            guard let ptr else { return .failure(LoadError(message: "dlsym(\(name)) failed")) }
+            return .success(unsafeBitCast(ptr, to: T.self))
+        }
+
+        let createParams: CreateParamsFn
+        let freeParams: FreeParamsFn
+        let setParam: SetParamFn
+        let compileString: CompileStringFn
+        let compileNamed: CompileNamedFn
+        let freeProfile: FreeProfileFn
+        let freeError: FreeErrorFn
+        let apply: ApplyFn
+        let registerProfile: RegisterProfileFn
+
+        switch sym("sandbox_create_params", CreateParamsFn.self) {
+        case .success(let v): createParams = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_free_params", FreeParamsFn.self) {
+        case .success(let v): freeParams = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_set_param", SetParamFn.self) {
+        case .success(let v): setParam = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_compile_string", CompileStringFn.self) {
+        case .success(let v): compileString = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_compile_named", CompileNamedFn.self) {
+        case .success(let v): compileNamed = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_free_profile", FreeProfileFn.self) {
+        case .success(let v): freeProfile = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_free_error", FreeErrorFn.self) {
+        case .success(let v): freeError = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_apply", ApplyFn.self) {
+        case .success(let v): apply = v
+        case .failure(let err): return .failure(err)
+        }
+        switch sym("sandbox_register_profile", RegisterProfileFn.self) {
+        case .success(let v): registerProfile = v
+        case .failure(let err): return .failure(err)
+        }
+        let unregisterProfile: UnregisterProfileFn? = {
+            let ptr = "sandbox_unregister_profile".withCString { dlsym(handle, $0) }
+            guard let ptr else { return nil }
+            return unsafeBitCast(ptr, to: UnregisterProfileFn.self)
+        }()
+
+        return .success(
+            SandboxLib(
+                createParams: createParams,
+                freeParams: freeParams,
+                setParam: setParam,
+                compileString: compileString,
+                compileNamed: compileNamed,
+                freeProfile: freeProfile,
+                freeError: freeError,
+                apply: apply,
+                registerProfile: registerProfile,
+                unregisterProfile: unregisterProfile
+            )
+        )
+    }
+}
+
+// MARK: - sandbox_check binding
+
+private typealias SandboxCheckNoArgFn = @convention(c) (pid_t, UnsafePointer<CChar>?, Int32) -> Int32
+private typealias SandboxCheckOneArgFn = @convention(c) (pid_t, UnsafePointer<CChar>?, Int32, UnsafePointer<CChar>?) -> Int32
+
+private func resolveSandboxCheckSymbol() -> UnsafeMutableRawPointer? {
+    let rtldDefault = UnsafeMutableRawPointer(bitPattern: -2)
+    return "sandbox_check".withCString { sym in dlsym(rtldDefault, sym) }
+}
+
+// MARK: - Mach bootstrap lookup (for mach-lookup probes)
+
+@_silgen_name("bootstrap_look_up")
+private func bootstrap_look_up(_ bp: mach_port_t, _ service_name: UnsafePointer<CChar>, _ sp: UnsafeMutablePointer<mach_port_t>) -> kern_return_t
+
+// MARK: - deny-signal counter (Channel B)
+
+private var pwRunnerDenySignalCount: sig_atomic_t = 0
+
+@_cdecl("pw_runner_deny_signal_handler")
+private func pw_runner_deny_signal_handler(_ signo: Int32) {
+    if signo == PW_RUNNER_DENY_SIGNAL {
+        pwRunnerDenySignalCount += 1
+    }
+}
+
+private func installDenySignalHandler() {
+    _ = signal(PW_RUNNER_DENY_SIGNAL, pw_runner_deny_signal_handler)
+    // In some XPC/libdispatch contexts, signals can be blocked on the current
+    // thread. Unblock our deny signal so a sandbox-side-effect (if supported by
+    // the active profile) can be observed deterministically.
+    var set = sigset_t()
+    sigemptyset(&set)
+    sigaddset(&set, PW_RUNNER_DENY_SIGNAL)
+    _ = pthread_sigmask(SIG_UNBLOCK, &set, nil)
+}
+
+private func denySignalCount() -> Int {
+    Int(pwRunnerDenySignalCount)
+}
+
+// MARK: - Runner implementation
+
+public final class PWRunnerService: NSObject, PWRunnerProtocol {
+    private var didRun = false
+
+    public func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
+        if didRun {
+            let resp = PWRunnerRunResult(
+                specimen_id: "<unknown>",
+                run_kind: nil,
+                rc: 1,
+                normalized_outcome: "already_ran",
+                error: "runner instance only supports one RunSpecimen request",
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: "unknown",
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+        didRun = true
+
+        installDenySignalHandler()
+
+        let parsed: PWRunnerRunSpec
+        do {
+            parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: request)
+        } catch {
+            let resp = PWRunnerRunResult(
+                specimen_id: "<decode_failed>",
+                run_kind: nil,
+                rc: 1,
+                normalized_outcome: "bad_request",
+                error: "request decode failed: \(error)",
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: "unknown",
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
+        let sandboxLib: SandboxLib
+        switch SandboxLib.load() {
+        case .success(let lib):
+            sandboxLib = lib
+        case .failure(let err):
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: 1,
+                normalized_outcome: "libsandbox_unavailable",
+                error: err.description,
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
+        let sandboxCheckSymbol = resolveSandboxCheckSymbol()
+        if sandboxCheckSymbol == nil {
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: 1,
+                normalized_outcome: "sandbox_check_missing",
+                error: "sandbox_check symbol not found via dlsym(RTLD_DEFAULT, \"sandbox_check\")",
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
+        let policyHash: String?
+        do {
+            policyHash = try computePolicyHash(parsed.policy)
+        } catch {
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: 1,
+                normalized_outcome: "bad_policy",
+                error: "\(error)",
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
+        let applyResult = applySandboxPolicy(parsed.policy, sandboxLib: sandboxLib)
+        if case .failure(let err) = applyResult {
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: 1,
+                normalized_outcome: "sandbox_apply_failed",
+                error: err.description,
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                policy_sha256: policyHash,
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
+        let sandboxedAfterApply: Bool? = {
+            guard let symbol = sandboxCheckSymbol else { return nil }
+            let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
+            let rc = fn(getpid(), nil, 0)
+            return rc == 1
+        }()
+
+        var stepResults: [PWRunnerStepResult] = []
+        for step in parsed.probe_plan {
+            let beforeSig = denySignalCount()
+            let sb = runSandboxCheck(step.sandbox_check, symbol: sandboxCheckSymbol!)
+            let attempt = runAttempt(step.attempt)
+            let afterSig = denySignalCount()
+            let sig = PWRunnerSignalResult(signal: "SIGUSR1", count_before: beforeSig, count_after: afterSig)
+            stepResults.append(
+                PWRunnerStepResult(
+                    step_id: step.step_id,
+                    sandbox_check: sb,
+                    attempt: attempt,
+                    deny_signal: sig
+                )
+            )
+        }
+
+        let totalSig = PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: denySignalCount())
+        let resp = PWRunnerRunResult(
+            specimen_id: parsed.specimen_id,
+            run_kind: parsed.run_kind,
+            rc: 0,
+            normalized_outcome: "ok",
+            error: nil,
+            pid: Int(getpid()),
+            bundle_id: bundleString("CFBundleIdentifier"),
+            policy_format: parsed.policy.format,
+            policy_sha256: policyHash,
+            sandboxed_after_apply: sandboxedAfterApply,
+            deny_signal_total: totalSig,
+            steps: stepResults
+        )
+        reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+        DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+    }
+
+    private enum PolicyHashError: Error, CustomStringConvertible {
+        case missingField(String)
+
+        var description: String {
+            switch self {
+            case .missingField(let f):
+                return "missing policy field: \(f)"
+            }
+        }
+    }
+
+    private func computePolicyHash(_ policy: PWRunnerPolicySpec) throws -> String {
+        switch policy.format {
+        case "sbpl":
+            guard let src = policy.sbpl_source else { throw PolicyHashError.missingField("sbpl_source") }
+            return sha256Hex(Data(src.utf8))
+        case "compiled_bytes":
+            guard let b64 = policy.compiled_profile_b64 else {
+                throw PolicyHashError.missingField("compiled_profile_b64")
+            }
+            guard let data = Data(base64Encoded: b64) else {
+                throw PolicyHashError.missingField("compiled_profile_b64 (invalid base64)")
+            }
+            return sha256Hex(data)
+        default:
+            throw PolicyHashError.missingField("format (expected sbpl|compiled_bytes)")
+        }
+    }
+
+    private struct ApplyError: Error, CustomStringConvertible {
+        var message: String
+
+        var description: String { message }
+    }
+
+    private func applySandboxPolicy(_ policy: PWRunnerPolicySpec, sandboxLib: SandboxLib) -> Result<Void, ApplyError> {
+        // Create params if present.
+        let paramsObj: SandboxLib.SandboxParams? = {
+            guard let params = policy.params, !params.isEmpty else { return nil }
+            guard let obj = sandboxLib.createParams() else { return nil }
+            for (k, v) in params.sorted(by: { $0.key < $1.key }) {
+                _ = k.withCString { kPtr in
+                    v.withCString { vPtr in
+                        sandboxLib.setParam(obj, kPtr, vPtr)
+                    }
+                }
+            }
+            return obj
+        }()
+        defer {
+            if let paramsObj {
+                sandboxLib.freeParams(paramsObj)
+            }
+        }
+
+        switch policy.format {
+        case "sbpl":
+            guard let src = policy.sbpl_source else { return .failure(ApplyError(message: "missing policy.sbpl_source")) }
+            var errBuf: UnsafeMutablePointer<CChar>?
+            let profile: SandboxLib.SandboxProfile? = src.withCString { cStr in
+                sandboxLib.compileString(cStr, paramsObj, &errBuf)
+            }
+            if let errBuf {
+                let message = String(cString: errBuf)
+                sandboxLib.freeError(errBuf)
+                return .failure(ApplyError(message: "sandbox_compile_string failed: \(message)"))
+            }
+            guard let profile else { return .failure(ApplyError(message: "sandbox_compile_string failed (no profile and no error)")) }
+            defer { sandboxLib.freeProfile(profile) }
+            let rc = sandboxLib.apply(profile)
+            if rc != 0 {
+                return .failure(ApplyError(message: "sandbox_apply failed: \(String(cString: strerror(errno)))"))
+            }
+            return .success(())
+
+        case "compiled_bytes":
+            guard let b64 = policy.compiled_profile_b64 else { return .failure(ApplyError(message: "missing policy.compiled_profile_b64")) }
+            guard let bytes = Data(base64Encoded: b64) else { return .failure(ApplyError(message: "compiled_profile_b64 invalid base64")) }
+            let name = "pw.runner.\(UUID().uuidString)"
+            let regRc: Int32 = name.withCString { namePtr in
+                bytes.withUnsafeBytes { buf in
+                    let base = buf.baseAddress
+                    return sandboxLib.registerProfile(namePtr, base, buf.count)
+                }
+            }
+            if regRc != 0 {
+                return .failure(ApplyError(message: "sandbox_register_profile failed: \(String(cString: strerror(errno)))"))
+            }
+            defer {
+                if let unregister = sandboxLib.unregisterProfile {
+                    _ = name.withCString { ptr in unregister(ptr) }
+                }
+            }
+
+            var errBuf: UnsafeMutablePointer<CChar>?
+            let profile: SandboxLib.SandboxProfile? = name.withCString { namePtr in
+                sandboxLib.compileNamed(namePtr, paramsObj, &errBuf)
+            }
+            if let errBuf {
+                let message = String(cString: errBuf)
+                sandboxLib.freeError(errBuf)
+                return .failure(ApplyError(message: "sandbox_compile_named failed: \(message)"))
+            }
+            guard let profile else { return .failure(ApplyError(message: "sandbox_compile_named failed (no profile and no error)")) }
+            defer { sandboxLib.freeProfile(profile) }
+            let rc = sandboxLib.apply(profile)
+            if rc != 0 {
+                return .failure(ApplyError(message: "sandbox_apply failed: \(String(cString: strerror(errno)))"))
+            }
+            return .success(())
+
+        default:
+            return .failure(ApplyError(message: "unknown policy.format (expected sbpl|compiled_bytes)"))
+        }
+    }
+
+    private func runSandboxCheck(_ check: PWRunnerSandboxCheck, symbol: UnsafeMutableRawPointer) -> PWRunnerSandboxCheckResult {
+        let op = check.operation
+        let filterKind = check.filter.kind
+        let filterValue = check.filter.value
+
+        let rc: Int32 = op.withCString { opPtr in
+            switch filterKind {
+            case "none":
+                let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
+                return fn(getpid(), opPtr, 0)
+            case "path":
+                let fn = unsafeBitCast(symbol, to: SandboxCheckOneArgFn.self)
+                return (filterValue ?? "").withCString { pathPtr in
+                    fn(getpid(), opPtr, PW_SANDBOX_FILTER_PATH, pathPtr)
+                }
+            case "global_name":
+                let fn = unsafeBitCast(symbol, to: SandboxCheckOneArgFn.self)
+                return (filterValue ?? "").withCString { namePtr in
+                    fn(getpid(), opPtr, PW_SANDBOX_FILTER_GLOBAL_NAME, namePtr)
+                }
+            default:
+                let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
+                return fn(getpid(), opPtr, 0)
+            }
+        }
+
+        let outcome: String
+        if rc == 0 {
+            outcome = "allow"
+        } else if rc == 1 {
+            outcome = "deny"
+        } else {
+            outcome = "rc_nonstandard"
+        }
+
+        return PWRunnerSandboxCheckResult(
+            rc: Int(rc),
+            outcome: outcome,
+            filter_kind: filterKind,
+            filter_value: filterValue
+        )
+    }
+
+    private func runAttempt(_ attempt: PWRunnerAttempt) -> PWRunnerAttemptResult {
+        switch attempt.kind {
+        case "file":
+            return runFileAttempt(action: attempt.action, path: attempt.target)
+        case "mach_lookup":
+            return runMachLookupAttempt(action: attempt.action, name: attempt.target)
+        default:
+            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported attempt.kind")
+        }
+    }
+
+    private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResult {
+        let resolved = canonicalizePath(path)
+        let target = resolved.resolved ?? resolved.input
+
+        switch action {
+        case "open_read":
+            var buf: UInt8 = 0
+            let fd = target.withCString { open($0, O_RDONLY, 0) }
+            if fd < 0 {
+                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+            }
+            defer { close(fd) }
+            _ = Darwin.read(fd, &buf, 1)
+            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+
+        case "open_write":
+            let fd = target.withCString { open($0, O_WRONLY | O_TRUNC, 0) }
+            if fd < 0 {
+                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+            }
+            defer { close(fd) }
+            var b: UInt8 = UInt8(ascii: "x")
+            _ = Darwin.write(fd, &b, 1)
+            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+
+        case "create":
+            let fd = target.withCString { open($0, O_WRONLY | O_CREAT, 0o600) }
+            if fd < 0 {
+                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+            }
+            close(fd)
+            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+
+        case "unlink":
+            let rc = target.withCString { unlink($0) }
+            if rc != 0 {
+                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "unlink_failed", error: String(cString: strerror(errno)))
+            }
+            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+
+        default:
+            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported file action")
+        }
+    }
+
+    private func runMachLookupAttempt(action: String, name: String) -> PWRunnerAttemptResult {
+        guard action == "bootstrap_look_up" else {
+            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported mach_lookup action")
+        }
+
+        var bootstrap: mach_port_t = 0
+        let kr = task_get_special_port(mach_task_self_, task_special_port_t(TASK_BOOTSTRAP_PORT), &bootstrap)
+        if kr != KERN_SUCCESS {
+            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "bootstrap_port_failed", error: "task_get_special_port failed kr=\(kr)")
+        }
+
+        var servicePort: mach_port_t = 0
+        let kr2: kern_return_t = name.withCString { ptr in
+            bootstrap_look_up(bootstrap, ptr, &servicePort)
+        }
+        if kr2 != KERN_SUCCESS {
+            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "lookup_failed", error: "bootstrap_look_up failed kr=\(kr2)")
+        }
+        mach_port_deallocate(mach_task_self_, servicePort)
+        return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+    }
+
+    private struct CanonicalPath {
+        var input: String
+        var resolved: String?
+    }
+
+    private func canonicalizePath(_ input: String) -> CanonicalPath {
+        var buf = [CChar](repeating: 0, count: Int(PATH_MAX))
+        let rc = input.withCString { ptr in
+            realpath(ptr, &buf)
+        }
+        if rc != nil {
+            return CanonicalPath(input: input, resolved: String(cString: buf))
+        }
+        return CanonicalPath(input: input, resolved: nil)
+    }
+}
+
+public final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
+    public func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
+        let exported = PWRunnerService()
+        newConnection.exportedInterface = NSXPCInterface(with: PWRunnerProtocol.self)
+        newConnection.exportedObject = exported
+        newConnection.resume()
+        return true
+    }
+}

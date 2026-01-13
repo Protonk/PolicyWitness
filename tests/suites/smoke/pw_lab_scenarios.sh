@@ -7,7 +7,7 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_scenarios"
 
-LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
+LAB_TOOL="${ROOT_DIR}/laboratory/pw-lab"
 SCENARIO_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/scenario_basic.yaml"
 RUN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/run_basic"
 

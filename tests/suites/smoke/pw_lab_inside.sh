@@ -7,7 +7,7 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_inside"
 
-LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
+LAB_TOOL="${ROOT_DIR}/laboratory/pw-lab"
 PW_BIN="${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

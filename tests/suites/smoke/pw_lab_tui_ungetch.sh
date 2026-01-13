@@ -7,7 +7,7 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="smoke"
 PW_TEST_ID="pw_lab_tui_ungetch"
 
-LAB_TOOL="${ROOT_DIR}/tools/pwlab/pw-lab"
+LAB_TOOL="${ROOT_DIR}/laboratory/pw-lab"
 RUN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_lab/run_basic"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
@@ -41,10 +41,12 @@ import sys
 from pathlib import Path
 
 data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-if data.get("field_key") != "ok":
-    raise SystemExit(f"expected field_key=ok (got {data.get('field_key')!r})")
-if data.get("field_value") != "Y":
-    raise SystemExit(f"expected field_value=Y (got {data.get('field_value')!r})")
+if data.get("page") != "results":
+    raise SystemExit(f"expected page='results' (got {data.get('page')!r})")
+if data.get("field_key") != "status":
+    raise SystemExit(f"expected field_key='status' (got {data.get('field_key')!r})")
+if data.get("field_value") != "pass":
+    raise SystemExit(f"expected field_value='pass' (got {data.get('field_value')!r})")
 PY
 
 test_pass "pw-lab tui ungetch ok" "{}"

@@ -14,7 +14,7 @@ Related docs:
 - XPC services as entitlement targets: [xpc/README.md](../xpc/README.md)
 - End-user workflows (matrix runs, log capture, evidence): [PolicyWitness.md](../PolicyWitness.md)
 - Build/sign the app bundle: [SIGNING.md](../SIGNING.md)
-- Dev-only lab tooling: [tools/pwlab/README.md](../tools/pwlab/README.md)
+- Dev-only lab tooling: [laboratory/README.md](../laboratory/README.md)
 
 ## Lab scenarios and suites (dev-only)
 
