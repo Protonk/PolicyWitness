@@ -1,18 +1,24 @@
-# PolicyWitness.app (User Guide)
+# PolicyWitness User Guide
 
-PolicyWitness is a macOS tool to run seatbelt/App Sandbox experiments without hand‑waving about what happened.
+PolicyWitness runs sandbox specimens and prints a single JSON result to stdout.
+This guide covers usage only.
 
-PolicyWitness is **specimen-first**: you supply sandbox variation at runtime (SBPL or compiled profile bytes) plus a probe plan. Each specimen is executed by a fresh **ephemeral runner process** that starts unsandboxed, applies the requested policy **once**, runs the plan, returns a JSON witness, and exits.
+## Choose your runner
 
-This guide assumes you have only `PolicyWitness.app` and this file (`PolicyWitness.md`).
+You have two ways to run a specimen:
 
-## Router (start here)
+1) Plain runner (built-in)
+- Use this when you only need SBPL (source or compiled bytes) and do NOT need
+  extra entitlements beyond what ships in the app.
+- This is the default path: no extra setup.
 
-- Run one request and print a JSON result: `... policy-witness run <request.json>`
-- Save output for later inspection: `... policy-witness run <request.json> > result.json`
-- Manage external runners (entitlements): `... policy-witness runner <command>`
+2) External runner (BYOSig)
+- Use this when your probes or environment require entitlements that the
+  built-in runner does not have.
+- You sign a runner yourself and register it as a launchd service.
+- The specimen selects that runner by id or service name.
 
-## Quick start
+## Quick start (plain runner)
 
 Set a convenience variable:
 
@@ -20,7 +26,7 @@ Set a convenience variable:
 PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
 ```
 
-Create a request that denies reading `/etc/hosts`:
+Create a specimen:
 
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
@@ -45,200 +51,144 @@ cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 JSON
 ```
 
-Run it (prints JSON to stdout):
+Run it:
 
 ```sh
 $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 ```
 
-Open `/tmp/pw_result.json` and start from `data.runner_result`.
+## Specimen format (request JSON)
 
-## Core model (what PolicyWitness is trying to prove)
+Top-level fields:
 
-### One run per request
+- `schema_version`: number
+- `specimen_id`: string
+- `run_kind`: string (optional)
+- `policy`: object
+- `probe_plan`: array of steps
+- `runner`: object (optional, for external runners)
 
-Each `run` invocation starts a fresh runner instance, applies the requested policy exactly once, executes the probe plan, and returns a structured JSON witness.
+### Policy
 
-Each run is defined by three inputs: the specimen JSON, the signed app identity
-recorded in the embedded evidence manifest, and the caller environment (which
-can block XPC launch or log capture in sandboxed harnesses).
+SBPL source:
 
-### A specimen is a list of steps
-
-Each step contains:
-
-- a **Channel D** prediction (`sandbox_check`), and
-- a **Channel A** operation attempt (file op, mach lookup, etc.)
-
-PolicyWitness treats “permission-shaped failure” as ambiguous unless it can attach supporting evidence.
-
-### Evidence channels (A–D)
-
-- **A**: in-band attempt result (return code + `errno`/Mach return, plus a normalized outcome)
-- **B**: deterministic deny side-effect (SBPL `send-signal` if the policy uses it)
-- **C**: unified-log deny evidence correlated by PID + window (captured outside the sandbox boundary)
-- **D**: `sandbox_check` prediction (and a post-apply “am I sandboxed?” check)
-
-## CLI (what you can run)
-
-The shipped CLI surface is intentionally small:
-
-```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]
-policy-witness runner <command> [options]
+```json
+"policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1) (allow default) (deny file-read-data)",
+  "params": { "DENY_DIR": "/tmp/deny" }
+}
 ```
 
-### `run`
+Compiled bytes:
 
-Usage:
-
-```sh
-$PW run <request.json> [--timeout-ms <n>] [--log-last <dur>]
+```json
+"policy": {
+  "format": "compiled_bytes",
+  "compiled_profile_b64": "BASE64_BYTES_HERE"
+}
 ```
 
-Key flags:
+### Probe plan steps
 
-- `--timeout-ms`: runner RPC timeout (default: `240000`)
-- `--log-last`: unified log lookback window for deny capture (default: `10s`)
+Each step has:
 
-Exit codes:
+- `step_id`
+- `sandbox_check`: `{ operation, filter }`
+- `attempt`: `{ kind, action, target }`
 
-- `0`: runner executed successfully (`result.ok=true`)
-- `1`: runner execution failed (`result.ok=false`)
+Example:
 
-Run output includes `data.runner_provenance` (runner service + entitlements +
-signing metadata) and `data.app_provenance` (app bundle metadata from the
-embedded evidence manifest).
+```json
+{
+  "step_id": "read_etc_hosts",
+  "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": { "kind": "path", "value": "/etc/hosts" }
+  },
+  "attempt": { "kind": "file", "action": "open_read", "target": "/etc/hosts" }
+}
+```
 
-Set `PW_VERIFY_EVIDENCE=1` to include a hash verification report under
-`data.app_provenance.evidence_verify`.
+## External runner (BYOSig) flow
 
-### `runner` (external runner manager)
+Use this when you need entitlements that are not in the built-in runner.
 
-External runners are the path for entitlements: they are signed separately and
-registered as launchd Mach services, but they implement the same runner protocol.
+### What you need
 
-Common commands:
+- A runner bundle or binary to sign (typically a copy of `PWRunner.xpc`).
+- A signing identity (Developer ID Application) or ad-hoc signing for local use.
+- An entitlements plist.
+
+### Install an external runner
 
 ```sh
-$PW runner install --bundle /path/to/PWRunner.xpc --identity "Developer ID Application: ..."
-$PW runner list
+$PW runner install \
+  --bundle /path/to/PWRunner.xpc \
+  --identity "Developer ID Application: Your Name (TEAMID)" \
+  --entitlements /path/to/entitlements.plist \
+  --scope user
+```
+
+Notes:
+- Use `--allow-adhoc` for local ad-hoc signing.
+- Use `--scope system` if you want a system-wide service (requires admin).
+- Use `--skip-bootstrap` if you will run `launchctl` manually.
+
+The install command writes a launchd plist, bootstraps the service, and records
+the runner in the local registry.
+
+### Verify the runner
+
+```sh
 $PW runner verify --service-name com.policywitness.runner.<id>
-$PW runner remove --service-name com.policywitness.runner.<id>
 ```
 
-The registry lives at:
+### Use the runner in a specimen
+
+Preferred: include a `runner` object:
+
+```json
+"runner": {
+  "id": "runner-<id-from-install>",
+  "required_entitlements": [
+    "com.apple.security.cs.disable-library-validation"
+  ]
+}
+```
+
+Alternative: select by service name:
+
+```json
+"runner": {
+  "service": "com.policywitness.runner.<id>"
+}
+```
+
+`required_entitlements` enforces a superset check before dispatch.
+
+### List or remove runners
+
+```sh
+$PW runner list
+$PW runner remove --id runner-<id>
+```
+
+Registry location:
 
 ```
 ~/Library/Application Support/PolicyWitness/runners.json
 ```
 
-## Request format (JSON)
+## Common flags
 
-A request file has these top-level keys:
-
-```text
-schema_version: number
-specimen_id: string
-run_kind: string (optional)
-runner: { id, service, required_entitlements } (optional)
-policy: { ... }
-probe_plan: [ ... ]
-```
-
-If `runner` is present, the controller dispatches to the external service and
-enforces that the runner’s entitlements include every key in
-`required_entitlements`. Legacy top-level fields `runner_id`, `runner_service`,
-and `required_entitlements` are also accepted.
-
-### Policy (`policy`)
-
-Two policy formats are supported:
-
-- `format: "sbpl"`
-  - `sbpl_source`: the SBPL source string
-  - `params` (optional): map of parameter key/value strings
-
-- `format: "compiled_bytes"`
-  - `compiled_profile_b64`: base64 of compiled profile bytes
-  - `params` (optional): map of parameter key/value strings
-
-### Steps (`probe_plan`)
-
-Each step has:
-
-- `step_id`: string
-- `sandbox_check`: `{ operation, filter }`
-- `attempt`: `{ kind, action, target }`
-
-Supported `sandbox_check.filter.kind` values:
-
-- `none`
-- `path` (use `filter.value` as a path string)
-- `global_name` (for `mach-lookup`, use `filter.value` as the Mach service name)
-
-Supported attempts:
-
-- `attempt.kind: "file"`
-  - `action: "open_read" | "open_write" | "create" | "unlink"`
-  - `target: <path>`
-
-- `attempt.kind: "mach_lookup"`
-  - `action: "bootstrap_look_up"`
-  - `target: <mach-service-name>` (for example `com.apple.logd`)
-
-**Path canonicalization note**
-
-The runner canonicalizes file paths for the attempted operation (`realpath` when possible). For best results, use canonical paths in `sandbox_check.filter.value` too (avoid `/tmp` vs `/private/tmp` mismatches).
-
-## Additional example: deny `mach-lookup`
-
-This specimen denies all `mach-lookup` operations and then attempts to look up `com.apple.logd`:
-
-```sh
-cat > /tmp/pw_specimen_mach_deny.json <<'JSON'
-{
-  "schema_version": 1,
-  "specimen_id": "mach_deny",
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1) (allow default) (deny mach-lookup)"
-  },
-  "probe_plan": [
-    {
-      "step_id": "ml1",
-      "sandbox_check": {
-        "operation": "mach-lookup",
-        "filter": { "kind": "none" }
-      },
-      "attempt": { "kind": "mach_lookup", "action": "bootstrap_look_up", "target": "com.apple.logd" }
-    }
-  ]
-}
-JSON
-
-$PW run /tmp/pw_specimen_mach_deny.json
-```
+- `--timeout-ms <n>`: runner RPC timeout (default 240000)
+- `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
 
 ## Troubleshooting
 
-### Sandboxed automation environments
-
-Some automation/agent harnesses run commands under a macOS sandbox. In that context, PolicyWitness runs can fail before any runner code executes (for example XPC lookup `NSCocoaErrorDomain=4099` / error `159` “Sandbox restriction”), and unified logging capture can be unavailable (`log: Cannot run while sandboxed`).
-
-Treat these as environment constraints, not PolicyWitness regressions. If you see them, rerun the same command once from a normal Terminal context (or with escalation) before debugging PolicyWitness itself.
-
-### Log capture is unavailable
-
-If `data.sandbox_log_capture.capture_status` is `requested_unavailable`, unified-log evidence could not be collected from this environment. You can still use the runner’s `sandbox_check` predictions and operation results, but attribution confidence stays low.
-
-### `sandbox_check` and the attempt disagree
-
-- If the attempt failed but `sandbox_check` said `allow`, treat it as “not confirmed sandbox denial” and inspect the attempt error (`errno` / Mach return).
-- If the attempt succeeded but `sandbox_check` said `deny`, treat it as a probe mismatch (wrong operation/filter, non-canonical path, or an operation that isn’t governed by the policy string you checked).
-
-## Safety notes
-
-- PolicyWitness does not execute arbitrary paths; the runner only performs a small, explicit set of operations.
-- SBPL / compiled-profile inputs can deny broad classes of behavior. Run PolicyWitness in a controlled environment and expect specimens to fail loudly.
-- Treat missing deny evidence as uncertainty: if you did not capture deny evidence, do not claim “sandbox denied.”
+- Service not found: run `policy-witness runner list` and confirm the service name.
+- System scope install fails: use `--scope user` or run with admin privileges.
+- Verify fails with no reply: check launchd state and the service plist.
+- If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
+  run from a normal Terminal to confirm behavior.
