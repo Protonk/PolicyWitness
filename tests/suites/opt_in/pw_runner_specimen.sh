@@ -22,8 +22,7 @@ PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "run a deny specimen and require sandbox-log correlation"
 
-if [[ ! -x "${PW_BIN}" ]]; then
-  test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 
@@ -82,7 +81,7 @@ PY_STATUS=$?
 set -e
 
 if [[ ${PY_STATUS} -eq 3 ]]; then
-  test_skip "sandbox-log-observer unavailable on this host (see artifacts)" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
+  skip_sandbox_log_observer_unavailable "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
   exit 0
 fi
 if [[ ${PY_STATUS} -ne 0 ]]; then

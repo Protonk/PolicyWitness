@@ -263,3 +263,84 @@ test_skip() {
   write_report "skip" "${message}" "${duration_ms}"
   test_log "skip: ${message}"
 }
+
+skip_missing_pw_app() {
+  local pw_bin="$1"
+  test_skip "PolicyWitness.app is missing or not built at ${pw_bin}"
+}
+
+require_pw_app() {
+  local pw_bin="$1"
+  if [[ ! -x "${pw_bin}" ]]; then
+    skip_missing_pw_app "${pw_bin}"
+    return 1
+  fi
+  return 0
+}
+
+skip_missing_runner_bundle() {
+  local bundle_path="$1"
+  test_skip "runner bundle missing at ${bundle_path}"
+}
+
+require_runner_bundle() {
+  local bundle_path="$1"
+  if [[ ! -d "${bundle_path}" ]]; then
+    skip_missing_runner_bundle "${bundle_path}"
+    return 1
+  fi
+  return 0
+}
+
+skip_missing_clang() {
+  test_skip "clang not available (install Xcode Command Line Tools)"
+}
+
+require_clang() {
+  local clang_path
+  clang_path="$(/usr/bin/xcrun --sdk macosx --find clang 2>/dev/null || true)"
+  if [[ -z "${clang_path}" || ! -x "${clang_path}" ]]; then
+    skip_missing_clang
+    return 1
+  fi
+  echo "${clang_path}"
+}
+
+skip_missing_macos_sdk() {
+  test_skip "macOS SDK not available (install Xcode Command Line Tools)"
+}
+
+require_macos_sdk() {
+  local sdkroot
+  sdkroot="$(/usr/bin/xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)"
+  if [[ -z "${sdkroot}" || ! -d "${sdkroot}" ]]; then
+    skip_missing_macos_sdk
+    return 1
+  fi
+  echo "${sdkroot}"
+}
+
+skip_runner_install_non_gui() {
+  local data_json="${1:-}"
+  test_skip "runner install blocked (non-GUI session); run from a logged-in Terminal" "${data_json}"
+}
+
+skip_runner_install_failed() {
+  local data_json="${1:-}"
+  test_skip "runner install failed (see artifacts)" "${data_json}"
+}
+
+skip_sandbox_restriction() {
+  local data_json="${1:-}"
+  test_skip "runner unavailable due to sandbox restriction (see artifacts)" "${data_json}"
+}
+
+skip_sandbox_log_observer_unavailable() {
+  local data_json="${1:-}"
+  test_skip "sandbox-log-observer unavailable on this host (see artifacts)" "${data_json}"
+}
+
+skip_compiled_profile_registration() {
+  local data_json="${1:-}"
+  test_skip "compiled profile registration not permitted on this host" "${data_json}"
+}

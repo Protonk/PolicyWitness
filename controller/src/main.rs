@@ -4,6 +4,7 @@ mod runner_manager;
 
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -21,12 +22,12 @@ fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>]
   policy-witness runner <command> [options]
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is passed through to the runner client (it must match the runner request schema)"
+  - request.json is passed through to the runner client (or copied with instrumentation injected)"
     );
 }
 
@@ -205,6 +206,56 @@ fn parse_runner_selector(request_path: &Path) -> Result<RunnerSelector, String> 
     }
 
     Ok(selector)
+}
+
+fn read_json_file(path: &Path, label: &str) -> Result<Value, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| format!("failed to read {label}: {e}"))?;
+    serde_json::from_str(&text).map_err(|e| format!("failed to parse {label}: {e}"))
+}
+
+fn load_instrumentation_value(raw: &str) -> Result<Value, String> {
+    let raw = raw.trim();
+    let path = if let Some(rest) = raw.strip_prefix('@') {
+        Some(PathBuf::from(rest))
+    } else {
+        let candidate = Path::new(raw);
+        if candidate.exists() {
+            Some(candidate.to_path_buf())
+        } else {
+            None
+        }
+    };
+
+    let value = if let Some(path) = path {
+        read_json_file(&path, "instrumentation").map_err(|e| format!("failed to read instrumentation: {e}"))?
+    } else {
+        serde_json::from_str(raw).map_err(|e| format!("failed to parse instrumentation JSON: {e}"))?
+    };
+
+    if !value.is_object() {
+        return Err("instrumentation must be a JSON object".to_string());
+    }
+    Ok(value)
+}
+
+fn write_temp_request(value: &Value) -> Result<PathBuf, String> {
+    let temp_dir = std::env::temp_dir().join("policy-witness");
+    std::fs::create_dir_all(&temp_dir)
+        .map_err(|e| format!("failed to create temp dir: {e}"))?;
+    let pid = std::process::id();
+    let encoded = serde_json::to_string_pretty(value)
+        .map_err(|e| format!("failed to encode request JSON: {e}"))?;
+    for attempt in 0..100u32 {
+        let candidate = temp_dir.join(format!("request-{pid}-{}-{attempt}.json", now_unix_ms()));
+        if candidate.exists() {
+            continue;
+        }
+        std::fs::write(&candidate, &encoded)
+            .map_err(|e| format!("failed to write temp request: {e}"))?;
+        return Ok(candidate);
+    }
+    Err("failed to create temp request file".to_string())
 }
 
 fn entitlements_from_manifest_value(
@@ -537,6 +588,7 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut request_path: Option<PathBuf> = None;
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut log_last = DEFAULT_LOG_LAST.to_string();
+    let mut instrumentation_arg: Option<String> = None;
 
     let mut idx = 0usize;
     while idx < args.len() {
@@ -570,6 +622,14 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 log_last = value.to_string();
                 idx += 2;
             }
+            "--instrumentation" => {
+                let value = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --instrumentation".to_string())?;
+                instrumentation_arg = Some(value.to_string());
+                idx += 2;
+            }
             _ => return Err(format!("unknown argument: {arg}")),
         }
     }
@@ -585,8 +645,23 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let runner_target = resolve_runner_target(&app_root, &selector)?;
     let runner_provenance = runner_provenance_from_target(&runner_target);
 
+    let request_path_for_runner = if let Some(arg) = instrumentation_arg.as_deref() {
+        let instrumentation = load_instrumentation_value(arg)?;
+        let mut request_value = read_json_file(&request_path, "request.json")?;
+        let obj = request_value
+            .as_object_mut()
+            .ok_or_else(|| "request.json must be a JSON object".to_string())?;
+        if obj.contains_key("instrumentation") {
+            return Err("request.json already includes instrumentation; remove it or omit --instrumentation".to_string());
+        }
+        obj.insert("instrumentation".to_string(), instrumentation);
+        write_temp_request(&request_value)?
+    } else {
+        request_path.clone()
+    };
+
     let (runner_client, runner_result) =
-        run_pw_runner_client(&runner_target.service_name, &request_path, timeout_ms)?;
+        run_pw_runner_client(&runner_target.service_name, &request_path_for_runner, timeout_ms)?;
 
     let runner_pid = runner_result
         .as_ref()
@@ -699,6 +774,7 @@ usage:
   policy-witness runner install --bundle <path> [--service-name <name>] [--scope user|system]
                                [--identity <codesign-id>] [--entitlements <plist>]
                                [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
+                               [--env KEY=VALUE]
                                [--skip-bootstrap]
   policy-witness runner list
   policy-witness runner status --id <runner-id> | --service-name <name>
@@ -735,6 +811,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let mut bundle_id_override: Option<String> = None;
     let mut allow_adhoc = false;
     let mut skip_bootstrap = false;
+    let mut env: BTreeMap<String, String> = BTreeMap::new();
 
     let mut idx = 0;
     while idx < args.len() {
@@ -780,6 +857,18 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             "--allow-adhoc" => {
                 allow_adhoc = true;
                 idx += 1;
+            }
+            "--env" => {
+                let value = args.get(idx + 1).ok_or_else(|| "missing value for --env".to_string())?;
+                let raw = value.to_string_lossy();
+                let (key, val) = raw
+                    .split_once('=')
+                    .ok_or_else(|| "invalid --env (expected KEY=VALUE)".to_string())?;
+                if key.is_empty() {
+                    return Err("invalid --env (empty key)".to_string());
+                }
+                env.insert(key.to_string(), val.to_string());
+                idx += 2;
             }
             "--skip-bootstrap" => {
                 skip_bootstrap = true;
@@ -850,7 +939,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let runner_id = runner_manager::random_id()?;
     let service_name = service_name.unwrap_or_else(|| runner_manager::generate_service_name(&runner_id));
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
-    let plist_contents = runner_manager::build_launchd_plist(&service_name, &executable_path);
+    let plist_contents = runner_manager::build_launchd_plist(
+        &service_name,
+        &executable_path,
+        if env.is_empty() { None } else { Some(&env) },
+    );
     runner_manager::write_launchd_plist(&plist_path, &plist_contents)?;
     if !skip_bootstrap {
         runner_manager::launchctl_bootstrap(scope, &plist_path)?;

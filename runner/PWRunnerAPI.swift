@@ -17,19 +17,22 @@ public struct PWRunnerRunSpec: Codable {
     public var run_kind: String?
     public var policy: PWRunnerPolicySpec
     public var probe_plan: [PWRunnerProbeStep]
+    public var instrumentation: PWRunnerInstrumentation?
 
     public init(
         schema_version: Int = 1,
         specimen_id: String,
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec,
-        probe_plan: [PWRunnerProbeStep]
+        probe_plan: [PWRunnerProbeStep],
+        instrumentation: PWRunnerInstrumentation? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
         self.run_kind = run_kind
         self.policy = policy
         self.probe_plan = probe_plan
+        self.instrumentation = instrumentation
     }
 }
 
@@ -102,6 +105,148 @@ public struct PWRunnerProbeStep: Codable {
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
+    }
+}
+
+public struct PWRunnerInstrumentation: Codable {
+    public var version: Int
+    public var ports: [PWRunnerInstrumentationPort]
+
+    public init(version: Int = 1, ports: [PWRunnerInstrumentationPort]) {
+        self.version = version
+        self.ports = ports
+    }
+}
+
+public struct PWRunnerInstrumentationPort: Codable {
+    public var kind: String
+    public var phase: String?
+    public var label: String?
+    public var path: String?
+    public var symbol: String?
+    public var sleep_ms: Int?
+    public var size_bytes: Int?
+    public var keys: [String]?
+    public var expected: [String: String]?
+    public var reveal_values: Bool?
+
+    public init(
+        kind: String,
+        phase: String? = nil,
+        label: String? = nil,
+        path: String? = nil,
+        symbol: String? = nil,
+        sleep_ms: Int? = nil,
+        size_bytes: Int? = nil,
+        keys: [String]? = nil,
+        expected: [String: String]? = nil,
+        reveal_values: Bool? = nil
+    ) {
+        self.kind = kind
+        self.phase = phase
+        self.label = label
+        self.path = path
+        self.symbol = symbol
+        self.sleep_ms = sleep_ms
+        self.size_bytes = size_bytes
+        self.keys = keys
+        self.expected = expected
+        self.reveal_values = reveal_values
+    }
+}
+
+public struct PWRunnerInstrumentationReport: Codable {
+    public var version: Int
+    public var ports: [PWRunnerInstrumentationPortReport]
+
+    public init(version: Int, ports: [PWRunnerInstrumentationPortReport]) {
+        self.version = version
+        self.ports = ports
+    }
+}
+
+public struct PWRunnerInstrumentationPortReport: Codable {
+    public var kind: String
+    public var phase: String?
+    public var label: String?
+    public var status: String
+    public var error: String?
+    public var dylib: PWRunnerInstrumentationDylibReport?
+    public var debug_wait: PWRunnerInstrumentationDebugWaitReport?
+    public var execmem_probe: PWRunnerInstrumentationExecmemReport?
+    public var dyld_env: PWRunnerInstrumentationDyldEnvReport?
+
+    public init(
+        kind: String,
+        phase: String? = nil,
+        label: String? = nil,
+        status: String,
+        error: String? = nil,
+        dylib: PWRunnerInstrumentationDylibReport? = nil,
+        debug_wait: PWRunnerInstrumentationDebugWaitReport? = nil,
+        execmem_probe: PWRunnerInstrumentationExecmemReport? = nil,
+        dyld_env: PWRunnerInstrumentationDyldEnvReport? = nil
+    ) {
+        self.kind = kind
+        self.phase = phase
+        self.label = label
+        self.status = status
+        self.error = error
+        self.dylib = dylib
+        self.debug_wait = debug_wait
+        self.execmem_probe = execmem_probe
+        self.dyld_env = dyld_env
+    }
+}
+
+public struct PWRunnerInstrumentationDylibReport: Codable {
+    public var path: String
+    public var symbol: String?
+    public var symbol_found: Bool?
+
+    public init(path: String, symbol: String? = nil, symbol_found: Bool? = nil) {
+        self.path = path
+        self.symbol = symbol
+        self.symbol_found = symbol_found
+    }
+}
+
+public struct PWRunnerInstrumentationDebugWaitReport: Codable {
+    public var sleep_ms: Int
+
+    public init(sleep_ms: Int) {
+        self.sleep_ms = sleep_ms
+    }
+}
+
+public struct PWRunnerInstrumentationExecmemReport: Codable {
+    public var size_bytes: Int
+    public var mmap_succeeded: Bool
+    public var errno: Int?
+
+    public init(size_bytes: Int, mmap_succeeded: Bool, errno: Int? = nil) {
+        self.size_bytes = size_bytes
+        self.mmap_succeeded = mmap_succeeded
+        self.errno = errno
+    }
+}
+
+public struct PWRunnerInstrumentationDyldEnvReport: Codable {
+    public var keys_present: [String]
+    public var keys_missing: [String]
+    public var expected_mismatch: [String]
+    public var values: [String: String]?
+
+    public init(
+        keys_present: [String],
+        keys_missing: [String],
+        expected_mismatch: [String],
+        values: [String: String]? = nil
+    ) {
+        self.keys_present = keys_present
+        self.keys_missing = keys_missing
+        self.expected_mismatch = expected_mismatch
+        self.values = values
     }
 }
 
@@ -180,6 +325,7 @@ public struct PWRunnerRunResult: Codable {
     public var sandboxed_after_apply: Bool?
     public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
+    public var instrumentation: PWRunnerInstrumentationReport?
 
     public init(
         schema_version: Int = 1,
@@ -194,7 +340,8 @@ public struct PWRunnerRunResult: Codable {
         policy_sha256: String? = nil,
         sandboxed_after_apply: Bool? = nil,
         deny_signal_total: PWRunnerSignalResult? = nil,
-        steps: [PWRunnerStepResult]
+        steps: [PWRunnerStepResult],
+        instrumentation: PWRunnerInstrumentationReport? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -209,6 +356,7 @@ public struct PWRunnerRunResult: Codable {
         self.sandboxed_after_apply = sandboxed_after_apply
         self.deny_signal_total = deny_signal_total
         self.steps = steps
+        self.instrumentation = instrumentation
     }
 }
 
@@ -222,4 +370,3 @@ public func pwRunnerDecodeJSON<T: Decodable>(_ type: T.Type, from data: Data) th
     let dec = JSONDecoder()
     return try dec.decode(type, from: data)
 }
-

@@ -24,7 +24,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>]
 policy-witness runner <command> [options]
 ```
 
@@ -39,6 +39,7 @@ Runs a **single runner evaluation** against the selected runner service:
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.runner_provenance` and `data.app_provenance` to keep results auditable.
+- If `--instrumentation` is provided, the controller injects the instrumentation object into the request JSON (without modifying the original file).
 
 Exit codes:
 
@@ -79,6 +80,7 @@ These commands manage external runners signed with user entitlements:
 policy-witness runner install --bundle <path> [--service-name <name>] [--scope user|system]
                              [--identity <codesign-id>] [--entitlements <plist>]
                              [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
+                             [--env KEY=VALUE]
                              [--skip-bootstrap]
 policy-witness runner list
 policy-witness runner status --id <runner-id> | --service-name <name>

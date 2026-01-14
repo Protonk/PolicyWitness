@@ -13,6 +13,9 @@ Related docs:
 - CLI contract: `controller/README.md`
 - Runner architecture: `runner/README.md`
 - Signing/build: `SIGNING.md`
+- Coverage map: `tests/INDEX.md`
+- Fixtures catalog: `tests/fixtures/README.md`
+- Opt-in registry: `tests/OPT_IN_TESTS.md`
 
 ## How to run
 
@@ -35,9 +38,31 @@ make test
 ./tests/run.sh --suite blackbox_menagerie
 ./tests/run.sh --suite blackbox_e2e
 ./tests/run.sh --suite anomalies
+./tests/run.sh --describe --all
 ```
 
 Opt-in tests live under `tests/suites/opt_in/` and are listed in `tests/OPT_IN_TESTS.md`.
+
+## What We Cover / What We Promise
+
+Baseline (default in `--all`):
+- `preflight`: codesign/entitlements inventory matches the built bundle.
+- `unit`: controller unit logic passes.
+- `integration`: CLI contract + runner envelope work end-to-end for simple specimens.
+- `smoke`: end-to-end run succeeds and instrumentation ports respond.
+
+Extended (default, host-dependent skips are normal):
+- `blackbox_menagerie`: SBPL + compiled-bytes ingestion and evidence correlation.
+- `blackbox_e2e`: per-step evidence bundle matches expectations.
+
+Diagnostic:
+- `anomalies`: passes only when a known OS anomaly is reproduced.
+
+Opt-in:
+- scripts under `tests/suites/opt_in/` (see `tests/OPT_IN_TESTS.md`).
+
+For a compact coverage map, see `tests/INDEX.md`. For invariants and fixtures,
+see `tests/suites/<suite>/README.md`.
 
 ## Suites
 

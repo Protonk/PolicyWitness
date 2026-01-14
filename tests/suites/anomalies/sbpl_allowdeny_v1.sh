@@ -16,8 +16,7 @@ SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/specimen.template.
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "anomaly_probe" "probe alleged sandbox anomaly (SBPL allow vs sandbox_check deny)"
 
-if [[ ! -x "${PW_BIN}" ]]; then
-  test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 if [[ ! -f "${SBPL_FIXTURE}" ]]; then

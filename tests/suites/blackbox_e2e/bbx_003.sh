@@ -16,8 +16,7 @@ VALIDATE_PY="${ROOT_DIR}/tests/suites/blackbox_e2e/validate_run.py"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "compiled profile bytes + denial via D + attempt"
 
-if [[ ! -x "${PW_BIN}" ]]; then
-  test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 if [[ ! -f "${SPECIMEN_TEMPLATE}" ]]; then
@@ -84,8 +83,7 @@ set -e
 
 if [[ "${RC}" -ne 0 ]]; then
   set +e
-  SKIP_REASON="$(
-    /usr/bin/python3 - "${RUN_STDOUT}" 2>/dev/null <<'PY'
+  /usr/bin/python3 - "${RUN_STDOUT}" >/dev/null 2>/dev/null <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -98,22 +96,19 @@ except Exception:
 
 err = (env.get("result") or {}).get("error") or ""
 if "sandbox_register_profile failed: Operation not permitted" in err:
-    print("compiled profile registration not permitted on this host")
     raise SystemExit(0)
 
 runner_err = ((env.get("data") or {}).get("runner_result") or {}).get("error") or ""
 if "sandbox_register_profile failed: Operation not permitted" in runner_err:
-    print("compiled profile registration not permitted on this host")
     raise SystemExit(0)
 
 raise SystemExit(1)
 PY
-  )"
   STATUS=$?
   set -e
 
   if [[ ${STATUS} -eq 0 ]]; then
-    test_skip "${SKIP_REASON}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
+    skip_compiled_profile_registration "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
     exit 0
   fi
 

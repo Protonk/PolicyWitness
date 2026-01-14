@@ -67,6 +67,7 @@ Top-level fields:
 - `policy`: object
 - `probe_plan`: array of steps
 - `runner`: object (optional, for external runners)
+- `instrumentation`: object (optional, instrumentation port)
 
 ### Policy
 
@@ -110,6 +111,83 @@ Example:
 }
 ```
 
+## Instrumentation (opt-in)
+
+Instrumentation ports provide a user-friendly way to exercise the runner’s
+entitlement-backed capabilities. This field is optional; if omitted, behavior
+is unchanged. Results are reported under `instrumentation` in the run JSON and
+do not change the run outcome.
+Each port can specify an optional `phase`:
+
+- `pre_sandbox` (default)
+- `post_sandbox`
+
+Example specimen fragment:
+
+```json
+"instrumentation": {
+  "version": 1,
+  "ports": [
+    { "kind": "debug_wait", "sleep_ms": 5000 },
+    { "kind": "dylib_load", "path": "/path/to/lib.dylib", "symbol": "pw_instrumentation_init" },
+    { "kind": "execmem_probe", "size_bytes": 4096 },
+    { "kind": "dyld_env", "keys": ["DYLD_INSERT_LIBRARIES"] }
+  ]
+}
+```
+
+Notes:
+- `dylib_load` expects an optional no-arg symbol (C `void func(void)`).
+
+Ports (v1):
+- `dylib_load`: load a dylib and optionally call a symbol (uses `com.apple.security.cs.disable-library-validation`).
+- `debug_wait`: sleep before sandbox apply for debugger attach (uses `com.apple.security.get-task-allow`).
+- `execmem_probe`: attempt an RWX `mmap` and report success/failure (uses `com.apple.security.cs.allow-unsigned-executable-memory`).
+- `dyld_env`: report expected `DYLD_*` env vars (uses `com.apple.security.cs.allow-dyld-environment-variables`).
+
+Convenience flag (injects instrumentation into the request JSON at runtime):
+
+```sh
+$PW run /path/to/request.json --instrumentation @/path/to/instrumentation.json
+```
+
+Example specimen (full, minimal):
+
+```json
+{
+  "schema_version": 1,
+  "specimen_id": "instrumentation_debug_wait",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "instrumentation": {
+    "version": 1,
+    "ports": [
+      { "kind": "debug_wait", "sleep_ms": 1 }
+    ]
+  },
+  "probe_plan": []
+}
+```
+
+Explanation: this pauses briefly before sandbox apply; the run JSON includes an
+`instrumentation` report with the port status and `sleep_ms`, and the overall
+run outcome remains `ok`.
+
+Guide (quick start):
+
+1. Pick a port and add it to your specimen or create a small `instrumentation.json`.
+2. Run with `policy-witness run <request.json> --instrumentation @instrumentation.json`.
+3. Inspect `data.runner_result.instrumentation` in the output JSON for per-port status.
+
+Note: `dyld_env` is a check only. To actually set `DYLD_*` variables, use an
+external runner and set launchd `EnvironmentVariables` at install time:
+
+```sh
+$PW runner install --bundle /path/to/PWRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
+```
+
 ## External runner (BYOSig) flow
 
 Use this when you need entitlements that are not in the built-in runner.
@@ -134,6 +212,7 @@ Notes:
 - Use `--allow-adhoc` for local ad-hoc signing.
 - Use `--scope system` if you want a system-wide service (requires admin).
 - Use `--skip-bootstrap` if you will run `launchctl` manually.
+- Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
 
 The install command writes a launchd plist, bootstraps the service, and records
 the runner in the local registry.
@@ -184,6 +263,7 @@ Registry location:
 
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
+- `--instrumentation <json|@path>`: inject instrumentation ports into the request
 
 ## Troubleshooting
 

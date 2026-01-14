@@ -18,8 +18,7 @@ INVALID_MACH_SERVICE="com.example.policywitness.invalid"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "plain SBPL + negative controls"
 
-if [[ ! -x "${PW_BIN}" ]]; then
-  test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 if [[ ! -f "${PROFILE_SBPL}" ]]; then

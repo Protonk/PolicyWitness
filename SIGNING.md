@@ -9,12 +9,17 @@ Preferred entrypoint:
 ```sh
 make build
 # or:
+make build YOLO=1
+# or:
 IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
+# or:
+./build.sh --yolo
 ```
 
 Key requirements:
 
-- `IDENTITY` must be set to a **Developer ID Application** identity present in your keychain.
+- `IDENTITY` must be set to a **Developer ID Application** identity present in your keychain, or
+  pass `--yolo` / `YOLO=1` to auto-select the first matching identity.
 - Xcode Command Line Tools are required (`swiftc` is discovered via `xcrun`).
 
 ## What `build.sh` signs
@@ -38,5 +43,26 @@ These are derived from the **actual signed binaries on disk** (hashes and entitl
 
 ## Notarization (zip artifact)
 
-The build also produces `PolicyWitness.zip` suitable for notarization submission. Notarytool invocation and stapling are intentionally not automated in this repo; keep those steps in your release checklist.
+The build produces `PolicyWitness.zip` suitable for notarization submission. The
+required order is: sign and zip, submit the zip to notarytool, then staple the
+app bundle. This is what Gatekeeper expects.
 
+Preferred entrypoint:
+
+```sh
+make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile
+# or:
+NOTARY_KEYCHAIN_PROFILE=dev-profile make notarize
+# or (auto-select codesign identity):
+make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile YOLO=1
+```
+
+Manual equivalent:
+
+```sh
+xcrun notarytool submit "PolicyWitness.zip" --keychain-profile "dev-profile" --wait
+xcrun stapler staple "PolicyWitness.app"
+xcrun stapler validate -v "PolicyWitness.app"
+spctl -a -vv --type execute "PolicyWitness.app"
+ditto -c -k --sequesterRsrc --keepParent "PolicyWitness.app" "PolicyWitness.zip"
+```

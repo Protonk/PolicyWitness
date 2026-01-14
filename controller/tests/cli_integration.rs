@@ -95,3 +95,135 @@ fn specimen_smoke_file_read_deny() {
     let sb = step.get("sandbox_check").cloned().unwrap_or_default();
     assert_eq!(sb.get("outcome").and_then(|v| v.as_str()), Some("deny"));
 }
+
+#[test]
+fn instrumentation_injects_by_flag() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_file_read_deny.json");
+    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+
+    let instrumentation = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("instrumentation")
+        .join("debug_wait.json");
+    assert!(
+        instrumentation.exists(),
+        "missing instrumentation fixture: {}",
+        instrumentation.display()
+    );
+
+    let out = run_pw(
+        &bin,
+        &[
+            "run",
+            "--instrumentation",
+            instrumentation.to_str().expect("instrumentation path utf8"),
+            specimen.to_str().expect("specimen path utf8"),
+        ],
+    );
+
+    assert!(
+        out.status.success(),
+        "instrumentation run failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
+    let runner = envelope
+        .get("data")
+        .and_then(|v| v.get("runner_result"))
+        .cloned()
+        .expect("missing data.runner_result");
+    let inst = runner
+        .get("instrumentation")
+        .cloned()
+        .expect("missing runner_result.instrumentation");
+    let ports = inst
+        .get("ports")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert!(!ports.is_empty(), "expected instrumentation ports");
+    let port = &ports[0];
+    assert_eq!(
+        port.get("kind").and_then(|v| v.as_str()),
+        Some("debug_wait")
+    );
+    assert_eq!(
+        port.get("status").and_then(|v| v.as_str()),
+        Some("ok")
+    );
+}
+
+#[test]
+fn instrumentation_rejects_existing() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_instrumentation_debug_wait.json");
+    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+
+    let instrumentation = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("instrumentation")
+        .join("debug_wait.json");
+    assert!(
+        instrumentation.exists(),
+        "missing instrumentation fixture: {}",
+        instrumentation.display()
+    );
+
+    let out = run_pw(
+        &bin,
+        &[
+            "run",
+            "--instrumentation",
+            instrumentation.to_str().expect("instrumentation path utf8"),
+            specimen.to_str().expect("specimen path utf8"),
+        ],
+    );
+
+    assert!(
+        !out.status.success(),
+        "expected failure when instrumentation already present"
+    );
+    assert_eq!(out.status.code(), Some(2));
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
+    assert_eq!(
+        envelope
+            .get("result")
+            .and_then(|v| v.get("normalized_outcome"))
+            .and_then(|v| v.as_str()),
+        Some("tool_error")
+    );
+    let error = envelope
+        .get("result")
+        .and_then(|v| v.get("error"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        error.contains("instrumentation"),
+        "expected error to mention instrumentation (got {error:?})"
+    );
+}

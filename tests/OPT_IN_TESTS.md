@@ -37,6 +37,11 @@ tests/suites/opt_in/<test>.sh
 There is intentionally no `opt_in` suite runner; opt-in tests are meant to be
 invoked explicitly so resource-heavy or flaky tests are never run by accident.
 
+GUI session note: tests that install or bootstrap launchd services (for example
+`runner_instrumentation_dyld_env`) require a logged-in desktop session. Run
+them from a local Terminal.app window; SSH/CI or sandboxed harnesses will skip
+with a non-GUI session message.
+
 If you see `permission denied`, either invoke with `bash` or make the script
 executable (these tests are regular shell scripts).
 
@@ -60,6 +65,27 @@ Optional standard overrides:
 - **Resource dependency:** `PolicyWitness.app` built + `log show` access.
 - **When to run:** After changing `runner/PWRunner*` runner behavior or `policy-witness run`.
 - **Artifacts:** `tests/out/suites/opt_in/pw_runner_specimen/artifacts/*`
+
+### runner_instrumentation_dylib
+
+- **Location:** `tests/suites/opt_in/runner_instrumentation_dylib.sh`
+- **Purpose:** Validate the `dylib_load` instrumentation port by building a tiny
+  dylib, loading it pre-sandbox, and verifying the symbol runs.
+- **Opt-in reason:** Requires a compiler toolchain and dynamic library loading.
+- **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
+- **When to run:** After changing instrumentation port handling or runner entitlements.
+- **Artifacts:** `tests/out/suites/opt_in/runner_instrumentation_dylib/artifacts/*`
+
+### runner_instrumentation_dyld_env
+
+- **Location:** `tests/suites/opt_in/runner_instrumentation_dyld_env.sh`
+- **Purpose:** Validate external runner env injection and the `dyld_env` port.
+- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+  unsandboxed caller; can be blocked in sandboxed harnesses.
+- **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
+- **When to run:** After changing `policy-witness runner install` or
+  instrumentation env handling.
+- **Artifacts:** `tests/out/suites/opt_in/runner_instrumentation_dyld_env/artifacts/*`
 
 ## Adding a new opt-in test
 

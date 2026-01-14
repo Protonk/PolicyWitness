@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "specimen_id": "instrumentation_invalid_phase",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "instrumentation": {
+    "version": 1,
+    "ports": [
+      {
+        "kind": "debug_wait",
+        "phase": "later",
+        "sleep_ms": 1
+      }
+    ]
+  },
+  "probe_plan": []
+}

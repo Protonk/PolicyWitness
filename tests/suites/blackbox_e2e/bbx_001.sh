@@ -16,8 +16,7 @@ VALIDATE_PY="${ROOT_DIR}/tests/suites/blackbox_e2e/validate_run.py"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "SBPL params + deny-signal on file-write"
 
-if [[ ! -x "${PW_BIN}" ]]; then
-  test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 if [[ ! -f "${PROFILE_SBPL}" ]]; then

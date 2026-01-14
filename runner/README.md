@@ -58,6 +58,27 @@ Invariants:
 The controller provides a `policy-witness runner` manager to install/register
 these services and to enforce entitlements supersets before dispatch.
 
+## Instrumentation port (opt-in)
+
+The specimen schema includes an optional `instrumentation` object that activates
+entitlement-backed adapters in a controlled, auditable way. When present, the
+runner executes requested ports at `phase: pre_sandbox` (default) or
+`phase: post_sandbox`, then includes `instrumentation` results in the run JSON.
+
+Supported ports (v1):
+
+- `dylib_load`: `dlopen` a specified dylib and optionally call a symbol (uses
+  `com.apple.security.cs.disable-library-validation`).
+- `debug_wait`: sleep for `sleep_ms` before sandbox apply to allow debugger
+  attach (uses `com.apple.security.get-task-allow`).
+- `execmem_probe`: attempt an RWX `mmap` and report success/failure (uses
+  `com.apple.security.cs.allow-unsigned-executable-memory`).
+- `dyld_env`: report whether expected `DYLD_*` env vars are present; the runner
+  cannot set these at runtime, so use an external runner with launchd
+  `EnvironmentVariables`.
+
+Default behavior is unchanged: if `instrumentation` is omitted, nothing runs.
+
 ## Agent note: “nested sandbox” harnesses
 
 Some development harnesses run tools inside an OS sandbox. In those environments:

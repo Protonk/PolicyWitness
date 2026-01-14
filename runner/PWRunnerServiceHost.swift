@@ -10,6 +10,9 @@ private let PW_RUNNER_DENY_SIGNAL: Int32 = SIGUSR1
 private let PW_SANDBOX_FILTER_PATH: Int32 = 1
 private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 16
 
+private let PW_INSTRUMENTATION_PHASE_PRE: String = "pre_sandbox"
+private let PW_INSTRUMENTATION_PHASE_POST: String = "post_sandbox"
+
 private func nowUnixMs() -> UInt64 {
     UInt64(Date().timeIntervalSince1970 * 1000.0)
 }
@@ -179,6 +182,248 @@ private func denySignalCount() -> Int {
     Int(pwRunnerDenySignalCount)
 }
 
+// MARK: - Instrumentation ports (opt-in)
+
+private func instrumentationDefaultPhase(kind: String) -> String {
+    switch kind {
+    case "dylib_load", "debug_wait", "execmem_probe", "dyld_env":
+        return PW_INSTRUMENTATION_PHASE_PRE
+    default:
+        return PW_INSTRUMENTATION_PHASE_PRE
+    }
+}
+
+private func instrumentationPhaseIsValid(_ phase: String) -> Bool {
+    phase == PW_INSTRUMENTATION_PHASE_PRE || phase == PW_INSTRUMENTATION_PHASE_POST
+}
+
+private func instrumentationErrorReport(
+    port: PWRunnerInstrumentationPort,
+    phase: String?,
+    status: String = "error",
+    message: String
+) -> PWRunnerInstrumentationPortReport {
+    PWRunnerInstrumentationPortReport(
+        kind: port.kind,
+        phase: phase,
+        label: port.label,
+        status: status,
+        error: message
+    )
+}
+
+private func runInstrumentationPort(
+    _ port: PWRunnerInstrumentationPort,
+    phase: String
+) -> PWRunnerInstrumentationPortReport {
+    switch port.kind {
+    case "dylib_load":
+        guard let path = port.path, !path.isEmpty else {
+            return instrumentationErrorReport(port: port, phase: phase, message: "missing dylib path")
+        }
+        let handle = path.withCString { dlopen($0, RTLD_NOW) }
+        guard let handle else {
+            let err = dlerror().map { String(cString: $0) } ?? "dlopen failed"
+            return instrumentationErrorReport(port: port, phase: phase, message: err)
+        }
+        var symbolFound: Bool? = nil
+        if let symbol = port.symbol, !symbol.isEmpty {
+            _ = dlerror()
+            let sym = symbol.withCString { dlsym(handle, $0) }
+            if let sym {
+                typealias DylibEntryFn = @convention(c) () -> Void
+                let fn = unsafeBitCast(sym, to: DylibEntryFn.self)
+                fn()
+                symbolFound = true
+            } else {
+                let err = dlerror().map { String(cString: $0) } ?? "dlsym failed"
+                return PWRunnerInstrumentationPortReport(
+                    kind: port.kind,
+                    phase: phase,
+                    label: port.label,
+                    status: "error",
+                    error: err,
+                    dylib: PWRunnerInstrumentationDylibReport(path: path, symbol: symbol, symbol_found: false)
+                )
+            }
+        }
+        let dylibReport = PWRunnerInstrumentationDylibReport(path: path, symbol: port.symbol, symbol_found: symbolFound)
+        return PWRunnerInstrumentationPortReport(
+            kind: port.kind,
+            phase: phase,
+            label: port.label,
+            status: "ok",
+            error: nil,
+            dylib: dylibReport
+        )
+
+    case "debug_wait":
+        guard let sleepMs = port.sleep_ms, sleepMs > 0 else {
+            return instrumentationErrorReport(port: port, phase: phase, message: "missing sleep_ms")
+        }
+        Thread.sleep(forTimeInterval: Double(sleepMs) / 1000.0)
+        return PWRunnerInstrumentationPortReport(
+            kind: port.kind,
+            phase: phase,
+            label: port.label,
+            status: "ok",
+            error: nil,
+            debug_wait: PWRunnerInstrumentationDebugWaitReport(sleep_ms: sleepMs)
+        )
+
+    case "execmem_probe":
+        let requested = port.size_bytes ?? 4096
+        let size = max(1, min(requested, 1024 * 1024))
+        let ptr = mmap(nil, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0)
+        if ptr == MAP_FAILED {
+            let err = errno
+            return PWRunnerInstrumentationPortReport(
+                kind: port.kind,
+                phase: phase,
+                label: port.label,
+                status: "error",
+                error: String(cString: strerror(err)),
+                execmem_probe: PWRunnerInstrumentationExecmemReport(
+                    size_bytes: size,
+                    mmap_succeeded: false,
+                    errno: Int(err)
+                )
+            )
+        }
+        _ = munmap(ptr, size)
+        return PWRunnerInstrumentationPortReport(
+            kind: port.kind,
+            phase: phase,
+            label: port.label,
+            status: "ok",
+            error: nil,
+            execmem_probe: PWRunnerInstrumentationExecmemReport(
+                size_bytes: size,
+                mmap_succeeded: true,
+                errno: nil
+            )
+        )
+
+    case "dyld_env":
+        let keys = port.keys ?? []
+        let expected = port.expected ?? [:]
+        if keys.isEmpty && expected.isEmpty {
+            return instrumentationErrorReport(port: port, phase: phase, message: "missing keys or expected map")
+        }
+        let env = ProcessInfo.processInfo.environment
+        var present: Set<String> = []
+        var missing: Set<String> = []
+        var mismatched: Set<String> = []
+
+        let keySet = Set(keys).union(expected.keys)
+        for key in keySet {
+            if let value = env[key] {
+                present.insert(key)
+                if let expectedValue = expected[key], expectedValue != value {
+                    mismatched.insert(key)
+                }
+            } else {
+                missing.insert(key)
+                if expected.keys.contains(key) {
+                    mismatched.insert(key)
+                }
+            }
+        }
+
+        let reveal = port.reveal_values ?? false
+        var values: [String: String]? = nil
+        if reveal {
+            var out: [String: String] = [:]
+            for key in keySet.sorted() {
+                if let value = env[key] {
+                    out[key] = value
+                }
+            }
+            values = out.isEmpty ? nil : out
+        }
+
+        let keysPresent = present.sorted()
+        let keysMissing = missing.sorted()
+        let keysMismatch = mismatched.sorted()
+        let status = (keysMissing.isEmpty && keysMismatch.isEmpty) ? "ok" : "error"
+        let report = PWRunnerInstrumentationDyldEnvReport(
+            keys_present: keysPresent,
+            keys_missing: keysMissing,
+            expected_mismatch: keysMismatch,
+            values: values
+        )
+        return PWRunnerInstrumentationPortReport(
+            kind: port.kind,
+            phase: phase,
+            label: port.label,
+            status: status,
+            error: status == "ok" ? nil : "dyld env check failed",
+            dyld_env: report
+        )
+
+    default:
+        return instrumentationErrorReport(
+            port: port,
+            phase: phase,
+            status: "unsupported",
+            message: "unsupported instrumentation port"
+        )
+    }
+}
+
+private func applyInstrumentationPhase(
+    _ phase: String,
+    ports: [PWRunnerInstrumentationPort],
+    reports: inout [PWRunnerInstrumentationPortReport?]
+) {
+    for (idx, port) in ports.enumerated() {
+        if reports[idx] != nil {
+            continue
+        }
+        if let requestedPhase = port.phase, !instrumentationPhaseIsValid(requestedPhase) {
+            reports[idx] = instrumentationErrorReport(
+                port: port,
+                phase: requestedPhase,
+                message: "unknown phase (expected pre_sandbox|post_sandbox)"
+            )
+            continue
+        }
+        let effectivePhase = port.phase ?? instrumentationDefaultPhase(kind: port.kind)
+        if effectivePhase != phase {
+            continue
+        }
+        reports[idx] = runInstrumentationPort(port, phase: effectivePhase)
+    }
+}
+
+private func finalizeInstrumentationReport(
+    version: Int,
+    ports: [PWRunnerInstrumentationPort],
+    reports: [PWRunnerInstrumentationPortReport?],
+    earlyReason: String?
+) -> PWRunnerInstrumentationReport {
+    var out: [PWRunnerInstrumentationPortReport] = []
+    out.reserveCapacity(ports.count)
+    for (idx, port) in ports.enumerated() {
+        if let report = reports[idx] {
+            out.append(report)
+            continue
+        }
+        let phase = port.phase ?? instrumentationDefaultPhase(kind: port.kind)
+        let message = earlyReason ?? "instrumentation port did not run"
+        out.append(
+            PWRunnerInstrumentationPortReport(
+                kind: port.kind,
+                phase: phase,
+                label: port.label,
+                status: "skipped",
+                error: message
+            )
+        )
+    }
+    return PWRunnerInstrumentationReport(version: version, ports: out)
+}
+
 // MARK: - Runner implementation
 
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
@@ -225,6 +470,46 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        var instrumentationVersion: Int? = nil
+        var instrumentationPorts: [PWRunnerInstrumentationPort] = []
+        var instrumentationReports: [PWRunnerInstrumentationPortReport?] = []
+        var instrumentationReport: PWRunnerInstrumentationReport? = nil
+
+        if let instrumentation = parsed.instrumentation {
+            instrumentationVersion = instrumentation.version
+            instrumentationPorts = instrumentation.ports
+            if instrumentation.version != 1 {
+                let reports = instrumentationPorts.map { port in
+                    instrumentationErrorReport(
+                        port: port,
+                        phase: port.phase ?? instrumentationDefaultPhase(kind: port.kind),
+                        message: "unsupported instrumentation version \(instrumentation.version)"
+                    )
+                }
+                instrumentationReport = PWRunnerInstrumentationReport(version: instrumentation.version, ports: reports)
+            } else {
+                instrumentationReports = Array(repeating: nil, count: instrumentationPorts.count)
+                applyInstrumentationPhase(
+                    PW_INSTRUMENTATION_PHASE_PRE,
+                    ports: instrumentationPorts,
+                    reports: &instrumentationReports
+                )
+            }
+        }
+
+        let finalizeInstrumentation = { (reason: String?) -> PWRunnerInstrumentationReport? in
+            guard let version = instrumentationVersion else { return nil }
+            if let report = instrumentationReport {
+                return report
+            }
+            return finalizeInstrumentationReport(
+                version: version,
+                ports: instrumentationPorts,
+                reports: instrumentationReports,
+                earlyReason: reason
+            )
+        }
+
         let sandboxLib: SandboxLib
         switch SandboxLib.load() {
         case .success(let lib):
@@ -239,7 +524,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: []
+                steps: [],
+                instrumentation: finalizeInstrumentation("runner exited before sandbox setup")
             )
             reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
@@ -257,7 +543,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: []
+                steps: [],
+                instrumentation: finalizeInstrumentation("runner exited before sandbox setup")
             )
             reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
@@ -277,7 +564,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: []
+                steps: [],
+                instrumentation: finalizeInstrumentation("runner exited before sandbox apply")
             )
             reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
@@ -296,11 +584,20 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
                 policy_sha256: policyHash,
-                steps: []
+                steps: [],
+                instrumentation: finalizeInstrumentation("runner exited before sandbox apply")
             )
             reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
             return
+        }
+
+        if instrumentationVersion == 1 && instrumentationReport == nil {
+            applyInstrumentationPhase(
+                PW_INSTRUMENTATION_PHASE_POST,
+                ports: instrumentationPorts,
+                reports: &instrumentationReports
+            )
         }
 
         let sandboxedAfterApply: Bool? = {
@@ -340,7 +637,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             policy_sha256: policyHash,
             sandboxed_after_apply: sandboxedAfterApply,
             deny_signal_total: totalSig,
-            steps: stepResults
+            steps: stepResults,
+            instrumentation: finalizeInstrumentation(nil)
         )
         reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
         DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }

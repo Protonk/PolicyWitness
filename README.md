@@ -12,6 +12,15 @@ A specimen run spins up a fresh `PWRunner.xpc` process. The runner begins unsand
 
 Collection is made possible by executing each probe as a small, explicit attempt and recording its direct rc plus errno/kr. For each step, the runner also runs `sandbox_check` using the same operation and filter so you can compare the kernel’s prediction to the attempted outcome. When the policy uses deterministic side effects like `send-signal`, the runner installs a handler and records before/after signal counts so denials can be observed without relying on logs. The runner emits a single structured JSON report for the specimen—run metadata and per-step results—and exits immediately after replying. The result is a per-step record that favors witnessed facts over inferred explanations.
 
+## Instrumentation Port (Opt-in)
+
+PolicyWitness includes an optional instrumentation port that exposes the runner’s hardened‑runtime entitlements in a controlled, auditable way: specimens may include an `instrumentation` object with ports executed `pre_sandbox` or `post_sandbox`, and results are reported in the run JSON without changing the run outcome; for quick experimentation you can inject instrumentation at runtime with `policy-witness run <request.json> --instrumentation <json|@path>` and keep existing callers unchanged.
+
+- `dyld_env`: report expected `DYLD_*` env vars (`com.apple.security.cs.allow-dyld-environment-variables`); to set these, use an external runner with `policy-witness runner install --env KEY=VALUE`.
+- `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`).
+- `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`).
+- `execmem_probe`: attempt RWX `mmap` and report success/failure (`com.apple.security.cs.allow-unsigned-executable-memory`).
+
 ## Evidence Model
 
 `Specimens → Runs → Steps → Evidence`

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "specimen_id": "instrumentation_execmem_probe",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "instrumentation": {
+    "version": 1,
+    "ports": [
+      {
+        "kind": "execmem_probe",
+        "size_bytes": 4096
+      }
+    ]
+  },
+  "probe_plan": []
+}

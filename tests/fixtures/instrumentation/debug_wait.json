@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "ports": [
+    {
+      "kind": "debug_wait",
+      "sleep_ms": 1
+    }
+  ]
+}

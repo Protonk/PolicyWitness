@@ -22,11 +22,20 @@ runtime.
 - Compiled-blob profiles to exercise compiled-bytes ingestion; these cases may
   skip when profile registration is not permitted.
 
+## Success criteria
+
+- Each case either passes or skips with an explicit reason.
+- Expected mismatches are recorded as evidence (via `mismatch_reason`).
+
 ## Fixtures and manifests
 
 - Manifest: `tests/fixtures/blackbox_menagerie/cases/core.json`
 - SBPL sources: `tests/fixtures/blackbox_menagerie/sbpl/`
 - Compiled blobs: `tests/fixtures/blackbox_menagerie/compiled/`
+
+## Artifacts
+
+- `tests/out/suites/blackbox_menagerie/<case>/artifacts/*`
 
 ## Adding cases
 

@@ -37,7 +37,7 @@ if [[ ! -x "${PW_BIN}" ]]; then
     PW_TEST_ID="${case_id}"
     test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
     test_step "run" "${desc}"
-    test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
+    skip_missing_pw_app "${PW_BIN}"
   done <<< "${case_list}"
   exit 0
 fi

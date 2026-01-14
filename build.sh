@@ -4,6 +4,7 @@ set -euo pipefail
 # Usage:
 #   ./build.sh
 #   IDENTITY='Developer ID Application: ...' ./build.sh
+#   ./build.sh --yolo
 #   PW_INSPECTION=0 IDENTITY='Developer ID Application: ...' ./build.sh
 #
 # Produces:
@@ -35,6 +36,39 @@ SWIFT_MODULE_CACHE="${SWIFT_MODULE_CACHE:-.tmp/swift-module-cache}"
 SWIFT_OPT_LEVEL="${SWIFT_OPT_LEVEL:-}"
 SWIFT_DEBUG_FLAGS="${SWIFT_DEBUG_FLAGS:-}"
 PW_INSPECTION="${PW_INSPECTION:-1}"
+YOLO=0
+
+usage() {
+  cat <<'EOF'
+usage:
+  ./build.sh
+  IDENTITY='Developer ID Application: ...' ./build.sh
+  ./build.sh --yolo
+  PW_INSPECTION=0 IDENTITY='Developer ID Application: ...' ./build.sh
+
+notes:
+  - --yolo selects the first Developer ID Application identity from:
+      security find-identity -v -p codesigning
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --yolo)
+      YOLO=1
+      shift 1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" 1>&2
+      usage 1>&2
+      exit 2
+      ;;
+  esac
+done
 
 if [[ "${PW_INSPECTION}" == "1" ]]; then
   if [[ -z "${SWIFT_OPT_LEVEL}" ]]; then
@@ -56,16 +90,64 @@ fi
 IDENTITY="${IDENTITY:-}"
 
 if [[ -z "${IDENTITY}" ]]; then
-  cat <<'EOF' 1>&2
+  if [[ "${YOLO}" == "1" ]]; then
+    set +e
+    IDENTITY="$(
+      /usr/bin/python3 - <<'PY'
+import re
+import subprocess
+import sys
+
+proc = subprocess.run(
+    ["/usr/bin/security", "find-identity", "-v", "-p", "codesigning"],
+    capture_output=True,
+    text=True,
+)
+if proc.returncode != 0:
+    sys.exit(2)
+
+for line in (proc.stdout or "").splitlines():
+    if "Developer ID Application:" not in line:
+        continue
+    match = re.search(r'"(Developer ID Application: [^"]+)"', line)
+    if match:
+        print(match.group(1))
+        sys.exit(0)
+
+sys.exit(1)
+PY
+    )"
+    IDENTITY_STATUS=$?
+    set -e
+
+    if [[ ${IDENTITY_STATUS} -ne 0 || -z "${IDENTITY}" ]]; then
+      cat <<'EOF' 1>&2
+ERROR: --yolo could not find a Developer ID Application identity.
+
+Run:
+  security find-identity -v -p codesigning
+
+Then set IDENTITY explicitly or install/unlock the identity in your keychain.
+EOF
+      exit 2
+    fi
+
+    echo "==> Using codesign identity (yolo): ${IDENTITY}"
+  else
+    cat <<'EOF' 1>&2
 ERROR: IDENTITY is not set.
 
 Set it to your Developer ID Application identity string, for example:
   IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' ./build.sh
 
+Or re-run with --yolo to auto-select the first Developer ID Application identity:
+  ./build.sh --yolo
+
 You can find valid identities via:
   security find-identity -v -p codesigning
 EOF
-  exit 2
+    exit 2
+  fi
 fi
 
 if ! /usr/bin/security find-identity -v -p codesigning 2>/dev/null | /usr/bin/grep -Fq "\"${IDENTITY}\""; then
@@ -297,8 +379,12 @@ echo "  - ${SANDBOX_LOG_OBSERVER_BIN}"
 echo
 echo "Next (notarize with your saved profile):"
 cat <<EOF
+  make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile
+  # add YOLO=1 to auto-select a codesign identity
+  # or manually:
   xcrun notarytool submit "${ZIP_NAME}" --keychain-profile "dev-profile" --wait
   xcrun stapler staple "${APP_BUNDLE}"
   xcrun stapler validate -v "${APP_BUNDLE}"
   spctl -a -vv --type execute "${APP_BUNDLE}"
+  /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
 EOF

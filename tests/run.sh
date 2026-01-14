@@ -57,6 +57,7 @@ rm -rf "${RUN_OUT}"
 mkdir -p "${RUN_OUT}"
 
 suites=()
+describe=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -68,11 +69,16 @@ while [[ $# -gt 0 ]]; do
       suites=()
       shift 1
       ;;
+    --describe)
+      describe=1
+      shift 1
+      ;;
     -h|--help)
       cat <<'EOF'
 usage:
   tests/run.sh --all
   tests/run.sh --suite <preflight|unit|integration|smoke|blackbox_menagerie|blackbox_e2e|anomalies> [--suite <name> ...]
+  tests/run.sh --describe [--all|--suite <name> ...]
 EOF
       exit 0
       ;;
@@ -85,6 +91,15 @@ done
 
 if [[ ${#suites[@]} -eq 0 ]]; then
   suites=(preflight unit integration smoke blackbox_menagerie blackbox_e2e anomalies)
+fi
+
+if [[ ${describe} -eq 1 ]]; then
+  echo "==> [describe] suite map (tests/INDEX.md)"
+  if [[ -f "${ROOT_DIR}/tests/INDEX.md" ]]; then
+    cat "${ROOT_DIR}/tests/INDEX.md"
+  else
+    echo "missing: ${ROOT_DIR}/tests/INDEX.md" 1>&2
+  fi
 fi
 
 failures=0

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -155,7 +155,32 @@ pub fn entitlements_superset(required: &[String], entitlements: &RunnerEntitleme
     required.iter().all(|key| set.contains(key.as_str()))
 }
 
-pub fn build_launchd_plist(service_name: &str, executable_path: &Path) -> String {
+fn plist_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+pub fn build_launchd_plist(
+    service_name: &str,
+    executable_path: &Path,
+    env: Option<&BTreeMap<String, String>>,
+) -> String {
+    let mut env_block = String::new();
+    if let Some(env) = env {
+        if !env.is_empty() {
+            env_block.push_str("  <key>EnvironmentVariables</key>\n  <dict>\n");
+            for (key, value) in env {
+                env_block.push_str(&format!(
+                    "    <key>{}</key>\n    <string>{}</string>\n",
+                    plist_escape(key),
+                    plist_escape(value)
+                ));
+            }
+            env_block.push_str("  </dict>\n");
+        }
+    }
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -172,7 +197,7 @@ pub fn build_launchd_plist(service_name: &str, executable_path: &Path) -> String
     <key>{service_name}</key>
     <true/>
   </dict>
-  <key>RunAtLoad</key>
+{env_block}  <key>RunAtLoad</key>
   <true/>
 </dict>
 </plist>

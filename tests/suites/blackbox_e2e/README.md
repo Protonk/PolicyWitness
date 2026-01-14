@@ -24,11 +24,17 @@ A test passes only when the controller output matches the expected evidence
 bundle for every step. Failures include mismatched sandbox_check outcomes,
 attempt results, or denial classification.
 
-BBX-003 requires a compiled profile blob at:
-`tests/fixtures/blackbox_e2e/BBX-003/profile.compiled.b64`
+## Fixtures
+
+- Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`, `BBX-003/`
+- Compiled profile blob: `tests/fixtures/blackbox_e2e/BBX-003/profile.compiled.b64`
 
 BBX-003 will skip if the host rejects compiled profile registration
 (`sandbox_register_profile` returns EPERM).
 
 The suite will also skip a case if `sandbox_check` returns outcomes that
 contradict the expected policy (see the `anomalies` suite for known host bugs).
+
+## Artifacts
+
+- `tests/out/suites/blackbox_e2e/<case>/artifacts/*`
