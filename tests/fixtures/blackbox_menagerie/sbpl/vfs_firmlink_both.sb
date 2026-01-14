@@ -1,0 +1,9 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes for both /private/tmp and Data-volume spellings
+(allow file-read* (literal "/private/tmp/vfs_firmlink_probe"))
+(allow file-read* (literal "/System/Volumes/Data/private/tmp/vfs_firmlink_probe"))
+(allow file-write* (literal "/private/tmp/vfs_firmlink_probe"))
+(allow file-write* (literal "/System/Volumes/Data/private/tmp/vfs_firmlink_probe"))

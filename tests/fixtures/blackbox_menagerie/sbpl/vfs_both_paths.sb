@@ -1,0 +1,21 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes/metadata for both alias and canonical paths
+(allow file-read* (literal "/tmp/foo"))
+(allow file-read* (literal "/private/tmp/foo"))
+(allow file-read* (literal "/tmp/bar"))
+(allow file-read* (literal "/private/tmp/bar"))
+(allow file-read* (literal "/tmp/nested/child"))
+(allow file-read* (literal "/private/tmp/nested/child"))
+(allow file-read* (literal "/var/tmp/canon"))
+(allow file-read* (literal "/private/var/tmp/canon"))
+(allow file-write* (literal "/tmp/foo"))
+(allow file-write* (literal "/private/tmp/foo"))
+(allow file-write* (literal "/tmp/bar"))
+(allow file-write* (literal "/private/tmp/bar"))
+(allow file-write* (literal "/tmp/nested/child"))
+(allow file-write* (literal "/private/tmp/nested/child"))
+(allow file-write* (literal "/var/tmp/canon"))
+(allow file-write* (literal "/private/var/tmp/canon"))

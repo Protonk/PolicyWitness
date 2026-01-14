@@ -1,0 +1,9 @@
+(version 1)
+(allow default)
+(deny file-read* (literal "/tmp/baz.txt"))
+(deny file-write* (literal "/tmp/baz.txt"))
+(allow file-read* (require-any
+  (literal "/tmp/foo.txt")
+  (literal "/tmp/bar.txt")
+  (literal "/private/tmp/foo.txt")
+  (literal "/private/tmp/bar.txt")))

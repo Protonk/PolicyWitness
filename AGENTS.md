@@ -2,7 +2,7 @@
 
 This file is for contributors and agents.
 
-PolicyWitness is a sandbox runner instrumentation harness. Variation is supplied at runtime as SBPL / compiled profile bytes plus a probe plan. A single ephemeral XPC runner (`PWRunner.xpc`) self-applies the sandbox per specimen, executes the plan, and exits.
+PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — SBPL or compiled profile bytes plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance that self-applies the sandbox, executes the plan, and exits.
 
 ## Quick Router (open first)
 
@@ -17,6 +17,13 @@ Pick what you’re changing:
 - **Tests** → `tests/README.md`, `tests/run.sh --all`
 - **Opt-in tests registry** → `tests/OPT_IN_TESTS.md`
 - **User guide** → `PolicyWitness.md`
+
+## Vocabulary (repo-anchored)
+
+- **Specimen**: the unit of input for a run — policy (SBPL or compiled profile bytes + params) plus a probe plan.
+- **Controller**: the host-side orchestrator (`PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
+- **Runner**: the ephemeral XPC service (`PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`) that applies one sandbox policy, executes the probe plan, returns JSON, and exits.
+- **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
 
 ## What Ships (bundle layout contract)
 
@@ -74,3 +81,9 @@ Notes:
 Some automation/agent harnesses run commands under a macOS sandbox. In that context, PolicyWitness runs can fail before any runner code executes (for example XPC lookup `NSCocoaErrorDomain=4099` / error `159` “Sandbox restriction”), and unified logging capture can be unavailable (`log: Cannot run while sandboxed`).
 
 Treat these as environment constraints, not PolicyWitness regressions. If you see them, request escalation and rerun the same command once from an unsandboxed Terminal context to confirm behavior before debugging the project.
+
+## Maintenance checklist (when changing things)
+
+- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerServiceHost.swift`, fixtures under `tests/fixtures/`, and any controller parsing assumptions.
+- If you change shipped paths: update `build.sh`, `tests/build-evidence.py`, tests that locate binaries, and any docs that enumerate the bundle layout.
+- If you change evidence fields: update `controller/src/main.rs`, any tests that validate output, and the docs that describe evidence channels.

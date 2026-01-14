@@ -1,0 +1,9 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes for both direct and symlinked-in-path forms
+(allow file-read* (literal "/private/var/tmp/vfs_link_probe"))
+(allow file-read* (literal "/private/tmp/vfs_linkdir/to_var_tmp/vfs_link_probe"))
+(allow file-write* (literal "/private/var/tmp/vfs_link_probe"))
+(allow file-write* (literal "/private/tmp/vfs_linkdir/to_var_tmp/vfs_link_probe"))

@@ -1,9 +1,10 @@
 # `tests/` (test runner + suites)
 
-This directory contains the repository test harness. The test suite is organized to answer two questions:
+This directory contains the repository test harness. The test suite is organized to answer three questions:
 
 1. Does the built `PolicyWitness.app` basically work end-to-end?
 2. Did we break a contract (CLI shape, evidence artifacts, JSON output schema)?
+3. Can we reproduce known or suspected sandbox anomalies?
 
 The harness is machine-readable: every test writes structured JSONL events and a per-run summary under `tests/out/`.
 
@@ -31,6 +32,9 @@ make test
 ./tests/run.sh --suite unit
 ./tests/run.sh --suite integration
 ./tests/run.sh --suite smoke
+./tests/run.sh --suite blackbox_menagerie
+./tests/run.sh --suite blackbox_e2e
+./tests/run.sh --suite anomalies
 ```
 
 Opt-in tests live under `tests/suites/opt_in/` and are listed in `tests/OPT_IN_TESTS.md`.
@@ -41,6 +45,22 @@ Opt-in tests live under `tests/suites/opt_in/` and are listed in `tests/OPT_IN_T
 - `unit`: Rust unit tests (`cargo test --bins`)
 - `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/tests/cli_integration.rs`
 - `smoke`: end-to-end scripts against a built `PolicyWitness.app`
+- `blackbox_menagerie`: SBPL and compiled-blob end-to-end cases copied from PAWL evidence
+- `blackbox_e2e`: end-to-end runner black-box cases (specimen in, JSON out, strict evidence checks)
+- `anomalies`: structured reproductions of alleged system bugs (tests pass when the anomaly is reproduced)
+
+Anomalies are intentionally inverted: a test passes only when the anomaly is observed. Use messages of the form `Anomaly: <allegation> -- <observed behavior>` so the logs stay self-describing.
+
+Anomalies set `PW_TEST_QUIET=1` so they emit only the final anomaly note; they are feelers rather than a full suite narrative.
+
+## Blackbox menagerie
+
+End-to-end specimen runs sourced from local copies of PAWL evidence. The suite
+covers SBPL ingestion, compiled-bytes ingestion, probe execution, and evidence
+correlation; it includes negative controls and canonicalization-boundary cases
+where mismatches are recorded as evidence. Compiled-blob cases may skip when
+profile registration is not permitted on the host. See
+`tests/suites/blackbox_menagerie/README.md` for suite invariants and fixtures.
 
 ## Harness note: sandboxed automation environments
 

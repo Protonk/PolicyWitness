@@ -1,0 +1,7 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes only for the canonical /private/var/tmp path
+(allow file-read* (literal "/private/var/tmp/vfs_link_probe"))
+(allow file-write* (literal "/private/var/tmp/vfs_link_probe"))

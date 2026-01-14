@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "specimen_id": "BBX-002",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "__PROFILE_SBPL_SOURCE__"
+  },
+  "probe_plan": [
+    {
+      "step_id": "fs_read_missing",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {"kind": "path", "value": "__MISSING_FILE__"}
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "__MISSING_FILE__"
+      }
+    },
+    {
+      "step_id": "mach_lookup_invalid",
+      "sandbox_check": {
+        "operation": "mach-lookup",
+        "filter": {"kind": "global_name", "value": "__INVALID_MACH_SERVICE__"}
+      },
+      "attempt": {
+        "kind": "mach_lookup",
+        "action": "bootstrap_look_up",
+        "target": "__INVALID_MACH_SERVICE__"
+      }
+    },
+    {
+      "step_id": "fs_read_allowed",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {"kind": "path", "value": "__ALLOW_READ_FILE__"}
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "__ALLOW_READ_FILE__"
+      }
+    }
+  ]
+}

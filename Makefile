@@ -7,4 +7,5 @@ clean:
 	rm -rf tests/out/*
 
 test:
-	./tests/run.sh --all
+	@echo "==> [test] run all suites"
+	@./tests/run.sh --all

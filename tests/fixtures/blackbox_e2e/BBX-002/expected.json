@@ -1,0 +1,29 @@
+{
+  "policy_format": "sbpl",
+  "require_sandboxed_after_apply": true,
+  "require_policy_sha256": false,
+  "steps": [
+    {
+      "step_id": "fs_read_missing",
+      "sandbox_outcome": "allow",
+      "attempt_ok": false,
+      "expect_denial": false,
+      "errno": 2,
+      "deny_signal_delta": 0
+    },
+    {
+      "step_id": "mach_lookup_invalid",
+      "sandbox_outcome": "allow",
+      "attempt_ok": false,
+      "expect_denial": false,
+      "deny_signal_delta": 0
+    },
+    {
+      "step_id": "fs_read_allowed",
+      "sandbox_outcome": "allow",
+      "attempt_ok": true,
+      "expect_denial": false,
+      "deny_signal_delta": 0
+    }
+  ]
+}

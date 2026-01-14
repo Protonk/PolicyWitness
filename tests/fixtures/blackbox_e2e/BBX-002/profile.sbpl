@@ -1,0 +1,4 @@
+(version 1)
+
+; BBX-002: plain SBPL, allow default.
+(allow default)

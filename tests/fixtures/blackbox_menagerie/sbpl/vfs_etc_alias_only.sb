@@ -1,0 +1,6 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads only for /etc/hosts
+(allow file-read* (literal "/etc/hosts"))

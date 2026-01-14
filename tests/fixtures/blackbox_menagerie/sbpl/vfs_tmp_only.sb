@@ -1,0 +1,13 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes/metadata only for /tmp aliases
+(allow file-read* (literal "/tmp/foo"))
+(allow file-read* (literal "/tmp/bar"))
+(allow file-read* (literal "/tmp/nested/child"))
+(allow file-read* (literal "/var/tmp/canon"))
+(allow file-write* (literal "/tmp/foo"))
+(allow file-write* (literal "/tmp/bar"))
+(allow file-write* (literal "/tmp/nested/child"))
+(allow file-write* (literal "/var/tmp/canon"))

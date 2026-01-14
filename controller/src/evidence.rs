@@ -160,17 +160,6 @@ pub fn rel_path_from_absolute(app_root: &Path, abs: &Path) -> Option<String> {
         .map(|p| p.to_string_lossy().to_string())
 }
 
-pub fn app_root_from_exe(exe: &Path) -> Result<PathBuf, String> {
-    let contents_dir = exe
-        .parent()
-        .and_then(|p| p.parent())
-        .ok_or_else(|| format!("unexpected executable location: {}", exe.display()))?;
-    let app_root = contents_dir
-        .parent()
-        .ok_or_else(|| format!("unexpected app bundle location: {}", exe.display()))?;
-    Ok(app_root.to_path_buf())
-}
-
 pub fn manifest_path_from_app_root(app_root: &Path) -> PathBuf {
     app_root.join("Contents").join("Resources").join("Evidence").join("manifest.json")
 }

@@ -1,0 +1,1359 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "case_id": "core_strict_tmp",
+      "description": "strict subpath allow under /private/tmp/strict_ok with alias boundary",
+      "root_prefix": "/private/tmp/strict_ok",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/strict_1.sb"
+      },
+      "vars": {
+        "ALLOW_FILE": "{{CANON_ROOT}}/allow.txt",
+        "ALLOW_FILE_ALIAS": "{{ALIAS_ROOT}}/allow.txt",
+        "OUTSIDE_FILE": "/private/tmp/strict_not_ok/{{RUN_ID}}/outside.txt"
+      },
+      "files": [
+        {
+          "path": "{{ALLOW_FILE}}",
+          "content": "seed\n"
+        },
+        {
+          "path": "{{OUTSIDE_FILE}}",
+          "content": "seed\n"
+        }
+      ],
+      "steps": [
+        {
+          "step_id": "read_allow_canon",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{ALLOW_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{ALLOW_FILE}}"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": true
+          }
+        },
+        {
+          "step_id": "write_allow_canon",
+          "sandbox_check": {
+            "operation": "file-write-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{ALLOW_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_write",
+            "target": "{{ALLOW_FILE}}"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": true
+          }
+        },
+        {
+          "step_id": "read_alias_denied",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{ALLOW_FILE_ALIAS}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{ALLOW_FILE_ALIAS}}"
+          },
+          "expect": {
+            "policy": "deny",
+            "attempt_ok": false
+          }
+        },
+        {
+          "step_id": "read_hosts_denied",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/etc/hosts"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "/etc/hosts"
+          },
+          "expect": {
+            "policy": "deny",
+            "attempt_ok": false
+          }
+        },
+        {
+          "step_id": "read_outside_denied",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{OUTSIDE_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{OUTSIDE_FILE}}"
+          },
+          "expect": {
+            "policy": "deny",
+            "attempt_ok": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "core_read_only",
+      "description": "deny-default profile that only allows file-read*",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/v1_read.sb"
+      },
+      "vars": {
+        "ALLOW_FILE": "{{CANON_ROOT}}/read.txt",
+        "MISSING_FILE": "{{CANON_ROOT}}/missing.txt"
+      },
+      "files": [
+        {
+          "path": "{{ALLOW_FILE}}",
+          "content": "seed\n"
+        }
+      ],
+      "steps": [
+        {
+          "step_id": "read_allowed",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{ALLOW_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{ALLOW_FILE}}"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": true
+          }
+        },
+        {
+          "step_id": "write_denied",
+          "sandbox_check": {
+            "operation": "file-write-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{ALLOW_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_write",
+            "target": "{{ALLOW_FILE}}"
+          },
+          "expect": {
+            "policy": "deny",
+            "attempt_ok": false
+          }
+        },
+        {
+          "step_id": "read_missing",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{MISSING_FILE}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{MISSING_FILE}}"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": false,
+            "errno": 2,
+            "mismatch_reason": "nonexistent_target"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "core_mach_simple",
+      "description": "mach-lookup allow/deny plus non-sandbox failure",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/mach_simple_allow.sb"
+      },
+      "steps": [
+        {
+          "step_id": "mach_allow",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.cfprefsd.agent"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.apple.cfprefsd.agent"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": true
+          }
+        },
+        {
+          "step_id": "mach_deny",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.sandboxadversarial.fake"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.apple.sandboxadversarial.fake"
+          },
+          "expect": {
+            "policy": "deny",
+            "attempt_ok": false
+          }
+        },
+        {
+          "step_id": "mach_missing",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.sandboxadversarial.missing"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.apple.sandboxadversarial.missing"
+          },
+          "expect": {
+            "policy": "allow",
+            "attempt_ok": false,
+            "mismatch_reason": "service_missing"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "opt_vfs_tmp_only",
+      "description": "alias-only /tmp literals (canonicalization boundary)",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{CANON_FOO}}"
+        },
+        {
+          "content": "seed\n",
+          "path": "{{CANON_VAR}}"
+        }
+      ],
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/vfs_tmp_only.sb"
+      },
+      "sbpl_replacements": {
+        "/tmp/bar": "{{TMP_ALIAS_ROOT}}/bar",
+        "/tmp/foo": "{{TMP_ALIAS_ROOT}}/foo",
+        "/tmp/nested/child": "{{TMP_ALIAS_ROOT}}/nested/child",
+        "/var/tmp/canon": "{{VAR_ALIAS_ROOT}}/canon"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "mismatch_reason": "canonicalization_boundary",
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{CANON_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "policy": "deny"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{CANON_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_canon_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_VAR}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "mismatch_reason": "canonicalization_boundary",
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_VAR}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_var"
+        }
+      ],
+      "vars": {
+        "ALIAS_FOO": "{{TMP_ALIAS_ROOT}}/foo",
+        "ALIAS_VAR": "{{VAR_ALIAS_ROOT}}/canon",
+        "CANON_FOO": "{{TMP_CANON_ROOT}}/foo",
+        "CANON_VAR": "{{VAR_CANON_ROOT}}/canon"
+      }
+    },
+    {
+      "case_id": "opt_vfs_private_tmp_only",
+      "description": "canonical-only /private/tmp literals",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{CANON_FOO}}"
+        }
+      ],
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/vfs_private_tmp_only.sb"
+      },
+      "sbpl_replacements": {
+        "/private/tmp/bar": "{{TMP_CANON_ROOT}}/bar",
+        "/private/tmp/foo": "{{TMP_CANON_ROOT}}/foo",
+        "/private/tmp/nested/child": "{{TMP_CANON_ROOT}}/nested/child",
+        "/private/var/tmp/canon": "{{VAR_CANON_ROOT}}/canon"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{CANON_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": true,
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{CANON_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_canon_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "policy": "deny"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_foo"
+        }
+      ],
+      "vars": {
+        "ALIAS_FOO": "{{TMP_ALIAS_ROOT}}/foo",
+        "CANON_FOO": "{{TMP_CANON_ROOT}}/foo"
+      }
+    },
+    {
+      "case_id": "opt_vfs_both_paths",
+      "description": "allow both alias and canonical spellings",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{CANON_FOO}}"
+        }
+      ],
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/vfs_both_paths.sb"
+      },
+      "sbpl_replacements": {
+        "/private/tmp/bar": "{{TMP_CANON_ROOT}}/bar",
+        "/private/tmp/foo": "{{TMP_CANON_ROOT}}/foo",
+        "/private/tmp/nested/child": "{{TMP_CANON_ROOT}}/nested/child",
+        "/tmp/bar": "{{TMP_ALIAS_ROOT}}/bar",
+        "/tmp/foo": "{{TMP_ALIAS_ROOT}}/foo",
+        "/tmp/nested/child": "{{TMP_ALIAS_ROOT}}/nested/child"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "mismatch_reason": "canonicalization_boundary",
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{CANON_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": true,
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{CANON_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_canon_foo"
+        }
+      ],
+      "vars": {
+        "ALIAS_FOO": "{{TMP_ALIAS_ROOT}}/foo",
+        "CANON_FOO": "{{TMP_CANON_ROOT}}/foo"
+      }
+    },
+    {
+      "case_id": "opt_metafilter_any",
+      "description": "require-any literals + explicit deny on alias",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{TMP_CANON_ROOT}}/foo.txt"
+        },
+        {
+          "content": "seed\n",
+          "path": "{{TMP_CANON_ROOT}}/bar.txt"
+        },
+        {
+          "content": "seed\n",
+          "path": "{{TMP_CANON_ROOT}}/baz.txt"
+        }
+      ],
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/metafilter_any.sb"
+      },
+      "sbpl_replacements": {
+        "/private/tmp/bar.txt": "{{TMP_CANON_ROOT}}/bar.txt",
+        "/private/tmp/foo.txt": "{{TMP_CANON_ROOT}}/foo.txt",
+        "/tmp/bar.txt": "{{TMP_ALIAS_ROOT}}/bar.txt",
+        "/tmp/baz.txt": "{{TMP_ALIAS_ROOT}}/baz.txt",
+        "/tmp/foo.txt": "{{TMP_ALIAS_ROOT}}/foo.txt"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": true,
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_BAR}}"
+          },
+          "expect": {
+            "attempt_ok": true,
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_BAR}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_bar"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_BAZ}}"
+          },
+          "expect": {
+            "attempt_ok": true,
+            "mismatch_reason": "canonicalization_boundary",
+            "policy": "deny"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_BAZ}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_baz"
+        }
+      ],
+      "vars": {
+        "ALIAS_BAR": "{{TMP_ALIAS_ROOT}}/bar.txt",
+        "ALIAS_BAZ": "{{TMP_ALIAS_ROOT}}/baz.txt",
+        "ALIAS_FOO": "{{TMP_ALIAS_ROOT}}/foo.txt"
+      }
+    },
+    {
+      "case_id": "opt_bucket5_subpath",
+      "description": "subpath allow on /tmp alias",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{TMP_CANON_ROOT}}/foo"
+        },
+        {
+          "content": "seed\n",
+          "path": "{{TMP_CANON_ROOT}}/bar"
+        }
+      ],
+      "policy": {
+        "format": "sbpl",
+        "sbpl_path": "sbpl/bucket5_v11_read_subpath.sb"
+      },
+      "sbpl_replacements": {
+        "/tmp/foo": "{{TMP_ALIAS_ROOT}}/foo"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_FOO}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "mismatch_reason": "canonicalization_boundary",
+            "policy": "allow"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_FOO}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_foo"
+        },
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{ALIAS_BAR}}"
+          },
+          "expect": {
+            "attempt_ok": false,
+            "policy": "deny"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{ALIAS_BAR}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_alias_bar"
+        }
+      ],
+      "vars": {
+        "ALIAS_BAR": "{{TMP_ALIAS_ROOT}}/bar",
+        "ALIAS_FOO": "{{TMP_ALIAS_ROOT}}/foo"
+      }
+    },
+    {
+      "case_id": "blob_constructed_a",
+      "description": "compiled blob constructed_a.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/constructed_a.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_constructed_b",
+      "description": "compiled blob constructed_b.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/constructed_b.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_bundle_constructed_ab",
+      "description": "compiled blob bundle_constructed_ab.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/bundle_constructed_ab.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_com_apple_bird",
+      "description": "compiled blob com.apple.bird.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/com.apple.bird.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_quicklook_preview",
+      "description": "compiled blob quicklook-preview.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/quicklook-preview.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_com_apple_opendirectoryd_deny_default",
+      "description": "compiled blob com.apple.opendirectoryd-deny-default.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/com.apple.opendirectoryd-deny-default.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_mDNSResponder",
+      "description": "compiled blob mDNSResponder.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/mDNSResponder.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_kcm",
+      "description": "compiled blob kcm.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/kcm.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_com_apple_WindowServer",
+      "description": "compiled blob com.apple.WindowServer.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/com.apple.WindowServer.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_com_apple_cfprefsd",
+      "description": "compiled blob com.apple.cfprefsd.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/com.apple.cfprefsd.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    },
+    {
+      "case_id": "blob_mdworker",
+      "description": "compiled blob mdworker.blob",
+      "files": [
+        {
+          "content": "seed\n",
+          "path": "{{PROBE_FILE}}"
+        }
+      ],
+      "policy": {
+        "compiled_blob_path": "compiled/mdworker.blob",
+        "format": "compiled_bytes"
+      },
+      "steps": [
+        {
+          "attempt": {
+            "action": "open_read",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "read_probe"
+        },
+        {
+          "attempt": {
+            "action": "open_write",
+            "kind": "file",
+            "target": "{{PROBE_FILE}}"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "{{PROBE_FILE}}"
+            },
+            "operation": "file-write-data"
+          },
+          "step_id": "write_probe"
+        },
+        {
+          "attempt": {
+            "action": "bootstrap_look_up",
+            "kind": "mach_lookup",
+            "target": "com.apple.logd"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            },
+            "operation": "mach-lookup"
+          },
+          "step_id": "mach_probe"
+        }
+      ],
+      "vars": {
+        "PROBE_FILE": "{{CANON_ROOT}}/probe.txt"
+      }
+    }
+  ]
+}

@@ -26,6 +26,13 @@ PolicyWitness is now **specimen-first**:
 - `runner/services/PWRunner/`
   - `Info.plist`, `Entitlements.plist`, `main.swift` for the runner XPC service bundle.
 
+## Specimen inputs
+
+The runner consumes a `PWRunnerRunSpec` which contains:
+
+- `policy`: `sbpl` source or `compiled_bytes` (with optional `params`)
+- `probe_plan`: ordered probe steps (sandbox_check + attempt)
+
 ## Entitlements and sandboxing (important distinction)
 
 The runner’s **codesign entitlements** are fixed hardened-runtime exceptions (debug attach / dynamic loading / dyld env / executable memory). They enable inspection and controlled extensibility, but they do **not** make sandbox policy “dynamic”.
@@ -35,6 +42,21 @@ Sandbox policy variation is driven by the specimen itself:
 - the controller supplies SBPL (or compiled profile bytes),
 - the runner applies it once to itself,
 - the runner’s witness is defined by mandatory multi-channel evidence (see the controller docs).
+
+## External runner services
+
+PolicyWitness can target **external runner services** when entitlements are
+required. An external runner is the same PWRunner implementation, but signed
+with user-selected entitlements and registered as a launchd Mach service.
+
+Invariants:
+
+- The protocol is unchanged (`PWRunnerProtocol` JSON-over-Data).
+- One specimen -> one runner process; the runner applies the sandbox once and exits.
+- Evidence schema remains identical; the controller records runner provenance.
+
+The controller provides a `policy-witness runner` manager to install/register
+these services and to enforce entitlements supersets before dispatch.
 
 ## Agent note: “nested sandbox” harnesses
 

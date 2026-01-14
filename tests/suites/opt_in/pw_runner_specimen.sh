@@ -31,12 +31,8 @@ if [[ ! -f "${SPECIMEN_FIXTURE}" ]]; then
   test_fail "specimen fixture missing: ${SPECIMEN_FIXTURE}"
 fi
 
-# Some automation harnesses run commands inside an OS sandbox. In that context,
-# specimen execution and unified-log correlation can fail for reasons unrelated to PolicyWitness itself.
-if [[ -n "${CODEX_SANDBOX:-}" ]]; then
-  test_skip "sandboxed automation harness detected (CODEX_SANDBOX is set); rerun from a normal Terminal"
-  exit 0
-fi
+# Note: sandboxed automation harnesses can block XPC lookup or unified log access.
+# If this test fails with those symptoms, rerun from a normal Terminal.
 
 set +e
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"

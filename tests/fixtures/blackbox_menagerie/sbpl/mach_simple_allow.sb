@@ -1,0 +1,6 @@
+(version 1)
+(allow default)
+
+;; Focus probes: allow specific service, explicitly deny a bogus one.
+(allow mach-lookup (global-name "com.apple.cfprefsd.agent"))
+(deny mach-lookup (global-name "com.apple.sandboxadversarial.fake"))

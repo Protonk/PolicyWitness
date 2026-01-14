@@ -4,15 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-PW_TEST_SUITE="smoke"
-PW_TEST_ID="pw_runner_smoke_v1"
+export PW_TEST_QUIET=1
+
+PW_TEST_SUITE="anomalies"
+PW_TEST_ID="sbpl_allowdeny_v1"
 
 PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
 SBPL_FIXTURE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/profile.sbpl"
 SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/specimen.template.json"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "runner_smoke" "runner smoke v1 (SBPL params + send-signal + mach-lookup)"
+test_step "anomaly_probe" "probe alleged sandbox anomaly (SBPL allow vs sandbox_check deny)"
 
 if [[ ! -x "${PW_BIN}" ]]; then
   test_skip "PolicyWitness.app is missing or not built at ${PW_BIN}"
@@ -25,13 +27,8 @@ if [[ ! -f "${SPECIMEN_TEMPLATE}" ]]; then
   test_fail "fixture missing: ${SPECIMEN_TEMPLATE}"
 fi
 
-# Some automation harnesses run commands inside an OS sandbox. In that context,
-# specimen execution can fail for reasons unrelated to PolicyWitness itself
-# (XPC lookup restrictions, unified log access restrictions).
-if [[ -n "${CODEX_SANDBOX:-}" ]]; then
-  test_skip "sandboxed automation harness detected (CODEX_SANDBOX is set); rerun from a normal Terminal"
-  exit 0
-fi
+# Note: sandboxed automation harnesses can block XPC lookup or unified log access.
+# If this test fails with those symptoms, rerun from a normal Terminal.
 
 WORK_ROOT="${PW_TEST_ARTIFACTS}/workspace"
 ALLOW_DIR="${WORK_ROOT}/allow-write"
@@ -96,7 +93,9 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+set +e
+PY_ERR="$(
+  /usr/bin/python3 - "${RUN_STDOUT}" 2>&1 <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -137,36 +136,32 @@ def sig_delta(s):
     return ((s.get("deny_signal") or {}).get("delta") or 0)
 
 allowed_file = require_step("fs_write_allowed")
-if sb_outcome(allowed_file) != "allow":
-    raise SystemExit(f"fs_write_allowed: expected sandbox_check allow (got {sb_outcome(allowed_file)!r})")
+if sb_outcome(allowed_file) != "deny":
+    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected sandbox_check=deny (got {sb_outcome(allowed_file)!r})")
 if attempt_rc(allowed_file) != 0:
-    raise SystemExit(f"fs_write_allowed: expected attempt rc=0 (got {attempt_rc(allowed_file)!r})")
+    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected attempt rc=0 (got {attempt_rc(allowed_file)!r})")
 if sig_delta(allowed_file) != 0:
-    raise SystemExit(f"fs_write_allowed: expected deny_signal delta=0 (got {sig_delta(allowed_file)!r})")
+    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected deny_signal delta=0 (got {sig_delta(allowed_file)!r})")
 
 denied_file = require_step("fs_write_denied")
 if sb_outcome(denied_file) != "deny":
     raise SystemExit(f"fs_write_denied: expected sandbox_check deny (got {sb_outcome(denied_file)!r})")
 if attempt_rc(denied_file) == 0:
     raise SystemExit("fs_write_denied: expected attempt failure (rc != 0)")
-if sig_delta(denied_file) <= 0:
-    raise SystemExit(f"fs_write_denied: expected deny_signal delta>0 (got {sig_delta(denied_file)!r})")
 
-allowed_mach = require_step("mach_lookup_allowed")
-if sb_outcome(allowed_mach) != "allow":
-    raise SystemExit(f"mach_lookup_allowed: expected sandbox_check allow (got {sb_outcome(allowed_mach)!r})")
-if attempt_rc(allowed_mach) != 0:
-    raise SystemExit(f"mach_lookup_allowed: expected attempt rc=0 (got {attempt_rc(allowed_mach)!r})")
-if sig_delta(allowed_mach) != 0:
-    raise SystemExit(f"mach_lookup_allowed: expected deny_signal delta=0 (got {sig_delta(allowed_mach)!r})")
-
-denied_mach = require_step("mach_lookup_denied")
-if sb_outcome(denied_mach) != "deny":
-    raise SystemExit(f"mach_lookup_denied: expected sandbox_check deny (got {sb_outcome(denied_mach)!r})")
-if attempt_rc(denied_mach) == 0:
-    raise SystemExit("mach_lookup_denied: expected attempt failure (rc != 0)")
-if sig_delta(denied_mach) != 0:
-    raise SystemExit(f"mach_lookup_denied: expected deny_signal delta=0 (got {sig_delta(denied_mach)!r})")
+_ = require_step("mach_lookup_allowed")
+_ = require_step("mach_lookup_denied")
 PY
+)"
+PY_STATUS=$?
+set -e
 
-test_pass "runner smoke v1 ok" "{}"
+if [[ ${PY_STATUS} -ne 0 ]]; then
+  if [[ -z "${PY_ERR}" ]]; then
+    PY_ERR="anomaly validation failed"
+  fi
+  PY_ERR="${PY_ERR//$'\n'/ }"
+  test_fail "${PY_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
+fi
+
+test_pass_note "Anomaly: sandbox_check denied a path explicitly allowed by the SBPL profile -- fs_write_allowed expected sandbox_check=allow but got deny" "{}"

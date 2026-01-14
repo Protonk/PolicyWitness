@@ -1,0 +1,28 @@
+{
+  "policy_format": "compiled_bytes",
+  "require_sandboxed_after_apply": true,
+  "require_policy_sha256": true,
+  "steps": [
+    {
+      "step_id": "mach_lookup_denied",
+      "sandbox_outcome": "deny",
+      "attempt_ok": false,
+      "expect_denial": true,
+      "deny_signal_delta": 0
+    },
+    {
+      "step_id": "mach_lookup_allowed",
+      "sandbox_outcome": "allow",
+      "attempt_ok": true,
+      "expect_denial": false,
+      "deny_signal_delta": 0
+    },
+    {
+      "step_id": "fs_read_allowed",
+      "sandbox_outcome": "allow",
+      "attempt_ok": true,
+      "expect_denial": false,
+      "deny_signal_delta": 0
+    }
+  ]
+}

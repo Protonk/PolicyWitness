@@ -1,0 +1,7 @@
+(version 1)
+
+(deny default)
+
+;; Allow reads/writes only for /var/tmp/vfs_canon_probe
+(allow file-read* (literal "/var/tmp/vfs_canon_probe"))
+(allow file-write* (literal "/var/tmp/vfs_canon_probe"))

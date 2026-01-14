@@ -1,0 +1,13 @@
+(version 1)
+
+; BBX-001: SBPL with params + deny signal on file-write.
+(allow default)
+
+(allow file-write* (subpath (param "ALLOW_WRITE_DIR")))
+
+(deny file-write* (subpath (param "DENY_WRITE_DIR"))
+     (with send-signal SIGUSR1))
+
+(deny mach-lookup (global-name "com.apple.cfprefsd.xpc.daemon"))
+
+(allow mach-lookup (global-name "com.apple.logd"))

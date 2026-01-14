@@ -60,6 +60,19 @@ fn now_unix_ms() -> u64 {
         .as_millis() as u64
 }
 
+fn json_result(ok: bool) -> json_contract::JsonResult {
+    json_contract::JsonResult {
+        ok,
+        rc: None,
+        exit_code: Some(if ok { 0 } else { 3 }),
+        normalized_outcome: None,
+        errno: None,
+        error: None,
+        stderr: None,
+        stdout: None,
+    }
+}
+
 fn is_pid_alive(pid: i32) -> bool {
     unsafe {
         if kill(pid, 0) == 0 {
@@ -497,7 +510,7 @@ fn main() {
                         seatbelt: "observer_only".to_string(),
                     },
                 };
-                let result = json_contract::JsonResult::from_ok(false);
+                let result = json_result(false);
                 if let Err(err) =
                     json_contract::print_envelope("sandbox_log_observer_report", result, &data)
                 {
@@ -607,7 +620,7 @@ fn main() {
                 };
                 let text = match json_contract::render_envelope_compact(
                     "sandbox_log_observer_event",
-                    json_contract::JsonResult::from_ok(true),
+                    json_result(true),
                     &event,
                 ) {
                     Ok(text) => text,
@@ -684,7 +697,7 @@ fn main() {
                         seatbelt: "observer_only".to_string(),
                     },
                 };
-                let result = json_contract::JsonResult::from_ok(false);
+                let result = json_result(false);
                 if let Err(err) =
                     json_contract::print_envelope("sandbox_log_observer_report", result, &data)
                 {
@@ -758,7 +771,7 @@ fn main() {
         },
     };
 
-    let result = json_contract::JsonResult::from_ok(log_error.is_none());
+    let result = json_result(log_error.is_none());
 
     match output_format {
         OutputFormat::Json => {

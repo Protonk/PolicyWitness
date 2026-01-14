@@ -1,6 +1,5 @@
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const SCHEMA_VERSION: u32 = 1;
@@ -15,21 +14,6 @@ pub struct JsonResult {
     pub error: Option<String>,
     pub stderr: Option<String>,
     pub stdout: Option<String>,
-}
-
-impl JsonResult {
-    pub fn from_ok(ok: bool) -> Self {
-        JsonResult {
-            ok,
-            rc: None,
-            exit_code: Some(if ok { 0 } else { 3 }),
-            normalized_outcome: None,
-            errno: None,
-            error: None,
-            stderr: None,
-            stdout: None,
-        }
-    }
 }
 
 fn now_unix_ms() -> u64 {
@@ -103,17 +87,6 @@ pub fn print_envelope<T: Serialize>(
     Ok(())
 }
 
-pub fn write_envelope<T: Serialize>(
-    path: &Path,
-    kind: &str,
-    result: JsonResult,
-    data: &T,
-) -> Result<(), String> {
-    let text = render_envelope(kind, result, data)?;
-    std::fs::write(path, text)
-        .map_err(|e| format!("failed to write {}: {e}", path.display()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,12 +98,25 @@ mod tests {
         label: String,
     }
 
+    fn result_ok() -> JsonResult {
+        JsonResult {
+            ok: true,
+            rc: None,
+            exit_code: Some(0),
+            normalized_outcome: None,
+            errno: None,
+            error: None,
+            stderr: None,
+            stdout: None,
+        }
+    }
+
     #[test]
     fn compact_envelope_is_single_line() {
         let payload = Dummy {
             label: "ok".to_string(),
         };
-        let text = render_envelope_compact("dummy", JsonResult::from_ok(true), &payload)
+        let text = render_envelope_compact("dummy", result_ok(), &payload)
             .expect("render");
         assert!(!text.contains('\n'));
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
@@ -145,8 +131,7 @@ mod tests {
             "m": "middle",
             "a": "first"
         });
-        let text =
-            render_envelope_compact("dummy", JsonResult::from_ok(true), &payload).expect("render");
+        let text = render_envelope_compact("dummy", result_ok(), &payload).expect("render");
 
         let keys = [
             "\"data\"",

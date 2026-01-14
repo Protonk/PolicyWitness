@@ -1,0 +1,20 @@
+{
+  "schema_version": "provisional.profile_record.v1",
+  "record_id": "synthetic:compiled-bytes:bbx_003_cfprefsd_xpc_daemon_deny",
+  "profile_id": "bbx-003:cfprefsd_xpc_daemon_deny",
+  "category": "synthetic",
+  "pack_id": "synthetic",
+  "paths": {
+    "sbpl_path": "evidence/profiles/records/packs/synthetic/sources/compiled-bytes/bbx_003_cfprefsd_xpc_daemon_deny.sb",
+    "blob_path": "evidence/profiles/records/packs/synthetic/sources/compiled-bytes/bbx_003_cfprefsd_xpc_daemon_deny.sb.bin"
+  },
+  "runtime": {
+    "status": "missing",
+    "results_path": null
+  },
+  "preflight": {
+    "status": "unknown",
+    "report_path": null
+  },
+  "notes": "BBX-003 compiled-bytes profile: allow default; deny mach-lookup for com.apple.cfprefsd.xpc.daemon; no send-signal action."
+}

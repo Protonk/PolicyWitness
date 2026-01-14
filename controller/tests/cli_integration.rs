@@ -49,14 +49,8 @@ fn specimen_smoke_file_read_deny() {
     }
     let bin = require_pw_bin();
 
-    // Some automation harnesses run commands inside an OS sandbox. In that context, specimen execution
-    // can fail for reasons unrelated to PolicyWitness itself (XPC lookup restrictions, unified log
-    // access restrictions). Treat that environment as out of scope for this integration test.
-    if let Ok(val) = env::var("CODEX_SANDBOX") {
-        if !val.is_empty() {
-            return;
-        }
-    }
+    // Note: sandboxed automation harnesses can block XPC lookup or unified log access.
+    // If this test fails with those symptoms, rerun from a normal Terminal to confirm.
 
     let specimen = repo_root()
         .join("tests")

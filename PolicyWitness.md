@@ -10,6 +10,7 @@ This guide assumes you have only `PolicyWitness.app` and this file (`PolicyWitne
 
 - Run one request and print a JSON result: `... policy-witness run <request.json>`
 - Save output for later inspection: `... policy-witness run <request.json> > result.json`
+- Manage external runners (entitlements): `... policy-witness runner <command>`
 
 ## Quick start
 
@@ -58,6 +59,10 @@ Open `/tmp/pw_result.json` and start from `data.runner_result`.
 
 Each `run` invocation starts a fresh runner instance, applies the requested policy exactly once, executes the probe plan, and returns a structured JSON witness.
 
+Each run is defined by three inputs: the specimen JSON, the signed app identity
+recorded in the embedded evidence manifest, and the caller environment (which
+can block XPC launch or log capture in sandboxed harnesses).
+
 ### A specimen is a list of steps
 
 Each step contains:
@@ -80,6 +85,7 @@ The shipped CLI surface is intentionally small:
 
 ```text
 policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]
+policy-witness runner <command> [options]
 ```
 
 ### `run`
@@ -100,6 +106,33 @@ Exit codes:
 - `0`: runner executed successfully (`result.ok=true`)
 - `1`: runner execution failed (`result.ok=false`)
 
+Run output includes `data.runner_provenance` (runner service + entitlements +
+signing metadata) and `data.app_provenance` (app bundle metadata from the
+embedded evidence manifest).
+
+Set `PW_VERIFY_EVIDENCE=1` to include a hash verification report under
+`data.app_provenance.evidence_verify`.
+
+### `runner` (external runner manager)
+
+External runners are the path for entitlements: they are signed separately and
+registered as launchd Mach services, but they implement the same runner protocol.
+
+Common commands:
+
+```sh
+$PW runner install --bundle /path/to/PWRunner.xpc --identity "Developer ID Application: ..."
+$PW runner list
+$PW runner verify --service-name com.policywitness.runner.<id>
+$PW runner remove --service-name com.policywitness.runner.<id>
+```
+
+The registry lives at:
+
+```
+~/Library/Application Support/PolicyWitness/runners.json
+```
+
 ## Request format (JSON)
 
 A request file has these top-level keys:
@@ -108,9 +141,15 @@ A request file has these top-level keys:
 schema_version: number
 specimen_id: string
 run_kind: string (optional)
+runner: { id, service, required_entitlements } (optional)
 policy: { ... }
 probe_plan: [ ... ]
 ```
+
+If `runner` is present, the controller dispatches to the external service and
+enforces that the runner’s entitlements include every key in
+`required_entitlements`. Legacy top-level fields `runner_id`, `runner_service`,
+and `required_entitlements` are also accepted.
 
 ### Policy (`policy`)
 

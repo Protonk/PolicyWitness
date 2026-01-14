@@ -109,6 +109,16 @@ test_log() {
   local message="$1"
   local suite="${PW_TEST_SUITE:-unknown}"
   local test_id="${PW_TEST_ID:-unknown}"
+  if [[ -n "${PW_TEST_QUIET:-}" ]]; then
+    return 0
+  fi
+  echo "==> [${suite}/${test_id}] ${message}"
+}
+
+test_log_force() {
+  local message="$1"
+  local suite="${PW_TEST_SUITE:-unknown}"
+  local test_id="${PW_TEST_ID:-unknown}"
   echo "==> [${suite}/${test_id}] ${message}"
 }
 
@@ -202,6 +212,21 @@ test_pass() {
   write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
   write_report "pass" "${message}" "${duration_ms}"
   test_log "pass: ${message}"
+}
+
+test_pass_note() {
+  local message="${1:-ok}"
+  local data_json="${2:-}"
+  local end_ms
+  end_ms="$(now_ms)"
+  local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))
+
+  local event_line
+  event_line="$(emit_event "pass" "test_end" "${message}" "${data_json}" "${duration_ms}")"
+  write_json_line "${event_line}" "${PW_TEST_EVENTS}"
+  write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
+  write_report "pass" "${message}" "${duration_ms}"
+  test_log_force "${message}"
 }
 
 test_fail() {

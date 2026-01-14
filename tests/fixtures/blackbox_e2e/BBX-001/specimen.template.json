@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "specimen_id": "BBX-001",
+  "policy": {
+    "format": "sbpl",
+    "params": {
+      "ALLOW_WRITE_DIR": "__ALLOW_WRITE_DIR__",
+      "DENY_WRITE_DIR": "__DENY_WRITE_DIR__"
+    },
+    "sbpl_source": "__PROFILE_SBPL_SOURCE__"
+  },
+  "probe_plan": [
+    {
+      "step_id": "fs_write_allowed",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {"kind": "path", "value": "__ALLOW_WRITE_FILE__"}
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_write",
+        "target": "__ALLOW_WRITE_FILE__"
+      }
+    },
+    {
+      "step_id": "fs_write_denied",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {"kind": "path", "value": "__DENY_WRITE_FILE__"}
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_write",
+        "target": "__DENY_WRITE_FILE__"
+      }
+    },
+    {
+      "step_id": "mach_lookup_denied",
+      "sandbox_check": {
+        "operation": "mach-lookup",
+        "filter": {"kind": "global_name", "value": "com.apple.cfprefsd.xpc.daemon"}
+      },
+      "attempt": {
+        "kind": "mach_lookup",
+        "action": "bootstrap_look_up",
+        "target": "com.apple.cfprefsd.xpc.daemon"
+      }
+    }
+  ]
+}

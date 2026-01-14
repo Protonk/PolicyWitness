@@ -1,0 +1,8 @@
+(version 1)
+(deny default)
+
+;; Minimal strict profile: helper can run and touch only a small tmp subtree.
+(allow file-read* (subpath "/private/tmp/strict_ok"))
+(allow file-write* (subpath "/private/tmp/strict_ok"))
+(deny file-read* (literal "/etc/hosts"))
+(deny file-write* (literal "/etc/hosts"))
