@@ -32,6 +32,9 @@ XPC_RUNNER_SERVICE_HOST_FILE="${XPC_ROOT}/PWRunnerServiceHost.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
+SB_API_VALIDATOR_DIR="runtime/native/sb_api_validator"
+SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
+SB_API_VALIDATOR_BIN="${SB_API_VALIDATOR_DIR}/sb_api_validator"
 # Swift/Clang module cache must be writable; the harness sandbox often blocks the default path under ~/.cache.
 SWIFT_MODULE_CACHE="${SWIFT_MODULE_CACHE:-.tmp/swift-module-cache}"
 SWIFT_OPT_LEVEL="${SWIFT_OPT_LEVEL:-}"
@@ -203,6 +206,16 @@ if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
   exit 2
 fi
+if [[ ! -f "${SB_API_VALIDATOR_SRC}" ]]; then
+  echo "ERROR: missing sb_api_validator source at ${SB_API_VALIDATOR_SRC}" 1>&2
+  exit 2
+fi
+echo "==> Building sb_api_validator"
+/usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 -o "${SB_API_VALIDATOR_BIN}" "${SB_API_VALIDATOR_SRC}"
+if [[ ! -x "${SB_API_VALIDATOR_BIN}" ]]; then
+  echo "ERROR: expected sb_api_validator binary at ${SB_API_VALIDATOR_BIN}" 1>&2
+  exit 2
+fi
 
 echo "==> Assembling app bundle: ${APP_BUNDLE}"
 rm -rf "${APP_BUNDLE}"
@@ -224,6 +237,10 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 # Embed observer tooling (runs outside the App Sandbox boundary when launched from Terminal)
 cp "${SANDBOX_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
+
+# Embed sb_api_validator (sonoma cross-check helper)
+cp "${SB_API_VALIDATOR_BIN}" "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
+chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 # Optional: embed fencerunner
 if [[ -n "${EMBED_FENCERUNNER_PATH}" ]]; then
@@ -325,6 +342,7 @@ fi
 echo "==> Codesigning embedded MacOS tools (plain; unsandboxed host-side)"
 sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
+sign_macho_plain "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 echo "==> Codesigning embedded XPC services"
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then

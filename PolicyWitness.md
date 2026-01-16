@@ -276,6 +276,8 @@ Registry location:
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
 - `--instrumentation <json|@path>`: inject instrumentation ports into the request
+- `--sonoma-cross-check`: run an sb_api_validator cross-check against the runner PID
+  while it is paused post-sandbox; results are attached under `data.sonoma_cross_check`
 
 ## Troubleshooting
 
@@ -284,3 +286,5 @@ Registry location:
 - Verify fails with no reply: check launchd state and the service plist.
 - If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
   run from a normal Terminal to confirm behavior.
+- If `--sonoma-cross-check` reports `blocked` or `unavailable`, rerun from an
+  unsandboxed Terminal context (the helper needs to observe a live runner PID).

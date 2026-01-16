@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use runner_manager::{RunnerEntitlements, RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature};
 
 const PW_RUNNER_SERVICE_DIR: &str = "PWRunner";
@@ -17,12 +18,19 @@ const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 const DEFAULT_LOG_LAST: &str = "10s";
 
 const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
+const SONOMA_CROSS_CHECK_PID_TIMEOUT_MS: u64 = 1500;
+const SONOMA_CROSS_CHECK_PID_POLL_MS: u64 = 50;
+const SONOMA_CROSS_CHECK_SETTLE_MS: u64 = 200;
+const SONOMA_CROSS_CHECK_BASE_MS: u64 = 1000;
+const SONOMA_CROSS_CHECK_PER_STEP_MS: u64 = 150;
+const SONOMA_CROSS_CHECK_MIN_MS: u64 = 3000;
+const SONOMA_CROSS_CHECK_MAX_MS: u64 = 15000;
 
 fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>] [--sonoma-cross-check]
   policy-witness runner <command> [options]
 
 notes:
@@ -467,6 +475,56 @@ struct SandboxLogCapture {
     step_denies: Option<Vec<SandboxLogStepDeny>>,
 }
 
+#[derive(Clone)]
+struct SonomaCrossCheckSpec {
+    step_id: String,
+    operation: String,
+    filter_kind: String,
+    filter_value: Option<String>,
+}
+
+#[derive(Clone)]
+struct SonomaCrossCheckPlan {
+    tool_path: PathBuf,
+    process_name: String,
+    wait_ms: u64,
+    specs: Vec<SonomaCrossCheckSpec>,
+}
+
+#[derive(Serialize, Default)]
+struct SonomaCrossCheckCounts {
+    total: usize,
+    checked: usize,
+    skipped: usize,
+    errors: usize,
+    mismatches: usize,
+}
+
+#[derive(Serialize)]
+struct SonomaCrossCheckStep {
+    step_id: String,
+    operation: String,
+    filter_kind: String,
+    filter_value: Option<String>,
+    status: String,
+    validator: Option<Value>,
+    validator_outcome: Option<String>,
+    expected_outcome: Option<String>,
+    mismatch: Option<bool>,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct SonomaCrossCheckReport {
+    status: String,
+    tool_path: Option<String>,
+    runner_pid: Option<i64>,
+    wait_ms: Option<u64>,
+    error: Option<String>,
+    counts: SonomaCrossCheckCounts,
+    steps: Vec<SonomaCrossCheckStep>,
+}
+
 #[derive(Serialize)]
 struct RunData {
     request_path: String,
@@ -481,32 +539,15 @@ struct RunData {
     runner_client: RunnerClientRun,
     runner_result: Option<Value>,
     sandbox_log_capture: Option<SandboxLogCapture>,
+    sonoma_cross_check: Option<SonomaCrossCheckReport>,
 }
 
-fn run_pw_runner_client(
-    service_name: &str,
-    request_path: &Path,
-    timeout_ms: u64,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
-    let tool = resolve_contents_macos_tool("pw-runner-client")?;
-    let argv = vec![
-        tool.into_os_string(),
-        OsString::from("run"),
-        OsString::from("--timeout-ms"),
-        OsString::from(format!("{timeout_ms}")),
-        OsString::from(service_name),
-        request_path.as_os_str().to_os_string(),
-    ];
-
-    let started = now_unix_ms();
-    let out = Command::new(&argv[0])
-        .args(&argv[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
-    let ended = now_unix_ms();
-
+fn parse_runner_client_output(
+    argv: &[OsString],
+    started: u64,
+    ended: u64,
+    out: &std::process::Output,
+) -> (RunnerClientRun, Option<Value>) {
     let (stdout, stdout_truncated) = truncate_output(&out.stdout);
     let (stderr, stderr_truncated) = truncate_output(&out.stderr);
 
@@ -534,7 +575,67 @@ fn run_pw_runner_client(
         stderr_truncated,
     };
 
-    Ok((runner_client, parsed))
+    (runner_client, parsed)
+}
+
+fn run_pw_runner_client(
+    service_name: &str,
+    request_path: &Path,
+    timeout_ms: u64,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    let tool = resolve_contents_macos_tool("pw-runner-client")?;
+    let argv = vec![
+        tool.into_os_string(),
+        OsString::from("run"),
+        OsString::from("--timeout-ms"),
+        OsString::from(format!("{timeout_ms}")),
+        OsString::from(service_name),
+        request_path.as_os_str().to_os_string(),
+    ];
+
+    let started = now_unix_ms();
+    let out = Command::new(&argv[0])
+        .args(&argv[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
+    let ended = now_unix_ms();
+    Ok(parse_runner_client_output(&argv, started, ended, &out))
+}
+
+fn run_pw_runner_client_with_cross_check(
+    service_name: &str,
+    request_path: &Path,
+    timeout_ms: u64,
+    plan: SonomaCrossCheckPlan,
+) -> Result<(RunnerClientRun, Option<Value>, Option<SonomaCrossCheckReport>), String> {
+    let tool = resolve_contents_macos_tool("pw-runner-client")?;
+    let argv = vec![
+        tool.into_os_string(),
+        OsString::from("run"),
+        OsString::from("--timeout-ms"),
+        OsString::from(format!("{timeout_ms}")),
+        OsString::from(service_name),
+        request_path.as_os_str().to_os_string(),
+    ];
+
+    let started = now_unix_ms();
+    let child = Command::new(&argv[0])
+        .args(&argv[1..])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to spawn pw-runner-client: {e}"))?;
+
+    let report = run_sonoma_cross_check(&plan);
+
+    let out = child
+        .wait_with_output()
+        .map_err(|e| format!("failed to wait for pw-runner-client: {e}"))?;
+    let ended = now_unix_ms();
+    let (runner_client, parsed) = parse_runner_client_output(&argv, started, ended, &out);
+    Ok((runner_client, parsed, Some(report)))
 }
 
 fn observed_deny_from_observer_envelope(obj: &Value) -> Option<bool> {
@@ -699,11 +800,417 @@ fn capture_sandbox_logs_last(
     })
 }
 
+fn sonoma_cross_check_wait_ms(step_count: usize) -> u64 {
+    let raw = SONOMA_CROSS_CHECK_BASE_MS + (SONOMA_CROSS_CHECK_PER_STEP_MS * step_count as u64);
+    raw.clamp(SONOMA_CROSS_CHECK_MIN_MS, SONOMA_CROSS_CHECK_MAX_MS)
+}
+
+fn extract_sonoma_cross_check_specs(request_value: &Value) -> Result<Vec<SonomaCrossCheckSpec>, String> {
+    let plan = request_value
+        .get("probe_plan")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "request.json missing probe_plan array".to_string())?;
+    let mut specs = Vec::with_capacity(plan.len());
+    for step in plan {
+        let step_id = step
+            .get("step_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "probe_plan step missing step_id".to_string())?;
+        let sandbox_check = step
+            .get("sandbox_check")
+            .and_then(|v| v.as_object())
+            .ok_or_else(|| format!("step {step_id} missing sandbox_check"))?;
+        let operation = sandbox_check
+            .get("operation")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("step {step_id} missing sandbox_check.operation"))?;
+        let filter = sandbox_check
+            .get("filter")
+            .and_then(|v| v.as_object())
+            .ok_or_else(|| format!("step {step_id} missing sandbox_check.filter"))?;
+        let filter_kind = filter
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("step {step_id} missing sandbox_check.filter.kind"))?;
+        let filter_value = filter
+            .get("value")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        specs.push(SonomaCrossCheckSpec {
+            step_id: step_id.to_string(),
+            operation: operation.to_string(),
+            filter_kind: filter_kind.to_string(),
+            filter_value,
+        });
+    }
+    Ok(specs)
+}
+
+fn inject_sonoma_cross_check_instrumentation(
+    request_value: &mut Value,
+    wait_ms: u64,
+) -> Result<(), String> {
+    let obj = request_value
+        .as_object_mut()
+        .ok_or_else(|| "request.json must be a JSON object".to_string())?;
+    let instrumentation = obj
+        .entry("instrumentation")
+        .or_insert_with(|| json!({}));
+    let inst_obj = instrumentation
+        .as_object_mut()
+        .ok_or_else(|| "instrumentation must be a JSON object".to_string())?;
+    let version = inst_obj
+        .get("version")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(1);
+    if version != 1 {
+        return Err(format!(
+            "sonoma cross-check requires instrumentation.version=1 (got {version})"
+        ));
+    }
+    inst_obj.insert("version".to_string(), json!(1));
+    let ports = inst_obj.entry("ports").or_insert_with(|| json!([]));
+    let ports_arr = ports
+        .as_array_mut()
+        .ok_or_else(|| "instrumentation.ports must be an array".to_string())?;
+    ports_arr.push(json!({
+        "kind": "debug_wait",
+        "sleep_ms": wait_ms,
+        "phase": "post_sandbox",
+        "label": "sonoma_cross_check"
+    }));
+    Ok(())
+}
+
+fn wait_for_runner_pid(process_name: &str, timeout_ms: u64) -> Result<i64, String> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        let out = Command::new("/usr/bin/pgrep")
+            .args(["-n", "-x", process_name])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output();
+        match out {
+            Ok(output) => {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if let Some(first) = stdout.lines().next() {
+                        let pid = first
+                            .trim()
+                            .parse::<i64>()
+                            .map_err(|e| format!("failed to parse pgrep pid: {e}"))?;
+                        return Ok(pid);
+                    }
+                }
+            }
+            Err(e) => return Err(format!("failed to run pgrep: {e}")),
+        }
+
+        if Instant::now() >= deadline {
+            break;
+        }
+        thread::sleep(Duration::from_millis(SONOMA_CROSS_CHECK_PID_POLL_MS));
+    }
+    Err(format!(
+        "runner pid not found (process_name={process_name})"
+    ))
+}
+
+fn sb_api_validator_outcome(value: &Value) -> Option<String> {
+    let rc = value.get("rc").and_then(|v| v.as_i64())?;
+    let errno = value.get("errno").and_then(|v| v.as_i64()).unwrap_or(0);
+    if rc == 0 {
+        Some("allow".to_string())
+    } else if rc == 1 && errno == 0 {
+        Some("deny".to_string())
+    } else {
+        Some("error".to_string())
+    }
+}
+
+fn run_sb_api_validator(tool_path: &Path, pid: i64, spec: &SonomaCrossCheckSpec) -> SonomaCrossCheckStep {
+    let mut step = SonomaCrossCheckStep {
+        step_id: spec.step_id.clone(),
+        operation: spec.operation.clone(),
+        filter_kind: spec.filter_kind.clone(),
+        filter_value: spec.filter_value.clone(),
+        status: "error".to_string(),
+        validator: None,
+        validator_outcome: None,
+        expected_outcome: None,
+        mismatch: None,
+        error: None,
+    };
+
+    let filter_type = match spec.filter_kind.as_str() {
+        "path" => "PATH",
+        "global_name" => "GLOBAL_NAME",
+        "local_name" => "LOCAL_NAME",
+        "none" => {
+            step.status = "skipped".to_string();
+            step.error = Some("filter.kind=none not supported by sb_api_validator".to_string());
+            return step;
+        }
+        _ => {
+            step.status = "skipped".to_string();
+            step.error = Some(format!(
+                "unsupported filter.kind {}",
+                spec.filter_kind
+            ));
+            return step;
+        }
+    };
+
+    let filter_value = match spec.filter_value.as_deref() {
+        Some(v) if !v.is_empty() => v,
+        _ => {
+            step.status = "skipped".to_string();
+            step.error = Some("filter.value missing".to_string());
+            return step;
+        }
+    };
+
+    let out = Command::new(tool_path)
+        .args([
+            OsString::from("--json"),
+            OsString::from(pid.to_string()),
+            OsString::from(&spec.operation),
+            OsString::from(filter_type),
+            OsString::from(filter_value),
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output();
+
+    let out = match out {
+        Ok(o) => o,
+        Err(e) => {
+            step.error = Some(format!("sb_api_validator failed to run: {e}"));
+            return step;
+        }
+    };
+
+    let exit_code = out.status.code().unwrap_or(1);
+    let (stdout, stdout_truncated) = truncate_output(&out.stdout);
+    let (stderr, stderr_truncated) = truncate_output(&out.stderr);
+
+    if stdout.trim().is_empty() {
+        step.error = Some(format!(
+            "sb_api_validator produced no stdout (exit={exit_code})"
+        ));
+        return step;
+    }
+
+    let parsed = match serde_json::from_str::<Value>(&stdout) {
+        Ok(v) => v,
+        Err(e) => {
+            let mut msg = format!("sb_api_validator stdout parse error: {e}");
+            if stdout_truncated {
+                msg.push_str(" (stdout truncated)");
+            }
+            if stderr_truncated {
+                msg.push_str(" (stderr truncated)");
+            }
+            if !stderr.is_empty() {
+                msg.push_str(&format!("; stderr={}", stderr.trim()));
+            }
+            step.error = Some(msg);
+            return step;
+        }
+    };
+
+    let kind = parsed.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+    step.validator = Some(parsed.clone());
+
+    if kind == "sb_api_validator_error" {
+        let err = parsed
+            .get("error")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown error");
+        step.error = Some(format!("sb_api_validator error: {err}"));
+        return step;
+    }
+
+    if kind != "sb_api_validator_result" {
+        step.error = Some(format!("unexpected sb_api_validator kind: {kind}"));
+        return step;
+    }
+
+    if let Some(outcome) = sb_api_validator_outcome(&parsed) {
+        step.validator_outcome = Some(outcome.clone());
+        if outcome == "allow" || outcome == "deny" {
+            step.status = "ok".to_string();
+        } else {
+            step.status = "error".to_string();
+            step.error = Some("sb_api_validator returned non-allow/deny rc".to_string());
+        }
+        return step;
+    }
+
+    step.error = Some("sb_api_validator missing rc/errno".to_string());
+    step
+}
+
+fn update_sonoma_cross_check_counts(report: &mut SonomaCrossCheckReport) {
+    if report.status == "unavailable" {
+        return;
+    }
+    let mut blocked = report
+        .error
+        .as_ref()
+        .map(|msg| {
+            let msg = msg.to_ascii_lowercase();
+            msg.contains("operation not permitted") || msg.contains("sandbox")
+        })
+        .unwrap_or(false);
+    let mut counts = SonomaCrossCheckCounts::default();
+    counts.total = report.steps.len();
+    for step in &report.steps {
+        match step.status.as_str() {
+            "ok" => counts.checked += 1,
+            "skipped" => counts.skipped += 1,
+            _ => counts.errors += 1,
+        }
+        if step.mismatch == Some(true) {
+            counts.mismatches += 1;
+        }
+        if let Some(err) = step.error.as_ref() {
+            let msg = err.to_ascii_lowercase();
+            if msg.contains("operation not permitted") || msg.contains("sandbox") {
+                blocked = true;
+            }
+        }
+    }
+    report.counts = counts;
+    if blocked {
+        report.status = "blocked".to_string();
+        return;
+    }
+    report.status = if report.error.is_some() {
+        "error".to_string()
+    } else if report.counts.mismatches > 0 {
+        "mismatch".to_string()
+    } else if report.counts.errors > 0 {
+        "error".to_string()
+    } else if report.counts.checked == 0 {
+        "skipped".to_string()
+    } else if report.counts.skipped > 0 {
+        "partial".to_string()
+    } else {
+        "ok".to_string()
+    };
+}
+
+fn apply_sonoma_cross_check_runner_results(
+    report: &mut SonomaCrossCheckReport,
+    runner_result: &Value,
+) {
+    if report.status == "unavailable" {
+        return;
+    }
+    if report.runner_pid.is_none() {
+        if let Some(pid) = runner_result.get("pid").and_then(|v| v.as_i64()) {
+            report.runner_pid = Some(pid);
+        }
+    }
+
+    let mut by_id: BTreeMap<String, String> = BTreeMap::new();
+    if let Some(steps) = runner_result.get("steps").and_then(|v| v.as_array()) {
+        for step in steps {
+            let step_id = match step.get("step_id").and_then(|v| v.as_str()) {
+                Some(v) => v,
+                None => continue,
+            };
+            let outcome = step
+                .get("sandbox_check")
+                .and_then(|v| v.get("outcome"))
+                .and_then(|v| v.as_str());
+            if let Some(outcome) = outcome {
+                by_id.insert(step_id.to_string(), outcome.to_string());
+            }
+        }
+    }
+
+    for step in report.steps.iter_mut() {
+        if let Some(expected) = by_id.get(&step.step_id) {
+            step.expected_outcome = Some(expected.clone());
+            if let Some(actual) = step.validator_outcome.as_ref() {
+                if (expected == "allow" || expected == "deny")
+                    && (actual == "allow" || actual == "deny")
+                {
+                    step.mismatch = Some(actual != expected);
+                }
+            }
+        }
+    }
+    update_sonoma_cross_check_counts(report);
+}
+
+fn sonoma_cross_check_unavailable(error: String) -> SonomaCrossCheckReport {
+    SonomaCrossCheckReport {
+        status: "unavailable".to_string(),
+        tool_path: None,
+        runner_pid: None,
+        wait_ms: None,
+        error: Some(error),
+        counts: SonomaCrossCheckCounts::default(),
+        steps: Vec::new(),
+    }
+}
+
+fn sonoma_cross_check_skipped(reason: String) -> SonomaCrossCheckReport {
+    SonomaCrossCheckReport {
+        status: "skipped".to_string(),
+        tool_path: None,
+        runner_pid: None,
+        wait_ms: None,
+        error: Some(reason),
+        counts: SonomaCrossCheckCounts::default(),
+        steps: Vec::new(),
+    }
+}
+
+fn run_sonoma_cross_check(plan: &SonomaCrossCheckPlan) -> SonomaCrossCheckReport {
+    let mut report = SonomaCrossCheckReport {
+        status: "error".to_string(),
+        tool_path: Some(plan.tool_path.display().to_string()),
+        runner_pid: None,
+        wait_ms: Some(plan.wait_ms),
+        error: None,
+        counts: SonomaCrossCheckCounts::default(),
+        steps: Vec::new(),
+    };
+
+    let pid_timeout =
+        SONOMA_CROSS_CHECK_PID_TIMEOUT_MS.max(plan.wait_ms.saturating_sub(SONOMA_CROSS_CHECK_SETTLE_MS));
+    let pid = match wait_for_runner_pid(&plan.process_name, pid_timeout) {
+        Ok(pid) => pid,
+        Err(err) => {
+            report.error = Some(err);
+            update_sonoma_cross_check_counts(&mut report);
+            return report;
+        }
+    };
+    report.runner_pid = Some(pid);
+
+    thread::sleep(Duration::from_millis(SONOMA_CROSS_CHECK_SETTLE_MS));
+
+    for spec in &plan.specs {
+        report
+            .steps
+            .push(run_sb_api_validator(&plan.tool_path, pid, spec));
+    }
+
+    update_sonoma_cross_check_counts(&mut report);
+    report
+}
+
 fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut request_path: Option<PathBuf> = None;
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut log_last = DEFAULT_LOG_LAST.to_string();
     let mut instrumentation_arg: Option<String> = None;
+    let mut sonoma_cross_check_enabled = false;
 
     let mut idx = 0usize;
     while idx < args.len() {
@@ -745,6 +1252,10 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 instrumentation_arg = Some(value.to_string());
                 idx += 2;
             }
+            "--sonoma-cross-check" => {
+                sonoma_cross_check_enabled = true;
+                idx += 1;
+            }
             _ => return Err(format!("unknown argument: {arg}")),
         }
     }
@@ -760,23 +1271,92 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let runner_target = resolve_runner_target(&app_root, &selector)?;
     let runner_provenance = runner_provenance_from_target(&runner_target);
 
-    let request_path_for_runner = if let Some(arg) = instrumentation_arg.as_deref() {
+    let mut request_value: Option<Value> = None;
+    let mut request_modified = false;
+
+    if instrumentation_arg.is_some() || sonoma_cross_check_enabled {
+        request_value = Some(read_json_file(&request_path, "request.json")?);
+    }
+
+    if let Some(arg) = instrumentation_arg.as_deref() {
         let instrumentation = load_instrumentation_value(arg)?;
-        let mut request_value = read_json_file(&request_path, "request.json")?;
-        let obj = request_value
+        let request_value_mut = request_value
+            .as_mut()
+            .ok_or_else(|| "request.json unavailable".to_string())?;
+        let obj = request_value_mut
             .as_object_mut()
             .ok_or_else(|| "request.json must be a JSON object".to_string())?;
         if obj.contains_key("instrumentation") {
             return Err("request.json already includes instrumentation; remove it or omit --instrumentation".to_string());
         }
         obj.insert("instrumentation".to_string(), instrumentation);
-        write_temp_request(&request_value)?
+        request_modified = true;
+    }
+
+    let mut sonoma_cross_check_report: Option<SonomaCrossCheckReport> = None;
+    let mut sonoma_cross_check_plan: Option<SonomaCrossCheckPlan> = None;
+
+    if sonoma_cross_check_enabled {
+        let specs = extract_sonoma_cross_check_specs(
+            request_value
+                .as_ref()
+                .ok_or_else(|| "request.json unavailable".to_string())?,
+        )?;
+        if specs.is_empty() {
+            sonoma_cross_check_report =
+                Some(sonoma_cross_check_skipped("no sandbox_check steps".to_string()));
+        } else {
+            match resolve_contents_macos_tool("sb_api_validator") {
+                Ok(tool_path) => {
+                    let wait_ms = sonoma_cross_check_wait_ms(specs.len());
+                    let request_value_mut = request_value
+                        .as_mut()
+                        .ok_or_else(|| "request.json unavailable".to_string())?;
+                    inject_sonoma_cross_check_instrumentation(request_value_mut, wait_ms)?;
+                    request_modified = true;
+                    sonoma_cross_check_plan = Some(SonomaCrossCheckPlan {
+                        tool_path,
+                        process_name: runner_target.process_name.clone(),
+                        wait_ms,
+                        specs,
+                    });
+                }
+                Err(err) => {
+                    sonoma_cross_check_report = Some(sonoma_cross_check_unavailable(err));
+                }
+            }
+        }
+    }
+
+    let request_path_for_runner = if request_modified {
+        let value = request_value
+            .as_ref()
+            .ok_or_else(|| "request.json unavailable".to_string())?;
+        write_temp_request(value)?
     } else {
         request_path.clone()
     };
 
-    let (runner_client, runner_result) =
-        run_pw_runner_client(&runner_target.service_name, &request_path_for_runner, timeout_ms)?;
+    let (runner_client, runner_result, sonoma_cross_check_from_run) =
+        if let Some(plan) = sonoma_cross_check_plan {
+            run_pw_runner_client_with_cross_check(
+                &runner_target.service_name,
+                &request_path_for_runner,
+                timeout_ms,
+                plan,
+            )?
+        } else {
+            let (runner_client, runner_result) =
+                run_pw_runner_client(&runner_target.service_name, &request_path_for_runner, timeout_ms)?;
+            (runner_client, runner_result, None)
+        };
+
+    let mut sonoma_cross_check =
+        sonoma_cross_check_report.or(sonoma_cross_check_from_run);
+
+    if let (Some(report), Some(result)) = (sonoma_cross_check.as_mut(), runner_result.as_ref()) {
+        apply_sonoma_cross_check_runner_results(report, result);
+    }
 
     let runner_pid = runner_result
         .as_ref()
@@ -840,6 +1420,7 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         runner_client,
         runner_result,
         sandbox_log_capture,
+        sonoma_cross_check,
     };
 
     let error = if ok {

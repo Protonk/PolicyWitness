@@ -220,6 +220,7 @@ def main() -> int:
     # Embedded helper tools under Contents/MacOS (signed separately; host-side).
     helper_names = [
         "pw-runner-client",
+        "sb_api_validator",
         "sandbox-log-observer",
     ]
     for name in helper_names:

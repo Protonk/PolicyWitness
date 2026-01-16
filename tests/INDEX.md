@@ -18,7 +18,7 @@ Tiers:
 | `smoke` | Baseline | End-to-end run works and basic instrumentation ports respond | Built app + XPC | Quick scripts; see `tests/suites/smoke/` |
 | `blackbox_menagerie` | Extended | SBPL + compiled-bytes ingestion and evidence correlation | Built app | Compiled profile cases may skip |
 | `blackbox_e2e` | Extended | Evidence bundle matches expectations per step | Built app | Skips on host `sandbox_check` anomalies |
-| `anomalies` | Diagnostic | Known OS bugs are reproducible | Host-dependent | Passes when the anomaly is observed |
+| `anomalies` | Diagnostic | Known OS anomalies + sandbox_check cross-check consistency | Host-dependent | Cross-check may skip if tooling is unavailable |
 | `opt_in` | Opt-in | Heavy/host-sensitive paths (logs, DYLD, launchd) | See registry | `tests/OPT_IN_TESTS.md` |
 
 ## Expected skips by suite
@@ -29,5 +29,5 @@ Tiers:
 - `smoke`: skip when `PolicyWitness.app` is missing or unbuilt.
 - `blackbox_menagerie`: skip when `PolicyWitness.app` is missing; compiled profile registration not permitted; mismatch evidence not observed (host variance).
 - `blackbox_e2e`: skip when `PolicyWitness.app` is missing; host `sandbox_check` anomalies; compiled profile registration not permitted (BBX-003).
-- `anomalies`: skip when `PolicyWitness.app` is missing.
+- `anomalies`: skip when `PolicyWitness.app` is missing; cross-check tooling unavailable.
 - `opt_in`: skip when required resources are unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture).

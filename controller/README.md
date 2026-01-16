@@ -18,13 +18,15 @@ Standalone helper tools (embedded into the `.app`):
 
 - `controller/src/bin/sandbox-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
   - Captures unified-log sandbox deny lines by PID + process name
+- `runtime/native/sb_api_validator/sb_api_validator` → `PolicyWitness.app/Contents/MacOS/sb_api_validator`
+  - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
 
 ## CLI surface (contract)
 
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>] [--sonoma-cross-check]
 policy-witness runner <command> [options]
 ```
 
@@ -37,6 +39,9 @@ Runs a **single runner evaluation** against the selected runner service:
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance, applies the policy exactly once, executes the probe plan, and returns the runner’s structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
+- If `--sonoma-cross-check` is provided, the controller runs the embedded
+  `sb_api_validator` against the runner PID while it is paused post-sandbox
+  (a post-sandbox `debug_wait` port is injected to hold the runner open).
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.runner_provenance` and `data.app_provenance` to keep results auditable.
 - If `--instrumentation` is provided, the controller injects the instrumentation object into the request JSON (without modifying the original file).
@@ -54,6 +59,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
 - `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
+- `data.sonoma_cross_check`: optional `sandbox_check` cross-check report (best-effort)
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 
