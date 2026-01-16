@@ -33,6 +33,18 @@ The runner consumes a `PWRunnerRunSpec` which contains:
 - `policy`: `sbpl` source or `compiled_bytes` (with optional `params`)
 - `probe_plan`: ordered probe steps (sandbox_check + attempt)
 
+## Run result highlights
+
+Each probe step reports both a `sandbox_check` and an `attempt` result:
+
+- `sandbox_check` includes `scope` (currently `post_sandbox`) plus the original
+  `filter_value` and a best-effort `effective_filter_value` (for `path` filters,
+  this is the runner’s normalized path).
+- `attempt` always includes `exit_code` and `syscall_errno` (explicit `null` when
+  not applicable), and for file attempts it includes `requested_path`,
+  `normalized_path`, and `observed_path` (fd-based when available). Legacy `rc`
+  and `errno` remain for compatibility.
+
 ## Entitlements and sandboxing (important distinction)
 
 The runner’s **codesign entitlements** are fixed hardened-runtime exceptions (debug attach / dynamic loading / dyld env / executable memory). They enable inspection and controlled extensibility, but they do **not** make sandbox policy “dynamic”.

@@ -128,8 +128,23 @@ def require_step(step_id: str):
 def sb_outcome(s):
     return (s.get("sandbox_check") or {}).get("outcome")
 
-def attempt_rc(s):
-    return (s.get("attempt") or {}).get("rc")
+def attempt_exit(s):
+    attempt = s.get("attempt") or {}
+    if "exit_code" not in attempt:
+        raise SystemExit("missing attempt.exit_code")
+    return attempt.get("exit_code")
+
+def attempt_syscall_errno(s):
+    attempt = s.get("attempt") or {}
+    if "syscall_errno" not in attempt:
+        raise SystemExit("missing attempt.syscall_errno")
+    return attempt.get("syscall_errno")
+
+def require_attempt_paths(s, step_id):
+    attempt = s.get("attempt") or {}
+    for key in ("requested_path", "normalized_path", "observed_path"):
+        if key not in attempt:
+            raise SystemExit(f"{step_id}: missing attempt.{key}")
 
 def sig_delta(s):
     return ((s.get("deny_signal") or {}).get("delta") or 0)
@@ -137,16 +152,22 @@ def sig_delta(s):
 allowed_file = require_step("fs_write_allowed")
 if sb_outcome(allowed_file) != "deny":
     raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected sandbox_check=deny (got {sb_outcome(allowed_file)!r})")
-if attempt_rc(allowed_file) != 0:
-    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected attempt rc=0 (got {attempt_rc(allowed_file)!r})")
+require_attempt_paths(allowed_file, "fs_write_allowed")
+if attempt_exit(allowed_file) != 0:
+    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected attempt exit_code=0 (got {attempt_exit(allowed_file)!r})")
+if attempt_syscall_errno(allowed_file) is not None:
+    raise SystemExit("Anomaly not reproduced: fs_write_allowed expected syscall_errno=null")
 if sig_delta(allowed_file) != 0:
     raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected deny_signal delta=0 (got {sig_delta(allowed_file)!r})")
 
 denied_file = require_step("fs_write_denied")
 if sb_outcome(denied_file) != "deny":
     raise SystemExit(f"fs_write_denied: expected sandbox_check deny (got {sb_outcome(denied_file)!r})")
-if attempt_rc(denied_file) == 0:
-    raise SystemExit("fs_write_denied: expected attempt failure (rc != 0)")
+require_attempt_paths(denied_file, "fs_write_denied")
+if attempt_exit(denied_file) == 0:
+    raise SystemExit("fs_write_denied: expected attempt failure (exit_code != 0)")
+if attempt_syscall_errno(denied_file) is None:
+    raise SystemExit("fs_write_denied: expected syscall_errno on failure")
 
 _ = require_step("mach_lookup_allowed")
 _ = require_step("mach_lookup_denied")

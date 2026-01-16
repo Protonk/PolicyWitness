@@ -9,6 +9,12 @@ BUILD_ARGS += --yolo
 endif
 
 build:
+	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
+		echo "ERROR: set IDENTITY or opt-in to auto selection with YOLO=1"; \
+		echo "example: make build IDENTITY='Developer ID Application: ...'"; \
+		echo "example: make build YOLO=1"; \
+		exit 2; \
+	fi
 	./build.sh $(BUILD_ARGS)
 
 clean:

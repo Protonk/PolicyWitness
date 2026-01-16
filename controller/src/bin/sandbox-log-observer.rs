@@ -100,6 +100,54 @@ fn is_log_prelude_line(line: &str) -> bool {
         .contains("filtering the log data using")
 }
 
+#[derive(Serialize, Clone)]
+struct SandboxDenyEvent {
+    pid: Option<i32>,
+    process: Option<String>,
+    operation: Option<String>,
+    path: Option<String>,
+    raw_line: String,
+}
+
+fn parse_proc_pid(token: &str) -> (Option<String>, Option<i32>) {
+    let open = token.rfind('(');
+    let close = token.rfind(')');
+    if let (Some(open), Some(close)) = (open, close) {
+        if close > open + 1 {
+            let name = token[..open].to_string();
+            let pid_str = &token[(open + 1)..close];
+            if let Ok(pid) = pid_str.parse::<i32>() {
+                return (Some(name), Some(pid));
+            }
+        }
+    }
+    (None, None)
+}
+
+fn parse_sandbox_deny_line(line: &str) -> Option<SandboxDenyEvent> {
+    let idx = line.find("Sandbox:")?;
+    let msg = line[(idx + "Sandbox:".len())..].trim_start();
+    if !msg.to_ascii_lowercase().contains("deny(") {
+        return None;
+    }
+    let mut parts = msg.split_whitespace();
+    let proc_token = parts.next().unwrap_or_default();
+    let deny_token = parts.next().unwrap_or_default();
+    if !deny_token.to_ascii_lowercase().starts_with("deny(") {
+        return None;
+    }
+    let operation = parts.next().map(|v| v.to_string());
+    let path = parts.next().map(|v| v.to_string());
+    let (process, pid) = parse_proc_pid(proc_token);
+    Some(SandboxDenyEvent {
+        pid,
+        process,
+        operation,
+        path,
+        raw_line: line.to_string(),
+    })
+}
+
 fn open_output(path: &Path, append: bool) -> Result<std::fs::File, String> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() && parent != Path::new(".") {
@@ -170,10 +218,12 @@ struct LogObserverData {
     log_stdout: String,
     log_stderr: String,
     log_error: Option<String>,
+    blocked_reason: Option<String>,
     log_truncated: bool,
     observed_lines: usize,
     observed_deny: bool,
     deny_lines: Vec<String>,
+    deny_events: Vec<SandboxDenyEvent>,
     layer_attribution: ObserverLayerAttribution,
 }
 
@@ -459,12 +509,14 @@ fn main() {
 
     let mut observed_lines = 0usize;
     let mut deny_lines: Vec<String> = Vec::new();
+    let mut deny_events: Vec<SandboxDenyEvent> = Vec::new();
     let mut log_stdout = String::new();
     let mut log_stdout_bytes = 0usize;
     let mut log_truncated = false;
     let log_stderr: String;
     let log_rc: Option<i32>;
     let mut log_error: Option<String> = None;
+    let mut blocked_reason: Option<String> = None;
 
     let mode = if stream_mode { "stream" } else { "show" }.to_string();
     let duration_ms = duration.map(|d| d.as_millis() as u64);
@@ -502,10 +554,12 @@ fn main() {
                     log_stdout: String::new(),
                     log_stderr: String::new(),
                     log_error: Some(format!("failed to run log: {err}")),
+                    blocked_reason: None,
                     log_truncated: false,
                     observed_lines: 0,
                     observed_deny: false,
                     deny_lines: Vec::new(),
+                    deny_events: Vec::new(),
                     layer_attribution: ObserverLayerAttribution {
                         seatbelt: "observer_only".to_string(),
                     },
@@ -590,9 +644,11 @@ fn main() {
                 continue;
             }
             observed_lines += 1;
-            let is_deny = trimmed.to_ascii_lowercase().contains("deny");
-            if is_deny {
+            let deny_event = parse_sandbox_deny_line(trimmed);
+            let is_deny = deny_event.is_some();
+            if let Some(event) = deny_event {
                 deny_lines.push(trimmed.to_string());
+                deny_events.push(event);
             }
             if !log_truncated {
                 let add_bytes = trimmed.len() + 1;
@@ -689,10 +745,12 @@ fn main() {
                     log_stdout: String::new(),
                     log_stderr: String::new(),
                     log_error: Some(format!("failed to run log: {err}")),
+                    blocked_reason: None,
                     log_truncated: false,
                     observed_lines: 0,
                     observed_deny: false,
                     deny_lines: Vec::new(),
+                    deny_events: Vec::new(),
                     layer_attribution: ObserverLayerAttribution {
                         seatbelt: "observer_only".to_string(),
                     },
@@ -724,25 +782,26 @@ fn main() {
         }
 
         observed_lines = filtered.len();
-        deny_lines = filtered
-            .iter()
-            .filter(|line| line.to_ascii_lowercase().contains("deny"))
-            .map(|line| (*line).to_string())
-            .collect();
+        for line in filtered {
+            if let Some(event) = parse_sandbox_deny_line(line) {
+                deny_lines.push(line.to_string());
+                deny_events.push(event);
+            }
+        }
 
         if !out.status.success() {
             log_error = Some("log show returned non-zero".to_string());
         }
     }
 
-    if log_error.is_none() {
-        let lower = format!("{log_stdout}\n{log_stderr}").to_ascii_lowercase();
-        if lower.contains("cannot run while sandboxed") {
-            log_error = Some("Cannot run while sandboxed".to_string());
-        }
+    let lower = format!("{log_stdout}\n{log_stderr}").to_ascii_lowercase();
+    if lower.contains("cannot run while sandboxed") {
+        let reason = "Cannot run while sandboxed".to_string();
+        blocked_reason = Some(reason.clone());
+        log_error = Some(reason);
     }
 
-    let observed_deny = !deny_lines.is_empty();
+    let observed_deny = !deny_events.is_empty();
 
     let data = LogObserverData {
         observer_schema_version: OBSERVER_SCHEMA_VERSION,
@@ -762,10 +821,12 @@ fn main() {
         log_stdout,
         log_stderr,
         log_error: log_error.clone(),
+        blocked_reason,
         log_truncated,
         observed_lines,
         observed_deny,
         deny_lines,
+        deny_events,
         layer_attribution: ObserverLayerAttribution {
             seatbelt: "observer_only".to_string(),
         },

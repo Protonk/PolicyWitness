@@ -95,7 +95,7 @@ def load_run_json(path: Path):
         raise SystemExit(f"failed to parse run JSON: {exc}")
 
 
-def validate_run(case, run_data):
+def validate_run(expected_steps, run_data):
     if run_data.get("kind") != "run":
         return (1, f"expected kind=run (got {run_data.get('kind')!r})")
     if run_data.get("result", {}).get("ok") is not True:
@@ -112,7 +112,7 @@ def validate_run(case, run_data):
         return (1, "expected policy_sha256 to be present")
 
     steps = runner.get("steps") or []
-    expected_steps = case.get("steps") or []
+    expected_steps = expected_steps or []
     if len(steps) != len(expected_steps):
         return (1, f"expected {len(expected_steps)} steps (got {len(steps)})")
 
@@ -130,16 +130,53 @@ def validate_run(case, run_data):
         if not isinstance(attempt, dict) or not isinstance(sb, dict):
             return (1, f"missing attempt/sandbox_check for {step_id}")
 
-        attempt_ok = attempt.get("rc") == 0
+        if "exit_code" not in attempt:
+            return (1, f"{step_id}: missing attempt.exit_code")
+        if "syscall_errno" not in attempt:
+            return (1, f"{step_id}: missing attempt.syscall_errno")
+        for key in ("requested_path", "normalized_path", "observed_path"):
+            if key not in attempt:
+                return (1, f"{step_id}: missing attempt.{key}")
+        if "scope" not in sb:
+            return (1, f"{step_id}: missing sandbox_check.scope")
+        if "effective_filter_value" not in sb:
+            return (1, f"{step_id}: missing sandbox_check.effective_filter_value")
+
+        exit_code = attempt.get("exit_code")
+        if not isinstance(exit_code, int):
+            return (1, f"{step_id}: invalid attempt.exit_code={exit_code!r}")
+        if isinstance(attempt.get("rc"), int) and attempt.get("rc") != exit_code:
+            return (1, f"{step_id}: attempt.rc mismatch (rc={attempt.get('rc')!r} exit_code={exit_code!r})")
+        attempt_ok = exit_code == 0
         exp_meta = exp.get("expect") or {}
+        exp_attempt = exp.get("attempt") or {}
 
         if "attempt_ok" in exp_meta:
             if attempt_ok != exp_meta.get("attempt_ok"):
                 return (1, f"{step_id}: expected attempt_ok={exp_meta.get('attempt_ok')!r} (got {attempt_ok!r})")
 
+        if exp_attempt.get("kind") == "file":
+            expected_target = exp_attempt.get("target")
+            if expected_target and attempt.get("requested_path") != expected_target:
+                return (
+                    1,
+                    f"{step_id}: expected requested_path={expected_target!r} (got {attempt.get('requested_path')!r})",
+                )
+            if not attempt_ok and attempt.get("syscall_errno") is None:
+                return (1, f"{step_id}: expected syscall_errno on failed file attempt")
+            if attempt_ok and attempt.get("syscall_errno") is not None:
+                return (1, f"{step_id}: unexpected syscall_errno on successful file attempt")
+            if attempt_ok and exp_attempt.get("action") in ("open_read", "open_write", "create"):
+                if attempt.get("observed_path") is None:
+                    return (1, f"{step_id}: expected observed_path for successful open/create")
+
         if "errno" in exp_meta and exp_meta.get("errno") is not None:
-            if attempt.get("errno") != exp_meta.get("errno"):
-                return (1, f"{step_id}: expected errno={exp_meta.get('errno')!r} (got {attempt.get('errno')!r})")
+            got_errno = attempt.get("syscall_errno", attempt.get("errno"))
+            if got_errno != exp_meta.get("errno"):
+                return (
+                    1,
+                    f"{step_id}: expected errno={exp_meta.get('errno')!r} (got {got_errno!r})",
+                )
 
         policy = exp_meta.get("policy")
         mismatch_reason = exp_meta.get("mismatch_reason")
@@ -247,7 +284,7 @@ def main():
         return 1
 
     run_data = load_run_json(stdout_path)
-    status, message = validate_run(case, run_data)
+    status, message = validate_run(steps, run_data)
     print(message)
     return status
 

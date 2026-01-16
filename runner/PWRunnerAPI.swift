@@ -253,28 +253,152 @@ public struct PWRunnerInstrumentationDyldEnvReport: Codable {
 public struct PWRunnerSandboxCheckResult: Codable {
     public var rc: Int
     public var outcome: String
+    public var scope: String
     public var filter_kind: String
     public var filter_value: String?
+    public var effective_filter_value: String?
 
-    public init(rc: Int, outcome: String, filter_kind: String, filter_value: String? = nil) {
+    public init(
+        rc: Int,
+        outcome: String,
+        scope: String,
+        filter_kind: String,
+        filter_value: String? = nil,
+        effective_filter_value: String? = nil
+    ) {
         self.rc = rc
         self.outcome = outcome
+        self.scope = scope
         self.filter_kind = filter_kind
         self.filter_value = filter_value
+        self.effective_filter_value = effective_filter_value
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case rc
+        case outcome
+        case scope
+        case filter_kind
+        case filter_value
+        case effective_filter_value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(rc, forKey: .rc)
+        try container.encode(outcome, forKey: .outcome)
+        try container.encode(scope, forKey: .scope)
+        try container.encode(filter_kind, forKey: .filter_kind)
+        if let filter_value {
+            try container.encode(filter_value, forKey: .filter_value)
+        } else {
+            try container.encodeNil(forKey: .filter_value)
+        }
+        if let effective_filter_value {
+            try container.encode(effective_filter_value, forKey: .effective_filter_value)
+        } else {
+            try container.encodeNil(forKey: .effective_filter_value)
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rc = try container.decode(Int.self, forKey: .rc)
+        outcome = try container.decode(String.self, forKey: .outcome)
+        scope = try container.decode(String.self, forKey: .scope)
+        filter_kind = try container.decode(String.self, forKey: .filter_kind)
+        filter_value = try container.decodeIfPresent(String.self, forKey: .filter_value)
+        effective_filter_value = try container.decodeIfPresent(String.self, forKey: .effective_filter_value)
     }
 }
 
 public struct PWRunnerAttemptResult: Codable {
     public var rc: Int
+    public var exit_code: Int
     public var errno: Int?
+    public var syscall_errno: Int?
     public var outcome: String
     public var error: String?
+    public var requested_path: String?
+    public var normalized_path: String?
+    public var observed_path: String?
 
-    public init(rc: Int, errno: Int? = nil, outcome: String, error: String? = nil) {
+    public init(
+        rc: Int,
+        errno: Int? = nil,
+        outcome: String,
+        error: String? = nil,
+        requested_path: String? = nil,
+        normalized_path: String? = nil,
+        observed_path: String? = nil
+    ) {
         self.rc = rc
+        self.exit_code = rc
         self.errno = errno
+        self.syscall_errno = errno
         self.outcome = outcome
         self.error = error
+        self.requested_path = requested_path
+        self.normalized_path = normalized_path
+        self.observed_path = observed_path
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case rc
+        case exit_code
+        case errno
+        case syscall_errno
+        case outcome
+        case error
+        case requested_path
+        case normalized_path
+        case observed_path
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(rc, forKey: .rc)
+        try container.encode(exit_code, forKey: .exit_code)
+        if let errno {
+            try container.encode(errno, forKey: .errno)
+        } else {
+            try container.encodeNil(forKey: .errno)
+        }
+        if let syscall_errno {
+            try container.encode(syscall_errno, forKey: .syscall_errno)
+        } else {
+            try container.encodeNil(forKey: .syscall_errno)
+        }
+        try container.encode(outcome, forKey: .outcome)
+        try container.encodeIfPresent(error, forKey: .error)
+        if let requested_path {
+            try container.encode(requested_path, forKey: .requested_path)
+        } else {
+            try container.encodeNil(forKey: .requested_path)
+        }
+        if let normalized_path {
+            try container.encode(normalized_path, forKey: .normalized_path)
+        } else {
+            try container.encodeNil(forKey: .normalized_path)
+        }
+        if let observed_path {
+            try container.encode(observed_path, forKey: .observed_path)
+        } else {
+            try container.encodeNil(forKey: .observed_path)
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rc = try container.decode(Int.self, forKey: .rc)
+        exit_code = try container.decodeIfPresent(Int.self, forKey: .exit_code) ?? rc
+        errno = try container.decodeIfPresent(Int.self, forKey: .errno)
+        syscall_errno = try container.decodeIfPresent(Int.self, forKey: .syscall_errno)
+        outcome = try container.decode(String.self, forKey: .outcome)
+        error = try container.decodeIfPresent(String.self, forKey: .error)
+        requested_path = try container.decodeIfPresent(String.self, forKey: .requested_path)
+        normalized_path = try container.decodeIfPresent(String.self, forKey: .normalized_path)
+        observed_path = try container.decodeIfPresent(String.self, forKey: .observed_path)
     }
 }
 

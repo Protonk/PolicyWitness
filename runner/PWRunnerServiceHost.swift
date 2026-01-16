@@ -12,6 +12,7 @@ private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 16
 
 private let PW_INSTRUMENTATION_PHASE_PRE: String = "pre_sandbox"
 private let PW_INSTRUMENTATION_PHASE_POST: String = "post_sandbox"
+private let PW_SANDBOX_CHECK_SCOPE_POST: String = "post_sandbox"
 
 private func nowUnixMs() -> UInt64 {
     UInt64(Date().timeIntervalSince1970 * 1000.0)
@@ -155,6 +156,9 @@ private func resolveSandboxCheckSymbol() -> UnsafeMutableRawPointer? {
 
 @_silgen_name("bootstrap_look_up")
 private func bootstrap_look_up(_ bp: mach_port_t, _ service_name: UnsafePointer<CChar>, _ sp: UnsafeMutablePointer<mach_port_t>) -> kern_return_t
+
+@_silgen_name("fcntl")
+private func fcntl_getpath(_ fd: Int32, _ cmd: Int32, _ value: UnsafeMutablePointer<CChar>?) -> Int32
 
 // MARK: - deny-signal counter (Channel B)
 
@@ -789,6 +793,12 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         let op = check.operation
         let filterKind = check.filter.kind
         let filterValue = check.filter.value
+        var effectiveFilterValue = filterValue
+
+        if filterKind == "path", let value = filterValue, !value.isEmpty {
+            let canonical = canonicalizePath(value)
+            effectiveFilterValue = canonical.normalized
+        }
 
         let rc: Int32 = op.withCString { opPtr in
             switch filterKind {
@@ -797,7 +807,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 return fn(getpid(), opPtr, 0)
             case "path":
                 let fn = unsafeBitCast(symbol, to: SandboxCheckOneArgFn.self)
-                return (filterValue ?? "").withCString { pathPtr in
+                return (effectiveFilterValue ?? "").withCString { pathPtr in
                     fn(getpid(), opPtr, PW_SANDBOX_FILTER_PATH, pathPtr)
                 }
             case "global_name":
@@ -823,8 +833,10 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         return PWRunnerSandboxCheckResult(
             rc: Int(rc),
             outcome: outcome,
+            scope: PW_SANDBOX_CHECK_SCOPE_POST,
             filter_kind: filterKind,
-            filter_value: filterValue
+            filter_value: filterValue,
+            effective_filter_value: effectiveFilterValue
         )
     }
 
@@ -841,46 +853,123 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
 
     private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResult {
         let resolved = canonicalizePath(path)
-        let target = resolved.resolved ?? resolved.input
+        let target = resolved.resolved ?? resolved.normalized
+        let requestedPath = resolved.input
+        let normalizedPath = resolved.normalized
 
         switch action {
         case "open_read":
             var buf: UInt8 = 0
             let fd = target.withCString { open($0, O_RDONLY, 0) }
             if fd < 0 {
-                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+                return PWRunnerAttemptResult(
+                    rc: 1,
+                    errno: Int(errno),
+                    outcome: "open_failed",
+                    error: String(cString: strerror(errno)),
+                    requested_path: requestedPath,
+                    normalized_path: normalizedPath,
+                    observed_path: nil
+                )
             }
             defer { close(fd) }
             _ = Darwin.read(fd, &buf, 1)
-            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+            let observed = observedPathForFd(fd)
+            return PWRunnerAttemptResult(
+                rc: 0,
+                errno: nil,
+                outcome: "ok",
+                error: nil,
+                requested_path: requestedPath,
+                normalized_path: normalizedPath,
+                observed_path: observed
+            )
 
         case "open_write":
             let fd = target.withCString { open($0, O_WRONLY | O_TRUNC, 0) }
             if fd < 0 {
-                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+                return PWRunnerAttemptResult(
+                    rc: 1,
+                    errno: Int(errno),
+                    outcome: "open_failed",
+                    error: String(cString: strerror(errno)),
+                    requested_path: requestedPath,
+                    normalized_path: normalizedPath,
+                    observed_path: nil
+                )
             }
             defer { close(fd) }
             var b: UInt8 = UInt8(ascii: "x")
             _ = Darwin.write(fd, &b, 1)
-            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+            let observed = observedPathForFd(fd)
+            return PWRunnerAttemptResult(
+                rc: 0,
+                errno: nil,
+                outcome: "ok",
+                error: nil,
+                requested_path: requestedPath,
+                normalized_path: normalizedPath,
+                observed_path: observed
+            )
 
         case "create":
             let fd = target.withCString { open($0, O_WRONLY | O_CREAT, 0o600) }
             if fd < 0 {
-                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "open_failed", error: String(cString: strerror(errno)))
+                return PWRunnerAttemptResult(
+                    rc: 1,
+                    errno: Int(errno),
+                    outcome: "open_failed",
+                    error: String(cString: strerror(errno)),
+                    requested_path: requestedPath,
+                    normalized_path: normalizedPath,
+                    observed_path: nil
+                )
             }
+            let observed = observedPathForFd(fd)
             close(fd)
-            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+            return PWRunnerAttemptResult(
+                rc: 0,
+                errno: nil,
+                outcome: "ok",
+                error: nil,
+                requested_path: requestedPath,
+                normalized_path: normalizedPath,
+                observed_path: observed
+            )
 
         case "unlink":
             let rc = target.withCString { unlink($0) }
             if rc != 0 {
-                return PWRunnerAttemptResult(rc: 1, errno: Int(errno), outcome: "unlink_failed", error: String(cString: strerror(errno)))
+                return PWRunnerAttemptResult(
+                    rc: 1,
+                    errno: Int(errno),
+                    outcome: "unlink_failed",
+                    error: String(cString: strerror(errno)),
+                    requested_path: requestedPath,
+                    normalized_path: normalizedPath,
+                    observed_path: nil
+                )
             }
-            return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+            return PWRunnerAttemptResult(
+                rc: 0,
+                errno: nil,
+                outcome: "ok",
+                error: nil,
+                requested_path: requestedPath,
+                normalized_path: normalizedPath,
+                observed_path: nil
+            )
 
         default:
-            return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported file action")
+            return PWRunnerAttemptResult(
+                rc: 1,
+                errno: nil,
+                outcome: "unsupported",
+                error: "unsupported file action",
+                requested_path: requestedPath,
+                normalized_path: normalizedPath,
+                observed_path: nil
+            )
         }
     }
 
@@ -908,6 +997,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
 
     private struct CanonicalPath {
         var input: String
+        var normalized: String
         var resolved: String?
     }
 
@@ -917,9 +1007,30 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             realpath(ptr, &buf)
         }
         if rc != nil {
-            return CanonicalPath(input: input, resolved: String(cString: buf))
+            let resolved = String(cString: buf)
+            return CanonicalPath(input: input, normalized: resolved, resolved: resolved)
         }
-        return CanonicalPath(input: input, resolved: nil)
+        let normalized: String
+        if input.hasPrefix("/") {
+            normalized = URL(fileURLWithPath: input).standardizedFileURL.path
+        } else {
+            normalized = input
+        }
+        return CanonicalPath(input: input, normalized: normalized, resolved: nil)
+    }
+
+    private func observedPathForFd(_ fd: Int32) -> String? {
+        var buf = [CChar](repeating: 0, count: Int(PATH_MAX))
+        let rc: Int32 = buf.withUnsafeMutableBufferPointer { ptr in
+            guard let base = ptr.baseAddress else {
+                return -1
+            }
+            return fcntl_getpath(fd, F_GETPATH, base)
+        }
+        if rc == 0 {
+            return String(cString: buf)
+        }
+        return nil
     }
 }
 

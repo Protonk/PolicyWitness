@@ -70,6 +70,18 @@ for exp in expected_steps:
     if not isinstance(attempt, dict):
         fail(f"missing attempt for {step_id}")
 
+    if "scope" not in sb:
+        fail(f"{step_id}: missing sandbox_check.scope")
+    if "effective_filter_value" not in sb:
+        fail(f"{step_id}: missing sandbox_check.effective_filter_value")
+    if "exit_code" not in attempt:
+        fail(f"{step_id}: missing attempt.exit_code")
+    if "syscall_errno" not in attempt:
+        fail(f"{step_id}: missing attempt.syscall_errno")
+    for key in ("requested_path", "normalized_path", "observed_path"):
+        if key not in attempt:
+            fail(f"{step_id}: missing attempt.{key}")
+
     sb_outcome = sb.get("outcome")
     exp_outcome = exp.get("sandbox_outcome")
     if exp_outcome and sb_outcome != exp_outcome:
@@ -78,13 +90,19 @@ for exp in expected_steps:
             "host sandbox_check appears unreliable (see anomalies suite)"
         )
 
-    attempt_ok = attempt.get("rc") == 0
+    exit_code = attempt.get("exit_code")
+    if not isinstance(exit_code, int):
+        fail(f"{step_id}: invalid attempt.exit_code={exit_code!r}")
+    if isinstance(attempt.get("rc"), int) and attempt.get("rc") != exit_code:
+        fail(f"{step_id}: attempt.rc mismatch (rc={attempt.get('rc')!r} exit_code={exit_code!r})")
+    attempt_ok = exit_code == 0
     if "attempt_ok" in exp and attempt_ok != exp.get("attempt_ok"):
         fail(f"{step_id}: expected attempt_ok={exp.get('attempt_ok')!r} (got {attempt_ok!r})")
 
     if exp.get("errno") is not None:
-        if attempt.get("errno") != exp.get("errno"):
-            fail(f"{step_id}: expected errno={exp.get('errno')!r} (got {attempt.get('errno')!r})")
+        got_errno = attempt.get("syscall_errno", attempt.get("errno"))
+        if got_errno != exp.get("errno"):
+            fail(f"{step_id}: expected errno={exp.get('errno')!r} (got {got_errno!r})")
 
     if "deny_signal_delta" in exp:
         delta = ((step.get("deny_signal") or {}).get("delta") or 0)

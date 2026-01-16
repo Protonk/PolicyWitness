@@ -2,7 +2,7 @@ mod evidence;
 mod json_contract;
 mod runner_manager;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -436,10 +436,26 @@ struct RunnerClientRun {
     stderr_truncated: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+struct SandboxDenyEvent {
+    pid: Option<i32>,
+    process: Option<String>,
+    operation: Option<String>,
+    path: Option<String>,
+    raw_line: Option<String>,
+}
+
+#[derive(Serialize)]
+struct SandboxLogStepDeny {
+    step_id: String,
+    deny_events: Vec<SandboxDenyEvent>,
+}
+
 #[derive(Serialize)]
 struct SandboxLogCapture {
     capture_status: String,
     tool_exit_code: i32,
+    blocked_reason: Option<String>,
     stdout_parse_error: Option<String>,
     stdout_truncated: bool,
     stdout_raw: Option<String>,
@@ -447,6 +463,8 @@ struct SandboxLogCapture {
     stderr_truncated: bool,
     observer: Option<Value>,
     observed_deny: Option<bool>,
+    deny_events: Option<Vec<SandboxDenyEvent>>,
+    step_denies: Option<Vec<SandboxLogStepDeny>>,
 }
 
 #[derive(Serialize)]
@@ -525,6 +543,88 @@ fn observed_deny_from_observer_envelope(obj: &Value) -> Option<bool> {
         .and_then(|v| v.as_bool())
 }
 
+fn observer_log_error(obj: &Value) -> Option<String> {
+    obj.get("data")
+        .and_then(|v| v.get("log_error"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+fn observer_blocked_reason(obj: &Value) -> Option<String> {
+    if let Some(reason) = obj
+        .get("data")
+        .and_then(|v| v.get("blocked_reason"))
+        .and_then(|v| v.as_str())
+    {
+        return Some(reason.to_string());
+    }
+    let err = observer_log_error(obj)?;
+    if err.to_ascii_lowercase().contains("cannot run while sandboxed") {
+        return Some(err);
+    }
+    None
+}
+
+fn observer_deny_events(obj: &Value) -> Option<Vec<SandboxDenyEvent>> {
+    let value = obj.get("data")?.get("deny_events")?.clone();
+    serde_json::from_value::<Vec<SandboxDenyEvent>>(value).ok()
+}
+
+fn step_attempt_paths(step: &Value) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let attempt = match step.get("attempt") {
+        Some(v) => v,
+        None => return out,
+    };
+    for key in ["observed_path", "normalized_path", "requested_path"] {
+        if let Some(val) = attempt.get(key).and_then(|v| v.as_str()) {
+            out.push(val.to_string());
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn match_step_denies(
+    steps: &[Value],
+    deny_events: &[SandboxDenyEvent],
+    pid: Option<i64>,
+) -> Vec<SandboxLogStepDeny> {
+    let pid = pid.and_then(|v| i32::try_from(v).ok());
+    let mut out: Vec<SandboxLogStepDeny> = Vec::new();
+    for step in steps {
+        let step_id = match step.get("step_id").and_then(|v| v.as_str()) {
+            Some(v) => v.to_string(),
+            None => continue,
+        };
+        let paths = step_attempt_paths(step);
+        if paths.is_empty() {
+            continue;
+        }
+        let mut matched: Vec<SandboxDenyEvent> = Vec::new();
+        for event in deny_events {
+            if let (Some(event_pid), Some(pid)) = (event.pid, pid) {
+                if event_pid != pid {
+                    continue;
+                }
+            }
+            if let Some(path) = event.path.as_ref() {
+                if paths.iter().any(|p| p == path) {
+                    matched.push(event.clone());
+                }
+            }
+        }
+        if !matched.is_empty() {
+            out.push(SandboxLogStepDeny {
+                step_id,
+                deny_events: matched,
+            });
+        }
+    }
+    out
+}
+
 fn capture_sandbox_logs_last(
     pid: i64,
     process_name: &str,
@@ -551,11 +651,6 @@ fn capture_sandbox_logs_last(
         .map_err(|e| format!("failed to run sandbox-log-observer: {e}"))?;
 
     let exit_code = out.status.code().unwrap_or(1);
-    let capture_status = if out.status.success() {
-        "captured".to_string()
-    } else {
-        "requested_unavailable".to_string()
-    };
 
     let (stdout, stdout_truncated) = truncate_output(&out.stdout);
     let (stderr, stderr_truncated) = truncate_output(&out.stderr);
@@ -570,10 +665,28 @@ fn capture_sandbox_logs_last(
     }
 
     let observed_deny = parsed.as_ref().and_then(observed_deny_from_observer_envelope);
+    let observer_log_error = parsed.as_ref().and_then(observer_log_error);
+    let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
+    let deny_events = parsed.as_ref().and_then(observer_deny_events);
+
+    let capture_status = if parse_error.is_some() {
+        "parse_error".to_string()
+    } else if blocked_reason.is_some() {
+        "blocked".to_string()
+    } else if observer_log_error.is_some() {
+        "error".to_string()
+    } else if exit_code != 0 {
+        "error".to_string()
+    } else if parsed.is_some() {
+        "captured".to_string()
+    } else {
+        "error".to_string()
+    };
 
     Ok(SandboxLogCapture {
         capture_status,
         tool_exit_code: exit_code,
+        blocked_reason,
         stdout_parse_error: parse_error.clone(),
         stdout_truncated,
         stdout_raw: if parse_error.is_some() { Some(stdout) } else { None },
@@ -581,6 +694,8 @@ fn capture_sandbox_logs_last(
         stderr_truncated,
         observer: parsed,
         observed_deny,
+        deny_events,
+        step_denies: None,
     })
 }
 
@@ -675,11 +790,12 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         .to_string();
     let ok = runner_outcome == "ok";
 
-    let sandbox_log_capture = runner_pid.map(|pid| {
+    let mut sandbox_log_capture = runner_pid.map(|pid| {
         capture_sandbox_logs_last(pid, &runner_target.process_name, &log_last).unwrap_or_else(|err| {
             SandboxLogCapture {
                 capture_status: "requested_unavailable".to_string(),
                 tool_exit_code: 1,
+                blocked_reason: None,
                 stdout_parse_error: None,
                 stdout_truncated: false,
                 stdout_raw: None,
@@ -687,9 +803,26 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 stderr_truncated: false,
                 observer: None,
                 observed_deny: None,
+                deny_events: None,
+                step_denies: None,
             }
         })
     });
+
+    if let (Some(ref mut capture), Some(steps)) = (
+        sandbox_log_capture.as_mut(),
+        runner_result
+            .as_ref()
+            .and_then(|v| v.get("steps"))
+            .and_then(|v| v.as_array()),
+    ) {
+        if let Some(deny_events) = capture.deny_events.as_ref() {
+            let matches = match_step_denies(steps, deny_events, runner_pid);
+            if !matches.is_empty() {
+                capture.step_denies = Some(matches);
+            }
+        }
+    }
 
     let data = RunData {
         request_path: request_path.to_string_lossy().to_string(),

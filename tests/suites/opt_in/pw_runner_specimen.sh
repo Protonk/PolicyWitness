@@ -72,7 +72,8 @@ if not isinstance(cap, dict):
 status = cap.get("capture_status")
 observed = cap.get("observed_deny")
 if status != "captured":
-    print(f"SKIP: sandbox_log_capture capture_status={status!r}", file=sys.stderr)
+    reason = cap.get("blocked_reason") or cap.get("stdout_parse_error")
+    print(f"SKIP: sandbox_log_capture capture_status={status!r} reason={reason!r}", file=sys.stderr)
     raise SystemExit(3)
 if observed is not True:
     raise SystemExit(f"expected sandbox_log_capture.observed_deny=true (got {observed!r})")

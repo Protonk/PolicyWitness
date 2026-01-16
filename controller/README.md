@@ -57,6 +57,14 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 
+`data.sandbox_log_capture.capture_status` values:
+
+- `captured`: observer succeeded, no error reported
+- `blocked`: unified log access blocked (see `blocked_reason`)
+- `error`: observer returned an error or non-zero exit
+- `parse_error`: observer stdout was not valid JSON
+- `requested_unavailable`: observer could not be executed
+
 Optional:
 
 - `PW_VERIFY_EVIDENCE=1` runs a manifest hash verification pass and includes a

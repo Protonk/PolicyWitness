@@ -111,6 +111,18 @@ Example:
 }
 ```
 
+## Run output (per step)
+
+The runner echoes step results with additional context:
+
+- `steps[].sandbox_check`: `{ rc, outcome, scope, filter_kind, filter_value, effective_filter_value }`
+- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
+
+Notes:
+- `scope` is `post_sandbox` for runner-hosted checks.
+- `requested_path`, `normalized_path`, and `observed_path` are present for file
+  attempts; non-file attempts carry explicit `null` for these fields.
+
 ## Instrumentation (opt-in)
 
 Instrumentation ports provide a user-friendly way to exercise the runner’s
