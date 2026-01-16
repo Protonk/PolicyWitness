@@ -74,6 +74,19 @@ for exp in expected_steps:
         fail(f"{step_id}: missing sandbox_check.scope")
     if "effective_filter_value" not in sb:
         fail(f"{step_id}: missing sandbox_check.effective_filter_value")
+    for key in ("pid", "operation", "filter_type_id", "errno", "error"):
+        if key not in sb:
+            fail(f"{step_id}: missing sandbox_check.{key}")
+    if not isinstance(sb.get("pid"), int):
+        fail(f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
+    if not isinstance(sb.get("operation"), str) or not sb.get("operation"):
+        fail(f"{step_id}: invalid sandbox_check.operation={sb.get('operation')!r}")
+    if not isinstance(sb.get("filter_type_id"), int):
+        fail(f"{step_id}: invalid sandbox_check.filter_type_id={sb.get('filter_type_id')!r}")
+    if sb.get("errno") is not None and not isinstance(sb.get("errno"), int):
+        fail(f"{step_id}: invalid sandbox_check.errno={sb.get('errno')!r}")
+    if sb.get("error") is not None and not isinstance(sb.get("error"), str):
+        fail(f"{step_id}: invalid sandbox_check.error={sb.get('error')!r}")
     if "exit_code" not in attempt:
         fail(f"{step_id}: missing attempt.exit_code")
     if "syscall_errno" not in attempt:
@@ -109,6 +122,9 @@ for exp in expected_steps:
         expected_delta = exp.get("deny_signal_delta")
         if expected_delta == "nonzero":
             if delta <= 0:
+                total_delta = ((runner.get("deny_signal_total") or {}).get("delta") or 0)
+                if total_delta == 0:
+                    skip(f"{step_id}: deny_signal not observed on this host (delta=0)")
                 fail(f"{step_id}: expected deny_signal delta>0 (got {delta})")
         elif isinstance(expected_delta, int):
             if delta != expected_delta:

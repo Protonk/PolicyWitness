@@ -115,7 +115,7 @@ Example:
 
 The runner echoes step results with additional context:
 
-- `steps[].sandbox_check`: `{ rc, outcome, scope, filter_kind, filter_value, effective_filter_value }`
+- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error }`
 - `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
 
 Notes:

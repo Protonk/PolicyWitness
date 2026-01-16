@@ -141,6 +141,19 @@ def validate_run(expected_steps, run_data):
             return (1, f"{step_id}: missing sandbox_check.scope")
         if "effective_filter_value" not in sb:
             return (1, f"{step_id}: missing sandbox_check.effective_filter_value")
+        for key in ("pid", "operation", "filter_type_id", "errno", "error"):
+            if key not in sb:
+                return (1, f"{step_id}: missing sandbox_check.{key}")
+        if not isinstance(sb.get("pid"), int):
+            return (1, f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
+        if not isinstance(sb.get("operation"), str) or not sb.get("operation"):
+            return (1, f"{step_id}: invalid sandbox_check.operation={sb.get('operation')!r}")
+        if not isinstance(sb.get("filter_type_id"), int):
+            return (1, f"{step_id}: invalid sandbox_check.filter_type_id={sb.get('filter_type_id')!r}")
+        if sb.get("errno") is not None and not isinstance(sb.get("errno"), int):
+            return (1, f"{step_id}: invalid sandbox_check.errno={sb.get('errno')!r}")
+        if sb.get("error") is not None and not isinstance(sb.get("error"), str):
+            return (1, f"{step_id}: invalid sandbox_check.error={sb.get('error')!r}")
 
         exit_code = attempt.get("exit_code")
         if not isinstance(exit_code, int):

@@ -14,7 +14,7 @@ SBPL_FIXTURE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/profile.sbpl"
 SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/specimen.template.json"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "anomaly_probe" "probe alleged sandbox anomaly (SBPL allow vs sandbox_check deny)"
+test_step "sandbox_check_consistency" "verify sandbox_check aligns with allow/deny policy"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -150,15 +150,15 @@ def sig_delta(s):
     return ((s.get("deny_signal") or {}).get("delta") or 0)
 
 allowed_file = require_step("fs_write_allowed")
-if sb_outcome(allowed_file) != "deny":
-    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected sandbox_check=deny (got {sb_outcome(allowed_file)!r})")
+if sb_outcome(allowed_file) != "allow":
+    raise SystemExit(f"fs_write_allowed: expected sandbox_check=allow (got {sb_outcome(allowed_file)!r})")
 require_attempt_paths(allowed_file, "fs_write_allowed")
 if attempt_exit(allowed_file) != 0:
-    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected attempt exit_code=0 (got {attempt_exit(allowed_file)!r})")
+    raise SystemExit(f"fs_write_allowed: expected attempt exit_code=0 (got {attempt_exit(allowed_file)!r})")
 if attempt_syscall_errno(allowed_file) is not None:
-    raise SystemExit("Anomaly not reproduced: fs_write_allowed expected syscall_errno=null")
+    raise SystemExit("fs_write_allowed: expected syscall_errno=null")
 if sig_delta(allowed_file) != 0:
-    raise SystemExit(f"Anomaly not reproduced: fs_write_allowed expected deny_signal delta=0 (got {sig_delta(allowed_file)!r})")
+    raise SystemExit(f"fs_write_allowed: expected deny_signal delta=0 (got {sig_delta(allowed_file)!r})")
 
 denied_file = require_step("fs_write_denied")
 if sb_outcome(denied_file) != "deny":
@@ -184,4 +184,4 @@ if [[ ${PY_STATUS} -ne 0 ]]; then
   test_fail "${PY_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-test_pass_note "Anomaly: sandbox_check denied a path explicitly allowed by the SBPL profile -- fs_write_allowed expected sandbox_check=allow but got deny" "{}"
+test_pass_note "sandbox_check aligned with allow/deny policy" "{}"

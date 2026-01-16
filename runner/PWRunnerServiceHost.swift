@@ -9,6 +9,7 @@ private let PW_RUNNER_DENY_SIGNAL: Int32 = SIGUSR1
 // - mach-lookup global name filter: 16 (used for "mach-lookup" + service name)
 private let PW_SANDBOX_FILTER_PATH: Int32 = 1
 private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 16
+private let PW_SANDBOX_FILTER_LOCAL_NAME: Int32 = 17
 
 private let PW_INSTRUMENTATION_PHASE_PRE: String = "pre_sandbox"
 private let PW_INSTRUMENTATION_PHASE_POST: String = "post_sandbox"
@@ -30,6 +31,7 @@ private func sha256Hex(_ data: Data) -> String {
 // MARK: - libsandbox bindings (dlopen/dlsym)
 
 private struct SandboxLib {
+    let handle: UnsafeMutableRawPointer
     typealias SandboxParams = UnsafeMutableRawPointer
     typealias SandboxProfile = UnsafeMutableRawPointer
 
@@ -127,6 +129,7 @@ private struct SandboxLib {
 
         return .success(
             SandboxLib(
+                handle: handle,
                 createParams: createParams,
                 freeParams: freeParams,
                 setParam: setParam,
@@ -142,15 +145,23 @@ private struct SandboxLib {
     }
 }
 
-// MARK: - sandbox_check binding
+// MARK: - sandbox_check binding (C shim)
 
-private typealias SandboxCheckNoArgFn = @convention(c) (pid_t, UnsafePointer<CChar>?, Int32) -> Int32
-private typealias SandboxCheckOneArgFn = @convention(c) (pid_t, UnsafePointer<CChar>?, Int32, UnsafePointer<CChar>?) -> Int32
+@_silgen_name("pw_sandbox_check")
+private func pw_sandbox_check(
+    _ pid: pid_t,
+    _ operation: UnsafePointer<CChar>?,
+    _ filter: Int32,
+    _ arg: UnsafePointer<CChar>?,
+    _ out_errno: UnsafeMutablePointer<Int32>?
+) -> Int32
 
-private func resolveSandboxCheckSymbol() -> UnsafeMutableRawPointer? {
-    let rtldDefault = UnsafeMutableRawPointer(bitPattern: -2)
-    return "sandbox_check".withCString { sym in dlsym(rtldDefault, sym) }
-}
+@_silgen_name("pw_sandbox_check_noarg")
+private func pw_sandbox_check_noarg(
+    _ pid: pid_t,
+    _ operation: UnsafePointer<CChar>?,
+    _ out_errno: UnsafeMutablePointer<Int32>?
+) -> Int32
 
 // MARK: - Mach bootstrap lookup (for mach-lookup probes)
 
@@ -199,6 +210,43 @@ private func instrumentationDefaultPhase(kind: String) -> String {
 
 private func instrumentationPhaseIsValid(_ phase: String) -> Bool {
     phase == PW_INSTRUMENTATION_PHASE_PRE || phase == PW_INSTRUMENTATION_PHASE_POST
+}
+
+private enum SpecValidationError: Error, CustomStringConvertible {
+    case invalidSandboxCheck(stepId: String, message: String)
+
+    var description: String {
+        switch self {
+        case .invalidSandboxCheck(let stepId, let message):
+            return "invalid sandbox_check for step \(stepId): \(message)"
+        }
+    }
+}
+
+private func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
+    let allowedKinds: Set<String> = ["none", "path", "global_name", "local_name"]
+    for step in steps {
+        let op = step.sandbox_check.operation.trimmingCharacters(in: .whitespacesAndNewlines)
+        if op.isEmpty {
+            throw SpecValidationError.invalidSandboxCheck(stepId: step.step_id, message: "operation is empty")
+        }
+        let kind = step.sandbox_check.filter.kind
+        if !allowedKinds.contains(kind) {
+            throw SpecValidationError.invalidSandboxCheck(
+                stepId: step.step_id,
+                message: "unsupported filter.kind \(kind)"
+            )
+        }
+        if kind != "none" {
+            let value = step.sandbox_check.filter.value?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if value == nil || value == "" {
+                throw SpecValidationError.invalidSandboxCheck(
+                    stepId: step.step_id,
+                    message: "filter.value required for kind \(kind)"
+                )
+            }
+        }
+    }
 }
 
 private func instrumentationErrorReport(
@@ -474,6 +522,25 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        do {
+            try validateSandboxChecks(parsed.probe_plan)
+        } catch {
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: 1,
+                normalized_outcome: "bad_request",
+                error: String(describing: error),
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                steps: []
+            )
+            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            return
+        }
+
         var instrumentationVersion: Int? = nil
         var instrumentationPorts: [PWRunnerInstrumentationPort] = []
         var instrumentationReports: [PWRunnerInstrumentationPortReport?] = []
@@ -536,25 +603,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        let sandboxCheckSymbol = resolveSandboxCheckSymbol()
-        if sandboxCheckSymbol == nil {
-            let resp = PWRunnerRunResult(
-                specimen_id: parsed.specimen_id,
-                run_kind: parsed.run_kind,
-                rc: 1,
-                normalized_outcome: "sandbox_check_missing",
-                error: "sandbox_check symbol not found via dlsym(RTLD_DEFAULT, \"sandbox_check\")",
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
-                steps: [],
-                instrumentation: finalizeInstrumentation("runner exited before sandbox setup")
-            )
-            reply((try? pwRunnerEncodeJSON(resp)) ?? Data("{}".utf8))
-            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
-            return
-        }
-
         let policyHash: String?
         do {
             policyHash = try computePolicyHash(parsed.policy)
@@ -605,16 +653,15 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         }
 
         let sandboxedAfterApply: Bool? = {
-            guard let symbol = sandboxCheckSymbol else { return nil }
-            let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
-            let rc = fn(getpid(), nil, 0)
+            var err: Int32 = 0
+            let rc = pw_sandbox_check_noarg(getpid(), nil, &err)
             return rc == 1
         }()
 
         var stepResults: [PWRunnerStepResult] = []
         for step in parsed.probe_plan {
             let beforeSig = denySignalCount()
-            let sb = runSandboxCheck(step.sandbox_check, symbol: sandboxCheckSymbol!)
+            let sb = runSandboxCheck(step.sandbox_check)
             let attempt = runAttempt(step.attempt)
             let afterSig = denySignalCount()
             let sig = PWRunnerSignalResult(signal: "SIGUSR1", count_before: beforeSig, count_after: afterSig)
@@ -789,10 +836,11 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         }
     }
 
-    private func runSandboxCheck(_ check: PWRunnerSandboxCheck, symbol: UnsafeMutableRawPointer) -> PWRunnerSandboxCheckResult {
+    private func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResult {
         let op = check.operation
         let filterKind = check.filter.kind
         let filterValue = check.filter.value
+        let pid = Int(getpid())
         var effectiveFilterValue = filterValue
 
         if filterKind == "path", let value = filterValue, !value.isEmpty {
@@ -800,43 +848,58 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             effectiveFilterValue = canonical.normalized
         }
 
-        let rc: Int32 = op.withCString { opPtr in
+        let (filterTypeId, argValue): (Int32, String?) = {
             switch filterKind {
             case "none":
-                let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
-                return fn(getpid(), opPtr, 0)
+                return (0, nil)
             case "path":
-                let fn = unsafeBitCast(symbol, to: SandboxCheckOneArgFn.self)
-                return (effectiveFilterValue ?? "").withCString { pathPtr in
-                    fn(getpid(), opPtr, PW_SANDBOX_FILTER_PATH, pathPtr)
-                }
+                return (PW_SANDBOX_FILTER_PATH, filterValue)
             case "global_name":
-                let fn = unsafeBitCast(symbol, to: SandboxCheckOneArgFn.self)
-                return (filterValue ?? "").withCString { namePtr in
-                    fn(getpid(), opPtr, PW_SANDBOX_FILTER_GLOBAL_NAME, namePtr)
-                }
+                return (PW_SANDBOX_FILTER_GLOBAL_NAME, filterValue)
+            case "local_name":
+                return (PW_SANDBOX_FILTER_LOCAL_NAME, filterValue)
             default:
-                let fn = unsafeBitCast(symbol, to: SandboxCheckNoArgFn.self)
-                return fn(getpid(), opPtr, 0)
+                return (0, nil)
+            }
+        }()
+
+        var errNo: Int32 = 0
+        let rc: Int32 = op.withCString { opPtr in
+            if filterTypeId == 0 {
+                return pw_sandbox_check_noarg(getpid(), opPtr, &errNo)
+            }
+            return (argValue ?? "").withCString { argPtr in
+                pw_sandbox_check(getpid(), opPtr, filterTypeId, argPtr, &errNo)
             }
         }
 
-        let outcome: String
+        var outcome: String
+        var errNoOut: Int? = nil
+        var errMsg: String? = nil
+        if errNo != 0 {
+            errNoOut = Int(errNo)
+            errMsg = String(cString: strerror(errNo))
+        }
         if rc == 0 {
             outcome = "allow"
-        } else if rc == 1 {
+        } else if rc == 1 && errNo == 0 {
             outcome = "deny"
         } else {
-            outcome = "rc_nonstandard"
+            outcome = "error"
         }
 
         return PWRunnerSandboxCheckResult(
             rc: Int(rc),
             outcome: outcome,
+            pid: pid,
+            operation: op,
             scope: PW_SANDBOX_CHECK_SCOPE_POST,
             filter_kind: filterKind,
             filter_value: filterValue,
-            effective_filter_value: effectiveFilterValue
+            effective_filter_value: effectiveFilterValue,
+            filter_type_id: Int(filterTypeId),
+            errno: errNoOut,
+            error: errMsg
         )
     }
 

@@ -253,40 +253,62 @@ public struct PWRunnerInstrumentationDyldEnvReport: Codable {
 public struct PWRunnerSandboxCheckResult: Codable {
     public var rc: Int
     public var outcome: String
+    public var pid: Int
+    public var operation: String
     public var scope: String
     public var filter_kind: String
     public var filter_value: String?
     public var effective_filter_value: String?
+    public var filter_type_id: Int?
+    public var errno: Int?
+    public var error: String?
 
     public init(
         rc: Int,
         outcome: String,
+        pid: Int,
+        operation: String,
         scope: String,
         filter_kind: String,
         filter_value: String? = nil,
-        effective_filter_value: String? = nil
+        effective_filter_value: String? = nil,
+        filter_type_id: Int? = nil,
+        errno: Int? = nil,
+        error: String? = nil
     ) {
         self.rc = rc
         self.outcome = outcome
+        self.pid = pid
+        self.operation = operation
         self.scope = scope
         self.filter_kind = filter_kind
         self.filter_value = filter_value
         self.effective_filter_value = effective_filter_value
+        self.filter_type_id = filter_type_id
+        self.errno = errno
+        self.error = error
     }
 
     enum CodingKeys: String, CodingKey {
         case rc
         case outcome
+        case pid
+        case operation
         case scope
         case filter_kind
         case filter_value
         case effective_filter_value
+        case filter_type_id
+        case errno
+        case error
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(rc, forKey: .rc)
         try container.encode(outcome, forKey: .outcome)
+        try container.encode(pid, forKey: .pid)
+        try container.encode(operation, forKey: .operation)
         try container.encode(scope, forKey: .scope)
         try container.encode(filter_kind, forKey: .filter_kind)
         if let filter_value {
@@ -299,16 +321,36 @@ public struct PWRunnerSandboxCheckResult: Codable {
         } else {
             try container.encodeNil(forKey: .effective_filter_value)
         }
+        if let filter_type_id {
+            try container.encode(filter_type_id, forKey: .filter_type_id)
+        } else {
+            try container.encodeNil(forKey: .filter_type_id)
+        }
+        if let errno {
+            try container.encode(errno, forKey: .errno)
+        } else {
+            try container.encodeNil(forKey: .errno)
+        }
+        if let error {
+            try container.encode(error, forKey: .error)
+        } else {
+            try container.encodeNil(forKey: .error)
+        }
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         rc = try container.decode(Int.self, forKey: .rc)
         outcome = try container.decode(String.self, forKey: .outcome)
+        pid = try container.decodeIfPresent(Int.self, forKey: .pid) ?? -1
+        operation = try container.decodeIfPresent(String.self, forKey: .operation) ?? ""
         scope = try container.decode(String.self, forKey: .scope)
         filter_kind = try container.decode(String.self, forKey: .filter_kind)
         filter_value = try container.decodeIfPresent(String.self, forKey: .filter_value)
         effective_filter_value = try container.decodeIfPresent(String.self, forKey: .effective_filter_value)
+        filter_type_id = try container.decodeIfPresent(Int.self, forKey: .filter_type_id)
+        errno = try container.decodeIfPresent(Int.self, forKey: .errno)
+        error = try container.decodeIfPresent(String.self, forKey: .error)
     }
 }
 

@@ -29,6 +29,7 @@ BUILD_XPC="${BUILD_XPC:-1}"                            # set to 0 to skip buildi
 XPC_ROOT="runner"
 XPC_RUNNER_API_FILE="${XPC_ROOT}/PWRunnerAPI.swift"
 XPC_RUNNER_SERVICE_HOST_FILE="${XPC_ROOT}/PWRunnerServiceHost.swift"
+XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
 # Swift/Clang module cache must be writable; the harness sandbox often blocks the default path under ~/.cache.
@@ -254,7 +255,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     exit 2
   fi
   SWIFTC=(/usr/bin/xcrun --sdk macosx swiftc)
-  if [[ ! -f "${XPC_RUNNER_API_FILE}" ]] || [[ ! -f "${XPC_RUNNER_SERVICE_HOST_FILE}" ]] || [[ ! -f "${XPC_RUNNER_CLIENT_MAIN}" ]]; then
+  if [[ ! -f "${XPC_RUNNER_API_FILE}" ]] || [[ ! -f "${XPC_RUNNER_SERVICE_HOST_FILE}" ]] || [[ ! -f "${XPC_RUNNER_SANDBOX_SHIM}" ]] || [[ ! -f "${XPC_RUNNER_CLIENT_MAIN}" ]]; then
     echo "ERROR: BUILD_XPC=1 but XPC sources are missing under ${XPC_ROOT}/" 1>&2
     exit 2
   fi
@@ -286,7 +287,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   fi
   mkdir -p "${svc_bundle}/Contents/MacOS"
   cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
-  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${svc_bundle}/Contents/MacOS/PWRunner" "${XPC_RUNNER_API_FILE}" "${XPC_RUNNER_SERVICE_HOST_FILE}" "${svc_main}"
+  shim_obj="${SWIFT_MODULE_CACHE}/PWSandboxCheckShim.o"
+  /usr/bin/xcrun --sdk macosx clang -c "${XPC_RUNNER_SANDBOX_SHIM}" -o "${shim_obj}"
+  "${SWIFTC[@]}" -module-cache-path "${SWIFT_MODULE_CACHE}" "${SWIFT_FLAGS[@]}" -o "${svc_bundle}/Contents/MacOS/PWRunner" "${XPC_RUNNER_API_FILE}" "${XPC_RUNNER_SERVICE_HOST_FILE}" "${svc_main}" "${shim_obj}"
   chmod +x "${svc_bundle}/Contents/MacOS/PWRunner"
 fi
 
