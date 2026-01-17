@@ -1,36 +1,36 @@
 # PolicyWitness
 
-PolicyWitness is a macOS sandbox witness harness. The atomic input is a specimen: a policy (SBPL or compiled profile bytes with params) paired with a probe plan. Running a specimen launches a new `PWRunner.xpc` process; the runner starts unsandboxed, applies the policy once, executes the probes, returns a structured report, then terminates. The controller can also correlate out-of-band evidence such as unified-log denials.
+PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Each run consumes a specimen (policy plus probe plan), executes it in a fresh `PWRunner.xpc` process, and emits a structured JSON report.
 
-## Why
+Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork.
 
-Sandbox behavior is easy to misinterpret. "rc == 0" is rarely enough to prove an effect, and denials can be ambiguous without context. PolicyWitness focuses on recording what happened, step by step, with evidence that is attributable to a specific process and lifecycle.
+Read the [user guide](PolicyWitness.md) for more detail.
 
-## How It Works
+## Flow
 
-A specimen run spins up a fresh `PWRunner.xpc` process. The runner begins unsandboxed, loads libsandbox, compiles the provided policy (SBPL or compiled bytes with parameters), and applies it once—treating sandboxing as a one‑way transition for the lifetime of that process. After the policy is in force, it executes the probe plan step-by-step inside the sandboxed runner, collecting what happened for each probe.
+>Specimens -> Runs -> Steps -> Evidence
 
-Collection is made possible by executing each probe as a small, explicit attempt and recording its direct rc plus errno/kr. For each step, the runner also runs `sandbox_check` using the same operation and filter so you can compare the kernel’s prediction to the attempted outcome. When the policy uses deterministic side effects like `send-signal`, the runner installs a handler and records before/after signal counts so denials can be observed without relying on logs. The runner emits a single structured JSON report for the specimen—run metadata and per-step results—and exits immediately after replying. The result is a per-step record that favors witnessed facts over inferred explanations.
+The controller launches a fresh runner for each specimen. The runner starts unsandboxed, loads libsandbox, applies the provided policy once, and then executes the probe plan step by step inside the sandbox. Each step performs an explicit attempt, records rc plus errno or kr, and also runs `sandbox_check` with the same operation and filter so you can compare predicted vs observed outcomes. The runner returns a single JSON result and exits.
 
-## Instrumentation Port (Opt-in)
-
-PolicyWitness includes an optional instrumentation port that exposes the runner’s hardened‑runtime entitlements in a controlled, auditable way: specimens may include an `instrumentation` object with ports executed `pre_sandbox` or `post_sandbox`, and results are reported in the run JSON without changing the run outcome; for quick experimentation you can inject instrumentation at runtime with `policy-witness run <request.json> --instrumentation <json|@path>` and keep existing callers unchanged.
-
-- `dyld_env`: report expected `DYLD_*` env vars (`com.apple.security.cs.allow-dyld-environment-variables`); to set these, use an external runner with `policy-witness runner install --env KEY=VALUE`.
-- `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`).
-- `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`).
-- `execmem_probe`: attempt RWX `mmap` and report success/failure (`com.apple.security.cs.allow-unsigned-executable-memory`).
-
-## Evidence Model
-
-`Specimens → Runs → Steps → Evidence`
-
-Each step can record multiple channels of evidence:
+Each step may include multiple evidence channels:
 
 - **A**: in-band attempt result (rc/errno/kr)
-- **B**: deterministic deny side-effect (SBPL `send-signal` if configured)
-- **C**: unified-log correlation captured outside the sandbox
+- **B**: deterministic side effects (for example SBPL `send-signal`)
+- **C**: out-of-band unified-log correlation (best-effort)
 - **D**: `sandbox_check` prediction and "am I sandboxed" confirmation
+
+## Bring your own entitlements
+
+PolicyWitness treats entitlements as a first-class input alongside SBPL. You can register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
+
+### Instrumentation port
+
+Specimens may include an `instrumentation` object with ports executed `pre_sandbox` or `post_sandbox`. Results are reported in the run JSON and do not change the run outcome. You can also inject instrumentation at runtime with `policy-witness run <request.json> --instrumentation <json|@path>`.
+
+- `dyld_env`: report expected `DYLD_*` env vars (`com.apple.security.cs.allow-dyld-environment-variables`); set via an external runner with `policy-witness runner install --env KEY=VALUE`.
+- `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`)
+- `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`)
+- `execmem_probe`: attempt RWX `mmap` and report success/failure (`com.apple.security.cs.allow-unsigned-executable-memory`)
 
 ## What Ships
 
@@ -46,11 +46,11 @@ This repo builds a single distributable app bundle:
 
 ## Where To Learn
 
-- Using the app and workflows: `PolicyWitness.md`
-- Repo orientation: `AGENTS.md`
-- Contributing: `CONTRIBUTING.md`
-- Signing/distribution: `SIGNING.md`
-- Testing: `tests/README.md`
+- Using the app and workflows: [PolicyWitness.md](PolicyWitness.md)
+- Repo orientation: [AGENTS.md](AGENTS.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Signing/distribution: [SIGNING.md](SIGNING.md)
+- Testing: [tests/README.md](tests/README.md)
 - Implementation details:
-  - CLI contract and controller behavior: `controller/README.md`
-  - Runner service architecture: `runner/README.md`
+  - CLI contract and controller behavior: [controller/README.md](controller/README.md)
+  - Runner service architecture: [runner/README.md](runner/README.md)
