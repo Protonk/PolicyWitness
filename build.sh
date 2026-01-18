@@ -32,7 +32,7 @@ XPC_RUNNER_SERVICE_HOST_FILE="${XPC_ROOT}/PWRunnerServiceHost.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
-SB_API_VALIDATOR_DIR="runtime/native/sb_api_validator"
+SB_API_VALIDATOR_DIR="controller/tools/sb_api_validator"
 SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
 SB_API_VALIDATOR_BIN="${SB_API_VALIDATOR_DIR}/sb_api_validator"
 # Swift/Clang module cache must be writable; the harness sandbox often blocks the default path under ~/.cache.

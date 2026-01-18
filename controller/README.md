@@ -18,7 +18,7 @@ Standalone helper tools (embedded into the `.app`):
 
 - `controller/src/bin/sandbox-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
   - Captures unified-log sandbox deny lines by PID + process name
-- `runtime/native/sb_api_validator/sb_api_validator` → `PolicyWitness.app/Contents/MacOS/sb_api_validator`
+- `controller/tools/sb_api_validator/sb_api_validator` → `PolicyWitness.app/Contents/MacOS/sb_api_validator`
   - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
 
 ## CLI surface (contract)
