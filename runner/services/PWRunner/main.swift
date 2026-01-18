@@ -17,6 +17,11 @@ while idx < args.count {
     idx += 1
 }
 
+if machServiceName == nil {
+    // Allow launchd to provide the name when arguments are not forwarded.
+    machServiceName = ProcessInfo.processInfo.environment["PW_RUNNER_MACH_SERVICE_NAME"]
+}
+
 let listener: NSXPCListener
 if let machServiceName {
     listener = NSXPCListener(machServiceName: machServiceName)

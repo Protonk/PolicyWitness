@@ -1892,6 +1892,12 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             bundle_path.display().to_string(),
         );
     }
+    if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+        env.insert(
+            "PW_RUNNER_MACH_SERVICE_NAME".to_string(),
+            service_name.clone(),
+        );
+    }
     let plist_contents = runner_manager::build_launchd_plist(
         &service_name,
         &executable_path,
