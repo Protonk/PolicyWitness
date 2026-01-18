@@ -10,18 +10,18 @@ PolicyWitness supports three **tested** runner modes:
 1) Debuggable runner (built-in)
 - Default path; includes debug-friendly entitlements and instrumentation ports.
 - Select with `runner.mode="debuggable"` or `--runner-mode debuggable`.
-- Tested by `tests/suites/smoke/pw_instrumentation_execmem.sh`.
+- Tested by `tests/suites/runner_debuggable/run.sh`.
 
 2) BYOXPC runner (external XPC bundle)
 - Use when you need extra entitlements; supply a signed `.xpc` bundle.
-- Service name must match the bundle’s `CFBundleIdentifier`.
+- Service name must match the bundle’s `CFBundleIdentifier` (no override).
 - Install with `policy-witness runner install --kind byoxpc ...`.
-- Tested by `tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh`.
+- Tested by `tests/suites/runner_byoxpc/run.sh` (opt-in; GUI session required).
 
 3) MachMe runner (external Mach service binary)
 - Use when you want to launch a raw binary as a Mach service.
 - Install with `policy-witness runner install --kind machme --bundle /path/to/PWRunner`.
-- Tested by `tests/suites/runner_machme/run.sh`.
+- Tested by `tests/suites/runner_machme/run.sh` (opt-in; GUI session required).
 
 If no runner is specified, PolicyWitness uses the built-in debuggable runner.
 
@@ -213,6 +213,7 @@ Use these when you need entitlements that are not in the built-in runner.
 - MachMe: a runner binary to sign (typically `PWRunner.xpc/Contents/MacOS/PWRunner`).
 - A signing identity (Developer ID Application) or ad-hoc signing for local use.
 - An entitlements plist.
+- A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
 
 ### Install a BYOXPC runner
 
@@ -230,7 +231,8 @@ Notes:
 - Use `--scope system` if you want a system-wide service (requires admin).
 - Use `--skip-bootstrap` if you will run `launchctl` manually.
 - Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
-- BYOXPC service name must match the bundle’s `CFBundleIdentifier`.
+- BYOXPC service name must match the bundle’s `CFBundleIdentifier` (no override).
+- The bundle must be a valid XPC service (`CFBundlePackageType=XPC!`).
 
 The install command writes a launchd plist, bootstraps the service, and records
 the runner in the local registry.
@@ -249,6 +251,7 @@ $PW runner install \
 Notes:
 - Use `--service-name` to override the Mach service name (optional).
 - Use `--bundle-id` to set an optional provenance identifier.
+- If `--bundle` is a directory, pass `--executable` to point at the MachMe binary.
 
 ### Verify the runner
 
