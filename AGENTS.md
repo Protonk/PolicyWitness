@@ -67,6 +67,18 @@ Build knobs worth knowing (debugging/iteration):
 - `PW_INSPECTION=1` (default) keeps symbols/frame pointers; set `PW_INSPECTION=0` for a more optimized build.
 - Evidence is generated during build by `tests/build-evidence.py` and embedded under `Contents/Resources/Evidence/`.
 
+## External runner workflow (agents)
+
+Use this when you are asked to install, verify, or clean up BYOXPC or MachMe runners.
+
+- Inspect first: `policy-witness runner list` and note `service_name`, `scope`, and `bundle_path`.
+- BYOXPC service names are fixed to `CFBundleIdentifier` (no override); update by replacing the bundle and reinstalling.
+- MachMe service names are optional; choose explicit names to avoid collisions during testing.
+- Cleanup: `policy-witness runner remove --id ...` (user scope) or use `sudo launchctl bootout system/<service>` + delete `/Library/LaunchDaemons/<service>.plist` + `runner remove --skip-bootout` for system scope.
+- Launchd files: `~/Library/LaunchAgents/<service>.plist` (user) and `/Library/LaunchDaemons/<service>.plist` (system).
+- Install/verify debugging: `launchctl print "gui/$(id -u)/<service>"` or `launchctl print system/<service>`; check `XPC_SERVICE_PATH` and `PW_RUNNER_MACH_SERVICE_NAME`.
+- User scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed.
+
 ## Testing
 
 - Default full run: `tests/run.sh --all`

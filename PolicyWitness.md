@@ -215,6 +215,51 @@ Use these when you need entitlements that are not in the built-in runner.
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
 
+### Tested install paths (copy/paste)
+
+These sequences match the test suites and are the recommended starting point.
+
+BYOXPC (user scope):
+
+```sh
+PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
+IDENTITY="Developer ID Application: Your Name (TEAMID)"
+ENT="$PWD/runner/services/PWRunner/Entitlements.plist"
+BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
+
+mkdir -p "$(dirname "$BYO")"
+rm -rf "$BYO"
+cp -R PolicyWitness.app/Contents/XPCServices/PWRunner.xpc "$BYO"
+
+$PW runner install --kind byoxpc \
+  --bundle "$BYO" \
+  --identity "$IDENTITY" \
+  --entitlements "$ENT" \
+  --allow-adhoc \
+  --scope user
+
+$PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
+```
+
+MachMe (user scope):
+
+```sh
+PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
+IDENTITY="Developer ID Application: Your Name (TEAMID)"
+ENT="$PWD/runner/services/PWRunner/Entitlements.plist"
+BIN="$PWD/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+
+$PW runner install --kind machme \
+  --bundle "$BIN" \
+  --identity "$IDENTITY" \
+  --entitlements "$ENT" \
+  --allow-adhoc \
+  --service-name com.policywitness.runner.machme \
+  --scope user
+
+$PW runner verify --service-name com.policywitness.runner.machme --timeout-ms 2000
+```
+
 ### Install a BYOXPC runner
 
 ```sh
@@ -286,6 +331,27 @@ Alternative: select by service name:
 Valid modes: `debuggable`, `byoxpc`, `machme`.
 `required_entitlements` enforces a superset check before dispatch.
 
+Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
+
+```json
+{
+  "policy": { "sbpl": "(version 1) (deny default)" },
+  "probe_plan": [],
+  "runner": {
+    "service": "com.yourteam.policy-witness.PWRunner",
+    "mode": "byoxpc"
+  }
+}
+```
+
+Replace `service` and `mode` for MachMe runners.
+
+Then run:
+
+```sh
+$PW run /tmp/pw_byoxpc_smoke.json --timeout-ms 20000
+```
+
 ### List or remove runners
 
 ```sh
@@ -313,6 +379,7 @@ Registry location:
 - Service not found: run `policy-witness runner list` and confirm the service name.
 - System scope install fails: use `--scope user` or run with admin privileges.
 - Verify fails with no reply: check launchd state and the service plist.
+- BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
 - If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
   run from a normal Terminal to confirm behavior.
 - If `--sonoma-cross-check` reports `blocked` or `unavailable`, rerun from an
