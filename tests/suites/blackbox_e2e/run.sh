@@ -18,7 +18,6 @@ run_test() {
 
 run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/bbx_001.sh"
 run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/bbx_002.sh"
-run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/bbx_003.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1

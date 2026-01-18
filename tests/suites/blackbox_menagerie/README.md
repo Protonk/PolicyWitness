@@ -1,9 +1,9 @@
 # blackbox_menagerie
 
 End-to-end black-box suite that exercises specimen ingestion and evidence
-correlation using real SBPL inputs and compiled profile blobs. Fixtures are
-copied locally from PAWL evidence; the suite never reads external evidence at
-runtime.
+correlation using real SBPL inputs. Fixtures are copied locally from PAWL
+evidence; the suite never reads external evidence at runtime. These scripts are
+shared and invoked by the runner suites (debuggable/BYOXPC/MachMe).
 
 ## Invariants
 
@@ -19,8 +19,6 @@ runtime.
 - Mach-lookup allow/deny with a missing-service control.
 - Canonicalization boundary cases (alias vs canonical spelling); expected
   mismatches are recorded as evidence via mismatch_reason.
-- Compiled-blob profiles to exercise compiled-bytes ingestion; these cases may
-  skip when profile registration is not permitted.
 
 ## Success criteria
 
@@ -31,15 +29,14 @@ runtime.
 
 - Manifest: `tests/fixtures/blackbox_menagerie/cases/core.json`
 - SBPL sources: `tests/fixtures/blackbox_menagerie/sbpl/`
-- Compiled blobs: `tests/fixtures/blackbox_menagerie/compiled/`
 
 ## Artifacts
 
-- `tests/out/suites/blackbox_menagerie/<case>/artifacts/*`
+- `tests/out/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_menagerie` when run directly).
 
 ## Adding cases
 
-1. Drop SBPL or compiled blob under `tests/fixtures/blackbox_menagerie/`.
+1. Drop SBPL under `tests/fixtures/blackbox_menagerie/`.
 2. Add a case entry to `tests/fixtures/blackbox_menagerie/cases/core.json` with
    steps and expectations.
 3. Use mismatch_reason when you want a mismatch to be recorded as evidence

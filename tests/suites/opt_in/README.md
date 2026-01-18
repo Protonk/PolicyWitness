@@ -1,6 +1,7 @@
 # opt_in
 
-Manual tests that require special host resources (logs, launchd, DYLD, toolchain).
+Compatibility wrappers for opt-in tests grouped under runner suites. The real
+scripts live under `tests/suites/runner_*/opt_in/`.
 
 ## Invariants
 
@@ -17,7 +18,7 @@ Manual tests that require special host resources (logs, launchd, DYLD, toolchain
 
 ## Artifacts
 
-- `tests/out/suites/opt_in/<test_id>/artifacts/*`
+- `tests/out/suites/<runner_suite>/<test_id>/artifacts/*`
 
 Run:
 
@@ -26,6 +27,6 @@ tests/suites/opt_in/<test>.sh
 ```
 
 GUI session note: tests that install or bootstrap launchd services (for example
-`runner_instrumentation_dyld_env`) require a logged-in desktop session. Run
+`runner_instrumentation_dyld_env` and `runner_machme_smoke`) require a logged-in desktop session. Run
 them from a local Terminal.app window; SSH/CI or sandboxed harnesses will skip
 with a non-GUI session message.

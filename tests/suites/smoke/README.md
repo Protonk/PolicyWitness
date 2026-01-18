@@ -1,10 +1,11 @@
 # smoke
 
-Quick end-to-end checks against a built app bundle.
+Quick end-to-end checks against a built app bundle. These scripts are shared
+and invoked by the runner suites (debuggable/BYOXPC/MachMe).
 
 ## Invariants
 
-- Runs the CLI against small fixtures using the embedded runner.
+- Runs the CLI against small fixtures using the runner selected by the suite.
 - Validates basic instrumentation behavior (success and validation paths).
 
 ## Success criteria
@@ -19,7 +20,7 @@ Quick end-to-end checks against a built app bundle.
 
 ## Artifacts
 
-- `tests/out/suites/smoke/<test_id>/artifacts/*`
+- `tests/out/suites/<suite>/<test_id>/artifacts/*` (suite is `smoke` when run directly).
 
 Run:
 

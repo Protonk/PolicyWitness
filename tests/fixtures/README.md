@@ -5,11 +5,11 @@ checked into the repo so tests are hermetic.
 
 ## Categories
 
-- `pw_runner/`: minimal specimens for smoke/integration/opt-in runner paths
+- `pw_runner/`: minimal specimens for smoke/integration/runner suites and opt-in paths
   (single-step SBPL cases and instrumentation examples).
 - `runner_smoke/`: template-based fixtures used by smoke and runner verification.
-- `blackbox_menagerie/`: SBPL sources, compiled blobs, and a case manifest
-  (`cases/core.json`) sourced from PAWL evidence.
+- `blackbox_menagerie/`: SBPL sources and a case manifest (`cases/core.json`)
+  sourced from PAWL evidence.
 - `blackbox_e2e/`: per-case directories (`BBX-*`) with specimen templates and
   expected outcomes for strict evidence validation.
 - `instrumentation/`: JSON fragments used with `--instrumentation` to exercise

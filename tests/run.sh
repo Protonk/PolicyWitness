@@ -77,7 +77,7 @@ while [[ $# -gt 0 ]]; do
       cat <<'EOF'
 usage:
   tests/run.sh --all
-  tests/run.sh --suite <preflight|unit|integration|smoke|blackbox_menagerie|blackbox_e2e|anomalies> [--suite <name> ...]
+  tests/run.sh --suite <preflight|unit|integration|runner_debuggable|runner_byoxpc|runner_machme|smoke|blackbox_menagerie|blackbox_e2e|anomalies> [--suite <name> ...]
   tests/run.sh --describe [--all|--suite <name> ...]
 EOF
       exit 0
@@ -90,7 +90,7 @@ EOF
 done
 
 if [[ ${#suites[@]} -eq 0 ]]; then
-  suites=(preflight unit integration smoke blackbox_menagerie blackbox_e2e anomalies)
+  suites=(preflight unit integration runner_debuggable anomalies)
 fi
 
 if [[ ${describe} -eq 1 ]]; then

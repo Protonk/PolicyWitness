@@ -5,7 +5,7 @@ This directory contains the Swift implementation of the **ephemeral sandbox runn
 PolicyWitness is now **specimen-first**:
 
 - The controller (`policy-witness`) starts a fresh XPC runner instance per specimen.
-- The runner starts unsandboxed, applies a requested seatbelt profile exactly once (SBPL source + parameters, or compiled profile bytes), executes a probe plan, replies with JSON, and exits.
+- The runner starts unsandboxed, applies a requested seatbelt profile exactly once (SBPL source + parameters), executes a probe plan, replies with JSON, and exits.
 
 ## Key files
 
@@ -30,7 +30,7 @@ PolicyWitness is now **specimen-first**:
 
 The runner consumes a `PWRunnerRunSpec` which contains:
 
-- `policy`: `sbpl` source or `compiled_bytes` (with optional `params`)
+- `policy`: `sbpl` source (with optional `params`)
 - `probe_plan`: ordered probe steps (sandbox_check + attempt)
 
 ## Run result highlights
@@ -52,7 +52,7 @@ The runner’s **codesign entitlements** are fixed hardened-runtime exceptions (
 
 Sandbox policy variation is driven by the specimen itself:
 
-- the controller supplies SBPL (or compiled profile bytes),
+- the controller supplies SBPL,
 - the runner applies it once to itself,
 - the runner’s witness is defined by mandatory multi-channel evidence (see the controller docs).
 
@@ -60,7 +60,10 @@ Sandbox policy variation is driven by the specimen itself:
 
 PolicyWitness can target **external runner services** when entitlements are
 required. An external runner is the same PWRunner implementation, but signed
-with user-selected entitlements and registered as a launchd Mach service.
+with user-selected entitlements and registered with launchd in one of two modes:
+
+- **BYOXPC**: a signed `.xpc` bundle, addressed by `CFBundleIdentifier`.
+- **MachMe**: a signed raw binary, addressed as a Mach service name.
 
 Invariants:
 

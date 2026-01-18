@@ -11,6 +11,33 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+pub enum RunnerKind {
+    Debuggable,
+    Byoxpc,
+    Machme,
+}
+
+impl RunnerKind {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "debuggable" => Some(RunnerKind::Debuggable),
+            "byoxpc" => Some(RunnerKind::Byoxpc),
+            "machme" => Some(RunnerKind::Machme),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RunnerKind::Debuggable => "debuggable",
+            RunnerKind::Byoxpc => "byoxpc",
+            RunnerKind::Machme => "machme",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum RunnerScope {
     User,
     System,
@@ -54,6 +81,8 @@ pub struct RunnerRecord {
     pub signature: RunnerSignature,
     pub entitlements: RunnerEntitlements,
     pub installed_at_unix_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<RunnerKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,6 +195,7 @@ pub fn build_launchd_plist(
     service_name: &str,
     executable_path: &Path,
     env: Option<&BTreeMap<String, String>>,
+    kind: RunnerKind,
 ) -> String {
     let mut env_block = String::new();
     if let Some(env) = env {
@@ -181,6 +211,15 @@ pub fn build_launchd_plist(
             env_block.push_str("  </dict>\n");
         }
     }
+    let mut args = vec![executable_path.display().to_string()];
+    if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+        args.push("--mach-service".to_string());
+        args.push(service_name.to_string());
+    }
+    let args_block: String = args
+        .iter()
+        .map(|arg| format!("    <string>{}</string>\n", plist_escape(arg)))
+        .collect();
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -190,8 +229,7 @@ pub fn build_launchd_plist(
   <string>{service_name}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>{}</string>
-  </array>
+{args_block}  </array>
   <key>MachServices</key>
   <dict>
     <key>{service_name}</key>
@@ -202,7 +240,6 @@ pub fn build_launchd_plist(
 </dict>
 </plist>
 "#,
-        executable_path.display()
     )
 }
 
@@ -370,14 +407,51 @@ pub fn codesign_sign(
     Err(format!("codesign sign failed: {stderr}"))
 }
 
+fn current_uid_string() -> Result<String, String> {
+    if let Ok(uid) = std::env::var("UID") {
+        let trimmed = uid.trim();
+        if !trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_digit()) {
+            return Ok(trimmed.to_string());
+        }
+    }
+    let out = Command::new("/usr/bin/id")
+        .args(["-u"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run id -u: {e}"))?;
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        return Err(format!("id -u failed: {stderr}"));
+    }
+    let uid = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if uid.is_empty() || !uid.chars().all(|c| c.is_ascii_digit()) {
+        return Err("id -u returned a non-numeric uid".to_string());
+    }
+    Ok(uid)
+}
+
+fn launchctl_target(scope: RunnerScope) -> Result<String, String> {
+    match scope {
+        RunnerScope::User => Ok(format!("gui/{}", current_uid_string()?)),
+        RunnerScope::System => Ok("system".to_string()),
+    }
+}
+
+pub fn launchctl_service_present(scope: RunnerScope, service_name: &str) -> Result<bool, String> {
+    let target = launchctl_target(scope)?;
+    let full = format!("{}/{}", target, service_name);
+    let out = Command::new("/bin/launchctl")
+        .args(["print", &full])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run launchctl: {e}"))?;
+    Ok(out.status.success())
+}
+
 pub fn launchctl_bootstrap(scope: RunnerScope, plist_path: &Path) -> Result<(), String> {
-    let target = match scope {
-        RunnerScope::User => format!(
-            "gui/{}",
-            std::env::var("UID").unwrap_or_else(|_| "0".to_string())
-        ),
-        RunnerScope::System => "system".to_string(),
-    };
+    let target = launchctl_target(scope)?;
     let out = Command::new("/bin/launchctl")
         .args(["bootstrap", &target, plist_path.to_string_lossy().as_ref()])
         .stdout(Stdio::piped())
@@ -392,13 +466,7 @@ pub fn launchctl_bootstrap(scope: RunnerScope, plist_path: &Path) -> Result<(), 
 }
 
 pub fn launchctl_bootout(scope: RunnerScope, plist_path: &Path) -> Result<(), String> {
-    let target = match scope {
-        RunnerScope::User => format!(
-            "gui/{}",
-            std::env::var("UID").unwrap_or_else(|_| "0".to_string())
-        ),
-        RunnerScope::System => "system".to_string(),
-    };
+    let target = launchctl_target(scope)?;
     let out = Command::new("/bin/launchctl")
         .args(["bootout", &target, plist_path.to_string_lossy().as_ref()])
         .stdout(Stdio::piped())

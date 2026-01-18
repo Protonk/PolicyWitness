@@ -1,8 +1,9 @@
 # blackbox_e2e
 
 End-to-end tests that treat the runner as a black box. Each case feeds a specimen
-into the controller, runs a fresh PWRunner.xpc instance, and validates the
-returned JSON as a complete, correlated bundle.
+into the controller, runs a fresh runner instance, and validates the returned
+JSON as a complete, correlated bundle. These scripts are shared and invoked by
+the runner suites (debuggable/BYOXPC/MachMe).
 
 ## Invariants
 
@@ -26,15 +27,11 @@ attempt results, or denial classification.
 
 ## Fixtures
 
-- Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`, `BBX-003/`
-- Compiled profile blob: `tests/fixtures/blackbox_e2e/BBX-003/profile.compiled.b64`
-
-BBX-003 will skip if the host rejects compiled profile registration
-(`sandbox_register_profile` returns EPERM).
+- Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
 
 The suite will also skip a case if `sandbox_check` returns outcomes that
 contradict the expected policy (see the `anomalies` suite for known host bugs).
 
 ## Artifacts
 
-- `tests/out/suites/blackbox_e2e/<case>/artifacts/*`
+- `tests/out/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_e2e` when run directly).

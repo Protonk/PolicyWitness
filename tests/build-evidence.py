@@ -6,8 +6,8 @@ Generates a build-time evidence BOM for `PolicyWitness.app` under:
   PolicyWitness.app/Contents/Resources/Evidence/
 
 This repo is now specimen-first: sandbox policy variation is driven by the
-`PWRunner` XPC service applying SBPL / compiled profile bytes at runtime, not by
-proliferating different entitlement-signed XPC service families.
+`PWRunner` XPC service applying SBPL at runtime, not by proliferating different
+entitlement-signed XPC service families.
 
 Evidence artifacts:
   - manifest.json: hashes + metadata for embedded tools and services

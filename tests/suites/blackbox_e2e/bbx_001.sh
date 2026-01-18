@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-PW_TEST_SUITE="blackbox_e2e"
+PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-blackbox_e2e}"
 PW_TEST_ID="BBX-001"
 
 PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
@@ -80,6 +80,8 @@ for step in template.get("probe_plan", []):
 Path(out_path).write_text(json.dumps(template, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
+render_specimen_with_runner "${SPECIMEN_JSON}" "${SPECIMEN_JSON}"
+
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/policy_witness.run.stdout.json"
 RUN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.run.stderr.txt"
 
@@ -106,5 +108,7 @@ if [[ ${STATUS} -ne 0 ]]; then
   VALIDATE_OUT="${VALIDATE_OUT//$'\n'/ }"
   test_fail "${VALIDATE_OUT}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
+
+KIND_ERR="$(assert_runner_kind "${RUN_STDOUT}")" || test_fail "${KIND_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 
 test_pass "blackbox e2e ok" "{}"

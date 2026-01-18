@@ -11,7 +11,8 @@ Goals:
   network, system logs, long runtime, etc).
 - Provide a clear **when to run** trigger so the test is not forgotten.
 
-Opt-in tests live under `tests/suites/opt_in/` and are invoked directly.
+Opt-in tests live under `tests/suites/runner_*/opt_in/` and are invoked directly.
+Compatibility wrappers remain under `tests/suites/opt_in/`.
 
 ## What makes a test opt-in
 
@@ -31,6 +32,8 @@ If the test depends on one of these, make it opt-in and document the dependency.
 Run the script directly:
 
 ```sh
+tests/suites/runner_*/opt_in/<test>.sh
+# or a compatibility wrapper:
 tests/suites/opt_in/<test>.sh
 ```
 
@@ -52,9 +55,29 @@ Optional standard overrides:
 
 ## Registry (current opt-in tests)
 
+### runner_byoxpc
+
+- **Location:** `tests/suites/runner_byoxpc/run.sh`
+- **Purpose:** Run smoke + blackbox suites through a BYOXPC runner.
+- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+  unsandboxed caller; can be blocked in sandboxed harnesses.
+- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **When to run:** After changing BYOXPC install/verify behavior or runner-mode selection.
+- **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
+
+### runner_machme
+
+- **Location:** `tests/suites/runner_machme/run.sh`
+- **Purpose:** Run smoke + blackbox suites through a MachMe runner.
+- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+  unsandboxed caller; can be blocked in sandboxed harnesses.
+- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **When to run:** After changing MachMe install/verify behavior or runner-mode selection.
+- **Artifacts:** `tests/out/suites/runner_machme/*/artifacts/*`
+
 ### pw_runner_specimen
 
-- **Location:** `tests/suites/opt_in/pw_runner_specimen.sh`
+- **Location:** `tests/suites/runner_debuggable/opt_in/pw_runner_specimen.sh`
 - **Purpose:** Validate the PWRunner “run” execution lane:
   - SBPL apply + probe execution (single runner instance),
   - Channel D (`sandbox_check`) vs Channel A (attempt outcome) consistency,
@@ -64,36 +87,36 @@ Optional standard overrides:
   (in sandboxed harnesses, XPC lookup and log capture can be blocked).
 - **Resource dependency:** `PolicyWitness.app` built + `log show` access.
 - **When to run:** After changing `runner/PWRunner*` runner behavior or `policy-witness run`.
-- **Artifacts:** `tests/out/suites/opt_in/pw_runner_specimen/artifacts/*`
+- **Artifacts:** `tests/out/suites/runner_debuggable/pw_runner_specimen/artifacts/*`
 
 ### runner_instrumentation_dylib
 
-- **Location:** `tests/suites/opt_in/runner_instrumentation_dylib.sh`
+- **Location:** `tests/suites/runner_debuggable/opt_in/runner_instrumentation_dylib.sh`
 - **Purpose:** Validate the `dylib_load` instrumentation port by building a tiny
   dylib, loading it pre-sandbox, and verifying the symbol runs.
 - **Opt-in reason:** Requires a compiler toolchain and dynamic library loading.
 - **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
 - **When to run:** After changing instrumentation port handling or runner entitlements.
-- **Artifacts:** `tests/out/suites/opt_in/runner_instrumentation_dylib/artifacts/*`
+- **Artifacts:** `tests/out/suites/runner_debuggable/runner_instrumentation_dylib/artifacts/*`
 
 ### runner_instrumentation_dyld_env
 
-- **Location:** `tests/suites/opt_in/runner_instrumentation_dyld_env.sh`
-- **Purpose:** Validate external runner env injection and the `dyld_env` port.
+- **Location:** `tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh`
+- **Purpose:** Validate BYOXPC runner env injection and the `dyld_env` port.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
 - **When to run:** After changing `policy-witness runner install` or
   instrumentation env handling.
-- **Artifacts:** `tests/out/suites/opt_in/runner_instrumentation_dyld_env/artifacts/*`
+- **Artifacts:** `tests/out/suites/runner_byoxpc/runner_instrumentation_dyld_env/artifacts/*`
 
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:
 
-- **Suite name:** set `PW_TEST_SUITE="opt_in"` so results group under
-  `tests/out/suites/opt_in/`.
-- **Location:** the script path under `tests/suites/opt_in/`.
+- **Suite name:** use the runner suite name (for example `runner_debuggable` or
+  `runner_byoxpc`) so results group under `tests/out/suites/<suite>/`.
+- **Location:** the script path under `tests/suites/runner_*/opt_in/`.
 - **Purpose:** the behavior under test.
 - **Opt-in reason:** the resource or OS behavior that makes it non-default.
 - **When to run:** a trigger tied to code changes or regressions.

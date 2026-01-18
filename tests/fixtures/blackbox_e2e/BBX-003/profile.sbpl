@@ -1,3 +1,0 @@
-(version 1)
-(allow default)
-(deny mach-lookup (global-name "com.apple.cfprefsd.xpc.daemon"))

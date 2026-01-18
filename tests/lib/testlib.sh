@@ -340,7 +340,92 @@ skip_sandbox_log_observer_unavailable() {
   test_skip "sandbox-log-observer unavailable on this host (see artifacts)" "${data_json}"
 }
 
-skip_compiled_profile_registration() {
-  local data_json="${1:-}"
-  test_skip "compiled profile registration not permitted on this host" "${data_json}"
+has_gui_launchd_domain() {
+  local uid
+  uid="$(/usr/bin/id -u 2>/dev/null || true)"
+  if [[ -z "${uid}" ]]; then
+    return 1
+  fi
+  /bin/launchctl print "gui/${uid}" >/dev/null 2>&1
+}
+
+cleanup_runner_service() {
+  local pw_bin="$1"
+  local service_name="$2"
+  local scope="${3:-user}"
+
+  if [[ -z "${service_name}" ]]; then
+    return 0
+  fi
+
+  if [[ "${scope}" == "system" ]]; then
+    /bin/launchctl bootout "system/${service_name}" >/dev/null 2>&1 || true
+    if [[ -n "${pw_bin}" && -x "${pw_bin}" ]]; then
+      "${pw_bin}" runner remove --service-name "${service_name}" --skip-bootout >/dev/null 2>&1 || true
+    fi
+    rm -f "/Library/LaunchDaemons/${service_name}.plist" >/dev/null 2>&1 || true
+  else
+    /bin/launchctl bootout "gui/$(/usr/bin/id -u)/${service_name}" >/dev/null 2>&1 || true
+    if [[ -n "${pw_bin}" && -x "${pw_bin}" ]]; then
+      "${pw_bin}" runner remove --service-name "${service_name}" --skip-bootout >/dev/null 2>&1 || true
+    fi
+    rm -f "${HOME}/Library/LaunchAgents/${service_name}.plist" >/dev/null 2>&1 || true
+  fi
+}
+
+render_specimen_with_runner() {
+  local input_path="$1"
+  local output_path="$2"
+  local mode="${PW_TEST_RUNNER_MODE:-}"
+  local service="${PW_TEST_RUNNER_SERVICE:-}"
+
+  if [[ -z "${mode}" && -z "${service}" ]]; then
+    if [[ "${input_path}" != "${output_path}" ]]; then
+      mkdir -p "$(dirname "${output_path}")"
+      cp "${input_path}" "${output_path}"
+    fi
+    return 0
+  fi
+
+  mkdir -p "$(dirname "${output_path}")"
+  /usr/bin/python3 - "${input_path}" "${output_path}" "${mode}" "${service}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+input_path, output_path, mode, service = sys.argv[1:5]
+data = json.loads(Path(input_path).read_text(encoding="utf-8"))
+
+runner = data.get("runner") or {}
+if mode:
+    runner["mode"] = mode
+if service:
+    runner["service"] = service
+if runner:
+    data["runner"] = runner
+
+Path(output_path).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+}
+
+assert_runner_kind() {
+  local run_json="$1"
+  local expected="${PW_TEST_RUNNER_EXPECT_KIND:-}"
+
+  if [[ -z "${expected}" ]]; then
+    return 0
+  fi
+
+  /usr/bin/python3 - "${run_json}" "${expected}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+run_path, expected = sys.argv[1:3]
+env = json.loads(Path(run_path).read_text(encoding="utf-8"))
+kind = (env.get("data", {}) or {}).get("runner_provenance", {}).get("runner_kind")
+if kind != expected:
+    print(f"expected runner_kind={expected!r} (got {kind!r})")
+    raise SystemExit(1)
+PY
 }

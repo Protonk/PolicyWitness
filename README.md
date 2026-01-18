@@ -1,6 +1,6 @@
 # PolicyWitness
 
-PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Each run consumes a specimen (policy plus probe plan), executes it in a fresh `PWRunner.xpc` process, and emits a structured JSON report.
+PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Each run consumes a specimen (policy plus probe plan), executes it in a fresh runner process (debuggable, byoxpc, or machme), and emits a structured JSON report.
 
 Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork.
 
@@ -19,18 +19,28 @@ Each step may include multiple evidence channels:
 - **C**: out-of-band unified-log correlation (best-effort)
 - **D**: `sandbox_check` prediction and "am I sandboxed" confirmation
 
-## Bring your own entitlements
+## Runner modes
 
-PolicyWitness treats entitlements as a first-class input alongside SBPL. You can register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
+PolicyWitness supports three runner modes. All three return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
 
-### Instrumentation port
+- `debuggable`: built-in XPC service embedded in `PolicyWitness.app`; no install step.
+- `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`.
+- `machme`: user-supplied binary registered as a Mach service with `policy-witness runner install --kind machme`.
 
-Specimens may include an `instrumentation` object with ports executed `pre_sandbox` or `post_sandbox`. Results are reported in the run JSON and do not change the run outcome. You can also inject instrumentation at runtime with `policy-witness run <request.json> --instrumentation <json|@path>`.
+See the [user guide](PolicyWitness.md) for tested setup paths and request examples.
+
+## Instrumentation
+
+Instrumentation ports are part of the debuggable runner, allowing closer inspection.
 
 - `dyld_env`: report expected `DYLD_*` env vars (`com.apple.security.cs.allow-dyld-environment-variables`); set via an external runner with `policy-witness runner install --env KEY=VALUE`.
 - `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`)
 - `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`)
 - `execmem_probe`: attempt RWX `mmap` and report success/failure (`com.apple.security.cs.allow-unsigned-executable-memory`)
+
+## Bring your own entitlements
+
+PolicyWitness treats entitlements as a first-class input alongside SBPL. You can register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
 
 ## What Ships
 
@@ -40,7 +50,7 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift runner; one specimen per process)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, debuggable mode; one specimen per process)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 - `PolicyWitness.md` (user guide)
 

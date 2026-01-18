@@ -10,7 +10,9 @@ use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use runner_manager::{RunnerEntitlements, RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature};
+use runner_manager::{
+    RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature,
+};
 
 const PW_RUNNER_SERVICE_DIR: &str = "PWRunner";
 
@@ -30,12 +32,12 @@ fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
   policy-witness runner <command> [options]
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is passed through to the runner client (or copied with instrumentation injected)"
+  - request.json is passed through to the runner client (or copied with runner mode/instrumentation injected)"
     );
 }
 
@@ -140,10 +142,17 @@ struct RunnerSelector {
     runner_id: Option<String>,
     runner_service: Option<String>,
     required_entitlements: Vec<String>,
+    mode: Option<RunnerKind>,
+}
+
+enum RunnerConnectionKind {
+    XpcService,
+    MachService { privileged: bool },
 }
 
 struct RunnerTarget {
-    kind: String,
+    kind: RunnerKind,
+    connection: RunnerConnectionKind,
     service_name: String,
     process_name: String,
     bundle_id: Option<String>,
@@ -176,12 +185,7 @@ struct AppProvenance {
     evidence_verify: Option<evidence::VerifyReport>,
 }
 
-fn parse_runner_selector(request_path: &Path) -> Result<RunnerSelector, String> {
-    let text = std::fs::read_to_string(request_path)
-        .map_err(|e| format!("failed to read request.json: {e}"))?;
-    let value: Value = serde_json::from_str(&text)
-        .map_err(|e| format!("failed to parse request.json: {e}"))?;
-
+fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, String> {
     let mut selector = RunnerSelector::default();
 
     if let Some(runner) = value.get("runner").and_then(|v| v.as_object()) {
@@ -197,23 +201,50 @@ fn parse_runner_selector(request_path: &Path) -> Result<RunnerSelector, String> 
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
                 .collect();
         }
-        return Ok(selector);
+        if let Some(v) = runner.get("mode").and_then(|v| v.as_str()) {
+            selector.mode = Some(
+                RunnerKind::parse(v)
+                    .ok_or_else(|| format!("invalid runner.mode value: {v}"))?,
+            );
+        }
     }
 
-    if let Some(v) = value.get("runner_id").and_then(|v| v.as_str()) {
-        selector.runner_id = Some(v.to_string());
+    if selector.runner_id.is_none() {
+        if let Some(v) = value.get("runner_id").and_then(|v| v.as_str()) {
+            selector.runner_id = Some(v.to_string());
+        }
     }
-    if let Some(v) = value.get("runner_service").and_then(|v| v.as_str()) {
-        selector.runner_service = Some(v.to_string());
+    if selector.runner_service.is_none() {
+        if let Some(v) = value.get("runner_service").and_then(|v| v.as_str()) {
+            selector.runner_service = Some(v.to_string());
+        }
     }
-    if let Some(list) = value.get("required_entitlements").and_then(|v| v.as_array()) {
-        selector.required_entitlements = list
-            .iter()
-            .filter_map(|v| v.as_str().map(|s| s.to_string()))
-            .collect();
+    if selector.required_entitlements.is_empty() {
+        if let Some(list) = value.get("required_entitlements").and_then(|v| v.as_array()) {
+            selector.required_entitlements = list
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
+        }
+    }
+    if selector.mode.is_none() {
+        if let Some(v) = value.get("runner_mode").and_then(|v| v.as_str()) {
+            selector.mode = Some(
+                RunnerKind::parse(v)
+                    .ok_or_else(|| format!("invalid runner_mode value: {v}"))?,
+            );
+        }
     }
 
     Ok(selector)
+}
+
+fn parse_runner_selector(request_path: &Path) -> Result<RunnerSelector, String> {
+    let text = std::fs::read_to_string(request_path)
+        .map_err(|e| format!("failed to read request.json: {e}"))?;
+    let value: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("failed to parse request.json: {e}"))?;
+    parse_runner_selector_value(&value)
 }
 
 fn read_json_file(path: &Path, label: &str) -> Result<Value, String> {
@@ -311,7 +342,8 @@ fn builtin_runner_target(app_root: &Path) -> Result<RunnerTarget, String> {
     ));
 
     Ok(RunnerTarget {
-        kind: "builtin".to_string(),
+        kind: RunnerKind::Debuggable,
+        connection: RunnerConnectionKind::XpcService,
         service_name: runner_info.bundle_id.clone(),
         process_name: runner_info.executable.clone(),
         bundle_id: Some(runner_info.bundle_id),
@@ -323,11 +355,32 @@ fn builtin_runner_target(app_root: &Path) -> Result<RunnerTarget, String> {
     })
 }
 
+fn infer_record_kind(record: &RunnerRecord) -> RunnerKind {
+    if let Some(kind) = record.kind {
+        return kind;
+    }
+    let bundle_path = Path::new(&record.bundle_path);
+    if bundle_path.is_dir() {
+        if let Ok(info) = read_bundle_info(bundle_path) {
+            if info.package_type.as_deref() == Some("XPC!") {
+                return RunnerKind::Byoxpc;
+            }
+        }
+    }
+    RunnerKind::Machme
+}
+
 fn resolve_runner_target(
     app_root: &Path,
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
+    if matches!(selector.mode, Some(RunnerKind::Debuggable)) && needs_external {
+        return Err("runner.mode=debuggable cannot be combined with an external runner selection".to_string());
+    }
+    if matches!(selector.mode, Some(RunnerKind::Byoxpc | RunnerKind::Machme)) && !needs_external {
+        return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
+    }
     if !needs_external {
         let target = builtin_runner_target(app_root)?;
         if !selector.required_entitlements.is_empty() {
@@ -354,6 +407,17 @@ fn resolve_runner_target(
     }
     .ok_or_else(|| "external runner not found in registry".to_string())?;
 
+    let record_kind = infer_record_kind(record);
+    if let Some(mode) = selector.mode {
+        if mode != record_kind {
+            return Err(format!(
+                "runner.mode mismatch (requested {}, registry has {})",
+                mode.as_str(),
+                record_kind.as_str()
+            ));
+        }
+    }
+
     if !selector.required_entitlements.is_empty()
         && !runner_manager::entitlements_superset(
             &selector.required_entitlements,
@@ -363,8 +427,18 @@ fn resolve_runner_target(
         return Err("external runner does not satisfy required entitlements".to_string());
     }
 
+    let connection = match record_kind {
+        RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
+            privileged: matches!(record.scope, RunnerScope::System),
+        },
+        RunnerKind::Debuggable => {
+            return Err("external runners cannot be kind=debuggable".to_string());
+        }
+    };
+
     Ok(RunnerTarget {
-        kind: "external".to_string(),
+        kind: record_kind,
+        connection,
         service_name: record.service_name.clone(),
         process_name: Path::new(&record.executable_path)
             .file_name()
@@ -382,7 +456,7 @@ fn resolve_runner_target(
 
 fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance {
     RunnerProvenance {
-        runner_kind: target.kind.clone(),
+        runner_kind: target.kind.as_str().to_string(),
         runner_registry_id: target.registry_id.clone(),
         runner_service_name: target.service_name.clone(),
         runner_bundle_id: target.bundle_id.clone(),
@@ -582,16 +656,26 @@ fn run_pw_runner_client(
     service_name: &str,
     request_path: &Path,
     timeout_ms: u64,
+    connection: &RunnerConnectionKind,
 ) -> Result<(RunnerClientRun, Option<Value>), String> {
     let tool = resolve_contents_macos_tool("pw-runner-client")?;
-    let argv = vec![
+    let mut argv = vec![
         tool.into_os_string(),
         OsString::from("run"),
         OsString::from("--timeout-ms"),
         OsString::from(format!("{timeout_ms}")),
-        OsString::from(service_name),
-        request_path.as_os_str().to_os_string(),
     ];
+    match connection {
+        RunnerConnectionKind::XpcService => {}
+        RunnerConnectionKind::MachService { privileged } => {
+            argv.push(OsString::from("--mach-service"));
+            if *privileged {
+                argv.push(OsString::from("--privileged"));
+            }
+        }
+    }
+    argv.push(OsString::from(service_name));
+    argv.push(request_path.as_os_str().to_os_string());
 
     let started = now_unix_ms();
     let out = Command::new(&argv[0])
@@ -608,17 +692,27 @@ fn run_pw_runner_client_with_cross_check(
     service_name: &str,
     request_path: &Path,
     timeout_ms: u64,
+    connection: &RunnerConnectionKind,
     plan: SonomaCrossCheckPlan,
 ) -> Result<(RunnerClientRun, Option<Value>, Option<SonomaCrossCheckReport>), String> {
     let tool = resolve_contents_macos_tool("pw-runner-client")?;
-    let argv = vec![
+    let mut argv = vec![
         tool.into_os_string(),
         OsString::from("run"),
         OsString::from("--timeout-ms"),
         OsString::from(format!("{timeout_ms}")),
-        OsString::from(service_name),
-        request_path.as_os_str().to_os_string(),
     ];
+    match connection {
+        RunnerConnectionKind::XpcService => {}
+        RunnerConnectionKind::MachService { privileged } => {
+            argv.push(OsString::from("--mach-service"));
+            if *privileged {
+                argv.push(OsString::from("--privileged"));
+            }
+        }
+    }
+    argv.push(OsString::from(service_name));
+    argv.push(request_path.as_os_str().to_os_string());
 
     let started = now_unix_ms();
     let child = Command::new(&argv[0])
@@ -1210,6 +1304,7 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut log_last = DEFAULT_LOG_LAST.to_string();
     let mut instrumentation_arg: Option<String> = None;
+    let mut runner_mode_arg: Option<String> = None;
     let mut sonoma_cross_check_enabled = false;
 
     let mut idx = 0usize;
@@ -1244,6 +1339,14 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 log_last = value.to_string();
                 idx += 2;
             }
+            "--runner-mode" => {
+                let value = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --runner-mode".to_string())?;
+                runner_mode_arg = Some(value.to_string());
+                idx += 2;
+            }
             "--instrumentation" => {
                 let value = args
                     .get(idx + 1)
@@ -1267,16 +1370,52 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 
     let app_root = app_root_from_current_exe()?;
     let app_provenance = load_app_provenance(&app_root).ok();
-    let selector = parse_runner_selector(&request_path)?;
-    let runner_target = resolve_runner_target(&app_root, &selector)?;
-    let runner_provenance = runner_provenance_from_target(&runner_target);
 
     let mut request_value: Option<Value> = None;
     let mut request_modified = false;
 
-    if instrumentation_arg.is_some() || sonoma_cross_check_enabled {
+    if runner_mode_arg.is_some() || instrumentation_arg.is_some() || sonoma_cross_check_enabled {
         request_value = Some(read_json_file(&request_path, "request.json")?);
     }
+
+    if let Some(mode) = runner_mode_arg.as_deref() {
+        let kind = RunnerKind::parse(mode)
+            .ok_or_else(|| "invalid value for --runner-mode".to_string())?;
+        let request_value_mut = request_value
+            .as_mut()
+            .ok_or_else(|| "request.json unavailable".to_string())?;
+        let obj = request_value_mut
+            .as_object_mut()
+            .ok_or_else(|| "request.json must be a JSON object".to_string())?;
+        let runner_entry = obj
+            .entry("runner")
+            .or_insert_with(|| Value::Object(serde_json::Map::new()));
+        let runner_obj = runner_entry
+            .as_object_mut()
+            .ok_or_else(|| "runner must be a JSON object".to_string())?;
+        if let Some(existing) = runner_obj.get("mode").and_then(|v| v.as_str()) {
+            if existing != kind.as_str() {
+                return Err(
+                    "request.json already includes runner.mode; remove it or omit --runner-mode"
+                        .to_string(),
+                );
+            }
+        } else {
+            runner_obj.insert(
+                "mode".to_string(),
+                Value::String(kind.as_str().to_string()),
+            );
+            request_modified = true;
+        }
+    }
+
+    let selector = if let Some(value) = request_value.as_ref() {
+        parse_runner_selector_value(value)?
+    } else {
+        parse_runner_selector(&request_path)?
+    };
+    let runner_target = resolve_runner_target(&app_root, &selector)?;
+    let runner_provenance = runner_provenance_from_target(&runner_target);
 
     if let Some(arg) = instrumentation_arg.as_deref() {
         let instrumentation = load_instrumentation_value(arg)?;
@@ -1343,11 +1482,17 @@ fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 &runner_target.service_name,
                 &request_path_for_runner,
                 timeout_ms,
+                &runner_target.connection,
                 plan,
             )?
         } else {
             let (runner_client, runner_result) =
-                run_pw_runner_client(&runner_target.service_name, &request_path_for_runner, timeout_ms)?;
+                run_pw_runner_client(
+                    &runner_target.service_name,
+                    &request_path_for_runner,
+                    timeout_ms,
+                    &runner_target.connection,
+                )?;
             (runner_client, runner_result, None)
         };
 
@@ -1485,7 +1630,7 @@ struct RunnerRefreshData {
 fn runner_usage() -> String {
     "\
 usage:
-  policy-witness runner install --bundle <path> [--service-name <name>] [--scope user|system]
+  policy-witness runner install --bundle <path> [--kind byoxpc|machme] [--service-name <name>] [--scope user|system]
                                [--identity <codesign-id>] [--entitlements <plist>]
                                [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
                                [--env KEY=VALUE]
@@ -1499,14 +1644,25 @@ usage:
     .to_string()
 }
 
-fn read_bundle_info(bundle_path: &Path) -> Result<(String, String), String> {
+struct BundleInfo {
+    bundle_id: String,
+    executable: String,
+    package_type: Option<String>,
+}
+
+fn read_bundle_info(bundle_path: &Path) -> Result<BundleInfo, String> {
     let plist = bundle_path.join("Contents").join("Info.plist");
     if !plist.exists() {
         return Err(format!("missing Info.plist at {}", plist.display()));
     }
     let bundle_id = plist_key_string(&plist, "CFBundleIdentifier")?;
     let executable = plist_key_string(&plist, "CFBundleExecutable")?;
-    Ok((bundle_id, executable))
+    let package_type = plist_key_string(&plist, "CFBundlePackageType").ok();
+    Ok(BundleInfo {
+        bundle_id,
+        executable,
+        package_type,
+    })
 }
 
 fn load_registry_or_default() -> Result<(PathBuf, RunnerRegistry), String> {
@@ -1523,6 +1679,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let mut entitlements_path: Option<PathBuf> = None;
     let mut executable_override: Option<PathBuf> = None;
     let mut bundle_id_override: Option<String> = None;
+    let mut kind_override: Option<RunnerKind> = None;
     let mut allow_adhoc = false;
     let mut skip_bootstrap = false;
     let mut env: BTreeMap<String, String> = BTreeMap::new();
@@ -1568,6 +1725,16 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 bundle_id_override = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
+            "--kind" => {
+                let value = args.get(idx + 1).ok_or_else(|| "missing value for --kind".to_string())?;
+                let kind = RunnerKind::parse(value.to_string_lossy().as_ref())
+                    .ok_or_else(|| "invalid value for --kind".to_string())?;
+                if matches!(kind, RunnerKind::Debuggable) {
+                    return Err("runner install does not accept kind=debuggable".to_string());
+                }
+                kind_override = Some(kind);
+                idx += 2;
+            }
             "--allow-adhoc" => {
                 allow_adhoc = true;
                 idx += 1;
@@ -1597,28 +1764,73 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         return Err(format!("bundle path not found: {}", bundle_path.display()));
     }
 
-    let (bundle_id, executable_name) = if bundle_path.is_dir() {
-        read_bundle_info(&bundle_path)?
+    let bundle_info = if bundle_path.is_dir() {
+        read_bundle_info(&bundle_path).ok()
     } else {
-        (
-            bundle_id_override.clone().unwrap_or_else(|| "unknown".to_string()),
-            bundle_path
-                .file_name()
-                .and_then(|v| v.to_str())
-                .ok_or_else(|| "invalid bundle path".to_string())?
-                .to_string(),
-        )
+        None
     };
-    let executable_path = if let Some(override_path) = executable_override {
-        override_path
+
+    let kind = if let Some(kind) = kind_override {
+        kind
     } else if bundle_path.is_dir() {
-        bundle_path
-            .join("Contents")
-            .join("MacOS")
-            .join(&executable_name)
+        match bundle_info
+            .as_ref()
+            .and_then(|info| info.package_type.as_deref())
+        {
+            Some("XPC!") => RunnerKind::Byoxpc,
+            _ => {
+                return Err(
+                    "bundle is not an XPC service (CFBundlePackageType != XPC!); pass --kind machme and --executable to install a Mach service binary"
+                        .to_string(),
+                );
+            }
+        }
     } else {
-        bundle_path.clone()
+        RunnerKind::Machme
     };
+
+    if matches!(kind, RunnerKind::Byoxpc) {
+        if bundle_id_override.is_some() {
+            return Err("byoxpc runners use CFBundleIdentifier; remove --bundle-id".to_string());
+        }
+        if executable_override.is_some() {
+            return Err("byoxpc runners do not accept --executable".to_string());
+        }
+    }
+
+    let (bundle_id, executable_path) = match kind {
+        RunnerKind::Byoxpc => {
+            let info = bundle_info.as_ref().ok_or_else(|| {
+                "byoxpc runners require a bundle with Contents/Info.plist".to_string()
+            })?;
+            if info.package_type.as_deref() != Some("XPC!") {
+                return Err(
+                    "byoxpc runners require CFBundlePackageType=XPC! in Info.plist".to_string(),
+                );
+            }
+            let executable_path = bundle_path
+                .join("Contents")
+                .join("MacOS")
+                .join(&info.executable);
+            (Some(info.bundle_id.clone()), executable_path)
+        }
+        RunnerKind::Machme => {
+            if bundle_path.is_dir() && executable_override.is_none() {
+                return Err(
+                    "machme runners require --executable when --bundle is a directory".to_string(),
+                );
+            }
+            let executable_path = executable_override.unwrap_or_else(|| bundle_path.clone());
+            let bundle_id = bundle_id_override
+                .clone()
+                .or_else(|| bundle_info.as_ref().map(|info| info.bundle_id.clone()));
+            (bundle_id, executable_path)
+        }
+        RunnerKind::Debuggable => {
+            return Err("runner install does not accept kind=debuggable".to_string());
+        }
+    };
+
     if !executable_path.exists() {
         return Err(format!(
             "executable path not found: {}",
@@ -1626,10 +1838,12 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
-    let sign_target = if bundle_path.is_dir() {
-        bundle_path.clone()
-    } else {
-        executable_path.clone()
+    let sign_target = match kind {
+        RunnerKind::Byoxpc => bundle_path.clone(),
+        RunnerKind::Machme => executable_path.clone(),
+        RunnerKind::Debuggable => {
+            return Err("runner install does not accept kind=debuggable".to_string());
+        }
     };
     if let Some(identity) = identity.as_ref() {
         runner_manager::codesign_sign(
@@ -1651,16 +1865,49 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     };
 
     let runner_id = runner_manager::random_id()?;
-    let service_name = service_name.unwrap_or_else(|| runner_manager::generate_service_name(&runner_id));
+    let service_name = match kind {
+        RunnerKind::Byoxpc => {
+            let bundle_id = bundle_id
+                .clone()
+                .ok_or_else(|| "byoxpc runners require a CFBundleIdentifier".to_string())?;
+            if let Some(requested) = service_name.as_ref() {
+                if requested != &bundle_id {
+                    return Err(format!(
+                        "byoxpc service name must match CFBundleIdentifier ({bundle_id})"
+                    ));
+                }
+            }
+            bundle_id
+        }
+        RunnerKind::Machme => service_name
+            .unwrap_or_else(|| runner_manager::generate_service_name(&runner_id)),
+        RunnerKind::Debuggable => {
+            return Err("runner install does not accept kind=debuggable".to_string());
+        }
+    };
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
+    if matches!(kind, RunnerKind::Byoxpc) && !env.contains_key("XPC_SERVICE_PATH") {
+        env.insert(
+            "XPC_SERVICE_PATH".to_string(),
+            bundle_path.display().to_string(),
+        );
+    }
     let plist_contents = runner_manager::build_launchd_plist(
         &service_name,
         &executable_path,
         if env.is_empty() { None } else { Some(&env) },
+        kind,
     );
     runner_manager::write_launchd_plist(&plist_path, &plist_contents)?;
     if !skip_bootstrap {
-        runner_manager::launchctl_bootstrap(scope, &plist_path)?;
+        if let Err(err) = runner_manager::launchctl_bootstrap(scope, &plist_path) {
+            let present = runner_manager::launchctl_service_present(scope, &service_name)
+                .unwrap_or(false);
+            if !present {
+                return Err(err);
+            }
+            eprintln!("warning: {err} (service appears loaded; continuing)");
+        }
     }
 
     let record = RunnerRecord {
@@ -1668,12 +1915,13 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         service_name: service_name.clone(),
         bundle_path: bundle_path.display().to_string(),
         executable_path: executable_path.display().to_string(),
-        bundle_id: Some(bundle_id),
+        bundle_id,
         scope,
         protocol_version: runner_manager::RUNNER_PROTOCOL_VERSION,
         signature,
         entitlements,
         installed_at_unix_ms: now_unix_ms(),
+        kind: Some(kind),
     };
 
     let (registry_path, mut registry) = load_registry_or_default()?;
@@ -1828,8 +2076,17 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     std::fs::write(&request_path, serde_json::to_string_pretty(&spec).unwrap())
         .map_err(|e| format!("failed to write verify request: {e}"))?;
 
+    let record_kind = infer_record_kind(record);
+    let connection = match record_kind {
+        RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
+            privileged: matches!(record.scope, RunnerScope::System),
+        },
+        RunnerKind::Debuggable => {
+            return Err("external runners cannot be kind=debuggable".to_string());
+        }
+    };
     let (_, runner_result) =
-        run_pw_runner_client(&record.service_name, &request_path, timeout_ms)?;
+        run_pw_runner_client(&record.service_name, &request_path, timeout_ms, &connection)?;
     let runner_pid = runner_result
         .as_ref()
         .and_then(|v| v.get("pid"))
@@ -1945,6 +2202,9 @@ fn cmd_runner_refresh() -> Result<i32, String> {
             record.signature = sig;
         }
         record.entitlements = runner_manager::entitlements_from_codesign(exec_path);
+        if record.kind.is_none() {
+            record.kind = Some(infer_record_kind(record));
+        }
     }
     let updated = registry.runners.len();
     runner_manager::save_registry(&registry_path, &registry)?;
@@ -2059,7 +2319,8 @@ mod tests {
             "runner": {
                 "id": "runner-abc",
                 "service": "com.example.runner",
-                "required_entitlements": ["com.apple.security.cs.allow-jit"]
+                "required_entitlements": ["com.apple.security.cs.allow-jit"],
+                "mode": "machme"
             }
         });
         fs::write(&path, serde_json::to_string(&payload).unwrap()).unwrap();
@@ -2067,6 +2328,7 @@ mod tests {
         assert_eq!(selector.runner_id.as_deref(), Some("runner-abc"));
         assert_eq!(selector.runner_service.as_deref(), Some("com.example.runner"));
         assert_eq!(selector.required_entitlements.len(), 1);
+        assert_eq!(selector.mode, Some(RunnerKind::Machme));
         let _ = fs::remove_file(&path);
     }
 }

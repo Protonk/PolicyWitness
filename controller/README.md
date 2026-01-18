@@ -26,7 +26,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
 policy-witness runner <command> [options]
 ```
 
@@ -35,7 +35,7 @@ policy-witness runner <command> [options]
 Runs a **single runner evaluation** against the selected runner service:
 
 - Reads a request JSON file (runner request schema) that contains:
-  - a sandbox policy (`sbpl` source or compiled bytes),
+  - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance, applies the policy exactly once, executes the probe plan, and returns the runner’s structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
@@ -78,20 +78,22 @@ Optional:
 
 ### Runner selection (external entitlements)
 
-`run` can target an external runner by adding one of the following to the request:
+`run` can target specific runner modes by adding one of the following to the request:
 
-- `runner: { id, service, required_entitlements }` (preferred)
-- Legacy top-level fields: `runner_id`, `runner_service`, `required_entitlements`
+- `runner: { mode, id, service, required_entitlements }` (preferred)
+- Legacy top-level fields: `runner_id`, `runner_service`, `required_entitlements`, `runner_mode`
 
 If `required_entitlements` is present, the controller enforces a **superset**
 check against the runner’s recorded entitlements before dispatch.
+
+If `runner.mode` is present, it must match the registry kind (byoxpc or machme).
 
 ### `runner` (external runner manager)
 
 These commands manage external runners signed with user entitlements:
 
 ```text
-policy-witness runner install --bundle <path> [--service-name <name>] [--scope user|system]
+policy-witness runner install --bundle <path> [--kind byoxpc|machme] [--service-name <name>] [--scope user|system]
                              [--identity <codesign-id>] [--entitlements <plist>]
                              [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
                              [--env KEY=VALUE]
@@ -106,6 +108,10 @@ policy-witness runner refresh
 Install writes a launchd plist, bootstraps the service, and records runner
 metadata (entitlements + signature) in the local registry. The registry lives
 under `~/Library/Application Support/PolicyWitness/runners.json`.
+
+Notes:
+- BYOXPC runners require `CFBundlePackageType=XPC!` and use `CFBundleIdentifier` as the service name.
+- MachMe runners accept `--service-name` overrides and use Mach services for NSXPC.
 
 ## Why the Rust launcher still shells out
 

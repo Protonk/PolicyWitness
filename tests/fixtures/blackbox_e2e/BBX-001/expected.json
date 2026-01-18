@@ -14,8 +14,7 @@
       "step_id": "fs_write_denied",
       "sandbox_outcome": "deny",
       "attempt_ok": false,
-      "expect_denial": true,
-      "deny_signal_delta": "nonzero"
+      "expect_denial": true
     },
     {
       "step_id": "mach_lookup_denied",

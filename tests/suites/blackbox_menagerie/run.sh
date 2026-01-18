@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-PW_TEST_SUITE="blackbox_menagerie"
+PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-blackbox_menagerie}"
 
 MANIFEST="${ROOT_DIR}/tests/fixtures/blackbox_menagerie/cases/core.json"
 FIXTURES_ROOT="${ROOT_DIR}/tests/fixtures/blackbox_menagerie"

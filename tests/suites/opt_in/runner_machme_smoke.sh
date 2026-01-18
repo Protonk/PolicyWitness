@@ -2,4 +2,4 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-exec "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh"
+exec "${ROOT_DIR}/tests/suites/runner_machme/run.sh"

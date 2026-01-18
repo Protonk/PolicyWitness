@@ -8,11 +8,12 @@ private func die(_ message: String, code: Int32) -> Never {
 private func usage() -> String {
     """
     usage:
-      pw-runner-client run [--timeout-ms <n>] <xpc-service-bundle-id> <request.json>
+      pw-runner-client run [--timeout-ms <n>] [--mach-service] [--privileged] <xpc-service-name> <request.json>
 
     notes:
       - prints the raw RunResult JSON returned by the runner (JSON-over-Data).
       - on open/call failure, prints a synthetic RunResult with normalized_outcome set.
+      - use --mach-service for Mach services; add --privileged for system scope.
     """
 }
 
@@ -34,6 +35,8 @@ private func nsErrorDetails(_ error: Error) -> XpcErrorDetails {
 
 private func run(args: [String]) -> Never {
     var timeoutMs = 240_000
+    var useMachService = false
+    var privileged = false
 
     var idx = 0
     while idx < args.count {
@@ -53,12 +56,18 @@ private func run(args: [String]) -> Never {
             guard let v = Int(args[idx + 1]) else { die("invalid --timeout-ms", code: 2) }
             timeoutMs = max(1, v)
             idx += 2
+        case "--mach-service":
+            useMachService = true
+            idx += 1
+        case "--privileged":
+            privileged = true
+            idx += 1
         default:
             die("unknown argument: \(arg)\n\n\(usage())", code: 2)
         }
     }
 
-    guard idx < args.count else { die("missing <xpc-service-bundle-id>\n\n\(usage())", code: 2) }
+    guard idx < args.count else { die("missing <xpc-service-name>\n\n\(usage())", code: 2) }
     let serviceName = args[idx]
     idx += 1
 
@@ -72,7 +81,13 @@ private func run(args: [String]) -> Never {
         die("failed to read request.json: \(error)", code: 2)
     }
 
-    let conn = NSXPCConnection(serviceName: serviceName)
+    let conn: NSXPCConnection
+    if useMachService {
+        let opts: NSXPCConnection.Options = privileged ? [.privileged] : []
+        conn = NSXPCConnection(machServiceName: serviceName, options: opts)
+    } else {
+        conn = NSXPCConnection(serviceName: serviceName)
+    }
     conn.remoteObjectInterface = NSXPCInterface(with: PWRunnerProtocol.self)
     conn.resume()
 
@@ -190,4 +205,3 @@ if argv[0] == "run" {
     run(args: Array(argv.dropFirst()))
 }
 die("unknown command: \(argv[0])\n\n\(usage())", code: 2)
-

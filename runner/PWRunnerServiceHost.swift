@@ -40,24 +40,18 @@ private struct SandboxLib {
     typealias SetParamFn = @convention(c) (SandboxParams?, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Int32
 
     typealias CompileStringFn = @convention(c) (UnsafePointer<CChar>?, SandboxParams?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> SandboxProfile?
-    typealias CompileNamedFn = @convention(c) (UnsafePointer<CChar>?, SandboxParams?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> SandboxProfile?
     typealias FreeProfileFn = @convention(c) (SandboxProfile?) -> Void
     typealias FreeErrorFn = @convention(c) (UnsafeMutablePointer<CChar>?) -> Void
 
     typealias ApplyFn = @convention(c) (SandboxProfile?) -> Int32
-    typealias RegisterProfileFn = @convention(c) (UnsafePointer<CChar>?, UnsafeRawPointer?, size_t) -> Int32
-    typealias UnregisterProfileFn = @convention(c) (UnsafePointer<CChar>?) -> Int32
 
     let createParams: CreateParamsFn
     let freeParams: FreeParamsFn
     let setParam: SetParamFn
     let compileString: CompileStringFn
-    let compileNamed: CompileNamedFn
     let freeProfile: FreeProfileFn
     let freeError: FreeErrorFn
     let apply: ApplyFn
-    let registerProfile: RegisterProfileFn
-    let unregisterProfile: UnregisterProfileFn?
 
     struct LoadError: Error, CustomStringConvertible {
         var message: String
@@ -79,11 +73,9 @@ private struct SandboxLib {
         let freeParams: FreeParamsFn
         let setParam: SetParamFn
         let compileString: CompileStringFn
-        let compileNamed: CompileNamedFn
         let freeProfile: FreeProfileFn
         let freeError: FreeErrorFn
         let apply: ApplyFn
-        let registerProfile: RegisterProfileFn
 
         switch sym("sandbox_create_params", CreateParamsFn.self) {
         case .success(let v): createParams = v
@@ -101,10 +93,6 @@ private struct SandboxLib {
         case .success(let v): compileString = v
         case .failure(let err): return .failure(err)
         }
-        switch sym("sandbox_compile_named", CompileNamedFn.self) {
-        case .success(let v): compileNamed = v
-        case .failure(let err): return .failure(err)
-        }
         switch sym("sandbox_free_profile", FreeProfileFn.self) {
         case .success(let v): freeProfile = v
         case .failure(let err): return .failure(err)
@@ -117,15 +105,6 @@ private struct SandboxLib {
         case .success(let v): apply = v
         case .failure(let err): return .failure(err)
         }
-        switch sym("sandbox_register_profile", RegisterProfileFn.self) {
-        case .success(let v): registerProfile = v
-        case .failure(let err): return .failure(err)
-        }
-        let unregisterProfile: UnregisterProfileFn? = {
-            let ptr = "sandbox_unregister_profile".withCString { dlsym(handle, $0) }
-            guard let ptr else { return nil }
-            return unsafeBitCast(ptr, to: UnregisterProfileFn.self)
-        }()
 
         return .success(
             SandboxLib(
@@ -134,12 +113,9 @@ private struct SandboxLib {
                 freeParams: freeParams,
                 setParam: setParam,
                 compileString: compileString,
-                compileNamed: compileNamed,
                 freeProfile: freeProfile,
                 freeError: freeError,
-                apply: apply,
-                registerProfile: registerProfile,
-                unregisterProfile: unregisterProfile
+                apply: apply
             )
         )
     }
@@ -711,16 +687,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         case "sbpl":
             guard let src = policy.sbpl_source else { throw PolicyHashError.missingField("sbpl_source") }
             return sha256Hex(Data(src.utf8))
-        case "compiled_bytes":
-            guard let b64 = policy.compiled_profile_b64 else {
-                throw PolicyHashError.missingField("compiled_profile_b64")
-            }
-            guard let data = Data(base64Encoded: b64) else {
-                throw PolicyHashError.missingField("compiled_profile_b64 (invalid base64)")
-            }
-            return sha256Hex(data)
         default:
-            throw PolicyHashError.missingField("format (expected sbpl|compiled_bytes)")
+            throw PolicyHashError.missingField("format (expected sbpl)")
         }
     }
 
@@ -795,44 +763,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             }
             return .success(())
 
-        case "compiled_bytes":
-            guard let b64 = policy.compiled_profile_b64 else { return .failure(ApplyError(message: "missing policy.compiled_profile_b64")) }
-            guard let bytes = Data(base64Encoded: b64) else { return .failure(ApplyError(message: "compiled_profile_b64 invalid base64")) }
-            let name = "pw.runner.\(UUID().uuidString)"
-            let regRc: Int32 = name.withCString { namePtr in
-                bytes.withUnsafeBytes { buf in
-                    let base = buf.baseAddress
-                    return sandboxLib.registerProfile(namePtr, base, buf.count)
-                }
-            }
-            if regRc != 0 {
-                return .failure(ApplyError(message: "sandbox_register_profile failed: \(String(cString: strerror(errno)))"))
-            }
-            defer {
-                if let unregister = sandboxLib.unregisterProfile {
-                    _ = name.withCString { ptr in unregister(ptr) }
-                }
-            }
-
-            var errBuf: UnsafeMutablePointer<CChar>?
-            let profile: SandboxLib.SandboxProfile? = name.withCString { namePtr in
-                sandboxLib.compileNamed(namePtr, paramsObj, &errBuf)
-            }
-            if let errBuf {
-                let message = String(cString: errBuf)
-                sandboxLib.freeError(errBuf)
-                return .failure(ApplyError(message: "sandbox_compile_named failed: \(message)"))
-            }
-            guard let profile else { return .failure(ApplyError(message: "sandbox_compile_named failed (no profile and no error)")) }
-            defer { sandboxLib.freeProfile(profile) }
-            let rc = sandboxLib.apply(profile)
-            if rc != 0 {
-                return .failure(ApplyError(message: "sandbox_apply failed: \(String(cString: strerror(errno)))"))
-            }
-            return .success(())
-
         default:
-            return .failure(ApplyError(message: "unknown policy.format (expected sbpl|compiled_bytes)"))
+            return .failure(ApplyError(message: "unknown policy.format (expected sbpl)"))
         }
     }
 

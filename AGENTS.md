@@ -2,7 +2,7 @@
 
 This file is for contributors and agents.
 
-PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — SBPL or compiled profile bytes plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance that self-applies the sandbox, executes the plan, and exits.
+PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — an SBPL policy plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance that self-applies the sandbox, executes the plan, and exits.
 
 ## Quick Router (open first)
 
@@ -20,7 +20,7 @@ Pick what you’re changing:
 
 ## Vocabulary (repo-anchored)
 
-- **Specimen**: the unit of input for a run — policy (SBPL or compiled profile bytes + params) plus a probe plan.
+- **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
 - **Controller**: the host-side orchestrator (`PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
 - **Runner**: the ephemeral XPC service (`PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`) that applies one sandbox policy, executes the probe plan, returns JSON, and exits.
 - **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
@@ -71,7 +71,7 @@ Build knobs worth knowing (debugging/iteration):
 
 - Default full run: `tests/run.sh --all`
 - Smoke only: `tests/run.sh --suite smoke`
-- Opt-in tests (PTY/log-sensitive/expensive) live under `tests/suites/opt_in/` and are documented in `tests/OPT_IN_TESTS.md`.
+- Opt-in tests (PTY/log-sensitive/expensive) live under `tests/suites/runner_*/opt_in/` (wrappers under `tests/suites/opt_in/`) and are documented in `tests/OPT_IN_TESTS.md`.
 
 Notes:
 

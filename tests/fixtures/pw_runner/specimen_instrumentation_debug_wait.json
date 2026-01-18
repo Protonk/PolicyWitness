@@ -1,6 +1,9 @@
 {
   "schema_version": 1,
   "specimen_id": "instrumentation_debug_wait",
+  "runner": {
+    "mode": "debuggable"
+  },
   "policy": {
     "format": "sbpl",
     "sbpl_source": "(version 1) (allow default)"

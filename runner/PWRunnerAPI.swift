@@ -37,22 +37,19 @@ public struct PWRunnerRunSpec: Codable {
 }
 
 public struct PWRunnerPolicySpec: Codable {
-    // "sbpl" or "compiled_bytes"
+    // "sbpl"
     public var format: String
     public var sbpl_source: String?
     public var params: [String: String]?
-    public var compiled_profile_b64: String?
 
     public init(
         format: String,
         sbpl_source: String? = nil,
-        params: [String: String]? = nil,
-        compiled_profile_b64: String? = nil
+        params: [String: String]? = nil
     ) {
         self.format = format
         self.sbpl_source = sbpl_source
         self.params = params
-        self.compiled_profile_b64 = compiled_profile_b64
     }
 }
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import base64
 import json
 import os
 import subprocess
@@ -211,6 +210,20 @@ def validate_run(expected_steps, run_data):
     return (0, "ok")
 
 
+def apply_runner_selector(specimen):
+    mode = os.environ.get("PW_TEST_RUNNER_MODE") or ""
+    service = os.environ.get("PW_TEST_RUNNER_SERVICE") or ""
+    if not mode and not service:
+        return
+    runner = specimen.get("runner") or {}
+    if mode:
+        runner["mode"] = mode
+    if service:
+        runner["service"] = service
+    if runner:
+        specimen["runner"] = runner
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True)
@@ -249,13 +262,6 @@ def main():
         policy_spec = {"format": "sbpl", "sbpl_source": sbpl}
         if params:
             policy_spec["params"] = params
-    elif policy_format == "compiled_bytes":
-        blob_path = fixtures_root / policy.get("compiled_blob_path", "")
-        if not blob_path.exists():
-            raise SystemExit(f"missing compiled_blob_path: {blob_path}")
-        data = blob_path.read_bytes()
-        b64 = base64.b64encode(data).decode("ascii")
-        policy_spec = {"format": "compiled_bytes", "compiled_profile_b64": b64}
     else:
         raise SystemExit(f"unknown policy.format: {policy_format!r}")
 
@@ -266,6 +272,7 @@ def main():
         "policy": policy_spec,
         "probe_plan": steps,
     }
+    apply_runner_selector(specimen)
 
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     specimen_path = artifacts_dir / "specimen.rendered.json"
@@ -279,25 +286,17 @@ def main():
 
     rc = run_policy_witness(pw_bin, specimen_path, stdout_path, stderr_path)
     if rc != 0:
-        err_text = stderr_path.read_text(encoding="utf-8", errors="ignore")
-        if policy_format == "compiled_bytes":
-            if "sandbox_register_profile failed" in err_text or "sandbox_apply failed: Operation not permitted" in err_text:
-                print("compiled profile registration not permitted on this host")
-                return 3
-            try:
-                run_data = load_run_json(stdout_path)
-            except SystemExit:
-                run_data = None
-            if isinstance(run_data, dict):
-                error = (run_data.get("result") or {}).get("error") or ""
-                if "sandbox_register_profile failed" in error or "sandbox_apply failed" in error:
-                    print("compiled profile registration not permitted on this host")
-                    return 3
         print(f"policy-witness run failed (rc={rc})")
         return 1
 
     run_data = load_run_json(stdout_path)
     status, message = validate_run(steps, run_data)
+    expected_kind = os.environ.get("PW_TEST_RUNNER_EXPECT_KIND")
+    if expected_kind:
+        actual_kind = (run_data.get("data") or {}).get("runner_provenance", {}).get("runner_kind")
+        if actual_kind != expected_kind:
+            print(f"expected runner_kind={expected_kind!r} (got {actual_kind!r})")
+            return 1
     print(message)
     return status
 
