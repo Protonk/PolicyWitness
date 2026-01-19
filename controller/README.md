@@ -10,8 +10,26 @@ For the Swift runner implementation details, see `runner/README.md`.
 
 ## What lives in `controller/`
 
-- `controller/src/main.rs` — CLI parsing and specimen evaluation orchestration
-- `controller/src/json_contract.rs` — JSON key sorting helper (used by other bins)
+Core controller modules:
+
+- `controller/src/main.rs` — entry point and module wiring
+- `controller/src/cli.rs` — CLI usage text + top-level dispatch
+- `controller/src/run_flow.rs` — run orchestration and JSON envelope assembly
+- `controller/src/runner_select.rs` — runner selection + provenance
+- `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
+- `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
+- `controller/src/sonoma_cross_check.rs` — `sb_api_validator` cross-check flow
+- `controller/src/runner_commands.rs` — external runner install/list/verify/remove/refresh
+
+Support modules:
+
+- `controller/src/app_layout.rs` — app bundle layout + embedded tool resolution
+- `controller/src/plist.rs` — PlistBuddy helpers for Info.plist lookups
+- `controller/src/bundle.rs` — bundle metadata reader for external runners
+- `controller/src/request_patch.rs` — request JSON injection helpers
+- `controller/src/utils.rs` — shared time + output helpers
+- `controller/src/evidence.rs` — evidence manifest parsing + verification
+- `controller/src/json_contract.rs` — JSON envelope rendering with sorted keys
 - `controller/src/runner_manager.rs` — external runner registry + launchd wiring
 
 Standalone helper tools (embedded into the `.app`):

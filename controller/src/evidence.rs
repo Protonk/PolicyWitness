@@ -1,3 +1,8 @@
+//! Evidence manifest helpers for shipped binaries.
+//!
+//! The embedded manifest records hashes and entitlements so runs can report
+//! provenance without relying on external tooling.
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -68,6 +73,7 @@ pub fn sha256_hex(path: &Path) -> Result<String, String> {
     let mut file = File::open(path)
         .map_err(|e| format!("failed to open {}: {e}", path.display()))?;
     let mut hasher = Sha256::new();
+    // Stream the file to avoid loading large binaries in memory.
     let mut buf = [0u8; 8192];
     loop {
         let n = file
@@ -90,6 +96,7 @@ pub fn verify_manifest(manifest: &EvidenceManifest, app_root: &Path, manifest_pa
     let mut mismatches = Vec::new();
     let mut checked = 0usize;
 
+    // Walk each entry with a declared hash and compare it to disk.
     for entry in &manifest.entries {
         let expected = entry.sha256.clone();
         if expected.is_none() {

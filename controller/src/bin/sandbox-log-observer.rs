@@ -1,3 +1,9 @@
+//! Unified-log observer for sandbox deny events.
+//!
+//! This tool runs outside the app sandbox to query the system log for deny
+//! messages associated with a specific process. It emits JSON so the controller
+//! can attach evidence without parsing raw log output.
+
 #[path = "../json_contract.rs"]
 #[allow(dead_code)]
 mod json_contract;
@@ -75,6 +81,7 @@ fn json_result(ok: bool) -> json_contract::JsonResult {
 
 fn is_pid_alive(pid: i32) -> bool {
     unsafe {
+        // kill(pid, 0) checks existence without delivering a signal.
         if kill(pid, 0) == 0 {
             return true;
         }
@@ -89,6 +96,7 @@ fn is_pid_alive(pid: i32) -> bool {
 fn sandbox_predicate(process_name: &str, pid: i32) -> String {
     let term = format!("Sandbox: {}({})", process_name, pid);
     let escaped = term.replace('"', "\\\"");
+    // Match both explicit deny lines and any sandbox line for the PID.
     format!(
         r#"((eventMessage CONTAINS[c] "{}") OR ((eventMessage CONTAINS[c] "deny") AND (eventMessage CONTAINS[c] "{}")))"#,
         escaped, pid
@@ -518,6 +526,7 @@ fn main() {
     let mut log_error: Option<String> = None;
     let mut blocked_reason: Option<String> = None;
 
+    // log stream gives live updates; log show is a point-in-time snapshot.
     let mode = if stream_mode { "stream" } else { "show" }.to_string();
     let duration_ms = duration.map(|d| d.as_millis() as u64);
 

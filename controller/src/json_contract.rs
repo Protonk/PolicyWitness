@@ -1,3 +1,8 @@
+//! JSON envelope helpers for controller output.
+//!
+//! The controller emits a single JSON object per run. Keys are sorted so
+//! envelopes are stable for diffing and hashing.
+
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -31,6 +36,7 @@ fn sort_value(value: &mut Value) {
             }
         }
         Value::Object(map) => {
+            // Sort object keys to keep output deterministic across runs.
             let mut entries: Vec<(String, Value)> =
                 map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
             entries.sort_by(|a, b| a.0.cmp(&b.0));

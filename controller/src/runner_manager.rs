@@ -1,3 +1,9 @@
+//! External runner registry and launchd wiring.
+//!
+//! The registry is a small JSON file under the user's Library directory. We
+//! also generate launchd plists so Mach services can be registered in a user or
+//! system domain.
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -213,6 +219,7 @@ pub fn build_launchd_plist(
     }
     let mut args = vec![executable_path.display().to_string()];
     if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+        // External runners use a Mach service name for NSXPC connections.
         args.push("--mach-service".to_string());
         args.push(service_name.to_string());
     }
@@ -414,6 +421,7 @@ fn current_uid_string() -> Result<String, String> {
             return Ok(trimmed.to_string());
         }
     }
+    // Fall back to /usr/bin/id for environments that do not export UID.
     let out = Command::new("/usr/bin/id")
         .args(["-u"])
         .stdout(Stdio::piped())
@@ -433,6 +441,7 @@ fn current_uid_string() -> Result<String, String> {
 
 fn launchctl_target(scope: RunnerScope) -> Result<String, String> {
     match scope {
+        // launchctl expects user services under the per-user GUI domain.
         RunnerScope::User => Ok(format!("gui/{}", current_uid_string()?)),
         RunnerScope::System => Ok("system".to_string()),
     }
