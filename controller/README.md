@@ -27,6 +27,7 @@ Support modules:
 - `controller/src/plist.rs` — PlistBuddy helpers for Info.plist lookups
 - `controller/src/bundle.rs` — bundle metadata reader for external runners
 - `controller/src/request_patch.rs` — request JSON injection helpers
+- `controller/src/policy_preflight.rs` — SBPL preflight runner wiring
 - `controller/src/utils.rs` — shared time + output helpers
 - `controller/src/evidence.rs` — evidence manifest parsing + verification
 - `controller/src/json_contract.rs` — JSON envelope rendering with sorted keys
@@ -36,6 +37,8 @@ Standalone helper tools (embedded into the `.app`):
 
 - `controller/src/bin/sandbox-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
   - Captures unified-log sandbox deny lines by PID + process name
+- `controller/src/bin/sbpl-preflight.rs` → `PolicyWitness.app/Contents/MacOS/sbpl-preflight`
+  - Compiles SBPL policies and reports compiler errors before the runner launches
 - `controller/tools/sb_api_validator/sb_api_validator` → `PolicyWitness.app/Contents/MacOS/sb_api_validator`
   - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
 
@@ -76,6 +79,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
+- `data.policy_preflight`: SBPL compile report from `sbpl-preflight` (best-effort)
+- `data.runner_startup_diagnostics`: extra context when XPC startup fails
 - `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
 - `data.sonoma_cross_check`: optional `sandbox_check` cross-check report (best-effort)
 - `data.runner_provenance`: runner identity + entitlements metadata

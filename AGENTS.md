@@ -63,6 +63,7 @@ Documentation should be stateless: describe current behavior without historical 
 - Build: `make build` (or `./build.sh`)
   - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see `SIGNING.md`).
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun.
+- If you add a helper under `Contents/MacOS`, update the `build.sh` signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
 Build knobs worth knowing (debugging/iteration):

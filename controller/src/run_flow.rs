@@ -12,14 +12,15 @@ use crate::app_layout::app_root_from_current_exe;
 use crate::cli;
 use crate::evidence;
 use crate::json_contract;
+use crate::policy_preflight::{run_policy_preflight, PolicyPreflightCapture};
 use crate::request_patch::{load_instrumentation_value, read_json_file, write_temp_request};
 use crate::runner_client::{
     run_pw_runner_client, run_pw_runner_client_with_cross_check, RunnerClientRun,
 };
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
-    parse_runner_selector, parse_runner_selector_value, resolve_runner_target,
-    runner_provenance_from_target, RunnerProvenance,
+    parse_runner_selector_value, resolve_runner_target, runner_provenance_from_target,
+    RunnerProvenance,
 };
 use crate::sandbox_log::{capture_sandbox_logs_last, match_step_denies, SandboxLogCapture};
 use crate::sonoma_cross_check::{
@@ -28,6 +29,7 @@ use crate::sonoma_cross_check::{
     sonoma_cross_check_unavailable, sonoma_cross_check_wait_ms,
     SonomaCrossCheckPlan, SonomaCrossCheckReport,
 };
+use crate::utils::now_unix_ms;
 
 pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 const DEFAULT_LOG_LAST: &str = "10s";
@@ -51,12 +53,22 @@ pub struct RunData {
     pub runner_registry_id: Option<String>,
     pub runner_provenance: RunnerProvenance,
     pub app_provenance: Option<AppProvenance>,
+    pub policy_preflight: Option<PolicyPreflightCapture>,
     pub timeout_ms: u64,
     pub log_last: String,
     pub runner_client: RunnerClientRun,
     pub runner_result: Option<Value>,
     pub sandbox_log_capture: Option<SandboxLogCapture>,
     pub sonoma_cross_check: Option<SonomaCrossCheckReport>,
+    pub runner_startup_diagnostics: Option<RunnerStartupDiagnostics>,
+}
+
+#[derive(Serialize)]
+pub struct RunnerStartupDiagnostics {
+    pub status: String,
+    pub note: String,
+    pub xpc_error: Option<String>,
+    pub policy_preflight_status: Option<String>,
 }
 
 fn load_app_provenance(app_root: &Path) -> Result<AppProvenance, String> {
@@ -79,6 +91,21 @@ fn load_app_provenance(app_root: &Path) -> Result<AppProvenance, String> {
         evidence_notes: manifest.notes,
         evidence_verify: verify,
     })
+}
+
+fn synthetic_runner_client(note: &str) -> RunnerClientRun {
+    let now = now_unix_ms();
+    RunnerClientRun {
+        argv: vec!["(runner not invoked)".to_string()],
+        started_at_unix_ms: now,
+        ended_at_unix_ms: now,
+        exit_code: 2,
+        stdout_parse_error: None,
+        stdout_truncated: false,
+        stdout_raw: None,
+        stderr: note.to_string(),
+        stderr_truncated: false,
+    }
 }
 
 pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
@@ -153,21 +180,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let app_root = app_root_from_current_exe()?;
     let app_provenance = load_app_provenance(&app_root).ok();
 
-    let mut request_value: Option<Value> = None;
+    // Parse request JSON early for runner selection and policy preflight.
+    let mut request_value = read_json_file(&request_path, "request.json")?;
     let mut request_modified = false;
-
-    if runner_mode_arg.is_some() || instrumentation_arg.is_some() || sonoma_cross_check_enabled {
-        // Only parse the request JSON if we might mutate it.
-        request_value = Some(read_json_file(&request_path, "request.json")?);
-    }
 
     if let Some(mode) = runner_mode_arg.as_deref() {
         let kind = RunnerKind::parse(mode)
             .ok_or_else(|| "invalid value for --runner-mode".to_string())?;
-        let request_value_mut = request_value
-            .as_mut()
-            .ok_or_else(|| "request.json unavailable".to_string())?;
-        let obj = request_value_mut
+        let obj = request_value
             .as_object_mut()
             .ok_or_else(|| "request.json must be a JSON object".to_string())?;
         let runner_entry = obj
@@ -192,20 +212,66 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         }
     }
 
-    let selector = if let Some(value) = request_value.as_ref() {
-        parse_runner_selector_value(value)?
-    } else {
-        parse_runner_selector(&request_path)?
-    };
+    let selector = parse_runner_selector_value(&request_value)?;
     let runner_target = resolve_runner_target(&app_root, &selector)?;
     let runner_provenance = runner_provenance_from_target(&runner_target);
 
+    let mut policy_preflight = match run_policy_preflight(&request_path) {
+        Ok(report) => Some(report),
+        Err(err) => Some(PolicyPreflightCapture::unavailable(err)),
+    };
+    let preflight_failed = policy_preflight
+        .as_ref()
+        .and_then(|p| p.compiled)
+        == Some(false);
+    if preflight_failed {
+        let preflight = policy_preflight.take();
+        let compile_error = preflight
+            .as_ref()
+            .and_then(|p| p.compile_error.clone())
+            .unwrap_or_else(|| "sbpl preflight failed".to_string());
+        let runner_client = synthetic_runner_client(&format!(
+            "runner not invoked; sbpl preflight failed: {compile_error}"
+        ));
+
+        let data = RunData {
+            request_path: request_path.to_string_lossy().to_string(),
+            runner_service_bundle_id: runner_target
+                .bundle_id
+                .clone()
+                .unwrap_or_else(|| runner_target.service_name.clone()),
+            runner_service_executable: runner_target.process_name.clone(),
+            runner_service_name: runner_target.service_name.clone(),
+            runner_registry_id: runner_target.registry_id.clone(),
+            runner_provenance,
+            app_provenance,
+            policy_preflight: preflight,
+            timeout_ms,
+            log_last,
+            runner_client,
+            runner_result: None,
+            sandbox_log_capture: None,
+            sonoma_cross_check: None,
+            runner_startup_diagnostics: None,
+        };
+
+        let result = json_contract::JsonResult {
+            ok: false,
+            rc: None,
+            exit_code: Some(1),
+            normalized_outcome: Some("bad_policy".to_string()),
+            errno: None,
+            error: Some(compile_error),
+            stderr: None,
+            stdout: None,
+        };
+        json_contract::print_envelope("run", result, &data)?;
+        return Ok(1);
+    }
+
     if let Some(arg) = instrumentation_arg.as_deref() {
         let instrumentation = load_instrumentation_value(arg)?;
-        let request_value_mut = request_value
-            .as_mut()
-            .ok_or_else(|| "request.json unavailable".to_string())?;
-        let obj = request_value_mut
+        let obj = request_value
             .as_object_mut()
             .ok_or_else(|| "request.json must be a JSON object".to_string())?;
         if obj.contains_key("instrumentation") {
@@ -219,11 +285,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut sonoma_cross_check_plan: Option<SonomaCrossCheckPlan> = None;
 
     if sonoma_cross_check_enabled {
-        let specs = extract_sonoma_cross_check_specs(
-            request_value
-                .as_ref()
-                .ok_or_else(|| "request.json unavailable".to_string())?,
-        )?;
+        let specs = extract_sonoma_cross_check_specs(&request_value)?;
         if specs.is_empty() {
             sonoma_cross_check_report =
                 Some(sonoma_cross_check_skipped("no sandbox_check steps".to_string()));
@@ -231,11 +293,8 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             match crate::app_layout::resolve_contents_macos_tool("sb_api_validator") {
                 Ok(tool_path) => {
                     let wait_ms = sonoma_cross_check_wait_ms(specs.len());
-                    let request_value_mut = request_value
-                        .as_mut()
-                        .ok_or_else(|| "request.json unavailable".to_string())?;
                     // Inject a post-sandbox delay so the runner stays alive for cross-checking.
-                    inject_sonoma_cross_check_instrumentation(request_value_mut, wait_ms)?;
+                    inject_sonoma_cross_check_instrumentation(&mut request_value, wait_ms)?;
                     request_modified = true;
                     sonoma_cross_check_plan = Some(SonomaCrossCheckPlan {
                         tool_path,
@@ -252,10 +311,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     }
 
     let request_path_for_runner = if request_modified {
-        let value = request_value
-            .as_ref()
-            .ok_or_else(|| "request.json unavailable".to_string())?;
-        write_temp_request(value)?
+        write_temp_request(&request_value)?
     } else {
         request_path.clone()
     };
@@ -297,6 +353,35 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         .unwrap_or("runner_output_not_json")
         .to_string();
     let ok = runner_outcome == "ok";
+
+    let runner_startup_diagnostics = if runner_outcome == "xpc_error" {
+        let mut note = "runner did not reply; process may have exited during sandbox apply or policy may block Mach/XPC reply".to_string();
+        if let Some(preflight) = policy_preflight.as_ref() {
+            match preflight.compiled {
+                Some(true) => note.push_str(" (sbpl preflight compiled ok)"),
+                Some(false) => note.push_str(" (sbpl preflight failed)"),
+                None => {
+                    if preflight.status == "unavailable" {
+                        note.push_str(" (sbpl preflight unavailable)")
+                    }
+                }
+            }
+        }
+        Some(RunnerStartupDiagnostics {
+            status: "xpc_error".to_string(),
+            note,
+            xpc_error: runner_result
+                .as_ref()
+                .and_then(|v| v.get("error"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            policy_preflight_status: policy_preflight
+                .as_ref()
+                .map(|p| p.status.clone()),
+        })
+    } else {
+        None
+    };
 
     let mut sandbox_log_capture = runner_pid.map(|pid| {
         // Capture unified-log evidence only when the runner PID is known.
@@ -344,12 +429,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         runner_registry_id: runner_target.registry_id.clone(),
         runner_provenance,
         app_provenance,
+        policy_preflight,
         timeout_ms,
         log_last,
         runner_client,
         runner_result,
         sandbox_log_capture,
         sonoma_cross_check,
+        runner_startup_diagnostics,
     };
 
     let error = if ok {

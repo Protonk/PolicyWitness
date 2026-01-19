@@ -136,16 +136,22 @@ fi
 echo "==> Building Rust controller + tools"
 cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin policy-witness \
-  --bin sandbox-log-observer
+  --bin sandbox-log-observer \
+  --bin sbpl-preflight
 
 RUNNER_BIN="${ROOT_DIR}/controller/target/release/policy-witness"
 SANDBOX_LOG_OBSERVER_BIN="${ROOT_DIR}/controller/target/release/sandbox-log-observer"
+SBPL_PREFLIGHT_BIN="${ROOT_DIR}/controller/target/release/sbpl-preflight"
 if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2
 fi
 if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
+  exit 2
+fi
+if [[ ! -x "${SBPL_PREFLIGHT_BIN}" ]]; then
+  echo "ERROR: expected sbpl-preflight binary at ${SBPL_PREFLIGHT_BIN}" 1>&2
   exit 2
 fi
 if [[ ! -f "${SB_API_VALIDATOR_SRC}" ]]; then
@@ -178,6 +184,9 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 
 cp "${SANDBOX_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
+
+cp "${SBPL_PREFLIGHT_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
+chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
 
 cp "${SB_API_VALIDATOR_BIN}" "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
@@ -297,6 +306,7 @@ sign_macho() {
 echo "==> Codesigning embedded MacOS tools"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
+sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then

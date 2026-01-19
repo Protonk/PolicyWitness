@@ -12,6 +12,10 @@ path = "src/main.rs"
 name = "sandbox-log-observer"
 path = "src/bin/sandbox-log-observer.rs"
 
+[[bin]]
+name = "sbpl-preflight"
+path = "src/bin/sbpl-preflight.rs"
+
 [[test]]
 name = "cli_contract"
 path = "integration/cli_contract.rs"

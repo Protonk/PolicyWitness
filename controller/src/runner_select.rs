@@ -107,14 +107,6 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
     Ok(selector)
 }
 
-pub fn parse_runner_selector(request_path: &Path) -> Result<RunnerSelector, String> {
-    let text = std::fs::read_to_string(request_path)
-        .map_err(|e| format!("failed to read request.json: {e}"))?;
-    let value: Value = serde_json::from_str(&text)
-        .map_err(|e| format!("failed to parse request.json: {e}"))?;
-    parse_runner_selector_value(&value)
-}
-
 fn entitlements_from_manifest_value(
     value: Option<&Value>,
     error: Option<&String>,
@@ -297,7 +289,7 @@ pub fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{json, Value};
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -325,7 +317,9 @@ mod tests {
             }
         });
         fs::write(&path, serde_json::to_string(&payload).unwrap()).unwrap();
-        let selector = parse_runner_selector(&path).expect("parse selector");
+        let text = fs::read_to_string(&path).expect("read request");
+        let value: Value = serde_json::from_str(&text).expect("parse request");
+        let selector = parse_runner_selector_value(&value).expect("parse selector");
         assert_eq!(selector.runner_id.as_deref(), Some("runner-abc"));
         assert_eq!(selector.runner_service.as_deref(), Some("com.example.runner"));
         assert_eq!(selector.required_entitlements.len(), 1);

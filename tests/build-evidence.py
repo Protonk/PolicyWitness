@@ -222,6 +222,7 @@ def main() -> int:
         "pw-runner-client",
         "sb_api_validator",
         "sandbox-log-observer",
+        "sbpl-preflight",
     ]
     for name in helper_names:
         helper_path = contents_dir / "MacOS" / name

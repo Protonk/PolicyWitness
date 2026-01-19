@@ -31,6 +31,7 @@ Signing is “inside-out”:
 3. Sign the outer `.app` last.
 
 Do not “fix” signing by adding `codesign --deep` to the signing steps. Explicitly sign the known nested binaries and then sign the outer app.
+When you add a new embedded helper under `Contents/MacOS`, add an explicit signing step in `build.sh`. Notarization will fail if any embedded tool remains ad hoc-signed.
 
 ## Evidence artifacts
 
