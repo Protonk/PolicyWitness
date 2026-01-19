@@ -12,13 +12,20 @@ PolicyWitness is now **specimen-first**:
 - `runner/PWRunnerAPI.swift`
   - `PWRunnerProtocol` (`runSpecimen(Data) -> Data`)
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
-
-- `runner/PWRunnerServiceHost.swift`
-  - Runner implementation:
-    - loads libsandbox dynamically (`dlopen` + `dlsym`)
-    - applies the requested policy (`sandbox_compile_*` + `sandbox_apply`)
-    - confirms sandbox state via `sandbox_check`
-    - executes a small set of probe attempts (file + mach-lookup)
+- `runner/SandboxLib.swift`
+  - Explicit `dlopen` + `dlsym` bindings for libsandbox.
+- `runner/SandboxApply.swift`
+  - Policy hashing and single-shot `sandbox_apply` path.
+- `runner/Instrumentation.swift`
+  - Instrumentation ports and `InstrumentationState`.
+- `runner/ProbeRunner.swift`
+  - `sandbox_check` and probe attempts (file + mach-lookup).
+- `runner/PathUtils.swift`
+  - Path normalization and fd-based observation helpers.
+- `runner/Signals.swift`
+  - Deny-signal handler and counters.
+- `runner/PWRunnerService.swift`
+  - Orchestrates the run flow (decode → instrumentation → sandbox apply → probes → reply).
 
 - `runner/runner-client/main.swift` → builds `PolicyWitness.app/Contents/MacOS/pw-runner-client`
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.

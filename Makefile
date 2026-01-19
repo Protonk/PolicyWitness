@@ -2,11 +2,6 @@
 
 NOTARY_KEYCHAIN_PROFILE ?=
 YOLO ?=
-BUILD_ARGS ?=
-
-ifneq ($(strip $(YOLO)),)
-BUILD_ARGS += --yolo
-endif
 
 build:
 	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
@@ -15,7 +10,7 @@ build:
 		echo "example: make build YOLO=1"; \
 		exit 2; \
 	fi
-	./build.sh $(BUILD_ARGS)
+	IDENTITY="$(IDENTITY)" YOLO="$(YOLO)" ./build.sh
 
 clean:
 	rm -rf tests/out/*

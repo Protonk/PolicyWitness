@@ -1,5 +1,7 @@
 import Foundation
 
+// Thin NSXPC wrapper. On XPC failure it emits a synthetic RunResult JSON; it
+// never interprets sandbox behavior or probe outcomes.
 private func die(_ message: String, code: Int32) -> Never {
     fputs(message + "\n", stderr)
     exit(code)

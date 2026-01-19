@@ -1,5 +1,7 @@
 import Foundation
 
+// Minimal XPC service entrypoint. Accepts --mach-service or falls back to the
+// launchd-provided PW_RUNNER_MACH_SERVICE_NAME when arguments are not forwarded.
 let args = Array(CommandLine.arguments.dropFirst())
 var machServiceName: String? = nil
 var idx = 0

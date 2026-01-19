@@ -11,6 +11,34 @@ import Foundation
     func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void)
 }
 
+// Wire string constants used across runner/client code. Keep these stable.
+enum PWRunnerWire {
+    static let policyFormatSbpl = "sbpl"
+
+    static let attemptKindFile = "file"
+    static let attemptKindMachLookup = "mach_lookup"
+
+    static let attemptActionOpenRead = "open_read"
+    static let attemptActionOpenWrite = "open_write"
+    static let attemptActionCreate = "create"
+    static let attemptActionUnlink = "unlink"
+    static let attemptActionMachLookup = "bootstrap_look_up"
+
+    static let sandboxFilterNone = "none"
+    static let sandboxFilterPath = "path"
+    static let sandboxFilterGlobalName = "global_name"
+    static let sandboxFilterLocalName = "local_name"
+    static let sandboxCheckScopePost = "post_sandbox"
+
+    static let instrumentationPhasePre = "pre_sandbox"
+    static let instrumentationPhasePost = "post_sandbox"
+
+    static let instrumentationKindDylibLoad = "dylib_load"
+    static let instrumentationKindDebugWait = "debug_wait"
+    static let instrumentationKindExecmemProbe = "execmem_probe"
+    static let instrumentationKindDyldEnv = "dyld_env"
+}
+
 public struct PWRunnerRunSpec: Codable {
     public var schema_version: Int
     public var specimen_id: String
@@ -37,7 +65,7 @@ public struct PWRunnerRunSpec: Codable {
 }
 
 public struct PWRunnerPolicySpec: Codable {
-    // "sbpl"
+    // Policy format, e.g. PWRunnerWire.policyFormatSbpl.
     public var format: String
     public var sbpl_source: String?
     public var params: [String: String]?

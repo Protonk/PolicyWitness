@@ -97,6 +97,6 @@ Treat these as environment constraints, not PolicyWitness regressions. If you se
 
 ## Maintenance checklist (when changing things)
 
-- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerServiceHost.swift`, fixtures under `tests/fixtures/`, and any controller parsing assumptions.
+- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift` (and related helpers under `runner/`), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
 - If you change shipped paths: update `build.sh`, `tests/build-evidence.py`, tests that locate binaries, and any docs that enumerate the bundle layout.
 - If you change evidence fields: update `controller/src/main.rs`, any tests that validate output, and the docs that describe evidence channels.

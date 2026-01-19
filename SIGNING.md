@@ -13,13 +13,13 @@ make build YOLO=1
 # or:
 IDENTITY='Developer ID Application: YOUR NAME (TEAMID)' ./build.sh
 # or:
-./build.sh --yolo
+YOLO=1 ./build.sh
 ```
 
 Key requirements:
 
 - `IDENTITY` must be set to a **Developer ID Application** identity present in your keychain, or
-  pass `--yolo` / `YOLO=1` to auto-select the first matching identity.
+  pass `YOLO=1` to auto-select the first matching identity.
 - Xcode Command Line Tools are required (`swiftc` is discovered via `xcrun`).
 
 ## What `build.sh` signs
