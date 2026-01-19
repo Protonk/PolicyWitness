@@ -1,3 +1,9 @@
+//! CLI contract integration tests for the controller binary.
+//!
+//! These tests run the built PolicyWitness.app to validate the end-to-end
+//! envelope shape and instrumentation injection behavior. They are gated behind
+//! PW_INTEGRATION=1 so `cargo test --tests` can run without a built app.
+
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -15,6 +21,7 @@ fn repo_root() -> PathBuf {
 
 fn pw_bin_path() -> PathBuf {
     if let Ok(val) = env::var("PW_BIN_PATH") {
+        // Allow CI or local runs to point at a non-standard build location.
         return PathBuf::from(val);
     }
     repo_root()
@@ -27,6 +34,7 @@ fn pw_bin_path() -> PathBuf {
 fn require_pw_bin() -> PathBuf {
     let path = pw_bin_path();
     if !path.exists() {
+        // The integration suite assumes a built app bundle is available.
         panic!(
             "PolicyWitness.app not found at {} (build the app or set PW_BIN_PATH)",
             path.display()
@@ -49,8 +57,8 @@ fn specimen_smoke_file_read_deny() {
     }
     let bin = require_pw_bin();
 
-    // Note: sandboxed automation harnesses can block XPC lookup or unified log access.
-    // If this test fails with those symptoms, rerun from a normal Terminal to confirm.
+    // Sandboxed harnesses can block XPC lookup or unified log access; rerun from
+    // a normal Terminal if failures look environment-related.
 
     let specimen = repo_root()
         .join("tests")

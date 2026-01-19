@@ -70,7 +70,7 @@ see `tests/suites/<suite>/README.md`.
 
 - `preflight`: codesign/entitlements inspection only (no execution)
 - `unit`: Rust unit tests (`cargo test --bins`)
-- `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/tests/cli_integration.rs`
+- `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/integration/cli_contract.rs`
 - `runner_debuggable`: smoke + blackbox coverage via the built-in debuggable runner
 - `runner_byoxpc`: smoke + blackbox coverage via a BYOXPC runner (opt-in)
 - `runner_machme`: smoke + blackbox coverage via a MachMe runner (opt-in)
