@@ -1,6 +1,6 @@
 # PolicyWitness
 
-PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Each run consumes a specimen (policy plus probe plan), executes it in a fresh runner process (debuggable, byoxpc, or machme), and emits a structured JSON report.
+PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Each run consumes a specimen (policy plus probe plan), executes it in a fresh runner process, and emits a structured JSON report.
 
 Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork.
 

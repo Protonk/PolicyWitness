@@ -2,7 +2,7 @@
 
 This directory contains the Swift implementation of the **ephemeral sandbox runner** shipped inside `PolicyWitness.app`.
 
-PolicyWitness is now **specimen-first**:
+PolicyWitness is **specimen-first**:
 
 - The controller (`policy-witness`) starts a fresh XPC runner instance per specimen.
 - The runner starts unsandboxed, applies a requested seatbelt profile exactly once (SBPL source + parameters), executes a probe plan, replies with JSON, and exits.
@@ -44,14 +44,14 @@ The runner consumes a `PWRunnerRunSpec` which contains:
 
 Each probe step reports both a `sandbox_check` and an `attempt` result:
 
-- `sandbox_check` includes `scope` (currently `post_sandbox`) plus the original
+- `sandbox_check` includes `scope` (`post_sandbox`) plus the original
   `filter_value` and a best-effort `effective_filter_value` (for `path` filters,
   this is the runner’s normalized path). It also reports `pid`, `operation`,
   `filter_type_id`, and `errno`/`error` when the check call fails.
 - `attempt` always includes `exit_code` and `syscall_errno` (explicit `null` when
   not applicable), and for file attempts it includes `requested_path`,
-  `normalized_path`, and `observed_path` (fd-based when available). Legacy `rc`
-  and `errno` remain for compatibility.
+  `normalized_path`, and `observed_path` (fd-based when available). The `rc`
+  and `errno` fields are retained for compatibility.
 
 ## Entitlements and sandboxing (important distinction)
 

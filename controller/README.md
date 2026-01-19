@@ -4,7 +4,7 @@ This is developer documentation for the Rust code in `controller/`. It builds th
 
 - `PolicyWitness.app/Contents/MacOS/policy-witness`
 
-PolicyWitness is now **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run.
+PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run.
 
 For the Swift runner implementation details, see `runner/README.md`.
 

@@ -39,13 +39,17 @@ The `.app` layout is a contract: tests and evidence generation assume these path
 
 If you rename/move anything here, expect downstream breakage (build script, evidence, tests, tooling).
 
-## Product Surfaces (current)
+## Product Surfaces
 
 The shipped CLI is intentionally small:
 
 - `policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]`
 
-Legacy “profile-per-service” XPC probe commands have been removed; do not re-introduce them without an explicit design decision.
+Profile-per-service XPC probe commands are not part of the CLI; do not re-introduce them without an explicit design decision.
+
+## Documentation
+
+Documentation should be stateless: describe current behavior without historical change notes. Reserve history for `README.md` only.
 
 ## Core ideas
 
