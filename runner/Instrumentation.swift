@@ -95,33 +95,63 @@ private func runInstrumentationPort(
     case PWRunnerWire.instrumentationKindExecmemProbe:
         let requested = port.size_bytes ?? 4096
         let size = max(1, min(requested, 1024 * 1024))
-        let ptr = mmap(nil, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0)
-        if ptr == MAP_FAILED {
-            let err = errno
+        // Prefer MAP_JIT when allowed; fall back to legacy RWX mapping if needed.
+        let flagsJit = MAP_PRIVATE | MAP_ANON | MAP_JIT
+        let protJit = PROT_READ | PROT_WRITE  // MAP_JIT provides an exec alias.
+        var primaryErr: Int32? = nil
+
+        let ptrJit = mmap(nil, size, protJit, flagsJit, -1, 0)
+        if ptrJit != MAP_FAILED {
+            _ = munmap(ptrJit, size)
             return PWRunnerInstrumentationPortReport(
                 kind: port.kind,
                 phase: phase,
                 label: port.label,
-                status: "error",
-                error: String(cString: strerror(err)),
+                status: "ok",
+                error: nil,
                 execmem_probe: PWRunnerInstrumentationExecmemReport(
                     size_bytes: size,
-                    mmap_succeeded: false,
-                    errno: Int(err)
+                    mmap_succeeded: true,
+                    errno: nil
                 )
             )
         }
-        _ = munmap(ptr, size)
+        primaryErr = errno
+
+        // Legacy fallback: RWX anonymous mapping (may still fail under hardened runtime).
+        let ptrLegacy = mmap(nil, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0)
+        if ptrLegacy != MAP_FAILED {
+            _ = munmap(ptrLegacy, size)
+            return PWRunnerInstrumentationPortReport(
+                kind: port.kind,
+                phase: phase,
+                label: port.label,
+                status: "ok",
+                error: nil,
+                execmem_probe: PWRunnerInstrumentationExecmemReport(
+                    size_bytes: size,
+                    mmap_succeeded: true,
+                    errno: nil
+                )
+            )
+        }
+        let err = errno
+        let combinedError: String
+        if let primaryErr {
+            combinedError = "MAP_JIT failed: \(String(cString: strerror(primaryErr))); RWX mmap failed: \(String(cString: strerror(err)))"
+        } else {
+            combinedError = String(cString: strerror(err))
+        }
         return PWRunnerInstrumentationPortReport(
             kind: port.kind,
             phase: phase,
             label: port.label,
-            status: "ok",
-            error: nil,
+            status: "error",
+            error: combinedError,
             execmem_probe: PWRunnerInstrumentationExecmemReport(
                 size_bytes: size,
-                mmap_succeeded: true,
-                errno: nil
+                mmap_succeeded: false,
+                errno: Int(err)
             )
         )
 

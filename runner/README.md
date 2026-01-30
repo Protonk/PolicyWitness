@@ -94,7 +94,7 @@ Supported ports (v1):
   `com.apple.security.cs.disable-library-validation`).
 - `debug_wait`: sleep for `sleep_ms` before sandbox apply to allow debugger
   attach (uses `com.apple.security.get-task-allow`).
-- `execmem_probe`: attempt an RWX `mmap` and report success/failure (uses
+- `execmem_probe`: attempt a JIT mapping (`MAP_JIT`, `PROT_READ|PROT_WRITE`) and report success/failure (uses
   `com.apple.security.cs.allow-unsigned-executable-memory`).
 - `dyld_env`: report whether expected `DYLD_*` env vars are present; the runner
   cannot set these at runtime, so use an external runner with launchd

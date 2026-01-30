@@ -76,6 +76,22 @@ Top-level fields:
 - `runner`: object (optional; select runner mode and external runners)
 - `instrumentation`: object (optional, instrumentation port)
 
+Minimal skeleton (copy/paste):
+
+```json
+{
+  "schema_version": 1,
+  "specimen_id": "skeleton",
+  "runner": { "mode": "debuggable" },
+  "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
+  "probe_plan": []
+}
+```
+Notes:
+- All path rules live inside `policy.sbpl_source`; there is no `path_membership` field.
+- `instrumentation` (if any) sits next to `policy`, not inside it.
+- `probe_plan` can be empty when you only want instrumentation.
+
 ### Policy
 
 SBPL source:
@@ -120,6 +136,15 @@ Notes:
 - `scope` is `post_sandbox` for runner-hosted checks.
 - `requested_path`, `normalized_path`, and `observed_path` are present for file
   attempts; non-file attempts carry explicit `null` for these fields.
+- `filter_value` is the exact string the runner passes to `sandbox_check`.
+- `effective_filter_value` is a canonicalized/realpath form used for reporting only.
+- `filter_type_id`: `1` (path), `16` (mach-lookup global), `17` (mach-lookup local).
+
+Capture the sandbox_check argument quickly (no interpose needed):
+
+```sh
+jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome}' run.json
+```
 
 ## Instrumentation (opt-in)
 
@@ -133,6 +158,12 @@ Each port can specify an optional `phase`:
 
 - `pre_sandbox` (default)
 - `post_sandbox`
+
+Debug flow (quick recipe):
+- Add a short `debug_wait` to give LLDB a window before sandbox apply.
+- Add `dylib_load` with your logging shim to capture sandbox_check strings.
+- Keep `runner.mode="debuggable"` (or pass `--runner-mode debuggable`) so these ports are enabled.
+- Run: `policy-witness run <request.json> --instrumentation @instrumentation.json` and attach to the runner PID shown in logs.
 
 Example specimen fragment:
 
@@ -154,7 +185,7 @@ Notes:
 Ports (v1):
 - `dylib_load`: load a dylib and optionally call a symbol (uses `com.apple.security.cs.disable-library-validation`).
 - `debug_wait`: sleep before sandbox apply for debugger attach (uses `com.apple.security.get-task-allow`).
-- `execmem_probe`: attempt an RWX `mmap` and report success/failure (uses `com.apple.security.cs.allow-unsigned-executable-memory`).
+- `execmem_probe`: attempt a JIT mapping (`MAP_JIT`, `PROT_READ|PROT_WRITE`) and report success/failure (requires `com.apple.security.cs.allow-jit`; falls back to legacy RWX if available).
 - `dyld_env`: report expected `DYLD_*` env vars (uses `com.apple.security.cs.allow-dyld-environment-variables`).
 
 Convenience flag (injects instrumentation into the request JSON at runtime):
@@ -384,3 +415,9 @@ Registry location:
   run from a normal Terminal to confirm behavior.
 - If `--sonoma-cross-check` reports `blocked` or `unavailable`, rerun from an
   unsandboxed Terminal context (the helper needs to observe a live runner PID).
+
+Common decode errors (quick fixes)
+- `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
+- `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
+- `unknown field 'path_membership'`: path rules belong in `policy.sbpl_source` as SBPL, not as JSON fields.
+- Instrumentation ignored: ensure `instrumentation` is top level and `runner.mode` is `debuggable` (or use `--runner-mode debuggable`).

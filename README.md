@@ -34,7 +34,7 @@ Instrumentation ports are part of the debuggable runner, allowing closer inspect
 - `dyld_env`: report expected `DYLD_*` env vars (`com.apple.security.cs.allow-dyld-environment-variables`); set via an external runner with `policy-witness runner install --env KEY=VALUE`.
 - `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`)
 - `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`)
-- `execmem_probe`: attempt RWX `mmap` and report success/failure (`com.apple.security.cs.allow-unsigned-executable-memory`)
+- `execmem_probe`: attempt JIT `mmap` (MAP_JIT, PROT_READ|PROT_WRITE) and report success/failure (`com.apple.security.cs.allow-jit`; falls back to legacy RWX if available)
 
 ## What Ships
 
