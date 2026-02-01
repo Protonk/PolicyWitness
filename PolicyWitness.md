@@ -5,27 +5,31 @@ This guide covers usage only.
 
 ## Choose your runner
 
-PolicyWitness supports three **tested** runner modes:
+PolicyWitness supports four runner modes:
 
-1) Debuggable runner (built-in)
-- Default path; includes debug-friendly entitlements and instrumentation ports.
+1) Standard runner (built-in)
+- Default path; minimal entitlements (no debug allowances).
+- Select with `runner.mode="standard"` or `--runner-mode standard`.
+
+2) Debuggable runner (built-in)
+- Debug-friendly entitlements plus instrumentation ports.
 - Select with `runner.mode="debuggable"` or `--runner-mode debuggable`.
 - Tested by `tests/suites/runner_debuggable/run.sh`.
 
-2) BYOXPC runner (external XPC bundle)
+3) BYOXPC runner (external XPC bundle)
 - Use when you need extra entitlements; supply a signed `.xpc` bundle.
 - Service name must match the bundle’s `CFBundleIdentifier` (no override).
 - Install with `policy-witness runner install --kind byoxpc ...`.
 - Tested by `tests/suites/runner_byoxpc/run.sh` (opt-in; GUI session required).
 
-3) MachMe runner (external Mach service binary)
+4) MachMe runner (external Mach service binary)
 - Use when you want to launch a raw binary as a Mach service.
 - Install with `policy-witness runner install --kind machme --bundle /path/to/PWRunner`.
 - Tested by `tests/suites/runner_machme/run.sh` (opt-in; GUI session required).
 
-If no runner is specified, PolicyWitness uses the built-in debuggable runner.
+If no runner is specified, PolicyWitness uses the built-in standard runner.
 
-## Quick start (debuggable runner)
+## Quick start (standard runner)
 
 Set a convenience variable:
 
@@ -82,7 +86,7 @@ Minimal skeleton (copy/paste):
 {
   "schema_version": 1,
   "specimen_id": "skeleton",
-  "runner": { "mode": "debuggable" },
+  "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
   "probe_plan": []
 }
@@ -153,7 +157,7 @@ entitlement-backed capabilities. This field is optional; if omitted, behavior
 is unchanged. Results are reported under `instrumentation` in the run JSON and
 do not change the run outcome.
 These ports are part of the debuggable runner mode; use `runner.mode="debuggable"`
-(or `--runner-mode debuggable`) in tested setups.
+(or `--runner-mode debuggable`) or an external runner signed with matching entitlements.
 Each port can specify an optional `phase`:
 
 - `pre_sandbox` (default)
@@ -162,7 +166,7 @@ Each port can specify an optional `phase`:
 Debug flow (quick recipe):
 - Add a short `debug_wait` to give LLDB a window before sandbox apply.
 - Add `dylib_load` with your logging shim to capture sandbox_check strings.
-- Keep `runner.mode="debuggable"` (or pass `--runner-mode debuggable`) so these ports are enabled.
+- Keep `runner.mode="debuggable"` (or use an external runner with matching entitlements) so these ports are enabled.
 - Run: `policy-witness run <request.json> --instrumentation @instrumentation.json` and attach to the runner PID shown in logs.
 
 Example specimen fragment:
@@ -231,7 +235,7 @@ Note: `dyld_env` is a check only. To actually set `DYLD_*` variables, use an
 external runner and set launchd `EnvironmentVariables` at install time:
 
 ```sh
-$PW runner install --kind byoxpc --bundle /path/to/PWRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
+$PW runner install --kind byoxpc --bundle /path/to/PWRunnerDebug.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
 ```
 
 ## External runners (BYOXPC + MachMe)
@@ -240,8 +244,8 @@ Use these when you need entitlements that are not in the built-in runner.
 
 ### What you need
 
-- BYOXPC: a runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc`).
-- MachMe: a runner binary to sign (typically `PWRunner.xpc/Contents/MacOS/PWRunner`).
+- BYOXPC: a runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc` or `PWRunnerDebug.xpc`).
+- MachMe: a runner binary to sign (typically `PWRunner.xpc/Contents/MacOS/PWRunner` or the debug variant).
 - A signing identity (Developer ID Application) or ad-hoc signing for local use.
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
@@ -255,12 +259,12 @@ BYOXPC (user scope):
 ```sh
 PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
-ENT="$PWD/runner/services/PWRunner/Entitlements.plist"
+ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
 BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
 
 mkdir -p "$(dirname "$BYO")"
 rm -rf "$BYO"
-cp -R PolicyWitness.app/Contents/XPCServices/PWRunner.xpc "$BYO"
+cp -R PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc "$BYO"
 
 $PW runner install --kind byoxpc \
   --bundle "$BYO" \
@@ -269,7 +273,7 @@ $PW runner install --kind byoxpc \
   --allow-adhoc \
   --scope user
 
-$PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
+$PW runner verify --service-name com.yourteam.policy-witness.PWRunnerDebug --timeout-ms 2000
 ```
 
 MachMe (user scope):
@@ -277,8 +281,8 @@ MachMe (user scope):
 ```sh
 PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
-ENT="$PWD/runner/services/PWRunner/Entitlements.plist"
-BIN="$PWD/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
+BIN="$PWD/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc/Contents/MacOS/PWRunnerDebug"
 
 $PW runner install --kind machme \
   --bundle "$BIN" \
@@ -296,7 +300,7 @@ $PW runner verify --service-name com.policywitness.runner.machme --timeout-ms 20
 ```sh
 $PW runner install \
   --kind byoxpc \
-  --bundle /path/to/PWRunner.xpc \
+  --bundle /path/to/PWRunnerDebug.xpc \
   --identity "Developer ID Application: Your Name (TEAMID)" \
   --entitlements /path/to/entitlements.plist \
   --scope user
@@ -358,8 +362,8 @@ Alternative: select by service name:
 }
 ```
 
-`runner.mode` is optional; when present it must match the registry kind.
-Valid modes: `debuggable`, `byoxpc`, `machme`.
+`runner.mode` is optional; when present it must match the registry kind for external runners.
+Valid modes: `standard`, `debuggable`, `byoxpc`, `machme`.
 `required_entitlements` enforces a superset check before dispatch.
 
 Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
@@ -390,6 +394,24 @@ $PW runner list
 $PW runner remove --id runner-<id>
 ```
 
+External runners install a launchd background item. `runner remove` is the
+preferred uninstall path and removes the launchd entry and registry record.
+If you no longer have the registry entry, uninstall manually:
+
+User scope:
+
+```sh
+launchctl bootout "gui/$(id -u)/<service-name>"
+rm -f "$HOME/Library/LaunchAgents/<service-name>.plist"
+```
+
+System scope:
+
+```sh
+sudo launchctl bootout "system/<service-name>"
+sudo rm -f "/Library/LaunchDaemons/<service-name>.plist"
+```
+
 Registry location:
 
 ```
@@ -400,7 +422,7 @@ Registry location:
 
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
-- `--runner-mode <debuggable|byoxpc|machme>`: inject `runner.mode` into the request
+- `--runner-mode <standard|debuggable|byoxpc|machme>`: inject `runner.mode` into the request
 - `--instrumentation <json|@path>`: inject instrumentation ports into the request
 - `--sonoma-cross-check`: run an sb_api_validator cross-check against the runner PID
   while it is paused post-sandbox; results are attached under `data.sonoma_cross_check`
@@ -420,4 +442,4 @@ Common decode errors (quick fixes)
 - `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
 - `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
 - `unknown field 'path_membership'`: path rules belong in `policy.sbpl_source` as SBPL, not as JSON fields.
-- Instrumentation ignored: ensure `instrumentation` is top level and `runner.mode` is `debuggable` (or use `--runner-mode debuggable`).
+- Instrumentation ignored: ensure `instrumentation` is top level and `runner.mode` is `debuggable` (or use `--runner-mode debuggable`, or an external runner with matching entitlements).

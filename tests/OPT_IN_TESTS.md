@@ -110,6 +110,17 @@ Optional standard overrides:
   instrumentation env handling.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/runner_instrumentation_dyld_env/artifacts/*`
 
+### runner_auth_external
+
+- **Location:** `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
+- **Purpose:** Validate that an external BYOXPC runner without auth keys accepts
+  an ad-hoc caller (auth gating is built-in only).
+- **Opt-in reason:** Requires launchd service install/bootstrapping and an
+  unsandboxed caller; can be blocked in sandboxed harnesses.
+- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **When to run:** After changing runner caller-authorization logic.
+- **Artifacts:** `tests/out/suites/runner_byoxpc/runner_auth_external/artifacts/*`
+
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:

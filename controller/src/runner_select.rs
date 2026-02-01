@@ -1,14 +1,16 @@
 //! Runner selection and provenance logic.
 //!
-//! The controller can target the embedded debuggable runner or an external
-//! runner registered in the local registry. This module resolves the request
-//! selector into a concrete service connection and auditable metadata.
+//! The controller can target the embedded standard/debuggable runner or an
+//! external runner registered in the local registry. This module resolves the
+//! request selector into a concrete service connection and auditable metadata.
 
 use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{resolve_pw_runner_bundle_info, PW_RUNNER_SERVICE_DIR};
+use crate::app_layout::{
+    resolve_pw_runner_bundle_info, PW_RUNNER_DEBUG_SERVICE_DIR, PW_RUNNER_STANDARD_SERVICE_DIR,
+};
 use crate::bundle::read_bundle_info;
 use crate::evidence;
 use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerScope, RunnerSignature};
@@ -128,12 +130,19 @@ fn entitlements_from_manifest_value(
     entitlements
 }
 
-fn builtin_runner_target(app_root: &Path) -> Result<RunnerTarget, String> {
-    let runner_info = resolve_pw_runner_bundle_info(app_root)?;
+fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarget, String> {
+    let service_dir = match kind {
+        RunnerKind::Standard => PW_RUNNER_STANDARD_SERVICE_DIR,
+        RunnerKind::Debuggable => PW_RUNNER_DEBUG_SERVICE_DIR,
+        RunnerKind::Byoxpc | RunnerKind::Machme => {
+            return Err("builtin runner target requires a built-in kind".to_string());
+        }
+    };
+    let runner_info = resolve_pw_runner_bundle_info(app_root, service_dir)?;
     let bundle_path = app_root
         .join("Contents")
         .join("XPCServices")
-        .join(format!("{PW_RUNNER_SERVICE_DIR}.xpc"));
+        .join(format!("{service_dir}.xpc"));
     let executable_path = bundle_path
         .join("Contents")
         .join("MacOS")
@@ -154,7 +163,7 @@ fn builtin_runner_target(app_root: &Path) -> Result<RunnerTarget, String> {
     });
 
     Ok(RunnerTarget {
-        kind: RunnerKind::Debuggable,
+        kind,
         connection: RunnerConnectionKind::XpcService,
         service_name: runner_info.bundle_id.clone(),
         process_name: runner_info.executable.clone(),
@@ -187,14 +196,21 @@ pub fn resolve_runner_target(
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
-    if matches!(selector.mode, Some(RunnerKind::Debuggable)) && needs_external {
-        return Err("runner.mode=debuggable cannot be combined with an external runner selection".to_string());
+    if matches!(selector.mode, Some(RunnerKind::Debuggable | RunnerKind::Standard)) && needs_external {
+        return Err(
+            "runner.mode=standard or runner.mode=debuggable cannot be combined with an external runner selection"
+                .to_string(),
+        );
     }
     if matches!(selector.mode, Some(RunnerKind::Byoxpc | RunnerKind::Machme)) && !needs_external {
         return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
     }
     if !needs_external {
-        let target = builtin_runner_target(app_root)?;
+        let kind = selector.mode.unwrap_or(RunnerKind::Standard);
+        if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+            return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
+        }
+        let target = builtin_runner_target(app_root, kind)?;
         if !selector.required_entitlements.is_empty() {
             let ent = target
                 .entitlements
@@ -244,8 +260,8 @@ pub fn resolve_runner_target(
         RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
-        RunnerKind::Debuggable => {
-            return Err("external runners cannot be kind=debuggable".to_string());
+        RunnerKind::Debuggable | RunnerKind::Standard => {
+            return Err("external runners cannot be built-in kinds".to_string());
         }
     };
 

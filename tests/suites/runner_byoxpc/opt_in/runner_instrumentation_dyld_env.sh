@@ -15,7 +15,7 @@ PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-runner_byoxpc}"
 PW_TEST_ID="runner_instrumentation_dyld_env"
 
 PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
-RUNNER_BUNDLE="${ROOT_DIR}/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc"
+RUNNER_BUNDLE_SRC="${ROOT_DIR}/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "preflight" "check runner bundle and toolchain"
@@ -24,16 +24,9 @@ if ! require_pw_app "${PW_BIN}"; then
   exit 0
 fi
 
-if ! require_runner_bundle "${RUNNER_BUNDLE}"; then
+if ! require_runner_bundle "${RUNNER_BUNDLE_SRC}"; then
   exit 0
 fi
-
-INFO_PLIST="${RUNNER_BUNDLE}/Contents/Info.plist"
-BUNDLE_ID="$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "${INFO_PLIST}" 2>/dev/null || true)"
-if [[ -z "${BUNDLE_ID}" ]]; then
-  test_fail "failed to read CFBundleIdentifier from ${INFO_PLIST}"
-fi
-cleanup_runner_service "${PW_BIN}" "${BUNDLE_ID}" "user"
 
 CLANG_PATH="$(require_clang)" || exit 0
 SDKROOT="$(require_macos_sdk)" || exit 0
@@ -63,6 +56,52 @@ set -e
 if [[ ${CLANG_RC} -ne 0 ]]; then
   test_fail "clang failed to build dylib" "{\"log_path\":\"${BUILD_LOG}\"}"
 fi
+
+test_step "prep_bundle" "prepare runner bundle with DYLD entitlements"
+
+RUNNER_BUNDLE="${PW_TEST_ARTIFACTS}/PWRunner.dyld_env.xpc"
+rm -rf "${RUNNER_BUNDLE}"
+cp -R "${RUNNER_BUNDLE_SRC}" "${RUNNER_BUNDLE}"
+
+INFO_PLIST="${RUNNER_BUNDLE}/Contents/Info.plist"
+if [[ ! -f "${INFO_PLIST}" ]]; then
+  test_fail "missing Info.plist in runner bundle copy"
+fi
+
+/usr/bin/python3 - "${INFO_PLIST}" <<'PY'
+import plistlib
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+plist = plistlib.load(path.open('rb'))
+plist.pop("PWRunnerRequireSignedCaller", None)
+plist.pop("PWRunnerAllowedIdentifiers", None)
+plist["CFBundleIdentifier"] = "com.yourteam.policy-witness.PWRunnerDyldEnv"
+plistlib.dump(plist, path.open('wb'))
+PY
+
+BUNDLE_ID="$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "${INFO_PLIST}" 2>/dev/null || true)"
+if [[ -z "${BUNDLE_ID}" ]]; then
+  test_fail "failed to read CFBundleIdentifier from ${INFO_PLIST}"
+fi
+cleanup_runner_service "${PW_BIN}" "${BUNDLE_ID}" "user"
+
+ENTITLEMENTS_PLIST="${PW_TEST_ARTIFACTS}/dyld_env.entitlements.plist"
+cat > "${ENTITLEMENTS_PLIST}" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+</dict>
+</plist>
+PLIST
+
+/usr/bin/codesign --force --options runtime --entitlements "${ENTITLEMENTS_PLIST}" -s - "${RUNNER_BUNDLE}" >/dev/null 2>&1 \
+  || test_fail "ad-hoc codesign with dyld env entitlements failed"
 
 test_step "install_runner" "install external runner with DYLD_INSERT_LIBRARIES"
 

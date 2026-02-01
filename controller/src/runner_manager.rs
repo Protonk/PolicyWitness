@@ -18,6 +18,7 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum RunnerKind {
+    Standard,
     Debuggable,
     Byoxpc,
     Machme,
@@ -26,6 +27,7 @@ pub enum RunnerKind {
 impl RunnerKind {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
+            "standard" => Some(RunnerKind::Standard),
             "debuggable" => Some(RunnerKind::Debuggable),
             "byoxpc" => Some(RunnerKind::Byoxpc),
             "machme" => Some(RunnerKind::Machme),
@@ -35,6 +37,7 @@ impl RunnerKind {
 
     pub fn as_str(&self) -> &'static str {
         match self {
+            RunnerKind::Standard => "standard",
             RunnerKind::Debuggable => "debuggable",
             RunnerKind::Byoxpc => "byoxpc",
             RunnerKind::Machme => "machme",

@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key>
-  <string>PWRunner</string>
+  <string>PWRunnerDebug</string>
   <key>CFBundleIdentifier</key>
-  <string>com.yourteam.policy-witness.PWRunner</string>
+  <string>com.yourteam.policy-witness.PWRunnerDebug</string>
   <key>CFBundleName</key>
-  <string>PWRunner</string>
+  <string>PWRunnerDebug</string>
   <key>CFBundlePackageType</key>
   <string>XPC!</string>
   <key>CFBundleShortVersionString</key>

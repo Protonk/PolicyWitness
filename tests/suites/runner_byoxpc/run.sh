@@ -29,6 +29,7 @@ unset PW_TEST_RUNNER_SERVICE
 unset PW_TEST_RUNNER_EXPECT_KIND
 
 run_test "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh"
+run_test "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh"
 
 RUNNER_ENV_PATH="${PW_TEST_OUT_DIR}/suites/runner_byoxpc/runner_install/artifacts/runner_env.json"
 export PW_TEST_RUNNER_ENV_PATH="${RUNNER_ENV_PATH}"

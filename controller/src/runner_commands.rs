@@ -127,8 +127,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 let value = args.get(idx + 1).ok_or_else(|| "missing value for --kind".to_string())?;
                 let kind = RunnerKind::parse(value.to_string_lossy().as_ref())
                     .ok_or_else(|| "invalid value for --kind".to_string())?;
-                if matches!(kind, RunnerKind::Debuggable) {
-                    return Err("runner install does not accept kind=debuggable".to_string());
+                if matches!(kind, RunnerKind::Debuggable | RunnerKind::Standard) {
+                    return Err(format!(
+                        "runner install does not accept kind={}",
+                        kind.as_str()
+                    ));
                 }
                 kind_override = Some(kind);
                 idx += 2;
@@ -224,8 +227,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 .or_else(|| bundle_info.as_ref().map(|info| info.bundle_id.clone()));
             (bundle_id, executable_path)
         }
-        RunnerKind::Debuggable => {
-            return Err("runner install does not accept kind=debuggable".to_string());
+        RunnerKind::Debuggable | RunnerKind::Standard => {
+            return Err(format!(
+                "runner install does not accept kind={}",
+                kind.as_str()
+            ));
         }
     };
 
@@ -239,8 +245,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let sign_target = match kind {
         RunnerKind::Byoxpc => bundle_path.clone(),
         RunnerKind::Machme => executable_path.clone(),
-        RunnerKind::Debuggable => {
-            return Err("runner install does not accept kind=debuggable".to_string());
+        RunnerKind::Debuggable | RunnerKind::Standard => {
+            return Err(format!(
+                "runner install does not accept kind={}",
+                kind.as_str()
+            ));
         }
     };
     if let Some(identity) = identity.as_ref() {
@@ -279,8 +288,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         }
         RunnerKind::Machme => service_name
             .unwrap_or_else(|| runner_manager::generate_service_name(&runner_id)),
-        RunnerKind::Debuggable => {
-            return Err("runner install does not accept kind=debuggable".to_string());
+        RunnerKind::Debuggable | RunnerKind::Standard => {
+            return Err(format!(
+                "runner install does not accept kind={}",
+                kind.as_str()
+            ));
         }
     };
 
@@ -487,8 +499,8 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
-        RunnerKind::Debuggable => {
-            return Err("external runners cannot be kind=debuggable".to_string());
+        RunnerKind::Debuggable | RunnerKind::Standard => {
+            return Err("external runners cannot be built-in kinds".to_string());
         }
     };
     let (_, runner_result) =

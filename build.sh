@@ -37,6 +37,7 @@ XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/PWRunnerService.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
+XPC_SERVICE_NAMES=("PWRunner" "PWRunnerDebug")
 
 # Host-side sandbox_check cross-check helper.
 SB_API_VALIDATOR_DIR="${ROOT_DIR}/controller/tools/sb_api_validator"
@@ -249,38 +250,40 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     "${XPC_RUNNER_API_FILE}" "${XPC_RUNNER_CLIENT_MAIN}"
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 
-  echo "==> Building embedded PWRunner XPC service"
-  svc_dir="${XPC_SERVICES_DIR}/PWRunner"
-  svc_info="${svc_dir}/Info.plist"
-  svc_main="${svc_dir}/main.swift"
-  svc_bundle="${APP_BUNDLE}/Contents/XPCServices/PWRunner.xpc"
-  if [[ ! -d "${svc_dir}" ]]; then
-    echo "ERROR: missing PWRunner service dir at ${svc_dir}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${svc_info}" ]] || [[ ! -f "${svc_main}" ]]; then
-    echo "ERROR: PWRunner service is missing Info.plist or main.swift" 1>&2
-    exit 2
-  fi
-  mkdir -p "${svc_bundle}/Contents/MacOS"
-  cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
-
+  echo "==> Building embedded PWRunner XPC services"
   shim_obj="${SWIFT_MODULE_CACHE}/PWSandboxCheckShim.o"
   /usr/bin/xcrun --sdk macosx clang -c "${XPC_RUNNER_SANDBOX_SHIM}" -o "${shim_obj}"
-  /usr/bin/xcrun --sdk macosx swiftc \
-    -module-cache-path "${SWIFT_MODULE_CACHE}" \
-    "${SWIFT_FLAGS[@]}" \
-    -o "${svc_bundle}/Contents/MacOS/PWRunner" \
-    "${XPC_RUNNER_API_FILE}" \
-    "${XPC_RUNNER_SANDBOX_LIB_FILE}" \
-    "${XPC_RUNNER_SANDBOX_APPLY_FILE}" \
-    "${XPC_RUNNER_INSTRUMENTATION_FILE}" \
-    "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
-    "${XPC_RUNNER_PATH_UTILS_FILE}" \
-    "${XPC_RUNNER_SIGNALS_FILE}" \
-    "${XPC_RUNNER_SERVICE_FILE}" \
-    "${svc_main}" "${shim_obj}"
-  chmod +x "${svc_bundle}/Contents/MacOS/PWRunner"
+  for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
+    svc_dir="${XPC_SERVICES_DIR}/${svc_name}"
+    svc_info="${svc_dir}/Info.plist"
+    svc_main="${svc_dir}/main.swift"
+    svc_bundle="${APP_BUNDLE}/Contents/XPCServices/${svc_name}.xpc"
+    if [[ ! -d "${svc_dir}" ]]; then
+      echo "ERROR: missing ${svc_name} service dir at ${svc_dir}" 1>&2
+      exit 2
+    fi
+    if [[ ! -f "${svc_info}" ]] || [[ ! -f "${svc_main}" ]]; then
+      echo "ERROR: ${svc_name} service is missing Info.plist or main.swift" 1>&2
+      exit 2
+    fi
+    mkdir -p "${svc_bundle}/Contents/MacOS"
+    cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
+
+    /usr/bin/xcrun --sdk macosx swiftc \
+      -module-cache-path "${SWIFT_MODULE_CACHE}" \
+      "${SWIFT_FLAGS[@]}" \
+      -o "${svc_bundle}/Contents/MacOS/${svc_name}" \
+      "${XPC_RUNNER_API_FILE}" \
+      "${XPC_RUNNER_SANDBOX_LIB_FILE}" \
+      "${XPC_RUNNER_SANDBOX_APPLY_FILE}" \
+      "${XPC_RUNNER_INSTRUMENTATION_FILE}" \
+      "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
+      "${XPC_RUNNER_PATH_UTILS_FILE}" \
+      "${XPC_RUNNER_SIGNALS_FILE}" \
+      "${XPC_RUNNER_SERVICE_FILE}" \
+      "${svc_main}" "${shim_obj}"
+    chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
+  done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
 fi
@@ -311,19 +314,21 @@ sign_macho "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
   echo "==> Codesigning embedded XPC services"
-  svc_entitlements="${XPC_SERVICES_DIR}/PWRunner/Entitlements.plist"
-  svc_bundle="${APP_BUNDLE}/Contents/XPCServices/PWRunner.xpc"
-  if [[ ! -d "${svc_bundle}" ]]; then
-    echo "ERROR: expected XPC service bundle at ${svc_bundle}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${svc_entitlements}" ]]; then
-    echo "ERROR: PWRunner service is missing Entitlements.plist at ${svc_entitlements}" 1>&2
-    exit 2
-  fi
-  codesign --force --options runtime --timestamp \
-    --entitlements "${svc_entitlements}" \
-    -s "${IDENTITY}" "${svc_bundle}"
+  for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
+    svc_entitlements="${XPC_SERVICES_DIR}/${svc_name}/Entitlements.plist"
+    svc_bundle="${APP_BUNDLE}/Contents/XPCServices/${svc_name}.xpc"
+    if [[ ! -d "${svc_bundle}" ]]; then
+      echo "ERROR: expected XPC service bundle at ${svc_bundle}" 1>&2
+      exit 2
+    fi
+    if [[ ! -f "${svc_entitlements}" ]]; then
+      echo "ERROR: ${svc_name} service is missing Entitlements.plist at ${svc_entitlements}" 1>&2
+      exit 2
+    fi
+    codesign --force --options runtime --timestamp \
+      --entitlements "${svc_entitlements}" \
+      -s "${IDENTITY}" "${svc_bundle}"
+  done
 fi
 
 # Evidence generation must run after the binaries are in place and signed.

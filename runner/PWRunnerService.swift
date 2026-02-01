@@ -1,8 +1,88 @@
 import Foundation
 import Darwin
+import Security
 
 private func bundleString(_ key: String) -> String? {
     Bundle.main.object(forInfoDictionaryKey: key) as? String
+}
+
+private struct PWRunnerSigningInfo {
+    let teamID: String?
+    let identifier: String?
+}
+
+private func signingInfo(for code: SecStaticCode) -> PWRunnerSigningInfo {
+    var infoRef: CFDictionary?
+    let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+    let status = SecCodeCopySigningInformation(code, flags, &infoRef)
+    guard status == errSecSuccess, let info = infoRef as? [String: Any] else {
+        return PWRunnerSigningInfo(teamID: nil, identifier: nil)
+    }
+    let teamID = info[kSecCodeInfoTeamIdentifier as String] as? String
+    let identifier = info[kSecCodeInfoIdentifier as String] as? String
+    return PWRunnerSigningInfo(teamID: teamID, identifier: identifier)
+}
+
+private func staticCode(from code: SecCode) -> SecStaticCode? {
+    var staticCode: SecStaticCode?
+    guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess else {
+        return nil
+    }
+    return staticCode
+}
+
+private func requireSignedCaller() -> Bool {
+    (Bundle.main.object(forInfoDictionaryKey: "PWRunnerRequireSignedCaller") as? Bool) ?? false
+}
+
+private func allowedCallerIdentifiers() -> Set<String>? {
+    guard let list = Bundle.main.object(forInfoDictionaryKey: "PWRunnerAllowedIdentifiers") as? [String] else {
+        return nil
+    }
+    let trimmed = list
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    return trimmed.isEmpty ? nil : Set(trimmed)
+}
+
+private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
+    if !requireSignedCaller() {
+        return true
+    }
+
+    let pid = connection.processIdentifier
+    let attrs = [kSecGuestAttributePid as String: NSNumber(value: pid)] as CFDictionary
+
+    var callerCode: SecCode?
+    guard SecCodeCopyGuestWithAttributes(nil, attrs, [], &callerCode) == errSecSuccess,
+          let caller = callerCode,
+          let callerStatic = staticCode(from: caller) else {
+        return false
+    }
+
+    var selfCode: SecCode?
+    guard SecCodeCopySelf([], &selfCode) == errSecSuccess,
+          let selfCode,
+          let selfStatic = staticCode(from: selfCode) else {
+        return false
+    }
+
+    let callerInfo = signingInfo(for: callerStatic)
+    let selfInfo = signingInfo(for: selfStatic)
+    guard let callerTeam = callerInfo.teamID,
+          let selfTeam = selfInfo.teamID,
+          callerTeam == selfTeam else {
+        return false
+    }
+
+    if let allowlist = allowedCallerIdentifiers() {
+        guard let identifier = callerInfo.identifier,
+              allowlist.contains(identifier) else {
+            return false
+        }
+    }
+
+    return true
 }
 
 // PWRunnerService executes one specimen per process. The flow is intentionally
@@ -184,6 +264,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
 
 public final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
     public func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
+        if !authorizedCaller(newConnection) {
+            return false
+        }
         let exported = PWRunnerService()
         newConnection.exportedInterface = NSXPCInterface(with: PWRunnerProtocol.self)
         newConnection.exportedObject = exported

@@ -47,7 +47,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
 policy-witness runner <command> [options]
 ```
 
@@ -109,7 +109,8 @@ Optional:
 If `required_entitlements` is present, the controller enforces a **superset**
 check against the runner’s recorded entitlements before dispatch.
 
-If `runner.mode` is present, it must match the registry kind (byoxpc or machme).
+Built-in modes are `standard` (default) and `debuggable`.
+If `runner.mode` is present and an external runner is selected, it must match the registry kind (byoxpc or machme).
 
 ### `runner` (external runner manager)
 

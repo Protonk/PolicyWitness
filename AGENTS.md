@@ -9,7 +9,7 @@ PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by
 Pick what you’re changing:
 
 - **CLI behavior / JSON contract** → `controller/README.md`, `controller/src/main.rs`
-- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/services/PWRunner/`
+- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/services/PWRunner/`, `runner/services/PWRunnerDebug/`
 - **Runner API types** → `runner/PWRunnerAPI.swift`
 - **Runner client (NSXPCConnection wrapper)** → `runner/runner-client/`
 - **Build + signing** → `build.sh`, `SIGNING.md`
@@ -33,7 +33,8 @@ The `.app` layout is a contract: tests and evidence generation assume these path
 - `PolicyWitness.app/Contents/MacOS/pw-runner-client` (Swift client that talks to `PWRunner.xpc`)
 - `PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
 - `PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
-- `PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner; one specimen per instance)
+- `PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one specimen per instance)
+- `PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one specimen per instance)
 - `PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
 - `PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
 

@@ -19,8 +19,9 @@ Each step may include multiple evidence channels:
 
 ## Runner modes
 
-PolicyWitness supports three runner modes. All three return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
+PolicyWitness supports four runner modes. All four return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
 
+- `standard`: built-in XPC service embedded in `PolicyWitness.app`; no install step. Default when no runner is specified.
 - `debuggable`: built-in XPC service embedded in `PolicyWitness.app`; no install step.
 - `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`.
 - `machme`: user-supplied binary registered as a Mach service with `policy-witness runner install --kind machme`.
@@ -29,7 +30,7 @@ PolicyWitness treats entitlements as a first-class input alongside SBPL. Registe
 
 ### Instrumentation
 
-Instrumentation ports are part of the debuggable runner, allowing closer inspection.
+Instrumentation ports are part of the debuggable runner (or external runners with matching entitlements), allowing closer inspection.
 
 - `dyld_env`: report expected `DYLD_*` env vars (observation only); to set them, use an external runner installed with `--env KEY=VALUE`.
 - `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`)
@@ -44,7 +45,8 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, debuggable mode; one specimen per process)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, standard mode; one specimen per process)
+  - `Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable mode; one specimen per process)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 ## Where To Learn

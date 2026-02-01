@@ -31,7 +31,9 @@ PolicyWitness is **specimen-first**:
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
 
 - `runner/services/PWRunner/`
-  - `Info.plist`, `Entitlements.plist`, `main.swift` for the runner XPC service bundle.
+  - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard runner XPC service bundle.
+- `runner/services/PWRunnerDebug/`
+  - `Info.plist`, `Entitlements.plist`, `main.swift` for the debuggable runner XPC service bundle.
 
 ## Specimen inputs
 
@@ -55,7 +57,22 @@ Each probe step reports both a `sandbox_check` and an `attempt` result:
 
 ## Entitlements and sandboxing (important distinction)
 
-The runner’s **codesign entitlements** are fixed hardened-runtime exceptions (debug attach / dynamic loading / dyld env / executable memory). They enable inspection and controlled extensibility, but they do **not** make sandbox policy “dynamic”.
+The standard built-in runner ships with minimal entitlements. The debuggable
+built-in runner (and some external runners) include hardened-runtime exceptions
+for inspection and controlled extensibility (debug attach / dynamic loading /
+dyld env / executable memory). These do **not** make sandbox policy “dynamic”.
+
+## Caller authorization (built-in only)
+
+Built-in runners can require a signed caller before accepting XPC connections.
+The check is controlled via Info.plist keys:
+
+- `PWRunnerRequireSignedCaller` (bool)
+- `PWRunnerAllowedIdentifiers` (optional array of code signing identifiers)
+
+When enabled, the runner compares the caller’s Team ID to its own Team ID and
+optionally enforces the allowlist. External runners are unaffected unless they
+opt in by adding the same keys.
 
 Sandbox policy variation is driven by the specimen itself:
 

@@ -7,7 +7,8 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::plist::plist_key_string;
 
-pub const PW_RUNNER_SERVICE_DIR: &str = "PWRunner";
+pub const PW_RUNNER_STANDARD_SERVICE_DIR: &str = "PWRunner";
+pub const PW_RUNNER_DEBUG_SERVICE_DIR: &str = "PWRunnerDebug";
 
 #[derive(Clone)]
 pub struct PWRunnerBundleInfo {
@@ -56,11 +57,14 @@ pub fn resolve_contents_macos_tool(tool_name: &str) -> Result<PathBuf, String> {
     ))
 }
 
-pub fn resolve_pw_runner_bundle_info(app_root: &Path) -> Result<PWRunnerBundleInfo, String> {
+pub fn resolve_pw_runner_bundle_info(
+    app_root: &Path,
+    service_dir: &str,
+) -> Result<PWRunnerBundleInfo, String> {
     let plist = app_root
         .join("Contents")
         .join("XPCServices")
-        .join(format!("{PW_RUNNER_SERVICE_DIR}.xpc"))
+        .join(format!("{service_dir}.xpc"))
         .join("Contents")
         .join("Info.plist");
     if !plist.exists() {
