@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 OUT_PATH=""
@@ -55,7 +56,7 @@ fi
 
 mkdir -p "$(dirname "${OUT_PATH}")"
 
-APP_PATH="${ROOT_DIR}/PolicyWitness.app"
+APP_PATH="${PW_APP_DIR}"
 
 step "codesign_inspection" "inspect codesign metadata"
 

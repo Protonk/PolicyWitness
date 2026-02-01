@@ -19,7 +19,7 @@ Preferred coverage options (in roughly increasing integration cost):
 
 - Rust unit tests for pure logic
 - Rust integration tests in `controller/integration/`
-- Smoke scripts in `tests/suites/smoke/` against a built `PolicyWitness.app`
+- Smoke scripts in `tests/suites/smoke/` against a built `dist/PolicyWitness.app`
 
 ### Write Swift like you want it trivially reverse-engineered
 

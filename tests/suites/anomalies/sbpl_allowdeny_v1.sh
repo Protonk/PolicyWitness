@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 export PW_TEST_QUIET=1
@@ -9,7 +10,7 @@ export PW_TEST_QUIET=1
 PW_TEST_SUITE="anomalies"
 PW_TEST_ID="sbpl_allowdeny_v1"
 
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 SBPL_FIXTURE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/profile.sbpl"
 SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/runner_smoke/v1/specimen.template.json"
 

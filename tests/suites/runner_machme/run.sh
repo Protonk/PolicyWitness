@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 
 if [[ -z "${PW_TEST_OUT_DIR:-}" ]]; then
   export PW_TEST_OUT_DIR="${ROOT_DIR}/tests/out"
 fi
 
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 export PW_BIN
 
 failures=0

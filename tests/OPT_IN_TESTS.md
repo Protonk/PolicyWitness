@@ -61,7 +61,7 @@ Optional standard overrides:
 - **Purpose:** Run smoke + blackbox suites through a BYOXPC runner.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
 - **When to run:** After changing BYOXPC install/verify behavior or runner-mode selection.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
 
@@ -71,7 +71,7 @@ Optional standard overrides:
 - **Purpose:** Run smoke + blackbox suites through a MachMe runner.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
 - **When to run:** After changing MachMe install/verify behavior or runner-mode selection.
 - **Artifacts:** `tests/out/suites/runner_machme/*/artifacts/*`
 
@@ -85,7 +85,7 @@ Optional standard overrides:
   - Channel C unified-log correlation via `sandbox-log-observer`.
 - **Opt-in reason:** Requires Unified Logging access and an unsandboxed caller
   (in sandboxed harnesses, XPC lookup and log capture can be blocked).
-- **Resource dependency:** `PolicyWitness.app` built + `log show` access.
+- **Resource dependency:** `dist/PolicyWitness.app` built + `log show` access.
 - **When to run:** After changing `runner/PWRunner*` runner behavior or `policy-witness run`.
 - **Artifacts:** `tests/out/suites/runner_debuggable/pw_runner_specimen/artifacts/*`
 
@@ -95,7 +95,7 @@ Optional standard overrides:
 - **Purpose:** Validate the `dylib_load` instrumentation port by building a tiny
   dylib, loading it pre-sandbox, and verifying the symbol runs.
 - **Opt-in reason:** Requires a compiler toolchain and dynamic library loading.
-- **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
+- **Resource dependency:** `dist/PolicyWitness.app` built + Xcode Command Line Tools.
 - **When to run:** After changing instrumentation port handling or runner entitlements.
 - **Artifacts:** `tests/out/suites/runner_debuggable/runner_instrumentation_dylib/artifacts/*`
 
@@ -105,7 +105,7 @@ Optional standard overrides:
 - **Purpose:** Validate BYOXPC runner env injection and the `dyld_env` port.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `PolicyWitness.app` built + Xcode Command Line Tools.
+- **Resource dependency:** `dist/PolicyWitness.app` built + Xcode Command Line Tools.
 - **When to run:** After changing `policy-witness runner install` or
   instrumentation env handling.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/runner_instrumentation_dyld_env/artifacts/*`
@@ -117,7 +117,7 @@ Optional standard overrides:
   an ad-hoc caller (auth gating is built-in only).
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `PolicyWitness.app` built + GUI session.
+- **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
 - **When to run:** After changing runner caller-authorization logic.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/runner_auth_external/artifacts/*`
 

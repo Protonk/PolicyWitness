@@ -28,7 +28,7 @@ pub fn validate_tool_name(tool_name: &str) -> Result<(), String> {
 
 pub fn app_root_from_current_exe() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| format!("current_exe() failed: {e}"))?;
-    // Expected layout: PolicyWitness.app/Contents/MacOS/policy-witness
+    // Expected layout: dist/PolicyWitness.app/Contents/MacOS/policy-witness
     let contents_dir = exe
         .parent()
         .and_then(|p| p.parent())

@@ -11,13 +11,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-runner_debuggable}"
 PW_TEST_ID="pw_runner_specimen"
 
 SPECIMEN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_runner/specimen_file_read_deny.json"
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "run a deny specimen and require sandbox-log correlation"

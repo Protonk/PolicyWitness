@@ -12,7 +12,7 @@ Tiers:
 
 | Suite | Tier | Primary claim | Requires | Notes / artifacts |
 | --- | --- | --- | --- | --- |
-| `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `PolicyWitness.app` | `tests/out/suites/preflight/.../preflight.json` |
+| `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `dist/PolicyWitness.app` | `tests/out/suites/preflight/.../preflight.json` |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | `tests/out/suites/unit/.../cargo-test-bins.log` |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | Uses fixtures under `tests/fixtures/pw_runner/` |
 | `runner_debuggable` | Baseline | Smoke + blackbox coverage through the built-in debuggable runner | Built app + XPC | Uses shared smoke/blackbox scripts |
@@ -26,8 +26,8 @@ Tiers:
 - `preflight`: no expected skips; missing app or codesign issues should fail.
 - `unit`: no expected skips; missing toolchain should fail.
 - `integration`: no expected skips; missing app should fail.
-- `runner_debuggable`: skip when `PolicyWitness.app` is missing or unbuilt; blackbox cases may skip for host `sandbox_check` anomalies.
+- `runner_debuggable`: skip when `dist/PolicyWitness.app` is missing or unbuilt; blackbox cases may skip for host `sandbox_check` anomalies.
 - `runner_byoxpc`: skip when launchd bootstrap is unavailable or sandboxed; blackbox cases may skip for host `sandbox_check` anomalies.
 - `runner_machme`: skip when launchd bootstrap is unavailable or sandboxed; blackbox cases may skip for host `sandbox_check` anomalies.
-- `anomalies`: skip when `PolicyWitness.app` is missing; cross-check tooling unavailable.
+- `anomalies`: skip when `dist/PolicyWitness.app` is missing; cross-check tooling unavailable.
 - `opt_in`: skip when required resources are unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture).

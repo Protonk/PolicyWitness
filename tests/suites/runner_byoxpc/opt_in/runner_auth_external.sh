@@ -2,14 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-runner_byoxpc}"
 PW_TEST_ID="runner_auth_external"
 
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 REQUEST_JSON="${ROOT_DIR}/tests/fixtures/pw_runner/specimen_file_read_deny.json"
-SRC_BUNDLE="${ROOT_DIR}/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc"
+SRC_BUNDLE="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "preflight" "install BYOXPC runner without caller auth keys"

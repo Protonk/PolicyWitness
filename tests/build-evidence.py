@@ -2,8 +2,8 @@
 """
 build-evidence.py
 
-Generates a build-time evidence BOM for `PolicyWitness.app` under:
-  PolicyWitness.app/Contents/Resources/Evidence/
+Generates a build-time evidence BOM for a built PolicyWitness.app bundle, typically under:
+  dist/PolicyWitness.app/Contents/Resources/Evidence/
 
 This repo is now specimen-first: sandbox policy variation is driven by the
 `PWRunner` XPC service applying SBPL at runtime, not by proliferating different
@@ -193,8 +193,8 @@ def utc_now() -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build Evidence BOM for PolicyWitness.app")
-    ap.add_argument("--app-bundle", required=True, help="Path to PolicyWitness.app")
+    ap = argparse.ArgumentParser(description="Build Evidence BOM for a PolicyWitness.app bundle")
+    ap.add_argument("--app-bundle", required=True, help="Path to a PolicyWitness.app bundle")
     ap.add_argument("--app-entitlements", required=True, help="Path to main app entitlements plist")
     args = ap.parse_args()
 

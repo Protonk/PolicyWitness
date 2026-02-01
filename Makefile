@@ -2,6 +2,7 @@
 
 NOTARY_KEYCHAIN_PROFILE ?=
 YOLO ?=
+DIST_DIR ?= dist
 
 build:
 	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
@@ -10,7 +11,7 @@ build:
 		echo "example: make build YOLO=1"; \
 		exit 2; \
 	fi
-	IDENTITY="$(IDENTITY)" YOLO="$(YOLO)" ./build.sh
+	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" YOLO="$(YOLO)" ./build.sh
 
 clean:
 	rm -rf tests/out/*
@@ -32,13 +33,13 @@ notarize:
 		exit 2; \
 	fi
 	@$(MAKE) build
-	@echo "==> [notarize] submit PolicyWitness.zip"
-	@xcrun notarytool submit "PolicyWitness.zip" --keychain-profile "$(NOTARY_KEYCHAIN_PROFILE)" --wait
-	@echo "==> [notarize] staple PolicyWitness.app"
-	@xcrun stapler staple "PolicyWitness.app"
-	@echo "==> [notarize] validate PolicyWitness.app"
-	@xcrun stapler validate -v "PolicyWitness.app"
-	@spctl -a -vv --type execute "PolicyWitness.app"
+	@echo "==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip"
+	@xcrun notarytool submit "$(DIST_DIR)/PolicyWitness.zip" --keychain-profile "$(NOTARY_KEYCHAIN_PROFILE)" --wait
+	@echo "==> [notarize] staple $(DIST_DIR)/PolicyWitness.app"
+	@xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"
+	@echo "==> [notarize] validate $(DIST_DIR)/PolicyWitness.app"
+	@xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"
+	@spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"
 	@echo "==> [notarize] re-zip stapled app"
-	@rm -f "PolicyWitness.zip"
-	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "PolicyWitness.app" "PolicyWitness.zip"
+	@rm -f "$(DIST_DIR)/PolicyWitness.zip"
+	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"

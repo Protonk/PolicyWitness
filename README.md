@@ -21,8 +21,8 @@ Each step may include multiple evidence channels:
 
 PolicyWitness supports four runner modes. All four return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
 
-- `standard`: built-in XPC service embedded in `PolicyWitness.app`; no install step. Default when no runner is specified.
-- `debuggable`: built-in XPC service embedded in `PolicyWitness.app`; no install step.
+- `standard`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step. Default when no runner is specified.
+- `debuggable`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step.
 - `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`.
 - `machme`: user-supplied binary registered as a Mach service with `policy-witness runner install --kind machme`.
 
@@ -41,7 +41,7 @@ Instrumentation ports are part of the debuggable runner (or external runners wit
 
 This repo builds a single distributable app bundle:
 
-- `PolicyWitness.app`
+- `dist/PolicyWitness.app`
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)

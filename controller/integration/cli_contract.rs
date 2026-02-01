@@ -1,6 +1,6 @@
 //! CLI contract integration tests for the controller binary.
 //!
-//! These tests run the built PolicyWitness.app to validate the end-to-end
+//! These tests run the built dist/PolicyWitness.app to validate the end-to-end
 //! envelope shape and instrumentation injection behavior. They are gated behind
 //! PW_INTEGRATION=1 so `cargo test --tests` can run without a built app.
 
@@ -25,6 +25,7 @@ fn pw_bin_path() -> PathBuf {
         return PathBuf::from(val);
     }
     repo_root()
+        .join("dist")
         .join("PolicyWitness.app")
         .join("Contents")
         .join("MacOS")
@@ -36,7 +37,7 @@ fn require_pw_bin() -> PathBuf {
     if !path.exists() {
         // The integration suite assumes a built app bundle is available.
         panic!(
-            "PolicyWitness.app not found at {} (build the app or set PW_BIN_PATH)",
+            "dist/PolicyWitness.app not found at {} (build the app or set PW_BIN_PATH)",
             path.display()
         );
     }

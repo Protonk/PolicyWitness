@@ -1,6 +1,6 @@
 # `runner/` (Swift runner: specimen-first sandbox witness)
 
-This directory contains the Swift implementation of the **ephemeral sandbox runner** shipped inside `PolicyWitness.app`.
+This directory contains the Swift implementation of the **ephemeral sandbox runner** shipped inside `dist/PolicyWitness.app`.
 
 PolicyWitness is **specimen-first**:
 
@@ -27,7 +27,7 @@ PolicyWitness is **specimen-first**:
 - `runner/PWRunnerService.swift`
   - Orchestrates the run flow (decode → instrumentation → sandbox apply → probes → reply).
 
-- `runner/runner-client/main.swift` → builds `PolicyWitness.app/Contents/MacOS/pw-runner-client`
+- `runner/runner-client/main.swift` → builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
 
 - `runner/services/PWRunner/`

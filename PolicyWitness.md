@@ -34,7 +34,7 @@ If no runner is specified, PolicyWitness uses the built-in standard runner.
 Set a convenience variable:
 
 ```sh
-PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
+PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
 ```
 
 Create a specimen:
@@ -257,14 +257,14 @@ These sequences match the test suites and are the recommended starting point.
 BYOXPC (user scope):
 
 ```sh
-PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
+PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
 ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
 BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
 
 mkdir -p "$(dirname "$BYO")"
 rm -rf "$BYO"
-cp -R PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc "$BYO"
+cp -R dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc "$BYO"
 
 $PW runner install --kind byoxpc \
   --bundle "$BYO" \
@@ -279,10 +279,10 @@ $PW runner verify --service-name com.yourteam.policy-witness.PWRunnerDebug --tim
 MachMe (user scope):
 
 ```sh
-PW="$PWD/PolicyWitness.app/Contents/MacOS/policy-witness"
+PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
 ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
-BIN="$PWD/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc/Contents/MacOS/PWRunnerDebug"
+BIN="$PWD/dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc/Contents/MacOS/PWRunnerDebug"
 
 $PW runner install --kind machme \
   --bundle "$BIN" \

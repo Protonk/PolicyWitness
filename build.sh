@@ -11,13 +11,14 @@ set -euo pipefail
 #   SWIFT_MODULE_CACHE  Writable path for Swift module cache (default: .tmp/swift-module-cache).
 #
 # Outputs:
-#   PolicyWitness.app
-#   PolicyWitness.zip (ready for notarization)
+#   dist/PolicyWitness.app
+#   dist/PolicyWitness.zip (ready for notarization)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="PolicyWitness"
-APP_BUNDLE="${ROOT_DIR}/${APP_NAME}.app"
-ZIP_NAME="${ROOT_DIR}/${APP_NAME}.zip"
+DIST_DIR="${DIST_DIR:-${ROOT_DIR}/dist}"
+APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
+ZIP_NAME="${DIST_DIR}/${APP_NAME}.zip"
 
 # Repo paths.
 RUNNER_MANIFEST="${ROOT_DIR}/controller/Cargo.toml"
@@ -171,6 +172,7 @@ fi
 # ---- Assemble app bundle ---------------------------------------------------
 
 echo "==> Assembling app bundle: ${APP_BUNDLE}"
+mkdir -p "${DIST_DIR}"
 rm -rf "${APP_BUNDLE}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 

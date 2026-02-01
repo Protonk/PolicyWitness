@@ -37,14 +37,14 @@ When you add a new embedded helper under `Contents/MacOS`, add an explicit signi
 
 During the build, `tests/build-evidence.py` generates:
 
-- `PolicyWitness.app/Contents/Resources/Evidence/manifest.json`
-- `PolicyWitness.app/Contents/Resources/Evidence/symbols.json`
+- `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json`
+- `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json`
 
 These are derived from the **actual signed binaries on disk** (hashes and entitlements extracted via `codesign -d --entitlements`), and are intended to make “what shipped” auditable.
 
 ## Notarization (zip artifact)
 
-The build produces `PolicyWitness.zip` suitable for notarization submission. The
+The build produces `dist/PolicyWitness.zip` suitable for notarization submission. The
 required order is: sign and zip, submit the zip to notarytool, then staple the
 app bundle. This is what Gatekeeper expects.
 
@@ -61,9 +61,9 @@ make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile YOLO=1
 Manual equivalent:
 
 ```sh
-xcrun notarytool submit "PolicyWitness.zip" --keychain-profile "dev-profile" --wait
-xcrun stapler staple "PolicyWitness.app"
-xcrun stapler validate -v "PolicyWitness.app"
-spctl -a -vv --type execute "PolicyWitness.app"
-ditto -c -k --sequesterRsrc --keepParent "PolicyWitness.app" "PolicyWitness.zip"
+xcrun notarytool submit "dist/PolicyWitness.zip" --keychain-profile "dev-profile" --wait
+xcrun stapler staple "dist/PolicyWitness.app"
+xcrun stapler validate -v "dist/PolicyWitness.app"
+spctl -a -vv --type execute "dist/PolicyWitness.app"
+ditto -c -k --sequesterRsrc --keepParent "dist/PolicyWitness.app" "dist/PolicyWitness.zip"
 ```

@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-blackbox_e2e}"
 PW_TEST_ID="BBX-002"
 
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 PROFILE_SBPL="${ROOT_DIR}/tests/fixtures/blackbox_e2e/BBX-002/profile.sbpl"
 SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/blackbox_e2e/BBX-002/specimen.template.json"
 EXPECTED_JSON="${ROOT_DIR}/tests/fixtures/blackbox_e2e/BBX-002/expected.json"

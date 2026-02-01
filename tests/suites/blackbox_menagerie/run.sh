@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-blackbox_menagerie}"
@@ -9,7 +10,7 @@ PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-blackbox_menagerie}"
 MANIFEST="${ROOT_DIR}/tests/fixtures/blackbox_menagerie/cases/core.json"
 FIXTURES_ROOT="${ROOT_DIR}/tests/fixtures/blackbox_menagerie"
 RUN_CASE="${ROOT_DIR}/tests/suites/blackbox_menagerie/run_case.py"
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 if [[ ! -f "${MANIFEST}" ]]; then
   echo "missing manifest: ${MANIFEST}" 1>&2

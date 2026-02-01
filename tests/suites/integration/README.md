@@ -4,7 +4,7 @@ Rust integration tests that exercise the CLI contract against a built app.
 
 ## Invariants
 
-- Uses `PolicyWitness.app/Contents/MacOS/policy-witness` to run specimens.
+- Uses `dist/PolicyWitness.app/Contents/MacOS/policy-witness` to run specimens.
 - Validates the controller envelope and runner result shape.
 - Exercises instrumentation injection and duplicate protection.
 - Test source lives at `controller/integration/cli_contract.rs`.

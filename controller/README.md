@@ -2,7 +2,7 @@
 
 This is developer documentation for the Rust code in `controller/`. It builds the command-line controller that ships as:
 
-- `PolicyWitness.app/Contents/MacOS/policy-witness`
+- `dist/PolicyWitness.app/Contents/MacOS/policy-witness`
 
 PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run.
 
@@ -35,11 +35,11 @@ Support modules:
 
 Standalone helper tools (embedded into the `.app`):
 
-- `controller/src/bin/sandbox-log-observer.rs` → `PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
+- `controller/src/bin/sandbox-log-observer.rs` → `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
   - Captures unified-log sandbox deny lines by PID + process name
-- `controller/src/bin/sbpl-preflight.rs` → `PolicyWitness.app/Contents/MacOS/sbpl-preflight`
+- `controller/src/bin/sbpl-preflight.rs` → `dist/PolicyWitness.app/Contents/MacOS/sbpl-preflight`
   - Compiles SBPL policies and reports compiler errors before the runner launches
-- `controller/tools/sb_api_validator/sb_api_validator` → `PolicyWitness.app/Contents/MacOS/sb_api_validator`
+- `controller/tools/sb_api_validator/sb_api_validator` → `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator`
   - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
 
 ## CLI surface (contract)
@@ -141,6 +141,6 @@ Notes:
 
 The launcher does not speak NSXPC directly. It drives the Swift client helper embedded in the app bundle:
 
-- `PolicyWitness.app/Contents/MacOS/pw-runner-client`
+- `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`
 
 The Swift client is responsible for `NSXPCConnection` wiring; the Rust launcher owns run orchestration and evidence capture.

@@ -2,13 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-runner_machme}"
 PW_TEST_ID="runner_install"
 
-PW_BIN="${PW_BIN:-${ROOT_DIR}/PolicyWitness.app/Contents/MacOS/policy-witness}"
-RUNNER_BIN="${ROOT_DIR}/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
+RUNNER_BIN="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "preflight" "install MachMe runner"

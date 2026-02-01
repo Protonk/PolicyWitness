@@ -2,7 +2,7 @@
 
 This directory contains the repository test harness. The test suite is organized to answer three questions:
 
-1. Does the built `PolicyWitness.app` basically work end-to-end?
+1. Does the built `dist/PolicyWitness.app` basically work end-to-end?
 2. Did we break a contract (CLI shape, evidence artifacts, JSON output schema)?
 3. Can we reproduce known or suspected sandbox anomalies?
 
@@ -77,7 +77,7 @@ see `tests/suites/<suite>/README.md`.
 - `anomalies`: structured reproductions of alleged system bugs (tests pass when the anomaly is reproduced)
 
 Shared runners (invoked by runner suites, still runnable directly):
-- `smoke`: end-to-end scripts against a built `PolicyWitness.app`
+- `smoke`: end-to-end scripts against a built `dist/PolicyWitness.app`
 - `blackbox_menagerie`: SBPL end-to-end cases copied from PAWL evidence
 - `blackbox_e2e`: end-to-end runner black-box cases (specimen in, JSON out, strict evidence checks)
 

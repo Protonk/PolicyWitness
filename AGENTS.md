@@ -21,22 +21,22 @@ Pick what you’re changing:
 ## Vocabulary (repo-anchored)
 
 - **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
-- **Controller**: the host-side orchestrator (`PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
-- **Runner**: the ephemeral XPC service (`PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`) that applies one sandbox policy, executes the probe plan, returns JSON, and exits.
+- **Controller**: the host-side orchestrator (`dist/PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
+- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`) that applies one sandbox policy, executes the probe plan, returns JSON, and exits.
 - **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
 
 ## What Ships (bundle layout contract)
 
 The `.app` layout is a contract: tests and evidence generation assume these paths.
 
-- `PolicyWitness.app/Contents/MacOS/policy-witness` (Rust controller / orchestrator)
-- `PolicyWitness.app/Contents/MacOS/pw-runner-client` (Swift client that talks to `PWRunner.xpc`)
-- `PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
-- `PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
-- `PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one specimen per instance)
-- `PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one specimen per instance)
-- `PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
-- `PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
+- `dist/PolicyWitness.app/Contents/MacOS/policy-witness` (Rust controller / orchestrator)
+- `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client` (Swift client that talks to `PWRunner.xpc`)
+- `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
+- `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
+- `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one specimen per instance)
+- `dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one specimen per instance)
+- `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
+- `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
 
 If you rename/move anything here, expect downstream breakage (build script, evidence, tests, tooling).
 
@@ -65,7 +65,7 @@ Documentation should be stateless: describe current behavior without historical 
   - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see `SIGNING.md`).
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun.
 - If you add a helper under `Contents/MacOS`, update the `build.sh` signing list; notarization fails if any embedded tool is left ad hoc-signed.
-- Run: `PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
+- Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
 Build knobs worth knowing (debugging/iteration):
 
