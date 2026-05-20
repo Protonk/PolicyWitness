@@ -83,10 +83,21 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     let filterValue = check.filter.value
     let pid = Int(getpid())
     var effectiveFilterValue = filterValue
+    var pathDiagnostics: PWRunnerPathDiagnostics? = nil
 
     if filterKind == PWRunnerWire.sandboxFilterPath, let value = filterValue, !value.isEmpty {
         let canonical = canonicalizePath(value)
         effectiveFilterValue = canonical.normalized
+        // Diagnostics only — sandbox_check still gets the raw filterValue
+        // below. This block lets a caller see the kernel-side forms libsandbox
+        // could have been matching against when a `(subpath ...)` rule
+        // surprisingly denied a path that looked like it should match.
+        pathDiagnostics = PWRunnerPathDiagnostics(
+            input: value,
+            realpath_resolved: canonical.resolved,
+            firmlink_resolved: firmlinkResolved(canonical.resolved ?? value),
+            data_volume_form: dataVolumeForm(canonical.resolved ?? value)
+        )
     }
 
     let (filterTypeId, argValue): (Int32, String?) = {
@@ -140,7 +151,8 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         effective_filter_value: effectiveFilterValue,
         filter_type_id: Int(filterTypeId),
         errno: errNoOut,
-        error: errMsg
+        error: errMsg,
+        path_diagnostics: pathDiagnostics
     )
 }
 

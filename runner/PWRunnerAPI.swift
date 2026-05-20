@@ -275,6 +275,34 @@ public struct PWRunnerInstrumentationDyldEnvReport: Codable {
     }
 }
 
+// Candidate kernel-side forms of a path-filter argument. Diagnostic only —
+// the runner passes the raw filter_value to sandbox_check; this block lets a
+// caller see which other forms of the same path libsandbox could have been
+// comparing against when matching a `(subpath ...)` rule.
+//
+// Introduced in PWRunnerRunResult.schema_version = 2. Old controllers reading
+// new runner output ignore this field gracefully; new controllers reading old
+// runner output see nil and should branch on schema_version to know whether
+// the absence is "unsupported" or "no path-filter steps".
+public struct PWRunnerPathDiagnostics: Codable {
+    public var input: String
+    public var realpath_resolved: String?
+    public var firmlink_resolved: String?
+    public var data_volume_form: String?
+
+    public init(
+        input: String,
+        realpath_resolved: String? = nil,
+        firmlink_resolved: String? = nil,
+        data_volume_form: String? = nil
+    ) {
+        self.input = input
+        self.realpath_resolved = realpath_resolved
+        self.firmlink_resolved = firmlink_resolved
+        self.data_volume_form = data_volume_form
+    }
+}
+
 public struct PWRunnerSandboxCheckResult: Codable {
     public var rc: Int
     public var outcome: String
@@ -287,6 +315,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
     public var filter_type_id: Int?
     public var errno: Int?
     public var error: String?
+    public var path_diagnostics: PWRunnerPathDiagnostics?
 
     public init(
         rc: Int,
@@ -299,7 +328,8 @@ public struct PWRunnerSandboxCheckResult: Codable {
         effective_filter_value: String? = nil,
         filter_type_id: Int? = nil,
         errno: Int? = nil,
-        error: String? = nil
+        error: String? = nil,
+        path_diagnostics: PWRunnerPathDiagnostics? = nil
     ) {
         self.rc = rc
         self.outcome = outcome
@@ -312,6 +342,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
         self.filter_type_id = filter_type_id
         self.errno = errno
         self.error = error
+        self.path_diagnostics = path_diagnostics
     }
 
     enum CodingKeys: String, CodingKey {
@@ -326,6 +357,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
         case filter_type_id
         case errno
         case error
+        case path_diagnostics
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -361,6 +393,12 @@ public struct PWRunnerSandboxCheckResult: Codable {
         } else {
             try container.encodeNil(forKey: .error)
         }
+        // Omit the key entirely on non-path filters so the output stays minimal
+        // and consumers can branch on `path_diagnostics != nil` rather than
+        // inspecting a null payload.
+        if let path_diagnostics {
+            try container.encode(path_diagnostics, forKey: .path_diagnostics)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -376,6 +414,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
         filter_type_id = try container.decodeIfPresent(Int.self, forKey: .filter_type_id)
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
         error = try container.decodeIfPresent(String.self, forKey: .error)
+        path_diagnostics = try container.decodeIfPresent(PWRunnerPathDiagnostics.self, forKey: .path_diagnostics)
     }
 }
 
@@ -503,6 +542,13 @@ public struct PWRunnerStepResult: Codable {
 }
 
 public struct PWRunnerRunResult: Codable {
+    // Response wire version.
+    //   1 — initial shape.
+    //   2 — adds optional `steps[].sandbox_check.path_diagnostics` block
+    //       (kernel-side path candidate forms). Consumers that branch on
+    //       schema_version can rely on path_diagnostics being available on
+    //       any path-filter check when schema_version >= 2. The field is
+    //       additive: clients pinned to v1 ignore it transparently.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -519,7 +565,7 @@ public struct PWRunnerRunResult: Codable {
     public var instrumentation: PWRunnerInstrumentationReport?
 
     public init(
-        schema_version: Int = 1,
+        schema_version: Int = 2,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,

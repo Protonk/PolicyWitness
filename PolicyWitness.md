@@ -108,6 +108,62 @@ SBPL source:
 }
 ```
 
+`(import "...")` statements compile transparently — `sandbox_compile_string`
+resolves them against the system profile search path. `(param "NAME")`
+substitution uses values from `policy.params`. `string-append` of param
+references is supported by the compiler.
+
+#### Policy preflight diagnostics
+
+Before the runner is invoked, the host compiles the policy with
+`sbpl-preflight`. The preflight envelope exposes:
+
+- `params_referenced`: names found in `(param "...")` forms in the source
+  (string literals and `;` line comments are skipped).
+- `params_supplied`: keys from `policy.params`.
+- `params_missing`: referenced but not supplied. If non-empty, preflight
+  returns `result.normalized_outcome = "missing_params"` and exits 1 with a
+  clean `result.error` listing the names — instead of the cryptic libsandbox
+  message ("expected pattern, got boolean") that surfaces when an unbound
+  `(param ...)` is folded into a path filter. The libsandbox message is
+  still preserved under `data.compile_error` for auditability.
+- `params_unused`: supplied but never referenced. Recorded as info only;
+  does not fail the preflight.
+
+`policy.sbpl_source` is capped at 4 MiB. Oversized inputs are rejected with
+`result.normalized_outcome = "policy_too_large"` and exit code 1; nothing is
+sent to libsandbox and no imports are resolved. The cap is in place to bound
+preflight work — far above any real-world hand-written profile.
+
+The preflight envelope also records the imports closure:
+
+- `imports`: each entry is `{name, resolved_path, sha256, size_bytes,
+  mtime_unix, error}`. The resolver walks `(import "...")` statements
+  recursively (depth cap 8, count cap 64), trying
+  `/System/Library/Sandbox/Profiles/<name>` first and then
+  `/usr/share/sandbox/<name>`. Names must include the `.sb` extension —
+  libsandbox does not auto-append. Absolute paths starting with `/` are
+  accepted as-is.
+- `imports_truncated`: true when either the count cap (64 imports) or the
+  depth cap (8 levels) was hit during resolution. Records still include the
+  partial result up to the cap.
+- `imports_cycle`: when a back-edge to an in-progress import is detected
+  during resolution, the chain of import names that closed the cycle —
+  `[outer, ..., inner, repeated_name]`. Null when no cycle is present. The
+  field is single-valued: only the first cycle observed in a given walk is
+  reported. (Diamond imports — the same file reached via two distinct paths
+  with no cycle — are deduplicated silently and do not populate this field.)
+- `policy_sha256`: sha256 of `policy.sbpl_source` only.
+- `policy_closure_sha256`: sha256 of the source plus the sorted
+  `resolved_path + " " + sha256` of every successfully resolved import.
+  This hash is reproducible iff every resolved file is content-identical
+  on the verifying host. Unresolved imports are excluded — check
+  `imports[].error` to see which ones failed.
+- `macos_build_version`: `sw_vers -buildVersion` for the host that ran the
+  preflight. Import contents change between OS builds; this lets a
+  downstream auditor decide whether a closure hash is verifiable on their
+  machine.
+
 ### Probe plan steps
 
 Each step has:
@@ -133,7 +189,7 @@ Example:
 
 The runner echoes step results with additional context:
 
-- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error }`
+- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
 - `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
 
 Notes:
@@ -143,11 +199,28 @@ Notes:
 - `filter_value` is the exact string the runner passes to `sandbox_check`.
 - `effective_filter_value` is a canonicalized/realpath form used for reporting only.
 - `filter_type_id`: `1` (path), `16` (mach-lookup global), `17` (mach-lookup local).
+- `path_diagnostics` is emitted only for path-filter checks. Introduced in
+  runner response `schema_version = 2`; consumers branching on
+  `schema_version` can rely on its presence on any path-filter check at v2+.
+  It carries the candidate kernel-side forms of the check path so a caller
+  can see which prefix libsandbox could have been comparing against when a
+  `(subpath ...)` rule denies a path that looked like it should match.
+  Fields: `{ input, realpath_resolved, firmlink_resolved, data_volume_form }`.
+  The runner still passes the raw `filter_value` to `sandbox_check` — this
+  block is observation only.
+  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
+  - `firmlink_resolved`: the realpath result rewritten through
+    `/usr/share/firmlinks`. On a stock macOS install `/etc/hosts` lands at
+    `/System/Volumes/Data/private/etc/hosts`.
+  - `data_volume_form`: heuristic shortcut that prepends
+    `/System/Volumes/Data` to paths under `/private/`. Useful when
+    `firmlinkResolved` returns nil on a host where `/usr/share/firmlinks` is
+    absent.
 
 Capture the sandbox_check argument quickly (no interpose needed):
 
 ```sh
-jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome}' run.json
+jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome, path_diagnostics}' run.json
 ```
 
 ## Instrumentation (opt-in)

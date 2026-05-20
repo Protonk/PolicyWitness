@@ -44,6 +44,26 @@ fn require_pw_bin() -> PathBuf {
     path
 }
 
+fn sbpl_preflight_bin_path() -> PathBuf {
+    repo_root()
+        .join("dist")
+        .join("PolicyWitness.app")
+        .join("Contents")
+        .join("MacOS")
+        .join("sbpl-preflight")
+}
+
+fn require_sbpl_preflight_bin() -> PathBuf {
+    let path = sbpl_preflight_bin_path();
+    if !path.exists() {
+        panic!(
+            "dist/PolicyWitness.app sbpl-preflight not found at {} (run `make build`)",
+            path.display()
+        );
+    }
+    path
+}
+
 fn run_pw(bin: &Path, args: &[&str]) -> Output {
     Command::new(bin)
         .args(args)
@@ -235,4 +255,244 @@ fn instrumentation_rejects_existing() {
         error.contains("instrumentation"),
         "expected error to mention instrumentation (got {error:?})"
     );
+}
+
+#[test]
+fn preflight_missing_params_returns_clean_outcome() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_sbpl_preflight_bin();
+
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-preflight-missing-{}.json",
+        std::process::id()
+    ));
+    let request = r#"{
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(deny default)\n(allow file-read-data (subpath (param \"HOME\")))\n"
+        },
+        "probe_plan": []
+    }"#;
+    std::fs::write(&tmp, request).expect("write preflight request");
+
+    let out = run_pw(&bin, &["--request", tmp.to_str().expect("tmp path utf8")]);
+    let _ = std::fs::remove_file(&tmp);
+
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "expected exit code 1 (missing params); got {:?}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&stdout).expect("parse preflight envelope");
+    assert_eq!(
+        envelope.get("kind").and_then(|v| v.as_str()),
+        Some("sbpl_preflight")
+    );
+    assert_eq!(
+        envelope
+            .get("result")
+            .and_then(|v| v.get("normalized_outcome"))
+            .and_then(|v| v.as_str()),
+        Some("missing_params"),
+        "expected normalized_outcome=missing_params (envelope={envelope})"
+    );
+
+    let data = envelope.get("data").expect("missing data block");
+    let missing: Vec<String> = data
+        .get("params_missing")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(missing, vec!["HOME".to_string()]);
+
+    let referenced: Vec<String> = data
+        .get("params_referenced")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(referenced, vec!["HOME".to_string()]);
+
+    // The libsandbox-side cryptic message must still be surfaced under
+    // compile_error so the diagnostic is auditable.
+    let compile_error = data
+        .get("compile_error")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        compile_error.contains("expected pattern"),
+        "expected compile_error to still carry the libsandbox message (got {compile_error:?})"
+    );
+}
+
+#[test]
+fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_file_read_deny.json");
+    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+
+    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    assert!(
+        out.status.success(),
+        "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&stdout).expect("parse run envelope");
+
+    let runner = envelope
+        .get("data")
+        .and_then(|v| v.get("runner_result"))
+        .cloned()
+        .expect("missing data.runner_result");
+    let steps = runner
+        .get("steps")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(steps.len(), 1, "expected 1 step, got {}", steps.len());
+
+    let sb = steps[0]
+        .get("sandbox_check")
+        .cloned()
+        .expect("missing sandbox_check on step");
+    let diag = sb
+        .get("path_diagnostics")
+        .cloned()
+        .expect("missing path_diagnostics on path-filter sandbox_check");
+
+    assert_eq!(
+        diag.get("input").and_then(|v| v.as_str()),
+        Some("/etc/hosts")
+    );
+    assert_eq!(
+        diag.get("realpath_resolved").and_then(|v| v.as_str()),
+        Some("/private/etc/hosts"),
+        "realpath should fold the /etc symlink"
+    );
+    // /private is firmlinked to /System/Volumes/Data/private on a stock macOS
+    // install; if this assertion ever fails, /usr/share/firmlinks changed
+    // shape and the firmlink parser needs re-verification.
+    assert_eq!(
+        diag.get("firmlink_resolved").and_then(|v| v.as_str()),
+        Some("/System/Volumes/Data/private/etc/hosts"),
+        "firmlink resolution should land on the Data volume"
+    );
+    assert_eq!(
+        diag.get("data_volume_form").and_then(|v| v.as_str()),
+        Some("/System/Volumes/Data/private/etc/hosts"),
+        "data_volume_form should apply the /private heuristic"
+    );
+}
+
+#[test]
+fn preflight_records_import_provenance_for_system_sb() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_sbpl_preflight_bin();
+
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-preflight-imports-{}.json",
+        std::process::id()
+    ));
+    let request = r#"{
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(deny default)\n(import \"system.sb\")\n(allow file-read-data)\n"
+        },
+        "probe_plan": []
+    }"#;
+    std::fs::write(&tmp, request).expect("write preflight request");
+
+    let out = run_pw(&bin, &["--request", tmp.to_str().expect("tmp path utf8")]);
+    let _ = std::fs::remove_file(&tmp);
+
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "expected exit code 0 (compile ok); got {:?}\nstderr:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&stdout).expect("parse preflight envelope");
+
+    let data = envelope.get("data").expect("missing data block");
+    let policy_sha = data
+        .get("policy_sha256")
+        .and_then(|v| v.as_str())
+        .expect("policy_sha256 missing");
+    let closure_sha = data
+        .get("policy_closure_sha256")
+        .and_then(|v| v.as_str())
+        .expect("policy_closure_sha256 missing");
+    assert_ne!(
+        policy_sha, closure_sha,
+        "closure hash should differ from policy_sha256 when imports were resolved"
+    );
+
+    let build = data
+        .get("macos_build_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        !build.is_empty(),
+        "macos_build_version should be populated (got {build:?})"
+    );
+
+    let imports = data
+        .get("imports")
+        .and_then(|v| v.as_array())
+        .expect("imports missing");
+    assert!(
+        imports.len() >= 1,
+        "expected at least one resolved import, got {}",
+        imports.len()
+    );
+
+    let system_sb = imports
+        .iter()
+        .find(|imp| imp.get("name").and_then(|v| v.as_str()) == Some("system.sb"))
+        .expect("system.sb should be in imports");
+    assert_eq!(
+        system_sb
+            .get("resolved_path")
+            .and_then(|v| v.as_str()),
+        Some("/System/Library/Sandbox/Profiles/system.sb"),
+        "system.sb should resolve from the Profiles directory"
+    );
+    let sha = system_sb
+        .get("sha256")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert_eq!(sha.len(), 64, "sha256 should be a 64-char hex string");
 }
