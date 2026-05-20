@@ -19,7 +19,7 @@ Core controller modules:
 - `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
 - `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
 - `controller/src/sonoma_cross_check.rs` — `sb_api_validator` cross-check flow
-- `controller/src/runner_commands.rs` — external runner install/list/verify/remove/refresh
+- `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate
 
 Support modules:
 
@@ -47,7 +47,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc>] [--instrumentation <json|@path>] [--sonoma-cross-check]
 policy-witness runner <command> [options]
 ```
 
@@ -110,16 +110,16 @@ If `required_entitlements` is present, the controller enforces a **superset**
 check against the runner’s recorded entitlements before dispatch.
 
 Built-in modes are `standard` (default) and `debuggable`.
-If `runner.mode` is present and an external runner is selected, it must match the registry kind (byoxpc or machme).
+If `runner.mode` is present and an external runner is selected, it must equal `byoxpc` — the only supported external runner kind.
 
 ### `runner` (external runner manager)
 
 These commands manage external runners signed with user entitlements:
 
 ```text
-policy-witness runner install --bundle <path> [--kind byoxpc|machme] [--service-name <name>] [--scope user|system]
+policy-witness runner install --bundle <path-to-xpc-bundle> [--kind byoxpc] [--service-name <name>] [--scope user|system]
                              [--identity <codesign-id>] [--entitlements <plist>]
-                             [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
+                             [--allow-adhoc]
                              [--env KEY=VALUE]
                              [--skip-bootstrap]
 policy-witness runner list
@@ -134,9 +134,10 @@ metadata (entitlements + signature) in the local registry. The registry lives
 under `~/Library/Application Support/PolicyWitness/runners.json`.
 
 Notes:
-- BYOXPC runners require `CFBundlePackageType=XPC!` and use `CFBundleIdentifier` as the service name.
-- MachMe runners accept `--service-name` overrides and use Mach services for NSXPC.
-- For MachMe, if `--bundle` is a directory, `--executable` is optional when the bundle's `Info.plist` declares `CFBundleExecutable` — the executable is then derived as `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
+- BYOXPC is the only external runner kind. The bundle must be an XPC service
+  directory (`CFBundlePackageType=XPC!`); the Mach service name equals the
+  bundle's `CFBundleIdentifier`. The executable is derived from
+  `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
 - `runner verify` defaults to a 5-second timeout (override with `--timeout-ms`).
 - `runner remove` always persists the registry change. `launchctl bootout` or plist-removal failures are surfaced in the envelope's `data.warnings` rather than aborting the call, so dirty launchd state cannot strand a registry entry.

@@ -19,12 +19,11 @@ Each step may include multiple evidence channels:
 
 ## Runner modes
 
-PolicyWitness supports four runner modes. All four return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
+PolicyWitness supports three runner modes. All three return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
 
 - `standard`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step. Default when no runner is specified.
 - `debuggable`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step.
 - `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`.
-- `machme`: user-supplied binary registered as a Mach service with `policy-witness runner install --kind machme`.
 
 PolicyWitness treats entitlements as a first-class input alongside SBPL. Register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
 

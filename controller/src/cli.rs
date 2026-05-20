@@ -14,7 +14,7 @@ pub fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc|machme>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc>] [--instrumentation <json|@path>] [--sonoma-cross-check]
   policy-witness runner <command> [options]
 
 notes:

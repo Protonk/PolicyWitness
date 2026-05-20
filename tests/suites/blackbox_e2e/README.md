@@ -3,7 +3,7 @@
 End-to-end tests that treat the runner as a black box. Each case feeds a specimen
 into the controller, runs a fresh runner instance, and validates the returned
 JSON as a complete, correlated bundle. These scripts are shared and invoked by
-the runner suites (debuggable/BYOXPC/MachMe).
+the runner suites (debuggable/BYOXPC).
 
 ## Invariants
 

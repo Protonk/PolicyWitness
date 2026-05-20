@@ -5,7 +5,7 @@ This guide covers usage only.
 
 ## Choose your runner
 
-PolicyWitness supports four runner modes:
+PolicyWitness supports three runner modes:
 
 1) Standard runner (built-in)
 - Default path; minimal entitlements (no debug allowances).
@@ -18,14 +18,9 @@ PolicyWitness supports four runner modes:
 
 3) BYOXPC runner (external XPC bundle)
 - Use when you need extra entitlements; supply a signed `.xpc` bundle.
-- Service name must match the bundle’s `CFBundleIdentifier` (no override).
+- Service name must match the bundle's `CFBundleIdentifier` (no override).
 - Install with `policy-witness runner install --kind byoxpc ...`.
 - Tested by `tests/suites/runner_byoxpc/run.sh` (opt-in; GUI session required).
-
-4) MachMe runner (external Mach service binary)
-- Use when you want to launch a raw binary as a Mach service.
-- Install with `policy-witness runner install --kind machme --bundle /path/to/PWRunner`.
-- Tested by `tests/suites/runner_machme/run.sh` (opt-in; GUI session required).
 
 If no runner is specified, PolicyWitness uses the built-in standard runner.
 
@@ -338,23 +333,22 @@ external runner and set launchd `EnvironmentVariables` at install time:
 $PW runner install --kind byoxpc --bundle /path/to/PWRunnerDebug.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
 ```
 
-## External runners (BYOXPC + MachMe)
+## External runners (BYOXPC)
 
-Use these when you need entitlements that are not in the built-in runner.
+Use this when you need entitlements that are not in the built-in runner.
+BYOXPC is the only external runner kind.
 
 ### What you need
 
-- BYOXPC: a runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc` or `PWRunnerDebug.xpc`).
-- MachMe: a runner binary to sign (typically `PWRunner.xpc/Contents/MacOS/PWRunner` or the debug variant).
+- A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc` or `PWRunnerDebug.xpc`).
 - A signing identity (Developer ID Application) or ad-hoc signing for local use.
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
 
-### Tested install paths (copy/paste)
+### Tested install path (copy/paste)
 
-These sequences match the test suites and are the recommended starting point.
-
-BYOXPC (user scope):
+This sequence matches `tests/suites/runner_byoxpc/run.sh` and is the
+recommended starting point.
 
 ```sh
 PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
@@ -376,25 +370,6 @@ $PW runner install --kind byoxpc \
 $PW runner verify --service-name com.yourteam.policy-witness.PWRunnerDebug --timeout-ms 2000
 ```
 
-MachMe (user scope):
-
-```sh
-PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
-IDENTITY="Developer ID Application: Your Name (TEAMID)"
-ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
-BIN="$PWD/dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc/Contents/MacOS/PWRunnerDebug"
-
-$PW runner install --kind machme \
-  --bundle "$BIN" \
-  --identity "$IDENTITY" \
-  --entitlements "$ENT" \
-  --allow-adhoc \
-  --service-name com.policywitness.runner.machme \
-  --scope user
-
-$PW runner verify --service-name com.policywitness.runner.machme --timeout-ms 2000
-```
-
 ### Install a BYOXPC runner
 
 ```sh
@@ -411,8 +386,10 @@ Notes:
 - Use `--scope system` if you want a system-wide service (requires admin).
 - Use `--skip-bootstrap` if you will run `launchctl` manually.
 - Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
-- BYOXPC service name must match the bundle’s `CFBundleIdentifier` (no override).
-- The bundle must be a valid XPC service (`CFBundlePackageType=XPC!`).
+- BYOXPC service name must match the bundle's `CFBundleIdentifier` (no override).
+- The bundle must be a valid XPC service (`CFBundlePackageType=XPC!`); plain
+  binaries are rejected at install time. The executable is derived from
+  `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc` so the
   supplied entitlements are actually re-embedded into the binary. Passing
   `--entitlements` without one of those is rejected — the registry would
@@ -422,27 +399,6 @@ The install command writes a launchd plist, bootstraps the service, and records
 the runner in the local registry. The registry's `entitlements` field always
 reflects what's embedded in the binary (read back via `codesign -d --entitlements`),
 not what was supplied on the command line.
-
-### Install a MachMe runner
-
-```sh
-$PW runner install \
-  --kind machme \
-  --bundle /path/to/PWRunner \
-  --identity "Developer ID Application: Your Name (TEAMID)" \
-  --entitlements /path/to/entitlements.plist \
-  --scope user
-```
-
-Notes:
-- Use `--service-name` to override the Mach service name (optional).
-- Use `--bundle-id` to set an optional provenance identifier.
-- If `--bundle` is a directory whose `Info.plist` declares `CFBundleExecutable`,
-  `--executable` is optional — the binary is derived from
-  `<bundle>/Contents/MacOS/<CFBundleExecutable>`. Pass `--executable` explicitly
-  to override, or when the bundle has no readable Info.plist.
-- The same `--entitlements` rule as BYOXPC applies: pair it with `--identity`
-  or `--allow-adhoc`.
 
 ### Verify the runner
 
@@ -471,13 +427,13 @@ Alternative: select by service name:
 
 ```json
 "runner": {
-  "service": "com.policywitness.runner.<id>",
-  "mode": "machme"
+  "service": "com.yourteam.policy-witness.PWRunner",
+  "mode": "byoxpc"
 }
 ```
 
-`runner.mode` is optional; when present it must match the registry kind for external runners.
-Valid modes: `standard`, `debuggable`, `byoxpc`, `machme`.
+`runner.mode` is optional; when present it must equal `byoxpc` for external
+runners. Valid modes: `standard`, `debuggable`, `byoxpc`.
 `required_entitlements` enforces a superset check before dispatch.
 
 Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
@@ -492,8 +448,6 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
   }
 }
 ```
-
-Replace `service` and `mode` for MachMe runners.
 
 Then run:
 
@@ -552,7 +506,7 @@ Registry location:
 
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
-- `--runner-mode <standard|debuggable|byoxpc|machme>`: inject `runner.mode` into the request
+- `--runner-mode <standard|debuggable|byoxpc>`: inject `runner.mode` into the request
 - `--instrumentation <json|@path>`: inject instrumentation ports into the request
 - `--sonoma-cross-check`: run an sb_api_validator cross-check against the runner PID
   while it is paused post-sandbox; results are attached under `data.sonoma_cross_check`

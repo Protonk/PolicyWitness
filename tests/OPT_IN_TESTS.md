@@ -65,16 +65,6 @@ Optional standard overrides:
 - **When to run:** After changing BYOXPC install/verify behavior or runner-mode selection.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
 
-### runner_machme
-
-- **Location:** `tests/suites/runner_machme/run.sh`
-- **Purpose:** Run smoke + blackbox suites through a MachMe runner.
-- **Opt-in reason:** Requires launchd service install/bootstrapping and an
-  unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
-- **When to run:** After changing MachMe install/verify behavior or runner-mode selection.
-- **Artifacts:** `tests/out/suites/runner_machme/*/artifacts/*`
-
 ### pw_runner_specimen
 
 - **Location:** `tests/suites/runner_debuggable/opt_in/pw_runner_specimen.sh`

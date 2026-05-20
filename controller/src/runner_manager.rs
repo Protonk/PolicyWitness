@@ -20,8 +20,11 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 pub enum RunnerKind {
     Standard,
     Debuggable,
+    // The alias accepts legacy on-disk registry entries carrying
+    // `kind: "machme"` and stores them as Byoxpc; new input that uses
+    // the literal "machme" string is rejected by RunnerKind::parse.
+    #[serde(alias = "machme")]
     Byoxpc,
-    Machme,
 }
 
 impl RunnerKind {
@@ -30,7 +33,6 @@ impl RunnerKind {
             "standard" => Some(RunnerKind::Standard),
             "debuggable" => Some(RunnerKind::Debuggable),
             "byoxpc" => Some(RunnerKind::Byoxpc),
-            "machme" => Some(RunnerKind::Machme),
             _ => None,
         }
     }
@@ -40,7 +42,6 @@ impl RunnerKind {
             RunnerKind::Standard => "standard",
             RunnerKind::Debuggable => "debuggable",
             RunnerKind::Byoxpc => "byoxpc",
-            RunnerKind::Machme => "machme",
         }
     }
 }
@@ -165,10 +166,6 @@ pub fn random_id() -> Result<String, String> {
     Ok(out)
 }
 
-pub fn generate_service_name(id: &str) -> String {
-    format!("com.policywitness.runner.{id}")
-}
-
 pub fn entitlements_from_json(value: &Value) -> RunnerEntitlements {
     let keys = match value {
         Value::Object(map) => {
@@ -221,7 +218,7 @@ pub fn build_launchd_plist(
         }
     }
     let mut args = vec![executable_path.display().to_string()];
-    if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+    if matches!(kind, RunnerKind::Byoxpc) {
         // External runners use a Mach service name for NSXPC connections.
         args.push("--mach-service".to_string());
         args.push(service_name.to_string());
@@ -501,5 +498,28 @@ mod tests {
             &vec!["com.apple.security.files.user-selected.read-only".to_string()],
             &ent
         ));
+    }
+
+    #[test]
+    fn legacy_machme_kind_deserializes_as_byoxpc() {
+        // Registry entries written by older builds may carry `"kind": "machme"`.
+        // The serde alias on RunnerKind::Byoxpc must absorb them silently so
+        // upgraded integrators don't have a stranded registry. Re-serializing
+        // produces "byoxpc" — that's the documented one-shot migration.
+        let kind: RunnerKind =
+            serde_json::from_str("\"machme\"").expect("legacy machme should deserialize");
+        assert_eq!(kind, RunnerKind::Byoxpc);
+        let round_trip = serde_json::to_string(&kind).unwrap();
+        assert_eq!(round_trip, "\"byoxpc\"");
+    }
+
+    #[test]
+    fn caller_facing_parse_rejects_machme() {
+        // RunnerKind::parse is for CLI / specimen input where we want a clean
+        // error pointing at byoxpc, not silent migration.
+        assert_eq!(RunnerKind::parse("machme"), None);
+        assert_eq!(RunnerKind::parse("byoxpc"), Some(RunnerKind::Byoxpc));
+        assert_eq!(RunnerKind::parse("standard"), Some(RunnerKind::Standard));
+        assert_eq!(RunnerKind::parse("debuggable"), Some(RunnerKind::Debuggable));
     }
 }

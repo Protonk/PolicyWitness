@@ -185,8 +185,13 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut request_modified = false;
 
     if let Some(mode) = runner_mode_arg.as_deref() {
+        if mode == "machme" {
+            return Err(
+                "--runner-mode machme is not supported; use --runner-mode byoxpc".to_string(),
+            );
+        }
         let kind = RunnerKind::parse(mode)
-            .ok_or_else(|| "invalid value for --runner-mode".to_string())?;
+            .ok_or_else(|| format!("invalid value for --runner-mode: {mode}"))?;
         let obj = request_value
             .as_object_mut()
             .ok_or_else(|| "request.json must be a JSON object".to_string())?;

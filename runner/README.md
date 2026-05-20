@@ -84,10 +84,8 @@ Sandbox policy variation is driven by the specimen itself:
 
 PolicyWitness can target **external runner services** when entitlements are
 required. An external runner is the same PWRunner implementation, but signed
-with user-selected entitlements and registered with launchd in one of two modes:
-
-- **BYOXPC**: a signed `.xpc` bundle, addressed by `CFBundleIdentifier`.
-- **MachMe**: a signed raw binary, addressed as a Mach service name.
+with user-selected entitlements and registered with launchd as a **BYOXPC**
+runner: a signed `.xpc` bundle, addressed by `CFBundleIdentifier`.
 
 Invariants:
 

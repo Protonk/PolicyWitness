@@ -36,14 +36,13 @@ make test
 ./tests/run.sh --suite integration
 ./tests/run.sh --suite runner_debuggable
 ./tests/run.sh --suite runner_byoxpc
-./tests/run.sh --suite runner_machme
 ./tests/run.sh --suite anomalies
 ./tests/run.sh --describe --all
 ```
 
 Opt-in tests live under `tests/suites/runner_*/opt_in/` and are listed in `tests/OPT_IN_TESTS.md`.
 Compatibility wrappers remain under `tests/suites/opt_in/`.
-Runner suites that install launchd services (`runner_byoxpc`, `runner_machme`) require a logged-in GUI session.
+Runner suites that install launchd services (`runner_byoxpc`) require a logged-in GUI session.
 
 ## What We Cover / What We Promise
 
@@ -55,7 +54,6 @@ Baseline (default in `--all`):
 
 Extended (opt-in; host-dependent skips are normal):
 - `runner_byoxpc`: smoke + blackbox coverage through a BYOXPC runner.
-- `runner_machme`: smoke + blackbox coverage through a MachMe runner.
 
 Diagnostic:
 - `anomalies`: passes only when a known OS anomaly is reproduced.
@@ -73,7 +71,6 @@ see `tests/suites/<suite>/README.md`.
 - `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/integration/cli_contract.rs`
 - `runner_debuggable`: smoke + blackbox coverage via the built-in debuggable runner
 - `runner_byoxpc`: smoke + blackbox coverage via a BYOXPC runner (opt-in)
-- `runner_machme`: smoke + blackbox coverage via a MachMe runner (opt-in)
 - `anomalies`: structured reproductions of alleged system bugs (tests pass when the anomaly is reproduced)
 
 Shared runners (invoked by runner suites, still runnable directly):

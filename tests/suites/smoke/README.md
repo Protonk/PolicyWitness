@@ -1,7 +1,7 @@
 # smoke
 
 Quick end-to-end checks against a built app bundle. These scripts are shared
-and invoked by the runner suites (debuggable/BYOXPC/MachMe).
+and invoked by the runner suites (debuggable/BYOXPC).
 
 ## Invariants
 

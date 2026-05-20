@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 use crate::app_layout::{
     resolve_pw_runner_bundle_info, PW_RUNNER_DEBUG_SERVICE_DIR, PW_RUNNER_STANDARD_SERVICE_DIR,
 };
-use crate::bundle::read_bundle_info;
 use crate::evidence;
 use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerScope, RunnerSignature};
 
@@ -71,10 +70,7 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
                 .collect();
         }
         if let Some(v) = runner.get("mode").and_then(|v| v.as_str()) {
-            selector.mode = Some(
-                RunnerKind::parse(v)
-                    .ok_or_else(|| format!("invalid runner.mode value: {v}"))?,
-            );
+            selector.mode = Some(parse_runner_mode(v, "runner.mode")?);
         }
     }
 
@@ -99,14 +95,20 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
     }
     if selector.mode.is_none() {
         if let Some(v) = value.get("runner_mode").and_then(|v| v.as_str()) {
-            selector.mode = Some(
-                RunnerKind::parse(v)
-                    .ok_or_else(|| format!("invalid runner_mode value: {v}"))?,
-            );
+            selector.mode = Some(parse_runner_mode(v, "runner_mode")?);
         }
     }
 
     Ok(selector)
+}
+
+fn parse_runner_mode(value: &str, field: &str) -> Result<RunnerKind, String> {
+    if value == "machme" {
+        return Err(format!(
+            "{field}=\"machme\" is not supported; use \"byoxpc\""
+        ));
+    }
+    RunnerKind::parse(value).ok_or_else(|| format!("invalid {field} value: {value}"))
 }
 
 fn entitlements_from_manifest_value(
@@ -134,7 +136,7 @@ fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarg
     let service_dir = match kind {
         RunnerKind::Standard => PW_RUNNER_STANDARD_SERVICE_DIR,
         RunnerKind::Debuggable => PW_RUNNER_DEBUG_SERVICE_DIR,
-        RunnerKind::Byoxpc | RunnerKind::Machme => {
+        RunnerKind::Byoxpc => {
             return Err("builtin runner target requires a built-in kind".to_string());
         }
     };
@@ -177,18 +179,7 @@ fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarg
 }
 
 pub fn infer_record_kind(record: &RunnerRecord) -> RunnerKind {
-    if let Some(kind) = record.kind {
-        return kind;
-    }
-    let bundle_path = Path::new(&record.bundle_path);
-    if bundle_path.is_dir() {
-        if let Ok(info) = read_bundle_info(bundle_path) {
-            if info.package_type.as_deref() == Some("XPC!") {
-                return RunnerKind::Byoxpc;
-            }
-        }
-    }
-    RunnerKind::Machme
+    record.kind.unwrap_or(RunnerKind::Byoxpc)
 }
 
 pub fn resolve_runner_target(
@@ -202,12 +193,12 @@ pub fn resolve_runner_target(
                 .to_string(),
         );
     }
-    if matches!(selector.mode, Some(RunnerKind::Byoxpc | RunnerKind::Machme)) && !needs_external {
+    if matches!(selector.mode, Some(RunnerKind::Byoxpc)) && !needs_external {
         return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
     }
     if !needs_external {
         let kind = selector.mode.unwrap_or(RunnerKind::Standard);
-        if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
+        if matches!(kind, RunnerKind::Byoxpc) {
             return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
         }
         let target = builtin_runner_target(app_root, kind)?;
@@ -257,7 +248,7 @@ pub fn resolve_runner_target(
     }
 
     let connection = match record_kind {
-        RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
+        RunnerKind::Byoxpc => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
         RunnerKind::Debuggable | RunnerKind::Standard => {
@@ -329,7 +320,7 @@ mod tests {
                 "id": "runner-abc",
                 "service": "com.example.runner",
                 "required_entitlements": ["com.apple.security.cs.allow-jit"],
-                "mode": "machme"
+                "mode": "byoxpc"
             }
         });
         fs::write(&path, serde_json::to_string(&payload).unwrap()).unwrap();
@@ -339,7 +330,7 @@ mod tests {
         assert_eq!(selector.runner_id.as_deref(), Some("runner-abc"));
         assert_eq!(selector.runner_service.as_deref(), Some("com.example.runner"));
         assert_eq!(selector.required_entitlements.len(), 1);
-        assert_eq!(selector.mode, Some(RunnerKind::Machme));
+        assert_eq!(selector.mode, Some(RunnerKind::Byoxpc));
         let _ = fs::remove_file(&path);
     }
 }

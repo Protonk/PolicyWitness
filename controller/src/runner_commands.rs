@@ -87,9 +87,9 @@ fn emit_runner_not_found(
 fn runner_usage() -> String {
     "\
 usage:
-  policy-witness runner install --bundle <path> [--kind byoxpc|machme] [--service-name <name>] [--scope user|system]
+  policy-witness runner install --bundle <path-to-xpc-bundle> [--kind byoxpc] [--service-name <name>] [--scope user|system]
                                [--identity <codesign-id>] [--entitlements <plist>]
-                               [--executable <path>] [--bundle-id <id>] [--allow-adhoc]
+                               [--allow-adhoc]
                                [--env KEY=VALUE]
                                [--skip-bootstrap]
   policy-witness runner list
@@ -163,8 +163,12 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             }
             "--kind" => {
                 let value = args.get(idx + 1).ok_or_else(|| "missing value for --kind".to_string())?;
-                let kind = RunnerKind::parse(value.to_string_lossy().as_ref())
-                    .ok_or_else(|| "invalid value for --kind".to_string())?;
+                let raw = value.to_string_lossy();
+                if raw == "machme" {
+                    return Err("--kind machme is not supported; use --kind byoxpc".to_string());
+                }
+                let kind = RunnerKind::parse(raw.as_ref())
+                    .ok_or_else(|| format!("invalid value for --kind: {raw}"))?;
                 if matches!(kind, RunnerKind::Debuggable | RunnerKind::Standard) {
                     return Err(format!(
                         "runner install does not accept kind={}",
@@ -203,85 +207,56 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         return Err(format!("bundle path not found: {}", bundle_path.display()));
     }
 
-    let bundle_info = if bundle_path.is_dir() {
-        read_bundle_info(&bundle_path).ok()
-    } else {
-        None
-    };
-
-    let kind = if let Some(kind) = kind_override {
-        kind
-    } else if bundle_path.is_dir() {
-        match bundle_info
-            .as_ref()
-            .and_then(|info| info.package_type.as_deref())
-        {
-            Some("XPC!") => RunnerKind::Byoxpc,
-            _ => {
-                return Err(
-                    "bundle is not an XPC service (CFBundlePackageType != XPC!); pass --kind machme and --executable to install a Mach service binary"
-                        .to_string(),
-                );
-            }
-        }
-    } else {
-        RunnerKind::Machme
-    };
-
-    if matches!(kind, RunnerKind::Byoxpc) {
-        if bundle_id_override.is_some() {
-            return Err("byoxpc runners use CFBundleIdentifier; remove --bundle-id".to_string());
-        }
-        if executable_override.is_some() {
-            return Err("byoxpc runners do not accept --executable".to_string());
-        }
+    // byoxpc is the only kind `runner install` accepts. The CLI parser above
+    // already rejects standard/debuggable; here we accept an explicit
+    // `--kind byoxpc` and otherwise default to it, and reject anything that
+    // somehow surfaced as a different variant (defensive).
+    let kind = kind_override.unwrap_or(RunnerKind::Byoxpc);
+    if !matches!(kind, RunnerKind::Byoxpc) {
+        return Err(format!(
+            "runner install does not accept kind={}",
+            kind.as_str()
+        ));
     }
 
-    let (bundle_id, executable_path) = match kind {
-        RunnerKind::Byoxpc => {
-            let info = bundle_info.as_ref().ok_or_else(|| {
-                "byoxpc runners require a bundle with Contents/Info.plist".to_string()
-            })?;
-            if info.package_type.as_deref() != Some("XPC!") {
-                return Err(
-                    "byoxpc runners require CFBundlePackageType=XPC! in Info.plist".to_string(),
-                );
-            }
-            let executable_path = bundle_path
-                .join("Contents")
-                .join("MacOS")
-                .join(&info.executable);
-            (Some(info.bundle_id.clone()), executable_path)
-        }
-        RunnerKind::Machme => {
-            let executable_path = if let Some(path) = executable_override {
-                path
-            } else if bundle_path.is_dir() {
-                let info = bundle_info.as_ref().ok_or_else(|| {
-                    "machme runners require --executable when --bundle is a directory \
-                     without a readable Contents/Info.plist"
-                        .to_string()
-                })?;
-                bundle_path
-                    .join("Contents")
-                    .join("MacOS")
-                    .join(&info.executable)
-            } else {
-                bundle_path.clone()
-            };
-            let bundle_id = bundle_id_override
-                .clone()
-                .or_else(|| bundle_info.as_ref().map(|info| info.bundle_id.clone()));
-            (bundle_id, executable_path)
-        }
-        RunnerKind::Debuggable | RunnerKind::Standard => {
-            return Err(format!(
-                "runner install does not accept kind={}",
-                kind.as_str()
-            ));
-        }
-    };
+    if bundle_id_override.is_some() {
+        return Err(
+            "external runners use CFBundleIdentifier; remove --bundle-id".to_string()
+        );
+    }
+    if executable_override.is_some() {
+        return Err(
+            "external runners do not accept --executable; \
+             the binary is derived from <bundle>/Contents/MacOS/<CFBundleExecutable>"
+                .to_string(),
+        );
+    }
 
+    if !bundle_path.is_dir() {
+        return Err(
+            "external runners require a `.xpc` bundle directory (not a plain binary); \
+             pass --bundle <path-to-PWRunner.xpc>"
+                .to_string(),
+        );
+    }
+    let bundle_info = read_bundle_info(&bundle_path).map_err(|e| {
+        format!(
+            "failed to read {}/Contents/Info.plist: {e}",
+            bundle_path.display()
+        )
+    })?;
+    if bundle_info.package_type.as_deref() != Some("XPC!") {
+        return Err(format!(
+            "external runners require CFBundlePackageType=XPC! in Info.plist (got {:?})",
+            bundle_info.package_type.as_deref().unwrap_or("absent")
+        ));
+    }
+
+    let bundle_id = bundle_info.bundle_id.clone();
+    let executable_path = bundle_path
+        .join("Contents")
+        .join("MacOS")
+        .join(&bundle_info.executable);
     if !executable_path.exists() {
         return Err(format!(
             "executable path not found: {}",
@@ -289,43 +264,25 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
-    let sign_target = match kind {
-        RunnerKind::Byoxpc => bundle_path.clone(),
-        RunnerKind::Machme => executable_path.clone(),
-        RunnerKind::Debuggable | RunnerKind::Standard => {
-            return Err(format!(
-                "runner install does not accept kind={}",
-                kind.as_str()
-            ));
-        }
-    };
+    // The XPC bundle is the signing/launchctl target; codesign treats it as
+    // a single unit and the inner binary's signature is derived from the
+    // bundle's seal.
+    let sign_target = bundle_path.clone();
 
     // Resolve the service name early so we can fail fast on registry conflicts
-    // before touching codesign, launchd, or the on-disk plist.
+    // before touching codesign, launchd, or the on-disk plist. byoxpc's
+    // service name must equal the bundle's CFBundleIdentifier — that's how
+    // launchd routes Mach service lookups to the XPC service host.
     let runner_id = runner_manager::random_id()?;
-    let service_name = match kind {
-        RunnerKind::Byoxpc => {
-            let bundle_id = bundle_id
-                .clone()
-                .ok_or_else(|| "byoxpc runners require a CFBundleIdentifier".to_string())?;
-            if let Some(requested) = service_name.as_ref() {
-                if requested != &bundle_id {
-                    return Err(format!(
-                        "byoxpc service name must match CFBundleIdentifier ({bundle_id})"
-                    ));
-                }
-            }
-            bundle_id
-        }
-        RunnerKind::Machme => service_name
-            .unwrap_or_else(|| runner_manager::generate_service_name(&runner_id)),
-        RunnerKind::Debuggable | RunnerKind::Standard => {
+    if let Some(requested) = service_name.as_ref() {
+        if requested != &bundle_id {
             return Err(format!(
-                "runner install does not accept kind={}",
-                kind.as_str()
+                "byoxpc service name must match CFBundleIdentifier ({bundle_id})"
             ));
         }
-    };
+    }
+    let service_name = bundle_id.clone();
+    let bundle_id = Some(bundle_id);
 
     let (registry_path, mut registry) = load_registry_or_default()?;
     if let Some(existing) = registry
@@ -375,18 +332,11 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let entitlements = runner_manager::entitlements_from_codesign(&executable_path);
 
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
-    if matches!(kind, RunnerKind::Byoxpc) && !env.contains_key("XPC_SERVICE_PATH") {
+    if !env.contains_key("XPC_SERVICE_PATH") {
         // libxpc expects the bundle root for the XPC service when launching directly.
         env.insert(
             "XPC_SERVICE_PATH".to_string(),
             bundle_path.display().to_string(),
-        );
-    }
-    if matches!(kind, RunnerKind::Byoxpc | RunnerKind::Machme) {
-        // PWRunner reads this to advertise the Mach service name for NSXPC.
-        env.insert(
-            "PW_RUNNER_MACH_SERVICE_NAME".to_string(),
-            service_name.clone(),
         );
     }
     let plist_contents = runner_manager::build_launchd_plist(
@@ -593,7 +543,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
 
     let record_kind = infer_record_kind(record);
     let connection = match record_kind {
-        RunnerKind::Byoxpc | RunnerKind::Machme => RunnerConnectionKind::MachService {
+        RunnerKind::Byoxpc => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
         RunnerKind::Debuggable | RunnerKind::Standard => {
