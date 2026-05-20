@@ -129,6 +129,16 @@ Before the runner is invoked, the host compiles the policy with
   still preserved under `data.compile_error` for auditability.
 - `params_unused`: supplied but never referenced. Recorded as info only;
   does not fail the preflight.
+- `params_scan_complete`: false when the source contains at least one
+  `(param X)` form where `X` is not a quoted string. That's typically
+  macro-indirected, e.g.
+  `(define (helper pn) (subpath (param pn)))` with `(helper "FOO")` at the
+  call site — the literal `"FOO"` is bound to `pn` at a level the surface
+  lexer doesn't expand. When this flag is false, treat `params_missing:
+  []` as "we couldn't tell" rather than "nothing required". The cryptic
+  libsandbox error ("expected pattern, got boolean") then surfaces under
+  `compile_error` as before. Resolving these would require real macro
+  expansion and is out of scope for the preflight scanner.
 
 `policy.sbpl_source` is capped at 4 MiB. Oversized inputs are rejected with
 `result.normalized_outcome = "policy_too_large"` and exit code 1; nothing is
@@ -208,14 +218,21 @@ Notes:
   Fields: `{ input, realpath_resolved, firmlink_resolved, data_volume_form }`.
   The runner still passes the raw `filter_value` to `sandbox_check` — this
   block is observation only.
-  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
+  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure. A
+    restrictive enclosing sandbox (e.g. `(deny default)` without
+    `(allow file-read-metadata)`) blocks the stat realpath needs, so this
+    field can legitimately be null even when the file exists. The other
+    forms below remain computable in that case.
   - `firmlink_resolved`: the realpath result rewritten through
-    `/usr/share/firmlinks`. On a stock macOS install `/etc/hosts` lands at
-    `/System/Volumes/Data/private/etc/hosts`.
+    `/usr/share/firmlinks`. When realpath returned null, the runner falls
+    back to a pure-string substitution of the standard userspace symlinks
+    (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`) before applying
+    firmlinks, so `/etc/hosts` still lands at
+    `/System/Volumes/Data/private/etc/hosts` even under a strict sandbox.
   - `data_volume_form`: heuristic shortcut that prepends
-    `/System/Volumes/Data` to paths under `/private/`. Useful when
-    `firmlinkResolved` returns nil on a host where `/usr/share/firmlinks` is
-    absent.
+    `/System/Volumes/Data` to paths under `/private/`. Computed from the
+    same fallback basis as `firmlink_resolved`, so it is populated for the
+    common case even when realpath is unavailable.
 
 Capture the sandbox_check argument quickly (no interpose needed):
 

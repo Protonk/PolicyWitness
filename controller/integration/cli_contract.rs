@@ -412,6 +412,71 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
 }
 
 #[test]
+fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
+    // Repro of the downstream report: under `(deny default)` the runner's
+    // realpath(3) call can't stat the path, so realpath_resolved is nil.
+    // The fallback (wellKnownSymlinksResolved) must still produce a usable
+    // firmlink_resolved and data_volume_form so the diagnostic block remains
+    // load-bearing in the strict case.
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_path_diagnostics_strict.json");
+    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+
+    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    assert!(
+        out.status.success(),
+        "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&stdout).expect("parse run envelope");
+    let sb = envelope
+        .get("data")
+        .and_then(|v| v.get("runner_result"))
+        .and_then(|v| v.get("steps"))
+        .and_then(|v| v.as_array())
+        .and_then(|steps| steps.first().cloned())
+        .and_then(|s| s.get("sandbox_check").cloned())
+        .expect("missing sandbox_check on first step");
+
+    let diag = sb
+        .get("path_diagnostics")
+        .cloned()
+        .expect("missing path_diagnostics on path-filter check");
+
+    assert_eq!(
+        diag.get("input").and_then(|v| v.as_str()),
+        Some("/etc/hosts")
+    );
+    // Whether realpath_resolved is populated is sandbox-dependent and not the
+    // load-bearing assertion here — the derived forms must be present.
+    assert_eq!(
+        diag.get("firmlink_resolved").and_then(|v| v.as_str()),
+        Some("/System/Volumes/Data/private/etc/hosts"),
+        "firmlink_resolved must be derivable from the well-known symlink \
+         substitution even when realpath(3) is blocked by the sandbox"
+    );
+    assert_eq!(
+        diag.get("data_volume_form").and_then(|v| v.as_str()),
+        Some("/System/Volumes/Data/private/etc/hosts"),
+        "data_volume_form must be populated for /etc paths via the \
+         well-known symlink fallback"
+    );
+}
+
+#[test]
 fn preflight_records_import_provenance_for_system_sb() {
     if !integration_enabled() {
         return;

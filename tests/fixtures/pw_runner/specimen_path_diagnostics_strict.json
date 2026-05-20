@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "specimen_id": "path_diagnostics_strict",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(deny default)\n(allow file-read-data (subpath \"/etc\"))"
+  },
+  "probe_plan": [
+    {
+      "step_id": "x",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {"kind": "path", "value": "/etc/hosts"}
+      },
+      "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
+    }
+  ]
+}

@@ -92,11 +92,20 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         // below. This block lets a caller see the kernel-side forms libsandbox
         // could have been matching against when a `(subpath ...)` rule
         // surprisingly denied a path that looked like it should match.
+        //
+        // realpath(3) can return NULL when the runner's enclosing sandbox
+        // denies the stat (e.g. a (deny default) profile that doesn't grant
+        // file-read-metadata). Fall back to pure-string substitution of the
+        // standard userspace symlinks so firmlink_resolved and
+        // data_volume_form remain populated for the cases the report
+        // documents — we report what we can compute, not just what realpath
+        // could see.
+        let basis = canonical.resolved ?? wellKnownSymlinksResolved(value)
         pathDiagnostics = PWRunnerPathDiagnostics(
             input: value,
             realpath_resolved: canonical.resolved,
-            firmlink_resolved: firmlinkResolved(canonical.resolved ?? value),
-            data_volume_form: dataVolumeForm(canonical.resolved ?? value)
+            firmlink_resolved: firmlinkResolved(basis),
+            data_volume_form: dataVolumeForm(basis)
         )
     }
 

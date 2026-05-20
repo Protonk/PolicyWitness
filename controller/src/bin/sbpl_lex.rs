@@ -9,18 +9,60 @@
 
 use std::collections::BTreeSet;
 
-/// Scan an SBPL source for `(param "NAME")` references and return the
-/// deduplicated set of names found.
+/// Result of a `(param ...)` scan.
+///
+/// `refs` is the set of literal names captured. `scan_complete` is false when
+/// the source contains at least one `(param X)` form where `X` is not a
+/// quoted string — that case is typically macro-indirected (`(define (f n)
+/// (subpath (param n)))` with `(f "FOO")` at the call site) and is beyond
+/// the surface lexer's reach. Consumers should treat `params_missing: []`
+/// with `scan_complete = false` as "we don't actually know" rather than
+/// "no params are needed".
+pub struct ParamScanResult {
+    pub refs: BTreeSet<String>,
+    pub scan_complete: bool,
+}
+
+/// Scan an SBPL source for `(param "NAME")` references and report whether
+/// the static scan can stand on its own — see [`ParamScanResult`].
 ///
 /// String literals and `;` line comments are skipped — a `(param "X")` spelled
 /// inside a string or a comment does not count.
-pub fn param_refs(source: &str) -> BTreeSet<String> {
-    scan_keyword_refs(source, b"param")
+pub fn param_scan(source: &str) -> ParamScanResult {
+    let bytes = source.as_bytes();
+    let mut refs = BTreeSet::new();
+    let mut scan_complete = true;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b';' => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+            }
+            b'"' => {
+                i = skip_string(bytes, i);
+            }
+            b'(' => match try_match_param_form(bytes, i) {
+                Some(ParamFormMatch::Literal { name, next }) => {
+                    refs.insert(name);
+                    i = next;
+                }
+                Some(ParamFormMatch::NonLiteral { next }) => {
+                    scan_complete = false;
+                    i = next;
+                }
+                None => i += 1,
+            },
+            _ => i += 1,
+        }
+    }
+    ParamScanResult { refs, scan_complete }
 }
 
 /// Scan an SBPL source for `(import "NAME")` references and return the
 /// deduplicated set of names found, sorted. Same scanning discipline as
-/// [`param_refs`].
+/// [`param_scan`].
 pub fn import_refs(source: &str) -> BTreeSet<String> {
     scan_keyword_refs(source, b"import")
 }
@@ -52,6 +94,68 @@ fn scan_keyword_refs(source: &str, keyword: &[u8]) -> BTreeSet<String> {
         }
     }
     out
+}
+
+enum ParamFormMatch {
+    /// `(param "NAME")` — argument is a string literal we can capture.
+    Literal { name: String, next: usize },
+    /// `(param X)` where X is a non-string token (typically a macro
+    /// parameter from an enclosing `define`). We advance past the form so
+    /// the outer walk doesn't re-scan its interior.
+    NonLiteral { next: usize },
+}
+
+fn try_match_param_form(bytes: &[u8], start: usize) -> Option<ParamFormMatch> {
+    debug_assert_eq!(bytes[start], b'(');
+    let mut i = start + 1;
+    i = skip_ws(bytes, i);
+
+    const KW: &[u8] = b"param";
+    if i + KW.len() > bytes.len() || &bytes[i..i + KW.len()] != KW {
+        return None;
+    }
+    i += KW.len();
+
+    if i >= bytes.len() || !is_ws(bytes[i]) {
+        return None;
+    }
+    i = skip_ws(bytes, i);
+
+    if i >= bytes.len() {
+        return None;
+    }
+    if bytes[i] == b'"' {
+        // Literal-form path: reuse the keyword-form matcher's tail logic.
+        if let Some((name, next)) = try_match_keyword_form(bytes, start, b"param") {
+            return Some(ParamFormMatch::Literal { name, next });
+        }
+        return None;
+    }
+
+    // Non-literal argument — walk to the matching ')' so the outer scanner
+    // resumes after the whole form and we don't double-count the inner
+    // tokens.
+    let mut depth = 1usize;
+    while i < bytes.len() && depth > 0 {
+        match bytes[i] {
+            b';' => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+            }
+            b'"' => i = skip_string(bytes, i),
+            b'(' => {
+                depth += 1;
+                i += 1;
+            }
+            b')' => {
+                depth -= 1;
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+    Some(ParamFormMatch::NonLiteral { next: i })
 }
 
 /// Skip a double-quoted string starting at `start` (which points at the opening
@@ -145,7 +249,7 @@ mod tests {
     use super::*;
 
     fn names(source: &str) -> Vec<String> {
-        param_refs(source).into_iter().collect()
+        param_scan(source).refs.into_iter().collect()
     }
 
     #[test]
@@ -265,6 +369,55 @@ mod tests {
         // Ensure the keyword discrimination works both ways: `(param ...)` must
         // not be picked up as an import.
         assert!(imports("(param \"X\")").is_empty());
-        assert!(param_refs("(import \"X.sb\")").is_empty());
+        assert!(param_scan("(import \"X.sb\")").refs.is_empty());
+    }
+
+    #[test]
+    fn param_scan_complete_for_pure_literal_source() {
+        let r = param_scan("(allow file-read-data (subpath (param \"HOME\")))");
+        assert!(r.scan_complete);
+        assert_eq!(
+            r.refs.into_iter().collect::<Vec<_>>(),
+            vec!["HOME".to_string()]
+        );
+    }
+
+    #[test]
+    fn param_scan_flags_macro_indirected_param() {
+        // The form on the downstream report:
+        //   (define (helper pn) (subpath (param pn)))
+        //   (allow file-read-data (helper "FOO"))
+        // The (param pn) form has an identifier arg, not a literal — we can't
+        // resolve it without macro expansion, so scan_complete must drop.
+        let src = "(define (helper pn) (subpath (param pn)))\n\
+                   (allow file-read-data (helper \"FOO\"))\n";
+        let r = param_scan(src);
+        assert!(!r.scan_complete, "non-literal (param pn) must mark scan incomplete");
+        assert!(
+            r.refs.is_empty(),
+            "no literal names to capture in this profile"
+        );
+    }
+
+    #[test]
+    fn param_scan_mixed_literal_and_indirected() {
+        // A literal and a macro-indirected form together: we capture the
+        // literal and still flag scan_complete=false.
+        let src = "(define (h x) (param x))\n(subpath (param \"DIRECT\"))\n";
+        let r = param_scan(src);
+        assert!(!r.scan_complete);
+        assert_eq!(
+            r.refs.into_iter().collect::<Vec<_>>(),
+            vec!["DIRECT".to_string()]
+        );
+    }
+
+    #[test]
+    fn param_scan_ignores_string_with_param_word() {
+        // A string that happens to contain the text `(param x)` must not flip
+        // the completeness flag.
+        let r = param_scan("(allow default \"contains (param x) literally\")");
+        assert!(r.scan_complete);
+        assert!(r.refs.is_empty());
     }
 }

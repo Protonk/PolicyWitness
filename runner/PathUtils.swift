@@ -123,3 +123,30 @@ func dataVolumeForm(_ input: String) -> String? {
     }
     return nil
 }
+
+/// Pure-string substitution for the three standard userspace symlinks that
+/// exist on every shipped macOS: `/etc`, `/tmp`, `/var` -> `/private/etc`,
+/// `/private/tmp`, `/private/var`. Returns the input unchanged when no
+/// substitution applies.
+///
+/// Used as a fallback for `realpath(3)` when the runner is operating inside
+/// its own sandbox that denies the stat libsandbox would need (e.g. a
+/// `(deny default)` profile under which file-read-metadata is unavailable).
+/// Knowing these three mappings is enough to recover the realpath-equivalent
+/// form for the prefixes that actually matter in practice.
+func wellKnownSymlinksResolved(_ input: String) -> String {
+    let mappings: [(String, String)] = [
+        ("/etc", "/private/etc"),
+        ("/tmp", "/private/tmp"),
+        ("/var", "/private/var"),
+    ]
+    for (prefix, target) in mappings {
+        if input == prefix {
+            return target
+        }
+        if input.hasPrefix(prefix + "/") {
+            return target + input.dropFirst(prefix.count)
+        }
+    }
+    return input
+}

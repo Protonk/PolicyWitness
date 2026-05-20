@@ -98,6 +98,11 @@ struct PreflightData {
     params_supplied: Vec<String>,
     params_missing: Vec<String>,
     params_unused: Vec<String>,
+    /// False when the surface lexer saw `(param X)` with X non-literal — the
+    /// reference is macro-indirected and beyond static scanning. Consumers
+    /// must treat `params_missing: []` together with `params_scan_complete:
+    /// false` as "we don't know" rather than "nothing required".
+    params_scan_complete: bool,
     imports: Vec<ImportRecord>,
     imports_truncated: bool,
     imports_cycle: Option<Vec<String>>,
@@ -126,23 +131,25 @@ struct ParamDiff {
     supplied: Vec<String>,
     missing: Vec<String>,
     unused: Vec<String>,
+    scan_complete: bool,
 }
 
 fn compute_param_diff(
     source: &str,
     supplied: Option<&BTreeMap<String, String>>,
 ) -> ParamDiff {
-    let referenced = sbpl_lex::param_refs(source);
+    let scan = sbpl_lex::param_scan(source);
     let supplied_set: BTreeSet<String> = supplied
         .map(|p| p.keys().cloned().collect())
         .unwrap_or_default();
-    let missing: Vec<String> = referenced.difference(&supplied_set).cloned().collect();
-    let unused: Vec<String> = supplied_set.difference(&referenced).cloned().collect();
+    let missing: Vec<String> = scan.refs.difference(&supplied_set).cloned().collect();
+    let unused: Vec<String> = supplied_set.difference(&scan.refs).cloned().collect();
     ParamDiff {
-        referenced: referenced.into_iter().collect(),
+        referenced: scan.refs.into_iter().collect(),
         supplied: supplied_set.into_iter().collect(),
         missing,
         unused,
+        scan_complete: scan.scan_complete,
     }
 }
 
@@ -169,6 +176,7 @@ fn empty_param_diff() -> ParamDiff {
         supplied: Vec::new(),
         missing: Vec::new(),
         unused: Vec::new(),
+        scan_complete: true,
     }
 }
 
@@ -572,6 +580,7 @@ fn main() {
             params_supplied: diff.supplied,
             params_missing: diff.missing,
             params_unused: diff.unused,
+            params_scan_complete: diff.scan_complete,
             imports: Vec::new(),
             imports_truncated: false,
             imports_cycle: None,
@@ -607,6 +616,7 @@ fn main() {
                 params_supplied: diff.supplied,
                 params_missing: diff.missing,
                 params_unused: diff.unused,
+                params_scan_complete: diff.scan_complete,
                 imports: Vec::new(),
                 imports_truncated: false,
                 imports_cycle: None,
@@ -646,6 +656,7 @@ fn main() {
             params_supplied: diff.supplied,
             params_missing: diff.missing,
             params_unused: diff.unused,
+            params_scan_complete: diff.scan_complete,
             imports: Vec::new(),
             imports_truncated: false,
             imports_cycle: None,
@@ -706,6 +717,7 @@ fn main() {
         params_supplied: diff.supplied,
         params_missing: diff.missing,
         params_unused: diff.unused,
+        params_scan_complete: diff.scan_complete,
         imports: resolved.records,
         imports_truncated: resolved.truncated,
         imports_cycle: resolved.cycle,
