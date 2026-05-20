@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
-use crate::run_flow::DEFAULT_TIMEOUT_MS;
 use crate::runner_client::run_pw_runner_client;
 use crate::runner_manager::{self, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope};
 use crate::runner_select::{infer_record_kind, RunnerConnectionKind};
@@ -30,6 +29,9 @@ struct RunnerRemoveData {
     service_name: String,
     plist_path: String,
     booted_out: bool,
+    plist_removed: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    warnings: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -41,9 +43,45 @@ struct RunnerVerifyData {
 }
 
 #[derive(Serialize)]
-struct RunnerRefreshData {
+struct RunnerValidateData {
     updated: usize,
     missing: usize,
+}
+
+#[derive(Serialize)]
+struct RunnerNotFoundData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    requested_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    requested_service_name: Option<String>,
+}
+
+/// Emit a `not_found` envelope for a runner-lookup miss and return exit code 2.
+///
+/// `kind` should match the envelope kind the caller would have emitted on
+/// success (e.g. `runner_remove`), so consumers can dispatch by kind and then
+/// branch on `result.normalized_outcome`.
+fn emit_runner_not_found(
+    kind: &str,
+    requested_id: Option<&str>,
+    requested_service_name: Option<&str>,
+) -> Result<i32, String> {
+    let data = RunnerNotFoundData {
+        requested_id: requested_id.map(str::to_string),
+        requested_service_name: requested_service_name.map(str::to_string),
+    };
+    let result = json_contract::JsonResult {
+        ok: false,
+        rc: None,
+        exit_code: Some(2),
+        normalized_outcome: Some("not_found".to_string()),
+        errno: None,
+        error: Some("runner not found in registry".to_string()),
+        stderr: None,
+        stdout: None,
+    };
+    json_contract::print_envelope(kind, result, &data)?;
+    Ok(2)
 }
 
 fn runner_usage() -> String {
@@ -58,7 +96,7 @@ usage:
   policy-witness runner status --id <runner-id> | --service-name <name>
   policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
   policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
-  policy-witness runner refresh
+  policy-witness runner validate
 "
     .to_string()
 }
@@ -216,12 +254,21 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             (Some(info.bundle_id.clone()), executable_path)
         }
         RunnerKind::Machme => {
-            if bundle_path.is_dir() && executable_override.is_none() {
-                return Err(
-                    "machme runners require --executable when --bundle is a directory".to_string(),
-                );
-            }
-            let executable_path = executable_override.unwrap_or_else(|| bundle_path.clone());
+            let executable_path = if let Some(path) = executable_override {
+                path
+            } else if bundle_path.is_dir() {
+                let info = bundle_info.as_ref().ok_or_else(|| {
+                    "machme runners require --executable when --bundle is a directory \
+                     without a readable Contents/Info.plist"
+                        .to_string()
+                })?;
+                bundle_path
+                    .join("Contents")
+                    .join("MacOS")
+                    .join(&info.executable)
+            } else {
+                bundle_path.clone()
+            };
             let bundle_id = bundle_id_override
                 .clone()
                 .or_else(|| bundle_info.as_ref().map(|info| info.bundle_id.clone()));
@@ -252,25 +299,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             ));
         }
     };
-    if let Some(identity) = identity.as_ref() {
-        runner_manager::codesign_sign(
-            &sign_target,
-            identity,
-            entitlements_path.as_deref(),
-        )?;
-    }
-    runner_manager::codesign_verify(&sign_target)?;
-    let signature = runner_manager::codesign_metadata(&executable_path)?;
-    if signature.adhoc && !allow_adhoc {
-        return Err("runner is ad-hoc signed; pass --allow-adhoc to accept".to_string());
-    }
 
-    let entitlements = if let Some(entitlements_path) = entitlements_path.as_deref() {
-        runner_manager::entitlements_from_plist_path(entitlements_path)
-    } else {
-        runner_manager::entitlements_from_codesign(&executable_path)
-    };
-
+    // Resolve the service name early so we can fail fast on registry conflicts
+    // before touching codesign, launchd, or the on-disk plist.
     let runner_id = runner_manager::random_id()?;
     let service_name = match kind {
         RunnerKind::Byoxpc => {
@@ -295,6 +326,53 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
             ));
         }
     };
+
+    let (registry_path, mut registry) = load_registry_or_default()?;
+    if let Some(existing) = registry
+        .runners
+        .iter()
+        .find(|r| r.service_name == service_name)
+    {
+        return Err(format!(
+            "service name '{}' is already registered as runner '{}'; run \
+             `policy-witness runner remove --service-name {}` to remove it first",
+            existing.service_name, existing.id, existing.service_name
+        ));
+    }
+
+    // Re-sign the bundle (or its inner binary) when the caller supplied a
+    // signing flag. The two modes are:
+    //   --identity <id>      : sign with the named identity, optionally
+    //                          embedding --entitlements.
+    //   --allow-adhoc + --entitlements : ad-hoc re-sign so the embedded
+    //                                    entitlements actually match the
+    //                                    plist (registry would otherwise lie).
+    // Passing --entitlements without either flag silently used to leave the
+    // existing signature untouched; that footgun is now rejected.
+    if let Some(identity) = identity.as_ref() {
+        runner_manager::codesign_sign(
+            &sign_target,
+            identity,
+            entitlements_path.as_deref(),
+        )?;
+    } else if allow_adhoc && entitlements_path.is_some() {
+        runner_manager::codesign_sign(&sign_target, "-", entitlements_path.as_deref())?;
+    } else if entitlements_path.is_some() {
+        return Err(
+            "--entitlements requires --identity <id> or --allow-adhoc to re-sign the binary; \
+             without one of those the supplied entitlements would not be embedded"
+                .to_string(),
+        );
+    }
+    runner_manager::codesign_verify(&sign_target)?;
+    let signature = runner_manager::codesign_metadata(&executable_path)?;
+    if signature.adhoc && !allow_adhoc {
+        return Err("runner is ad-hoc signed; pass --allow-adhoc to accept".to_string());
+    }
+
+    // Always read entitlements from the binary so the registry reflects what
+    // the kernel will actually enforce, not what the caller's plist asked for.
+    let entitlements = runner_manager::entitlements_from_codesign(&executable_path);
 
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
     if matches!(kind, RunnerKind::Byoxpc) && !env.contains_key("XPC_SERVICE_PATH") {
@@ -343,14 +421,6 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         kind: Some(kind),
     };
 
-    let (registry_path, mut registry) = load_registry_or_default()?;
-    if registry
-        .runners
-        .iter()
-        .any(|r| r.id == record.id || r.service_name == record.service_name)
-    {
-        return Err("runner id or service name already registered".to_string());
-    }
     registry.runners.push(record.clone());
     runner_manager::save_registry(&registry_path, &registry)?;
 
@@ -417,9 +487,19 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
     } else if let Some(service) = service_name.as_ref() {
         registry.runners.iter().find(|r| &r.service_name == service)
     } else {
-        None
-    }
-    .ok_or_else(|| "runner not found in registry".to_string())?;
+        return Err("runner status requires --id or --service-name".to_string());
+    };
+
+    let record = match record {
+        Some(record) => record,
+        None => {
+            return emit_runner_not_found(
+                "runner_status",
+                runner_id.as_deref(),
+                service_name.as_deref(),
+            );
+        }
+    };
 
     let result = json_contract::JsonResult {
         ok: true,
@@ -435,10 +515,17 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
     Ok(0)
 }
 
+/// `runner verify` is meant to be a fast health check — most integrators call
+/// it defensively in teardown loops where a 4-minute default (the value used
+/// by `policy-witness run`) hangs the wrapper when the agent is gone. Keep
+/// the default short; callers waiting on a real cold-spawn can pass
+/// `--timeout-ms` explicitly.
+const RUNNER_VERIFY_DEFAULT_TIMEOUT_MS: u64 = 5_000;
+
 fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     let mut runner_id: Option<String> = None;
     let mut service_name: Option<String> = None;
-    let mut timeout_ms: u64 = DEFAULT_TIMEOUT_MS;
+    let mut timeout_ms: u64 = RUNNER_VERIFY_DEFAULT_TIMEOUT_MS;
 
     let mut idx = 0;
     while idx < args.len() {
@@ -472,9 +559,19 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     } else if let Some(service) = service_name.as_ref() {
         registry.runners.iter().find(|r| &r.service_name == service)
     } else {
-        None
-    }
-    .ok_or_else(|| "runner not found in registry".to_string())?;
+        return Err("runner verify requires --id or --service-name".to_string());
+    };
+
+    let record = match record {
+        Some(record) => record,
+        None => {
+            return emit_runner_not_found(
+                "runner_verify",
+                runner_id.as_deref(),
+                service_name.as_deref(),
+            );
+        }
+    };
 
     let temp_dir = std::env::temp_dir().join("pw-runner-verify");
     std::fs::create_dir_all(&temp_dir)
@@ -570,26 +667,59 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
     } else if let Some(service) = service_name.as_ref() {
         registry.runners.iter().position(|r| &r.service_name == service)
     } else {
-        None
-    }
-    .ok_or_else(|| "runner not found in registry".to_string())?;
+        return Err("runner remove requires --id or --service-name".to_string());
+    };
+
+    let idx = match idx {
+        Some(idx) => idx,
+        None => {
+            return emit_runner_not_found(
+                "runner_remove",
+                runner_id.as_deref(),
+                service_name.as_deref(),
+            );
+        }
+    };
 
     let record = registry.runners.remove(idx);
     let plist_path = runner_manager::launchd_plist_path(&record.service_name, record.scope)?;
+
+    // Remove is the integrator's escape hatch for cleaning up dirty state, so
+    // launchctl and on-disk failures must not strand the registry entry.
+    // Surface them as warnings on a successful envelope instead.
+    let mut warnings: Vec<String> = Vec::new();
+    let mut booted_out = false;
     if !skip_bootout {
-        runner_manager::launchctl_bootout(record.scope, &plist_path)?;
+        match runner_manager::launchctl_bootout(record.scope, &plist_path) {
+            Ok(()) => booted_out = true,
+            Err(err) => warnings.push(format!("launchctl bootout: {err}")),
+        }
     }
-    if plist_path.exists() {
-        std::fs::remove_file(&plist_path)
-            .map_err(|e| format!("failed to remove plist {}: {e}", plist_path.display()))?;
-    }
+
+    let plist_removed = if plist_path.exists() {
+        match std::fs::remove_file(&plist_path) {
+            Ok(()) => true,
+            Err(err) => {
+                warnings.push(format!(
+                    "failed to remove plist {}: {err}",
+                    plist_path.display()
+                ));
+                false
+            }
+        }
+    } else {
+        false
+    };
+
     runner_manager::save_registry(&registry_path, &registry)?;
 
     let data = RunnerRemoveData {
         runner_id: record.id,
         service_name: record.service_name,
         plist_path: plist_path.display().to_string(),
-        booted_out: !skip_bootout,
+        booted_out,
+        plist_removed,
+        warnings,
     };
     let result = json_contract::JsonResult {
         ok: true,
@@ -605,7 +735,11 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
     Ok(0)
 }
 
-fn cmd_runner_refresh() -> Result<i32, String> {
+/// Walk the registry and re-read each runner's on-disk signature and
+/// entitlements. This is *registry-internal* validation — it does not
+/// reconcile against launchctl or LaunchAgents/. Callers wanting that
+/// will need a separate gc/reconcile command.
+fn cmd_runner_validate() -> Result<i32, String> {
     let (registry_path, mut registry) = load_registry_or_default()?;
     let mut missing = 0usize;
     for record in registry.runners.iter_mut() {
@@ -627,7 +761,7 @@ fn cmd_runner_refresh() -> Result<i32, String> {
     let updated = registry.runners.len();
     runner_manager::save_registry(&registry_path, &registry)?;
 
-    let data = RunnerRefreshData { updated, missing };
+    let data = RunnerValidateData { updated, missing };
     let result = json_contract::JsonResult {
         ok: true,
         rc: None,
@@ -638,7 +772,7 @@ fn cmd_runner_refresh() -> Result<i32, String> {
         stderr: None,
         stdout: None,
     };
-    json_contract::print_envelope("runner_refresh", result, &data)?;
+    json_contract::print_envelope("runner_validate", result, &data)?;
     Ok(0)
 }
 
@@ -654,7 +788,7 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
         "status" => cmd_runner_status(rest),
         "verify" => cmd_runner_verify(rest),
         "remove" => cmd_runner_remove(rest),
-        "refresh" => cmd_runner_refresh(),
+        "validate" => cmd_runner_validate(),
         "-h" | "--help" | "help" => {
             println!("{}", runner_usage());
             Ok(0)

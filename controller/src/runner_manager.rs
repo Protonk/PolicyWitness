@@ -287,24 +287,6 @@ fn plutil_json_from_bytes(bytes: &[u8]) -> Result<Value, String> {
     serde_json::from_slice(&out.stdout).map_err(|e| format!("plutil JSON parse failed: {e}"))
 }
 
-pub fn entitlements_from_plist_path(path: &Path) -> RunnerEntitlements {
-    let raw = fs::read(path)
-        .map_err(|e| format!("failed to read entitlements {}: {e}", path.display()))
-        .and_then(|bytes| plutil_json_from_bytes(&bytes));
-    match raw {
-        Ok(value) => {
-            let mut ent = entitlements_from_json(&value);
-            ent.raw_plist = fs::read_to_string(path).ok();
-            ent
-        }
-        Err(err) => RunnerEntitlements {
-            raw_plist: fs::read_to_string(path).ok(),
-            keys: Vec::new(),
-            error: Some(err),
-        },
-    }
-}
-
 pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
     let out = Command::new("/usr/bin/codesign")
         .args(["-d", "--entitlements", ":-", target.to_string_lossy().as_ref()])
@@ -400,7 +382,12 @@ pub fn codesign_sign(
     entitlements: Option<&Path>,
 ) -> Result<(), String> {
     let mut cmd = Command::new("/usr/bin/codesign");
-    cmd.args(["--force", "--options", "runtime", "--timestamp", "-s", identity]);
+    cmd.args(["--force", "--options", "runtime", "-s", identity]);
+    // Apple's RFC 3161 timestamp service rejects ad-hoc signatures; only request
+    // a trusted timestamp when the caller actually has a signing identity.
+    if identity != "-" {
+        cmd.arg("--timestamp");
+    }
     if let Some(entitlements) = entitlements {
         cmd.args(["--entitlements", entitlements.to_string_lossy().as_ref()]);
     }

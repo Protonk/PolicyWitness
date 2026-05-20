@@ -126,7 +126,7 @@ policy-witness runner list
 policy-witness runner status --id <runner-id> | --service-name <name>
 policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
 policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
-policy-witness runner refresh
+policy-witness runner validate
 ```
 
 Install writes a launchd plist, bootstraps the service, and records runner
@@ -136,6 +136,12 @@ under `~/Library/Application Support/PolicyWitness/runners.json`.
 Notes:
 - BYOXPC runners require `CFBundlePackageType=XPC!` and use `CFBundleIdentifier` as the service name.
 - MachMe runners accept `--service-name` overrides and use Mach services for NSXPC.
+- For MachMe, if `--bundle` is a directory, `--executable` is optional when the bundle's `Info.plist` declares `CFBundleExecutable` — the executable is then derived as `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
+- `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
+- `runner verify` defaults to a 5-second timeout (override with `--timeout-ms`).
+- `runner remove` always persists the registry change. `launchctl bootout` or plist-removal failures are surfaced in the envelope's `data.warnings` rather than aborting the call, so dirty launchd state cannot strand a registry entry.
+- `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.
+- `runner validate` re-reads each registry entry's on-disk signature and entitlements. It does not reconcile against launchctl or `LaunchAgents/`.
 
 ## Why the Rust launcher still shells out
 

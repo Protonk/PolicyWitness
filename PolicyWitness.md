@@ -313,9 +313,15 @@ Notes:
 - Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
 - BYOXPC service name must match the bundle’s `CFBundleIdentifier` (no override).
 - The bundle must be a valid XPC service (`CFBundlePackageType=XPC!`).
+- `--entitlements` requires either `--identity <id>` or `--allow-adhoc` so the
+  supplied entitlements are actually re-embedded into the binary. Passing
+  `--entitlements` without one of those is rejected — the registry would
+  otherwise record entitlements that the kernel will not enforce.
 
 The install command writes a launchd plist, bootstraps the service, and records
-the runner in the local registry.
+the runner in the local registry. The registry's `entitlements` field always
+reflects what's embedded in the binary (read back via `codesign -d --entitlements`),
+not what was supplied on the command line.
 
 ### Install a MachMe runner
 
@@ -331,13 +337,21 @@ $PW runner install \
 Notes:
 - Use `--service-name` to override the Mach service name (optional).
 - Use `--bundle-id` to set an optional provenance identifier.
-- If `--bundle` is a directory, pass `--executable` to point at the MachMe binary.
+- If `--bundle` is a directory whose `Info.plist` declares `CFBundleExecutable`,
+  `--executable` is optional — the binary is derived from
+  `<bundle>/Contents/MacOS/<CFBundleExecutable>`. Pass `--executable` explicitly
+  to override, or when the bundle has no readable Info.plist.
+- The same `--entitlements` rule as BYOXPC applies: pair it with `--identity`
+  or `--allow-adhoc`.
 
 ### Verify the runner
 
 ```sh
 $PW runner verify --service-name <service-name>
 ```
+
+`runner verify` defaults to a 5-second timeout; pass `--timeout-ms <n>` for
+slow cold-spawn cases.
 
 ### Use the runner in a specimen
 
@@ -387,15 +401,31 @@ Then run:
 $PW run /tmp/pw_byoxpc_smoke.json --timeout-ms 20000
 ```
 
-### List or remove runners
+### List, validate, or remove runners
 
 ```sh
 $PW runner list
+$PW runner validate
 $PW runner remove --id runner-<id>
 ```
 
 External runners install a launchd background item. `runner remove` is the
 preferred uninstall path and removes the launchd entry and registry record.
+It is also self-healing: if `launchctl bootout` fails (e.g. the service was
+already booted out) or the plist file is already gone, the registry entry is
+still removed and the failure is surfaced in the envelope's `data.warnings`
+array. This means `remove` is safe to call defensively before a fresh
+`install`.
+
+`runner validate` re-reads each registry entry's on-disk signature and
+entitlements (registry-internal only — it does not reconcile against launchctl
+or `LaunchAgents/`).
+
+`runner status`, `runner verify`, and `runner remove` emit an envelope with
+`result.normalized_outcome = "not_found"` and exit code 2 when the lookup key
+isn't present in the registry; the envelope `kind` still matches the operation
+so consumers can dispatch by `kind` and then branch on `normalized_outcome`.
+
 If you no longer have the registry entry, uninstall manually:
 
 User scope:
