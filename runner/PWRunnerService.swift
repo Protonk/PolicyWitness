@@ -202,6 +202,12 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        // Warm path-resolution caches before the sandbox locks down file reads.
+        // /usr/share/firmlinks is unreadable under `(deny default)` profiles,
+        // which would leave the map populated only by the built-in fallback.
+        // Touching it here uses the on-disk file when we still can.
+        warmFirmlinkMap()
+
         let applyResult = applySandboxPolicy(parsed.policy, sandboxLib: sandboxLib)
         if case .failure(let err) = applyResult {
             let resp = PWRunnerRunResult(

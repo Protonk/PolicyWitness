@@ -218,6 +218,12 @@ Notes:
   Fields: `{ input, realpath_resolved, firmlink_resolved, data_volume_form }`.
   The runner still passes the raw `filter_value` to `sandbox_check` — this
   block is observation only.
+
+  At v2+ all four keys are always emitted: a string when computed, an
+  explicit `null` when the computation didn't produce a value. Consumers
+  can therefore distinguish "computed and the result was null" (key
+  present, value `null`) from "diagnostic was not emitted at all" (key
+  absent or the entire `path_diagnostics` object absent).
   - `realpath_resolved`: `realpath(3)` of `input`, or null on failure. A
     restrictive enclosing sandbox (e.g. `(deny default)` without
     `(allow file-read-metadata)`) blocks the stat realpath needs, so this
@@ -229,6 +235,10 @@ Notes:
     (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`) before applying
     firmlinks, so `/etc/hosts` still lands at
     `/System/Volumes/Data/private/etc/hosts` even under a strict sandbox.
+    The firmlinks map is loaded eagerly at runner startup (before the
+    SBPL profile is applied) and has a built-in fallback mirroring the
+    standard mappings on Catalina+, so this field is populated even when
+    the runner's enclosing sandbox would otherwise block the file read.
   - `data_volume_form`: heuristic shortcut that prepends
     `/System/Volumes/Data` to paths under `/private/`. Computed from the
     same fallback basis as `firmlink_resolved`, so it is populated for the

@@ -453,8 +453,19 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
 
     let diag = sb
         .get("path_diagnostics")
+        .and_then(|v| v.as_object())
         .cloned()
         .expect("missing path_diagnostics on path-filter check");
+
+    // All four documented keys must be present (string or explicit null) so
+    // consumers can distinguish "computed and the result was null" from
+    // "field was not emitted at all".
+    for key in ["input", "realpath_resolved", "firmlink_resolved", "data_volume_form"] {
+        assert!(
+            diag.contains_key(key),
+            "path_diagnostics missing key {key:?}; got {diag:?}"
+        );
+    }
 
     assert_eq!(
         diag.get("input").and_then(|v| v.as_str()),
@@ -466,7 +477,8 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
         diag.get("firmlink_resolved").and_then(|v| v.as_str()),
         Some("/System/Volumes/Data/private/etc/hosts"),
         "firmlink_resolved must be derivable from the well-known symlink \
-         substitution even when realpath(3) is blocked by the sandbox"
+         substitution even when realpath(3) is blocked by the sandbox \
+         (firmlinks map is warmed pre-sandbox and has a built-in fallback)"
     );
     assert_eq!(
         diag.get("data_volume_form").and_then(|v| v.as_str()),

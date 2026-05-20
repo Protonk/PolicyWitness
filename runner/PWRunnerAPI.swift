@@ -301,6 +301,45 @@ public struct PWRunnerPathDiagnostics: Codable {
         self.firmlink_resolved = firmlink_resolved
         self.data_volume_form = data_volume_form
     }
+
+    enum CodingKeys: String, CodingKey {
+        case input
+        case realpath_resolved
+        case firmlink_resolved
+        case data_volume_form
+    }
+
+    // Always emit all four keys at schema_version >= 2 so a consumer can
+    // distinguish "computed and the result was null" from "not emitted at
+    // all". The default Swift Codable behavior would omit keys whose values
+    // are nil, conflating both states.
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(input, forKey: .input)
+        if let realpath_resolved {
+            try container.encode(realpath_resolved, forKey: .realpath_resolved)
+        } else {
+            try container.encodeNil(forKey: .realpath_resolved)
+        }
+        if let firmlink_resolved {
+            try container.encode(firmlink_resolved, forKey: .firmlink_resolved)
+        } else {
+            try container.encodeNil(forKey: .firmlink_resolved)
+        }
+        if let data_volume_form {
+            try container.encode(data_volume_form, forKey: .data_volume_form)
+        } else {
+            try container.encodeNil(forKey: .data_volume_form)
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        input = try container.decode(String.self, forKey: .input)
+        realpath_resolved = try container.decodeIfPresent(String.self, forKey: .realpath_resolved)
+        firmlink_resolved = try container.decodeIfPresent(String.self, forKey: .firmlink_resolved)
+        data_volume_form = try container.decodeIfPresent(String.self, forKey: .data_volume_form)
+    }
 }
 
 public struct PWRunnerSandboxCheckResult: Codable {

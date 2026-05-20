@@ -60,6 +60,35 @@ func observedPathForFd(_ fd: Int32) -> String? {
 // where source is absolute and target is data-volume-relative (no leading
 // slash). Lazily loaded once per process.
 
+// Standard /usr/share/firmlinks mappings as shipped on Catalina+. Used as a
+// fallback when the file itself is unreadable — most often because the
+// runner's enclosing sandbox (e.g. `(deny default)`) blocks the read after
+// the sandbox is applied. The source paths are absolute; the targets are
+// the data-volume-relative subpaths (which get `/System/Volumes/Data/`
+// prepended at load time). Order does not matter — we re-sort by descending
+// prefix length for longest-match.
+private let firmlinksBuiltinFallback: [(String, String)] = [
+    ("/AppleInternal", "AppleInternal"),
+    ("/Applications", "Applications"),
+    ("/Library", "Library"),
+    ("/System/Library/Caches", "System/Library/Caches"),
+    ("/System/Library/Assets", "System/Library/Assets"),
+    ("/System/Library/PreinstalledAssets", "System/Library/PreinstalledAssets"),
+    ("/System/Library/AssetsV2", "System/Library/AssetsV2"),
+    ("/System/Library/PreinstalledAssetsV2", "System/Library/PreinstalledAssetsV2"),
+    ("/System/Library/CoreServices/CoreTypes.bundle/Contents/Library",
+     "System/Library/CoreServices/CoreTypes.bundle/Contents/Library"),
+    ("/System/Library/Speech", "System/Library/Speech"),
+    ("/Users", "Users"),
+    ("/Volumes", "Volumes"),
+    ("/cores", "cores"),
+    ("/opt", "opt"),
+    ("/private", "private"),
+    ("/usr/local", "usr/local"),
+    ("/usr/libexec/cups", "usr/libexec/cups"),
+    ("/usr/share/snmp", "usr/share/snmp"),
+]
+
 private struct FirmlinkMap {
     // Sorted by descending source-prefix length so the first match is the
     // most specific (e.g. `/System/Library/Caches` wins over a hypothetical
@@ -69,22 +98,31 @@ private struct FirmlinkMap {
     static let shared: FirmlinkMap = parse(path: "/usr/share/firmlinks")
 
     static func parse(path: String) -> FirmlinkMap {
-        guard let contents = try? String(contentsOfFile: path, encoding: .utf8) else {
-            return FirmlinkMap(mappings: [])
+        // Try the on-disk file first so we pick up any host-local changes;
+        // fall back to the built-in mapping when the read fails (sandbox or
+        // missing file). Either way the map is non-empty on every supported
+        // macOS.
+        if let contents = try? String(contentsOfFile: path, encoding: .utf8) {
+            var pairs: [(String, String)] = []
+            for rawLine in contents.split(separator: "\n", omittingEmptySubsequences: true) {
+                let line = String(rawLine)
+                let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2 else { continue }
+                let source = String(parts[0])
+                let targetRel = String(parts[1])
+                guard source.hasPrefix("/"), !targetRel.isEmpty else { continue }
+                pairs.append((source, "/System/Volumes/Data/\(targetRel)"))
+            }
+            if !pairs.isEmpty {
+                pairs.sort { $0.0.count > $1.0.count }
+                return FirmlinkMap(mappings: pairs)
+            }
         }
-        var pairs: [(String, String)] = []
-        for rawLine in contents.split(separator: "\n", omittingEmptySubsequences: true) {
-            let line = String(rawLine)
-            let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
-            guard parts.count == 2 else { continue }
-            let source = String(parts[0])
-            let targetRel = String(parts[1])
-            guard source.hasPrefix("/"), !targetRel.isEmpty else { continue }
-            let target = "/System/Volumes/Data/\(targetRel)"
-            pairs.append((source, target))
+        var fallback: [(String, String)] = firmlinksBuiltinFallback.map {
+            ($0.0, "/System/Volumes/Data/\($0.1)")
         }
-        pairs.sort { $0.0.count > $1.0.count }
-        return FirmlinkMap(mappings: pairs)
+        fallback.sort { $0.0.count > $1.0.count }
+        return FirmlinkMap(mappings: fallback)
     }
 
     func resolve(_ input: String) -> String? {
@@ -102,9 +140,17 @@ private struct FirmlinkMap {
     }
 }
 
+/// Force the lazy `FirmlinkMap.shared` initializer to run now. Call this from
+/// the runner's startup path BEFORE the SBPL profile is applied — once the
+/// sandbox is up, `(deny default)` profiles block the file read and the map
+/// would be initialized from the built-in fallback only.
+func warmFirmlinkMap() {
+    _ = FirmlinkMap.shared.mappings.count
+}
+
 /// Apply the firmlinks mapping to an absolute path. Returns nil when the path
-/// is not absolute, when /usr/share/firmlinks is unreadable, or when no
-/// mapping prefix matches.
+/// is not absolute or when no mapping prefix matches. The map itself is
+/// always non-empty on a supported macOS — see `firmlinksBuiltinFallback`.
 func firmlinkResolved(_ input: String) -> String? {
     return FirmlinkMap.shared.resolve(input)
 }
