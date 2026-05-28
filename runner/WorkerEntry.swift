@@ -26,8 +26,9 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
     var instrumentationState = InstrumentationState(spec: parsed.instrumentation)
     instrumentationState?.runPhase(PWRunnerWire.instrumentationPhasePre)
 
+    let libsandboxPath = parsed._test_overrides?.libsandbox_path ?? SandboxLib.defaultLibraryPath
     let sandboxLib: SandboxLib
-    switch SandboxLib.load() {
+    switch SandboxLib.load(path: libsandboxPath) {
     case .success(let lib):
         sandboxLib = lib
     case .failure(let err):

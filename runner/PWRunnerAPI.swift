@@ -47,6 +47,7 @@ public struct PWRunnerRunSpec: Codable {
     public var policy: PWRunnerPolicySpec
     public var probe_plan: [PWRunnerProbeStep]
     public var instrumentation: PWRunnerInstrumentation?
+    public var _test_overrides: PWRunnerTestOverrides?
 
     public init(
         schema_version: Int = 1,
@@ -54,7 +55,8 @@ public struct PWRunnerRunSpec: Codable {
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec,
         probe_plan: [PWRunnerProbeStep],
-        instrumentation: PWRunnerInstrumentation? = nil
+        instrumentation: PWRunnerInstrumentation? = nil,
+        _test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -62,6 +64,21 @@ public struct PWRunnerRunSpec: Codable {
         self.policy = policy
         self.probe_plan = probe_plan
         self.instrumentation = instrumentation
+        self._test_overrides = _test_overrides
+    }
+}
+
+// Test-only knobs that re-route narrow boundaries (e.g. the libsandbox dlopen
+// path) so the test suite can exercise real failure paths without stubbing
+// return values. The underscore prefix signals "not part of the public
+// contract"; readers can branch on its presence to flag a non-production run.
+// Any override consumed is mirrored back into PWRunnerRunResult.test_overrides
+// for auditability.
+public struct PWRunnerTestOverrides: Codable {
+    public var libsandbox_path: String?
+
+    public init(libsandbox_path: String? = nil) {
+        self.libsandbox_path = libsandbox_path
     }
 }
 
@@ -628,6 +645,7 @@ public struct PWRunnerRunResult: Codable {
     public var steps: [PWRunnerStepResult]
     public var instrumentation: PWRunnerInstrumentationReport?
     public var runner_subprocess: PWRunnerSubprocess?
+    public var test_overrides: PWRunnerTestOverrides?
 
     public init(
         schema_version: Int = 3,
@@ -644,7 +662,8 @@ public struct PWRunnerRunResult: Codable {
         deny_signal_total: PWRunnerSignalResult? = nil,
         steps: [PWRunnerStepResult],
         instrumentation: PWRunnerInstrumentationReport? = nil,
-        runner_subprocess: PWRunnerSubprocess? = nil
+        runner_subprocess: PWRunnerSubprocess? = nil,
+        test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -661,6 +680,7 @@ public struct PWRunnerRunResult: Codable {
         self.steps = steps
         self.instrumentation = instrumentation
         self.runner_subprocess = runner_subprocess
+        self.test_overrides = test_overrides
     }
 }
 

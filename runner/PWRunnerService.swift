@@ -152,7 +152,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        switch SandboxLib.load() {
+        let libsandboxPath = parsed._test_overrides?.libsandbox_path ?? SandboxLib.defaultLibraryPath
+        switch SandboxLib.load(path: libsandboxPath) {
         case .success:
             break
         case .failure(let err):
@@ -165,7 +166,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: []
+                steps: [],
+                test_overrides: parsed._test_overrides
             )
             replyAndExit(resp)
             return
@@ -227,7 +229,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 deny_signal_total: report?.deny_signal_total,
                 steps: report?.steps ?? [],
                 instrumentation: report?.instrumentation,
-                runner_subprocess: worker.subprocess
+                runner_subprocess: worker.subprocess,
+                test_overrides: parsed._test_overrides
             )
             replyAndExit(resp)
         }

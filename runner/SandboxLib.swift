@@ -3,6 +3,14 @@ import Darwin
 // Minimal dynamic loader for libsandbox. We resolve each symbol explicitly so
 // inspection shows exactly which APIs we use.
 struct SandboxLib {
+    // The system libsandbox path. Tests inject an override path through the
+    // request JSON (`_test_overrides.libsandbox_path`) so they exercise the
+    // real dlopen-failure → LoadError → "libsandbox_unavailable" pipeline
+    // without stubbing the loader's return value. Env vars are not used as a
+    // test seam here because launchd spawns the XPC service host with a
+    // clean environment, so a shell-set var does not reach it.
+    static let defaultLibraryPath = "/usr/lib/libsandbox.dylib"
+
     let handle: UnsafeMutableRawPointer
 
     typealias SandboxParams = UnsafeMutableRawPointer
@@ -32,9 +40,11 @@ struct SandboxLib {
         var description: String { message }
     }
 
-    static func load() -> Result<SandboxLib, LoadError> {
+    static func load(
+        path: String = SandboxLib.defaultLibraryPath
+    ) -> Result<SandboxLib, LoadError> {
         let handle: UnsafeMutableRawPointer
-        switch loadHandle() {
+        switch loadHandle(path: path) {
         case .success(let value):
             handle = value
         case .failure(let err):
@@ -111,9 +121,10 @@ struct SandboxLib {
         )
     }
 
-    private static func loadHandle() -> Result<UnsafeMutableRawPointer, LoadError> {
-        guard let handle = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW) else {
-            return .failure(LoadError(message: "dlopen(/usr/lib/libsandbox.dylib) failed"))
+    private static func loadHandle(path: String) -> Result<UnsafeMutableRawPointer, LoadError> {
+        guard let handle = path.withCString({ dlopen($0, RTLD_NOW) }) else {
+            let reason = dlerror().map { String(cString: $0) } ?? "dlopen returned NULL"
+            return .failure(LoadError(message: "dlopen(\(path)) failed: \(reason)"))
         }
         return .success(handle)
     }

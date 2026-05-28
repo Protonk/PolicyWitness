@@ -18,6 +18,13 @@ PolicyWitness is **specimen-first**:
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
 - `runner/SandboxLib.swift`
   - Explicit `dlopen` + `dlsym` bindings for libsandbox.
+  - `SandboxLib.load(path:)` defaults to `/usr/lib/libsandbox.dylib`.
+    The host and worker pass through any `_test_overrides.libsandbox_path`
+    field from the request JSON so tests can point the loader at a
+    nonexistent file; the resulting real `dlopen` failure drives the
+    `libsandbox_unavailable` outcome through the production
+    error-handling path. Env vars are not a test seam here because
+    launchd spawns the XPC service host with a clean environment.
 - `runner/SandboxApply.swift`
   - Policy hashing and single-shot `sandbox_apply` path.
 - `runner/Instrumentation.swift`
