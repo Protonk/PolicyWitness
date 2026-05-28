@@ -299,10 +299,37 @@ Each port can specify an optional `phase`:
 - `post_sandbox`
 
 Debug flow (quick recipe):
-- Add a short `debug_wait` to give LLDB a window before sandbox apply.
-- Add `dylib_load` with your logging shim to capture sandbox_check strings.
-- Keep `runner.mode="debuggable"` (or use an external runner with matching entitlements) so these ports are enabled.
-- Run: `policy-witness run <request.json> --instrumentation @instrumentation.json` and attach to the runner PID shown in logs.
+
+The runner is two processes per specimen: an unsandboxed XPC service host
+that orchestrates, and a short-lived worker that applies the policy and
+runs the probe plan. Attach the debugger to the **worker** to inspect
+policy effects; the host never applies the policy and isn't useful for
+that purpose.
+
+1. Use the debuggable runner so `debug_wait` and `dylib_load` are honored:
+   add `"runner": { "mode": "debuggable" }` to the specimen, or pass
+   `--runner-mode debuggable` on the CLI.
+2. Add a `debug_wait` instrumentation port at `phase: "pre_sandbox"` (the
+   default) to open an attach window in the worker *before* sandbox apply.
+   Use `phase: "post_sandbox"` instead if you want to inspect the worker
+   *after* the sandbox is in effect.
+3. Run the specimen. While the worker is paused in `debug_wait`, find its
+   PID through the live process table:
+   ```sh
+   pgrep -lf -- '--apply-and-probe-worker'
+   ```
+   The worker's argv includes `--apply-and-probe-worker --specimen-id <id>`
+   so multiple concurrent workers are distinguishable by their specimen
+   label. The host process has the same Mach-O name but no `--apply-and-probe-worker`
+   in its argv — don't attach to that one.
+4. `lldb -p <worker-pid>` and proceed. `runner_subprocess.pid` in the
+   eventual JSON envelope confirms which worker you attached to.
+
+Run interactive `lldb`, `pgrep`, and `log stream` workflows from an
+unsandboxed Terminal. A sandboxed automation harness can block XPC
+lookup, process-table inspection, and unified-log capture before any
+runner code executes — that's an environment constraint, not a
+PolicyWitness behavior.
 
 Example specimen fragment:
 

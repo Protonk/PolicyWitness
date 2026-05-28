@@ -37,7 +37,8 @@ enum WorkerProcess {
         requestData: Data,
         expectedStepCount: Int,
         executablePathOverride: String? = nil,
-        timeoutMsOverride: Int? = nil
+        timeoutMsOverride: Int? = nil,
+        specimenId: String? = nil
     ) -> Result<WorkerProcessResult, WorkerSpawnError> {
         var sockets = [Int32](repeating: -1, count: 2)
         if socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets) != 0 {
@@ -54,7 +55,8 @@ enum WorkerProcess {
         let spawnResult = spawnWorker(
             workerFD: workerFD,
             hostFD: hostFD,
-            executablePathOverride: executablePathOverride
+            executablePathOverride: executablePathOverride,
+            specimenId: specimenId
         )
         close(workerFD)
 
@@ -151,6 +153,19 @@ enum WorkerProcess {
     }
 }
 
+// Cap and filter the specimen_id before it lands in worker argv. argv is not
+// shell-evaluated (we posix_spawn directly), so injection per se isn't a
+// concern — the goal is keeping pgrep/ps output readable when a hostile or
+// noisy specimen_id reaches the spawn boundary. Returns nil when the input
+// produces nothing useful, so callers omit the label entirely.
+func sanitizedSpecimenLabel(_ raw: String?) -> String? {
+    guard let raw, !raw.isEmpty else { return nil }
+    let safe = raw.prefix(64).filter { ch in
+        ch.isLetter || ch.isNumber || ch == "-" || ch == "_" || ch == "." || ch == ":"
+    }
+    return safe.isEmpty ? nil : String(safe)
+}
+
 private func disableSigpipe(_ fd: Int32) {
     var one: Int32 = 1
     setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
@@ -159,7 +174,8 @@ private func disableSigpipe(_ fd: Int32) {
 private func spawnWorker(
     workerFD: Int32,
     hostFD: Int32,
-    executablePathOverride: String?
+    executablePathOverride: String?,
+    specimenId: String?
 ) -> Result<pid_t, WorkerSpawnError> {
     let executable: String
     if let override = executablePathOverride, !override.isEmpty {
@@ -200,7 +216,16 @@ private func spawnWorker(
         _ = posix_spawn_file_actions_addclose(&actions, hostFD)
     }
 
-    let argvStrings = [executable, pwRunnerWorkerModeArgument]
+    // Decorate argv with a sanitized, length-capped specimen label so that
+    // `pgrep -af -- '--apply-and-probe-worker'` shows which specimen each
+    // live worker is running. The worker entrypoint keys only on
+    // pwRunnerWorkerModeArgument; the label is advisory and never read by
+    // production code or treated as evidence of sandbox behavior.
+    var argvStrings = [executable, pwRunnerWorkerModeArgument]
+    if let label = sanitizedSpecimenLabel(specimenId) {
+        argvStrings.append("--specimen-id")
+        argvStrings.append(label)
+    }
     let envStrings = ProcessInfo.processInfo.environment
         .map { "\($0.key)=\($0.value)" }
         .sorted()

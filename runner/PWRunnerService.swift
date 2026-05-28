@@ -196,7 +196,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             requestData: request,
             expectedStepCount: parsed.probe_plan.count,
             executablePathOverride: parsed._test_overrides?.worker_executable_path,
-            timeoutMsOverride: parsed._test_overrides?.worker_timeout_ms
+            timeoutMsOverride: parsed._test_overrides?.worker_timeout_ms,
+            specimenId: parsed.specimen_id
         )
 
         switch workerRun {

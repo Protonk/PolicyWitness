@@ -33,6 +33,39 @@ func runWorkerHelperTests(_ tk: TestKit) {
         }
     }
 
+    tk.group("WorkerProcess.sanitizedSpecimenLabel") {
+
+        tk.run("nil and empty input produce nil") {
+            try expectNil(sanitizedSpecimenLabel(nil))
+            try expectNil(sanitizedSpecimenLabel(""))
+        }
+
+        tk.run("safe characters pass through unchanged") {
+            try expectEqual(sanitizedSpecimenLabel("file_read_deny"), "file_read_deny")
+            try expectEqual(sanitizedSpecimenLabel("BBX-001"), "BBX-001")
+            try expectEqual(sanitizedSpecimenLabel("v2.foo:bar"), "v2.foo:bar")
+        }
+
+        tk.run("unsafe characters are stripped") {
+            // Spaces, shell metacharacters, control chars — all gone. The
+            // remaining characters survive in order so pgrep output stays
+            // human-readable.
+            try expectEqual(sanitizedSpecimenLabel("hi there"), "hithere")
+            try expectEqual(sanitizedSpecimenLabel("$(rm -rf /)"), "rm-rf")
+            try expectEqual(sanitizedSpecimenLabel("a/b\\c"), "abc")
+        }
+
+        tk.run("input is capped at 64 characters before filtering") {
+            let long = String(repeating: "a", count: 100)
+            try expectEqual(sanitizedSpecimenLabel(long)?.count, 64)
+        }
+
+        tk.run("input that filters to nothing yields nil") {
+            try expectNil(sanitizedSpecimenLabel("///"))
+            try expectNil(sanitizedSpecimenLabel("    "))
+        }
+    }
+
     tk.group("WorkerProcess.partialStepOutput") {
 
         tk.run("reports partial only when worker produced some but not all steps") {
