@@ -23,6 +23,7 @@ Tiers:
 | `runner_outcome_libsandbox_unavailable` | Baseline | `_test_overrides.libsandbox_path=/nonexistent` causes `SandboxLib.load(path:)` to fail with a real `dlopen` error and the host returns `normalized_outcome="libsandbox_unavailable"` without spawning a worker | Built app + XPC | Exercises the real loader; no stubbing. Asserts the failure message names the override path and that `test_overrides` is mirrored back |
 | `runner_outcome_worker_spawn_failed` | Baseline | `_test_overrides.worker_executable_path=/nonexistent` makes `posix_spawn` return `ENOENT`; host returns `normalized_outcome="worker_spawn_failed"` | Built app + XPC | Asserts `runner_subprocess` is null (no worker observed) and override is mirrored back |
 | `runner_outcome_runner_timeout` | Baseline | `_test_overrides.worker_timeout_ms=2000` plus an 8s `debug_wait` instrumentation port makes the host SIGKILL the worker at its deadline; `normalized_outcome="runner_timeout"` | Built app + XPC | Asserts `term_signal=9` (host-issued) and that wall-clock elapsed time matches the host deadline, not the worker's natural sleep |
+| `runner_outcome_bad_request` | Baseline | Two e2e cases that drive `normalized_outcome="bad_request"` through both emit sites in `PWRunnerService.runSpecimen` — Swift decode failure and `validateSandboxChecks` rejection. No `_test_overrides` needed. | Built app + XPC | Asserts `runner_subprocess` is null and that the error message identifies the rejected field |
 | `runner_debuggable` | Baseline | Smoke + blackbox coverage through the built-in debuggable runner | Built app + XPC | Uses shared smoke/blackbox scripts |
 | `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Skips when launchd bootstrap is unavailable |
 | `anomalies` | Diagnostic | Known OS anomalies + sandbox_check cross-check consistency | Host-dependent | Cross-check may skip if tooling is unavailable |
@@ -41,7 +42,33 @@ Tiers:
 - `runner_outcome_libsandbox_unavailable`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
 - `runner_outcome_worker_spawn_failed`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
 - `runner_outcome_runner_timeout`: skip when `dist/PolicyWitness.app` is missing or unbuilt. Runs ~2s wall-clock time.
+- `runner_outcome_bad_request`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
 - `runner_debuggable`: skip when `dist/PolicyWitness.app` is missing or unbuilt; blackbox cases may skip for host `sandbox_check` anomalies.
 - `runner_byoxpc`: skip when launchd bootstrap is unavailable or sandboxed; blackbox cases may skip for host `sandbox_check` anomalies.
 - `anomalies`: skip when `dist/PolicyWitness.app` is missing; cross-check tooling unavailable.
 - `opt_in`: skip when required resources are unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture).
+
+## Normalized outcome coverage matrix
+
+Every value in `runner/PWRunnerAPI.swift::NormalizedOutcome` must appear
+exactly once in this matrix. New outcomes are added here in the same
+change that introduces the constant; `source_drift` enforces the rule
+mechanically. "Untestable" rows are not unmaintained — the rationale
+column says why, and the closest unit or harness coverage is named.
+
+| outcome | emitted by | primary suite/case | notes |
+| --- | --- | --- | --- |
+| `ok` | worker (WorkerEntry) | `runner_apply_isolation_v2`, `runner_apply_isolation_v3`, `integration`, `runner_debuggable`, others | The happy path; covered everywhere. |
+| `bad_policy` | worker (WorkerEntry); host (PWRunnerService) for pre-spawn hash failure | none (e2e unreachable) | The Rust controller's preflight short-circuits malformed SBPL as `bad_policy` before invoking the runner, so the runner-side branches are defense-in-depth. `runner_unit` covers `computePolicyHash` failure indirectly through `applySandboxPolicy` shape tests. |
+| `sandbox_apply_failed` | worker (WorkerEntry) | `runner_unit` / `SandboxApplyTests` | E2e unreachable because preflight catches the same input upstream as `bad_policy`. Unit tests stub `SandboxLib` to force compile/apply failure. |
+| `libsandbox_unavailable` | host (PWRunnerService) short-circuit; worker (WorkerEntry) defense-in-depth | `runner_outcome_libsandbox_unavailable` | Driven via `_test_overrides.libsandbox_path`. The worker-side path is unreachable today because the host short-circuits first; that's documented in `WorkerEntry.swift`. |
+| `bad_request` | host (PWRunnerService) — Swift decode + `validateSandboxChecks` | `runner_outcome_bad_request` | Two cases cover both emit sites. No override needed. |
+| `already_ran` | host (PWRunnerService) | none (out of scope) | The XPC service exits ~50ms after the first reply, so a second request from the same connection is racy. Unit-testing it would require refactoring `replyAndExit`'s `exit(0)` out, which `COMMITMENTS-PLAN.md` lists as out of scope. |
+| `worker_spawn_failed` | host (PWRunnerService) | `runner_outcome_worker_spawn_failed` | Driven via `_test_overrides.worker_executable_path`. |
+| `runner_sandbox_denied` | host classifier (WorkerProcess.classifyWorkerResult) | `runner_sandbox_denied`; unit-pinned by `runner_unit` / `WorkerProcessClassifyTests` | The bug-report specimen, verbatim. |
+| `runner_timeout` | host classifier | `runner_outcome_runner_timeout`; unit-pinned by `runner_unit` | Driven via `_test_overrides.worker_timeout_ms` plus a long `debug_wait`. |
+| `runner_failed` | host classifier; worker self-report on encode failure | `runner_unit` / `WorkerProcessClassifyTests` | E2e unreachable today because the failure modes that produce it (worker exits non-zero with no report; worker self-reports during a teardown error) don't surface from any deterministic specimen. Unit tests cover the classifier branch. |
+| `xpc_error` | client (`pw-runner-client`) synthetic reply | none (e2e requires renaming the `.xpc` bundle out from under launchd) | Reachable in practice when the bundle is missing or launchd refuses to spawn the host. Documented in `PolicyWitness.md` troubleshooting. |
+| `xpc_timeout` | client synthetic reply | none (e2e requires a slow specimen plus tight `--timeout-ms`) | Trigger is real (`--timeout-ms 50` plus a long `debug_wait`) but not currently scripted. |
+| `xpc_proxy_type_mismatch` | client synthetic reply | none (no realistic trigger) | Fires only if the remote XPC proxy doesn't conform to `PWRunnerProtocol`. Defense-in-depth for a code path that should never run with our matched client/host. |
+| `xpc_no_reply` | client synthetic reply | none (no realistic trigger) | Fires only if the XPC reply never arrives but no error fires either. Defense-in-depth. |

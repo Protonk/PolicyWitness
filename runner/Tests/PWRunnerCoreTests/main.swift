@@ -8,6 +8,7 @@ runSandboxApplyTests(tk)
 runWorkerClassifyTests(tk)
 runWorkerHelperTests(tk)
 runWorkerFrameTests(tk)
+runEnvelopeInvariantTests(tk)
 
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))
 exit(tk.exitCode())
