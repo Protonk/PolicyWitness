@@ -8,7 +8,7 @@ PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies 
 
 >Specimens -> Runs -> Steps -> Evidence
 
-PolicyWitness operates on specimen, packages of SBPL + entitlements and probe plans. The controller launches a fresh runner for each specimen. The runner starts unsandboxed, loads libsandbox, applies the provided policy once, and then executes the probe plan step by step inside the sandbox. Each step performs an explicit attempt, records rc plus errno or kr, and also runs `sandbox_check` with the same operation and filter so you can compare predicted vs observed outcomes. The runner returns a single JSON result and exits.
+PolicyWitness operates on specimen, packages of SBPL + entitlements and probe plans. The controller launches a fresh runner for each specimen. The runner is two processes: an unsandboxed XPC host that validates the request and spawns a short-lived worker, and a worker that applies the policy to itself and executes the probe plan step by step inside the sandbox. The split keeps the XPC reply path alive even when the specimen policy is a strict `(deny default)` profile that would otherwise block the host's own runtime. Each step performs an explicit attempt, records rc plus errno or kr, and also runs `sandbox_check` with the same operation and filter so you can compare predicted vs observed outcomes. The worker returns a single JSON report to the host, the host translates it into the public JSON envelope, and both processes exit.
 
 Each step may include multiple evidence channels:
 
@@ -44,8 +44,8 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, standard mode; one specimen per process)
-  - `Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable mode; one specimen per process)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, standard mode; one XPC host + one worker per specimen)
+  - `Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable mode; one XPC host + one worker per specimen)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 ## Where To Learn

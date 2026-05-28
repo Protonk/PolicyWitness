@@ -5,7 +5,11 @@ This directory contains the Swift implementation of the **ephemeral sandbox runn
 PolicyWitness is **specimen-first**:
 
 - The controller (`policy-witness`) starts a fresh XPC runner instance per specimen.
-- The runner starts unsandboxed, applies a requested seatbelt profile exactly once (SBPL source + parameters), executes a probe plan, replies with JSON, and exits.
+- The runner XPC host starts unsandboxed, spawns a short-lived worker, and the
+  worker applies the requested seatbelt profile exactly once (SBPL source +
+  parameters), executes the probe plan, returns JSON to the host, and exits.
+- The host never applies the specimen policy, so default-deny policies cannot
+  block the XPC reply path.
 
 ## Key files
 
@@ -24,8 +28,17 @@ PolicyWitness is **specimen-first**:
   - Path normalization and fd-based observation helpers.
 - `runner/Signals.swift`
   - Deny-signal handler and counters.
+- `runner/PWRunnerWorkerWire.swift`
+  - Internal length-prefixed JSON framing and worker report type.
+- `runner/WorkerEntry.swift`
+  - Worker-mode entry point and sandboxed apply/probe execution.
+- `runner/WorkerProcess.swift`
+  - Host-side worker spawn, IPC, reap, and outcome classification.
 - `runner/PWRunnerService.swift`
-  - Orchestrates the run flow (decode → instrumentation → sandbox apply → probes → reply).
+  - Orchestrates the host flow (decode → validate → spawn worker → reply).
+  - The host enforces caller authorization, loads libsandbox once to fail
+    fast on missing dynamic loaders, computes `policy_sha256`, and never
+    calls `sandbox_apply` on itself.
 
 - `runner/runner-client/main.swift` → builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
@@ -46,6 +59,14 @@ The runner consumes a `PWRunnerRunSpec` which contains:
 
 Each probe step reports both a `sandbox_check` and an `attempt` result:
 
+- `pid` at the top level is the sandboxed worker PID when
+  `runner_subprocess` is present. `runner_subprocess` carries the worker's
+  `exit_code` or `term_signal` plus a `partial_steps` marker. The
+  classifier in `WorkerProcess.swift` maps worker exit status to
+  `normalized_outcome`: a complete report + clean exit → `ok`; any fatal
+  signal with no report → `runner_sandbox_denied` (the precise signal
+  stays in `runner_subprocess.term_signal`); host-side timeout →
+  `runner_timeout`; failure to `posix_spawn` → `worker_spawn_failed`.
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
   `filter_value` and a best-effort `effective_filter_value` (for `path` filters,
   this is the runner’s normalized path). It also reports `pid`, `operation`,
@@ -77,7 +98,7 @@ opt in by adding the same keys.
 Sandbox policy variation is driven by the specimen itself:
 
 - the controller supplies SBPL,
-- the runner applies it once to itself,
+- the runner worker applies it once to itself,
 - the runner’s witness is defined by mandatory multi-channel evidence (see the controller docs).
 
 ## External runner services

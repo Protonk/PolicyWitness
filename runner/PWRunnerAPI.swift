@@ -1,7 +1,8 @@
 import Foundation
 
-// PWRunner is a single-purpose, ephemeral XPC runner that starts unsandboxed and
-// self-applies a seatbelt profile exactly once, then executes a probe plan and exits.
+// PWRunner is a single-purpose, ephemeral XPC runner. The XPC service host
+// stays unsandboxed; a short-lived worker self-applies a seatbelt profile,
+// executes the probe plan, returns a report to the host, and exits.
 //
 // This file intentionally defines a small JSON-over-Data protocol surface so the
 // runner can be driven by multiple controllers (CLI, lab tools) without NSXPC
@@ -580,6 +581,25 @@ public struct PWRunnerStepResult: Codable {
     }
 }
 
+public struct PWRunnerSubprocess: Codable {
+    public var pid: Int
+    public var term_signal: Int?
+    public var exit_code: Int?
+    public var partial_steps: Bool
+
+    public init(
+        pid: Int,
+        term_signal: Int? = nil,
+        exit_code: Int? = nil,
+        partial_steps: Bool
+    ) {
+        self.pid = pid
+        self.term_signal = term_signal
+        self.exit_code = exit_code
+        self.partial_steps = partial_steps
+    }
+}
+
 public struct PWRunnerRunResult: Codable {
     // Response wire version.
     //   1 — initial shape.
@@ -588,6 +608,11 @@ public struct PWRunnerRunResult: Codable {
     //       schema_version can rely on path_diagnostics being available on
     //       any path-filter check when schema_version >= 2. The field is
     //       additive: clients pinned to v1 ignore it transparently.
+    //   3 — splits the XPC service host from the sandboxed worker process.
+    //       `pid` is the sandboxed worker PID when `runner_subprocess` is
+    //       present, so unified-log correlation should continue to use this
+    //       top-level field. `runner_subprocess` carries the worker exit
+    //       status observed by the unsandboxed host.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -602,9 +627,10 @@ public struct PWRunnerRunResult: Codable {
     public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
     public var instrumentation: PWRunnerInstrumentationReport?
+    public var runner_subprocess: PWRunnerSubprocess?
 
     public init(
-        schema_version: Int = 2,
+        schema_version: Int = 3,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -617,7 +643,8 @@ public struct PWRunnerRunResult: Codable {
         sandboxed_after_apply: Bool? = nil,
         deny_signal_total: PWRunnerSignalResult? = nil,
         steps: [PWRunnerStepResult],
-        instrumentation: PWRunnerInstrumentationReport? = nil
+        instrumentation: PWRunnerInstrumentationReport? = nil,
+        runner_subprocess: PWRunnerSubprocess? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -633,6 +660,7 @@ public struct PWRunnerRunResult: Codable {
         self.deny_signal_total = deny_signal_total
         self.steps = steps
         self.instrumentation = instrumentation
+        self.runner_subprocess = runner_subprocess
     }
 }
 

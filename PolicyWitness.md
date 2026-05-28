@@ -192,6 +192,43 @@ Example:
 
 ## Run output (per step)
 
+Runner responses use `schema_version = 3`. The XPC service process stays
+unsandboxed and spawns a short-lived worker that applies the specimen policy.
+`data.runner_result.pid` names that worker process when
+`runner_subprocess` is present; use it for sandbox unified-log correlation.
+`runner_subprocess` records `{ pid, term_signal, exit_code, partial_steps }`.
+
+`data.runner_result.normalized_outcome` values the runner can produce
+(controller-level outcomes like `bad_policy`, `missing_params`, and
+`policy_too_large` are documented elsewhere on this page):
+
+- `ok` — worker wrote a complete report and exited cleanly.
+- `runner_sandbox_denied` — worker spawned, applied the policy, and was
+  terminated by a fatal signal before writing a report. The kernel sandbox
+  is the overwhelming cause on macOS; the precise signal is preserved in
+  `runner_subprocess.term_signal` (commonly `9` for SIGKILL, or `5`/`6` for
+  SIGTRAP/SIGABRT from Swift's runtime when an allocation trap fires under
+  a `(deny default)` profile that blocks `mach_vm_allocate`-class traps).
+  `data.sandbox_log_capture.deny_events` carries the matching unified-log
+  evidence when available.
+- `runner_timeout` — worker did not exit and did not write a report within
+  the host's deadline. The host SIGKILLs the worker before replying.
+- `worker_spawn_failed` — host could not `posix_spawn` the worker
+  (filesystem/codesign/quota error). Worker never ran.
+- `bad_request` — request JSON failed to decode or referenced an unknown
+  sandbox operation. No worker is spawned.
+- `libsandbox_unavailable` — libsandbox could not be opened on this host.
+- `sandbox_apply_failed` — worker reached `sandbox_apply` but libsandbox
+  rejected the policy (returned non-zero). The worker reports this and
+  exits cleanly; the host forwards it.
+- `already_ran` — the XPC service instance only accepts one
+  `runSpecimen` call. A second call returns this error.
+
+`xpc_error`, `xpc_timeout`, `xpc_proxy_type_mismatch`, and `xpc_no_reply`
+are synthesized by `pw-runner-client` when the XPC peer itself can't be
+reached. After the host/worker split they should be rare: the unsandboxed
+host always replies unless launchd or codesign reject the bundle outright.
+
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
@@ -517,6 +554,17 @@ Registry location:
 - System scope install fails: use `--scope user` or run with admin privileges.
 - Verify fails with no reply: check launchd state and the service plist.
 - BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
+- `normalized_outcome` is `runner_sandbox_denied` and you expected `ok`: the
+  worker was terminated by the kernel sandbox (or by a Swift-runtime trap
+  triggered by a denied `mach_vm_allocate`) before writing its report. Check
+  `data.runner_result.runner_subprocess.term_signal` for the signal and
+  `data.sandbox_log_capture.deny_events` for matching kernel denies. A bare
+  `(deny default)` policy almost always produces this outcome unless the
+  specimen adds enough `(allow ...)` entries to keep the worker's
+  encode-and-write path alive.
+- `normalized_outcome` is `worker_spawn_failed`: the host could not
+  `posix_spawn` the worker. Verify the bundle is signed and on a writable
+  filesystem; `pgrep -fl PWRunner` should show no stragglers.
 - If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
   run from a normal Terminal to confirm behavior.
 - If `--sonoma-cross-check` reports `blocked` or `unavailable`, rerun from an

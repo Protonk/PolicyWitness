@@ -4,7 +4,7 @@ This is developer documentation for the Rust code in `controller/`. It builds th
 
 - `dist/PolicyWitness.app/Contents/MacOS/policy-witness`
 
-PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run.
+PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run. The runner is itself a host/worker pair: the XPC host stays unsandboxed and the worker process applies the specimen policy. The controller treats this as an implementation detail of the runner — it only consumes the host's reply.
 
 For the Swift runner implementation details, see `runner/README.md`.
 
@@ -58,7 +58,7 @@ Runs a **single runner evaluation** against the selected runner service:
 - Reads a request JSON file (runner request schema) that contains:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
-- Starts a fresh runner instance, applies the policy exactly once, executes the probe plan, and returns the runner’s structured JSON result.
+- Starts a fresh runner instance (one XPC host + one worker process), applies the policy exactly once inside the worker, executes the probe plan, and returns the runner's structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
 - If `--sonoma-cross-check` is provided, the controller runs the embedded
   `sb_api_validator` against the runner PID while it is paused post-sandbox
@@ -81,6 +81,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
 - `data.policy_preflight`: SBPL compile report from `sbpl-preflight` (best-effort)
 - `data.runner_startup_diagnostics`: extra context when XPC startup fails
+  (rare after the host/worker split, since the unsandboxed host always
+  replies unless launchd or codesign reject the bundle outright)
 - `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
 - `data.sonoma_cross_check`: optional `sandbox_check` cross-check report (best-effort)
 - `data.runner_provenance`: runner identity + entitlements metadata

@@ -2,7 +2,7 @@
 
 This file is for contributors and agents.
 
-PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — an SBPL policy plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance that self-applies the sandbox, executes the plan, and exits.
+PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — an SBPL policy plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance. The XPC host stays unsandboxed; it spawns a short-lived worker process that applies the specimen policy to itself, executes the probe plan, returns a JSON report, and exits. The host then replies via XPC and exits too.
 
 ## Quick Router (open first)
 
@@ -22,7 +22,7 @@ Pick what you’re changing:
 
 - **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
 - **Controller**: the host-side orchestrator (`dist/PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
-- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`) that applies one sandbox policy, executes the probe plan, returns JSON, and exits.
+- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`). The XPC host validates the request, spawns a short-lived worker, and returns the worker's JSON report. The worker is a `posix_spawn` of the same binary with `--apply-and-probe-worker`; it applies one sandbox policy to itself, executes the probe plan, and exits. Both the host and worker are single-use per specimen.
 - **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
 
 ## What Ships (bundle layout contract)
@@ -33,8 +33,8 @@ The `.app` layout is a contract: tests and evidence generation assume these path
 - `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client` (Swift client that talks to `PWRunner.xpc`)
 - `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
 - `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
-- `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one specimen per instance)
-- `dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one specimen per instance)
+- `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one XPC host + one worker per specimen)
+- `dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one XPC host + one worker per specimen)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
 
@@ -54,10 +54,11 @@ Documentation should be stateless: describe current behavior without historical 
 
 ## Core ideas
 
-- **One-way sandbox per process**: the runner applies exactly one sandbox per instance. A new specimen means a fresh runner process.
+- **One-way sandbox per process**: the worker applies exactly one sandbox to itself and exits. A new specimen means a fresh XPC host plus a fresh worker.
+- **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
 - **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
 - **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
-- **Runner simplicity**: runner Swift code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition).
+- **Runner simplicity**: runner Swift code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Any new work that must run under the applied sandbox belongs in `WorkerEntry.swift`; host-side work stays in `PWRunnerService.swift`.
 
 ## Dev Workflow (fast path)
 
@@ -102,6 +103,6 @@ Treat these as environment constraints, not PolicyWitness regressions. If you se
 
 ## Maintenance checklist (when changing things)
 
-- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift` (and related helpers under `runner/`), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
+- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift`, the worker plumbing (`runner/WorkerEntry.swift`, `runner/WorkerProcess.swift`, `runner/PWRunnerWorkerWire.swift`), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
 - If you change shipped paths: update `build.sh`, `tests/build-evidence.py`, tests that locate binaries, and any docs that enumerate the bundle layout.
 - If you change evidence fields: update `controller/src/main.rs`, any tests that validate output, and the docs that describe evidence channels.

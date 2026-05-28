@@ -85,13 +85,9 @@ private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
     return true
 }
 
-// PWRunnerService executes one specimen per process. The flow is intentionally
-// linear and explicit:
-// 1) Decode and validate the run spec.
-// 2) Run pre-sandbox instrumentation (if requested).
-// 3) Load libsandbox and apply the policy.
-// 4) Run post-sandbox instrumentation (if requested).
-// 5) Execute probe steps and reply with a JSON result, then exit.
+// PWRunnerService is the unsandboxed XPC host. It validates the request,
+// starts a short-lived worker process that applies the specimen policy, then
+// translates the worker report back into the public RunResult shape.
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
     private var didRun = false
 
@@ -118,8 +114,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
         didRun = true
-
-        installDenySignalHandler()
 
         let parsed: PWRunnerRunSpec
         do {
@@ -158,13 +152,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        var instrumentationState = InstrumentationState(spec: parsed.instrumentation)
-        instrumentationState?.runPhase(PWRunnerWire.instrumentationPhasePre)
-
-        let sandboxLib: SandboxLib
         switch SandboxLib.load() {
-        case .success(let lib):
-            sandboxLib = lib
+        case .success:
+            break
         case .failure(let err):
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
@@ -175,8 +165,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: [],
-                instrumentation: instrumentationState?.finalize(reason: "runner exited before sandbox setup")
+                steps: []
             )
             replyAndExit(resp)
             return
@@ -195,76 +184,53 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
-                steps: [],
-                instrumentation: instrumentationState?.finalize(reason: "runner exited before sandbox apply")
+                steps: []
             )
             replyAndExit(resp)
             return
         }
 
-        // Warm path-resolution caches before the sandbox locks down file reads.
-        // /usr/share/firmlinks is unreadable under `(deny default)` profiles,
-        // which would leave the map populated only by the built-in fallback.
-        // Touching it here uses the on-disk file when we still can.
-        warmFirmlinkMap()
+        let workerRun = WorkerProcess.run(
+            requestData: request,
+            expectedStepCount: parsed.probe_plan.count
+        )
 
-        let applyResult = applySandboxPolicy(parsed.policy, sandboxLib: sandboxLib)
-        if case .failure(let err) = applyResult {
+        switch workerRun {
+        case .failure(let err):
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
                 run_kind: parsed.run_kind,
                 rc: 1,
-                normalized_outcome: "sandbox_apply_failed",
+                normalized_outcome: "worker_spawn_failed",
                 error: err.description,
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
                 policy_sha256: policyHash,
-                steps: [],
-                instrumentation: instrumentationState?.finalize(reason: "runner exited before sandbox apply")
+                steps: []
             )
             replyAndExit(resp)
-            return
-        }
 
-        instrumentationState?.runPhase(PWRunnerWire.instrumentationPhasePost)
-
-        let sandboxedAfterApply: Bool? = currentProcessIsSandboxed()
-
-        var stepResults: [PWRunnerStepResult] = []
-        for step in parsed.probe_plan {
-            let beforeSig = denySignalCount()
-            let sb = runSandboxCheck(step.sandbox_check)
-            let attempt = runAttempt(step.attempt)
-            let afterSig = denySignalCount()
-            let sig = PWRunnerSignalResult(signal: "SIGUSR1", count_before: beforeSig, count_after: afterSig)
-            stepResults.append(
-                PWRunnerStepResult(
-                    step_id: step.step_id,
-                    sandbox_check: sb,
-                    attempt: attempt,
-                    deny_signal: sig
-                )
+        case .success(let worker):
+            let report = worker.report
+            let resp = PWRunnerRunResult(
+                specimen_id: parsed.specimen_id,
+                run_kind: parsed.run_kind,
+                rc: worker.rc,
+                normalized_outcome: worker.normalized_outcome,
+                error: worker.error,
+                pid: report?.worker_pid ?? worker.subprocess.pid,
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: parsed.policy.format,
+                policy_sha256: report?.policy_sha256 ?? policyHash,
+                sandboxed_after_apply: report?.sandboxed_after_apply,
+                deny_signal_total: report?.deny_signal_total,
+                steps: report?.steps ?? [],
+                instrumentation: report?.instrumentation,
+                runner_subprocess: worker.subprocess
             )
+            replyAndExit(resp)
         }
-
-        let totalSig = PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: denySignalCount())
-        let resp = PWRunnerRunResult(
-            specimen_id: parsed.specimen_id,
-            run_kind: parsed.run_kind,
-            rc: 0,
-            normalized_outcome: "ok",
-            error: nil,
-            pid: Int(getpid()),
-            bundle_id: bundleString("CFBundleIdentifier"),
-            policy_format: parsed.policy.format,
-            policy_sha256: policyHash,
-            sandboxed_after_apply: sandboxedAfterApply,
-            deny_signal_total: totalSig,
-            steps: stepResults,
-            instrumentation: instrumentationState?.finalize(reason: nil)
-        )
-        replyAndExit(resp)
     }
 }
 

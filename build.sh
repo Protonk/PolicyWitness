@@ -34,6 +34,9 @@ XPC_RUNNER_INSTRUMENTATION_FILE="${XPC_ROOT}/Instrumentation.swift"
 XPC_RUNNER_PROBE_RUNNER_FILE="${XPC_ROOT}/ProbeRunner.swift"
 XPC_RUNNER_PATH_UTILS_FILE="${XPC_ROOT}/PathUtils.swift"
 XPC_RUNNER_SIGNALS_FILE="${XPC_ROOT}/Signals.swift"
+XPC_RUNNER_WORKER_WIRE_FILE="${XPC_ROOT}/PWRunnerWorkerWire.swift"
+XPC_RUNNER_WORKER_ENTRY_FILE="${XPC_ROOT}/WorkerEntry.swift"
+XPC_RUNNER_WORKER_PROCESS_FILE="${XPC_ROOT}/WorkerProcess.swift"
 XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/PWRunnerService.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
@@ -230,6 +233,18 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SIGNALS_FILE}" 1>&2
     exit 2
   fi
+  if [[ ! -f "${XPC_RUNNER_WORKER_WIRE_FILE}" ]]; then
+    echo "ERROR: missing ${XPC_RUNNER_WORKER_WIRE_FILE}" 1>&2
+    exit 2
+  fi
+  if [[ ! -f "${XPC_RUNNER_WORKER_ENTRY_FILE}" ]]; then
+    echo "ERROR: missing ${XPC_RUNNER_WORKER_ENTRY_FILE}" 1>&2
+    exit 2
+  fi
+  if [[ ! -f "${XPC_RUNNER_WORKER_PROCESS_FILE}" ]]; then
+    echo "ERROR: missing ${XPC_RUNNER_WORKER_PROCESS_FILE}" 1>&2
+    exit 2
+  fi
   if [[ ! -f "${XPC_RUNNER_SERVICE_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SERVICE_FILE}" 1>&2
     exit 2
@@ -282,6 +297,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
       "${XPC_RUNNER_PATH_UTILS_FILE}" \
       "${XPC_RUNNER_SIGNALS_FILE}" \
+      "${XPC_RUNNER_WORKER_WIRE_FILE}" \
+      "${XPC_RUNNER_WORKER_ENTRY_FILE}" \
+      "${XPC_RUNNER_WORKER_PROCESS_FILE}" \
       "${XPC_RUNNER_SERVICE_FILE}" \
       "${svc_main}" "${shim_obj}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
