@@ -74,9 +74,6 @@ Top-level fields:
 - `probe_plan`: array of steps
 - `runner`: object (optional; select runner mode and external runners)
 - `instrumentation`: object (optional, instrumentation port)
-- `_test_overrides`: object (optional; test-only knobs — see "Test
-  overrides" below). The leading underscore signals "not part of the
-  public contract"; do not use in production specimens.
 
 Minimal skeleton (copy/paste):
 
@@ -232,35 +229,8 @@ are synthesized by `pw-runner-client` when the XPC peer itself can't be
 reached. After the host/worker split they should be rare: the unsandboxed
 host always replies unless launchd or codesign reject the bundle outright.
 
-### Test overrides
-
-`_test_overrides` is a test seam. It lets the test suite drive specific
-failure paths through real production code by re-routing narrow
-boundaries (e.g. the `dlopen` path used by `SandboxLib.load(path:)`).
-The field is **not** exposed via env vars because launchd spawns the XPC
-service host with a clean environment; the request JSON is the only
-channel that reliably reaches the host.
-
-Supported keys:
-
-- `libsandbox_path` (string) — alternate filesystem path passed to
-  `SandboxLib.load(path:)`. A nonexistent path makes `dlopen` fail for a
-  real reason and surfaces `normalized_outcome = "libsandbox_unavailable"`.
-- `worker_executable_path` (string) — alternate executable path passed
-  to `posix_spawn` when the host launches the worker. A nonexistent
-  path makes `posix_spawn` return `ENOENT` and surfaces
-  `normalized_outcome = "worker_spawn_failed"`.
-- `worker_timeout_ms` (integer, milliseconds, floored at 50) — overrides
-  the host-side worker deadline (default 90 000 ms). Pair with a long
-  `instrumentation.debug_wait` to make the host's deadline fire before
-  the worker exits naturally; surfaces
-  `normalized_outcome = "runner_timeout"` with the worker SIGKILLed by
-  the host.
-
-When any override is honored, the same object is mirrored back into
-`data.runner_result.test_overrides`. A reader can therefore tell at a
-glance whether a given run JSON came from a production specimen or a
-test-overridden one — production runs leave `test_overrides` unset.
+The request schema includes a `_test_overrides` field that exists to
+simplify build and test procedures. It is not for public consumption.
 
 The runner echoes step results with additional context:
 
