@@ -14,6 +14,7 @@ Tiers:
 | --- | --- | --- | --- | --- |
 | `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `dist/PolicyWitness.app` | `tests/out/suites/preflight/.../preflight.json` |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | `tests/out/suites/unit/.../cargo-test-bins.log` |
+| `runner_unit` | Baseline | Swift runner internals (`applySandboxPolicy`, `classifyWorkerResult`, `effectiveWorkerTimeoutSeconds`, `partialStepOutput`, wait-status decoders, `PWRunnerWorkerWire` framing) are correct at the unit level. Covers paths that no real specimen can reach. | `swift` on PATH | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Built via `runner/Package.swift`. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | Uses fixtures under `tests/fixtures/pw_runner/` |
 | `runner_apply_isolation_v2` | Baseline | v2 deny-default specimens reply through the unsandboxed host/worker split (positive case: worker survives because the specimen pre-allows the syscalls its encode-and-write path needs) | Built app + XPC | Asserts `runner_subprocess` and worker PID semantics |
 | `runner_apply_isolation_v3` | Baseline | v3 deny-default specimens reply through the unsandboxed host/worker split (positive case) | Built app + XPC | Asserts `runner_subprocess` and worker PID semantics |
@@ -30,6 +31,7 @@ Tiers:
 
 - `preflight`: no expected skips; missing app or codesign issues should fail.
 - `unit`: no expected skips; missing toolchain should fail.
+- `runner_unit`: skip when the `swift` toolchain or `runner/Package.swift` is missing.
 - `integration`: no expected skips; missing app should fail.
 - `runner_apply_isolation_v2`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
 - `runner_apply_isolation_v3`: skip when `dist/PolicyWitness.app` is missing or unbuilt.

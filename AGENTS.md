@@ -95,6 +95,36 @@ Notes:
 
 - Some curses tests require a TTY and will `skip` under non-interactive CI.
 
+### Swift runner unit tests (SwiftPM)
+
+`runner/Package.swift` declares a test-only SwiftPM layout: a `PWRunnerCore` library that compiles the same source set build.sh ships in `PWRunner.xpc`, plus a `PWRunnerCoreTests` executable target. The `runner_unit` suite runs `swift run --package-path runner PWRunnerCoreTests` and asserts on the stdout summary line.
+
+SwiftPM is test-only here. Production builds still go through `build.sh`; the SwiftPM `.build/` tree is gitignored.
+
+**Why an executableTarget, not a testTarget.** XCTest ships with full Xcode, not Command Line Tools, and contributors frequently have only CLT. The hand-rolled `TestKit` harness in `runner/Tests/PWRunnerCoreTests/TestKit.swift` gives us XCTest-shaped assertions (`expectEqual`, `expectThrows`, `expectContains`, etc.) without the XCTest dependency, so `swift run PWRunnerCoreTests` works against either toolchain. `PWRunnerCore` is built with `-enable-testing` so the executable can `@testable import PWRunnerCore` and reach internal symbols.
+
+**When to add a unit test rather than an e2e suite.** Reach for `runner_unit` when:
+
+1. The behavior is a small pure function that backs an outcome decision (e.g. `classifyWorkerResult`, `effectiveWorkerTimeoutSeconds`, `partialStepOutput`, BSD wait-status decoders). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
+2. The outcome is unreachable from a real specimen because something upstream short-circuits it (`sandbox_apply_failed` is hidden behind controller-side preflight; `runner_failed` requires an intermediate failure no fixture can produce).
+3. You're testing a failure mode of a small helper (frame truncation, oversized prefix, EOF before any bytes) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
+
+Don't reach for `runner_unit` when:
+
+1. The outcome is reachable through a `_test_overrides` injection (use the e2e suite — it exercises more production code).
+2. You're testing behavior that depends on the real XPC service host, launchd, or kernel sandbox. Those live in the e2e suites; the unit tests run in a plain process with no XPC.
+
+**Adding a new unit test file.**
+
+1. Drop a `Foo*Tests.swift` file under `runner/Tests/PWRunnerCoreTests/`. Each file exports one function `runFooTests(_ tk: TestKit)`.
+2. Inside, group related assertions with `tk.group("name") { tk.run("case") { try expect...(...) } }`.
+3. Add a call to `runFooTests(tk)` in `runner/Tests/PWRunnerCoreTests/main.swift`. SwiftPM picks up the new file automatically.
+4. Run locally with `swift run --package-path runner PWRunnerCoreTests` or `tests/run.sh --suite runner_unit`.
+
+**Stubbing C function pointers.** `SandboxLib`'s function-pointer slots are `@convention(c)`, which forbids closure capture. To observe side effects (call counts, freed-pointer lists) from a stub, route through file-scope `private var`s and reset them at the top of any test that uses them. `SandboxApplyTests.swift` is the worked example.
+
+**Promoting `private` symbols to `internal`.** `@testable import` reaches `internal` but not `private`. Promote a helper to `internal` (drop the `private`) when a unit test needs it; production behavior is unchanged. The few we currently expose are documented in their files' top comments.
+
 ### Testing `normalized_outcome` failure paths via `_test_overrides`
 
 Several `normalized_outcome` values are only reachable when a specific boundary fails (`libsandbox_unavailable`, `worker_spawn_failed`, `runner_timeout`). To exercise the real production error-handling code rather than stubbing return values, the request JSON accepts an optional `_test_overrides` block. Each honored override is mirrored back into `data.runner_result.test_overrides`, so the resulting envelope is self-describing: a reader can tell a production run (`test_overrides: null`) from a test-overridden one at a glance.

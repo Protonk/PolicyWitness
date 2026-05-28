@@ -43,6 +43,26 @@ PolicyWitness is **specimen-first**:
     fast on missing dynamic loaders, computes `policy_sha256`, and never
     calls `sandbox_apply` on itself.
 
+## Unit tests (SwiftPM)
+
+`Package.swift` declares a test-only SwiftPM layout that mirrors the
+source set build.sh ships in `PWRunner.xpc`. The `runner_unit` suite
+runs the `PWRunnerCoreTests` executable via:
+
+```sh
+swift run --package-path runner PWRunnerCoreTests
+```
+
+The executable hand-rolls a small XCTest-shaped harness so the test
+target works on Command Line Tools alone (full Xcode not required).
+`PWRunnerCore` is built with `-enable-testing` so tests can
+`@testable import` it. Production builds keep going through `build.sh`;
+SwiftPM's `.build/` tree is gitignored.
+
+See `AGENTS.md` → "Swift runner unit tests (SwiftPM)" for the contract,
+when to reach for a unit test vs an e2e suite, the rules around stubbing
+`@convention(c)` C function pointers, and how to add a new test file.
+
 ## Test seam: `_test_overrides`
 
 The request JSON accepts an optional `_test_overrides` block that

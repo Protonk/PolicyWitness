@@ -367,7 +367,7 @@ private func waitForWorkerExit(
     }
 }
 
-private func effectiveWorkerTimeoutSeconds(override: Int?) -> TimeInterval {
+func effectiveWorkerTimeoutSeconds(override: Int?) -> TimeInterval {
     guard let override, override > 0 else {
         return defaultWorkerTimeoutSeconds
     }
@@ -386,14 +386,14 @@ private func millisecondsUntil(_ deadline: Date) -> Int32 {
     return Int32(min(ms, Int(Int32.max)))
 }
 
-private func waitExitCode(_ status: Int32) -> Int? {
+func waitExitCode(_ status: Int32) -> Int? {
     if (status & 0x7f) == 0 {
         return Int((status >> 8) & 0xff)
     }
     return nil
 }
 
-private func waitTermSignal(_ status: Int32) -> Int? {
+func waitTermSignal(_ status: Int32) -> Int? {
     let sig = status & 0x7f
     if sig != 0 && sig != 0x7f {
         return Int(sig)
@@ -401,11 +401,11 @@ private func waitTermSignal(_ status: Int32) -> Int? {
     return nil
 }
 
-private func partialStepOutput(_ count: Int, expectedStepCount: Int) -> Bool {
+func partialStepOutput(_ count: Int, expectedStepCount: Int) -> Bool {
     count > 0 && count < expectedStepCount
 }
 
-private func classifyWorkerResult(
+func classifyWorkerResult(
     report: PWRunnerWorkerReport?,
     subprocess: PWRunnerSubprocess,
     timedOut: Bool,
