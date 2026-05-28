@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
-"""Verify the runner source list is consistent across both build paths.
+"""Verify the runner source list and the testing registry are consistent.
 
-Two manifests enumerate the Swift files that compile into the PWRunner.xpc
-service: build.sh (production) and runner/Package.swift (test-only SwiftPM
-layout). They must agree literally — otherwise a new file shipped via one
-path won't show up in the other, and either the production binary or the
-unit-test target will silently drop it.
+The check has two halves:
 
-Same check applies to the single C shim file (PWSandboxCheckShim.c).
+1. Source-set drift between the two compile paths that ship Swift to
+   PWRunner.xpc. build.sh and runner/Package.swift both enumerate the
+   same set of Swift files; a file added to one but not the other never
+   reaches the missing path. Same applies to the C shim.
+
+2. Test-registry drift across what should be self-consistent project
+   discipline:
+     a. Every tests/suites/<name>/ with run.sh has README.md.
+     b. Every Baseline-tier suite is in tests/run.sh's default list.
+     c. Every tests/suites/<name>/ has a row in tests/INDEX.md, and
+        every INDEX row maps to a real suite directory.
+     d. Every runner_outcome_<X> suite corresponds to an outcome in the
+        coverage matrix in tests/INDEX.md.
+     e. Every NormalizedOutcome constant in runner/PWRunnerAPI.swift
+        has a row in the coverage matrix.
 
 Exit codes:
-  0 — manifests agree
+  0 — everything agrees
   1 — drift detected; details printed to stderr
   2 — script error (unable to parse a manifest)
 """
@@ -25,11 +35,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 RUNNER_DIR = REPO_ROOT / "runner"
 BUILD_SH = REPO_ROOT / "build.sh"
 PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
+PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
+SUITES_DIR = REPO_ROOT / "tests" / "suites"
+TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
+TESTS_INDEX = REPO_ROOT / "tests" / "INDEX.md"
 
-# Subdirectories under runner/ that are intentionally outside the
-# PWRunner.xpc / PWRunnerCore source set.
 EXCLUDED_SUBDIRS = {"services", "runner-client", "Tests", "include"}
-# Files at runner/ root that are not Swift source code shipped in the runner.
 EXCLUDED_FILES = {"Package.swift", "README.md", ".gitignore"}
 
 
@@ -37,13 +48,14 @@ def fail(msg: str) -> None:
     sys.stderr.write(msg + "\n")
 
 
+# ---------------------------------------------------------------------------
+# Source manifest checks (pre-existing behavior — unchanged)
+# ---------------------------------------------------------------------------
+
 def disk_swift_files() -> set[str]:
-    """Swift files at runner/ root that should appear in both manifests."""
     out: set[str] = set()
     for path in RUNNER_DIR.iterdir():
-        if path.is_dir():
-            continue
-        if path.name in EXCLUDED_FILES:
+        if path.is_dir() or path.name in EXCLUDED_FILES:
             continue
         if path.suffix == ".swift":
             out.add(path.name)
@@ -51,38 +63,19 @@ def disk_swift_files() -> set[str]:
 
 
 def disk_c_files() -> set[str]:
-    """C source files at runner/ root."""
-    out: set[str] = set()
-    for path in RUNNER_DIR.iterdir():
-        if path.is_dir():
-            continue
-        if path.suffix == ".c":
-            out.add(path.name)
-    return out
+    return {p.name for p in RUNNER_DIR.iterdir() if p.is_file() and p.suffix == ".c"}
 
 
 def build_sh_swift_files() -> set[str]:
-    """Files compiled into PWRunner.xpc by build.sh's swiftc invocation.
-
-    We parse two layers: the variable declarations (XPC_RUNNER_*_FILE=...)
-    that resolve to file paths, and the references to those variables
-    inside the swiftc command for the service bundle. A variable that
-    isn't referenced is treated as drift even if it's declared.
-    """
     text = BUILD_SH.read_text(encoding="utf-8")
-
-    # XPC_RUNNER_FOO_FILE="${XPC_ROOT}/Bar.swift"
     decl_re = re.compile(
         r'^XPC_RUNNER_([A-Z_]+)_FILE="\$\{XPC_ROOT\}/([^"]+\.swift)"',
         re.MULTILINE,
     )
     declarations: dict[str, str] = {}
     for match in decl_re.finditer(text):
-        var_name = "XPC_RUNNER_" + match.group(1) + "_FILE"
-        declarations[var_name] = match.group(2)
+        declarations["XPC_RUNNER_" + match.group(1) + "_FILE"] = match.group(2)
 
-    # Find the swiftc block that builds the service binaries and extract
-    # every "${XPC_RUNNER_*_FILE}" reference inside it.
     svc_block_re = re.compile(
         r'echo "==> Building embedded PWRunner XPC services".*?for svc_name.*?done',
         re.DOTALL,
@@ -103,38 +96,31 @@ def build_sh_swift_files() -> set[str]:
 
 
 def build_sh_c_files() -> set[str]:
-    """C source files compiled into PWRunner.xpc by build.sh."""
     text = BUILD_SH.read_text(encoding="utf-8")
     shim_re = re.compile(
         r'^XPC_RUNNER_SANDBOX_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
         re.MULTILINE,
     )
-    files: set[str] = set()
-    for match in shim_re.finditer(text):
-        files.add(match.group(1))
-    return files
+    return {m.group(1) for m in shim_re.finditer(text)}
 
 
 def package_swift_sources(target_name: str) -> set[str]:
-    """Files listed in the `sources:` array of a SwiftPM target."""
     text = PACKAGE_SWIFT.read_text(encoding="utf-8")
-    # Anchor on .target(name: "<target>", ...) ... sources: [...]
     target_re = re.compile(
-        r'\.(?:target|executableTarget)\(\s*name:\s*"' + re.escape(target_name) + r'".*?sources:\s*\[(.*?)\]',
+        r'\.(?:target|executableTarget)\(\s*name:\s*"'
+        + re.escape(target_name)
+        + r'".*?sources:\s*\[(.*?)\]',
         re.DOTALL,
     )
     match = target_re.search(text)
     if match is None:
         fail(f"could not find target {target_name!r} with a sources: array in Package.swift")
         sys.exit(2)
-    body = match.group(1)
-    entries = re.findall(r'"([^"]+)"', body)
-    return set(entries)
+    return set(re.findall(r'"([^"]+)"', match.group(1)))
 
 
 def diff_sets(label: str, manifests: dict[str, set[str]]) -> list[str]:
-    """Return a list of human-readable mismatch lines; empty when agreed."""
-    union = set().union(*manifests.values())
+    union: set[str] = set().union(*manifests.values())
     problems: list[str] = []
     for filename in sorted(union):
         present_in = [name for name, files in manifests.items() if filename in files]
@@ -146,6 +132,171 @@ def diff_sets(label: str, manifests: dict[str, set[str]]) -> list[str]:
         )
     return problems
 
+
+# ---------------------------------------------------------------------------
+# Test-registry parsers
+# ---------------------------------------------------------------------------
+
+def suites_with_run_sh() -> set[str]:
+    out: set[str] = set()
+    if not SUITES_DIR.is_dir():
+        fail(f"missing suites directory: {SUITES_DIR}")
+        sys.exit(2)
+    for child in SUITES_DIR.iterdir():
+        if not child.is_dir():
+            continue
+        if (child / "run.sh").exists():
+            out.add(child.name)
+    return out
+
+
+def suites_missing_readme() -> list[str]:
+    out: list[str] = []
+    for child in sorted(SUITES_DIR.iterdir()):
+        if not child.is_dir():
+            continue
+        if not (child / "run.sh").exists():
+            continue
+        if not (child / "README.md").exists():
+            out.append(child.name)
+    return out
+
+
+def default_suites_from_run_sh() -> set[str]:
+    """Parse the default suite list from tests/run.sh.
+
+    The script declares `suites=()` empty up top and then conditionally
+    assigns the real defaults later — so a naive first-match grabs the
+    empty array. Pick the assignment with the most entries instead,
+    which is always the default-fill block.
+    """
+    text = TESTS_RUN_SH.read_text(encoding="utf-8")
+    matches = re.findall(r'\bsuites=\(([^)]*)\)', text)
+    if not matches:
+        fail("could not locate any suites=(...) assignment in tests/run.sh")
+        sys.exit(2)
+    best = max(matches, key=lambda body: len(body.split()))
+    return set(best.split())
+
+
+def parse_index_rows() -> dict[str, str]:
+    """Return {suite_name: tier} parsed from the suite table in INDEX.md.
+
+    Only the first markdown table is considered; matrix rows below the
+    Normalized outcome coverage matrix heading are skipped.
+    """
+    text = TESTS_INDEX.read_text(encoding="utf-8")
+    # Split off the matrix section so we only parse the suite table.
+    cut = text.split("## Normalized outcome coverage matrix", 1)[0]
+    rows: dict[str, str] = {}
+    row_re = re.compile(r'^\|\s*`([a-z][a-z0-9_]*)`\s*\|\s*([A-Za-z][^|]*?)\s*\|', re.MULTILINE)
+    for match in row_re.finditer(cut):
+        rows[match.group(1)] = match.group(2).strip()
+    return rows
+
+
+def parse_matrix_outcomes() -> set[str]:
+    text = TESTS_INDEX.read_text(encoding="utf-8")
+    parts = text.split("## Normalized outcome coverage matrix", 1)
+    if len(parts) != 2:
+        fail("tests/INDEX.md is missing the 'Normalized outcome coverage matrix' section")
+        sys.exit(2)
+    matrix_text = parts[1]
+    # Stop at the next ## heading if present.
+    next_heading = re.search(r'^##\s', matrix_text, re.MULTILINE)
+    if next_heading:
+        matrix_text = matrix_text[: next_heading.start()]
+    row_re = re.compile(r'^\|\s*`([a-z][a-z0-9_]*)`\s*\|', re.MULTILINE)
+    return {m.group(1) for m in row_re.finditer(matrix_text)}
+
+
+def parse_normalized_outcomes() -> set[str]:
+    text = PWRUNNER_API.read_text(encoding="utf-8")
+    # public enum NormalizedOutcome { ... public static let foo = "bar" ... }
+    enum_re = re.compile(
+        r'public enum NormalizedOutcome\s*\{(.*?)\n\}',
+        re.DOTALL,
+    )
+    match = enum_re.search(text)
+    if match is None:
+        fail("could not locate NormalizedOutcome enum in runner/PWRunnerAPI.swift")
+        sys.exit(2)
+    body = match.group(1)
+    constant_re = re.compile(r'public static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"')
+    return {m.group(1) for m in constant_re.finditer(body)}
+
+
+# ---------------------------------------------------------------------------
+# Test-registry checks
+# ---------------------------------------------------------------------------
+
+def check_readmes_present() -> list[str]:
+    missing = suites_missing_readme()
+    return [f"  README: tests/suites/{name}/ has run.sh but no README.md" for name in missing]
+
+
+def check_index_vs_disk() -> list[str]:
+    problems: list[str] = []
+    on_disk = suites_with_run_sh()
+    in_index = set(parse_index_rows().keys())
+
+    for name in sorted(on_disk - in_index):
+        problems.append(f"  INDEX: tests/suites/{name}/ exists but has no row in tests/INDEX.md")
+    for name in sorted(in_index - on_disk):
+        problems.append(f"  INDEX: tests/INDEX.md has a row for {name!r} but no such tests/suites/{name}/ exists")
+    return problems
+
+
+def check_baseline_in_run_sh_defaults() -> list[str]:
+    problems: list[str] = []
+    rows = parse_index_rows()
+    defaults = default_suites_from_run_sh()
+    for name, tier in sorted(rows.items()):
+        if tier.lower() != "baseline":
+            continue
+        if name not in defaults:
+            problems.append(
+                f"  run.sh: Baseline-tier suite {name!r} is missing from tests/run.sh's default suites=(...) list"
+            )
+    return problems
+
+
+def check_runner_outcome_suites_have_matrix_rows() -> list[str]:
+    problems: list[str] = []
+    on_disk = suites_with_run_sh()
+    matrix = parse_matrix_outcomes()
+    for name in sorted(on_disk):
+        if not name.startswith("runner_outcome_"):
+            continue
+        outcome = name[len("runner_outcome_"):]
+        if outcome not in matrix:
+            problems.append(
+                f"  matrix: suite {name!r} has no row for outcome {outcome!r} "
+                f"in the Normalized outcome coverage matrix"
+            )
+    return problems
+
+
+def check_normalized_outcomes_have_matrix_rows() -> list[str]:
+    problems: list[str] = []
+    outcomes = parse_normalized_outcomes()
+    matrix = parse_matrix_outcomes()
+    for outcome in sorted(outcomes - matrix):
+        problems.append(
+            f"  matrix: NormalizedOutcome.{outcome} has no row in tests/INDEX.md "
+            f"coverage matrix"
+        )
+    for outcome in sorted(matrix - outcomes):
+        problems.append(
+            f"  matrix: coverage matrix lists {outcome!r} but no NormalizedOutcome "
+            f"constant by that name exists"
+        )
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 def main() -> int:
     swift_manifests = {
@@ -162,22 +313,31 @@ def main() -> int:
     problems: list[str] = []
     problems.extend(diff_sets("swift", swift_manifests))
     problems.extend(diff_sets("c", c_manifests))
+    problems.extend(check_readmes_present())
+    problems.extend(check_index_vs_disk())
+    problems.extend(check_baseline_in_run_sh_defaults())
+    problems.extend(check_runner_outcome_suites_have_matrix_rows())
+    problems.extend(check_normalized_outcomes_have_matrix_rows())
 
     if problems:
-        fail("runner source manifests disagree:")
+        fail("source/test-registry drift detected:")
         for line in problems:
             fail(line)
         fail("")
-        fail("Fix by adding the file to every manifest that should ship it, or")
-        fail("by removing it from manifests that should not. The three sources of")
-        fail("truth (disk, build.sh, Package.swift) must agree on the runner/ root")
-        fail("file set; subdirectories under EXCLUDED_SUBDIRS are managed separately.")
+        fail("Each rule is mechanical: fix the missing file, row, or list entry")
+        fail("named above. The guardrail exists so adding a new suite or outcome")
+        fail("without registering it everywhere fails loudly here rather than")
+        fail("silently in downstream consumers.")
         return 1
 
+    suite_count = len(suites_with_run_sh())
+    outcome_count = len(parse_normalized_outcomes())
     print(
-        f"runner source manifests agree: "
+        f"all drift checks pass: "
         f"{len(swift_manifests['disk (runner/*.swift)'])} swift, "
-        f"{len(c_manifests['disk (runner/*.c)'])} c"
+        f"{len(c_manifests['disk (runner/*.c)'])} c, "
+        f"{suite_count} suites, "
+        f"{outcome_count} outcomes."
     )
     return 0
 

@@ -6,8 +6,8 @@ passes. For exact invariants and fixtures, see the per-suite README files under
 
 Tiers:
 - **Baseline**: expected on supported hosts; run by default in `tests/run.sh --all`.
-- **Extended**: broader coverage but host-dependent skips are normal.
 - **Diagnostic**: validates known OS anomalies; not a product guarantee.
+- **Shared**: real suites with their own `run.sh`, but invoked transitively by the runner-mode wrappers (debuggable / BYOXPC) rather than from `--all` defaults.
 - **Opt-in**: manual, resource-sensitive, or environment-specific tests.
 
 | Suite | Tier | Primary claim | Requires | Notes / artifacts |
@@ -26,6 +26,9 @@ Tiers:
 | `runner_outcome_bad_request` | Baseline | Two e2e cases that drive `normalized_outcome="bad_request"` through both emit sites in `PWRunnerService.runSpecimen` — Swift decode failure and `validateSandboxChecks` rejection. No `_test_overrides` needed. | Built app + XPC | Asserts `runner_subprocess` is null and that the error message identifies the rejected field |
 | `runner_debuggable` | Baseline | Smoke + blackbox coverage through the built-in debuggable runner | Built app + XPC | Uses shared smoke/blackbox scripts |
 | `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Skips when launchd bootstrap is unavailable |
+| `smoke` | Shared | Quick end-to-end checks (specimen smoke + instrumentation paths) against a built app bundle | Built app + XPC | Invoked by `runner_debuggable` / `runner_byoxpc`; runs standalone via `tests/run.sh --suite smoke` |
+| `blackbox_e2e` | Shared | End-to-end black-box cases (BBX-*) that treat the runner as a sealed unit and validate the returned JSON envelope | Built app + XPC | Invoked by `runner_debuggable` / `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` |
+| `blackbox_menagerie` | Shared | Real SBPL fixtures exercising specimen ingestion and evidence correlation | Built app + XPC | Invoked by `runner_debuggable` / `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie` |
 | `anomalies` | Diagnostic | Known OS anomalies + sandbox_check cross-check consistency | Host-dependent | Cross-check may skip if tooling is unavailable |
 | `opt_in` | Opt-in | Runner-mode opt-ins (logs, DYLD, launchd) | See registry | `tests/OPT_IN_TESTS.md` |
 
