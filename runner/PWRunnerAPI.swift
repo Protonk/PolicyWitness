@@ -40,6 +40,43 @@ enum PWRunnerWire {
     static let instrumentationKindDyldEnv = "dyld_env"
 }
 
+// Canonical normalized_outcome values. Every emit site in the runner stack
+// references these constants instead of writing a literal string, so a typo
+// becomes a compile error rather than a silent new outcome that no test
+// asserts on and no doc covers. The wire type stays `String` (Codable
+// unchanged); these are just the typo-proof spellings.
+//
+// Adding an outcome: declare it here, then teach the matching test suite
+// (tests/suites/runner_outcome_*/ or runner_sandbox_denied/) to assert
+// against it. PolicyWitness.md should also list it in the "Run output"
+// section so callers can recognize it.
+public enum NormalizedOutcome {
+    // ----- emitted by the worker (WorkerEntry.swift), forwarded by host
+    public static let ok = "ok"
+    public static let badPolicy = "bad_policy"
+    public static let sandboxApplyFailed = "sandbox_apply_failed"
+
+    // ----- emitted by both the host short-circuit and the worker
+    // (libsandbox load is checked at both layers; either may emit)
+    public static let libsandboxUnavailable = "libsandbox_unavailable"
+
+    // ----- emitted by the host short-circuit (PWRunnerService.swift)
+    public static let badRequest = "bad_request"
+    public static let alreadyRan = "already_ran"
+    public static let workerSpawnFailed = "worker_spawn_failed"
+
+    // ----- emitted by the host classifier (WorkerProcess.swift)
+    public static let runnerSandboxDenied = "runner_sandbox_denied"
+    public static let runnerTimeout = "runner_timeout"
+    public static let runnerFailed = "runner_failed"
+
+    // ----- synthesized by pw-runner-client when the XPC peer is unreachable
+    public static let xpcError = "xpc_error"
+    public static let xpcTimeout = "xpc_timeout"
+    public static let xpcProxyTypeMismatch = "xpc_proxy_type_mismatch"
+    public static let xpcNoReply = "xpc_no_reply"
+}
+
 public struct PWRunnerRunSpec: Codable {
     public var schema_version: Int
     public var specimen_id: String
@@ -68,12 +105,33 @@ public struct PWRunnerRunSpec: Codable {
     }
 }
 
-// Test-only knobs that re-route narrow boundaries (e.g. the libsandbox dlopen
-// path) so the test suite can exercise real failure paths without stubbing
-// return values. The underscore prefix signals "not part of the public
-// contract"; readers can branch on its presence to flag a non-production run.
-// Any override consumed is mirrored back into PWRunnerRunResult.test_overrides
-// for auditability.
+// Test-only knobs that re-route narrow boundaries through real production
+// code so the test suite can reach failure outcomes without stubbing return
+// values. The underscore prefix on the wire field
+// (`PWRunnerRunSpec._test_overrides`) signals "not part of the public
+// contract"; readers can branch on its presence to flag a non-production
+// run. Any override consumed is mirrored back into
+// `PWRunnerRunResult.test_overrides` so the resulting envelope is
+// self-describing — a production run leaves `test_overrides` null.
+//
+// Design rule for new keys: re-route a *condition* (a path, a deadline,
+// a hostile value), never fake a *result*. The classifier and the JSON
+// envelope assembly must still run for real; only their input is steered.
+//
+// Currently supported keys and the boundaries they re-route:
+//
+// | key                       | consumed at                                                   | drives outcome           |
+// | ------------------------- | ------------------------------------------------------------- | ------------------------ |
+// | `libsandbox_path`         | `SandboxLib.load(path:)` via PWRunnerService.swift +          | `libsandbox_unavailable` |
+// |                           | WorkerEntry.swift (defense-in-depth; host short-circuits      |                          |
+// |                           | first today, so the worker line is reached only if that       |                          |
+// |                           | ordering ever changes)                                        |                          |
+// | `worker_executable_path`  | `posix_spawn` path in WorkerProcess.spawnWorker               | `worker_spawn_failed`    |
+// | `worker_timeout_ms`       | host-side deadline in WorkerProcess.run (floored at 50ms)     | `runner_timeout`         |
+//
+// See AGENTS.md → "Testing `normalized_outcome` failure paths via
+// `_test_overrides`" for the full contract, the four-assertion test
+// recipe, and the rules for adding a new key.
 public struct PWRunnerTestOverrides: Codable {
     public var libsandbox_path: String?
     public var worker_executable_path: String?

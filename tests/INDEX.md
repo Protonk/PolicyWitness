@@ -13,6 +13,7 @@ Tiers:
 | Suite | Tier | Primary claim | Requires | Notes / artifacts |
 | --- | --- | --- | --- | --- |
 | `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `dist/PolicyWitness.app` | `tests/out/suites/preflight/.../preflight.json` |
+| `source_drift` | Baseline | The runner source manifest is consistent across all three sources of truth: `runner/*.swift` on disk, `build.sh`'s `XPC_RUNNER_*_FILE` set, and `runner/Package.swift`'s `sources:` array. Catches files added to one manifest but not the other before the drift ships. | Python 3 | `tests/out/suites/source_drift/.../check.log` |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | `tests/out/suites/unit/.../cargo-test-bins.log` |
 | `runner_unit` | Baseline | Swift runner internals (`applySandboxPolicy`, `classifyWorkerResult`, `effectiveWorkerTimeoutSeconds`, `partialStepOutput`, wait-status decoders, `PWRunnerWorkerWire` framing) are correct at the unit level. Covers paths that no real specimen can reach. | `swift` on PATH | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Built via `runner/Package.swift`. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | Uses fixtures under `tests/fixtures/pw_runner/` |
@@ -30,6 +31,7 @@ Tiers:
 ## Expected skips by suite
 
 - `preflight`: no expected skips; missing app or codesign issues should fail.
+- `source_drift`: no expected skips; manifest disagreement is always a fail.
 - `unit`: no expected skips; missing toolchain should fail.
 - `runner_unit`: skip when the `swift` toolchain or `runner/Package.swift` is missing.
 - `integration`: no expected skips; missing app should fail.

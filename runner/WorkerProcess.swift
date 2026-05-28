@@ -83,7 +83,7 @@ enum WorkerProcess {
                         report: nil,
                         subprocess: subprocess,
                         rc: 1,
-                        normalized_outcome: "runner_failed",
+                        normalized_outcome: NormalizedOutcome.runnerFailed,
                         error: "failed to send request to worker: \(error)"
                     )
                 )
@@ -413,7 +413,7 @@ func classifyWorkerResult(
     waitError: String?
 ) -> (rc: Int, outcome: String, error: String?) {
     if timedOut {
-        return (1, "runner_timeout", transportError ?? waitError ?? "worker timed out")
+        return (1, NormalizedOutcome.runnerTimeout, transportError ?? waitError ?? "worker timed out")
     }
     if let report {
         return (report.rc, report.normalized_outcome, report.error ?? waitError)
@@ -432,10 +432,10 @@ func classifyWorkerResult(
         let message = transportError
             ?? waitError
             ?? "worker terminated by signal \(sig) before writing a report"
-        return (1, "runner_sandbox_denied", message)
+        return (1, NormalizedOutcome.runnerSandboxDenied, message)
     }
     if let code = subprocess.exit_code, code != 0 {
-        return (1, "runner_failed", transportError ?? waitError ?? "worker exited with status \(code)")
+        return (1, NormalizedOutcome.runnerFailed, transportError ?? waitError ?? "worker exited with status \(code)")
     }
-    return (1, "runner_failed", transportError ?? waitError ?? "worker exited without a complete report")
+    return (1, NormalizedOutcome.runnerFailed, transportError ?? waitError ?? "worker exited without a complete report")
 }

@@ -26,6 +26,13 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
     var instrumentationState = InstrumentationState(spec: parsed.instrumentation)
     instrumentationState?.runPhase(PWRunnerWire.instrumentationPhasePre)
 
+    // Defense-in-depth: the host's pre-spawn libsandbox check
+    // (PWRunnerService.swift) consults the same _test_overrides.libsandbox_path
+    // and short-circuits with libsandbox_unavailable before we ever spawn,
+    // so under the current ordering the failure case here is unreachable
+    // via the standard flow. Kept so a future reorder that drops the host
+    // pre-check still produces the right outcome rather than letting the
+    // worker crash inside dlopen.
     let libsandboxPath = parsed._test_overrides?.libsandbox_path ?? SandboxLib.defaultLibraryPath
     let sandboxLib: SandboxLib
     switch SandboxLib.load(path: libsandboxPath) {
@@ -33,7 +40,7 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
         sandboxLib = lib
     case .failure(let err):
         return failureWorkerReport(
-            normalizedOutcome: "libsandbox_unavailable",
+            normalizedOutcome: NormalizedOutcome.libsandboxUnavailable,
             error: err.description,
             instrumentation: instrumentationState?.finalize(reason: "worker exited before sandbox setup")
         )
@@ -44,7 +51,7 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
         policyHash = try computePolicyHash(parsed.policy)
     } catch {
         return failureWorkerReport(
-            normalizedOutcome: "bad_policy",
+            normalizedOutcome: NormalizedOutcome.badPolicy,
             error: "\(error)",
             instrumentation: instrumentationState?.finalize(reason: "worker exited before sandbox apply")
         )
@@ -56,7 +63,7 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
     let applyResult = applySandboxPolicy(parsed.policy, sandboxLib: sandboxLib)
     if case .failure(let err) = applyResult {
         return failureWorkerReport(
-            normalizedOutcome: "sandbox_apply_failed",
+            normalizedOutcome: NormalizedOutcome.sandboxApplyFailed,
             error: err.description,
             policySHA256: policyHash,
             instrumentation: instrumentationState?.finalize(reason: "worker exited before sandbox apply")
@@ -88,7 +95,7 @@ func runWorkerBody(_ parsed: PWRunnerRunSpec) -> PWRunnerWorkerReport {
     return PWRunnerWorkerReport(
         worker_pid: Int(getpid()),
         rc: 0,
-        normalized_outcome: "ok",
+        normalized_outcome: NormalizedOutcome.ok,
         error: nil,
         policy_sha256: policyHash,
         sandboxed_after_apply: sandboxedAfterApply,
@@ -109,7 +116,7 @@ func runApplyAndProbeWorker(requestFD: Int32 = pwRunnerWorkerRequestFD) -> Never
         exitCode = 0
     } catch {
         let report = failureWorkerReport(
-            normalizedOutcome: "runner_failed",
+            normalizedOutcome: NormalizedOutcome.runnerFailed,
             error: "worker failed before completing report: \(error)"
         )
         if let responseData = try? pwRunnerEncodeJSON(report) {
