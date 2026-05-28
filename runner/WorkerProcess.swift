@@ -1,6 +1,23 @@
 import Foundation
 import Darwin
 
+// WorkerProcess is the host-side half of the worker lifecycle: it owns
+// the socketpair, the posix_spawn invocation, the host-side deadline,
+// the read of the worker's report frame, and the waitpid that reaps the
+// worker. It also owns classifyWorkerResult, which turns "what waitpid
+// observed plus what bytes (if any) came back" into a normalized_outcome
+// string.
+//
+// The companion file is WorkerEntry.swift, which runs *inside* the
+// worker process. Anything that runs under the applied policy belongs
+// there. Anything that has to outlive the policy — spawn setup, IPC,
+// reaping, classification — belongs here.
+//
+// What does NOT belong in this file: code that runs inside the worker;
+// any normalized_outcome value not produced by classifyWorkerResult.
+// PWRunnerWorkerWire.swift owns the wire format the IPC uses; this file
+// only orchestrates around it.
+
 private let defaultWorkerTimeoutSeconds: TimeInterval = 90
 private let workerExitGraceSeconds: TimeInterval = 1
 

@@ -1,6 +1,23 @@
 import Foundation
 import Darwin
 
+// PWRunnerWorkerWire defines the host↔worker IPC: the argv flag the
+// worker keys on at startup (pwRunnerWorkerModeArgument), the inherited
+// file descriptor the worker reads from and writes to
+// (pwRunnerWorkerRequestFD), the length-prefixed frame format used to
+// carry the request and the report across the socketpair, and the
+// internal PWRunnerWorkerReport type the worker emits.
+//
+// The companions are WorkerProcess.swift (host side: creates the
+// socketpair, posix_spawns the worker, reads the report frame) and
+// WorkerEntry.swift (worker side: reads the request frame, runs the
+// probe plan, writes the report frame).
+//
+// What does NOT belong in this file: classifier logic, sandbox apply,
+// caller authentication, anything user-facing. The wire types are
+// internal — production callers see only PWRunnerRunResult, which
+// PWRunnerService synthesizes from PWRunnerWorkerReport.
+
 let pwRunnerWorkerModeArgument = "--apply-and-probe-worker"
 let pwRunnerWorkerRequestFD: Int32 = 3
 

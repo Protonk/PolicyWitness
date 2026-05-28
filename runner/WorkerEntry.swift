@@ -1,6 +1,23 @@
 import Foundation
 import Darwin
 
+// WorkerEntry is the sandboxed half of the runner: it runs inside the
+// short-lived worker process that PWRunnerService spawned via
+// WorkerProcess. The worker reads its request from the inherited socket
+// pair, applies the specimen policy to itself, executes the probe plan,
+// writes a PWRunnerWorkerReport back over the same socket, and exits.
+//
+// The companion file is PWRunnerService.swift, which is the unsandboxed
+// host that orchestrates the worker. Anything that must outlive the
+// applied policy — the XPC reply, caller authentication, the worker
+// timeout deadline — belongs there, not here.
+//
+// What does NOT belong in this file: NSXPCConnection wiring, the
+// `exit(0)` that ends the XPC service process, any code that needs to
+// be invariant under a (deny default) profile. The worker is single-use
+// and disposable; if a line of code needs to survive the applied
+// policy, move it to the host.
+
 private func failureWorkerReport(
     normalizedOutcome: String,
     error: String,

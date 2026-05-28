@@ -2,6 +2,22 @@ import Foundation
 import Darwin
 import Security
 
+// PWRunnerService is the unsandboxed half of the runner: the XPC service
+// host that authenticates the caller, validates the request, spawns a
+// short-lived worker through WorkerProcess, and translates the worker's
+// report into the public PWRunnerRunResult shape before replying via XPC.
+//
+// The companion file is WorkerEntry.swift, which is the sandboxed half
+// — it runs inside the worker process, applies the policy to itself,
+// and executes the probe plan. Anything that must observe the applied
+// sandbox belongs there, not here.
+//
+// What does NOT belong in this file: calls to applySandboxPolicy,
+// libsandbox state that survives past the load check, runSandboxCheck
+// or runAttempt. The host must stay invariant under the policy under
+// test so the XPC reply path is never disrupted by a (deny default)
+// specimen.
+
 private func bundleString(_ key: String) -> String? {
     Bundle.main.object(forInfoDictionaryKey: key) as? String
 }
@@ -85,9 +101,6 @@ private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
     return true
 }
 
-// PWRunnerService is the unsandboxed XPC host. It validates the request,
-// starts a short-lived worker process that applies the specimen policy, then
-// translates the worker report back into the public RunResult shape.
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
     private var didRun = false
 
