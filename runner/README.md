@@ -18,13 +18,9 @@ PolicyWitness is **specimen-first**:
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
 - `runner/SandboxLib.swift`
   - Explicit `dlopen` + `dlsym` bindings for libsandbox.
-  - `SandboxLib.load(path:)` defaults to `/usr/lib/libsandbox.dylib`.
-    The host and worker pass through any `_test_overrides.libsandbox_path`
-    field from the request JSON so tests can point the loader at a
-    nonexistent file; the resulting real `dlopen` failure drives the
-    `libsandbox_unavailable` outcome through the production
-    error-handling path. Env vars are not a test seam here because
-    launchd spawns the XPC service host with a clean environment.
+  - `SandboxLib.load(path:)` defaults to `/usr/lib/libsandbox.dylib`;
+    re-routed by `_test_overrides.libsandbox_path` (see "Test seam"
+    below).
 - `runner/SandboxApply.swift`
   - Policy hashing and single-shot `sandbox_apply` path.
 - `runner/Instrumentation.swift`
@@ -46,6 +42,26 @@ PolicyWitness is **specimen-first**:
   - The host enforces caller authorization, loads libsandbox once to fail
     fast on missing dynamic loaders, computes `policy_sha256`, and never
     calls `sandbox_apply` on itself.
+
+## Test seam: `_test_overrides`
+
+The request JSON accepts an optional `_test_overrides` block that
+re-routes narrow boundaries through real production code so the test
+suite can reach failure outcomes (`libsandbox_unavailable`,
+`worker_spawn_failed`, `runner_timeout`) without stubbing returns.
+Every honored override is mirrored back into
+`data.runner_result.test_overrides`; production runs leave that field
+unset.
+
+| Key | Default | Re-routed boundary | Outcome it lets you reach |
+| --- | --- | --- | --- |
+| `libsandbox_path` | `/usr/lib/libsandbox.dylib` | `dlopen` in `SandboxLib.load(path:)` (host + worker) | `libsandbox_unavailable` |
+| `worker_executable_path` | `_NSGetExecutablePath()` | `posix_spawn` path in `WorkerProcess.spawnWorker` | `worker_spawn_failed` |
+| `worker_timeout_ms` | 90000 (floored at 50) | `WorkerProcess` host-side deadline | `runner_timeout` |
+
+See `AGENTS.md` → "Testing `normalized_outcome` failure paths via
+`_test_overrides`" for the full contract, the four-assertion test
+recipe, and the rules for adding a new override.
 
 - `runner/runner-client/main.swift` → builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.

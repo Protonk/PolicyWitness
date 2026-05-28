@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-private let workerTimeoutSeconds: TimeInterval = 90
+private let defaultWorkerTimeoutSeconds: TimeInterval = 90
 private let workerExitGraceSeconds: TimeInterval = 1
 
 struct WorkerSpawnError: Error, CustomStringConvertible {
@@ -33,7 +33,12 @@ private struct WorkerWaitObservation {
 }
 
 enum WorkerProcess {
-    static func run(requestData: Data, expectedStepCount: Int) -> Result<WorkerProcessResult, WorkerSpawnError> {
+    static func run(
+        requestData: Data,
+        expectedStepCount: Int,
+        executablePathOverride: String? = nil,
+        timeoutMsOverride: Int? = nil
+    ) -> Result<WorkerProcessResult, WorkerSpawnError> {
         var sockets = [Int32](repeating: -1, count: 2)
         if socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets) != 0 {
             return .failure(WorkerSpawnError(message: "socketpair failed: \(String(cString: strerror(errno)))"))
@@ -43,8 +48,17 @@ enum WorkerProcess {
         disableSigpipe(hostFD)
         disableSigpipe(workerFD)
 
-        let spawnResult = spawnWorker(workerFD: workerFD, hostFD: hostFD)
+        // The override path is consumed at the posix_spawn boundary so a
+        // hostile value produces a real ENOENT/ENOEXEC, not a stubbed
+        // failure inside our wrapper.
+        let spawnResult = spawnWorker(
+            workerFD: workerFD,
+            hostFD: hostFD,
+            executablePathOverride: executablePathOverride
+        )
         close(workerFD)
+
+        let workerTimeoutSeconds = effectiveWorkerTimeoutSeconds(override: timeoutMsOverride)
 
         switch spawnResult {
         case .failure(let err):
@@ -142,12 +156,20 @@ private func disableSigpipe(_ fd: Int32) {
     setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size))
 }
 
-private func spawnWorker(workerFD: Int32, hostFD: Int32) -> Result<pid_t, WorkerSpawnError> {
+private func spawnWorker(
+    workerFD: Int32,
+    hostFD: Int32,
+    executablePathOverride: String?
+) -> Result<pid_t, WorkerSpawnError> {
     let executable: String
-    do {
-        executable = try currentExecutablePath()
-    } catch {
-        return .failure(WorkerSpawnError(message: "failed to resolve worker executable: \(error)"))
+    if let override = executablePathOverride, !override.isEmpty {
+        executable = override
+    } else {
+        do {
+            executable = try currentExecutablePath()
+        } catch {
+            return .failure(WorkerSpawnError(message: "failed to resolve worker executable: \(error)"))
+        }
     }
 
     var actions: posix_spawn_file_actions_t? = nil
@@ -343,6 +365,17 @@ private func waitForWorkerExit(
         }
         usleep(10_000)
     }
+}
+
+private func effectiveWorkerTimeoutSeconds(override: Int?) -> TimeInterval {
+    guard let override, override > 0 else {
+        return defaultWorkerTimeoutSeconds
+    }
+    // The override is in milliseconds; the host uses TimeInterval seconds.
+    // Floor at 50ms — anything shorter is racy against posix_spawn + first
+    // worker syscall on a modern Mac and produces non-deterministic results.
+    let ms = max(override, 50)
+    return TimeInterval(ms) / 1000.0
 }
 
 private func millisecondsUntil(_ deadline: Date) -> Int32 {

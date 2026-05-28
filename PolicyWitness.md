@@ -246,6 +246,16 @@ Supported keys:
 - `libsandbox_path` (string) — alternate filesystem path passed to
   `SandboxLib.load(path:)`. A nonexistent path makes `dlopen` fail for a
   real reason and surfaces `normalized_outcome = "libsandbox_unavailable"`.
+- `worker_executable_path` (string) — alternate executable path passed
+  to `posix_spawn` when the host launches the worker. A nonexistent
+  path makes `posix_spawn` return `ENOENT` and surfaces
+  `normalized_outcome = "worker_spawn_failed"`.
+- `worker_timeout_ms` (integer, milliseconds, floored at 50) — overrides
+  the host-side worker deadline (default 90 000 ms). Pair with a long
+  `instrumentation.debug_wait` to make the host's deadline fire before
+  the worker exits naturally; surfaces
+  `normalized_outcome = "runner_timeout"` with the worker SIGKILLed by
+  the host.
 
 When any override is honored, the same object is mirrored back into
 `data.runner_result.test_overrides`. A reader can therefore tell at a

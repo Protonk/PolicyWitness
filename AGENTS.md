@@ -95,6 +95,45 @@ Notes:
 
 - Some curses tests require a TTY and will `skip` under non-interactive CI.
 
+### Testing `normalized_outcome` failure paths via `_test_overrides`
+
+Several `normalized_outcome` values are only reachable when a specific boundary fails (`libsandbox_unavailable`, `worker_spawn_failed`, `runner_timeout`). To exercise the real production error-handling code rather than stubbing return values, the request JSON accepts an optional `_test_overrides` block. Each honored override is mirrored back into `data.runner_result.test_overrides`, so the resulting envelope is self-describing: a reader can tell a production run (`test_overrides: null`) from a test-overridden one at a glance.
+
+**Why request-JSON instead of env vars.** launchd spawns the XPC service host with a stripped environment; a shell-set `PW_*` does not reach the host. The request JSON is the only channel that reliably does. The worker inherits the host's process environment via `posix_spawn`, so if a future override is worker-only we can still use env vars there — but anything the host consumes belongs in the request.
+
+**Anatomy of an override-driven test.**
+
+1. Construct a specimen with a normal `policy` and `probe_plan` plus a `_test_overrides` block.
+2. Run through the standard CLI: `policy-witness run <specimen> > out.json`. No special harness, no monkey-patched library.
+3. Assert four things:
+   - `data.runner_result.normalized_outcome == "<expected>"`.
+   - `data.runner_result.error` mentions a real artifact of the failure (the hostile path, the syscall name, etc.). This catches "outcome string is right but came from a fake code path."
+   - `data.runner_result.test_overrides.<key>` equals the value you sent. Without this, a stale build that ignores the override would pass.
+   - Structural fields downstream of the failure are appropriately empty (`runner_subprocess == null` when the host short-circuits; `steps == []`; etc.).
+
+**Supported override keys** (defined in `runner/PWRunnerAPI.swift::PWRunnerTestOverrides`):
+
+| Key | Type | Boundary it re-routes | Outcome it lets you reach |
+| --- | --- | --- | --- |
+| `libsandbox_path` | string | `SandboxLib.load(path:)` → `dlopen(path)` (host first, then worker on the same value) | `libsandbox_unavailable` |
+| `worker_executable_path` | string | `posix_spawn(path, ...)` inside `WorkerProcess.spawnWorker` | `worker_spawn_failed` |
+| `worker_timeout_ms` | integer (ms, floored at 50) | Host-side `kqueue`/poll deadline in `WorkerProcess.run` | `runner_timeout` |
+
+A hostile value drives a real failure: a `/nonexistent/...` path makes `dlopen` or `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `instrumentation.debug_wait` makes the host's deadline fire before the worker exits naturally. The classifier in `WorkerProcess.classifyWorkerResult` is the same code that runs in production — only its *input* is steered.
+
+**Adding a new override.** When you need to cover another outcome:
+
+1. Add the optional field to `PWRunnerTestOverrides` (additive — no schema bump).
+2. Plumb it from `PWRunnerService.runSpecimen` (or `WorkerEntry` if it's worker-side) into the boundary it re-routes. Default to the production value when unset.
+3. Make sure the boundary uses the override at the place where the real OS call happens (not a wrapper that returns early on the override). The point is to *trigger* a real condition, not fake a result.
+4. Mirror it back: every `PWRunnerRunResult` constructed on the affected code path should pass `test_overrides: parsed._test_overrides` so the audit signal survives.
+5. Add a `tests/suites/runner_outcome_<name>/run.sh` suite that follows the four assertions above.
+6. Register the suite in `tests/run.sh` (default list + usage line) and `tests/INDEX.md`.
+
+**What overrides should not do.** Don't add an override that fakes a *result* (e.g. `force_normalized_outcome: "x"`). That short-circuits the very code we're trying to verify. If a code path can't be reached by re-routing a boundary, cover it with a Swift unit test against the classifier directly instead.
+
+**Auditing override usage.** `jq '.data.runner_result.test_overrides' run.json` returns `null` for every production run. Any run whose envelope reports a non-null `test_overrides` has been steered; treat its outcome as evidence about the classifier/error-handling path, not about the specimen's policy.
+
 ## Note: sandboxed automation harnesses
 
 Some automation/agent harnesses run commands under a macOS sandbox. In that context, PolicyWitness runs can fail before any runner code executes (for example XPC lookup `NSCocoaErrorDomain=4099` / error `159` “Sandbox restriction”), and unified logging capture can be unavailable (`log: Cannot run while sandboxed`).

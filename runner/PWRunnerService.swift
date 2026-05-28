@@ -194,7 +194,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
 
         let workerRun = WorkerProcess.run(
             requestData: request,
-            expectedStepCount: parsed.probe_plan.count
+            expectedStepCount: parsed.probe_plan.count,
+            executablePathOverride: parsed._test_overrides?.worker_executable_path,
+            timeoutMsOverride: parsed._test_overrides?.worker_timeout_ms
         )
 
         switch workerRun {
@@ -209,7 +211,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
                 policy_sha256: policyHash,
-                steps: []
+                steps: [],
+                test_overrides: parsed._test_overrides
             )
             replyAndExit(resp)
 

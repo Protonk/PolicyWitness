@@ -76,9 +76,17 @@ public struct PWRunnerRunSpec: Codable {
 // for auditability.
 public struct PWRunnerTestOverrides: Codable {
     public var libsandbox_path: String?
+    public var worker_executable_path: String?
+    public var worker_timeout_ms: Int?
 
-    public init(libsandbox_path: String? = nil) {
+    public init(
+        libsandbox_path: String? = nil,
+        worker_executable_path: String? = nil,
+        worker_timeout_ms: Int? = nil
+    ) {
         self.libsandbox_path = libsandbox_path
+        self.worker_executable_path = worker_executable_path
+        self.worker_timeout_ms = worker_timeout_ms
     }
 }
 
