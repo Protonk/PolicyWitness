@@ -15,11 +15,9 @@ Related docs:
 
 If a change affects behavior, outputs, or safety boundaries, it needs matching words and some coverage.
 
-Preferred coverage options (in roughly increasing integration cost):
+### Reach the most integrated test you can
 
-- Rust unit tests for pure logic
-- Rust integration tests in `controller/integration/`
-- Smoke scripts in `tests/suites/smoke/` against a built `dist/PolicyWitness.app`
+Tests should fail when the code is wrong — and the more integrated the test, the less surface for the test itself to be wrong. End-to-end through the CLI is the most integrated; an `_test_overrides`-driven suite is next; a unit test against an internal helper is the last resort. Each step down the ladder is one more thing that could be wrong about your *test* rather than about the *code*: a unit test against a stub-shaped classifier can pass while the real classifier is broken. If the integrated path isn't reachable, treat that as information about the production code — usually a boundary worth exposing as an override — not a license to ship the unit test.
 
 ### Write Swift like you want it trivially reverse-engineered
 
