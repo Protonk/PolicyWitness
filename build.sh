@@ -192,7 +192,13 @@ if [[ ! -x "${SB_API_VALIDATOR_BIN}" ]]; then
 fi
 
 echo "==> Building pw-probe-runner"
+# Link against libsandbox so sandbox_apply / sandbox_compile_string
+# resolve at link time. Both symbols are SPI (not exposed by the
+# public sandbox.h) but live in /usr/lib/libsandbox.dylib; this is
+# the linking model R5 calls for ("dynamically against libSystem and
+# libsandbox — no static-link gymnastics").
 /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
+  -lsandbox \
   -o "${PW_PROBE_RUNNER_BIN}" "${PW_PROBE_RUNNER_SRC}"
 if [[ ! -x "${PW_PROBE_RUNNER_BIN}" ]]; then
   echo "ERROR: expected pw-probe-runner binary at ${PW_PROBE_RUNNER_BIN}" 1>&2

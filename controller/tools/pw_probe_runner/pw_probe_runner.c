@@ -1,23 +1,79 @@
 /*
  * pw_probe_runner.c — sandboxed C worker that owns the post-apply
- * syscall surface. Per RUNNER-RESHAPE-PLAN.md Step 5 (R5+R6+R7+R8).
+ * syscall surface. Per RUNNER-RESHAPE-PLAN.md Step 5 (R5/R6/R7/R8).
  *
- * Current state: SKELETON. This file establishes the build pipeline,
- * the embed/sign treatment, and the public ABI (see
- * pw_probe_runner_abi.h). The real flow (read inputs from shm,
- * compile policy from stdin, write pre-apply ready byte, sandbox_apply,
- * run attempts, write done sentinel, spin on exit_requested) lands in
- * Step 5 Chunk 2.
+ * Flow (Chunk 2):
+ *   1. Parse argv: --shm-fd <N> --ready-fd <N> --step-count <N>
+ *                  [--policy-fd <N>] (defaults to stdin).
+ *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
+ *      --shm-fd. Verify abi_version and prepared sentinel.
+ *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
+ *      into a stack-fixed buffer. This is the LAST allocation
+ *      attempt before sandbox_apply().
+ *   4. sandbox_compile_string(). On failure: write apply_rc and
+ *      done sentinel, then enter the spin loop (still report the
+ *      failure cleanly).
+ *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
+ *   6. sandbox_apply(). Write apply_rc to header.
+ *   7. Write applied sentinel (release ordering).
+ *   8. For each populated slot: run the attempt (stub today; Chunk
+ *      3 wires real implementations). Slot output writes use
+ *      regular stores; the slot's `completed` flag is written with
+ *      release ordering so the host's acquire-load of completed
+ *      pairs with all preceding writes.
+ *   9. Write done sentinel.
+ *  10. Spin loop: poll exit_requested with acquire ordering, sleep
+ *      between polls, _exit(0) when set. The spin is bounded by
+ *      the host's grace timer (SIGKILL fallback if _exit is denied).
  *
- * Today this binary accepts --version and otherwise prints usage to
- * stderr and exits 2. The host code does not invoke it yet.
+ * No allocations after sandbox_apply. The result region is the only
+ * post-apply output channel; stdout/stderr writes may be denied by
+ * a (deny default) policy and must not be relied on for results.
  */
 
+#include <errno.h>
+#include <fcntl.h>
+#include <sandbox.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "pw_probe_runner_abi.h"
+
+/* SPI symbols from libsandbox. The public sandbox.h does not declare
+ * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
+ * Same approach the existing Swift loader uses via dlsym; the C
+ * worker links statically per R5 ("no static-link gymnastics").
+ *
+ * The second arg of sandbox_compile_string is an OPAQUE SandboxParams
+ * pointer (from sandbox_create_params), NOT a string — passing a
+ * string literal here segfaults inside libsandbox. The worker doesn't
+ * exercise SBPL params today; pass NULL until the host plumbs them
+ * through the request.
+ */
+extern int sandbox_apply(void *profile);
+extern void *sandbox_compile_string(const char *str, void *params, char **error);
+/* sandbox_free_error is deprecated in modern SDKs. The libsandbox
+ * implementation is a thin wrapper around free(); we call free()
+ * directly to avoid the deprecation warning without changing
+ * behaviour. The errbuf returned by sandbox_compile_string is
+ * documented as plain-malloc'd. */
+
+/* ---- argv parsing -------------------------------------------------------- */
+
+typedef struct {
+    int shm_fd;
+    int ready_fd;
+    int policy_fd;
+    uint32_t step_count;
+} pw_args_t;
 
 static void print_usage(FILE *to) {
     fprintf(to,
@@ -25,23 +81,165 @@ static void print_usage(FILE *to) {
         "                       [--policy-fd <N>]\n"
         "\n"
         "  --shm-fd N        FD of the host's pw_shm_region mapping.\n"
-        "                    Worker mmaps PW_SHM_REGION_BYTES from this FD.\n"
-        "  --ready-fd N      FD the worker writes one byte to after\n"
-        "                    parsing the request and just before\n"
-        "                    sandbox_apply(). Pre-apply readiness only;\n"
+        "  --ready-fd N      FD the worker writes one byte to just\n"
+        "                    before sandbox_apply(). Pre-apply only;\n"
         "                    post-apply readiness is the `applied`\n"
         "                    sentinel in shm.\n"
-        "  --step-count N    Number of populated slots, 0..PW_SHM_MAX_STEPS.\n"
-        "  --policy-fd N     Optional FD carrying the SBPL policy text.\n"
+        "  --step-count N    Number of populated slots, 0..%u.\n"
+        "  --policy-fd N     Optional FD with the SBPL policy text.\n"
         "                    Defaults to stdin (FD 0).\n"
         "\n"
-        "  --version         Print ABI version and exit.\n"
-        "\n"
-        "This is the C worker spawned by the runner host (PWRunnerService).\n"
-        "It is not meant to be invoked directly outside the runner\n"
-        "host or its dedicated harness (see\n"
-        "tests/suites/runner_c_worker_harness/ when Chunk 4 lands).\n");
+        "  --version         Print ABI version and exit.\n",
+        PW_SHM_MAX_STEPS);
 }
+
+static int parse_int_arg(const char *value, long *out) {
+    if (!value || !*value) return -1;
+    char *end = NULL;
+    long v = strtol(value, &end, 10);
+    if (!end || *end) return -1;
+    *out = v;
+    return 0;
+}
+
+static int parse_args(int argc, char **argv, pw_args_t *args) {
+    args->shm_fd     = -1;
+    args->ready_fd   = -1;
+    args->policy_fd  = STDIN_FILENO;
+    args->step_count = 0;
+
+    int i = 1;
+    while (i < argc) {
+        const char *flag = argv[i];
+        if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
+            strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
+                return -1;
+            }
+            long v;
+            if (parse_int_arg(argv[i + 1], &v) != 0) {
+                fprintf(stderr, "pw-probe-runner: %s: invalid integer %s\n", flag, argv[i + 1]);
+                return -1;
+            }
+            if (strcmp(flag, "--shm-fd") == 0) {
+                args->shm_fd = (int)v;
+            } else if (strcmp(flag, "--ready-fd") == 0) {
+                args->ready_fd = (int)v;
+            } else if (strcmp(flag, "--policy-fd") == 0) {
+                args->policy_fd = (int)v;
+            } else {
+                if (v < 0 || (unsigned long)v > (unsigned long)PW_SHM_MAX_STEPS) {
+                    fprintf(stderr, "pw-probe-runner: --step-count %ld out of range\n", v);
+                    return -1;
+                }
+                args->step_count = (uint32_t)v;
+            }
+            i += 2;
+        } else {
+            fprintf(stderr, "pw-probe-runner: unknown argument %s\n", flag);
+            return -1;
+        }
+    }
+
+    if (args->shm_fd < 0) {
+        fprintf(stderr, "pw-probe-runner: --shm-fd is required\n");
+        return -1;
+    }
+    if (args->ready_fd < 0) {
+        fprintf(stderr, "pw-probe-runner: --ready-fd is required\n");
+        return -1;
+    }
+    return 0;
+}
+
+/* ---- shm + policy + sandbox --------------------------------------------- */
+
+/* mmap the host's region. Verifies abi_version and prepared sentinel.
+ * Returns the base pointer on success, NULL on failure (caller logs +
+ * exits; no further shm communication is possible). */
+static void *map_region(int shm_fd) {
+    struct stat st;
+    if (fstat(shm_fd, &st) != 0) {
+        fprintf(stderr, "pw-probe-runner: fstat(shm_fd=%d): %s\n", shm_fd, strerror(errno));
+        return NULL;
+    }
+    if ((size_t)st.st_size < PW_SHM_REGION_BYTES) {
+        fprintf(stderr,
+                "pw-probe-runner: shm_fd region too small: got %lld bytes, need %zu\n",
+                (long long)st.st_size, (size_t)PW_SHM_REGION_BYTES);
+        return NULL;
+    }
+    void *base = mmap(NULL, PW_SHM_REGION_BYTES, PROT_READ | PROT_WRITE,
+                      MAP_SHARED, shm_fd, 0);
+    if (base == MAP_FAILED) {
+        fprintf(stderr, "pw-probe-runner: mmap: %s\n", strerror(errno));
+        return NULL;
+    }
+    return base;
+}
+
+/* Read up to max_len-1 bytes from fd into buf, NUL-terminating.
+ * Returns the number of bytes read on success, -1 on read error. */
+static ssize_t read_all_from_fd(int fd, char *buf, size_t max_len) {
+    if (max_len == 0) return -1;
+    size_t total = 0;
+    while (total < max_len - 1) {
+        ssize_t n = read(fd, buf + total, (max_len - 1) - total);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        if (n == 0) break;
+        total += (size_t)n;
+    }
+    buf[total] = '\0';
+    return (ssize_t)total;
+}
+
+/* Write one byte to the ready FD. Restart on EINTR. Returns 0 on
+ * success, -1 on persistent failure. */
+static int write_ready_byte(int fd) {
+    static const uint8_t byte = 1;
+    for (;;) {
+        ssize_t n = write(fd, &byte, 1);
+        if (n == 1) return 0;
+        if (n < 0 && errno == EINTR) continue;
+        return -1;
+    }
+}
+
+/* ---- attempt stubs (Chunk 3 replaces with real impls) ------------------- */
+
+/* For Chunk 2: mark the slot completed without doing real work. Chunk
+ * 3 swaps this for an attempt-kind switch driving real POSIX calls. */
+static void run_stub_attempt(pw_shm_slot_t *slot) {
+    /* Inputs the host populated remain in place. We just signal we
+     * reached this slot — distinguishes "host plan was 5 steps and
+     * worker did them" from "worker died before reaching step N". */
+    slot->rc = 0;
+    slot->errno_val = 0;
+    slot->observed_path[0] = '\0';
+    slot->error[0] = '\0';
+    atomic_store_explicit(&slot->completed, 1u, memory_order_release);
+}
+
+/* ---- post-done spin loop ------------------------------------------------- */
+
+/* Bounded sleep between exit-byte polls. 2 ms matches the host poll
+ * cadence documented in R8 so the host's exit-byte write is observed
+ * within one cycle in the common case. */
+static void spin_for_exit(pw_shm_header_t *hdr) {
+    struct timespec ts = { .tv_sec = 0, .tv_nsec = 2 * 1000 * 1000 };
+    for (;;) {
+        if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) {
+            _exit(0);
+        }
+        nanosleep(&ts, NULL);
+    }
+}
+
+/* ---- main ---------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
@@ -53,11 +251,101 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    /* No real flow yet — Chunk 2 wires up shm/policy/apply/spin. */
-    print_usage(stderr);
-    fprintf(stderr,
-            "\npw-probe-runner: skeleton build (Step 5 Chunk 1). "
-            "Real flow not yet implemented; this binary exists to "
-            "exercise the build/sign/embed pipeline.\n");
-    return 2;
+    pw_args_t args;
+    if (parse_args(argc, argv, &args) != 0) {
+        print_usage(stderr);
+        return 2;
+    }
+
+    void *base = map_region(args.shm_fd);
+    if (!base) return 3;
+
+    pw_shm_header_t *hdr = (pw_shm_header_t *)base;
+    pw_shm_slot_t   *slots = (pw_shm_slot_t *)((char *)base + PW_SHM_HEADER_BYTES);
+
+    if (hdr->abi_version != PW_PROBE_RUNNER_ABI_VERSION) {
+        fprintf(stderr,
+                "pw-probe-runner: ABI mismatch — header says %u, worker built for %u\n",
+                hdr->abi_version, PW_PROBE_RUNNER_ABI_VERSION);
+        return 4;
+    }
+    if (atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1u) {
+        fprintf(stderr,
+                "pw-probe-runner: host did not set prepared=1; refusing to proceed\n");
+        return 5;
+    }
+
+    /* Honour the host's step_count over argv. argv is advisory; the
+     * shm is the source of truth so a host that wrote step_count=N
+     * cannot have a worker overrun by being passed --step-count=M>N
+     * on the command line. */
+    if (hdr->step_count > PW_SHM_MAX_STEPS) {
+        fprintf(stderr,
+                "pw-probe-runner: header step_count=%u exceeds PW_SHM_MAX_STEPS=%u\n",
+                hdr->step_count, PW_SHM_MAX_STEPS);
+        return 6;
+    }
+    if (args.step_count != 0 && args.step_count != hdr->step_count) {
+        fprintf(stderr,
+                "pw-probe-runner: argv --step-count=%u disagrees with header=%u; using header\n",
+                args.step_count, hdr->step_count);
+    }
+    uint32_t step_count = hdr->step_count;
+
+    /* Read policy text into a stack-bounded buffer. SBPL policies are
+     * typically small (KiB); cap at 256 KiB so a runaway producer
+     * fails loudly rather than allocating unboundedly. The buffer
+     * lives on the stack so there is no malloc to worry about. */
+    enum { POLICY_MAX = 256 * 1024 };
+    static char policy_buf[POLICY_MAX];
+    ssize_t plen = read_all_from_fd(args.policy_fd, policy_buf, sizeof(policy_buf));
+    if (plen < 0) {
+        fprintf(stderr, "pw-probe-runner: failed reading policy: %s\n", strerror(errno));
+        return 7;
+    }
+
+    /* Compile. sandbox_compile_string allocates internally; that's
+     * before sandbox_apply so it's safe. */
+    char *compile_err = NULL;
+    void *profile = sandbox_compile_string(policy_buf, NULL, &compile_err);
+    if (!profile) {
+        fprintf(stderr,
+                "pw-probe-runner: sandbox_compile_string failed: %s\n",
+                compile_err ? compile_err : "(no error string)");
+        if (compile_err) free(compile_err);
+        hdr->apply_rc = -1;
+        atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+        spin_for_exit(hdr);
+    }
+
+    /* Pre-apply ready byte. Tells the host the worker has parsed,
+     * mmap'd, and is about to apply. */
+    if (write_ready_byte(args.ready_fd) != 0) {
+        fprintf(stderr,
+                "pw-probe-runner: write(ready_fd=%d): %s\n",
+                args.ready_fd, strerror(errno));
+        /* Continue anyway — the apply + sentinel path still gives
+         * the host visibility via shm. */
+    }
+
+    /* Apply. After this point: no allocations, no stdout writes
+     * that the policy hasn't been authored to permit. */
+    int apply_rc = sandbox_apply(profile);
+    hdr->apply_rc = apply_rc;
+    if (apply_rc != 0) {
+        /* apply failed — write done so the host stops polling, then
+         * spin until exit. apply_rc carries the cause. */
+        atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+        spin_for_exit(hdr);
+    }
+    atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
+
+    /* Run attempts. Stub today — every slot gets completed=1 with
+     * rc=0/errno=0. Chunk 3 dispatches on slot->attempt_kind. */
+    for (uint32_t i = 0; i < step_count; i++) {
+        run_stub_attempt(&slots[i]);
+    }
+
+    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+    spin_for_exit(hdr);
 }
