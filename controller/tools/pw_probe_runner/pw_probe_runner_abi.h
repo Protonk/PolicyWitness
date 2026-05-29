@@ -31,19 +31,32 @@
 #ifndef PW_PROBE_RUNNER_ABI_H
 #define PW_PROBE_RUNNER_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 
-#define PW_PROBE_RUNNER_ABI_VERSION 1u
+/*
+ * ABI version 2 adds a fixed-size params region after the slots so
+ * the host can deliver `policy.params` (SBPL parameters used inside
+ * the policy text via `(param "NAME")`). v1 hosts must NOT spawn a
+ * v2 worker: the worker checks abi_version on entry and aborts on
+ * mismatch.
+ */
+#define PW_PROBE_RUNNER_ABI_VERSION 2u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
- * 2 KiB + 64 B header = 512 KiB + 64 B per run. The cap is chosen to
- * fit comfortably in one page-aligned anonymous mapping while still
- * being deep enough for any plausible specimen plan. */
+ * 2 KiB + 16 params × 512 B + 64 B header = 520 KiB + 64 B per run.
+ * The cap is chosen to fit comfortably in one page-aligned anonymous
+ * mapping while still being deep enough for any plausible specimen
+ * plan. */
 #define PW_SHM_MAX_STEPS    256u
 #define PW_SHM_SLOT_BYTES   2048u
+#define PW_SHM_MAX_PARAMS   16u
+#define PW_SHM_PARAM_BYTES  512u
 #define PW_SHM_HEADER_BYTES 64u
-#define PW_SHM_REGION_BYTES \
-    ((size_t)PW_SHM_HEADER_BYTES + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES))
+#define PW_SHM_REGION_BYTES                                                  \
+    ((size_t)PW_SHM_HEADER_BYTES                                             \
+     + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES)                        \
+     + ((size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES))
 
 /* Bounded string sizes inside a slot. They add up below the slot
  * budget; the remainder is reserved padding for future fields. */
@@ -51,6 +64,12 @@
 #define PW_SHM_TARGET_MAX        512u   /* path or mach-service name */
 #define PW_SHM_OBSERVED_PATH_MAX 1024u  /* PATH_MAX on macOS */
 #define PW_SHM_ERROR_MAX          256u  /* optional failure-cause string */
+
+/* Bounded string sizes inside a param slot. SBPL param names are
+ * typically short identifiers; values can be paths or other long
+ * strings. Sized to keep pw_shm_param_t at PW_SHM_PARAM_BYTES exactly. */
+#define PW_SHM_PARAM_KEY_MAX     128u
+#define PW_SHM_PARAM_VALUE_MAX   384u
 
 /*
  * Attempt kinds. Wire-stable across host and worker: new kinds MUST
@@ -107,7 +126,8 @@ typedef struct {
     _Atomic uint32_t done;
     _Atomic uint32_t exit_requested;
     int32_t apply_rc;
-    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 7u];
+    uint32_t param_count;            /* 0..PW_SHM_MAX_PARAMS */
+    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 8u];
 } pw_shm_header_t;
 
 /*
@@ -145,9 +165,27 @@ typedef struct {
                       - sizeof(_Atomic uint32_t)];
 } pw_shm_slot_t;
 
+/*
+ * SBPL params delivered to the worker. Host populates [0..param_count)
+ * pre-spawn; worker reads pre-apply and passes each key/value through
+ * sandbox_create_params + sandbox_set_param before calling
+ * sandbox_compile_string. Keys and values must be NUL-terminated; the
+ * worker re-applies a terminating NUL at the field boundary defensively
+ * before sandbox apply (matching the slot string treatment).
+ *
+ * The params region lives at offset
+ * PW_SHM_HEADER_BYTES + PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES.
+ */
+typedef struct {
+    char key[PW_SHM_PARAM_KEY_MAX];
+    char value[PW_SHM_PARAM_VALUE_MAX];
+} pw_shm_param_t;
+
 _Static_assert(sizeof(pw_shm_header_t) == PW_SHM_HEADER_BYTES,
                "pw_shm_header_t must be exactly PW_SHM_HEADER_BYTES");
 _Static_assert(sizeof(pw_shm_slot_t) == PW_SHM_SLOT_BYTES,
                "pw_shm_slot_t must be exactly PW_SHM_SLOT_BYTES");
+_Static_assert(sizeof(pw_shm_param_t) == PW_SHM_PARAM_BYTES,
+               "pw_shm_param_t must be exactly PW_SHM_PARAM_BYTES");
 
 #endif /* PW_PROBE_RUNNER_ABI_H */

@@ -22,8 +22,8 @@
  *      release ordering so the host's acquire-load of completed
  *      pairs with all preceding writes.
  *   9. Write done sentinel.
- *  10. Spin loop: poll exit_requested with acquire ordering, sleep
- *      between polls, _exit(0) when set. The spin is bounded by
+ *  10. Spin loop: poll exit_requested with acquire ordering, _exit(0)
+ *      when set. The spin is bounded by
  *      the host's grace timer (SIGKILL fallback if _exit is denied).
  *
  * No allocations after sandbox_apply. The result region is the only
@@ -33,6 +33,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <mach/mach.h>
 #include <sandbox.h>
 #include <servers/bootstrap.h>
@@ -52,16 +53,19 @@
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
  * Same approach the existing Swift loader uses via dlsym; the C
- * worker links statically per R5 ("no static-link gymnastics").
+ * worker links dynamically per R5 ("no static-link gymnastics").
  *
  * The second arg of sandbox_compile_string is an OPAQUE SandboxParams
  * pointer (from sandbox_create_params), NOT a string — passing a
- * string literal here segfaults inside libsandbox. The worker doesn't
- * exercise SBPL params today; pass NULL until the host plumbs them
- * through the request.
+ * string literal here segfaults inside libsandbox. The params object
+ * is built pre-apply from the host-populated shm params region and
+ * freed after compile.
  */
 extern int sandbox_apply(void *profile);
 extern void *sandbox_compile_string(const char *str, void *params, char **error);
+extern void *sandbox_create_params(void);
+extern int sandbox_set_param(void *params, const char *key, const char *value);
+extern void sandbox_free_params(void *params);
 /* sandbox_free_error is deprecated in modern SDKs. The libsandbox
  * implementation is a thin wrapper around free(); we call free()
  * directly to avoid the deprecation warning without changing
@@ -97,9 +101,10 @@ static void print_usage(FILE *to) {
 
 static int parse_int_arg(const char *value, long *out) {
     if (!value || !*value) return -1;
+    errno = 0;
     char *end = NULL;
     long v = strtol(value, &end, 10);
-    if (!end || *end) return -1;
+    if (errno == ERANGE || !end || *end) return -1;
     *out = v;
     return 0;
 }
@@ -125,10 +130,22 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                 return -1;
             }
             if (strcmp(flag, "--shm-fd") == 0) {
+                if (v < 0 || v > INT_MAX) {
+                    fprintf(stderr, "pw-probe-runner: %s: fd out of range %ld\n", flag, v);
+                    return -1;
+                }
                 args->shm_fd = (int)v;
             } else if (strcmp(flag, "--ready-fd") == 0) {
+                if (v < 0 || v > INT_MAX) {
+                    fprintf(stderr, "pw-probe-runner: %s: fd out of range %ld\n", flag, v);
+                    return -1;
+                }
                 args->ready_fd = (int)v;
             } else if (strcmp(flag, "--policy-fd") == 0) {
+                if (v < 0 || v > INT_MAX) {
+                    fprintf(stderr, "pw-probe-runner: %s: fd out of range %ld\n", flag, v);
+                    return -1;
+                }
                 args->policy_fd = (int)v;
             } else {
                 if (v < 0 || (unsigned long)v > (unsigned long)PW_SHM_MAX_STEPS) {
@@ -182,7 +199,8 @@ static void *map_region(int shm_fd) {
 }
 
 /* Read up to max_len-1 bytes from fd into buf, NUL-terminating.
- * Returns the number of bytes read on success, -1 on read error. */
+ * Returns the number of bytes read on success, -1 on read error, and
+ * -2 if the input exceeds the fixed buffer. */
 static ssize_t read_all_from_fd(int fd, char *buf, size_t max_len) {
     if (max_len == 0) return -1;
     size_t total = 0;
@@ -196,6 +214,16 @@ static ssize_t read_all_from_fd(int fd, char *buf, size_t max_len) {
         total += (size_t)n;
     }
     buf[total] = '\0';
+    if (total == max_len - 1) {
+        char extra;
+        for (;;) {
+            ssize_t n = read(fd, &extra, 1);
+            if (n < 0 && errno == EINTR) continue;
+            if (n < 0) return -1;
+            if (n > 0) return -2;
+            break;
+        }
+    }
     return (ssize_t)total;
 }
 
@@ -369,16 +397,27 @@ static void run_attempt(pw_shm_slot_t *slot) {
 
 /* ---- post-done spin loop ------------------------------------------------- */
 
-/* Bounded sleep between exit-byte polls. 2 ms matches the host poll
- * cadence documented in R8 so the host's exit-byte write is observed
- * within one cycle in the common case. */
+static inline void cpu_relax(void) {
+#if defined(__aarch64__) || defined(__arm64__)
+    __asm__ volatile("yield" ::: "memory");
+#elif defined(__x86_64__)
+    __asm__ volatile("pause" ::: "memory");
+#else
+    atomic_signal_fence(memory_order_seq_cst);
+#endif
+}
+
+/* Post-apply teardown cannot rely on sleep/yield syscalls surviving
+ * hostile profiles. Keep this loop CPU-only: an atomic load, a small
+ * processor-relax backoff, and _exit(0) once the host flips the byte. */
 static void spin_for_exit(pw_shm_header_t *hdr) {
-    struct timespec ts = { .tv_sec = 0, .tv_nsec = 2 * 1000 * 1000 };
     for (;;) {
         if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) {
             _exit(0);
         }
-        nanosleep(&ts, NULL);
+        for (uint32_t i = 0; i < 100000u; i++) {
+            cpu_relax();
+        }
     }
 }
 
@@ -405,6 +444,8 @@ int main(int argc, char **argv) {
 
     pw_shm_header_t *hdr = (pw_shm_header_t *)base;
     pw_shm_slot_t   *slots = (pw_shm_slot_t *)((char *)base + PW_SHM_HEADER_BYTES);
+    pw_shm_param_t  *params = (pw_shm_param_t *)((char *)slots
+                              + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
 
     if (hdr->abi_version != PW_PROBE_RUNNER_ABI_VERSION) {
         fprintf(stderr,
@@ -435,22 +476,83 @@ int main(int argc, char **argv) {
     }
     uint32_t step_count = hdr->step_count;
 
-    /* Read policy text into a stack-bounded buffer. SBPL policies are
+    /* Ensure host-populated strings are bounded before the sandbox is
+     * applied. The worker is intentionally defensive here because a
+     * missing NUL would otherwise let open/bootstrap_look_up read past
+     * the slot's fixed field after apply. */
+    for (uint32_t i = 0; i < step_count; i++) {
+        slots[i].step_id[PW_SHM_STEP_ID_MAX - 1u] = '\0';
+        slots[i].target[PW_SHM_TARGET_MAX - 1u] = '\0';
+        atomic_store_explicit(&slots[i].completed, 0u, memory_order_release);
+    }
+
+    if (hdr->param_count > PW_SHM_MAX_PARAMS) {
+        fprintf(stderr,
+                "pw-probe-runner: header param_count=%u exceeds PW_SHM_MAX_PARAMS=%u\n",
+                hdr->param_count, PW_SHM_MAX_PARAMS);
+        return 8;
+    }
+    uint32_t param_count = hdr->param_count;
+    for (uint32_t i = 0; i < param_count; i++) {
+        params[i].key[PW_SHM_PARAM_KEY_MAX - 1u] = '\0';
+        params[i].value[PW_SHM_PARAM_VALUE_MAX - 1u] = '\0';
+    }
+
+    /* Read policy text into a fixed buffer. SBPL policies are
      * typically small (KiB); cap at 256 KiB so a runaway producer
-     * fails loudly rather than allocating unboundedly. The buffer
-     * lives on the stack so there is no malloc to worry about. */
+     * fails loudly rather than allocating unboundedly or silently
+     * truncating. */
     enum { POLICY_MAX = 256 * 1024 };
     static char policy_buf[POLICY_MAX];
     ssize_t plen = read_all_from_fd(args.policy_fd, policy_buf, sizeof(policy_buf));
     if (plen < 0) {
-        fprintf(stderr, "pw-probe-runner: failed reading policy: %s\n", strerror(errno));
+        if (plen == -2) {
+            fprintf(stderr,
+                    "pw-probe-runner: policy exceeds fixed buffer (%zu bytes max)\n",
+                    sizeof(policy_buf) - 1u);
+        } else {
+            fprintf(stderr, "pw-probe-runner: failed reading policy: %s\n", strerror(errno));
+        }
         return 7;
+    }
+
+    /* Build SandboxParams from the host-populated params region. The
+     * worker only allocates a params object when param_count > 0; an
+     * empty params region keeps the v1 behaviour of passing NULL,
+     * which sandbox_compile_string accepts. Any sandbox_set_param
+     * failure is fatal — silently dropping a param could change
+     * which subpath/value the policy denies. */
+    void *params_obj = NULL;
+    if (param_count > 0) {
+        params_obj = sandbox_create_params();
+        if (!params_obj) {
+            fprintf(stderr,
+                    "pw-probe-runner: sandbox_create_params returned NULL\n");
+            hdr->apply_rc = -1;
+            atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+            spin_for_exit(hdr);
+        }
+        for (uint32_t i = 0; i < param_count; i++) {
+            int srv = sandbox_set_param(params_obj, params[i].key, params[i].value);
+            if (srv != 0) {
+                fprintf(stderr,
+                        "pw-probe-runner: sandbox_set_param[%u] (key=%s) failed rc=%d\n",
+                        i, params[i].key, srv);
+                sandbox_free_params(params_obj);
+                hdr->apply_rc = -1;
+                atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+                spin_for_exit(hdr);
+            }
+        }
     }
 
     /* Compile. sandbox_compile_string allocates internally; that's
      * before sandbox_apply so it's safe. */
     char *compile_err = NULL;
-    void *profile = sandbox_compile_string(policy_buf, NULL, &compile_err);
+    void *profile = sandbox_compile_string(policy_buf, params_obj, &compile_err);
+    /* Whether compile succeeded or not, the params object is no longer
+     * needed (libsandbox copies what it needs into the profile). */
+    if (params_obj) sandbox_free_params(params_obj);
     if (!profile) {
         fprintf(stderr,
                 "pw-probe-runner: sandbox_compile_string failed: %s\n",

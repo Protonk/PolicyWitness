@@ -6,7 +6,8 @@
  *
  * Usage:
  *   harness <worker_path> <scenario>
- *     scenario: happy_default_allow | bare_deny_default | exit_byte_clean
+ *     scenario: happy_default_allow | bare_deny_default | exit_byte_clean |
+ *               max_slots_deny_default | sigkill_fallback
  *
  * The harness:
  *  1. Builds the host side: shm_open + ftruncate + mmap, populate
@@ -55,8 +56,12 @@ typedef struct {
     const char *name;
     const char *policy;
     uint32_t step_count;
+    int request_exit;
     /* Populates the slots according to scenario semantics. */
     void (*populate_slots)(pw_shm_slot_t *slots);
+    /* Optional: populates params + returns the populated count
+     * (0..PW_SHM_MAX_PARAMS). NULL means "no params, leave region zero". */
+    uint32_t (*populate_params)(pw_shm_param_t *params);
 } scenario_t;
 
 static void populate_happy(pw_shm_slot_t *slots) {
@@ -76,6 +81,34 @@ static void populate_deny_default(pw_shm_slot_t *slots) {
     snprintf(slots[0].target, sizeof(slots[0].target), "/etc/hosts");
 }
 
+static void populate_max_slots(pw_shm_slot_t *slots) {
+    for (uint32_t i = 0; i < PW_SHM_MAX_STEPS; i++) {
+        snprintf(slots[i].step_id, sizeof(slots[i].step_id), "none_%03u", i);
+        slots[i].attempt_kind = PW_ATTEMPT_NONE;
+        slots[i].target[0] = '\0';
+    }
+}
+
+/* Populate one slot that reads /etc/hosts and one param TARGET=/etc.
+ * Paired with SCEN_PARAMS_ROUND_TRIP_POLICY below. */
+static void populate_params_slot(pw_shm_slot_t *slots) {
+    snprintf(slots[0].step_id, sizeof(slots[0].step_id), "read_etc_hosts_param_target");
+    slots[0].attempt_kind = PW_ATTEMPT_FILE_OPEN_READ;
+    snprintf(slots[0].target, sizeof(slots[0].target), "/etc/hosts");
+}
+
+static uint32_t populate_params_target(pw_shm_param_t *params) {
+    snprintf(params[0].key, sizeof(params[0].key), "TARGET");
+    /* Subpath match in SBPL is against the kernel-canonical form, not
+     * userspace aliases — /etc/hosts realpaths to /private/etc/hosts,
+     * so TARGET must be /private/etc for the deny rule to fire. This
+     * is an SBPL semantic detail, not a worker concern; the test
+     * documents it inline so a future reader doesn't waste time
+     * debugging it again. */
+    snprintf(params[0].value, sizeof(params[0].value), "/private/etc");
+    return 1u;
+}
+
 /* Allow file-read but (deny default) — the worker can read /etc/hosts
  * but everything else is denied. Lets the happy_default_allow case run
  * under a maximally-restrictive policy that still permits the probe;
@@ -91,10 +124,29 @@ static const char SCEN_DENY_DEFAULT_POLICY[] =
     "(version 1)\n"
     "(deny default)\n";
 
+/* Default-allow with one deny rule whose subpath is taken from the
+ * TARGET param. Without sandbox_set_param + a compatible params
+ * object, sandbox_compile_string fails because (param "TARGET")
+ * resolves to nothing. With it, the policy denies file-read-data
+ * under /etc — so the /etc/hosts open fails with EPERM. Either
+ * outcome proves the param round-tripped:
+ *   - compile failure ⇒ params object wasn't built correctly,
+ *   - kernel allow on /etc/hosts ⇒ param value didn't reach the
+ *     compiled profile,
+ *   - kernel deny on /etc/hosts ⇒ params are live.
+ */
+static const char SCEN_PARAMS_ROUND_TRIP_POLICY[] =
+    "(version 1)\n"
+    "(allow default)\n"
+    "(deny file-read-data (subpath (param \"TARGET\")))\n";
+
 static scenario_t SCENARIOS[] = {
-    { "happy_default_allow", SCEN_ALLOW_DEFAULT_POLICY, 1, populate_happy },
-    { "bare_deny_default",   SCEN_DENY_DEFAULT_POLICY,  1, populate_deny_default },
-    { "exit_byte_clean",     SCEN_ALLOW_DEFAULT_POLICY, 1, populate_happy },
+    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL },
+    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL },
+    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL },
+    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL },
+    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target },
 };
 static const size_t SCENARIO_COUNT = sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
 
@@ -165,10 +217,27 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     }
     pw_shm_header_t *hdr = (pw_shm_header_t *)base;
     pw_shm_slot_t *slots = (pw_shm_slot_t *)((char *)base + PW_SHM_HEADER_BYTES);
+    pw_shm_param_t *params = (pw_shm_param_t *)((char *)slots
+                              + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
     memset(hdr, 0, sizeof(*hdr));
     hdr->abi_version = PW_PROBE_RUNNER_ABI_VERSION;
     hdr->step_count = scen->step_count;
     if (scen->populate_slots) scen->populate_slots(slots);
+    if (scen->populate_params) {
+        hdr->param_count = scen->populate_params(params);
+    }
+
+    /* R8 requires the host to pre-touch every page it expects the
+     * worker to write after apply. Write each page before the worker is
+     * spawned so the post-apply path never depends on lazy allocation. */
+    long page_size = sysconf(_SC_PAGESIZE);
+    if (page_size <= 0) page_size = 4096;
+    volatile unsigned char *touch = (volatile unsigned char *)base;
+    for (size_t off = 0; off < PW_SHM_REGION_BYTES; off += (size_t)page_size) {
+        touch[off] = touch[off];
+    }
+    touch[PW_SHM_REGION_BYTES - 1u] = touch[PW_SHM_REGION_BYTES - 1u];
+
     atomic_store_explicit(&hdr->prepared, 1u, memory_order_release);
 
     /* Ready pipe + policy pipe. Parent-side ends get FD_CLOEXEC so
@@ -180,6 +249,10 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         return 1;
     }
     fcntl(ready_pipe[0], F_SETFD, FD_CLOEXEC);
+    int ready_flags = fcntl(ready_pipe[0], F_GETFL, 0);
+    if (ready_flags >= 0) {
+        fcntl(ready_pipe[0], F_SETFL, ready_flags | O_NONBLOCK);
+    }
     fcntl(policy_pipe[1], F_SETFD, FD_CLOEXEC);
 
     posix_spawn_file_actions_t fa;
@@ -244,8 +317,11 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         }
     }
 
-    /* Request exit. */
-    atomic_store_explicit(&hdr->exit_requested, 1u, memory_order_release);
+    /* Request exit unless this scenario intentionally withholds the
+     * exit byte to exercise the host-side SIGKILL fallback. */
+    if (scen->request_exit) {
+        atomic_store_explicit(&hdr->exit_requested, 1u, memory_order_release);
+    }
 
     /* Wait for the worker to clean-exit. 1 s deadline — if it hasn't
      * exited by then, send SIGKILL so the test doesn't hang. */

@@ -18,6 +18,7 @@ WORKER_PATH="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-p
 # rebuilt on schema changes.
 HARNESS_BIN="${PW_TEST_OUT_DIR}/harness.runner_c_worker"
 mkdir -p "$(dirname "${HARNESS_BIN}")"
+harness_built=0
 
 check_prereqs() {
   if [[ ! -x "${WORKER_PATH}" ]]; then
@@ -36,6 +37,13 @@ build_harness() {
     "${SUITE_DIR}/harness.c"
 }
 
+ensure_harness() {
+  if [[ "${harness_built}" -eq 0 ]]; then
+    build_harness
+    harness_built=1
+  fi
+}
+
 # ---- test_id: happy_default_allow ----------------------------------------
 
 run_happy_default_allow() {
@@ -47,9 +55,7 @@ run_happy_default_allow() {
     test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
     return 0
   fi
-  if [[ ! -x "${HARNESS_BIN}" ]]; then
-    build_harness
-  fi
+  ensure_harness
 
   local result_file="${PW_TEST_ARTIFACTS}/result.json"
   set +e
@@ -107,9 +113,7 @@ run_bare_deny_default() {
     test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
     return 0
   fi
-  if [[ ! -x "${HARNESS_BIN}" ]]; then
-    build_harness
-  fi
+  ensure_harness
 
   local result_file="${PW_TEST_ARTIFACTS}/result.json"
   set +e
@@ -172,9 +176,7 @@ run_exit_byte_clean() {
     test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
     return 0
   fi
-  if [[ ! -x "${HARNESS_BIN}" ]]; then
-    build_harness
-  fi
+  ensure_harness
 
   local result_file="${PW_TEST_ARTIFACTS}/result.json"
   set +e
@@ -210,6 +212,194 @@ PY
   test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
 }
 
+# ---- test_id: max_slots_deny_default ---------------------------------------
+
+run_max_slots_deny_default() {
+  local test_id="max_slots_deny_default"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "harness" "worker completes all 256 shared-memory slots under bare (deny default)"
+
+  if ! check_prereqs; then
+    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
+    return 0
+  fi
+  ensure_harness
+
+  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  set +e
+  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
+  local rc=$?
+  set -e
+  if [[ "${rc}" -ne 0 ]]; then
+    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
+    return 0
+  fi
+
+  set +e
+  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+
+assert r["ready_byte_received"], "pre-apply ready byte not received"
+assert r["applied"], f"applied sentinel never flipped: {r}"
+assert r["apply_rc"] == 0, f"sandbox_apply returned {r['apply_rc']}"
+assert r["done"], f"done sentinel never flipped: {r}"
+assert not r["sent_sigkill"], "worker did not clean-exit after max-slot run"
+assert r["exit_code"] == 0, f"worker exit_code != 0: {r}"
+
+slots = r["slots"]
+assert len(slots) == 256, f"expected 256 slots, got {len(slots)}"
+for idx in (0, 1, 2, 127, 255):
+    s = slots[idx]
+    assert s["step_id"] == f"none_{idx:03d}", f"slot {idx} step_id mismatch: {s}"
+    assert s["completed"] == 1, f"slot {idx} not completed: {s}"
+    assert s["rc"] == 0, f"PW_ATTEMPT_NONE slot {idx} should rc=0: {s}"
+    assert s["errno"] == 0, f"PW_ATTEMPT_NONE slot {idx} should errno=0: {s}"
+
+missing = [i for i, s in enumerate(slots) if s["completed"] != 1]
+assert not missing, f"incomplete slots: {missing[:10]}"
+print("ok: 256 slots completed across the full shared-memory region under deny-default")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
+    return 0
+  fi
+  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+}
+
+# ---- test_id: sigkill_fallback ---------------------------------------------
+
+run_sigkill_fallback() {
+  local test_id="sigkill_fallback"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "harness" "host SIGKILL fallback reaps worker when clean exit byte is withheld"
+
+  if ! check_prereqs; then
+    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
+    return 0
+  fi
+  ensure_harness
+
+  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  set +e
+  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
+  local rc=$?
+  set -e
+  if [[ "${rc}" -ne 0 ]]; then
+    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
+    return 0
+  fi
+
+  set +e
+  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+
+assert r["ready_byte_received"], "pre-apply ready byte not received"
+assert r["applied"], f"applied sentinel never flipped: {r}"
+assert r["done"], f"done sentinel never flipped: {r}"
+assert r["sent_sigkill"], f"expected harness SIGKILL fallback, got clean exit: {r}"
+assert r["exit_code"] is None, f"worker should not have clean-exited: {r}"
+assert r["term_signal"] == 9, f"expected SIGKILL term_signal=9: {r}"
+
+slots = r["slots"]
+assert len(slots) == 1, f"expected 1 slot, got {len(slots)}"
+assert slots[0]["completed"] == 1, f"slot should complete before fallback kill: {slots[0]}"
+print("ok: host SIGKILL fallback reaped worker after withheld exit byte")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
+    return 0
+  fi
+  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+}
+
+# ---- test_id: params_round_trip --------------------------------------------
+
+run_params_round_trip() {
+  local test_id="params_round_trip"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "harness" "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc when TARGET=/etc"
+
+  if ! check_prereqs; then
+    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
+    return 0
+  fi
+  ensure_harness
+
+  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  set +e
+  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
+  local rc=$?
+  set -e
+  if [[ "${rc}" -ne 0 ]]; then
+    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
+    return 0
+  fi
+
+  set +e
+  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+
+# Three distinguishable outcomes:
+#   (a) compile failed: sandbox_compile_string couldn't resolve
+#       (param "TARGET") so apply_rc=-1, done is set, no slots ran.
+#       Means the worker built a params object but it was empty or
+#       the SET failed silently.
+#   (b) compile + apply succeeded but slot rc=0: the param was
+#       parsed but its value didn't reach the compiled profile,
+#       so the kernel allowed /etc/hosts.
+#   (c) compile + apply succeeded AND slot rc=1 with errno=EPERM:
+#       the param TARGET=/etc reached the compiled profile, the
+#       kernel saw the deny rule, and the open was denied.
+#
+# (c) is the only outcome that proves end-to-end round-trip.
+assert r["ready_byte_received"], "pre-apply ready byte not received"
+assert r["apply_rc"] == 0, \
+    f"sandbox_compile_string + apply failed (apply_rc={r['apply_rc']}); params didn't construct the profile"
+assert r["applied"], f"applied sentinel never flipped: {r}"
+assert r["done"], f"done sentinel never flipped: {r}"
+assert not r["sent_sigkill"], "worker did not clean-exit"
+assert r["exit_code"] == 0, f"worker exit_code != 0: {r}"
+
+slots = r["slots"]
+assert len(slots) == 1, f"expected 1 slot, got {len(slots)}"
+s = slots[0]
+assert s["completed"] == 1, f"slot not marked completed: {s}"
+assert s["rc"] == 1, \
+    f"TARGET=/etc should make /etc/hosts open fail with EPERM; got rc={s['rc']} errno={s['errno']}. " \
+    f"This means the param didn't reach the kernel — likely a worker bug in the sandbox_set_param path."
+assert s["errno"] in (1, 13), \
+    f"expected errno EPERM (1) or EACCES (13) for the param-driven kernel deny, got {s['errno']}"
+
+print(f"ok: TARGET=/etc round-tripped; kernel denied /etc/hosts with errno={s['errno']}")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
+    return 0
+  fi
+  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+}
+
 run_happy_default_allow
 run_bare_deny_default
 run_exit_byte_clean
+run_max_slots_deny_default
+run_sigkill_fallback
+run_params_round_trip
