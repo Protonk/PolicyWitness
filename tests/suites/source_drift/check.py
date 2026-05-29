@@ -99,9 +99,14 @@ def build_sh_swift_files() -> set[str]:
 
 
 def build_sh_c_files() -> set[str]:
+    """Collect every C source file build.sh declares as an XPC_RUNNER_*_SHIM
+    relative to XPC_ROOT. As of Step 6.2 there are two: PWSandboxCheckShim.c
+    (the existing sandbox_check trampoline) and PWCWorkerShim.c (atomic +
+    shm_open helpers for the Swift CWorker driver). Adding a third shim is
+    a single line edit here and a matching declaration in build.sh."""
     text = BUILD_SH.read_text(encoding="utf-8")
     shim_re = re.compile(
-        r'^XPC_RUNNER_SANDBOX_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
+        r'^XPC_RUNNER_(?:SANDBOX|CWORKER)_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
         re.MULTILINE,
     )
     return {m.group(1) for m in shim_re.finditer(text)}
@@ -440,10 +445,16 @@ def main() -> int:
         "build.sh (PWRunner.xpc swiftc)": build_sh_swift_files(),
         "Package.swift (PWRunnerCore target)": package_swift_sources("PWRunnerCore"),
     }
+    # Each C shim is its own SwiftPM target with its own sources block;
+    # the union of those source sets has to match disk and build.sh.
+    package_c_sources = (
+        package_swift_sources("PWSandboxCheckShim")
+        | package_swift_sources("PWCWorkerShim")
+    )
     c_manifests = {
         "disk (runner/*.c)": disk_c_files(),
-        "build.sh (XPC_RUNNER_SANDBOX_SHIM)": build_sh_c_files(),
-        "Package.swift (PWSandboxCheckShim target)": package_swift_sources("PWSandboxCheckShim"),
+        "build.sh (XPC_RUNNER_*_SHIM)": build_sh_c_files(),
+        "Package.swift (PWSandboxCheckShim + PWCWorkerShim sources)": package_c_sources,
     }
 
     problems: list[str] = []

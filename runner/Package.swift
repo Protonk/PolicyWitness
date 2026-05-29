@@ -40,14 +40,22 @@ let package = Package(
             publicHeadersPath: "include"
         ),
         .target(
+            name: "PWCWorkerShim",
+            path: ".",
+            sources: ["PWCWorkerShim.c"],
+            publicHeadersPath: "include_cworker"
+        ),
+        .target(
             name: "PWRunnerCore",
-            dependencies: ["PWSandboxCheckShim"],
+            dependencies: ["PWSandboxCheckShim", "PWCWorkerShim"],
             path: ".",
             exclude: [
                 "Package.swift",
                 "README.md",
                 "PWSandboxCheckShim.c",
+                "PWCWorkerShim.c",
                 "include",
+                "include_cworker",
                 "runner-client",
                 "services",
                 "Tests",
@@ -63,6 +71,7 @@ let package = Package(
                 "PWRunnerWorkerWire.swift",
                 "WorkerEntry.swift",
                 "WorkerProcess.swift",
+                "CWorker.swift",
                 "PWRunnerService.swift",
             ],
             swiftSettings: [
