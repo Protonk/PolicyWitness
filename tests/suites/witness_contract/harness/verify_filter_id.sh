@@ -39,13 +39,23 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF' >&2
-usage: verify_filter_id.sh <probe> <sbpl-filter-name> <value> [--probe-target <STRING>]
-  probe: mach_lookup | iokit_open | sysctl_read | preferences_read
+usage: verify_filter_id.sh <probe> <sbpl-filter-name> <value> [options]
+  probe: mach_lookup | iokit_open | iokit_open_user_client | sysctl_read | preferences_read
   --probe-target STRING: override the probe target (default: <value>)
+  --allowed-value STRING: sibling filter value the policy does NOT deny;
+      enables strict mode — a filter ID is confirmed only if its
+      sandbox_check verdict matches the kernel for BOTH the denied
+      <value> (expect deny) and the --allowed-value (expect allow).
+      Without it, the script reports candidate matches that may include
+      incidental deniers like PATH=1 which return deny for any string.
+  --max-id INT: highest filter ID to scan (default 200; overridable via
+      SCAN_MAX env var for backwards compatibility).
   examples:
-    verify_filter_id.sh mach_lookup global-name com.apple.cfprefsd.xpc.daemon
-    verify_filter_id.sh iokit_open iokit-user-client-class \
-        IOSurfaceRootUserClient --probe-target IOSurfaceRoot
+    verify_filter_id.sh mach_lookup global-name com.apple.cfprefsd.xpc.daemon \
+        --allowed-value com.apple.unknown.fake.service
+    verify_filter_id.sh iokit_open_user_client iokit-user-client-class \
+        IOSurfaceRootUserClient --probe-target IOSurfaceRoot \
+        --allowed-value SomeOtherUserClient
 EOF
 }
 
@@ -60,6 +70,8 @@ VALUE="$3"
 shift 3
 
 PROBE_TARGET="${VALUE}"
+ALLOWED_VALUE=""
+SCAN_MAX_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --probe-target)
@@ -68,6 +80,22 @@ while [[ $# -gt 0 ]]; do
                 exit 2
             fi
             PROBE_TARGET="$2"
+            shift 2
+            ;;
+        --allowed-value)
+            if [[ $# -lt 2 ]]; then
+                echo "ERROR: --allowed-value requires a value" >&2
+                exit 2
+            fi
+            ALLOWED_VALUE="$2"
+            shift 2
+            ;;
+        --max-id)
+            if [[ $# -lt 2 ]]; then
+                echo "ERROR: --max-id requires a value" >&2
+                exit 2
+            fi
+            SCAN_MAX_OVERRIDE="$2"
             shift 2
             ;;
         -h|--help)
@@ -230,17 +258,45 @@ else: print(f"err:rc={rc},errno={errno}")
 ' <<< "${out}"
 }
 
-echo "id    sandbox_check_verdict    matches_kernel?"
+# SCAN_MAX precedence (highest first): --max-id flag, SCAN_MAX env var
+# (legacy), built-in default 200.
+if [[ -n "${SCAN_MAX_OVERRIDE}" ]]; then
+    SCAN_MAX="${SCAN_MAX_OVERRIDE}"
+else
+    SCAN_MAX="${SCAN_MAX:-200}"
+fi
+
+echo "==> scanning filter IDs 1..${SCAN_MAX}"
+if [[ -n "${ALLOWED_VALUE}" ]]; then
+    echo "==> strict mode: require sandbox_check verdict to match kernel"
+    echo "    for BOTH denied value (${VALUE}) and allowed sibling (${ALLOWED_VALUE})"
+    printf "id    deny-side             allow-side            both_match?\n"
+else
+    echo "==> permissive mode: no --allowed-value supplied; matches may"
+    echo "    include incidental deniers (e.g. ID 1 / PATH returns deny"
+    echo "    for any string)"
+    printf "id    sandbox_check_verdict    matches_kernel?\n"
+fi
+
 agreeing=()
-SCAN_MAX="${SCAN_MAX:-63}"
 for type_id in $(seq 1 "${SCAN_MAX}"); do
-    verdict="$(probe "${TARGET_PID}" "${OPERATION}" "${type_id}" "${VALUE}")"
-    match="-"
-    if [[ "${verdict}" == "${ACTUAL_OUTCOME}" ]]; then
-        match="YES"
-        agreeing+=("${type_id}")
+    deny_verdict="$(probe "${TARGET_PID}" "${OPERATION}" "${type_id}" "${VALUE}")"
+    if [[ -n "${ALLOWED_VALUE}" ]]; then
+        allow_verdict="$(probe "${TARGET_PID}" "${OPERATION}" "${type_id}" "${ALLOWED_VALUE}")"
+        match="-"
+        if [[ "${deny_verdict}" == "deny" && "${allow_verdict}" == "allow" ]]; then
+            match="YES"
+            agreeing+=("${type_id}")
+        fi
+        printf "%-5s %-21s %-21s %s\n" "${type_id}" "${deny_verdict}" "${allow_verdict}" "${match}"
+    else
+        match="-"
+        if [[ "${deny_verdict}" == "${ACTUAL_OUTCOME}" ]]; then
+            match="YES"
+            agreeing+=("${type_id}")
+        fi
+        printf "%-5s %-24s %s\n" "${type_id}" "${deny_verdict}" "${match}"
     fi
-    printf "%-5s %-24s %s\n" "${type_id}" "${verdict}" "${match}"
 
     if ! kill -0 "${TARGET_PID}" 2>/dev/null; then
         echo ""
@@ -251,16 +307,28 @@ done
 
 echo ""
 if [[ ${#agreeing[@]} -gt 0 ]]; then
-    echo "==> IDs whose sandbox_check verdict matches kernel enforcement: ${agreeing[*]}"
-    echo "    These are the candidates for the named filter '${SBPL_FILTER}'"
-    echo "    on operation '${OPERATION}'. Multiple agreements mean the"
-    echo "    discriminator pattern alone can't single out the unique ID;"
-    echo "    use a second probe value to break the tie."
+    if [[ -n "${ALLOWED_VALUE}" ]]; then
+        echo "==> CONFIRMED filter IDs (deny on '${VALUE}', allow on '${ALLOWED_VALUE}'): ${agreeing[*]}"
+        echo "    These IDs correctly interpret filter_value as a string-match"
+        echo "    against the policy's filter values. Incidental deniers that"
+        echo "    return deny for any string are excluded by the allow-side check."
+    else
+        echo "==> candidate filter IDs (deny-side only): ${agreeing[*]}"
+        echo "    These match the kernel deny but the set may include incidental"
+        echo "    deniers (e.g. ID 1 = PATH returns deny for any string). Rerun"
+        echo "    with --allowed-value <sibling-string> to disambiguate."
+    fi
     exit 0
 else
     echo "==> NO ID's sandbox_check verdict matches kernel enforcement."
-    echo "    sandbox_check is unreliable for this op+filter combination."
-    echo "    Validator-primary verdicts via cross-check cannot be trusted"
-    echo "    for this filter kind."
+    if [[ -n "${ALLOWED_VALUE}" ]]; then
+        echo "    Across 1..${SCAN_MAX}, no ID produced (deny on '${VALUE}',"
+        echo "    allow on '${ALLOWED_VALUE}'). sandbox_check is unreliable for"
+        echo "    this op+filter combination — emit prediction_unavailable."
+    else
+        echo "    sandbox_check is unreliable for this op+filter combination."
+        echo "    (Permissive mode — even incidental deniers didn't match,"
+        echo "    so the userland predicate is fully off for this op+filter.)"
+    fi
     exit 1
 fi

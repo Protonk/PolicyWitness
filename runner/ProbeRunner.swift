@@ -7,12 +7,19 @@ import Darwin
 // verdicts against actual kernel enforcement (see
 // tests/suites/witness_contract/harness/verify_filter_id.sh).
 // - PATH filter: 1                       (long-stable; widely documented)
-// - mach-lookup global name filter: 2    (previously documented as 16; corrected
-//                                         by enforcement verification. The wrong
-//                                         constant was the cause of the
-//                                         BBX-001 anomaly we had carried as
-//                                         "Apple's sandbox_check is
-//                                         unreliable for global-name".)
+// - mach-lookup global name filter: 2    (selected working ID. Strict
+//                                         verification — both denied
+//                                         and allowed sibling — passes
+//                                         for IDs 2 AND 12 across the
+//                                         scan to 200; uniqueness is
+//                                         NOT proven. ID 2 was chosen
+//                                         because it is the lower of
+//                                         the two and conventional;
+//                                         ID 12 is presumably an alias
+//                                         or aliased predicate path.
+//                                         The previously-documented 16
+//                                         was empirically wrong — the
+//                                         original cause of BBX-001.)
 // - mach-lookup local name filter: 17    (NOT YET re-verified by the same
 //                                         methodology; may also be wrong.
 //                                         No in-tree test exercises local-name
