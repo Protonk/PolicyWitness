@@ -114,11 +114,16 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
     tk.group("PWRunnerRunResult: production-shaped success result") {
 
-        tk.run("schema_version is 3, test_overrides is nil, runner_subprocess is present") {
+        tk.run("schema_version is 4, test_overrides is nil, runner_subprocess is present") {
             let result = okResult(pid: 7777, stepCount: 2)
-            try expectEqual(result.schema_version, 3)
+            try expectEqual(result.schema_version, 4)
             try expectNil(result.test_overrides)
             try expectNotNil(result.runner_subprocess)
+            // validator_subprocess defaults to nil on the legacy path.
+            // Production wiring (Step 6.8) populates it when the host
+            // takes the C-worker code path. v4 consumers branching on
+            // `validator_subprocess != nil` see the right value.
+            try expectNil(result.validator_subprocess)
         }
 
         tk.run("top-level pid agrees with runner_subprocess.pid") {
@@ -135,6 +140,45 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             let data = try pwRunnerEncodeJSON(original)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
             try expectEqual(decoded.steps.count, 3)
+        }
+
+        tk.run("v4: validator_subprocess + steps[].drift round-trip via Codable") {
+            // Production-shaped result with the v4 fields populated.
+            var result = okResult(pid: 9001, stepCount: 2)
+            result.validator_subprocess = PWRunnerValidatorSubprocess(
+                pid: 9002, term_signal: nil, exit_code: 0
+            )
+            // Per-step drift values: one true, one false. Both must
+            // round-trip identically. The third (default-nil) case
+            // is covered separately below.
+            result.steps[0].drift = true
+            result.steps[1].drift = false
+
+            let data = try pwRunnerEncodeJSON(result)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            try expectEqual(decoded.schema_version, 4)
+            try expectNotNil(decoded.validator_subprocess)
+            try expectEqual(decoded.validator_subprocess?.pid, 9002)
+            try expectEqual(decoded.validator_subprocess?.exit_code, 0)
+            try expectNil(decoded.validator_subprocess?.term_signal)
+            try expectEqual(decoded.steps[0].drift, true)
+            try expectEqual(decoded.steps[1].drift, false)
+        }
+
+        tk.run("v4: steps[].drift=nil encodes as explicit JSON null and decodes back to nil") {
+            // Distinguishing "v4 producer chose not to populate" from
+            // "v3 producer never wrote the key" requires the encoder to
+            // emit explicit null. The decoder still gives back nil
+            // either way, but a consumer that introspects the raw JSON
+            // sees the key.
+            let result = okResult(pid: 9100, stepCount: 1)
+            try expectNil(result.steps[0].drift)
+            let data = try pwRunnerEncodeJSON(result)
+            let raw = String(data: data, encoding: .utf8) ?? ""
+            try expectTrue(raw.contains("\"drift\":null"),
+                           "expected explicit \"drift\":null in v4 envelope; raw=\(raw)")
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            try expectNil(decoded.steps[0].drift)
         }
     }
 

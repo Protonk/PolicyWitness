@@ -192,11 +192,36 @@ Example:
 
 ## Run output (per step)
 
-Runner responses use `schema_version = 3`. The XPC service process stays
+Runner responses use `schema_version = 4`. The XPC service process stays
 unsandboxed and spawns a short-lived worker that applies the specimen policy.
 `data.runner_result.pid` names that worker process when
 `runner_subprocess` is present; use it for sandbox unified-log correlation.
 `runner_subprocess` records `{ pid, term_signal, exit_code, partial_steps }`.
+
+`schema_version = 4` (additive to v3):
+
+- `validator_subprocess: { pid, exit_code, term_signal } | null` — the
+  `sb_api_validator --batch` child the host spawns alongside the worker
+  to collect `sandbox_check` verdicts against the sandboxed worker_pid.
+  `null` when the runner host fell through to the legacy Swift-worker
+  path (the validator isn't spawned in that path) or when the validator
+  failed to spawn before any metadata could be captured. Exactly one of
+  `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
+  non-null on a completed run.
+- `steps[].drift: bool | null` — disagreement between the validator's
+  predicted verdict and the attempt's observed verdict for the step.
+  `true` when they disagree about allow/deny (libsandbox-drift evidence;
+  the property PolicyWitness exists to surface). `false` when they
+  agree. `null` when no comparison is possible: the validator wasn't
+  run, the validator skipped this step (e.g. an op+filter pair in
+  `prediction_unavailable`), or the attempt didn't produce a verdict.
+  Encoded as explicit JSON null at v4 — consumers introspecting the
+  raw JSON see the key whether or not a comparison was possible, so
+  "absent" reliably means "v3 producer."
+- Top-level `pid` semantics from v3 are preserved: when
+  `runner_subprocess` is present, it names the sandboxed worker
+  process for unified-log correlation. `validator_subprocess.pid` is
+  the validator's PID and is a separate process.
 
 `data.runner_result.normalized_outcome` values the runner can produce
 (controller-level outcomes like `bad_policy`, `missing_params`, and

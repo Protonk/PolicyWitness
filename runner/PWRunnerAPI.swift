@@ -678,16 +678,74 @@ public struct PWRunnerStepResult: Codable {
     public var attempt: PWRunnerAttemptResult
     public var deny_signal: PWRunnerSignalResult
 
+    /// Drift between the validator's predicted verdict and the attempt's
+    /// observed verdict. Introduced in PWRunnerRunResult.schema_version=4.
+    ///
+    /// Semantics:
+    ///   - `true`  — validator predicted allow but attempt observed deny
+    ///               (or vice versa). The libsandbox-drift design property
+    ///               PolicyWitness exists to surface.
+    ///   - `false` — validator predicted X and attempt observed X.
+    ///   - `nil`   — no comparison possible: validator was skipped
+    ///               (e.g. `prediction_unavailable` filter pair), validator
+    ///               wasn't run (Swift-worker code path), validator failed
+    ///               to produce a verdict for this step, or the attempt
+    ///               didn't run.
+    ///
+    /// `nil` is the default and is encoded as explicit JSON null so
+    /// consumers can distinguish "field absent on v3" from "field present
+    /// but no comparison possible on v4".
+    public var drift: Bool?
+
     public init(
         step_id: String,
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
-        deny_signal: PWRunnerSignalResult
+        deny_signal: PWRunnerSignalResult,
+        drift: Bool? = nil
     ) {
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
         self.deny_signal = deny_signal
+        self.drift = drift
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case step_id
+        case sandbox_check
+        case attempt
+        case deny_signal
+        case drift
+    }
+
+    // Custom encode so `drift` is emitted as explicit JSON null when
+    // nil. Consumers at schema_version >= 4 can rely on the key being
+    // present (bool or null); v3 producers never write the key at all.
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(step_id, forKey: .step_id)
+        try container.encode(sandbox_check, forKey: .sandbox_check)
+        try container.encode(attempt, forKey: .attempt)
+        try container.encode(deny_signal, forKey: .deny_signal)
+        if let drift {
+            try container.encode(drift, forKey: .drift)
+        } else {
+            try container.encodeNil(forKey: .drift)
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        step_id = try container.decode(String.self, forKey: .step_id)
+        sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
+        attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
+        deny_signal = try container.decode(PWRunnerSignalResult.self, forKey: .deny_signal)
+        // decodeIfPresent handles both "key absent" (v3 producer) and
+        // "key present but null" (v4 producer with no comparison) →
+        // both land as Bool? = nil on the reader side. That's the
+        // intended behaviour.
+        drift = try container.decodeIfPresent(Bool.self, forKey: .drift)
     }
 }
 
@@ -710,6 +768,33 @@ public struct PWRunnerSubprocess: Codable {
     }
 }
 
+/// Validator child process metadata. Introduced in
+/// PWRunnerRunResult.schema_version=4 to mirror `runner_subprocess` for
+/// the `sb_api_validator --batch` child the runner host spawns
+/// alongside the C worker. `pid` is the validator's PID; `exit_code`
+/// is its waitpid status when the validator clean-exited; `term_signal`
+/// is set when the validator was signaled (typically only the host's
+/// SIGKILL grace fallback). Exactly one of `exit_code` or `term_signal`
+/// is non-nil for a completed run.
+///
+/// `validator_subprocess` is nil on the runner response when the
+/// validator path didn't run — either the runner host fell through to
+/// the legacy Swift-worker code path (which doesn't spawn a separate
+/// validator), or the validator child failed to spawn before any
+/// metadata could be captured. In the latter case `normalized_outcome`
+/// is set to `validator_spawn_failed` (Step 6.5).
+public struct PWRunnerValidatorSubprocess: Codable {
+    public var pid: Int
+    public var term_signal: Int?
+    public var exit_code: Int?
+
+    public init(pid: Int, term_signal: Int? = nil, exit_code: Int? = nil) {
+        self.pid = pid
+        self.term_signal = term_signal
+        self.exit_code = exit_code
+    }
+}
+
 public struct PWRunnerRunResult: Codable {
     // Response wire version.
     //   1 — initial shape.
@@ -723,6 +808,17 @@ public struct PWRunnerRunResult: Codable {
     //       present, so unified-log correlation should continue to use this
     //       top-level field. `runner_subprocess` carries the worker exit
     //       status observed by the unsandboxed host.
+    //   4 — adds `validator_subprocess` (alongside `runner_subprocess`)
+    //       describing the sb_api_validator --batch child the host spawns
+    //       against the sandboxed worker_pid, and adds `steps[].drift`
+    //       (nullable bool) capturing validator-prediction vs
+    //       attempt-observation disagreement per step.
+    //       `validator_subprocess` is nil when the host fell through to
+    //       the legacy Swift-worker path (the validator isn't spawned in
+    //       that path). `drift` is nil when no comparison is possible
+    //       (e.g. validator wasn't run, or the validator skipped this
+    //       step for a known-unreliable prediction). Top-level `pid`
+    //       semantics from v3 are preserved.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -738,10 +834,11 @@ public struct PWRunnerRunResult: Codable {
     public var steps: [PWRunnerStepResult]
     public var instrumentation: PWRunnerInstrumentationReport?
     public var runner_subprocess: PWRunnerSubprocess?
+    public var validator_subprocess: PWRunnerValidatorSubprocess?
     public var test_overrides: PWRunnerTestOverrides?
 
     public init(
-        schema_version: Int = 3,
+        schema_version: Int = 4,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -756,6 +853,7 @@ public struct PWRunnerRunResult: Codable {
         steps: [PWRunnerStepResult],
         instrumentation: PWRunnerInstrumentationReport? = nil,
         runner_subprocess: PWRunnerSubprocess? = nil,
+        validator_subprocess: PWRunnerValidatorSubprocess? = nil,
         test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
@@ -773,6 +871,7 @@ public struct PWRunnerRunResult: Codable {
         self.steps = steps
         self.instrumentation = instrumentation
         self.runner_subprocess = runner_subprocess
+        self.validator_subprocess = validator_subprocess
         self.test_overrides = test_overrides
     }
 }
