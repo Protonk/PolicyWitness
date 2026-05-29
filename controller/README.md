@@ -60,6 +60,15 @@ Runs a **single runner evaluation** against the selected runner service:
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance (one XPC host + one worker process), applies the policy exactly once inside the worker, executes the probe plan, and returns the runner's structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
+- The embedded `sb_api_validator` supports two invocation shapes:
+  per-probe CLI (`sb_api_validator [--json] <pid> <operation> <filter_type> [<filter_value>]`,
+  used by `--sonoma-cross-check` today) and batch mode
+  (`sb_api_validator --batch <pid>`, reads NDJSON probes from stdin
+  and writes NDJSON verdicts to stdout). Batch mode is the per-run
+  invocation the C probe-runner (RUNNER-RESHAPE-PLAN Step 5) will
+  adopt — one validator process per run instead of one per probe.
+  See `tests/suites/validator_batch_mode/README.md` for the wire
+  contract.
 - If `--sonoma-cross-check` is provided, the controller runs the embedded
   `sb_api_validator` against the runner PID while it is paused post-sandbox
   (a post-sandbox `debug_wait` port is injected to hold the runner open).
