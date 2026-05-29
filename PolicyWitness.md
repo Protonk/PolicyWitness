@@ -243,7 +243,13 @@ Notes:
   attempts; non-file attempts carry explicit `null` for these fields.
 - `filter_value` is the exact string the runner passes to `sandbox_check`.
 - `effective_filter_value` is a canonicalized/realpath form used for reporting only.
-- `filter_type_id`: `1` (path), `16` (mach-lookup global), `17` (mach-lookup local).
+- `filter_type_id`: `1` (path), `2` (mach-lookup global), `17` (mach-lookup local). The
+  global-name ID was previously documented as `16` based on a now-invalidated
+  external reference; empirical verification against actual kernel enforcement
+  (see `tests/suites/witness_contract/harness/verify_filter_id.sh`) confirms
+  `2` is the correct value for current macOS. The local-name ID (`17`) has not
+  been re-verified by the same methodology and may also be incorrect; it is
+  documented here unchanged pending a verification fixture.
 - `path_diagnostics` is emitted only for path-filter checks. Introduced in
   runner response `schema_version = 2`; consumers branching on
   `schema_version` can rely on its presence on any path-filter check at v2+.

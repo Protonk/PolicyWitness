@@ -48,8 +48,8 @@ Tiers:
 - `runner_outcome_worker_spawn_failed`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
 - `runner_outcome_runner_timeout`: skip when `dist/PolicyWitness.app` is missing or unbuilt. Runs ~2s wall-clock time.
 - `runner_outcome_bad_request`: skip when `dist/PolicyWitness.app` is missing or unbuilt.
-- `runner_debuggable`: skip when `dist/PolicyWitness.app` is missing or unbuilt; blackbox cases may skip for host `sandbox_check` anomalies.
-- `runner_byoxpc`: skip when launchd bootstrap is unavailable or sandboxed; blackbox cases may skip for host `sandbox_check` anomalies.
+- `runner_debuggable`: skip when `dist/PolicyWitness.app` is missing or unbuilt. Blackbox cases historically reported a skip for a `mach-lookup global-name` sandbox_check anomaly (BBX-001); root-caused as a wrong filter type ID in the runner (corrected from 16 → 2 after empirical verification). Skips of that specific form should no longer fire. Other `sandbox_check` divergences (especially for filter kinds whose IDs we have not yet re-verified) may still surface.
+- `runner_byoxpc`: skip when launchd bootstrap is unavailable or sandboxed. Same `sandbox_check`-divergence caveat as `runner_debuggable`.
 - `anomalies`: skip when `dist/PolicyWitness.app` is missing; cross-check tooling unavailable.
 - `opt_in`: skip when required resources are unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture).
 - `witness_contract`: tests are *expected to fail* during the reshape; see the suite README. The suite is not in `tests/run.sh --all` defaults until fully green. `happy_path_baseline` should always pass.

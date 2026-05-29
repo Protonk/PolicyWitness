@@ -2,12 +2,24 @@ import Foundation
 import Darwin
 
 // Probe execution helpers: sandbox_check plus file and mach-lookup attempts.
-// Empirical sandbox_check filter kind values that are stable on current macOS:
-// - PATH filter: 1
-// - mach-lookup global name filter: 16
-// - mach-lookup local name filter: 17
+// Filter type IDs for sandbox_check. The public sandbox.h doesn't export
+// these; the values are determined empirically by comparing sandbox_check
+// verdicts against actual kernel enforcement (see
+// tests/suites/witness_contract/harness/verify_filter_id.sh).
+// - PATH filter: 1                       (long-stable; widely documented)
+// - mach-lookup global name filter: 2    (previously documented as 16; corrected
+//                                         by enforcement verification. The wrong
+//                                         constant was the cause of the
+//                                         BBX-001 anomaly we had carried as
+//                                         "Apple's sandbox_check is
+//                                         unreliable for global-name".)
+// - mach-lookup local name filter: 17    (NOT YET re-verified by the same
+//                                         methodology; may also be wrong.
+//                                         No in-tree test exercises local-name
+//                                         today. Recheck before relying on
+//                                         this constant for any new fixture.)
 private let PW_SANDBOX_FILTER_PATH: Int32 = 1
-private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 16
+private let PW_SANDBOX_FILTER_GLOBAL_NAME: Int32 = 2
 private let PW_SANDBOX_FILTER_LOCAL_NAME: Int32 = 17
 
 // sandbox_check binding (C shim)

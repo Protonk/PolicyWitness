@@ -7,11 +7,26 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/* Filter type IDs. The public sandbox.h does not export these constants;
+ * values are determined empirically by comparing sandbox_check verdicts
+ * against actual kernel enforcement (see
+ * tests/suites/witness_contract/harness/verify_filter_id.sh).
+ *
+ * GLOBAL_NAME=2: previously documented as 16; corrected by enforcement
+ * verification against the bug-report's `(deny mach-lookup (global-name
+ * "com.apple.cfprefsd.xpc.daemon"))` policy. The wrong constant caused
+ * the BBX-001 anomaly we had carried as "Apple's sandbox_check is
+ * unreliable for global-name" — that anomaly was at least partly
+ * self-inflicted by querying with the wrong filter ID.
+ *
+ * LOCAL_NAME=17: NOT YET re-verified by the same methodology. May also
+ * be incorrect by the same pattern. No in-tree test exercises
+ * local-name today. */
 #ifndef SANDBOX_FILTER_PATH
 #define SANDBOX_FILTER_PATH 1
 #endif
 #ifndef SANDBOX_FILTER_GLOBAL_NAME
-#define SANDBOX_FILTER_GLOBAL_NAME 16
+#define SANDBOX_FILTER_GLOBAL_NAME 2
 #endif
 #ifndef SANDBOX_FILTER_LOCAL_NAME
 #define SANDBOX_FILTER_LOCAL_NAME 17
