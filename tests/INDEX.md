@@ -8,6 +8,7 @@ Tiers:
 - **Baseline**: expected on supported hosts; run by default in `tests/run.sh --all`.
 - **Diagnostic**: validates known OS anomalies; not a product guarantee.
 - **Shared**: real suites with their own `run.sh`, but invoked transitively by the runner-mode wrappers (debuggable / BYOXPC) rather than from `--all` defaults.
+- **Contract**: pins target behaviors of an in-progress refactor. Off the default battery until fully green; once green, the suite is promoted to Baseline. Failures during the transition print a precise "PASSES WHEN: …" line naming the gating row in the relevant plan document.
 - **Opt-in**: manual, resource-sensitive, or environment-specific tests.
 
 | Suite | Tier | Primary claim | Requires | Notes / artifacts |
@@ -31,6 +32,7 @@ Tiers:
 | `blackbox_menagerie` | Shared | Real SBPL fixtures exercising specimen ingestion and evidence correlation | Built app + XPC | Invoked by `runner_debuggable` / `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie` |
 | `anomalies` | Diagnostic | Known OS anomalies + sandbox_check cross-check consistency | Host-dependent | Cross-check may skip if tooling is unavailable |
 | `opt_in` | Opt-in | Runner-mode opt-ins (logs, DYLD, launchd) | See registry | `tests/OPT_IN_TESTS.md` |
+| `witness_contract` | Contract | Pins the load-bearing behaviors PolicyWitness contracts to provide: verdicts + attempts + drift surfaced + validator failures attributed + removed fields rejected + test seam functioning + audit-rule enforcement. | Built app + XPC | Off the default battery during the runner reshape (`RUNNER-RESHAPE-PLAN.md`). Most tests fail today with PHASE 0 markers naming the gating plan row; `happy_path_baseline` passes today as a regression sentinel. |
 
 ## Expected skips by suite
 
@@ -50,6 +52,7 @@ Tiers:
 - `runner_byoxpc`: skip when launchd bootstrap is unavailable or sandboxed; blackbox cases may skip for host `sandbox_check` anomalies.
 - `anomalies`: skip when `dist/PolicyWitness.app` is missing; cross-check tooling unavailable.
 - `opt_in`: skip when required resources are unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture).
+- `witness_contract`: tests are *expected to fail* during the reshape; see the suite README. The suite is not in `tests/run.sh --all` defaults until fully green. `happy_path_baseline` should always pass.
 
 ## Normalized outcome coverage matrix
 
