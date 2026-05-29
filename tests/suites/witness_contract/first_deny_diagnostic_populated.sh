@@ -44,13 +44,17 @@ set +e
 import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-runner = env.get("data", {}).get("runner_result") or {}
-diag = runner.get("runner_sandbox_diagnostics")
+data = env.get("data") or {}
+diag = data.get("runner_sandbox_diagnostics")
 if diag is None:
-    raise SystemExit("PHASE 0 — runner_sandbox_diagnostics field absent (passes when D1 lands)")
+    raise SystemExit("PHASE 0 — data.runner_sandbox_diagnostics field absent (passes when D1 lands)")
 first = diag.get("first_deny")
 if first is None:
-    raise SystemExit("PHASE 0 — runner_sandbox_diagnostics.first_deny is null; capture may be blocked, or D1 not yet landed")
+    capture = data.get("sandbox_log_capture") or {}
+    raise SystemExit(
+        f"PHASE 0 — first_deny is null; capture_status={capture.get('capture_status')!r}. "
+        "May be a sandboxed-harness limitation if running under a restricted shell."
+    )
 if not isinstance(first.get("operation"), str) or not first["operation"]:
     raise SystemExit(f"expected first_deny.operation to be a non-empty string (got {first!r})")
 PY

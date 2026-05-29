@@ -224,14 +224,10 @@ fn run_sb_api_validator(
     };
 
     let filter_type = match spec.filter_kind.as_str() {
+        "none" => "NONE",
         "path" => "PATH",
         "global_name" => "GLOBAL_NAME",
         "local_name" => "LOCAL_NAME",
-        "none" => {
-            step.status = "skipped".to_string();
-            step.error = Some("filter.kind=none not supported by sb_api_validator".to_string());
-            return step;
-        }
         _ => {
             step.status = "skipped".to_string();
             step.error = Some(format!(
@@ -242,23 +238,32 @@ fn run_sb_api_validator(
         }
     };
 
-    let filter_value = match spec.filter_value.as_deref() {
-        Some(v) if !v.is_empty() => v,
-        _ => {
-            step.status = "skipped".to_string();
-            step.error = Some("filter.value missing".to_string());
-            return step;
+    // NONE takes no filter_value; everything else requires one.
+    let filter_value_arg: Option<&str> = if spec.filter_kind == "none" {
+        None
+    } else {
+        match spec.filter_value.as_deref() {
+            Some(v) if !v.is_empty() => Some(v),
+            _ => {
+                step.status = "skipped".to_string();
+                step.error = Some("filter.value missing".to_string());
+                return step;
+            }
         }
     };
 
+    let mut args: Vec<OsString> = vec![
+        OsString::from("--json"),
+        OsString::from(pid.to_string()),
+        OsString::from(&spec.operation),
+        OsString::from(filter_type),
+    ];
+    if let Some(v) = filter_value_arg {
+        args.push(OsString::from(v));
+    }
+
     let out = Command::new(tool_path)
-        .args([
-            OsString::from("--json"),
-            OsString::from(pid.to_string()),
-            OsString::from(&spec.operation),
-            OsString::from(filter_type),
-            OsString::from(filter_value),
-        ])
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output();

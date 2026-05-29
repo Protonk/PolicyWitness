@@ -61,6 +61,19 @@ pub struct RunData {
     pub sandbox_log_capture: Option<SandboxLogCapture>,
     pub sonoma_cross_check: Option<SonomaCrossCheckReport>,
     pub runner_startup_diagnostics: Option<RunnerStartupDiagnostics>,
+    pub runner_sandbox_diagnostics: Option<RunnerSandboxDiagnostics>,
+}
+
+#[derive(Serialize)]
+pub struct RunnerSandboxDiagnostics {
+    pub first_deny: Option<DenyEventSummary>,
+}
+
+#[derive(Serialize)]
+pub struct DenyEventSummary {
+    pub operation: Option<String>,
+    pub path: Option<String>,
+    pub raw_line: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -258,6 +271,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             sandbox_log_capture: None,
             sonoma_cross_check: None,
             runner_startup_diagnostics: None,
+            runner_sandbox_diagnostics: None,
         };
 
         let result = json_contract::JsonResult {
@@ -423,6 +437,12 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         }
     }
 
+    let runner_sandbox_diagnostics = synthesize_runner_sandbox_diagnostics(
+        &runner_outcome,
+        runner_pid,
+        sandbox_log_capture.as_ref(),
+    );
+
     let data = RunData {
         request_path: request_path.to_string_lossy().to_string(),
         runner_service_bundle_id: runner_target
@@ -442,6 +462,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         sandbox_log_capture,
         sonoma_cross_check,
         runner_startup_diagnostics,
+        runner_sandbox_diagnostics,
     };
 
     let error = if ok {
@@ -472,4 +493,34 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 
     json_contract::print_envelope("run", result, &data)?;
     Ok(if ok { 0 } else { 1 })
+}
+
+// Surface the first kernel sandbox deny that killed the worker so
+// consumers can route by cause without parsing the full deny_events
+// array. PID-filtered (no process-name fallback) to avoid attribution
+// to concurrent runners. Returns None unless the outcome is
+// runner_sandbox_denied, log capture succeeded, and at least one
+// matching event is present.
+fn synthesize_runner_sandbox_diagnostics(
+    normalized_outcome: &str,
+    worker_pid: Option<i64>,
+    capture: Option<&SandboxLogCapture>,
+) -> Option<RunnerSandboxDiagnostics> {
+    if normalized_outcome != "runner_sandbox_denied" {
+        return None;
+    }
+    let capture = capture?;
+    if capture.capture_status != "captured" {
+        return None;
+    }
+    let pid = worker_pid.and_then(|v| i32::try_from(v).ok())?;
+    let deny_events = capture.deny_events.as_ref()?;
+    let first = deny_events.iter().find(|e| e.pid == Some(pid))?;
+    Some(RunnerSandboxDiagnostics {
+        first_deny: Some(DenyEventSummary {
+            operation: first.operation.clone(),
+            path: first.path.clone(),
+            raw_line: first.raw_line.clone(),
+        }),
+    })
 }

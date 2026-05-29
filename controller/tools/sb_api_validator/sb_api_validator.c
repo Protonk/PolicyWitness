@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (argc - argi < 3) {
+    if (argc - argi < 2) {
         if (json) {
             print_error("missing_args", pid);
         } else {
@@ -103,10 +103,17 @@ int main(int argc, char **argv) {
 
     const char *operation = argv[argi++];
     const char *filter_type = argv[argi++];
-    const char *filter_value = argv[argi++];
+    /* NONE filter takes no argument; everything else requires filter_value
+     * as the next positional. */
+    const char *filter_value = NULL;
+    if (argi < argc) {
+        filter_value = argv[argi++];
+    }
 
     int filter_type_id = -1;
-    if (strcmp(filter_type, "PATH") == 0) {
+    if (strcmp(filter_type, "NONE") == 0) {
+        filter_type_id = 0;
+    } else if (strcmp(filter_type, "PATH") == 0) {
         filter_type_id = SANDBOX_FILTER_PATH;
     } else if (strcmp(filter_type, "GLOBAL_NAME") == 0) {
         filter_type_id = SANDBOX_FILTER_GLOBAL_NAME;
@@ -170,8 +177,24 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    /* Non-NONE filters require a value; NONE filters must not have one. */
+    if (filter_type_id != 0 && filter_value == NULL) {
+        if (json) {
+            print_error("missing_filter_value", pid);
+        } else {
+            fprintf(stderr, "missing filter_value for %s\n", filter_type);
+        }
+        return 2;
+    }
+
     errno = 0;
-    int rc = sandbox_check(pid, operation, filter_type_id, filter_value);
+    int rc;
+    if (filter_type_id == 0) {
+        /* type=0 indicates no filter argument. */
+        rc = sandbox_check(pid, operation, 0);
+    } else {
+        rc = sandbox_check(pid, operation, filter_type_id, filter_value);
+    }
 
     if (!json) {
         printf("rc=%d errno=%d\n", rc, errno);
@@ -186,7 +209,11 @@ int main(int argc, char **argv) {
     print_json_string(filter_type);
     printf(",\"filter_type_id\":%d", filter_type_id);
     printf(",\"filter_value\":");
-    print_json_string(filter_value);
+    if (filter_value) {
+        print_json_string(filter_value);
+    } else {
+        printf("null");
+    }
     printf(",\"extra\":null");
     printf(",\"rc\":%d", rc);
     printf(",\"errno\":%d", errno);

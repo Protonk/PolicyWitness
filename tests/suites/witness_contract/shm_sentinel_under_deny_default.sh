@@ -16,11 +16,24 @@ test_step "run" "C harness applies (deny default), writes applied sentinel to pr
 # applies a (deny default) policy, then writes a sentinel byte via a
 # memory store (no syscall) and spins. The parent reads the byte.
 #
-# The harness lives at tests/suites/witness_contract/harness/sentinel_harness
-# once R8's verification work lands. Until then, this test reports PHASE 0.
-HARNESS="${ROOT_DIR}/tests/suites/witness_contract/harness/sentinel_harness"
-if [[ ! -x "${HARNESS}" ]]; then
-  test_fail "PHASE 0 — sentinel harness binary not present at ${HARNESS} (passes when R8 verification lands as part of Step 1)" "{}"
+# When the source is present, this test auto-builds the harness
+# idempotently and runs it. When the source is missing, it reports PHASE 0.
+HARNESS_DIR="${ROOT_DIR}/tests/suites/witness_contract/harness"
+HARNESS="${HARNESS_DIR}/sentinel_harness"
+SOURCE="${HARNESS_DIR}/sentinel_harness.c"
+
+if [[ ! -f "${SOURCE}" ]]; then
+  test_fail "PHASE 0 — sentinel harness source absent at ${SOURCE} (passes when R8 verification lands as part of Step 1)" "{}"
+fi
+
+# Rebuild if missing or stale.
+if [[ ! -x "${HARNESS}" || "${SOURCE}" -nt "${HARNESS}" ]]; then
+  BUILD_LOG="${PW_TEST_ARTIFACTS}/build.log"
+  if ! xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
+       -o "${HARNESS}" "${SOURCE}" >"${BUILD_LOG}" 2>&1; then
+    BUILD_TAIL="$(tail -n 10 "${BUILD_LOG}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "sentinel harness build failed: ${BUILD_TAIL}" "{\"log\":\"${BUILD_LOG}\"}"
+  fi
 fi
 
 RUN_LOG="${PW_TEST_ARTIFACTS}/run.log"
