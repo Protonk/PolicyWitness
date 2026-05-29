@@ -232,6 +232,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
 
         case .success(let worker):
             let report = worker.report
+            let enrichedSteps = enrichPathDiagnostics(steps: report?.steps ?? [])
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
                 run_kind: parsed.run_kind,
@@ -244,13 +245,47 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 policy_sha256: report?.policy_sha256 ?? policyHash,
                 sandboxed_after_apply: report?.sandboxed_after_apply,
                 deny_signal_total: report?.deny_signal_total,
-                steps: report?.steps ?? [],
+                steps: enrichedSteps,
                 instrumentation: report?.instrumentation,
                 runner_subprocess: worker.subprocess,
                 test_overrides: parsed._test_overrides
             )
             replyAndExit(resp)
         }
+    }
+}
+
+// path_diagnostics is computed here in the unsandboxed host rather
+// than in the worker (per RUNNER-RESHAPE-PLAN.md Step 3 / R4). The
+// host's realpath(3) is not blocked by a worker (deny default)
+// policy, so realpath_resolved is populated more reliably than the
+// pre-Step-3 producer could manage. The fallback chain
+// (wellKnownSymlinksResolved when realpath is unavailable) is
+// retained for hosts that for any reason can't stat the path.
+//
+// The schema/wire shape is unchanged: path_diagnostics still appears
+// on path-filter sandbox_check results and only on those. Consumers
+// that branched on `path_diagnostics != nil` behave identically; the
+// only observable difference is that realpath_resolved is less often
+// null. The producer change is documented in PolicyWitness.md.
+func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] {
+    return steps.map { step in
+        guard step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterPath,
+              let value = step.sandbox_check.filter_value,
+              !value.isEmpty
+        else {
+            return step
+        }
+        var updated = step
+        let canonical = canonicalizePath(value)
+        let basis = canonical.resolved ?? wellKnownSymlinksResolved(value)
+        updated.sandbox_check.path_diagnostics = PWRunnerPathDiagnostics(
+            input: value,
+            realpath_resolved: canonical.resolved,
+            firmlink_resolved: firmlinkResolved(basis),
+            data_volume_form: dataVolumeForm(basis)
+        )
+        return updated
     }
 }
 

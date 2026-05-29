@@ -160,7 +160,6 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     let filterValue = check.filter.value
     let pid = Int(getpid())
     var effectiveFilterValue = filterValue
-    var pathDiagnostics: PWRunnerPathDiagnostics? = nil
 
     let opFilterPair = PredictionUnavailablePair(operation: op, filterKind: filterKind)
     if predictionUnavailableOpFilters.contains(opFilterPair) {
@@ -192,27 +191,20 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     }
 
     if filterKind == PWRunnerWire.sandboxFilterPath, let value = filterValue, !value.isEmpty {
+        // effective_filter_value is the worker's canonicalized form of
+        // the filter value; sandbox_check still gets the raw filterValue
+        // below (the worker passes the user-authored string through to
+        // libsandbox so policy matching matches whatever the user
+        // wrote).
         let canonical = canonicalizePath(value)
         effectiveFilterValue = canonical.normalized
-        // Diagnostics only — sandbox_check still gets the raw filterValue
-        // below. This block lets a caller see the kernel-side forms libsandbox
-        // could have been matching against when a `(subpath ...)` rule
-        // surprisingly denied a path that looked like it should match.
-        //
-        // realpath(3) can return NULL when the runner's enclosing sandbox
-        // denies the stat (e.g. a (deny default) profile that doesn't grant
-        // file-read-metadata). Fall back to pure-string substitution of the
-        // standard userspace symlinks so firmlink_resolved and
-        // data_volume_form remain populated for the cases the report
-        // documents — we report what we can compute, not just what realpath
-        // could see.
-        let basis = canonical.resolved ?? wellKnownSymlinksResolved(value)
-        pathDiagnostics = PWRunnerPathDiagnostics(
-            input: value,
-            realpath_resolved: canonical.resolved,
-            firmlink_resolved: firmlinkResolved(basis),
-            data_volume_form: dataVolumeForm(basis)
-        )
+        // path_diagnostics was previously computed here. It now lands
+        // on the response via host-side enrichment in
+        // PWRunnerService.runSpecimen — the host is unsandboxed, so
+        // realpath(3) is reliable there even under a worker (deny
+        // default) policy that would block the stat. See
+        // PolicyWitness.md "path_diagnostics" for the producer change
+        // and the more-reliable realpath_resolved semantics.
     }
 
     let (filterTypeId, argValue): (Int32, String?) = {
@@ -267,7 +259,7 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         filter_type_id: Int(filterTypeId),
         errno: errNoOut,
         error: errMsg,
-        path_diagnostics: pathDiagnostics
+        path_diagnostics: nil
     )
 }
 

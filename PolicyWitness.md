@@ -325,26 +325,37 @@ both lists must agree (source_drift enforces).
   The runner still passes the raw `filter_value` to `sandbox_check` — this
   block is observation only.
 
+  Producer: `path_diagnostics` is computed by the unsandboxed runner
+  host (`PWRunnerService.enrichPathDiagnostics`) after the worker
+  process returns. Earlier builds computed it inside the worker; the
+  observable schema is unchanged but `realpath_resolved` is now
+  populated more reliably under restrictive policies (the worker's
+  stat is blocked by `(deny default)`; the host's is not). Consumers
+  that intentionally relied on `realpath_resolved == null` as a
+  signal that the worker's enclosing sandbox blocked the stat must
+  read another channel for that signal — `path_diagnostics` no
+  longer surfaces it.
+
   At v2+ all four keys are always emitted: a string when computed, an
   explicit `null` when the computation didn't produce a value. Consumers
   can therefore distinguish "computed and the result was null" (key
   present, value `null`) from "diagnostic was not emitted at all" (key
   absent or the entire `path_diagnostics` object absent).
-  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure. A
-    restrictive enclosing sandbox (e.g. `(deny default)` without
-    `(allow file-read-metadata)`) blocks the stat realpath needs, so this
-    field can legitimately be null even when the file exists. The other
-    forms below remain computable in that case.
+  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
+    Computed in the unsandboxed host; under normal conditions this is
+    populated whenever the file exists. Null only when the host's own
+    `realpath` fails (path doesn't exist, permission denied at the
+    host level, etc.). The other forms below remain computable in that
+    case.
   - `firmlink_resolved`: the realpath result rewritten through
-    `/usr/share/firmlinks`. When realpath returned null, the runner falls
-    back to a pure-string substitution of the standard userspace symlinks
-    (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`) before applying
-    firmlinks, so `/etc/hosts` still lands at
-    `/System/Volumes/Data/private/etc/hosts` even under a strict sandbox.
-    The firmlinks map is loaded eagerly at runner startup (before the
-    SBPL profile is applied) and has a built-in fallback mirroring the
-    standard mappings on Catalina+, so this field is populated even when
-    the runner's enclosing sandbox would otherwise block the file read.
+    `/usr/share/firmlinks`. When realpath returned null, the host
+    falls back to a pure-string substitution of the standard userspace
+    symlinks (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`)
+    before applying firmlinks, so `/etc/hosts` still lands at
+    `/System/Volumes/Data/private/etc/hosts` in the rare case the
+    host's `realpath` fails. The firmlinks map is loaded eagerly and
+    has a built-in fallback mirroring the standard mappings on
+    Catalina+.
   - `data_volume_form`: heuristic shortcut that prepends
     `/System/Volumes/Data` to paths under `/private/`. Computed from the
     same fallback basis as `firmlink_resolved`, so it is populated for the

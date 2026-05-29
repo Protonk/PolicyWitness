@@ -413,11 +413,15 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
 
 #[test]
 fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
-    // Repro of the downstream report: under `(deny default)` the runner's
-    // realpath(3) call can't stat the path, so realpath_resolved is nil.
-    // The fallback (wellKnownSymlinksResolved) must still produce a usable
-    // firmlink_resolved and data_volume_form so the diagnostic block remains
-    // load-bearing in the strict case.
+    // Repro of the downstream report: under `(deny default)` the runner
+    // worker can't stat /etc/hosts. The pre-RUNNER-RESHAPE-PLAN-Step-3
+    // producer (worker-side) hit this stat block and emitted
+    // realpath_resolved=null, relying on wellKnownSymlinksResolved as
+    // the fallback for firmlink_resolved and data_volume_form. After
+    // Step 3 the producer is host-side (unsandboxed), so
+    // realpath_resolved is populated even under (deny default). Either
+    // way, the derived forms must be present and correct — that is the
+    // load-bearing assertion this test pins.
     if !integration_enabled() {
         return;
     }
