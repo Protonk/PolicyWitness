@@ -57,6 +57,7 @@ fi
 case "${PROBE}" in
     mach_lookup) OPERATION="mach-lookup" ;;
     iokit_open)  OPERATION="iokit-open-service" ;;
+    sysctl_read) OPERATION="sysctl-read" ;;
     *) echo "ERROR: unknown probe: ${PROBE}" >&2; exit 2 ;;
 esac
 

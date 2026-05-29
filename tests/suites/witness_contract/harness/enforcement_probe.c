@@ -30,13 +30,14 @@
  * Invocation:
  *   enforcement_probe mach_lookup <policy> <service-name>
  *   enforcement_probe iokit_open <policy> <iokit-class-name>
+ *   enforcement_probe sysctl_read <policy> <sysctl-name>
  *
  * Output (stdout, lines):
  *   ready_pid=<n>
  *   op=<probe>
  *   value=<value>
- *   baseline_outcome=allow|deny|missing      (iokit_open only)
- *   baseline_kr=<n>                          (iokit_open only)
+ *   baseline_outcome=allow|deny|missing      (probes that need it)
+ *   baseline_kr=<n>                          (probes that need it)
  *   attempt_rc=<n>          (0 success, anything else failure)
  *   attempt_errno=<n>       (errno after the call; 0 if not applicable)
  *   attempt_kr=<n>          (kern_return_t for mach/iokit probes)
@@ -50,6 +51,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/sysctl.h>
 #include <unistd.h>
 #include <mach/mach.h>
 #include <servers/bootstrap.h>
@@ -145,6 +147,45 @@ static int probe_iokit_open(const char *class_name) {
     return 0;
 }
 
+/* ---- sysctl_read ------------------------------------------------------- */
+
+/* Pre-apply baseline: the sysctl exists if sysctlbyname returns 0 (we
+ * pass a tiny buffer and don't actually care about the data). If the
+ * call fails with ENOENT the sysctl isn't on this host. */
+static int probe_sysctl_setup(const char *name) {
+    char buf[256];
+    size_t len = sizeof(buf);
+    errno = 0;
+    int rc = sysctlbyname(name, buf, &len, NULL, 0);
+    int err = errno;
+    if (rc != 0) {
+        if (err == ENOENT) {
+            printf("baseline_outcome=missing\n");
+        } else {
+            printf("baseline_outcome=deny\n");
+        }
+        printf("baseline_kr=0\n");
+        return 1;
+    }
+    printf("baseline_outcome=allow\n");
+    printf("baseline_kr=0\n");
+    return 0;
+}
+
+static int probe_sysctl_read(const char *name) {
+    char buf[256];
+    size_t len = sizeof(buf);
+    errno = 0;
+    int rc = sysctlbyname(name, buf, &len, NULL, 0);
+    int err = errno;
+    int allow = (rc == 0);
+    printf("attempt_rc=%d\n", rc);
+    printf("attempt_errno=%d\n", err);
+    printf("attempt_kr=0\n");
+    printf("attempt_outcome=%s\n", allow ? "allow" : "deny");
+    return 0;
+}
+
 /* ---- main -------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
@@ -165,18 +206,22 @@ int main(int argc, char **argv) {
     /* Pre-apply setup, if the probe needs it. We print baseline_*
      * lines BEFORE applying the policy so the parent can correlate
      * even if the probe later misbehaves. */
+    int setup_failed = 0;
     if (strcmp(probe, "iokit_open") == 0) {
-        if (probe_iokit_setup(value) != 0) {
-            /* Class isn't on this host — can't probe meaningfully.
-             * Still print ready/op/value so the caller can detect
-             * the bailout gracefully. */
-            printf("ready_pid=%d\n", getpid());
-            printf("op=%s\n", probe);
-            printf("value=%s\n", value);
-            printf("attempt_outcome=missing\n");
-            fflush(stdout);
-            while (1) { __asm__ __volatile__("" ::: "memory"); }
-        }
+        setup_failed = (probe_iokit_setup(value) != 0);
+    } else if (strcmp(probe, "sysctl_read") == 0) {
+        setup_failed = (probe_sysctl_setup(value) != 0);
+    }
+    if (setup_failed) {
+        /* Target isn't usable on this host — can't probe meaningfully.
+         * Still print ready/op/value so the caller can detect the
+         * bailout gracefully. */
+        printf("ready_pid=%d\n", getpid());
+        printf("op=%s\n", probe);
+        printf("value=%s\n", value);
+        printf("attempt_outcome=missing\n");
+        fflush(stdout);
+        while (1) { __asm__ __volatile__("" ::: "memory"); }
     }
 
     char *errbuf = NULL;
@@ -199,6 +244,8 @@ int main(int argc, char **argv) {
         probe_mach_lookup(value);
     } else if (strcmp(probe, "iokit_open") == 0) {
         probe_iokit_open(value);
+    } else if (strcmp(probe, "sysctl_read") == 0) {
+        probe_sysctl_read(value);
     } else {
         fprintf(stderr, "unknown probe kind: %s\n", probe);
         return 2;

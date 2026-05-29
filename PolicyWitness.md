@@ -277,10 +277,14 @@ Currently in this category:
   `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`) mirrors
   with `status="skipped"` and an error that includes the literal
   string `prediction_unavailable`.
+- `sysctl_name` on `sysctl-read` — verified unreliable across all
+  candidate filter IDs in 1..200 against `kern.osrelease`. Confirms
+  the drift pattern is not iokit-specific.
 
 Adding a filter kind to this set requires empirical verification via
 `tests/suites/witness_contract/harness/verify_filter_id.sh`. The
-matching code lives in `runner/ProbeRunner.swift::predictionUnavailableFilters`.
+matching code lives in `runner/ProbeRunner.swift::predictionUnavailableFilters`
+and `controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_FILTERS`.
 - `path_diagnostics` is emitted only for path-filter checks. Introduced in
   runner response `schema_version = 2`; consumers branching on
   `schema_version` can rely on its presence on any path-filter check at v2+.

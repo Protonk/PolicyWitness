@@ -65,6 +65,7 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
         PWRunnerWire.sandboxFilterGlobalName,
         PWRunnerWire.sandboxFilterLocalName,
         PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+        PWRunnerWire.sandboxFilterSysctlName,
     ]
     for step in steps {
         let op = step.sandbox_check.operation.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -105,6 +106,11 @@ private let predictionUnavailableFilters: Set<String> = [
     // 2026-05-29 against IOSurfaceRoot; no filter ID in 1..200
     // produced a sandbox_check verdict matching kernel enforcement.
     PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+    // sysctl-read via sysctl-name: verified 2026-05-29 against
+    // kern.osrelease; same pattern as iokit (sandbox_check returns
+    // allow for every candidate ID even when kernel enforces deny).
+    // Confirms the userland-vs-kernel drift is broader than iokit.
+    PWRunnerWire.sandboxFilterSysctlName,
 ]
 
 func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResult {

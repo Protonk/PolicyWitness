@@ -228,8 +228,13 @@ fn run_sb_api_validator(
     // and tests/suites/witness_contract/harness/verify_filter_id.sh). The
     // cross-check skips them with a stable error string so consumers can
     // recognize "we deliberately didn't predict" apart from "the cross-check
-    // hit a transient problem."
-    if spec.filter_kind == "iokit_registry_entry_class" {
+    // hit a transient problem." Each entry here MUST be matched by the
+    // same wire-name in the runner's predictionUnavailableFilters set.
+    const PREDICTION_UNAVAILABLE_FILTERS: &[&str] = &[
+        "iokit_registry_entry_class",
+        "sysctl_name",
+    ];
+    if PREDICTION_UNAVAILABLE_FILTERS.contains(&spec.filter_kind.as_str()) {
         step.status = "skipped".to_string();
         step.error = Some(
             "prediction_unavailable: sandbox_check is unreliable for this op+filter; \
