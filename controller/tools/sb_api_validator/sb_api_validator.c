@@ -109,7 +109,18 @@ int main(int argc, char **argv) {
     const char *filter_type = argv[argi++];
 
     int filter_type_id = -1;
-    if (strcmp(filter_type, "NONE") == 0) {
+    /* RAW:<n> escape hatch for empirical filter-id discovery. Pass a
+     * decimal number and the value goes straight to sandbox_check. Not
+     * part of the production CLI surface; lives here so the discovery
+     * harness in tests/suites/witness_contract/harness/ can probe
+     * candidate IDs without an out-of-tree tool. */
+    if (strncmp(filter_type, "RAW:", 4) == 0) {
+        char *end = NULL;
+        long v = strtol(filter_type + 4, &end, 10);
+        if (end && *end == '\0' && v >= 0 && v <= 255) {
+            filter_type_id = (int)v;
+        }
+    } else if (strcmp(filter_type, "NONE") == 0) {
         filter_type_id = 0;
     } else if (strcmp(filter_type, "PATH") == 0) {
         filter_type_id = SANDBOX_FILTER_PATH;

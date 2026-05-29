@@ -1,3 +1,4 @@
 sentinel_harness
+discovery_target
 *.o
 *.dSYM/
