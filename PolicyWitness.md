@@ -258,36 +258,54 @@ Notes:
   predicate is empirically known to drift from kernel enforcement.
   Channel A (the `attempt` result) remains the reliable evidence for
   those probes; the prediction is honestly absent rather than wrong.
+  When `outcome == "prediction_unavailable"`, `rc` is the sentinel
+  `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
+  that key on `rc == 0` for "allow" must check `outcome` first so the
+  sentinel is not misread.
 
 ### Filter kinds where prediction is unavailable
 
-Some op+filter combinations have a documented mismatch between
-`sandbox_check`'s userland verdict and the kernel's actual
+Some `(operation, filter_kind)` pairs have a documented mismatch
+between `sandbox_check`'s userland verdict and the kernel's actual
 enforcement. For these, the runner accepts the filter in specimens
 (so policies can be authored), accepts and enforces the policy
 correctly at compile/apply time, but skips `sandbox_check` entirely
 and emits `step.sandbox_check.outcome = "prediction_unavailable"`
-instead of a misleading `allow`/`deny`. The attempt still runs and
-provides the real evidence.
+with `step.sandbox_check.rc == -1` instead of a misleading
+`allow`/`deny`. The attempt still runs and provides the real evidence.
+
+The contract is keyed on the `(operation, filter_kind)` pair, not on
+the filter kind alone — a filter kind that drifts for one operation
+may behave correctly with another, and the verification is
+op+filter-specific. A specimen pairing one of these filter kinds with
+a DIFFERENT operation gets a normal `sandbox_check` call; the
+prediction may still be wrong, but the runner doesn't override a
+prediction it hasn't verified to be wrong.
 
 Currently in this category:
 
-- `iokit_registry_entry_class` on `iokit-open-service` — verified
-  unreliable across all candidate filter IDs in 1..200 against
-  `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`) mirrors
-  with `status="skipped"` and an error that includes the literal
-  string `prediction_unavailable`.
-- `iokit_user_client_class` on `iokit-open-service` — same drift
-  pattern as registry-entry-class; covers user-client subclass
-  filtering rather than registry-entry filtering.
-- `sysctl_name` on `sysctl-read` — verified unreliable across all
-  candidate filter IDs in 1..200 against `kern.osrelease`. Confirms
-  the drift pattern is not iokit-specific.
+- `(iokit-open-service, iokit_registry_entry_class)` — verified
+  2026-05-29 unreliable across all candidate filter IDs in 1..200
+  against `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`)
+  mirrors with `status="skipped"` and an error that includes the
+  literal string `prediction_unavailable`.
+- `(iokit-open-user-client, iokit_user_client_class)` — verified
+  2026-05-29 with policy filter `IOSurfaceRootUserClient` and probe
+  target `IOSurfaceRoot`. `iokit-open-user-client` is the SBPL
+  operation `iokit-user-client-class` matches against (see Apple's
+  `/System/Library/Sandbox/Profiles/application.sb` for canonical
+  usage); `iokit-open-service` is a sibling operation that fires for
+  the IOService class itself.
+- `(sysctl-read, sysctl_name)` — verified 2026-05-29 unreliable
+  across all candidate filter IDs in 1..200 against `kern.osrelease`.
+  Confirms the drift pattern is not iokit-specific.
 
-Adding a filter kind to this set requires empirical verification via
+Adding a pair to this set requires empirical verification via
 `tests/suites/witness_contract/harness/verify_filter_id.sh`. The
-matching code lives in `runner/ProbeRunner.swift::predictionUnavailableFilters`
-and `controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_FILTERS`.
+matching code lives in
+`runner/ProbeRunner.swift::predictionUnavailableOpFilters` and
+`controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_PAIRS`;
+both lists must agree (source_drift enforces).
 - `path_diagnostics` is emitted only for path-filter checks. Introduced in
   runner response `schema_version = 2`; consumers branching on
   `schema_version` can rely on its presence on any path-filter check at v2+.

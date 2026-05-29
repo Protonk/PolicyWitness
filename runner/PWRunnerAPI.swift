@@ -86,10 +86,17 @@ public enum NormalizedOutcome {
 //
 // `prediction_unavailable` is emitted when the runner deliberately
 // declines to call sandbox_check because the userland predicate is
-// known to drift from kernel enforcement for the operation+filter pair
-// (verified via tests/suites/witness_contract/harness/verify_filter_id.sh).
-// Channel A (the attempt result) remains the reliable evidence for
-// those probes; the prediction is honestly absent rather than wrong.
+// known to drift from kernel enforcement for the (operation, filter)
+// pair (verified via
+// tests/suites/witness_contract/harness/verify_filter_id.sh). Channel
+// A (the attempt result) remains the reliable evidence for those
+// probes; the prediction is honestly absent rather than wrong.
+//
+// When emitted, the result's `rc` field is the sentinel -1 (NOT 0) so
+// any consumer that keys on `rc == 0` for "allow" cannot misread the
+// absent prediction as an allow verdict. See PolicyWitness.md
+// "Filter kinds where prediction is unavailable" for the full
+// contract.
 public enum SandboxCheckOutcome {
     public static let allow = "allow"
     public static let deny = "deny"

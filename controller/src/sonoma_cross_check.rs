@@ -223,19 +223,26 @@ fn run_sb_api_validator(
         error: None,
     };
 
-    // Filter kinds for which sandbox_check is known to drift from kernel
-    // enforcement (see runner/ProbeRunner.swift::predictionUnavailableFilters
-    // and tests/suites/witness_contract/harness/verify_filter_id.sh). The
-    // cross-check skips them with a stable error string so consumers can
-    // recognize "we deliberately didn't predict" apart from "the cross-check
-    // hit a transient problem." Each entry here MUST be matched by the
-    // same wire-name in the runner's predictionUnavailableFilters set.
-    const PREDICTION_UNAVAILABLE_FILTERS: &[&str] = &[
-        "iokit_registry_entry_class",
-        "iokit_user_client_class",
-        "sysctl_name",
+    // (operation, filter_kind) pairs for which sandbox_check is known
+    // to drift from kernel enforcement (see
+    // runner/ProbeRunner.swift::predictionUnavailableOpFilters and
+    // tests/suites/witness_contract/harness/verify_filter_id.sh). The
+    // cross-check skips them with a stable error string so consumers
+    // can recognize "we deliberately didn't predict" apart from "the
+    // cross-check hit a transient problem."
+    //
+    // Keyed by (operation, filter_kind) — a filter kind that drifts
+    // for one op may behave correctly with another op, and the
+    // verification is op+filter-specific. Each entry here MUST be
+    // matched by the same pair in the runner's
+    // predictionUnavailableOpFilters set; source_drift enforces.
+    const PREDICTION_UNAVAILABLE_PAIRS: &[(&str, &str)] = &[
+        ("iokit-open-service", "iokit_registry_entry_class"),
+        ("iokit-open-user-client", "iokit_user_client_class"),
+        ("sysctl-read", "sysctl_name"),
     ];
-    if PREDICTION_UNAVAILABLE_FILTERS.contains(&spec.filter_kind.as_str()) {
+    let op_filter_pair = (spec.operation.as_str(), spec.filter_kind.as_str());
+    if PREDICTION_UNAVAILABLE_PAIRS.contains(&op_filter_pair) {
         step.status = "skipped".to_string();
         step.error = Some(
             "prediction_unavailable: sandbox_check is unreliable for this op+filter; \

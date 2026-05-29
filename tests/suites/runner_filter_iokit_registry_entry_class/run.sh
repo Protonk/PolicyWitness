@@ -82,6 +82,11 @@ if outcome != "prediction_unavailable":
         f"iokit_registry_entry_class (got {outcome!r}). Either the runner did not "
         f"recognize the filter kind, or the short-circuit was bypassed."
     )
+if sb.get("rc") != -1:
+    raise SystemExit(
+        f"expected step.sandbox_check.rc=-1 sentinel for prediction_unavailable "
+        f"(got {sb.get('rc')!r}); rc==0 would falsely look like allow"
+    )
 
 # When prediction is unavailable, filter_type_id should be null (no
 # numeric ID was used) and there should be no errno / error to mislead

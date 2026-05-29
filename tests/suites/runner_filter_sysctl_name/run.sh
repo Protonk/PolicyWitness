@@ -75,6 +75,11 @@ if outcome != "prediction_unavailable":
         f"sysctl_name (got {outcome!r}). The runner did not recognize the "
         f"filter kind or the short-circuit was bypassed."
     )
+if sb.get("rc") != -1:
+    raise SystemExit(
+        f"expected step.sandbox_check.rc=-1 sentinel for prediction_unavailable "
+        f"(got {sb.get('rc')!r}); rc==0 would falsely look like allow"
+    )
 if sb.get("filter_type_id") is not None:
     raise SystemExit(f"expected filter_type_id null, got {sb.get('filter_type_id')!r}")
 if sb.get("errno") is not None:

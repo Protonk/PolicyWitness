@@ -92,32 +92,60 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
     }
 }
 
-// Filter kinds for which the runner deliberately does NOT call
-// sandbox_check, because empirical verification against actual kernel
-// enforcement (verify_filter_id.sh) has shown the userland predicate
-// returns wrong answers for these op+filter combinations regardless of
-// numeric filter ID. Channel A (the attempt result) remains the
-// reliable evidence; the prediction is honestly absent rather than
-// silently wrong.
+// (operation, filter_kind) pairs for which the runner deliberately
+// does NOT call sandbox_check, because empirical verification against
+// actual kernel enforcement (verify_filter_id.sh) has shown the
+// userland predicate returns wrong answers for these specific
+// combinations regardless of numeric filter ID. Channel A (the
+// attempt result) remains the reliable evidence; the prediction is
+// honestly absent rather than silently wrong.
+//
+// Keyed by (operation, filter_kind), not by filter_kind alone — a
+// filter kind might be reliable for one op and unreliable for
+// another, and the verification is op+filter-specific. A specimen
+// pairing one of these filter kinds with a DIFFERENT operation gets
+// the normal sandbox_check call; the prediction may still be wrong,
+// but we haven't proven it and we don't override the prediction we
+// haven't verified to be wrong.
 //
 // Entries here must be paired with an enforcement_probe verification
 // commit naming the op+filter pair and the empirical evidence.
-private let predictionUnavailableFilters: Set<String> = [
-    // iokit-open-service via iokit-registry-entry-class: verified
+struct PredictionUnavailablePair: Hashable {
+    let operation: String
+    let filterKind: String
+}
+
+private let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
+    // iokit-open-service + iokit-registry-entry-class: verified
     // 2026-05-29 against IOSurfaceRoot; no filter ID in 1..200
     // produced a sandbox_check verdict matching kernel enforcement.
-    PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
-    // iokit-open-service via iokit-user-client-class: verified
-    // 2026-05-29 via the same iokit_open probe; kernel enforces the
-    // deny when the policy filters on user-client-class, but no
-    // sandbox_check filter ID agrees. Same drift pattern.
-    PWRunnerWire.sandboxFilterIokitUserClientClass,
-    // sysctl-read via sysctl-name: verified 2026-05-29 against
-    // kern.osrelease; same pattern as iokit (sandbox_check returns
-    // allow for every candidate ID even when kernel enforces deny).
-    // Confirms the userland-vs-kernel drift is broader than iokit.
-    PWRunnerWire.sandboxFilterSysctlName,
+    .init(operation: "iokit-open-service",
+          filterKind: PWRunnerWire.sandboxFilterIokitRegistryEntryClass),
+    // iokit-open-user-client + iokit-user-client-class: verified
+    // 2026-05-29 with policy filter value IOSurfaceRootUserClient
+    // and probe target IOSurfaceRoot. The earlier "verification"
+    // (pre-audit) used operation iokit-open-service, which is the
+    // wrong SBPL operation for this filter — both operations fire
+    // when IOServiceOpen is called, but iokit-user-client-class
+    // matches against the open-user-client operation. With the
+    // corrected pairing the kernel enforces the deny (kr=
+    // kIOReturnNotPermitted) and no sandbox_check filter ID in
+    // 1..200 produces a verdict that agrees with the kernel.
+    .init(operation: "iokit-open-user-client",
+          filterKind: PWRunnerWire.sandboxFilterIokitUserClientClass),
+    // sysctl-read + sysctl-name: verified 2026-05-29 against
+    // kern.osrelease; same pattern as iokit. Confirms the
+    // userland-vs-kernel drift is broader than iokit.
+    .init(operation: "sysctl-read",
+          filterKind: PWRunnerWire.sandboxFilterSysctlName),
 ]
+
+// Sentinel rc value emitted alongside outcome=prediction_unavailable.
+// A non-zero value so any consumer that keys on rc==0 (the long-standing
+// "allow" convention) doesn't misread the absent prediction as allow.
+// Consumers should treat rc with outcome==prediction_unavailable as
+// "no sandbox_check return value to interpret."
+private let predictionUnavailableRC: Int = -1
 
 func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResult {
     let op = check.operation
@@ -127,13 +155,21 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     var effectiveFilterValue = filterValue
     var pathDiagnostics: PWRunnerPathDiagnostics? = nil
 
-    if predictionUnavailableFilters.contains(filterKind) {
-        // Skip sandbox_check entirely — its verdict for this op+filter is
-        // known unreliable. Emit prediction_unavailable so consumers can
-        // tell "we deliberately didn't predict" apart from "we predicted
-        // and got allow/deny/error". The attempt (channel A) still runs.
+    let opFilterPair = PredictionUnavailablePair(operation: op, filterKind: filterKind)
+    if predictionUnavailableOpFilters.contains(opFilterPair) {
+        // Skip sandbox_check entirely — its verdict for this op+filter
+        // pair is known unreliable. Emit prediction_unavailable so
+        // consumers can tell "we deliberately didn't predict" apart
+        // from "we predicted and got allow/deny/error". The attempt
+        // (channel A) still runs.
+        //
+        // rc is the sentinel predictionUnavailableRC (-1) so any
+        // consumer that keys on rc==0 ("allow" by long-standing
+        // convention) doesn't misread the absent prediction as allow.
+        // The (rc=-1, outcome=prediction_unavailable, errno=nil)
+        // triple is unambiguous and documented in PolicyWitness.md.
         return PWRunnerSandboxCheckResult(
-            rc: 0,
+            rc: predictionUnavailableRC,
             outcome: SandboxCheckOutcome.predictionUnavailable,
             pid: pid,
             operation: op,

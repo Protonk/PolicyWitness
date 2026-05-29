@@ -27,18 +27,24 @@ spec = {
         "format": "sbpl",
         # User-client-class filtering — a common pattern in security
         # research for restricting which IOKit user clients a sandboxed
-        # process can open. IOSurfaceRootUserClient is the user-client
-        # class IOSurfaceRoot exposes for connect-type=0.
+        # process can open. The kernel observes IOServiceOpen as two
+        # distinct operations: iokit-open-service (matched by
+        # iokit-registry-entry-class) and iokit-open-user-client
+        # (matched by iokit-user-client-class). The latter is the right
+        # operation for this filter; see Apple's
+        # /System/Library/Sandbox/Profiles/application.sb for canonical
+        # usage. IOSurfaceRootUserClient is the user-client class
+        # IOSurfaceRoot exposes for connect-type=0.
         "sbpl_source": (
             "(version 1)\n"
             "(allow default)\n"
-            "(deny iokit-open-service (iokit-user-client-class \"IOSurfaceRootUserClient\"))\n"
+            "(deny iokit-open-user-client (iokit-user-client-class \"IOSurfaceRootUserClient\"))\n"
         ),
     },
     "probe_plan": [{
         "step_id": "iosurfaceroot_uc",
         "sandbox_check": {
-            "operation": "iokit-open-service",
+            "operation": "iokit-open-user-client",
             "filter": {"kind": "iokit_user_client_class", "value": "IOSurfaceRootUserClient"},
         },
         "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"},
@@ -73,6 +79,11 @@ if outcome != "prediction_unavailable":
     raise SystemExit(
         f"expected step.sandbox_check.outcome=prediction_unavailable for "
         f"iokit_user_client_class (got {outcome!r})"
+    )
+if sb.get("rc") != -1:
+    raise SystemExit(
+        f"expected step.sandbox_check.rc=-1 sentinel for prediction_unavailable "
+        f"(got {sb.get('rc')!r}); rc==0 would falsely look like allow"
     )
 if sb.get("filter_type_id") is not None:
     raise SystemExit(f"expected filter_type_id null, got {sb.get('filter_type_id')!r}")
