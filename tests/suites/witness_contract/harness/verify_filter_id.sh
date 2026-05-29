@@ -49,12 +49,14 @@ fi
 if [[ ! -x "${PROBE_BIN}" || "${PROBE_SRC}" -nt "${PROBE_BIN}" ]]; then
     echo "==> rebuilding enforcement_probe"
     xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
+        -framework IOKit -framework CoreFoundation \
         -o "${PROBE_BIN}" "${PROBE_SRC}"
 fi
 
 # Map our probe name to the SBPL operation name.
 case "${PROBE}" in
     mach_lookup) OPERATION="mach-lookup" ;;
+    iokit_open)  OPERATION="iokit-open-service" ;;
     *) echo "ERROR: unknown probe: ${PROBE}" >&2; exit 2 ;;
 esac
 
@@ -99,13 +101,33 @@ if [[ -z "${TARGET_PID}" ]]; then
     exit 1
 fi
 
-# Capture the actual kernel verdict.
+# Capture the actual kernel verdict and (for probes that produce one)
+# the pre-apply baseline.
 ACTUAL_OUTCOME="$(awk -F= '/^attempt_outcome=/{print $2; exit}' "${PROBE_OUT}")"
 ACTUAL_KR="$(awk -F= '/^attempt_kr=/{print $2; exit}' "${PROBE_OUT}")"
+BASELINE_OUTCOME="$(awk -F= '/^baseline_outcome=/{print $2; exit}' "${PROBE_OUT}")"
 
 echo "==> target pid: ${TARGET_PID}"
+if [[ -n "${BASELINE_OUTCOME}" ]]; then
+    echo "==> pre-apply baseline: ${BASELINE_OUTCOME}"
+fi
 echo "==> kernel's actual verdict: ${ACTUAL_OUTCOME} (kr=${ACTUAL_KR})"
 echo ""
+
+if [[ "${ACTUAL_OUTCOME}" == "missing" || "${BASELINE_OUTCOME}" == "missing" ]]; then
+    echo "ERROR: probe target is not present on this host."
+    echo "  Verification can't proceed without an observable enforcement target."
+    echo "  Pick a different VALUE that exists on this Mac and rerun."
+    exit 1
+fi
+
+if [[ -n "${BASELINE_OUTCOME}" && "${BASELINE_OUTCOME}" != "allow" ]]; then
+    echo "WARNING: pre-apply baseline reported ${BASELINE_OUTCOME} (not allow)."
+    echo "  The chosen probe value isn't openable even without a policy, so"
+    echo "  the post-apply outcome doesn't isolate the policy's effect."
+    echo "  Pick a different VALUE that is openable unsandboxed, then rerun."
+    exit 1
+fi
 
 if [[ "${ACTUAL_OUTCOME}" != "deny" ]]; then
     echo "WARNING: kernel did not enforce the deny rule (allowed the operation)."
@@ -145,7 +167,8 @@ else: print(f"err:rc={rc},errno={errno}")
 
 echo "id    sandbox_check_verdict    matches_kernel?"
 agreeing=()
-for type_id in $(seq 1 63); do
+SCAN_MAX="${SCAN_MAX:-63}"
+for type_id in $(seq 1 "${SCAN_MAX}"); do
     verdict="$(probe "${TARGET_PID}" "${OPERATION}" "${type_id}" "${VALUE}")"
     match="-"
     if [[ "${verdict}" == "${ACTUAL_OUTCOME}" ]]; then
