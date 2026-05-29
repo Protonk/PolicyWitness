@@ -268,6 +268,32 @@ def main() -> int:
                 entry["entitlements_error"] = err
             entries.append(entry)
 
+            # Sibling binaries inside the XPC bundle's MacOS dir (e.g.
+            # pw-probe-runner per RUNNER-RESHAPE-PLAN.md R5). These
+            # are signed individually before the XPC bundle seal is
+            # computed so the bundle codesign records their hashes;
+            # we surface them here so an evidence consumer can see
+            # the embedded helper's sha256 / lc_uuid / entitlements
+            # without having to descend into the bundle.
+            svc_macos_dir = svc_bundle / "Contents" / "MacOS"
+            for sibling in sorted(svc_macos_dir.iterdir()):
+                if sibling.name == svc_name or not sibling.is_file():
+                    continue
+                sib_entitlements, sib_err = entitlements_from_codesign(sibling)
+                sib_entry: Dict[str, Any] = {
+                    "id": f"{svc_name}/{sibling.name}",
+                    "bundle_id": bundle_id,
+                    "kind": "xpc-embedded-helper",
+                    "service_name": svc_name,
+                    "rel_path": rel_path(app_bundle, sibling),
+                    "sha256": sha256_file(sibling),
+                    "lc_uuid": lc_uuid(sibling) or "",
+                    "entitlements": sib_entitlements,
+                }
+                if sib_err:
+                    sib_entry["entitlements_error"] = sib_err
+                entries.append(sib_entry)
+
     symbols_entries: list[Dict[str, Any]] = []
     for entry in entries:
         abs_path = app_bundle / entry["rel_path"]

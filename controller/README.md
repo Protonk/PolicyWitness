@@ -41,6 +41,13 @@ Standalone helper tools (embedded into the `.app`):
   - Compiles SBPL policies and reports compiler errors before the runner launches
 - `controller/tools/sb_api_validator/sb_api_validator` → `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator`
   - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
+- `controller/tools/pw_probe_runner/pw_probe_runner` → embedded INSIDE
+  each XPC service bundle at
+  `…/Contents/XPCServices/<svc>.xpc/Contents/MacOS/pw-probe-runner`
+  (not in the app's top-level `Contents/MacOS/`). The runner host
+  resolves it relative to its own bundle so built-in and BYOXPC
+  runners both pick up the correct copy. Currently a skeleton; the
+  real worker flow lands in RUNNER-RESHAPE-PLAN Step 5 Chunk 2.
 
 ## CLI surface (contract)
 

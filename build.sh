@@ -48,6 +48,17 @@ SB_API_VALIDATOR_DIR="${ROOT_DIR}/controller/tools/sb_api_validator"
 SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
 SB_API_VALIDATOR_BIN="${SB_API_VALIDATOR_DIR}/sb_api_validator"
 
+# Sandboxed C worker spawned by the runner host. Per
+# RUNNER-RESHAPE-PLAN.md R5, this binary is embedded INSIDE each XPC
+# service bundle (not in the app's top-level MacOS dir), so the
+# runner host resolves it relative to its own bundle and built-in vs
+# BYOXPC runners both pick up the correct copy. The single source is
+# built once and copied into each XPC service.
+PW_PROBE_RUNNER_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
+PW_PROBE_RUNNER_SRC="${PW_PROBE_RUNNER_DIR}/pw_probe_runner.c"
+PW_PROBE_RUNNER_HDR="${PW_PROBE_RUNNER_DIR}/pw_probe_runner_abi.h"
+PW_PROBE_RUNNER_BIN="${PW_PROBE_RUNNER_DIR}/pw-probe-runner"
+
 # Build knobs.
 BUILD_XPC="${BUILD_XPC:-1}"
 PW_INSPECTION="${PW_INSPECTION:-1}"
@@ -163,12 +174,28 @@ if [[ ! -f "${SB_API_VALIDATOR_SRC}" ]]; then
   echo "ERROR: missing sb_api_validator source at ${SB_API_VALIDATOR_SRC}" 1>&2
   exit 2
 fi
+if [[ ! -f "${PW_PROBE_RUNNER_SRC}" ]]; then
+  echo "ERROR: missing pw_probe_runner source at ${PW_PROBE_RUNNER_SRC}" 1>&2
+  exit 2
+fi
+if [[ ! -f "${PW_PROBE_RUNNER_HDR}" ]]; then
+  echo "ERROR: missing pw_probe_runner_abi header at ${PW_PROBE_RUNNER_HDR}" 1>&2
+  exit 2
+fi
 
 echo "==> Building sb_api_validator"
 /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
   -o "${SB_API_VALIDATOR_BIN}" "${SB_API_VALIDATOR_SRC}"
 if [[ ! -x "${SB_API_VALIDATOR_BIN}" ]]; then
   echo "ERROR: expected sb_api_validator binary at ${SB_API_VALIDATOR_BIN}" 1>&2
+  exit 2
+fi
+
+echo "==> Building pw-probe-runner"
+/usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
+  -o "${PW_PROBE_RUNNER_BIN}" "${PW_PROBE_RUNNER_SRC}"
+if [[ ! -x "${PW_PROBE_RUNNER_BIN}" ]]; then
+  echo "ERROR: expected pw-probe-runner binary at ${PW_PROBE_RUNNER_BIN}" 1>&2
   exit 2
 fi
 
@@ -303,6 +330,12 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_SERVICE_FILE}" \
       "${svc_main}" "${shim_obj}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
+
+    # Embed pw-probe-runner inside the XPC service bundle so the host
+    # resolves it relative to its own bundle for both built-in and
+    # BYOXPC runners (per RUNNER-RESHAPE-PLAN.md R5).
+    cp "${PW_PROBE_RUNNER_BIN}" "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+    chmod +x "${svc_bundle}/Contents/MacOS/pw-probe-runner"
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
@@ -345,6 +378,13 @@ if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
       echo "ERROR: ${svc_name} service is missing Entitlements.plist at ${svc_entitlements}" 1>&2
       exit 2
     fi
+
+    # Sign embedded helpers (e.g. pw-probe-runner) BEFORE sealing the
+    # bundle, so the bundle codesign records their hashes. Without
+    # this, codesign may refuse to validate the sealed bundle because
+    # the helpers carry no signature when the seal is computed.
+    sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+
     codesign --force --options runtime --timestamp \
       --entitlements "${svc_entitlements}" \
       -s "${IDENTITY}" "${svc_bundle}"

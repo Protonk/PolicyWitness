@@ -34,7 +34,9 @@ The `.app` layout is a contract: tests and evidence generation assume these path
 - `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
 - `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
 - `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one XPC host + one worker per specimen)
+  - `…/PWRunner.xpc/Contents/MacOS/pw-probe-runner` (C worker helper embedded bundle-locally; reserved for RUNNER-RESHAPE-PLAN Step 5/6 use — the runner host will resolve it relative to its own bundle so built-in and BYOXPC runners both pick up the correct copy)
 - `dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one XPC host + one worker per specimen)
+  - `…/PWRunnerDebug.xpc/Contents/MacOS/pw-probe-runner` (same bundle-local C worker, embedded in the debuggable bundle)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
 
