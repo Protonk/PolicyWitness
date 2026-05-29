@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
+source "${ROOT_DIR}/tests/lib/testlib.sh"
+
+PW_TEST_SUITE="runner_filter_iokit_user_client_class"
+PW_TEST_ID="prediction_unavailable_attempt_observed"
+PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
+
+test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+test_step "run" "iokit-user-client-class probe — sandbox_check skipped, attempt observed"
+
+if ! require_pw_app "${PW_BIN}"; then
+  exit 0
+fi
+
+SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
+/usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
+import json, sys
+from pathlib import Path
+spec = {
+    "schema_version": 1,
+    "specimen_id": "runner_filter_iokit_user_client_class",
+    "policy": {
+        "format": "sbpl",
+        # User-client-class filtering — a common pattern in security
+        # research for restricting which IOKit user clients a sandboxed
+        # process can open. IOSurfaceRootUserClient is the user-client
+        # class IOSurfaceRoot exposes for connect-type=0.
+        "sbpl_source": (
+            "(version 1)\n"
+            "(allow default)\n"
+            "(deny iokit-open-service (iokit-user-client-class \"IOSurfaceRootUserClient\"))\n"
+        ),
+    },
+    "probe_plan": [{
+        "step_id": "iosurfaceroot_uc",
+        "sandbox_check": {
+            "operation": "iokit-open-service",
+            "filter": {"kind": "iokit_user_client_class", "value": "IOSurfaceRootUserClient"},
+        },
+        "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"},
+    }],
+}
+Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
+set +e
+"${PW_BIN}" run "${SPECIMEN_PATH}" --sonoma-cross-check >"${RUN_STDOUT}" 2>/dev/null
+RC=$?
+set -e
+
+if [[ "${RC}" -ne 0 ]]; then
+  test_fail "specimen should succeed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\"}"
+fi
+
+ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
+set +e
+/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+runner = env.get("data", {}).get("runner_result") or {}
+steps = runner.get("steps") or []
+if not steps:
+    raise SystemExit(f"expected 1 step, got 0 (outcome={runner.get('normalized_outcome')!r})")
+sb = steps[0].get("sandbox_check") or {}
+outcome = sb.get("outcome")
+if outcome != "prediction_unavailable":
+    raise SystemExit(
+        f"expected step.sandbox_check.outcome=prediction_unavailable for "
+        f"iokit_user_client_class (got {outcome!r})"
+    )
+if sb.get("filter_type_id") is not None:
+    raise SystemExit(f"expected filter_type_id null, got {sb.get('filter_type_id')!r}")
+if sb.get("errno") is not None:
+    raise SystemExit(f"expected errno null, got {sb.get('errno')!r}")
+
+attempt = steps[0].get("attempt") or {}
+if attempt.get("rc") is None:
+    raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
+
+cross = env.get("data", {}).get("sonoma_cross_check") or {}
+cross_steps = cross.get("steps") or []
+if not cross_steps:
+    raise SystemExit("expected sonoma_cross_check.steps to be present")
+cstep = cross_steps[0]
+if cstep.get("status") != "skipped":
+    raise SystemExit(f"expected cross-check status=skipped, got {cstep.get('status')!r}")
+err = cstep.get("error") or ""
+if "prediction_unavailable" not in err:
+    raise SystemExit(f"expected cross-check error to identify prediction_unavailable (got {err!r})")
+PY
+ASSERT_RC=$?
+set -e
+if [[ "${ASSERT_RC}" -ne 0 ]]; then
+  MSG="$(head -5 "${ASSERT_LOG}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+  test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
+fi
+
+test_pass "iokit_user_client_class: prediction_unavailable surfaced; attempt observed; cross-check mirrored" "{}"

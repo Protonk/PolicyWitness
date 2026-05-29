@@ -56,6 +56,7 @@
 #include <mach/mach.h>
 #include <servers/bootstrap.h>
 #include <sandbox.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>
 
 extern mach_port_t bootstrap_port;
@@ -186,6 +187,57 @@ static int probe_sysctl_read(const char *name) {
     return 0;
 }
 
+/* ---- preferences_read -------------------------------------------------- */
+
+/* Pre-apply baseline: a preference domain is "usable" iff it has at
+ * least one key visible via CFPreferencesCopyKeyList. We don't care
+ * which key — only that the domain isn't empty (would make post-apply
+ * deny vs missing indistinguishable). */
+static int probe_preferences_setup(const char *domain) {
+    CFStringRef cfDomain = CFStringCreateWithCString(NULL, domain, kCFStringEncodingUTF8);
+    if (!cfDomain) {
+        printf("baseline_outcome=missing\n");
+        printf("baseline_kr=0\n");
+        return 1;
+    }
+    CFArrayRef keys = CFPreferencesCopyKeyList(cfDomain,
+                                                kCFPreferencesCurrentUser,
+                                                kCFPreferencesAnyHost);
+    int has_keys = (keys != NULL && CFArrayGetCount(keys) > 0);
+    if (keys) CFRelease(keys);
+    CFRelease(cfDomain);
+    if (!has_keys) {
+        printf("baseline_outcome=missing\n");
+        printf("baseline_kr=0\n");
+        return 1;
+    }
+    printf("baseline_outcome=allow\n");
+    printf("baseline_kr=0\n");
+    return 0;
+}
+
+static int probe_preferences_read(const char *domain) {
+    CFStringRef cfDomain = CFStringCreateWithCString(NULL, domain, kCFStringEncodingUTF8);
+    if (!cfDomain) {
+        printf("attempt_rc=1\n");
+        printf("attempt_errno=0\n");
+        printf("attempt_kr=0\n");
+        printf("attempt_outcome=missing\n");
+        return 0;
+    }
+    CFArrayRef keys = CFPreferencesCopyKeyList(cfDomain,
+                                                kCFPreferencesCurrentUser,
+                                                kCFPreferencesAnyHost);
+    int allow = (keys != NULL && CFArrayGetCount(keys) > 0);
+    if (keys) CFRelease(keys);
+    CFRelease(cfDomain);
+    printf("attempt_rc=%d\n", allow ? 0 : 1);
+    printf("attempt_errno=0\n");
+    printf("attempt_kr=0\n");
+    printf("attempt_outcome=%s\n", allow ? "allow" : "deny");
+    return 0;
+}
+
 /* ---- main -------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
@@ -211,6 +263,8 @@ int main(int argc, char **argv) {
         setup_failed = (probe_iokit_setup(value) != 0);
     } else if (strcmp(probe, "sysctl_read") == 0) {
         setup_failed = (probe_sysctl_setup(value) != 0);
+    } else if (strcmp(probe, "preferences_read") == 0) {
+        setup_failed = (probe_preferences_setup(value) != 0);
     }
     if (setup_failed) {
         /* Target isn't usable on this host — can't probe meaningfully.
@@ -246,6 +300,8 @@ int main(int argc, char **argv) {
         probe_iokit_open(value);
     } else if (strcmp(probe, "sysctl_read") == 0) {
         probe_sysctl_read(value);
+    } else if (strcmp(probe, "preferences_read") == 0) {
+        probe_preferences_read(value);
     } else {
         fprintf(stderr, "unknown probe kind: %s\n", probe);
         return 2;

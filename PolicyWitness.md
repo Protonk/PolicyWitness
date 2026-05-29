@@ -277,6 +277,9 @@ Currently in this category:
   `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`) mirrors
   with `status="skipped"` and an error that includes the literal
   string `prediction_unavailable`.
+- `iokit_user_client_class` on `iokit-open-service` — same drift
+  pattern as registry-entry-class; covers user-client subclass
+  filtering rather than registry-entry filtering.
 - `sysctl_name` on `sysctl-read` — verified unreliable across all
   candidate filter IDs in 1..200 against `kern.osrelease`. Confirms
   the drift pattern is not iokit-specific.

@@ -232,6 +232,7 @@ fn run_sb_api_validator(
     // same wire-name in the runner's predictionUnavailableFilters set.
     const PREDICTION_UNAVAILABLE_FILTERS: &[&str] = &[
         "iokit_registry_entry_class",
+        "iokit_user_client_class",
         "sysctl_name",
     ];
     if PREDICTION_UNAVAILABLE_FILTERS.contains(&spec.filter_kind.as_str()) {

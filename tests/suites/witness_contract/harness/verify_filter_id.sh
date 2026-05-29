@@ -55,9 +55,10 @@ fi
 
 # Map our probe name to the SBPL operation name.
 case "${PROBE}" in
-    mach_lookup) OPERATION="mach-lookup" ;;
-    iokit_open)  OPERATION="iokit-open-service" ;;
-    sysctl_read) OPERATION="sysctl-read" ;;
+    mach_lookup)      OPERATION="mach-lookup" ;;
+    iokit_open)       OPERATION="iokit-open-service" ;;
+    sysctl_read)      OPERATION="sysctl-read" ;;
+    preferences_read) OPERATION="user-preference-read" ;;
     *) echo "ERROR: unknown probe: ${PROBE}" >&2; exit 2 ;;
 esac
 

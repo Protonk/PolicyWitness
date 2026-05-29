@@ -30,6 +30,7 @@ enum PWRunnerWire {
     static let sandboxFilterGlobalName = "global_name"
     static let sandboxFilterLocalName = "local_name"
     static let sandboxFilterIokitRegistryEntryClass = "iokit_registry_entry_class"
+    static let sandboxFilterIokitUserClientClass = "iokit_user_client_class"
     static let sandboxFilterSysctlName = "sysctl_name"
     static let sandboxCheckScopePost = "post_sandbox"
 

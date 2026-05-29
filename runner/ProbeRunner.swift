@@ -65,6 +65,7 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
         PWRunnerWire.sandboxFilterGlobalName,
         PWRunnerWire.sandboxFilterLocalName,
         PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+        PWRunnerWire.sandboxFilterIokitUserClientClass,
         PWRunnerWire.sandboxFilterSysctlName,
     ]
     for step in steps {
@@ -106,6 +107,11 @@ private let predictionUnavailableFilters: Set<String> = [
     // 2026-05-29 against IOSurfaceRoot; no filter ID in 1..200
     // produced a sandbox_check verdict matching kernel enforcement.
     PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+    // iokit-open-service via iokit-user-client-class: verified
+    // 2026-05-29 via the same iokit_open probe; kernel enforces the
+    // deny when the policy filters on user-client-class, but no
+    // sandbox_check filter ID agrees. Same drift pattern.
+    PWRunnerWire.sandboxFilterIokitUserClientClass,
     // sysctl-read via sysctl-name: verified 2026-05-29 against
     // kern.osrelease; same pattern as iokit (sandbox_check returns
     // allow for every candidate ID even when kernel enforces deny).
