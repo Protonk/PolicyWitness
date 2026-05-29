@@ -58,7 +58,11 @@ static int parse_pid(const char *s) {
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s [--json] <pid> [operation filter_type filter_value]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s [--json] <pid> [operation filter_type [filter_value]]\n"
+                "  filter_type: NONE | PATH | GLOBAL_NAME | LOCAL_NAME | ...\n"
+                "  filter_value: required for all filter_types except NONE\n",
+                argv[0]);
         return 2;
     }
 
@@ -103,12 +107,6 @@ int main(int argc, char **argv) {
 
     const char *operation = argv[argi++];
     const char *filter_type = argv[argi++];
-    /* NONE filter takes no argument; everything else requires filter_value
-     * as the next positional. */
-    const char *filter_value = NULL;
-    if (argi < argc) {
-        filter_value = argv[argi++];
-    }
 
     int filter_type_id = -1;
     if (strcmp(filter_type, "NONE") == 0) {
@@ -177,14 +175,39 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    /* Non-NONE filters require a value; NONE filters must not have one. */
-    if (filter_type_id != 0 && filter_value == NULL) {
-        if (json) {
-            print_error("missing_filter_value", pid);
-        } else {
-            fprintf(stderr, "missing filter_value for %s\n", filter_type);
+    /* filter_value rules:
+     *   NONE (filter_type_id == 0): must NOT have a filter_value arg.
+     *   Everything else: must have exactly one filter_value arg.
+     * Trailing positional args are always an error.
+     */
+    const char *filter_value = NULL;
+    if (filter_type_id == 0) {
+        if (argi < argc) {
+            if (json) {
+                print_error("unexpected_filter_value_for_none", pid);
+            } else {
+                fprintf(stderr, "filter type NONE must not be followed by a filter_value\n");
+            }
+            return 2;
         }
-        return 2;
+    } else {
+        if (argi >= argc) {
+            if (json) {
+                print_error("missing_filter_value", pid);
+            } else {
+                fprintf(stderr, "missing filter_value for %s\n", filter_type);
+            }
+            return 2;
+        }
+        filter_value = argv[argi++];
+        if (argi < argc) {
+            if (json) {
+                print_error("unexpected_extra_args", pid);
+            } else {
+                fprintf(stderr, "unexpected extra args after filter_value\n");
+            }
+            return 2;
+        }
     }
 
     errno = 0;

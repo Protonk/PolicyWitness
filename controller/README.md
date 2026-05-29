@@ -63,6 +63,14 @@ Runs a **single runner evaluation** against the selected runner service:
 - If `--sonoma-cross-check` is provided, the controller runs the embedded
   `sb_api_validator` against the runner PID while it is paused post-sandbox
   (a post-sandbox `debug_wait` port is injected to hold the runner open).
+  Filter-kind coverage: `path`, `global_name`, `local_name`, and `none`.
+  `none`-filter probes call `sandbox_check(pid, op, 0)` with no filter
+  argument and emit `filter_value: null` / `filter_type_id: 0` in the
+  cross-check verdict. Other filter kinds the runner can author but the
+  validator doesn't yet support (`IOKIT_REGISTRY_ENTRY_CLASS`,
+  `IOKIT_USER_CLIENT_CLASS`, `SYSCTL_NAME`, `MACH_PORT`, `PREFERENCE_DOMAIN`,
+  ...) still surface as `status: "skipped"` with an `unsupported filter.kind`
+  error; see `RUNNER-RESHAPE-PLAN.md` R2 for the expansion work.
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.runner_provenance` and `data.app_provenance` to keep results auditable.
 - If `--instrumentation` is provided, the controller injects the instrumentation object into the request JSON (without modifying the original file).
@@ -83,6 +91,13 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_startup_diagnostics`: extra context when XPC startup fails
   (rare after the host/worker split, since the unsandboxed host always
   replies unless launchd or codesign reject the bundle outright)
+- `data.runner_sandbox_diagnostics`: present when
+  `normalized_outcome == "runner_sandbox_denied"`. Carries
+  `first_deny: { operation, path, raw_line }` — the first unified-log
+  kernel deny attributed to the worker PID — or `first_deny: null` when
+  log capture was blocked/unavailable or no event matched. PID-filtered;
+  no process-name fallback (avoids over-attribution to concurrent
+  runners). Consumers can branch on `first_deny != null` directly.
 - `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
 - `data.sonoma_cross_check`: optional `sandbox_check` cross-check report (best-effort)
 - `data.runner_provenance`: runner identity + entitlements metadata

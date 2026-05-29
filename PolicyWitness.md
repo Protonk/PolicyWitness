@@ -586,12 +586,23 @@ Registry location:
 - BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
 - `normalized_outcome` is `runner_sandbox_denied` and you expected `ok`: the
   worker was terminated by the kernel sandbox (or by a Swift-runtime trap
-  triggered by a denied `mach_vm_allocate`) before writing its report. Check
-  `data.runner_result.runner_subprocess.term_signal` for the signal and
-  `data.sandbox_log_capture.deny_events` for matching kernel denies. A bare
-  `(deny default)` policy almost always produces this outcome unless the
-  specimen adds enough `(allow ...)` entries to keep the worker's
-  encode-and-write path alive.
+  triggered by a denied `mach_vm_allocate`) before writing its report.
+  - **Quickest read:** `data.runner_sandbox_diagnostics.first_deny` carries
+    the first kernel deny attributed to the worker PID — `operation`,
+    `path` if applicable, and the raw unified-log line. Use this when you
+    want one line that names the cause.
+  - `data.runner_sandbox_diagnostics.first_deny` is `null` when log capture
+    was blocked/unavailable or when no deny event matches the worker PID
+    (rare; usually means the capture window missed the event). The outer
+    `runner_sandbox_diagnostics` object is present whenever the outcome is
+    `runner_sandbox_denied`, so consumers can branch on `first_deny != null`
+    directly.
+  - For the full deny list (when one isn't enough), see
+    `data.sandbox_log_capture.deny_events`.
+  - `data.runner_result.runner_subprocess.term_signal` carries the exit
+    signal; a bare `(deny default)` policy almost always produces this
+    outcome unless the specimen adds enough `(allow ...)` entries to keep
+    the worker's encode-and-write path alive.
 - `normalized_outcome` is `worker_spawn_failed`: the host could not
   `posix_spawn` the worker. Verify the bundle is signed and on a writable
   filesystem; `pgrep -fl PWRunner` should show no stragglers.

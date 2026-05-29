@@ -498,9 +498,15 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 // Surface the first kernel sandbox deny that killed the worker so
 // consumers can route by cause without parsing the full deny_events
 // array. PID-filtered (no process-name fallback) to avoid attribution
-// to concurrent runners. Returns None unless the outcome is
-// runner_sandbox_denied, log capture succeeded, and at least one
-// matching event is present.
+// to concurrent runners.
+//
+// Contract: the outer `runner_sandbox_diagnostics` object is present
+// for any outcome where a sandbox deny is the suspected cause
+// (currently just `runner_sandbox_denied`); within it, `first_deny`
+// is populated when a matching deny event was captured and `null`
+// otherwise. Consumers can branch on `first_deny != null` without
+// first checking that the outer object exists. For unrelated outcomes
+// the outer object is `null` because no kernel-deny narrative applies.
 fn synthesize_runner_sandbox_diagnostics(
     normalized_outcome: &str,
     worker_pid: Option<i64>,
@@ -509,18 +515,16 @@ fn synthesize_runner_sandbox_diagnostics(
     if normalized_outcome != "runner_sandbox_denied" {
         return None;
     }
-    let capture = capture?;
-    if capture.capture_status != "captured" {
-        return None;
-    }
-    let pid = worker_pid.and_then(|v| i32::try_from(v).ok())?;
-    let deny_events = capture.deny_events.as_ref()?;
-    let first = deny_events.iter().find(|e| e.pid == Some(pid))?;
-    Some(RunnerSandboxDiagnostics {
-        first_deny: Some(DenyEventSummary {
-            operation: first.operation.clone(),
-            path: first.path.clone(),
-            raw_line: first.raw_line.clone(),
-        }),
-    })
+    let first_deny = capture
+        .filter(|c| c.capture_status == "captured")
+        .and_then(|c| {
+            let pid = worker_pid.and_then(|v| i32::try_from(v).ok())?;
+            let events = c.deny_events.as_ref()?;
+            events.iter().find(|e| e.pid == Some(pid)).map(|e| DenyEventSummary {
+                operation: e.operation.clone(),
+                path: e.path.clone(),
+                raw_line: e.raw_line.clone(),
+            })
+        });
+    Some(RunnerSandboxDiagnostics { first_deny })
 }
