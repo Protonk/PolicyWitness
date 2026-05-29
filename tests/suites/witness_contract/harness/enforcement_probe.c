@@ -189,6 +189,21 @@ static int probe_sysctl_read(const char *name) {
 
 /* ---- preferences_read -------------------------------------------------- */
 
+/*
+ * KNOWN-NARROW PROBE. This implementation observes enforcement only
+ * through CFPreferencesCopyKeyList. Empirically (2026-05-29) this API
+ * did not appear to surface SBPL (deny user-preference-read
+ * (preference-domain ...)) enforcement — same keys returned pre- and
+ * post-apply against com.apple.dock.
+ *
+ * The conclusion "user-preference-read is unenforceable" requires
+ * more evidence than this single API; before drawing it, extend this
+ * probe to also try CFPreferencesCopyAppValue, CFPreferencesSetValue,
+ * CFPreferencesSynchronize, and the per-user vs per-host variants.
+ * Until then, preference_domain is intentionally not exposed in
+ * validateSandboxChecks. See harness/VERIFICATIONS.md for context.
+ */
+
 /* Pre-apply baseline: a preference domain is "usable" iff it has at
  * least one key visible via CFPreferencesCopyKeyList. We don't care
  * which key — only that the domain isn't empty (would make post-apply

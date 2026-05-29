@@ -63,14 +63,24 @@ Runs a **single runner evaluation** against the selected runner service:
 - If `--sonoma-cross-check` is provided, the controller runs the embedded
   `sb_api_validator` against the runner PID while it is paused post-sandbox
   (a post-sandbox `debug_wait` port is injected to hold the runner open).
-  Filter-kind coverage: `path`, `global_name`, `local_name`, and `none`.
-  `none`-filter probes call `sandbox_check(pid, op, 0)` with no filter
-  argument and emit `filter_value: null` / `filter_type_id: 0` in the
-  cross-check verdict. Other filter kinds the runner can author but the
-  validator doesn't yet support (`IOKIT_REGISTRY_ENTRY_CLASS`,
-  `IOKIT_USER_CLIENT_CLASS`, `SYSCTL_NAME`, `MACH_PORT`, `PREFERENCE_DOMAIN`,
-  ...) still surface as `status: "skipped"` with an `unsupported filter.kind`
-  error; see `RUNNER-RESHAPE-PLAN.md` R2 for the expansion work.
+  - **Predicted** filter kinds (the validator calls `sandbox_check`):
+    `path`, `global_name`, `local_name`, `none`. `none`-filter probes
+    call `sandbox_check(pid, op, 0)` with no filter argument and emit
+    `filter_value: null` / `filter_type_id: 0` in the cross-check verdict.
+  - **Skipped — prediction unavailable** (verified-unreliable op+filter
+    pairs the runner accepts but deliberately does not predict for; see
+    `PolicyWitness.md` "Filter kinds where prediction is unavailable"):
+    `(iokit-open-service, iokit_registry_entry_class)`,
+    `(iokit-open-user-client, iokit_user_client_class)`,
+    `(sysctl-read, sysctl_name)`. The cross-check returns `status:
+    "skipped"` with an error string containing `prediction_unavailable`;
+    Channel A (the runner's `attempt` result) is the reliable evidence.
+  - **Skipped — unsupported by validator**: other filter kinds the
+    runner can author but the validator doesn't yet handle (`MACH_PORT`,
+    ...) still surface as `status: "skipped"` with an `unsupported
+    filter.kind` error; see `RUNNER-RESHAPE-PLAN.md` R2 for the
+    expansion work. `PREFERENCE_DOMAIN` is intentionally not exposed in
+    `validateSandboxChecks` pending a broader enforcement probe.
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.runner_provenance` and `data.app_provenance` to keep results auditable.
 - If `--instrumentation` is provided, the controller injects the instrumentation object into the request JSON (without modifying the original file).

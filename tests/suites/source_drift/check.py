@@ -36,6 +36,9 @@ RUNNER_DIR = REPO_ROOT / "runner"
 BUILD_SH = REPO_ROOT / "build.sh"
 PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
 PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
+PROBE_RUNNER = RUNNER_DIR / "ProbeRunner.swift"
+SONOMA_CROSS_CHECK = REPO_ROOT / "controller" / "src" / "sonoma_cross_check.rs"
+POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
 TESTS_INDEX = REPO_ROOT / "tests" / "INDEX.md"
@@ -295,6 +298,139 @@ def check_normalized_outcomes_have_matrix_rows() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Prediction-unavailable (op, filter) pair agreement.
+#
+# Three sources of truth must list the same set of pairs:
+#   - runner/ProbeRunner.swift::predictionUnavailableOpFilters
+#   - controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_PAIRS
+#   - PolicyWitness.md "Filter kinds where prediction is unavailable"
+#
+# A pair added to one but not the other means a request that should skip
+# in both runtimes only skips in one, or that the documented contract
+# diverges from the runtime — both bad.
+# ---------------------------------------------------------------------------
+
+def parse_swift_prediction_unavailable_pairs() -> set[tuple[str, str]]:
+    text = PROBE_RUNNER.read_text(encoding="utf-8")
+    # private let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
+    #     .init(operation: "iokit-open-service",
+    #           filterKind: PWRunnerWire.sandboxFilterIokitRegistryEntryClass),
+    #     ...
+    # ]
+    block_re = re.compile(
+        r'predictionUnavailableOpFilters[^\[]*\[(.*?)\n\]',
+        re.DOTALL,
+    )
+    match = block_re.search(text)
+    if match is None:
+        fail("could not locate predictionUnavailableOpFilters in runner/ProbeRunner.swift")
+        sys.exit(2)
+    body = match.group(1)
+    # Map the Swift constant references to their wire strings via the
+    # PWRunnerWire constants in PWRunnerAPI.swift.
+    wire = parse_pwrunner_wire_filter_constants()
+    pair_re = re.compile(
+        r'\.init\(operation:\s*"([^"]+)"\s*,\s*filterKind:\s*(?:PWRunnerWire\.([A-Za-z]+)|"([^"]+)")',
+    )
+    pairs: set[tuple[str, str]] = set()
+    for m in pair_re.finditer(body):
+        operation = m.group(1)
+        const_name = m.group(2)
+        literal = m.group(3)
+        if const_name:
+            kind = wire.get(const_name)
+            if kind is None:
+                fail(
+                    f"predictionUnavailableOpFilters references "
+                    f"PWRunnerWire.{const_name} but no such constant is "
+                    f"defined in runner/PWRunnerAPI.swift"
+                )
+                sys.exit(2)
+        else:
+            kind = literal
+        pairs.add((operation, kind))
+    return pairs
+
+
+def parse_pwrunner_wire_filter_constants() -> dict[str, str]:
+    text = PWRUNNER_API.read_text(encoding="utf-8")
+    # Inside `enum PWRunnerWire` (or `public enum PWRunnerWire`), grab
+    # `static let foo = "bar"` whether or not it's marked public.
+    enum_re = re.compile(
+        r'(?:public\s+)?enum PWRunnerWire\s*\{(.*?)\n\}',
+        re.DOTALL,
+    )
+    match = enum_re.search(text)
+    if match is None:
+        return {}
+    body = match.group(1)
+    const_re = re.compile(
+        r'(?:public\s+)?static let (\w+)\s*=\s*"([^"]*)"',
+    )
+    return {m.group(1): m.group(2) for m in const_re.finditer(body)}
+
+
+def parse_rust_prediction_unavailable_pairs() -> set[tuple[str, str]]:
+    text = SONOMA_CROSS_CHECK.read_text(encoding="utf-8")
+    block_re = re.compile(
+        r'PREDICTION_UNAVAILABLE_PAIRS:[^=]*=\s*&\[(.*?)\];',
+        re.DOTALL,
+    )
+    match = block_re.search(text)
+    if match is None:
+        fail("could not locate PREDICTION_UNAVAILABLE_PAIRS in controller/src/sonoma_cross_check.rs")
+        sys.exit(2)
+    body = match.group(1)
+    pair_re = re.compile(r'\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)')
+    return {(m.group(1), m.group(2)) for m in pair_re.finditer(body)}
+
+
+def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
+    """Extract (op, filter) pairs from PolicyWitness.md "Currently in
+    this category:" bullets, formatted as
+    `(operation, filter_kind)` at the start of each bullet."""
+    text = POLICYWITNESS_MD.read_text(encoding="utf-8")
+    section_re = re.compile(
+        r'## Filter kinds where prediction is unavailable.*?Currently in this category:\s*\n(.*?)(?:\n##|\Z)',
+        re.DOTALL,
+    )
+    match = section_re.search(text)
+    if match is None:
+        fail(
+            "could not locate 'Filter kinds where prediction is unavailable' "
+            "section in PolicyWitness.md (or its 'Currently in this category:' marker)"
+        )
+        sys.exit(2)
+    body = match.group(1)
+    pair_re = re.compile(r'-\s*`\(([a-z][a-z0-9-]*)\s*,\s*([a-z][a-z0-9_]*)\)`')
+    return {(m.group(1), m.group(2)) for m in pair_re.finditer(body)}
+
+
+def check_prediction_unavailable_agreement() -> list[str]:
+    swift_pairs = parse_swift_prediction_unavailable_pairs()
+    rust_pairs = parse_rust_prediction_unavailable_pairs()
+    docs_pairs = parse_docs_prediction_unavailable_pairs()
+    problems: list[str] = []
+    for label_a, set_a, label_b, set_b in [
+        ("swift (ProbeRunner.swift)", swift_pairs,
+         "rust (sonoma_cross_check.rs)", rust_pairs),
+        ("swift (ProbeRunner.swift)", swift_pairs,
+         "docs (PolicyWitness.md)", docs_pairs),
+        ("rust (sonoma_cross_check.rs)", rust_pairs,
+         "docs (PolicyWitness.md)", docs_pairs),
+    ]:
+        for pair in sorted(set_a - set_b):
+            problems.append(
+                f"  prediction_unavailable: {pair} listed in {label_a} but not {label_b}"
+            )
+        for pair in sorted(set_b - set_a):
+            problems.append(
+                f"  prediction_unavailable: {pair} listed in {label_b} but not {label_a}"
+            )
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -318,6 +454,7 @@ def main() -> int:
     problems.extend(check_baseline_in_run_sh_defaults())
     problems.extend(check_runner_outcome_suites_have_matrix_rows())
     problems.extend(check_normalized_outcomes_have_matrix_rows())
+    problems.extend(check_prediction_unavailable_agreement())
 
     if problems:
         fail("source/test-registry drift detected:")
@@ -332,12 +469,14 @@ def main() -> int:
 
     suite_count = len(suites_with_run_sh())
     outcome_count = len(parse_normalized_outcomes())
+    pu_pairs = parse_swift_prediction_unavailable_pairs()
     print(
         f"all drift checks pass: "
         f"{len(swift_manifests['disk (runner/*.swift)'])} swift, "
         f"{len(c_manifests['disk (runner/*.c)'])} c, "
         f"{suite_count} suites, "
-        f"{outcome_count} outcomes."
+        f"{outcome_count} outcomes, "
+        f"{len(pu_pairs)} prediction_unavailable pairs."
     )
     return 0
 

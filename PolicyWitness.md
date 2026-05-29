@@ -241,7 +241,10 @@ Notes:
 - `scope` is `post_sandbox` for runner-hosted checks.
 - `requested_path`, `normalized_path`, and `observed_path` are present for file
   attempts; non-file attempts carry explicit `null` for these fields.
-- `filter_value` is the exact string the runner passes to `sandbox_check`.
+- `filter_value` is the exact string the runner passes to `sandbox_check`,
+  except when `outcome == "prediction_unavailable"` — in that case no
+  `sandbox_check` call is made; `filter_value` is echoed back from the
+  request unchanged for cross-referencing with the specimen.
 - `effective_filter_value` is a canonicalized/realpath form used for reporting only.
 - `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
   (mach-lookup local). The global-name ID was previously documented
