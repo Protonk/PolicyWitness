@@ -237,6 +237,16 @@ static int parse_probe_line(const char *line,
         return -1;
     }
 
+    /* Reject trailing content after the closing '}'. Otherwise a
+     * malformed host could append junk to a valid probe and have it
+     * silently accepted — and Step 5/6's host orchestration relies
+     * on one NDJSON probe producing one trustworthy verdict. */
+    skip_ws(&p);
+    if (*p != '\0') {
+        *err_out = "trailing content after '}'";
+        return -1;
+    }
+
     if (!*step_id_out || !*operation_out || !*filter_type_out) {
         *err_out = "missing required field (step_id, operation, filter_type)";
         return -1;
@@ -310,13 +320,31 @@ static void emit_failure(const char *step_id,
 static int run_batch(int pid) {
     /* Cap at 64 KiB per line. Probe filter_values are typically
      * short strings; this is comfortably above anything the host
-     * should emit. A line that exceeds the cap reads as a partial
-     * line and is rejected by the parser. */
+     * should emit. A line longer than the cap is emitted as ONE
+     * parse_error verdict (not multiple chunks-as-probes), then
+     * the rest of the physical line is drained before the next
+     * iteration — preserving the "one verdict per probe in input
+     * order" contract under malformed input. */
     enum { LINE_MAX_BYTES = 65536 };
     char *line = (char *)malloc(LINE_MAX_BYTES);
     if (!line) return 2;
 
     while (fgets(line, LINE_MAX_BYTES, stdin)) {
+        /* If the read filled the buffer without seeing a newline, the
+         * physical line is longer than the cap. Emit one verdict and
+         * drain the rest before reading the next probe. EOF
+         * mid-overlong-line is treated as a valid drain endpoint. */
+        size_t len = strlen(line);
+        bool overlong = (len == LINE_MAX_BYTES - 1) && line[len - 1] != '\n';
+        if (overlong) {
+            emit_failure(NULL, "parse_error", "probe line exceeds 64 KiB cap");
+            int c;
+            while ((c = fgetc(stdin)) != EOF && c != '\n') {
+                /* discard */
+            }
+            continue;
+        }
+
         /* Skip blank lines silently so a trailing newline in the
          * input doesn't produce a spurious parse error. */
         const char *scan = line;
@@ -439,72 +467,12 @@ int main(int argc, char **argv) {
     const char *operation = argv[argi++];
     const char *filter_type = argv[argi++];
 
-    int filter_type_id = -1;
-    /* RAW:<n> escape hatch for empirical filter-id discovery. Pass a
-     * decimal number and the value goes straight to sandbox_check. Not
-     * part of the production CLI surface; lives here so the discovery
-     * harness in tests/suites/witness_contract/harness/ can probe
-     * candidate IDs without an out-of-tree tool. */
-    if (strncmp(filter_type, "RAW:", 4) == 0) {
-        char *end = NULL;
-        long v = strtol(filter_type + 4, &end, 10);
-        if (end && *end == '\0' && v >= 0 && v <= 255) {
-            filter_type_id = (int)v;
-        }
-    } else if (strcmp(filter_type, "NONE") == 0) {
-        filter_type_id = 0;
-    } else if (strcmp(filter_type, "PATH") == 0) {
-        filter_type_id = SANDBOX_FILTER_PATH;
-    } else if (strcmp(filter_type, "GLOBAL_NAME") == 0) {
-        filter_type_id = SANDBOX_FILTER_GLOBAL_NAME;
-    } else if (strcmp(filter_type, "LOCAL_NAME") == 0) {
-        filter_type_id = SANDBOX_FILTER_LOCAL_NAME;
-    }
-#if defined(SANDBOX_FILTER_APPLEEVENT_DESTINATION)
-    else if (strcmp(filter_type, "APPLEEVENT_DESTINATION") == 0) {
-        filter_type_id = SANDBOX_FILTER_APPLEEVENT_DESTINATION;
-    }
-#endif
-#if defined(SANDBOX_FILTER_RIGHT_NAME)
-    else if (strcmp(filter_type, "RIGHT_NAME") == 0) {
-        filter_type_id = SANDBOX_FILTER_RIGHT_NAME;
-    }
-#endif
-#if defined(SANDBOX_FILTER_PREFERENCE_DOMAIN)
-    else if (strcmp(filter_type, "PREFERENCE_DOMAIN") == 0) {
-        filter_type_id = SANDBOX_FILTER_PREFERENCE_DOMAIN;
-    }
-#endif
-#if defined(SANDBOX_FILTER_KEXT_BUNDLE_ID)
-    else if (strcmp(filter_type, "KEXT_BUNDLE_ID") == 0) {
-        filter_type_id = SANDBOX_FILTER_KEXT_BUNDLE_ID;
-    }
-#endif
-#if defined(SANDBOX_FILTER_INFO_TYPE)
-    else if (strcmp(filter_type, "INFO_TYPE") == 0) {
-        filter_type_id = SANDBOX_FILTER_INFO_TYPE;
-    }
-#endif
-#if defined(SANDBOX_FILTER_NOTIFICATION_TYPE)
-    else if (strcmp(filter_type, "NOTIFICATION_TYPE") == 0) {
-        filter_type_id = SANDBOX_FILTER_NOTIFICATION_TYPE;
-    }
-#endif
-#if defined(SANDBOX_FILTER_XPC_SERVICE_NAME)
-    else if (strcmp(filter_type, "XPC_SERVICE_NAME") == 0) {
-        filter_type_id = SANDBOX_FILTER_XPC_SERVICE_NAME;
-    }
-#endif
-#if defined(SANDBOX_FILTER_NVRAM_VARIABLE)
-    else if (strcmp(filter_type, "NVRAM_VARIABLE") == 0) {
-        filter_type_id = SANDBOX_FILTER_NVRAM_VARIABLE;
-    }
-#endif
-#if defined(SANDBOX_FILTER_POSIX_IPC_NAME)
-    else if (strcmp(filter_type, "POSIX_IPC_NAME") == 0) {
-        filter_type_id = SANDBOX_FILTER_POSIX_IPC_NAME;
-    }
-#endif
+    /* Shared with batch mode (see resolve_filter_type_id). Both
+     * surfaces must accept the same filter-type names; routing
+     * both through one function prevents drift when new filter
+     * kinds are added. The RAW:<n> escape hatch and all
+     * system-conditional names live in the shared helper. */
+    int filter_type_id = resolve_filter_type_id(filter_type);
 
     if (filter_type_id < 0) {
         if (json) {

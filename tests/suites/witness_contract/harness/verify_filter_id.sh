@@ -42,12 +42,15 @@ usage() {
 usage: verify_filter_id.sh <probe> <sbpl-filter-name> <value> [options]
   probe: mach_lookup | iokit_open | iokit_open_user_client | sysctl_read | preferences_read
   --probe-target STRING: override the probe target (default: <value>)
-  --allowed-value STRING: sibling filter value the policy does NOT deny;
-      enables strict mode — a filter ID is confirmed only if its
-      sandbox_check verdict matches the kernel for BOTH the denied
-      <value> (expect deny) and the --allowed-value (expect allow).
-      Without it, the script reports candidate matches that may include
-      incidental deniers like PATH=1 which return deny for any string.
+  --allowed-value STRING: sibling filter value the policy does NOT
+      deny; enables strict mode. A filter ID is reported as confirmed
+      when its sandbox_check verdict is deny for the policy's <value>
+      AND allow for the sibling. The deny side matches the kernel's
+      actual verdict (the probe exercised the syscall); the allow
+      side is sandbox_check's own answer for the un-denied sibling,
+      NOT a kernel-observed operation. Used to exclude incidental
+      deniers (e.g. ID 1 = PATH returns deny for any string), not as
+      a proof of kernel agreement on the allowed value.
   --max-id INT: highest filter ID to scan (default 200; overridable via
       SCAN_MAX env var for backwards compatibility).
   examples:
@@ -308,10 +311,15 @@ done
 echo ""
 if [[ ${#agreeing[@]} -gt 0 ]]; then
     if [[ -n "${ALLOWED_VALUE}" ]]; then
-        echo "==> CONFIRMED filter IDs (deny on '${VALUE}', allow on '${ALLOWED_VALUE}'): ${agreeing[*]}"
+        echo "==> filter IDs passing strict mode (kernel-observed deny on '${VALUE}',"
+        echo "    sandbox_check allow on '${ALLOWED_VALUE}'): ${agreeing[*]}"
         echo "    These IDs correctly interpret filter_value as a string-match"
         echo "    against the policy's filter values. Incidental deniers that"
         echo "    return deny for any string are excluded by the allow-side check."
+        echo "    The allow-side evidence is sandbox_check's own answer for the"
+        echo "    sibling — it is not a kernel observation. To raise confidence"
+        echo "    further, exercise the syscall against the allowed sibling out"
+        echo "    of band and confirm the kernel allows it."
     else
         echo "==> candidate filter IDs (deny-side only): ${agreeing[*]}"
         echo "    These match the kernel deny but the set may include incidental"

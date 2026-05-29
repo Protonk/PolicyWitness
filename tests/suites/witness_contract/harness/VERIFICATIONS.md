@@ -94,12 +94,18 @@ and the per-user variants — and only then verify with this harness.
 
 ## Methodology notes
 
-- `--allowed-value` enables **strict mode**: a filter ID is confirmed
-  only when sandbox_check returns deny for the policy's denied value
-  AND allow for the sibling un-denied value. This excludes incidental
-  deniers like ID 1 (PATH) which returns deny for any string. Without
-  `--allowed-value`, the script runs in permissive mode and reports
-  candidate matches that may include incidental deniers.
+- `--allowed-value` enables **strict mode** with asymmetric
+  evidence: a filter ID passes when its sandbox_check verdict is
+  deny for the policy's denied value (matched against the kernel's
+  observed verdict via the probe) AND allow for the sibling
+  un-denied value (sandbox_check's own answer; the syscall is NOT
+  exercised against the sibling). This excludes incidental deniers
+  like ID 1 (PATH) which returns deny for any string. It does not
+  prove the kernel would allow the sibling — to raise confidence
+  further, exercise the operation against the sibling out of band
+  and confirm the kernel allows. Without `--allowed-value`, the
+  script runs in permissive mode and reports candidate matches
+  that may include incidental deniers.
 - Default `--max-id 200`; the older `SCAN_MAX=63` was insufficient
   for several real filter IDs. The 1..200 default was chosen to cover
   the known constants comfortably; raise via `--max-id` if a new
