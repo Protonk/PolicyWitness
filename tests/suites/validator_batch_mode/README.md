@@ -33,16 +33,28 @@ preserved unchanged.
 
 ## Success criteria
 
-A mixed-filter request with 3 happy-path probes (PATH, GLOBAL_NAME,
-NONE) and 3 error probes (unknown filter, missing filter_value,
-malformed JSON) produces exactly 6 verdict lines with the
-classifications above.
+A mixed-filter request produces exactly 10 verdict lines covering all
+four sandbox_check outcomes plus all parser failure modes:
+
+- 3 allow (`s_mach_allow`, `s_net_allow`, `after_overlong`)
+- 1 deny (`s_path_deny` — path-filter probe against the sandboxed
+  child, classifier branch `rc=1 && errno=0 → deny`)
+- 1 error (`s_op_error` — unknown operation, classifier branch `else
+  → error`, errno != 0)
+- 1 bad_filter (`e1` — filter_type=BAD with filter_value present)
+- 4 parse_error: `e2` (missing required field, step_id preserved),
+  malformed JSON line (null step_id), `e_trail` (trailing garbage
+  after `}`, audit-finding-1 regression), and the 80 KiB overlong
+  line (audit-finding-2 regression).
 
 ## Fixtures
 
-- Request specimen built inline as a heredoc in `run.sh`. The probe
-  target is the test script's own PID — unsandboxed, so sandbox_check
-  returns allow for the happy-path probes.
+- Request specimen built inline in `run.sh`.
+- Target PID is a `/usr/bin/sandbox-exec` child running `/bin/sleep
+  30` with a profile that defaults allow but denies file-read-data
+  under `/etc`. Targeting an unsandboxed PID (e.g. `$$`) would return
+  allow for everything and leave the deny + error verdict-classifier
+  branches uncovered (post-Step-4 audit finding 6).
 
 ## Run
 

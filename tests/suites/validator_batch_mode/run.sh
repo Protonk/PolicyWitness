@@ -17,23 +17,52 @@ if [[ ! -x "${SB_VALIDATOR}" ]]; then
   exit 0
 fi
 
-# Use the test's own PID as the target. Unsandboxed processes return
-# allow for most operations, so all probes succeed except those that
-# deliberately exercise the error paths (parse, bad_filter).
-TARGET_PID="$$"
+# Spawn a sandboxed child via /usr/bin/sandbox-exec to serve as the
+# target PID. Targeting an unsandboxed PID (e.g. $$) would return
+# allow for everything, leaving the deny and error verdict-classifier
+# branches uncovered (post-Step-4 audit finding 6). The profile
+# allows everything by default but denies file-read-data under /etc,
+# which gives us a stable deny verdict for a path-filter probe.
+PROFILE_FILE="${PW_TEST_ARTIFACTS}/target.sb"
+cat >"${PROFILE_FILE}" <<'EOF'
+(version 1)
+(allow default)
+(deny file-read-data (subpath "/etc"))
+EOF
+
+/usr/bin/sandbox-exec -f "${PROFILE_FILE}" /bin/sleep 30 &
+TARGET_PID=$!
+# Give sandbox-exec a beat to apply the profile and exec into sleep
+# before we ask sandbox_check about the target's per-task state.
+sleep 0.3
+
+cleanup_target() {
+  if kill -0 "${TARGET_PID}" 2>/dev/null; then
+    kill "${TARGET_PID}" 2>/dev/null || true
+    wait "${TARGET_PID}" 2>/dev/null || true
+  fi
+}
+trap cleanup_target EXIT
 
 REQUEST_FILE="${PW_TEST_ARTIFACTS}/probes.ndjson"
 RESPONSE_FILE="${PW_TEST_ARTIFACTS}/verdicts.ndjson"
 
-# Mixed-filter request covering all four currently-supported batch
-# filter shapes plus four error paths that must surface as
-# parse_error/bad_filter verdicts (not abort the run). The two
-# trailing error rows (e_trail, the 64KiB overlong line) regression
-# the parser hardening from the post-Step-4 audit (findings 1 + 2).
+# Request covers all four verdict outcomes (allow, deny, error,
+# parse_error) plus the two parser-hardening regressions from the
+# post-Step-4 audit (findings 1 + 2: trailing garbage, overlong
+# line). The deny probe targets /tmp/foo rather than the policy's
+# literal denied /etc subpath because sandbox_check's verdict for
+# path filters under (allow default + deny subpath /etc) drifts
+# from the policy structure — the drift is reproducible and
+# stable, but the value we're testing is "the verdict classifier
+# emits outcome=deny when rc=1 errno=0", not "sandbox_check
+# matches the policy correctly." The libsandbox-drift design
+# property is the whole reason PolicyWitness exists.
 {
-  printf '%s\n' '{"step_id":"s1","operation":"file-read-data","filter_type":"PATH","filter_value":"/etc/hosts"}'
-  printf '%s\n' '{"step_id":"s2","operation":"mach-lookup","filter_type":"GLOBAL_NAME","filter_value":"com.apple.cfprefsd.xpc.daemon"}'
-  printf '%s\n' '{"step_id":"s3","operation":"network-outbound","filter_type":"NONE"}'
+  printf '%s\n' '{"step_id":"s_path_deny","operation":"file-read-data","filter_type":"PATH","filter_value":"/tmp/foo"}'
+  printf '%s\n' '{"step_id":"s_mach_allow","operation":"mach-lookup","filter_type":"GLOBAL_NAME","filter_value":"com.apple.cfprefsd.xpc.daemon"}'
+  printf '%s\n' '{"step_id":"s_net_allow","operation":"network-outbound","filter_type":"NONE"}'
+  printf '%s\n' '{"step_id":"s_op_error","operation":"this-op-does-not-exist","filter_type":"NONE"}'
   printf '\n'
   printf '%s\n' '{"step_id":"e1","operation":"x","filter_type":"BAD","filter_value":"y"}'
   printf '%s\n' '{"step_id":"e2","operation":"x","filter_type":"PATH"}'
@@ -67,13 +96,13 @@ import json, sys
 from pathlib import Path
 
 lines = [ln for ln in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines() if ln.strip()]
-# 8 probes (1 blank line skipped) → 8 verdicts:
-#   s1 s2 s3 (allow) + e1 (bad_filter) + e2 (parse_error) +
-#   not-valid-json (null step_id, parse_error) + e_trail (parse_error,
-#   trailing garbage) + overlong (null step_id, parse_error) +
-#   after_overlong (allow). That's 9 produced verdicts; check.
-if len(lines) != 9:
-    raise SystemExit(f"expected 9 verdict lines, got {len(lines)}: {lines!r}")
+# 10 probes (1 blank line skipped) → 10 verdicts:
+#   s_path_deny (deny) + s_mach_allow (allow) + s_net_allow (allow)
+#   + s_op_error (error) + e1 (bad_filter) + e2 (parse_error)
+#   + not-valid-json (null step_id, parse_error) + e_trail (parse_error)
+#   + overlong (null step_id, parse_error) + after_overlong (allow).
+if len(lines) != 10:
+    raise SystemExit(f"expected 10 verdict lines, got {len(lines)}: {lines!r}")
 
 verdicts = [json.loads(ln) for ln in lines]
 
@@ -87,17 +116,39 @@ for v in verdicts:
     else:
         by_step[sid] = v
 
-# Three happy-path probes: outcome=allow, rc=0, errno=0.
-for sid, expected_filter_type in [("s1", "PATH"), ("s2", "GLOBAL_NAME"), ("s3", "NONE")]:
+# Allow path (rc=0, errno=0): mach-lookup against the sandboxed target.
+for sid, expected_filter_type in [("s_mach_allow", "GLOBAL_NAME"), ("s_net_allow", "NONE")]:
     v = by_step.get(sid)
     if v is None:
         raise SystemExit(f"missing verdict for step {sid}: {verdicts!r}")
     if v.get("outcome") != "allow":
         raise SystemExit(f"step {sid} expected outcome=allow, got {v}")
+    if v.get("rc") != 0 or v.get("errno") != 0:
+        raise SystemExit(f"step {sid} expected rc=0 errno=0, got rc={v.get('rc')!r} errno={v.get('errno')!r}")
     if v.get("filter_type") != expected_filter_type:
         raise SystemExit(f"step {sid} filter_type mismatch: got {v.get('filter_type')!r}")
-    if v.get("rc") != 0:
-        raise SystemExit(f"step {sid} expected rc=0, got {v.get('rc')!r}")
+
+# Deny path (rc=1, errno=0): exercises the verdict classifier's
+# "rc==1 && errno==0 → deny" branch (audit finding 6 — previously
+# uncovered because the target PID was unsandboxed).
+deny = by_step.get("s_path_deny")
+if deny is None:
+    raise SystemExit(f"missing verdict for s_path_deny: {verdicts!r}")
+if deny.get("outcome") != "deny":
+    raise SystemExit(f"s_path_deny expected outcome=deny against sandboxed target, got {deny!r}")
+if deny.get("rc") != 1 or deny.get("errno") != 0:
+    raise SystemExit(f"s_path_deny expected rc=1 errno=0, got rc={deny.get('rc')!r} errno={deny.get('errno')!r}")
+
+# Error path (rc!=0, errno!=0): sandbox_check returns EINVAL for an
+# unknown operation name. Exercises the "else → error" branch of the
+# verdict classifier (audit finding 6).
+err_v = by_step.get("s_op_error")
+if err_v is None:
+    raise SystemExit(f"missing verdict for s_op_error: {verdicts!r}")
+if err_v.get("outcome") != "error":
+    raise SystemExit(f"s_op_error expected outcome=error for unknown op, got {err_v!r}")
+if err_v.get("errno") == 0:
+    raise SystemExit(f"s_op_error expected errno != 0 for unknown op, got {err_v!r}")
 
 # e1: bad_filter (filter_type=BAD with filter_value present)
 e1 = by_step.get("e1")
@@ -148,7 +199,7 @@ for v in verdicts:
     if v.get("schema_version") != 1:
         raise SystemExit(f"unexpected schema_version: {v!r}")
 
-print("ok: 9 verdicts validated (4 allow + 1 bad_filter + 4 parse_error)")
+print("ok: 10 verdicts validated (3 allow + 1 deny + 1 error + 1 bad_filter + 4 parse_error)")
 PY
 ASSERT_RC=$?
 set -e

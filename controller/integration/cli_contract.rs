@@ -493,6 +493,59 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
 }
 
 #[test]
+fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() {
+    // Pins the Step 3 (R4) producer move: path_diagnostics is computed
+    // by the unsandboxed runner host (PWRunnerService.enrichPathDiagnostics)
+    // after the worker reports back. The host's realpath(3) is NOT
+    // blocked by the worker's (deny default) policy, so realpath_resolved
+    // is populated even when the worker itself couldn't stat the path.
+    //
+    // This is the positive assertion the survives_strict_sandbox test
+    // deliberately avoided: a regression that moves path_diagnostics
+    // computation back into the worker (or otherwise prevents host
+    // realpath from running) silently breaks the Step-3 contract
+    // without breaking the shape-only assertions above. This test
+    // catches that.
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_path_diagnostics_strict.json");
+    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+
+    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    assert!(out.status.success(), "specimen failed");
+
+    let envelope: serde_json::Value = serde_json::from_str(
+        &String::from_utf8_lossy(&out.stdout)
+    ).expect("parse run envelope");
+
+    let realpath = envelope
+        .pointer("/data/runner_result/steps/0/sandbox_check/path_diagnostics/realpath_resolved")
+        .and_then(|v| v.as_str())
+        .unwrap_or_else(|| panic!(
+            "expected realpath_resolved to be a populated string under \
+             (deny default) — the host should compute it without the \
+             worker's sandbox restriction. Step 3 (R4) producer regression?"
+        ));
+
+    // /etc/hosts resolves to /private/etc/hosts on every shipped macOS
+    // since the /etc symlink is canonical. If the host's realpath
+    // returned anything else, something has changed about the system
+    // that we want to know about.
+    assert_eq!(
+        realpath, "/private/etc/hosts",
+        "host-produced realpath_resolved for /etc/hosts should be \
+         /private/etc/hosts on macOS (got {realpath:?})"
+    );
+}
+
+#[test]
 fn preflight_records_import_provenance_for_system_sb() {
     if !integration_enabled() {
         return;
