@@ -33,7 +33,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <mach/mach.h>
 #include <sandbox.h>
+#include <servers/bootstrap.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -209,18 +211,159 @@ static int write_ready_byte(int fd) {
     }
 }
 
-/* ---- attempt stubs (Chunk 3 replaces with real impls) ------------------- */
+/* ---- attempt implementations (R6) --------------------------------------- */
 
-/* For Chunk 2: mark the slot completed without doing real work. Chunk
- * 3 swaps this for an attempt-kind switch driving real POSIX calls. */
-static void run_stub_attempt(pw_shm_slot_t *slot) {
-    /* Inputs the host populated remain in place. We just signal we
-     * reached this slot — distinguishes "host plan was 5 steps and
-     * worker did them" from "worker died before reaching step N". */
+/*
+ * Per R6: each attempt is stack-only POSIX (or mach) code, ~25 LOC.
+ * No allocations post-apply. Outputs are written to the slot fields
+ * before run_attempt() releases the slot's `completed` flag.
+ *
+ * observed_path uses fcntl(F_GETPATH) on the file FD while it is
+ * still open — this is the kernel's authoritative answer to "what
+ * path did this open() actually resolve to", and survives the
+ * common difference between requested vs realpath form. Populated
+ * for file attempts only; mach_lookup leaves it empty.
+ */
+
+/* Helper: set rc/errno/error from a failed POSIX call. */
+static void fail_from_errno(pw_shm_slot_t *slot, const char *what) {
+    int saved = errno;
+    slot->rc = 1;
+    slot->errno_val = saved;
+    snprintf(slot->error, sizeof(slot->error), "%s: %s", what, strerror(saved));
+}
+
+/* Helper: capture observed_path from a still-open FD. Leaves the
+ * field empty on failure rather than reporting it as a slot error —
+ * the diagnostic is best-effort. */
+static void capture_observed_path(int fd, pw_shm_slot_t *slot) {
+    char buf[PW_SHM_OBSERVED_PATH_MAX];
+    if (fcntl(fd, F_GETPATH, buf) == 0) {
+        size_t n = strnlen(buf, sizeof(buf));
+        if (n >= sizeof(slot->observed_path)) n = sizeof(slot->observed_path) - 1;
+        memcpy(slot->observed_path, buf, n);
+        slot->observed_path[n] = '\0';
+    }
+}
+
+static void attempt_file_open_read(pw_shm_slot_t *slot) {
+    int fd = open(slot->target, O_RDONLY);
+    if (fd < 0) {
+        fail_from_errno(slot, "open(O_RDONLY)");
+        return;
+    }
+    capture_observed_path(fd, slot);
+    /* Touch one byte so the kernel observes the read, then close. */
+    char b;
+    (void)read(fd, &b, 1);
+    close(fd);
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+static void attempt_file_open_write(pw_shm_slot_t *slot) {
+    int fd = open(slot->target, O_WRONLY | O_TRUNC);
+    if (fd < 0) {
+        fail_from_errno(slot, "open(O_WRONLY|O_TRUNC)");
+        return;
+    }
+    capture_observed_path(fd, slot);
+    char b = 'x';
+    (void)write(fd, &b, 1);
+    close(fd);
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+static void attempt_file_create(pw_shm_slot_t *slot) {
+    /* Matches the Swift worker: O_WRONLY | O_CREAT without O_EXCL,
+     * mode 0600. A pre-existing file is opened for write but not
+     * truncated; semantics callers depend on. */
+    int fd = open(slot->target, O_WRONLY | O_CREAT, 0600);
+    if (fd < 0) {
+        fail_from_errno(slot, "open(O_WRONLY|O_CREAT)");
+        return;
+    }
+    capture_observed_path(fd, slot);
+    close(fd);
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+static void attempt_file_unlink(pw_shm_slot_t *slot) {
+    if (unlink(slot->target) != 0) {
+        fail_from_errno(slot, "unlink");
+        return;
+    }
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+static void attempt_file_access(pw_shm_slot_t *slot) {
+    /* R_OK: check the kernel would permit a read open without
+     * actually opening. New to the C worker — the Swift worker
+     * doesn't ship this kind. */
+    if (access(slot->target, R_OK) != 0) {
+        fail_from_errno(slot, "access(R_OK)");
+        return;
+    }
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+static void attempt_mach_lookup(pw_shm_slot_t *slot) {
+    mach_port_t bootstrap = MACH_PORT_NULL;
+    kern_return_t kr = task_get_special_port(mach_task_self(),
+                                             TASK_BOOTSTRAP_PORT,
+                                             &bootstrap);
+    if (kr != KERN_SUCCESS) {
+        slot->rc = 1;
+        slot->errno_val = 0;
+        snprintf(slot->error, sizeof(slot->error),
+                 "task_get_special_port: kr=%d", kr);
+        return;
+    }
+    mach_port_t svc = MACH_PORT_NULL;
+    kr = bootstrap_look_up(bootstrap, slot->target, &svc);
+    if (kr != KERN_SUCCESS) {
+        slot->rc = 1;
+        slot->errno_val = 0;
+        snprintf(slot->error, sizeof(slot->error),
+                 "bootstrap_look_up: kr=%d", kr);
+        return;
+    }
+    mach_port_deallocate(mach_task_self(), svc);
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
+/* Dispatch on attempt_kind. Initializes slot outputs to "ok defaults"
+ * before the per-kind helper runs so a kind that leaves a field
+ * untouched lands at a known state. `completed` is the LAST write
+ * (release ordering) so the host's acquire-load of completed
+ * synchronizes with every other slot write. */
+static void run_attempt(pw_shm_slot_t *slot) {
     slot->rc = 0;
     slot->errno_val = 0;
     slot->observed_path[0] = '\0';
     slot->error[0] = '\0';
+
+    switch (slot->attempt_kind) {
+    case PW_ATTEMPT_NONE:                                                 break;
+    case PW_ATTEMPT_FILE_OPEN_READ:   attempt_file_open_read(slot);       break;
+    case PW_ATTEMPT_FILE_OPEN_WRITE:  attempt_file_open_write(slot);      break;
+    case PW_ATTEMPT_FILE_CREATE:      attempt_file_create(slot);          break;
+    case PW_ATTEMPT_FILE_UNLINK:      attempt_file_unlink(slot);          break;
+    case PW_ATTEMPT_FILE_ACCESS:      attempt_file_access(slot);          break;
+    case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
+    default:
+        slot->rc = -1;
+        slot->errno_val = ENOSYS;
+        snprintf(slot->error, sizeof(slot->error),
+                 "unsupported attempt_kind=%u", slot->attempt_kind);
+        break;
+    }
+
     atomic_store_explicit(&slot->completed, 1u, memory_order_release);
 }
 
@@ -340,10 +483,10 @@ int main(int argc, char **argv) {
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
 
-    /* Run attempts. Stub today — every slot gets completed=1 with
-     * rc=0/errno=0. Chunk 3 dispatches on slot->attempt_kind. */
+    /* Run attempts. Dispatch by attempt_kind; each helper writes
+     * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
-        run_stub_attempt(&slots[i]);
+        run_attempt(&slots[i]);
     }
 
     atomic_store_explicit(&hdr->done, 1u, memory_order_release);
