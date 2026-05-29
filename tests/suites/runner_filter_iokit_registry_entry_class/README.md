@@ -1,31 +1,44 @@
 # runner_filter_iokit_registry_entry_class
 
-Pins the contract for the `iokit_registry_entry_class` filter kind on
-`iokit-open-service`: the runner accepts the filter in specimens,
-deliberately skips the `sandbox_check` userland predicate (which is
-empirically known to drift from kernel enforcement for this op+filter,
-see `tests/suites/witness_contract/harness/verify_filter_id.sh`), and
-emits `outcome="prediction_unavailable"` instead. The attempt still
-runs through channel A. The cross-check mirrors the same signal.
+Pins the contract for the `(iokit-open-service,
+iokit_registry_entry_class)` pair: the runner accepts the filter in
+specimens, deliberately skips the `sandbox_check` userland predicate
+(which is empirically known to drift from kernel enforcement for this
+op+filter, see
+`tests/suites/witness_contract/harness/verify_filter_id.sh`), and
+emits `outcome="prediction_unavailable"` with `rc=-1` (sentinel)
+instead. The cross-check mirrors the same signal.
+
+## What this suite does NOT cover
+
+The attempt slot in this specimen is a benign file `open_read`
+placeholder — there is no Channel A coverage of the
+`iokit-open-service` operation in this runner today. Real iokit
+attempts land when the C probe-runner (RUNNER-RESHAPE-PLAN Step 4)
+adds the operation kind. The suite asserts `attempt.outcome !=
+"unsupported"` so a regression to an unsupported action would fail
+the suite loudly rather than silently passing.
 
 ## Invariants
 
 - `validateSandboxChecks` accepts `iokit_registry_entry_class` as a
   filter kind alongside `none`, `path`, `global_name`, `local_name`.
 - `runSandboxCheck` short-circuits before calling `sandbox_check` for
-  this filter kind. The result has
-  `outcome == "prediction_unavailable"`, `filter_type_id == null`,
-  `errno == null`, `error == null`.
+  this (op, filter) pair. The result has
+  `outcome == "prediction_unavailable"`, `rc == -1` (sentinel),
+  `filter_type_id == null`, `errno == null`, `error == null`.
 - The cross-check (`--sonoma-cross-check`) emits a `skipped` step
   whose `error` includes the string `prediction_unavailable`.
-- The attempt portion of the step runs unchanged — channel A remains
-  the reliable evidence for any iokit-open-service probe.
+- The attempt portion of the step runs to completion with a supported
+  action so the envelope shape is exercised.
 
 ## Success criteria
 
 - `result.ok == true`.
 - `runner_result.steps[0].sandbox_check.outcome == "prediction_unavailable"`.
-- `runner_result.steps[0].attempt.rc` is populated.
+- `runner_result.steps[0].sandbox_check.rc == -1`.
+- `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
+  `attempt.rc` is populated.
 - `sonoma_cross_check.steps[0].status == "skipped"` with an error
   message containing `"prediction_unavailable"`.
 

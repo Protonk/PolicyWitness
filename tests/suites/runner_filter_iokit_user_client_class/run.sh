@@ -47,7 +47,12 @@ spec = {
             "operation": "iokit-open-user-client",
             "filter": {"kind": "iokit_user_client_class", "value": "IOSurfaceRootUserClient"},
         },
-        "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"},
+        # See sibling runner_filter_iokit_registry_entry_class/run.sh
+        # for the rationale: the attempt is a benign file open_read so
+        # the envelope slot is populated by a supported action. It does
+        # NOT observe iokit-open-user-client; Channel A coverage for
+        # that operation lands with the C probe-runner.
+        "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -91,6 +96,11 @@ if sb.get("errno") is not None:
     raise SystemExit(f"expected errno null, got {sb.get('errno')!r}")
 
 attempt = steps[0].get("attempt") or {}
+if attempt.get("outcome") == "unsupported":
+    raise SystemExit(
+        f"attempt placeholder is using an unsupported action; the runner "
+        f"returned outcome=unsupported. Got: {attempt!r}"
+    )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
 

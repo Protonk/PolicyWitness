@@ -37,11 +37,14 @@ spec = {
             "operation": "sysctl-read",
             "filter": {"kind": "sysctl_name", "value": "kern.osrelease"},
         },
-        # Sysctl attempts aren't a runner attempt kind today; we pair with
-        # a benign file access so the attempt slot is populated for
-        # envelope shape checks. The runner's actual sysctl exercise
-        # lands when the C probe-runner (Step 4) adds the operation.
-        "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"},
+        # Sysctl attempts aren't a runner attempt kind today; we pair
+        # with a benign file open_read (a SUPPORTED action — the prior
+        # "access" placeholder silently returned outcome=unsupported) so
+        # the attempt slot is populated for envelope shape checks. This
+        # does NOT observe sysctl-read; the assertion below is about
+        # the prediction path. Real sysctl attempts land when the C
+        # probe-runner (Step 4) adds the operation kind.
+        "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -86,6 +89,11 @@ if sb.get("errno") is not None:
     raise SystemExit(f"expected errno null, got {sb.get('errno')!r}")
 
 attempt = steps[0].get("attempt") or {}
+if attempt.get("outcome") == "unsupported":
+    raise SystemExit(
+        f"attempt placeholder is using an unsupported action; the runner "
+        f"returned outcome=unsupported. Got: {attempt!r}"
+    )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
 

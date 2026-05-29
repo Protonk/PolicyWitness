@@ -23,13 +23,23 @@ matching (filtering on the IOService class hierarchy) and
 user-client-class matching (filtering on which user-client subclass
 the open creates).
 
+## What this suite does NOT cover
+
+The attempt slot is a benign file `open_read` placeholder — there is
+no Channel A coverage of the `iokit-open-user-client` operation in
+this runner today. Real iokit attempts land when the C probe-runner
+(RUNNER-RESHAPE-PLAN Step 4) adds the operation kind. The suite
+asserts `attempt.outcome != "unsupported"` so a regression to an
+unsupported action would fail loudly.
+
 ## Success criteria
 
 - `result.ok == true`.
 - `runner_result.steps[0].sandbox_check.outcome == "prediction_unavailable"`.
 - `runner_result.steps[0].sandbox_check.rc == -1` (sentinel that
   disambiguates "no prediction" from rc=0 "allow").
-- `runner_result.steps[0].attempt.rc` is populated.
+- `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
+  `attempt.rc` is populated.
 - `sonoma_cross_check.steps[0].status == "skipped"` with an error
   containing `"prediction_unavailable"`.
 

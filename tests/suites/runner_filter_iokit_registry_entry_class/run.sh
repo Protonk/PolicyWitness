@@ -43,12 +43,16 @@ spec = {
             "filter": {"kind": "iokit_registry_entry_class", "value": "IOSurfaceRoot"},
         },
         # The runner's attempt machinery doesn't have an IOKit attempt
-        # kind today, so we pair the sandbox_check with a benign file
-        # access attempt — the assertion here is about the prediction
-        # path, not about exercising the IOKit operation end-to-end.
-        # IOKit attempts will land later when the C probe-runner (Step 4)
-        # adds the operation.
-        "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"},
+        # kind today. We pair the sandbox_check with a benign file
+        # open_read so the attempt slot in the envelope is populated by
+        # a SUPPORTED action — the prior placeholder ("access") was not
+        # a real action and silently returned outcome=unsupported. This
+        # exercise does NOT observe the iokit-open-service operation;
+        # the assertion below is about the prediction path (rc=-1,
+        # outcome=prediction_unavailable), not Channel A coverage of
+        # the IOKit operation. Real iokit attempts will land when the
+        # C probe-runner (Step 4) adds the operation kind.
+        "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -96,8 +100,18 @@ if sb.get("filter_type_id") is not None:
 if sb.get("errno") is not None:
     raise SystemExit(f"expected errno null for prediction_unavailable, got {sb.get('errno')!r}")
 
-# The attempt must still run — channel A is the reliable evidence.
+# The attempt envelope slot must still be populated by a SUPPORTED
+# action (the placeholder is file open_read; iokit attempt coverage
+# lands with the C probe-runner). Asserting outcome != "unsupported"
+# catches the prior bug where action="access" silently fell through.
 attempt = steps[0].get("attempt") or {}
+if attempt.get("outcome") == "unsupported":
+    raise SystemExit(
+        f"attempt placeholder is using an unsupported action; the runner "
+        f"returned outcome=unsupported. Use a supported action "
+        f"(open_read/open_write/create/unlink) so the envelope slot is "
+        f"populated by real work. Got: {attempt!r}"
+    )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
 

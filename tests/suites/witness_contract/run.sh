@@ -26,7 +26,13 @@ run_test "${SUITE_DIR}/attempt_outcome_matrix_enforced.sh"
 run_test "${SUITE_DIR}/bug_report_returns_attempts.sh"
 run_test "${SUITE_DIR}/bug_report_returns_verdicts.sh"
 run_test "${SUITE_DIR}/debuggable_mode_rejected.sh"
-run_test "${SUITE_DIR}/drift_surfaced_in_envelope.sh"
+# drift_surfaced_in_envelope removed: its original premise (BBX-001
+# mach-lookup global-name drift) was a wrong-filter-ID bug, not real
+# drift, and was fixed by GLOBAL_NAME=2. All other known op+filter
+# unreliabilities (iokit, sysctl) are now classified
+# prediction_unavailable — also not drift. Reintroduce when a real
+# current drift case is identified that the R10 steps[].drift field
+# should surface.
 run_test "${SUITE_DIR}/first_deny_diagnostic_populated.sh"
 run_test "${SUITE_DIR}/instrumentation_field_rejected.sh"
 run_test "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"
