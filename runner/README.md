@@ -91,6 +91,16 @@ recipe, and the rules for adding a new override.
 - `runner/services/PWRunnerDebug/`
   - `Info.plist`, `Entitlements.plist`, `main.swift` for the debuggable runner XPC service bundle.
 
+- `controller/tools/pw_probe_runner/pw_probe_runner.c` (+
+  `pw_probe_runner_abi.h`) — the C worker that owns the post-apply
+  syscall surface per RUNNER-RESHAPE-PLAN R5/R6/R7/R8. Built once
+  and embedded inside each XPC service bundle as
+  `…/Contents/MacOS/pw-probe-runner` (not the app's top-level
+  `Contents/MacOS/`) so built-in and BYOXPC runners both resolve
+  the binary relative to their own bundle. Proven in isolation by
+  the `runner_c_worker_harness` suite; not yet invoked by the
+  production runner host (Step 6 wires that flip).
+
 ## Specimen inputs
 
 The runner consumes a `PWRunnerRunSpec` which contains:
