@@ -1,4 +1,5 @@
 sentinel_harness
 discovery_target
+enforcement_probe
 *.o
 *.dSYM/
