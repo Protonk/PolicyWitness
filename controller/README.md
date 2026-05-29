@@ -46,8 +46,9 @@ Standalone helper tools (embedded into the `.app`):
   `…/Contents/XPCServices/<svc>.xpc/Contents/MacOS/pw-probe-runner`
   (not in the app's top-level `Contents/MacOS/`). The runner host
   resolves it relative to its own bundle so built-in and BYOXPC
-  runners both pick up the correct copy. Currently a skeleton; the
-  real worker flow lands in RUNNER-RESHAPE-PLAN Step 5 Chunk 2.
+  runners both pick up the correct copy. It implements the Step 5 C
+  worker shared-memory ABI and attempt loop; the production host still
+  uses the legacy Swift worker until RUNNER-RESHAPE-PLAN Step 6.
 
 ## CLI surface (contract)
 

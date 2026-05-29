@@ -22,7 +22,7 @@ Pick what you’re changing:
 
 - **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
 - **Controller**: the host-side orchestrator (`dist/PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
-- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`). The XPC host validates the request, spawns a short-lived worker, and returns the worker's JSON report. The worker is a `posix_spawn` of the same binary with `--apply-and-probe-worker`; it applies one sandbox policy to itself, executes the probe plan, and exits. Both the host and worker are single-use per specimen.
+- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`). The XPC host validates the request, spawns a short-lived worker, and returns the worker's JSON report. Production traffic currently uses a `posix_spawn` of the same binary with `--apply-and-probe-worker`; the bundle also carries `pw-probe-runner`, the Step 5 C worker helper that Step 6 will wire in. Both the host and worker are single-use per specimen.
 - **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
 
 ## What Ships (bundle layout contract)
@@ -60,14 +60,14 @@ Documentation should be stateless: describe current behavior without historical 
 - **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
 - **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
 - **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
-- **Runner simplicity**: runner Swift code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Any new work that must run under the applied sandbox belongs in `WorkerEntry.swift`; host-side work stays in `PWRunnerService.swift`.
+- **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift`; post-apply work belongs in the active worker implementation (`WorkerEntry.swift` today, `pw-probe-runner` after the runner reshape flips production traffic).
 
 ## Dev Workflow (fast path)
 
 - Build: `make build` (or `./build.sh`)
   - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see `SIGNING.md`).
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun.
-- If you add a helper under `Contents/MacOS`, update the `build.sh` signing list; notarization fails if any embedded tool is left ad hoc-signed.
+- If you add a helper under the app or XPC bundle `Contents/MacOS`, update the `build.sh` signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
 Build knobs worth knowing (debugging/iteration):

@@ -26,12 +26,17 @@ Key requirements:
 
 Signing is “inside-out”:
 
-1. Sign nested helper tools under `Contents/MacOS/` (host-side tools).
-2. Sign the runner service bundle `Contents/XPCServices/PWRunner.xpc`.
-3. Sign the outer `.app` last.
+1. Sign nested helper tools under the app's `Contents/MacOS/` (host-side tools).
+2. Sign helper tools embedded inside each runner service bundle, such as
+   `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner`.
+3. Sign the runner service bundle `Contents/XPCServices/PWRunner.xpc`.
+4. Sign the outer `.app` last.
 
 Do not “fix” signing by adding `codesign --deep` to the signing steps. Explicitly sign the known nested binaries and then sign the outer app.
-When you add a new embedded helper under `Contents/MacOS`, add an explicit signing step in `build.sh`. Notarization will fail if any embedded tool remains ad hoc-signed.
+When you add a new embedded helper under either the app's top-level
+`Contents/MacOS` or an XPC service's nested `Contents/MacOS`, add an
+explicit signing step in `build.sh`. Notarization will fail if any
+embedded tool remains ad hoc-signed.
 
 ## Evidence artifacts
 

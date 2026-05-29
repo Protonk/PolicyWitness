@@ -44,8 +44,12 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
+  - `Contents/MacOS/sb_api_validator` (C `sandbox_check` validator helper)
+  - `Contents/MacOS/sbpl-preflight` (SBPL compile/preflight helper)
   - `Contents/XPCServices/PWRunner.xpc` (Swift runner, standard mode; one XPC host + one worker per specimen)
+    - `Contents/MacOS/pw-probe-runner` (bundle-local C worker helper, proven in isolation; production traffic flips in the runner reshape Step 6)
   - `Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable mode; one XPC host + one worker per specimen)
+    - `Contents/MacOS/pw-probe-runner` (same helper, signed inside the debuggable service bundle)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 ## Where To Learn
