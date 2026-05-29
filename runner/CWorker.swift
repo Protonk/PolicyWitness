@@ -216,7 +216,18 @@ public enum CWorkerRunResult {
 
 // MARK: - Driver
 
-public func runCWorker(_ input: CWorkerInput) -> CWorkerRunResult {
+/// Callback invoked once the worker's `applied` sentinel flips, before
+/// the driver starts polling `done`. The callback receives the worker
+/// PID — that's the moment the validator child (or any other observer
+/// that wants to inspect the sandboxed worker) can be spawned. The
+/// callback runs synchronously; the driver does NOT poll `done` while
+/// it's executing, so a hook that blocks for longer than the per-attempt
+/// deadline will push the overall worker wait out by the same margin.
+/// The hook should complete in well under sentinelTimeoutMs.
+public typealias CWorkerPostAppliedHook = (pid_t) -> Void
+
+public func runCWorker(_ input: CWorkerInput,
+                       postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
     // ---- Validation: bound the inputs to ABI caps before we touch shm.
     if input.slots.count > PWShmLayout.maxSteps {
         return .failure(.slotCountExceeded(input.slots.count))
@@ -422,15 +433,30 @@ public func runCWorker(_ input: CWorkerInput) -> CWorkerRunResult {
     }
     close(readyPipe[0])
 
-    // ---- Poll applied + done.
+    // ---- Poll applied, fire postApplied hook, then poll done.
     var sawApplied = false
     var sawDone = false
     do {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
         let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
+        var hookFired = false
         for _ in 0..<deadlineIters {
-            if loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) != 0 { sawApplied = true }
-            if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) != 0 { sawDone = true; break }
+            if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) != 0 {
+                sawApplied = true
+            }
+            // Fire the post-applied hook the first iteration after we
+            // observe `applied`. The worker is now under the policy;
+            // anything the hook does sees the sandboxed worker_pid.
+            // We fire BEFORE checking `done` so a short-running worker
+            // can't finish before the hook starts.
+            if sawApplied && !hookFired {
+                hookFired = true
+                if let hook = postApplied { hook(pid) }
+            }
+            if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) != 0 {
+                sawDone = true
+                break
+            }
             sleepNs(pollIntervalNs)
         }
     }
@@ -567,7 +593,9 @@ private func readString(_ base: UnsafePointer<UInt8>, offset: Int, max: Int) -> 
 
 // MARK: - Misc helpers
 
-private func sleepNs(_ ns: UInt64) {
+// Shared with ValidatorClient.swift (Step 6.3b). Internal-scope so both
+// drivers see the same helper without code duplication.
+func sleepNs(_ ns: UInt64) {
     var ts = timespec(tv_sec: Int(ns / 1_000_000_000), tv_nsec: Int(ns % 1_000_000_000))
     _ = nanosleep(&ts, nil)
 }
@@ -575,8 +603,9 @@ private func sleepNs(_ ns: UInt64) {
 /// Convert a [String] into a NULL-terminated argv array of C strings the
 /// posix_spawn family expects. Each cstring is allocated and freed in the
 /// scope of the body closure.
-private func withCStringArrayCopy<R>(_ strings: [String],
-                                     _ body: (UnsafePointer<UnsafeMutablePointer<CChar>?>) -> R) -> R {
+// Shared with ValidatorClient.swift (Step 6.3b). Internal-scope.
+func withCStringArrayCopy<R>(_ strings: [String],
+                             _ body: (UnsafePointer<UnsafeMutablePointer<CChar>?>) -> R) -> R {
     let cStrings: [UnsafeMutablePointer<CChar>?] = strings.map { strdup($0) }
     defer {
         for p in cStrings { if let p { free(p) } }
