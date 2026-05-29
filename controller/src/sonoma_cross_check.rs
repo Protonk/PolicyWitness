@@ -223,6 +223,22 @@ fn run_sb_api_validator(
         error: None,
     };
 
+    // Filter kinds for which sandbox_check is known to drift from kernel
+    // enforcement (see runner/ProbeRunner.swift::predictionUnavailableFilters
+    // and tests/suites/witness_contract/harness/verify_filter_id.sh). The
+    // cross-check skips them with a stable error string so consumers can
+    // recognize "we deliberately didn't predict" apart from "the cross-check
+    // hit a transient problem."
+    if spec.filter_kind == "iokit_registry_entry_class" {
+        step.status = "skipped".to_string();
+        step.error = Some(
+            "prediction_unavailable: sandbox_check is unreliable for this op+filter; \
+             see runner_result.steps[].sandbox_check.outcome and the attempt result instead"
+                .to_string(),
+        );
+        return step;
+    }
+
     let filter_type = match spec.filter_kind.as_str() {
         "none" => "NONE",
         "path" => "PATH",

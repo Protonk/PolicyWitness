@@ -249,7 +249,38 @@ Notes:
   (see `tests/suites/witness_contract/harness/verify_filter_id.sh`) confirms
   `2` is the correct value for current macOS. The local-name ID (`17`) has not
   been re-verified by the same methodology and may also be incorrect; it is
-  documented here unchanged pending a verification fixture.
+  documented here unchanged pending a verification fixture. For
+  `iokit_registry_entry_class`, no `filter_type_id` is emitted (see the
+  "Filter kinds where prediction is unavailable" section below).
+- `outcome`: `allow`, `deny`, `error`, or `prediction_unavailable`. The
+  last value is emitted when the runner deliberately skips
+  `sandbox_check` for an op+filter combination where the userland
+  predicate is empirically known to drift from kernel enforcement.
+  Channel A (the `attempt` result) remains the reliable evidence for
+  those probes; the prediction is honestly absent rather than wrong.
+
+### Filter kinds where prediction is unavailable
+
+Some op+filter combinations have a documented mismatch between
+`sandbox_check`'s userland verdict and the kernel's actual
+enforcement. For these, the runner accepts the filter in specimens
+(so policies can be authored), accepts and enforces the policy
+correctly at compile/apply time, but skips `sandbox_check` entirely
+and emits `step.sandbox_check.outcome = "prediction_unavailable"`
+instead of a misleading `allow`/`deny`. The attempt still runs and
+provides the real evidence.
+
+Currently in this category:
+
+- `iokit_registry_entry_class` on `iokit-open-service` — verified
+  unreliable across all candidate filter IDs in 1..200 against
+  `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`) mirrors
+  with `status="skipped"` and an error that includes the literal
+  string `prediction_unavailable`.
+
+Adding a filter kind to this set requires empirical verification via
+`tests/suites/witness_contract/harness/verify_filter_id.sh`. The
+matching code lives in `runner/ProbeRunner.swift::predictionUnavailableFilters`.
 - `path_diagnostics` is emitted only for path-filter checks. Introduced in
   runner response `schema_version = 2`; consumers branching on
   `schema_version` can rely on its presence on any path-filter check at v2+.

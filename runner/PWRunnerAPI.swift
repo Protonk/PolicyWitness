@@ -29,6 +29,7 @@ enum PWRunnerWire {
     static let sandboxFilterPath = "path"
     static let sandboxFilterGlobalName = "global_name"
     static let sandboxFilterLocalName = "local_name"
+    static let sandboxFilterIokitRegistryEntryClass = "iokit_registry_entry_class"
     static let sandboxCheckScopePost = "post_sandbox"
 
     static let instrumentationPhasePre = "pre_sandbox"
@@ -75,6 +76,23 @@ public enum NormalizedOutcome {
     public static let xpcTimeout = "xpc_timeout"
     public static let xpcProxyTypeMismatch = "xpc_proxy_type_mismatch"
     public static let xpcNoReply = "xpc_no_reply"
+}
+
+// Canonical step.sandbox_check.outcome values. New constants should be
+// added here (with the matching wire string) before any emit site uses
+// them, by the same convention as NormalizedOutcome.
+//
+// `prediction_unavailable` is emitted when the runner deliberately
+// declines to call sandbox_check because the userland predicate is
+// known to drift from kernel enforcement for the operation+filter pair
+// (verified via tests/suites/witness_contract/harness/verify_filter_id.sh).
+// Channel A (the attempt result) remains the reliable evidence for
+// those probes; the prediction is honestly absent rather than wrong.
+public enum SandboxCheckOutcome {
+    public static let allow = "allow"
+    public static let deny = "deny"
+    public static let error = "error"
+    public static let predictionUnavailable = "prediction_unavailable"
 }
 
 public struct PWRunnerRunSpec: Codable {

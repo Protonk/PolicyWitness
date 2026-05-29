@@ -64,6 +64,7 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
         PWRunnerWire.sandboxFilterPath,
         PWRunnerWire.sandboxFilterGlobalName,
         PWRunnerWire.sandboxFilterLocalName,
+        PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
     ]
     for step in steps {
         let op = step.sandbox_check.operation.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -89,6 +90,23 @@ func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
     }
 }
 
+// Filter kinds for which the runner deliberately does NOT call
+// sandbox_check, because empirical verification against actual kernel
+// enforcement (verify_filter_id.sh) has shown the userland predicate
+// returns wrong answers for these op+filter combinations regardless of
+// numeric filter ID. Channel A (the attempt result) remains the
+// reliable evidence; the prediction is honestly absent rather than
+// silently wrong.
+//
+// Entries here must be paired with an enforcement_probe verification
+// commit naming the op+filter pair and the empirical evidence.
+private let predictionUnavailableFilters: Set<String> = [
+    // iokit-open-service via iokit-registry-entry-class: verified
+    // 2026-05-29 against IOSurfaceRoot; no filter ID in 1..200
+    // produced a sandbox_check verdict matching kernel enforcement.
+    PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+]
+
 func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResult {
     let op = check.operation
     let filterKind = check.filter.kind
@@ -96,6 +114,27 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     let pid = Int(getpid())
     var effectiveFilterValue = filterValue
     var pathDiagnostics: PWRunnerPathDiagnostics? = nil
+
+    if predictionUnavailableFilters.contains(filterKind) {
+        // Skip sandbox_check entirely — its verdict for this op+filter is
+        // known unreliable. Emit prediction_unavailable so consumers can
+        // tell "we deliberately didn't predict" apart from "we predicted
+        // and got allow/deny/error". The attempt (channel A) still runs.
+        return PWRunnerSandboxCheckResult(
+            rc: 0,
+            outcome: SandboxCheckOutcome.predictionUnavailable,
+            pid: pid,
+            operation: op,
+            scope: PWRunnerWire.sandboxCheckScopePost,
+            filter_kind: filterKind,
+            filter_value: filterValue,
+            effective_filter_value: filterValue,
+            filter_type_id: nil,
+            errno: nil,
+            error: nil,
+            path_diagnostics: nil
+        )
+    }
 
     if filterKind == PWRunnerWire.sandboxFilterPath, let value = filterValue, !value.isEmpty {
         let canonical = canonicalizePath(value)

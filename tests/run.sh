@@ -77,7 +77,7 @@ while [[ $# -gt 0 ]]; do
       cat <<'EOF'
 usage:
   tests/run.sh --all
-  tests/run.sh --suite <preflight|source_drift|unit|integration|runner_unit|runner_apply_isolation_v2|runner_apply_isolation_v3|runner_sandbox_denied|runner_outcome_libsandbox_unavailable|runner_outcome_worker_spawn_failed|runner_outcome_runner_timeout|runner_outcome_bad_request|runner_debuggable|runner_byoxpc|smoke|blackbox_menagerie|blackbox_e2e|anomalies|witness_contract> [--suite <name> ...]
+  tests/run.sh --suite <preflight|source_drift|unit|integration|runner_unit|runner_apply_isolation_v2|runner_apply_isolation_v3|runner_sandbox_denied|runner_outcome_libsandbox_unavailable|runner_outcome_worker_spawn_failed|runner_outcome_runner_timeout|runner_outcome_bad_request|runner_filter_iokit_registry_entry_class|runner_debuggable|runner_byoxpc|smoke|blackbox_menagerie|blackbox_e2e|anomalies|witness_contract> [--suite <name> ...]
   tests/run.sh --describe [--all|--suite <name> ...]
 EOF
       exit 0
@@ -90,7 +90,7 @@ EOF
 done
 
 if [[ ${#suites[@]} -eq 0 ]]; then
-  suites=(preflight source_drift unit integration runner_unit runner_apply_isolation_v2 runner_apply_isolation_v3 runner_sandbox_denied runner_outcome_libsandbox_unavailable runner_outcome_worker_spawn_failed runner_outcome_runner_timeout runner_outcome_bad_request runner_debuggable anomalies)
+  suites=(preflight source_drift unit integration runner_unit runner_apply_isolation_v2 runner_apply_isolation_v3 runner_sandbox_denied runner_outcome_libsandbox_unavailable runner_outcome_worker_spawn_failed runner_outcome_runner_timeout runner_outcome_bad_request runner_filter_iokit_registry_entry_class runner_debuggable anomalies)
 fi
 
 if [[ ${describe} -eq 1 ]]; then
