@@ -239,8 +239,8 @@ static int parse_probe_line(const char *line,
 
     /* Reject trailing content after the closing '}'. Otherwise a
      * malformed host could append junk to a valid probe and have it
-     * silently accepted — and Step 5/6's host orchestration relies
-     * on one NDJSON probe producing one trustworthy verdict. */
+     * silently accepted — the runner relies on one NDJSON probe
+     * producing one trustworthy verdict. */
     skip_ws(&p);
     if (*p != '\0') {
         *err_out = "trailing content after '}'";

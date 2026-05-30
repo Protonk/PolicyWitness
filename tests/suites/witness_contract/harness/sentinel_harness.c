@@ -1,14 +1,14 @@
 /*
- * sentinel_harness — verify the post-apply mechanics R5/R8 of the
- * RUNNER-RESHAPE-PLAN depend on, using the same primitive shapes the
- * future C probe-runner will use.
+ * sentinel_harness — verify the post-apply shared-memory mechanics
+ * the runner depends on, using the same primitive shapes
+ * pw-probe-runner uses.
  *
- * The future architecture has the XPC host posix_spawn a separate C
- * binary (pw-probe-runner), pass a shared-memory FD across the exec
- * boundary via posix_spawn_file_actions_adddup2, and rely on the
- * spawned worker to (a) mmap that inherited FD shared, (b) apply the
- * specimen policy, (c) write attempt results into the mmap'd region
- * via memory stores after apply, and (d) spin until the host signals
+ * The runner host posix_spawns pw-probe-runner, passes a
+ * shared-memory FD across the exec boundary via
+ * posix_spawn_file_actions_adddup2, and the spawned worker
+ * (a) mmaps that inherited FD shared, (b) applies the specimen
+ * policy, (c) writes attempt results into the mmap'd region via
+ * memory stores after apply, and (d) spins until the host signals
  * exit. This harness replicates that exact shape:
  *
  *   parent role  → posix_spawn child (re-exec of self with argv[1] sentinel),

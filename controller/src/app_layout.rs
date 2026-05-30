@@ -8,7 +8,6 @@ use std::path::{Component, Path, PathBuf};
 use crate::plist::plist_key_string;
 
 pub const PW_RUNNER_STANDARD_SERVICE_DIR: &str = "PWRunner";
-pub const PW_RUNNER_DEBUG_SERVICE_DIR: &str = "PWRunnerDebug";
 
 #[derive(Clone)]
 pub struct PWRunnerBundleInfo {

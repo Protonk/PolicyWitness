@@ -3,11 +3,9 @@ import Foundation
 
 /*
  * CWorkerOrchestrator — host-side wiring that runs a single specimen
- * through the C-worker code path: pw-probe-runner for attempts +
+ * through the runner's C code path: pw-probe-runner for attempts +
  * sb_api_validator --batch for sandbox_check verdicts, joined into
- * one PWRunnerRunResult envelope. Per RUNNER-RESHAPE-PLAN Step 6.8
- * (R9). Gated by `_test_overrides.use_c_worker` during 6.8a;
- * default-on after 6.8b.
+ * one PWRunnerRunResult envelope.
  *
  * The orchestrator owns:
  *   1. Request → driver inputs translation:
@@ -23,15 +21,16 @@ import Foundation
  *        - sandbox_check from validator verdict OR synthesized
  *          prediction_unavailable result for skipped pairs
  *        - attempt from CWorker slot result
- *        - drift = boolean comparison or nil per Step 6.4 contract
+ *        - drift = boolean comparison or nil (see drift helper for
+ *          the asymmetry rule)
  *   4. Classifier:
  *        - normalized_outcome from C-worker disposition +
  *          validator disposition + per-slot completed/done state
  *
  * Validation, libsandbox-availability checks, and policy-hash
- * computation are PWRunnerService.runSpecimen's responsibility —
- * they happen identically on both code paths. The orchestrator
- * only sees a request that has already passed those gates.
+ * computation are PWRunnerService.runSpecimen's responsibility.
+ * The orchestrator only sees a request that has already passed
+ * those gates.
  */
 
 public enum CWorkerOrchestrator {
@@ -52,12 +51,11 @@ public enum CWorkerOrchestrator {
         let workerParams = workerParamsFromPolicy(parsed.policy)
         let validatorProbes = validatorProbesFromProbePlan(parsed.probe_plan)
 
-        // _test_overrides.worker_timeout_ms drives the sentinel deadline
-        // on the C-worker path the same way it drives the kqueue
-        // deadline on the Swift-worker path. Floored at 50 ms to match
-        // WorkerProcess's existing contract — a smaller deadline fires
-        // before any real worker can complete its post-apply work and
-        // would just generate spurious runner_timeouts.
+        // _test_overrides.worker_timeout_ms drives the sentinel
+        // deadline on the C-worker path. Floored at 50 ms because a
+        // smaller deadline fires before any real worker can complete
+        // its post-apply work and would just generate spurious
+        // runner_timeouts.
         let workerInput = CWorkerInput(
             workerExecutablePath: workerExecutablePath,
             policy: parsed.policy.sbpl_source ?? "",
@@ -141,8 +139,8 @@ public enum CWorkerOrchestrator {
 
     // ---- bundle path resolution -----------------------------------------
 
-    /// pw-probe-runner lives at `<this xpc service>/Contents/MacOS/pw-probe-runner`
-    /// per RUNNER-RESHAPE-PLAN R5. The XPC service binary itself lives at
+    /// pw-probe-runner lives at `<this xpc service>/Contents/MacOS/pw-probe-runner`.
+    /// The XPC service binary itself lives at
     /// `<this xpc service>/Contents/MacOS/<service-name>` — Bundle.main
     /// resolves to the service bundle. Sibling resolution.
     public static func defaultWorkerExecutablePath() -> String {
@@ -213,10 +211,10 @@ public enum CWorkerOrchestrator {
 // MARK: - Helpers
 
 /// Resolve the sentinel-timeout for the C worker from the request's
-/// `_test_overrides.worker_timeout_ms`. Floor matches WorkerProcess.swift's
-/// existing 50 ms minimum so the Swift-worker and C-worker paths
-/// honour the override identically. nil/absent → CWorkerInput default
-/// (60s — long enough for any real specimen).
+/// `_test_overrides.worker_timeout_ms`. Floor at 50 ms because a
+/// smaller deadline fires before any real worker can complete its
+/// post-apply work. nil/absent → CWorkerInput default (60s — long
+/// enough for any real specimen).
 private func timeoutMsForCWorker(override: Int?) -> Int {
     let cWorkerDefault = 60_000
     guard let v = override else { return cWorkerDefault }
@@ -361,11 +359,10 @@ private func buildStepResults(
         }
     )
 
-    // sandbox_check.pid is consistently the sandboxed worker PID:
-    // matches the legacy Swift-worker path's contract, lets unified-log
-    // correlation use a single PID per run, and gives both
-    // validator-backed AND synthesized verdicts the same per-step pid.
-    // Falls back to the host PID only when no worker exists (spawn
+    // sandbox_check.pid is consistently the sandboxed worker PID so
+    // unified-log correlation can use a single PID per run, and so
+    // validator-backed AND synthesized verdicts carry the same per-step
+    // pid. Falls back to the host PID only when no worker exists (spawn
     // failed before pid was known).
     let sbCheckPid = Int(workerOutput?.workerPid ?? pid_t(getpid()))
 
@@ -483,7 +480,7 @@ private func buildAttemptResult(
     // Slot missing → worker never reached the step. Surface as
     // not_run_worker_died so consumers can tell "the attempt failed"
     // (slot present, rc non-zero) from "the attempt never ran"
-    // (slot missing). Step 6.7 / AttemptOutcome.
+    // (slot missing).
     guard let s = slot else {
         return PWRunnerAttemptResult(
             rc: -1,
@@ -551,9 +548,8 @@ private func computeDrift(
     sandboxCheck: PWRunnerSandboxCheckResult,
     attempt: PWRunnerAttemptResult
 ) -> Bool? {
-    // Per the Step 6.4 schema doc + the PR H #5 correction: drift is
-    // the validator-vs-attempt disagreement about *sandbox enforcement*
-    // — not just any allow/deny disagreement.
+    // drift is the validator-vs-attempt disagreement about *sandbox
+    // enforcement* — not just any allow/deny disagreement.
     //
     // An ENOENT file open or a BOOTSTRAP_UNKNOWN_SERVICE mach lookup
     // is a failure but NOT a sandbox denial — the file doesn't exist,
@@ -638,11 +634,10 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
 
 private func zeroSignalResult() -> PWRunnerSignalResult {
     // PWRunnerSignalResult: signal name + before/after counts + delta.
-    // The C-worker path doesn't yet observe per-step deny signals
-    // (the Swift worker collected those via signal handlers inside
-    // its own process). 6.8a leaves the field zeroed; a future
-    // chunk can wire in a per-slot signal counter if the data turns
-    // out to matter.
+    // The C worker doesn't yet observe per-step deny signals — the
+    // host doesn't share a signal handler with it. The field is
+    // zeroed for now; a future chunk can wire in a per-slot signal
+    // counter if the data turns out to matter.
     return PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: 0)
 }
 
@@ -684,8 +679,8 @@ private func classify(
         if !out.applied {
             // sandbox_apply failed inside the worker. apply_rc carries
             // the cause (the worker writes it to shm before flipping
-            // done and entering the spin loop). The Step 5 contract
-            // says compile failure follows the same path.
+            // done and entering the spin loop). Compile failure follows
+            // the same path.
             return ClassifiedRun(
                 outcome: NormalizedOutcome.sandboxApplyFailed,
                 rc: 1,

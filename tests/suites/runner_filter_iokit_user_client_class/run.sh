@@ -60,7 +60,7 @@ PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" --sonoma-cross-check >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
 RC=$?
 set -e
 
@@ -103,17 +103,6 @@ if attempt.get("outcome") == "unsupported":
     )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
-
-cross = env.get("data", {}).get("sonoma_cross_check") or {}
-cross_steps = cross.get("steps") or []
-if not cross_steps:
-    raise SystemExit("expected sonoma_cross_check.steps to be present")
-cstep = cross_steps[0]
-if cstep.get("status") != "skipped":
-    raise SystemExit(f"expected cross-check status=skipped, got {cstep.get('status')!r}")
-err = cstep.get("error") or ""
-if "prediction_unavailable" not in err:
-    raise SystemExit(f"expected cross-check error to identify prediction_unavailable (got {err!r})")
 PY
 ASSERT_RC=$?
 set -e
@@ -122,4 +111,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "iokit_user_client_class: prediction_unavailable surfaced; attempt observed; cross-check mirrored" "{}"
+test_pass "iokit_user_client_class: prediction_unavailable surfaced; attempt observed" "{}"

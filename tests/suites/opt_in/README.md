@@ -27,6 +27,6 @@ tests/suites/opt_in/<test>.sh
 ```
 
 GUI session note: tests that install or bootstrap launchd services (for example
-`runner_instrumentation_dyld_env`) require a logged-in desktop session. Run
-them from a local Terminal.app window; SSH/CI or sandboxed harnesses will skip
-with a non-GUI session message.
+`runner_auth_external`) require a logged-in desktop session. Run them from a
+local Terminal.app window; SSH/CI or sandboxed harnesses will skip with a
+non-GUI session message.

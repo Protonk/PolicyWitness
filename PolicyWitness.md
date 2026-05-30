@@ -5,24 +5,21 @@ This guide covers usage only.
 
 ## Choose your runner
 
-PolicyWitness supports three runner modes:
+PolicyWitness supports two runner modes:
 
 1) Standard runner (built-in)
 - Default path; minimal entitlements (no debug allowances).
 - Select with `runner.mode="standard"` or `--runner-mode standard`.
 
-2) Debuggable runner (built-in)
-- Debug-friendly entitlements plus instrumentation ports.
-- Select with `runner.mode="debuggable"` or `--runner-mode debuggable`.
-- Tested by `tests/suites/runner_debuggable/run.sh`.
-
-3) BYOXPC runner (external XPC bundle)
+2) BYOXPC runner (external XPC bundle)
 - Use when you need extra entitlements; supply a signed `.xpc` bundle.
 - Service name must match the bundle's `CFBundleIdentifier` (no override).
 - Install with `policy-witness runner install --kind byoxpc ...`.
 - Tested by `tests/suites/runner_byoxpc/run.sh` (opt-in; GUI session required).
 
 If no runner is specified, PolicyWitness uses the built-in standard runner.
+Use BYOXPC when probes require debug-attach, DYLD env, custom dylib loading,
+JIT, or other entitlements the standard runner doesn't ship.
 
 ## Quick start (standard runner)
 
@@ -73,7 +70,6 @@ Top-level fields:
 - `policy`: object
 - `probe_plan`: array of steps
 - `runner`: object (optional; select runner mode and external runners)
-- `instrumentation`: object (optional, instrumentation port)
 
 Minimal skeleton (copy/paste):
 
@@ -88,8 +84,9 @@ Minimal skeleton (copy/paste):
 ```
 Notes:
 - All path rules live inside `policy.sbpl_source`; there is no `path_membership` field.
-- `instrumentation` (if any) sits next to `policy`, not inside it.
-- `probe_plan` can be empty when you only want instrumentation.
+- `probe_plan` may be empty when you only want to exercise sandbox apply
+  (the validator subprocess still launches and writes per-step
+  verdicts when steps are present).
 
 ### Policy
 
@@ -202,20 +199,15 @@ unsandboxed and spawns a short-lived worker that applies the specimen policy.
 
 - `validator_subprocess: { pid, exit_code, term_signal } | null` — the
   `sb_api_validator --batch` child the host spawns alongside the C
-  worker (the default code path after the runner reshape) to collect
-  `sandbox_check` verdicts against the sandboxed worker_pid.
-  `null` when no validator child was spawned, which happens in three
-  cases:
-    1. The request opted out of the C-worker path
-       (`_test_overrides.use_c_worker: false`, or `instrumentation`
-       set — both route to the legacy Swift worker, which doesn't
-       spawn a separate validator).
-    2. Every probe in the plan had an (operation, filter) pair in
+  worker to collect `sandbox_check` verdicts against the sandboxed
+  worker_pid. `null` when no validator child was spawned, which
+  happens in two cases:
+    1. Every probe in the plan had an (operation, filter) pair in
        the `prediction_unavailable` set — the orchestrator skipped
        the validator entirely because there were no probes to send,
        and synthesized the per-step `sandbox_check.outcome =
        "prediction_unavailable"` verdicts locally.
-    3. The validator failed to spawn before any metadata could be
+    2. The validator failed to spawn before any metadata could be
        captured (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
   Otherwise populated, with exactly one of `exit_code` (clean exit)
@@ -332,9 +324,9 @@ Currently in this category:
 
 - `(iokit-open-service, iokit_registry_entry_class)` — verified
   2026-05-29 unreliable across all candidate filter IDs in 1..200
-  against `IOSurfaceRoot`. The cross-check (`--sonoma-cross-check`)
-  mirrors with `status="skipped"` and an error that includes the
-  literal string `prediction_unavailable`.
+  against `IOSurfaceRoot`. The runner short-circuits
+  `sandbox_check.outcome` to `prediction_unavailable` (`rc=-1`); the
+  C-worker orchestrator omits the probe from the validator batch.
 - `(iokit-open-user-client, iokit_user_client_class)` — verified
   2026-05-29 with policy filter `IOSurfaceRootUserClient` and probe
   target `IOSurfaceRoot`. `iokit-open-user-client` is the SBPL
@@ -349,9 +341,10 @@ Currently in this category:
 Adding a pair to this set requires empirical verification via
 `tests/suites/witness_contract/harness/verify_filter_id.sh`. The
 matching code lives in
-`runner/ProbeRunner.swift::predictionUnavailableOpFilters` and
-`controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_PAIRS`;
-both lists must agree (source_drift enforces).
+`runner/ProbeRunner.swift::predictionUnavailableOpFilters` and is
+mirrored host-side by
+`runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
+both lists and this doc must agree (source_drift enforces).
 - `path_diagnostics` is emitted only for path-filter checks. Introduced in
   runner response `schema_version = 2`; consumers branching on
   `schema_version` can rely on its presence on any path-filter check at v2+.
@@ -364,14 +357,9 @@ both lists must agree (source_drift enforces).
 
   Producer: `path_diagnostics` is computed by the unsandboxed runner
   host (`PWRunnerService.enrichPathDiagnostics`) after the worker
-  process returns. Earlier builds computed it inside the worker; the
-  observable schema is unchanged but `realpath_resolved` is now
-  populated more reliably under restrictive policies (the worker's
-  stat is blocked by `(deny default)`; the host's is not). Consumers
-  that intentionally relied on `realpath_resolved == null` as a
-  signal that the worker's enclosing sandbox blocked the stat must
-  read another channel for that signal — `path_diagnostics` no
-  longer surfaces it.
+  process returns. The host's `realpath(3)` is not blocked by the
+  worker's `(deny default)` policy, so `realpath_resolved` is reliably
+  populated even under restrictive sandboxes.
 
   At v2+ all four keys are always emitted: a string when computed, an
   explicit `null` when the computation didn't produce a value. Consumers
@@ -404,119 +392,22 @@ Capture the sandbox_check argument quickly (no interpose needed):
 jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome, path_diagnostics}' run.json
 ```
 
-## Instrumentation (opt-in)
+## Debug-attach to the worker
 
-Instrumentation ports provide a user-friendly way to exercise the runner’s
-entitlement-backed capabilities. This field is optional; if omitted, behavior
-is unchanged. Results are reported under `instrumentation` in the run JSON and
-do not change the run outcome.
-These ports are part of the debuggable runner mode; use `runner.mode="debuggable"`
-(or `--runner-mode debuggable`) or an external runner signed with matching entitlements.
-Each port can specify an optional `phase`:
+To pause the worker for a debugger attach, set
+`_test_overrides.worker_post_apply_hang_ms: <N>` on the request. The
+C worker stays alive for `N` ms after applying the policy, giving
+you an `lldb -p <runner_subprocess.pid>` window. The same seam
+backs `tests/suites/witness_contract/worker_post_apply_hang_seam.sh`.
 
-- `pre_sandbox` (default)
-- `post_sandbox`
-
-Debug flow (quick recipe):
-
-The runner is two processes per specimen: an unsandboxed XPC service host
-that orchestrates, and a short-lived worker that applies the policy and
-runs the probe plan. Attach the debugger to the **worker** to inspect
-policy effects; the host never applies the policy and isn't useful for
-that purpose.
-
-1. Use the debuggable runner so `debug_wait` and `dylib_load` are honored:
-   add `"runner": { "mode": "debuggable" }` to the specimen, or pass
-   `--runner-mode debuggable` on the CLI.
-2. Add a `debug_wait` instrumentation port at `phase: "pre_sandbox"` (the
-   default) to open an attach window in the worker *before* sandbox apply.
-   Use `phase: "post_sandbox"` instead if you want to inspect the worker
-   *after* the sandbox is in effect.
-3. Run the specimen. While the worker is paused in `debug_wait`, find its
-   PID through the live process table:
-   ```sh
-   pgrep -lf -- '--apply-and-probe-worker'
-   ```
-   The worker's argv includes `--apply-and-probe-worker --specimen-id <id>`
-   so multiple concurrent workers are distinguishable by their specimen
-   label. The host process has the same Mach-O name but no `--apply-and-probe-worker`
-   in its argv — don't attach to that one.
-4. `lldb -p <worker-pid>` and proceed. `runner_subprocess.pid` in the
-   eventual JSON envelope confirms which worker you attached to.
-
-Run interactive `lldb`, `pgrep`, and `log stream` workflows from an
-unsandboxed Terminal. A sandboxed automation harness can block XPC
-lookup, process-table inspection, and unified-log capture before any
-runner code executes — that's an environment constraint, not a
-PolicyWitness behavior.
-
-Example specimen fragment:
-
-```json
-"instrumentation": {
-  "version": 1,
-  "ports": [
-    { "kind": "debug_wait", "sleep_ms": 5000 },
-    { "kind": "dylib_load", "path": "/path/to/lib.dylib", "symbol": "pw_instrumentation_init" },
-    { "kind": "execmem_probe", "size_bytes": 4096 },
-    { "kind": "dyld_env", "keys": ["DYLD_INSERT_LIBRARIES"] }
-  ]
-}
-```
-
-Notes:
-- `dylib_load` expects an optional no-arg symbol (C `void func(void)`).
-
-Ports (v1):
-- `dylib_load`: load a dylib and optionally call a symbol (uses `com.apple.security.cs.disable-library-validation`).
-- `debug_wait`: sleep before sandbox apply for debugger attach (uses `com.apple.security.get-task-allow`).
-- `execmem_probe`: attempt a JIT mapping (`MAP_JIT`, `PROT_READ|PROT_WRITE`) and report success/failure (requires `com.apple.security.cs.allow-jit`; falls back to legacy RWX if available).
-- `dyld_env`: report expected `DYLD_*` env vars (observation only; for actual `DYLD_*` injection use an external runner installed with `--env DYLD_*`).
-
-Convenience flag (injects instrumentation into the request JSON at runtime):
+Custom dylib injection, JIT, DYLD env, and other entitlement-backed
+inspection paths go through BYOXPC: install a signed `.xpc` bundle
+with the entitlements you need and select it via `runner.id` or
+`runner.service`. To set `DYLD_*` env vars, supply them at install
+time:
 
 ```sh
-$PW run /path/to/request.json --instrumentation @/path/to/instrumentation.json
-```
-
-Example specimen (full, minimal):
-
-```json
-{
-  "schema_version": 1,
-  "specimen_id": "instrumentation_debug_wait",
-  "runner": {
-    "mode": "debuggable"
-  },
-  "policy": {
-    "format": "sbpl",
-    "sbpl_source": "(version 1) (allow default)"
-  },
-  "instrumentation": {
-    "version": 1,
-    "ports": [
-      { "kind": "debug_wait", "sleep_ms": 1 }
-    ]
-  },
-  "probe_plan": []
-}
-```
-
-Explanation: this pauses briefly before sandbox apply; the run JSON includes an
-`instrumentation` report with the port status and `sleep_ms`, and the overall
-run outcome remains `ok`.
-
-Guide (quick start):
-
-1. Pick a port and add it to your specimen or create a small `instrumentation.json`.
-2. Run with `policy-witness run <request.json> --instrumentation @instrumentation.json`.
-3. Inspect `data.runner_result.instrumentation` in the output JSON for per-port status.
-
-Note: `dyld_env` is a check only. To actually set `DYLD_*` variables, use an
-external runner and set launchd `EnvironmentVariables` at install time:
-
-```sh
-$PW runner install --kind byoxpc --bundle /path/to/PWRunnerDebug.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
+$PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
 ```
 
 ## External runners (BYOXPC)
@@ -526,7 +417,7 @@ BYOXPC is the only external runner kind.
 
 ### What you need
 
-- A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc` or `PWRunnerDebug.xpc`).
+- A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc`).
 - A signing identity (Developer ID Application) or ad-hoc signing for local use.
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
@@ -539,12 +430,12 @@ recommended starting point.
 ```sh
 PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
-ENT="$PWD/runner/services/PWRunnerDebug/Entitlements.plist"
+ENT="$PWD/path/to/your-byoxpc-entitlements.plist"
 BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
 
 mkdir -p "$(dirname "$BYO")"
 rm -rf "$BYO"
-cp -R dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc "$BYO"
+cp -R dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc "$BYO"
 
 $PW runner install --kind byoxpc \
   --bundle "$BYO" \
@@ -553,7 +444,7 @@ $PW runner install --kind byoxpc \
   --allow-adhoc \
   --scope user
 
-$PW runner verify --service-name com.yourteam.policy-witness.PWRunnerDebug --timeout-ms 2000
+$PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
 ```
 
 ### Install a BYOXPC runner
@@ -561,7 +452,7 @@ $PW runner verify --service-name com.yourteam.policy-witness.PWRunnerDebug --tim
 ```sh
 $PW runner install \
   --kind byoxpc \
-  --bundle /path/to/PWRunnerDebug.xpc \
+  --bundle /path/to/MyRunner.xpc \
   --identity "Developer ID Application: Your Name (TEAMID)" \
   --entitlements /path/to/entitlements.plist \
   --scope user
@@ -619,8 +510,8 @@ Alternative: select by service name:
 ```
 
 `runner.mode` is optional; when present it must equal `byoxpc` for external
-runners. Valid modes: `standard`, `debuggable`, `byoxpc`.
-`required_entitlements` enforces a superset check before dispatch.
+runners. Valid modes: `standard`, `byoxpc`. `required_entitlements` enforces
+a superset check before dispatch.
 
 Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
@@ -692,10 +583,7 @@ Registry location:
 
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
-- `--runner-mode <standard|debuggable|byoxpc>`: inject `runner.mode` into the request
-- `--instrumentation <json|@path>`: inject instrumentation ports into the request
-- `--sonoma-cross-check`: run an sb_api_validator cross-check against the runner PID
-  while it is paused post-sandbox; results are attached under `data.sonoma_cross_check`
+- `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 
 ## Troubleshooting
 
@@ -727,11 +615,11 @@ Registry location:
   filesystem; `pgrep -fl PWRunner` should show no stragglers.
 - If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
   run from a normal Terminal to confirm behavior.
-- If `--sonoma-cross-check` reports `blocked` or `unavailable`, rerun from an
-  unsandboxed Terminal context (the helper needs to observe a live runner PID).
 
 Common decode errors (quick fixes)
 - `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
 - `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
 - `unknown field 'path_membership'`: path rules belong in `policy.sbpl_source` as SBPL, not as JSON fields.
-- Instrumentation ignored: ensure `instrumentation` is top level and `runner.mode` is `debuggable` (or use `--runner-mode debuggable`, or an external runner with matching entitlements).
+- `runner.mode=debuggable` or top-level `instrumentation` field rejected:
+  these are not supported. Install a BYOXPC runner with the entitlements
+  you need and select it via `runner.id` or `runner.service`.

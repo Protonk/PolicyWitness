@@ -1,8 +1,8 @@
 /*
  * pw_probe_runner.c — sandboxed C worker that owns the post-apply
- * syscall surface. Per RUNNER-RESHAPE-PLAN.md Step 5 (R5/R6/R7/R8).
+ * syscall surface.
  *
- * Flow (Chunk 2):
+ * Flow:
  *   1. Parse argv: --shm-fd <N> --ready-fd <N> --step-count <N>
  *                  [--policy-fd <N>] (defaults to stdin).
  *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
@@ -79,13 +79,12 @@ typedef struct {
     int ready_fd;
     int policy_fd;
     uint32_t step_count;
-    /* Post-apply hang gate (RUNNER-RESHAPE-PLAN R12b /
-     * _test_overrides.worker_post_apply_hang_ms). When > 0, the
-     * worker calls nanosleep(N ms) AFTER every slot's `completed`
-     * flag is written but BEFORE the `done` sentinel flips. Pushes
-     * the host past its sentinel deadline so the runner_timeout
-     * outcome is reachable from a real test specimen on the C-worker
-     * path. Defaults to 0 (no hang). Safe to leave 0 in production. */
+    /* Post-apply hang gate (_test_overrides.worker_post_apply_hang_ms).
+     * When > 0, the worker calls nanosleep(N ms) AFTER every slot's
+     * `completed` flag is written but BEFORE the `done` sentinel
+     * flips. Pushes the host past its sentinel deadline so the
+     * runner_timeout outcome is reachable from a real test specimen.
+     * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
 } pw_args_t;
 
@@ -616,13 +615,13 @@ int main(int argc, char **argv) {
     }
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a
-     * maximally hostile policy — but R12b's contract is for tests
-     * running under cooperative policies (typically allow-default
-     * with a long-enough host deadline that the hang exceeds it). On
-     * an apply-default policy that survives slot execution at all,
-     * nanosleep will too. The post-done spin loop is unaffected; this
-     * fires before done flips, so a hung host observes
-     * applied=1, done=0 — exactly the runner_timeout shape. */
+     * maximally hostile policy — but the post-apply-hang test seam
+     * is for tests running under cooperative policies (typically
+     * allow-default with a long-enough host deadline that the hang
+     * exceeds it). On an apply-default policy that survives slot
+     * execution at all, nanosleep will too. The post-done spin loop
+     * is unaffected; this fires before done flips, so a hung host
+     * observes applied=1, done=0 — exactly the runner_timeout shape. */
     if (args.post_apply_hang_ms > 0) {
         long ns = args.post_apply_hang_ms * 1000000L;
         struct timespec ts = {

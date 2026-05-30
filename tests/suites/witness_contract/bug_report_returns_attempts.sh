@@ -48,14 +48,13 @@ runner = env.get("data", {}).get("runner_result") or {}
 steps = runner.get("steps") or []
 if not steps:
     raise SystemExit(
-        "PHASE 0 — steps[] is empty; the Swift worker dies under bare deny-default before recording attempts. "
-        "Passes when Step 6 lands (C worker preserves attempts under restrictive policies)."
+        "steps[] is empty under bare deny-default; the C worker should "
+        "preserve attempts even under restrictive policies."
     )
 at = steps[0].get("attempt") or {}
 if not isinstance(at.get("rc"), int):
     raise SystemExit(
-        f"PHASE 0 — first step's attempt.rc is not an int (got {at.get('rc')!r}). "
-        "Passes when Step 6 lands."
+        f"first step's attempt.rc is not an int (got {at.get('rc')!r})"
     )
 PY
 ASSERT_RC=$?

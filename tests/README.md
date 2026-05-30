@@ -34,7 +34,6 @@ make test
 ./tests/run.sh --suite preflight
 ./tests/run.sh --suite unit
 ./tests/run.sh --suite integration
-./tests/run.sh --suite runner_debuggable
 ./tests/run.sh --suite runner_byoxpc
 ./tests/run.sh --suite anomalies
 ./tests/run.sh --describe --all
@@ -50,7 +49,6 @@ Baseline (default in `--all`):
 - `preflight`: codesign/entitlements inventory matches the built bundle.
 - `unit`: controller unit logic passes.
 - `integration`: CLI contract + runner envelope work end-to-end for simple specimens.
-- `runner_debuggable`: smoke + blackbox coverage through the built-in debuggable runner.
 
 Extended (opt-in; host-dependent skips are normal):
 - `runner_byoxpc`: smoke + blackbox coverage through a BYOXPC runner.
@@ -69,7 +67,6 @@ see `tests/suites/<suite>/README.md`.
 - `preflight`: codesign/entitlements inspection only (no execution)
 - `unit`: Rust unit tests (`cargo test --bins`)
 - `integration`: Rust integration tests (`cargo test --tests`), primarily `controller/integration/cli_contract.rs`
-- `runner_debuggable`: smoke + blackbox coverage via the built-in debuggable runner
 - `runner_byoxpc`: smoke + blackbox coverage via a BYOXPC runner (opt-in)
 - `anomalies`: structured reproductions of alleged system bugs (tests pass when the anomaly is reproduced)
 

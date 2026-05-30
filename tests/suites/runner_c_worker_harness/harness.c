@@ -118,8 +118,8 @@ static const char SCEN_ALLOW_DEFAULT_POLICY[] =
     "(allow default)\n";
 
 /* The downstream bug-report shape: (deny default) with nothing else.
- * The pre-Step-5 Swift worker died here. The C worker must keep its
- * shared-memory writes + spin loop alive under this profile. */
+ * The C worker must keep its shared-memory writes + spin loop alive
+ * under this profile. */
 static const char SCEN_DENY_DEFAULT_POLICY[] =
     "(version 1)\n"
     "(deny default)\n";
@@ -227,9 +227,9 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         hdr->param_count = scen->populate_params(params);
     }
 
-    /* R8 requires the host to pre-touch every page it expects the
-     * worker to write after apply. Write each page before the worker is
-     * spawned so the post-apply path never depends on lazy allocation. */
+    /* The host pre-touches every page it expects the worker to write
+     * after apply, so the post-apply path never depends on lazy
+     * allocation (which a strict sandbox would block). */
     long page_size = sysconf(_SC_PAGESIZE);
     if (page_size <= 0) page_size = 4096;
     volatile unsigned char *touch = (volatile unsigned char *)base;

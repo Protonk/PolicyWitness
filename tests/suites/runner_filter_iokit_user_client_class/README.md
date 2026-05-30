@@ -26,11 +26,10 @@ the open creates).
 ## What this suite does NOT cover
 
 The attempt slot is a benign file `open_read` placeholder — there is
-no Channel A coverage of the `iokit-open-user-client` operation in
-this runner today. Real iokit attempts land when the C probe-runner
-(RUNNER-RESHAPE-PLAN Step 4) adds the operation kind. The suite
-asserts `attempt.outcome != "unsupported"` so a regression to an
-unsupported action would fail loudly.
+no Channel A coverage of the `iokit-open-user-client` operation
+today (the C probe-runner doesn't implement iokit attempts yet).
+The suite asserts `attempt.outcome != "unsupported"` so a
+regression to an unsupported action would fail loudly.
 
 ## Success criteria
 
@@ -40,8 +39,6 @@ unsupported action would fail loudly.
   disambiguates "no prediction" from rc=0 "allow").
 - `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
   `attempt.rc` is populated.
-- `sonoma_cross_check.steps[0].status == "skipped"` with an error
-  containing `"prediction_unavailable"`.
 
 ## Fixtures
 

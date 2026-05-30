@@ -16,9 +16,8 @@ enforcement applies to syscall-level operations too.
 ## What this suite does NOT cover
 
 The attempt slot is a benign file `open_read` placeholder — there is
-no Channel A coverage of the `sysctl-read` operation in this runner
-today. Real sysctl attempts land when the C probe-runner
-(RUNNER-RESHAPE-PLAN Step 4) adds the operation kind. The suite
+no Channel A coverage of the `sysctl-read` operation today (the
+C probe-runner doesn't implement sysctl attempts yet). The suite
 asserts `attempt.outcome != "unsupported"` so a regression to an
 unsupported action would fail loudly.
 
@@ -40,8 +39,6 @@ unsupported action would fail loudly.
 - `runner_result.steps[0].sandbox_check.rc == -1`.
 - `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
   `attempt.rc` is populated.
-- `sonoma_cross_check.steps[0].status == "skipped"` with an error
-  containing `"prediction_unavailable"`.
 
 ## Fixtures
 

@@ -14,12 +14,12 @@ pub fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is passed through to the runner client (or copied with runner mode/instrumentation injected)"
+  - request.json is passed through to the runner client (or copied with runner mode injected)"
     );
 }
 

@@ -29,7 +29,6 @@ unset PW_TEST_RUNNER_MODE
 unset PW_TEST_RUNNER_SERVICE
 unset PW_TEST_RUNNER_EXPECT_KIND
 
-run_test "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh"
 run_test "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh"
 
 RUNNER_ENV_PATH="${PW_TEST_OUT_DIR}/suites/runner_byoxpc/runner_install/artifacts/runner_env.json"
@@ -69,8 +68,6 @@ export PW_TEST_RUNNER_SERVICE="${SERVICE_NAME}"
 export PW_TEST_RUNNER_EXPECT_KIND="byoxpc"
 
 run_test "${ROOT_DIR}/tests/suites/smoke/pw_specimen_smoke.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_instrumentation_execmem.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_instrumentation_invalid_phase.sh"
 run_test "${ROOT_DIR}/tests/suites/blackbox_menagerie/run.sh"
 run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/run.sh"
 

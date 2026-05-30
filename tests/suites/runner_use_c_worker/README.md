@@ -1,22 +1,22 @@
 # runner_use_c_worker
 
-End-to-end coverage for the C-worker code path (the production
-default after RUNNER-RESHAPE-PLAN Step 6.8b). Specimens here set
-`_test_overrides.use_c_worker: true` explicitly so the assertions
-stay deterministic against the orchestration code under test even
-if a future routing change moves the defaults again.
+End-to-end coverage for the runner's C code path. Specimens here
+intentionally carry no `_test_overrides`, so each run also
+double-checks that production-shape requests assemble a complete
+v4 envelope without test-seam help.
 
-The C-worker path runs `pw-probe-runner` (attempts) +
-`sb_api_validator --batch` (sandbox_check verdicts) as two children
-of the XPC service,
-joined into a single `PWRunnerRunResult` envelope by
-`CWorkerOrchestrator`. Step 6.4's v4 schema additions
+The runner runs `pw-probe-runner` (attempts) + `sb_api_validator
+--batch` (sandbox_check verdicts) as two children of the XPC
+service, joined into a single `PWRunnerRunResult` envelope by
+`CWorkerOrchestrator`. The v4 schema additions
 (`validator_subprocess`, `steps[].drift`) carry the new evidence.
 
 ## What's pinned
 
-Three test_ids, each driving a real specimen through the
-controller → XPC service → orchestrator → both children:
+Ten test_ids, each driving a real specimen through the
+controller → XPC service → orchestrator → both children. The first
+three pin the basic v4 envelope shape; the rest are regression
+guards for the request-validation and drift-classification rules:
 
 1. **happy_default_allow** — `(allow default)` + one file read.
    Asserts:
@@ -28,11 +28,11 @@ controller → XPC service → orchestrator → both children:
      F_GETPATH; validates path_diagnostics enrichment also fires on
      the new path)
    - `steps[0].drift == false`
-   - `_test_overrides.use_c_worker` mirrored back
+   - `test_overrides == null` (production-shape run, no test seam)
 
 2. **bare_deny_default** — the downstream bug-report shape: bare
-   `(deny default)` with one file read. The Swift worker dies here
-   without producing step results; the C worker survives. Asserts:
+   `(deny default)` with one file read. The C worker survives this
+   policy. Asserts:
    - run completes (`normalized_outcome == "ok"`, both children
      clean-exited)
    - validator predicted `deny`, attempt observed `open_failed` with
@@ -48,26 +48,39 @@ controller → XPC service → orchestrator → both children:
    - `drift == null` (no comparison possible)
    - the attempt still ran
 
+4. **duplicate_step_id_rejected** — request with two probes that
+   share a `step_id`. Asserts `normalized_outcome == "bad_request"`
+   before any worker spawn (pre-spawn `validateProbePlanForCWorker`).
+5. **unsupported_attempt_rejected** — request with an
+   `attempt.kind`/`action` combination the C worker doesn't
+   implement. Same pre-spawn bad_request shape.
+6. **worker_timeout_ms_honored** — `_test_overrides.worker_timeout_ms`
+   paired with `_test_overrides.worker_post_apply_hang_ms` makes the
+   host SIGKILL the hung C worker. Asserts `runner_timeout`.
+7. **drift_null_for_non_policy_failure** — non-sandbox lookup
+   failure (`BOOTSTRAP_UNKNOWN_SERVICE`). Asserts `drift == null`
+   because the attempt didn't fail for a sandbox-policy reason.
+8. **sandbox_check_pid_matches_worker** — `sandbox_check.pid` is
+   the sandboxed worker PID consistently across both
+   validator-backed and orchestrator-synthesized verdicts.
+9. **drift_null_for_dac_eacces** — DAC EPERM/EACCES on a file
+   denied by filesystem perms (not the sandbox). Asserts
+   `drift == null` to avoid false libsandbox-drift attribution.
+10. **access_failure_classified** — `access(R_OK)` on a denied path
+    surfaces as `attempt.outcome == "access_failed"` with errno
+    preserved.
+
 ## What this suite does NOT cover
 
-- **Validator failure outcomes** (`validator_spawn_failed`,
-  `validator_no_reply`, `validator_decode_failure`,
-  `validator_unavailable`). Step 6.5 added the constants and
-  classifier rules; coverage for each lands as a separate suite
-  driven via `_test_overrides.validator_executable_path` and similar
-  seams (analogous to the existing `runner_outcome_*` suites).
-- **`runner_timeout` on the C-worker path.** Driven by
-  `_test_overrides.worker_post_apply_hang_ms` once a dedicated suite
-  lands (the unit test `postApplyHangMs > sentinelTimeoutMs produces
-  done=false` already pins the underlying mechanism).
-- **`sandbox_apply_failed`.** The Step 6.5 vocabulary handles it;
-  e2e coverage via a malformed-SBPL specimen is straightforward but
-  not yet scripted.
-- **Routing default semantics.** The suite always sets
-  `use_c_worker: true` explicitly so the assertions don't depend on
-  the routing precedence chain in PWRunnerService. Default routing
-  (the implicit-flag behaviour) is exercised by the rest of the
-  default battery; this suite focuses on the orchestration shape.
+- **Validator failure outcomes** (`validator_no_reply`,
+  `validator_decode_failure`, `validator_unavailable`). The
+  `witness_contract/validator_spawn_failed_reports_degraded` suite
+  covers `validator_spawn_failed`; the remaining three are wired in
+  the classifier (`CWorkerOrchestrator`) but lack dedicated e2e
+  specimens.
+- **`sandbox_apply_failed`.** Reachable when `sandbox_apply`
+  returns nonzero inside the C worker; not yet driven by an
+  e2e specimen.
 
 ## Run
 

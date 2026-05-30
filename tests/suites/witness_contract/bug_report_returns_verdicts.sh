@@ -49,8 +49,8 @@ steps = runner.get("steps") or []
 if not steps:
     outcome = runner.get("normalized_outcome")
     raise SystemExit(
-        f"PHASE 0 — steps[] is empty (outcome={outcome!r}); the worker dies under bare deny-default. "
-        "Passes when Step 6 lands (C worker + validator-primary) or sooner via cross-check augmentation."
+        f"steps[] is empty (outcome={outcome!r}); the bug-report "
+        f"specimen should produce a verdict for each probe."
     )
 sb = steps[0].get("sandbox_check") or {}
 if sb.get("outcome") not in ("allow", "deny"):

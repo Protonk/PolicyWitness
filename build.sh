@@ -30,13 +30,9 @@ XPC_ROOT="${ROOT_DIR}/runner"
 XPC_RUNNER_API_FILE="${XPC_ROOT}/PWRunnerAPI.swift"
 XPC_RUNNER_SANDBOX_LIB_FILE="${XPC_ROOT}/SandboxLib.swift"
 XPC_RUNNER_SANDBOX_APPLY_FILE="${XPC_ROOT}/SandboxApply.swift"
-XPC_RUNNER_INSTRUMENTATION_FILE="${XPC_ROOT}/Instrumentation.swift"
 XPC_RUNNER_PROBE_RUNNER_FILE="${XPC_ROOT}/ProbeRunner.swift"
 XPC_RUNNER_PATH_UTILS_FILE="${XPC_ROOT}/PathUtils.swift"
 XPC_RUNNER_SIGNALS_FILE="${XPC_ROOT}/Signals.swift"
-XPC_RUNNER_WORKER_WIRE_FILE="${XPC_ROOT}/PWRunnerWorkerWire.swift"
-XPC_RUNNER_WORKER_ENTRY_FILE="${XPC_ROOT}/WorkerEntry.swift"
-XPC_RUNNER_WORKER_PROCESS_FILE="${XPC_ROOT}/WorkerProcess.swift"
 XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/CWorker.swift"
 XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/ValidatorClient.swift"
 XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/CWorkerOrchestrator.swift"
@@ -45,19 +41,19 @@ XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CWORKER_SHIM="${XPC_ROOT}/PWCWorkerShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
-XPC_SERVICE_NAMES=("PWRunner" "PWRunnerDebug")
+XPC_SERVICE_NAMES=("PWRunner")
 
 # Host-side sandbox_check cross-check helper.
 SB_API_VALIDATOR_DIR="${ROOT_DIR}/controller/tools/sb_api_validator"
 SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
 SB_API_VALIDATOR_BIN="${SB_API_VALIDATOR_DIR}/sb_api_validator"
 
-# Sandboxed C worker spawned by the runner host. Per
-# RUNNER-RESHAPE-PLAN.md R5, this binary is embedded INSIDE each XPC
-# service bundle (not in the app's top-level MacOS dir), so the
-# runner host resolves it relative to its own bundle and built-in vs
-# BYOXPC runners both pick up the correct copy. The single source is
-# built once and copied into each XPC service.
+# Sandboxed C worker spawned by the runner host. This binary is
+# embedded INSIDE each XPC service bundle (not in the app's top-level
+# MacOS dir), so the runner host resolves it relative to its own
+# bundle and built-in vs BYOXPC runners both pick up the correct
+# copy. The single source is built once and copied into each XPC
+# service.
 PW_PROBE_RUNNER_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
 PW_PROBE_RUNNER_SRC="${PW_PROBE_RUNNER_DIR}/pw_probe_runner.c"
 PW_PROBE_RUNNER_HDR="${PW_PROBE_RUNNER_DIR}/pw_probe_runner_abi.h"
@@ -231,6 +227,13 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 cp "${SBPL_PREFLIGHT_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
 
+# sb_api_validator is embedded INSIDE each XPC service bundle (see
+# the XPC build loop below) and resolved relative to that bundle by
+# the runner host. The top-level copy below is preserved for
+# diagnostic tooling — test harnesses under
+# `tests/suites/{validator_batch_mode,witness_contract/harness}/`
+# invoke the validator CLI directly to exercise its `--batch` and
+# per-probe modes outside any runner flow.
 cp "${SB_API_VALIDATOR_BIN}" "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
@@ -254,10 +257,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SANDBOX_APPLY_FILE}" 1>&2
     exit 2
   fi
-  if [[ ! -f "${XPC_RUNNER_INSTRUMENTATION_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_INSTRUMENTATION_FILE}" 1>&2
-    exit 2
-  fi
   if [[ ! -f "${XPC_RUNNER_PROBE_RUNNER_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_PROBE_RUNNER_FILE}" 1>&2
     exit 2
@@ -268,18 +267,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   fi
   if [[ ! -f "${XPC_RUNNER_SIGNALS_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SIGNALS_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_WORKER_WIRE_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_WORKER_WIRE_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_WORKER_ENTRY_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_WORKER_ENTRY_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_WORKER_PROCESS_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_WORKER_PROCESS_FILE}" 1>&2
     exit 2
   fi
   if [[ ! -f "${XPC_RUNNER_CWORKER_FILE}" ]]; then
@@ -348,13 +335,9 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_API_FILE}" \
       "${XPC_RUNNER_SANDBOX_LIB_FILE}" \
       "${XPC_RUNNER_SANDBOX_APPLY_FILE}" \
-      "${XPC_RUNNER_INSTRUMENTATION_FILE}" \
       "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
       "${XPC_RUNNER_PATH_UTILS_FILE}" \
       "${XPC_RUNNER_SIGNALS_FILE}" \
-      "${XPC_RUNNER_WORKER_WIRE_FILE}" \
-      "${XPC_RUNNER_WORKER_ENTRY_FILE}" \
-      "${XPC_RUNNER_WORKER_PROCESS_FILE}" \
       "${XPC_RUNNER_CWORKER_FILE}" \
       "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
       "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
@@ -364,15 +347,14 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
 
     # Embed pw-probe-runner inside the XPC service bundle so the host
     # resolves it relative to its own bundle for both built-in and
-    # BYOXPC runners (per RUNNER-RESHAPE-PLAN.md R5).
+    # BYOXPC runners.
     cp "${PW_PROBE_RUNNER_BIN}" "${svc_bundle}/Contents/MacOS/pw-probe-runner"
     chmod +x "${svc_bundle}/Contents/MacOS/pw-probe-runner"
 
     # Embed sb_api_validator alongside pw-probe-runner for the same
     # bundle-local resolution reason — BYOXPC runners live outside any
     # app bundle, so the orchestrator's app-level fallback would miss.
-    # The orchestrator checks bundle-local first (post-Step-6.8a audit
-    # finding #6).
+    # The orchestrator checks bundle-local first.
     cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
     chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
   done

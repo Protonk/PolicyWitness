@@ -28,22 +28,19 @@ drift = Path(sys.argv[3]).read_text(encoding="utf-8")
 # 1. AttemptOutcome enum must exist in PWRunnerAPI.swift.
 if "public enum AttemptOutcome" not in api:
     raise SystemExit(
-        "PHASE 0 — AttemptOutcome enum is not yet defined in runner/PWRunnerAPI.swift. "
-        "Passes when R13 lands."
+        "AttemptOutcome enum is not defined in runner/PWRunnerAPI.swift."
     )
 
 # 2. tests/INDEX.md must contain a matrix section for attempt outcomes.
 if "## Attempt outcome coverage matrix" not in index:
     raise SystemExit(
-        "PHASE 0 — tests/INDEX.md has no 'Attempt outcome coverage matrix' section. "
-        "Passes when R13 lands."
+        "tests/INDEX.md has no 'Attempt outcome coverage matrix' section."
     )
 
 # 3. source_drift's check must reference attempt outcomes.
 if "AttemptOutcome" not in drift:
     raise SystemExit(
-        "PHASE 0 — tests/suites/source_drift/check.py does not enforce the AttemptOutcome matrix. "
-        "Passes when R13 lands."
+        "tests/suites/source_drift/check.py does not enforce the AttemptOutcome matrix."
     )
 
 # 4. Every AttemptOutcome constant has a matrix row.

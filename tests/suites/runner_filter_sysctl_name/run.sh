@@ -38,12 +38,9 @@ spec = {
             "filter": {"kind": "sysctl_name", "value": "kern.osrelease"},
         },
         # Sysctl attempts aren't a runner attempt kind today; we pair
-        # with a benign file open_read (a SUPPORTED action — the prior
-        # "access" placeholder silently returned outcome=unsupported) so
-        # the attempt slot is populated for envelope shape checks. This
-        # does NOT observe sysctl-read; the assertion below is about
-        # the prediction path. Real sysctl attempts land when the C
-        # probe-runner (Step 4) adds the operation kind.
+        # with a benign file open_read so the attempt slot is populated
+        # for envelope shape checks. This does NOT observe sysctl-read;
+        # the assertion below is about the prediction path.
         "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
@@ -52,7 +49,7 @@ PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" --sonoma-cross-check >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
 RC=$?
 set -e
 
@@ -96,17 +93,6 @@ if attempt.get("outcome") == "unsupported":
     )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
-
-cross = env.get("data", {}).get("sonoma_cross_check") or {}
-cross_steps = cross.get("steps") or []
-if not cross_steps:
-    raise SystemExit("expected sonoma_cross_check.steps to be present")
-cstep = cross_steps[0]
-if cstep.get("status") != "skipped":
-    raise SystemExit(f"expected cross-check status=skipped, got {cstep.get('status')!r}")
-err = cstep.get("error") or ""
-if "prediction_unavailable" not in err:
-    raise SystemExit(f"expected cross-check error to identify prediction_unavailable (got {err!r})")
 PY
 ASSERT_RC=$?
 set -e
@@ -115,4 +101,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "sysctl_name: prediction_unavailable surfaced; attempt observed; cross-check mirrored" "{}"
+test_pass "sysctl_name: prediction_unavailable surfaced; attempt observed" "{}"

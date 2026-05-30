@@ -17,7 +17,6 @@ run_test() {
 }
 
 run_test "${ROOT_DIR}/tests/suites/anomalies/sbpl_allowdeny_v1.sh"
-run_test "${ROOT_DIR}/tests/suites/anomalies/sonoma_cross_check.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1

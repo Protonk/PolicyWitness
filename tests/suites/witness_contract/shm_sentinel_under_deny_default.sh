@@ -16,14 +16,13 @@ test_step "run" "C harness applies (deny default), writes applied sentinel to pr
 # applies a (deny default) policy, then writes a sentinel byte via a
 # memory store (no syscall) and spins. The parent reads the byte.
 #
-# When the source is present, this test auto-builds the harness
-# idempotently and runs it. When the source is missing, it reports PHASE 0.
+# This test auto-builds the harness idempotently and runs it.
 HARNESS_DIR="${ROOT_DIR}/tests/suites/witness_contract/harness"
 HARNESS="${HARNESS_DIR}/sentinel_harness"
 SOURCE="${HARNESS_DIR}/sentinel_harness.c"
 
 if [[ ! -f "${SOURCE}" ]]; then
-  test_fail "PHASE 0 — sentinel harness source absent at ${SOURCE} (passes when R8 verification lands as part of Step 1)" "{}"
+  test_fail "sentinel harness source absent at ${SOURCE}" "{}"
 fi
 
 # Rebuild if missing or stale.

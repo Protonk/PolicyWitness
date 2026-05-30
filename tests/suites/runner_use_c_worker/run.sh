@@ -13,7 +13,7 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 run_happy_default_allow() {
   local test_id="happy_default_allow"
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "_test_overrides.use_c_worker=true routes through pw-probe-runner + sb_api_validator --batch; full v4 envelope assembles"
+  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full v4 envelope"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
@@ -33,8 +33,7 @@ run_happy_default_allow() {
       "filter": {"kind": "path", "value": "/etc/hosts"}
     },
     "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 
@@ -63,9 +62,11 @@ assert r["validator_subprocess"] is not None, "validator_subprocess missing"
 assert r["validator_subprocess"]["exit_code"] == 0
 assert r["runner_subprocess"] is not None, "runner_subprocess missing"
 assert r["runner_subprocess"]["exit_code"] == 0
-assert r["test_overrides"]["use_c_worker"] is True, "override not mirrored back"
+# Production-shape specimens carry no _test_overrides, so the
+# envelope should report test_overrides=null.
+assert r.get("test_overrides") is None, "expected null test_overrides for production-shape run"
 
-# top-level pid is the worker (per v3+ contract; preserved at v4).
+# top-level pid is the worker.
 assert r["pid"] == r["runner_subprocess"]["pid"], "top-level pid should equal runner_subprocess.pid"
 
 # Step: validator predicted allow, attempt observed ok, drift false.
@@ -85,7 +86,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "use_c_worker=true produces complete v4 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "C-worker path produces complete v4 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: bare_deny_default ------------------------------------------
@@ -93,7 +94,7 @@ PY
 run_bare_deny_default() {
   local test_id="bare_deny_default"
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "the downstream bug-report shape: (deny default) produces a coherent envelope on the C-worker path (Swift worker dies here)"
+  test_step "run" "the downstream bug-report shape: (deny default) produces a coherent envelope on the C-worker path"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
@@ -113,8 +114,7 @@ run_bare_deny_default() {
       "filter": {"kind": "path", "value": "/etc/hosts"}
     },
     "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 
@@ -189,8 +189,7 @@ run_prediction_unavailable_pair() {
       "filter": {"kind": "iokit_registry_entry_class", "value": "IOSurfaceRoot"}
     },
     "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 
@@ -254,8 +253,7 @@ run_duplicate_step_id_rejected() {
   "probe_plan": [
     {"step_id": "dup", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}},
     {"step_id": "dup", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}}
-  ],
-  "_test_overrides": { "use_c_worker": true }
+  ]
 }
 EOF
 
@@ -309,8 +307,7 @@ run_unsupported_attempt_rejected() {
     "step_id": "s1",
     "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
     "attempt": {"kind": "file", "action": "totally_not_a_real_action", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 
@@ -365,7 +362,6 @@ run_worker_timeout_ms_honored() {
     "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
   }],
   "_test_overrides": {
-    "use_c_worker": true,
     "worker_timeout_ms": 500,
     "worker_post_apply_hang_ms": 1500
   }
@@ -430,8 +426,7 @@ run_drift_null_for_non_policy_failure() {
     "step_id": "s_unknown_service",
     "sandbox_check": {"operation": "mach-lookup", "filter": {"kind": "global_name", "value": "com.pw.test.no-such-service"}},
     "attempt": {"kind": "mach_lookup", "action": "bootstrap_look_up", "target": "com.pw.test.no-such-service"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 
@@ -491,8 +486,7 @@ run_sandbox_check_pid_matches_worker() {
   "probe_plan": [
     {"step_id": "s_validator", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}},
     {"step_id": "s_synth", "sandbox_check": {"operation": "iokit-open-service", "filter": {"kind": "iokit_registry_entry_class", "value": "IOSurfaceRoot"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}}
-  ],
-  "_test_overrides": { "use_c_worker": true }
+  ]
 }
 EOF
 
@@ -565,7 +559,6 @@ spec = {
         "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": sys.argv[2]}},
         "attempt": {"kind": "file", "action": "open_read", "target": sys.argv[2]},
     }],
-    "_test_overrides": {"use_c_worker": True},
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -632,8 +625,7 @@ run_access_failure_classified() {
     "step_id": "s_access",
     "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
     "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": { "use_c_worker": true }
+  }]
 }
 EOF
 

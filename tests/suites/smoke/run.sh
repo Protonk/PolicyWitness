@@ -17,8 +17,6 @@ run_test() {
 }
 
 run_test "${ROOT_DIR}/tests/suites/smoke/pw_specimen_smoke.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_instrumentation_execmem.sh"
-run_test "${ROOT_DIR}/tests/suites/smoke/pw_instrumentation_invalid_phase.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1

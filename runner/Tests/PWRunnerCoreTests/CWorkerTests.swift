@@ -5,8 +5,8 @@ import Foundation
  * CWorkerTests — exercises the Swift CWorker driver against the
  * bundled pw-probe-runner binary. Mirrors the scenarios in the C
  * harness suite (tests/suites/runner_c_worker_harness/) but from
- * Swift, so the integration paths the Step 6.3 host wiring will
- * depend on are exercised inside the same process the host runs.
+ * Swift, so the integration paths the host depends on are exercised
+ * inside the same process the host runs.
  *
  * Skips cleanly when pw-probe-runner isn't built (e.g. fresh
  * checkout without `./build.sh`). Pin: the worker path resolves
@@ -212,7 +212,7 @@ func runCWorkerTests(_ tk: TestKit) {
             }
         }
 
-        // ---- postApplyHangMs test seam (Step 6.6 / R12b) -------------------
+        // ---- postApplyHangMs test seam -------------------
         // Drives the sentinel-timeout window from a real specimen.
         // The host's sentinelTimeoutMs (300 ms here) is shorter than
         // the worker's post-apply hang (800 ms), so `done` never

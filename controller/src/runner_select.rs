@@ -1,6 +1,6 @@
 //! Runner selection and provenance logic.
 //!
-//! The controller can target the embedded standard/debuggable runner or an
+//! The controller can target the embedded standard runner or an
 //! external runner registered in the local registry. This module resolves the
 //! request selector into a concrete service connection and auditable metadata.
 
@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::path::{Path, PathBuf};
 
 use crate::app_layout::{
-    resolve_pw_runner_bundle_info, PW_RUNNER_DEBUG_SERVICE_DIR, PW_RUNNER_STANDARD_SERVICE_DIR,
+    resolve_pw_runner_bundle_info, PW_RUNNER_STANDARD_SERVICE_DIR,
 };
 use crate::evidence;
 use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerScope, RunnerSignature};
@@ -135,7 +135,6 @@ fn entitlements_from_manifest_value(
 fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarget, String> {
     let service_dir = match kind {
         RunnerKind::Standard => PW_RUNNER_STANDARD_SERVICE_DIR,
-        RunnerKind::Debuggable => PW_RUNNER_DEBUG_SERVICE_DIR,
         RunnerKind::Byoxpc => {
             return Err("builtin runner target requires a built-in kind".to_string());
         }
@@ -187,9 +186,9 @@ pub fn resolve_runner_target(
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
-    if matches!(selector.mode, Some(RunnerKind::Debuggable | RunnerKind::Standard)) && needs_external {
+    if matches!(selector.mode, Some(RunnerKind::Standard)) && needs_external {
         return Err(
-            "runner.mode=standard or runner.mode=debuggable cannot be combined with an external runner selection"
+            "runner.mode=standard cannot be combined with an external runner selection"
                 .to_string(),
         );
     }
@@ -251,7 +250,7 @@ pub fn resolve_runner_target(
         RunnerKind::Byoxpc => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
-        RunnerKind::Debuggable | RunnerKind::Standard => {
+        RunnerKind::Standard => {
             return Err("external runners cannot be built-in kinds".to_string());
         }
     };

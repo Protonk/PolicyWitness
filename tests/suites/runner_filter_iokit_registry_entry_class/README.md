@@ -7,17 +7,17 @@ specimens, deliberately skips the `sandbox_check` userland predicate
 op+filter, see
 `tests/suites/witness_contract/harness/verify_filter_id.sh`), and
 emits `outcome="prediction_unavailable"` with `rc=-1` (sentinel)
-instead. The cross-check mirrors the same signal.
+instead.
 
 ## What this suite does NOT cover
 
 The attempt slot in this specimen is a benign file `open_read`
 placeholder — there is no Channel A coverage of the
-`iokit-open-service` operation in this runner today. Real iokit
-attempts land when the C probe-runner (RUNNER-RESHAPE-PLAN Step 4)
-adds the operation kind. The suite asserts `attempt.outcome !=
-"unsupported"` so a regression to an unsupported action would fail
-the suite loudly rather than silently passing.
+`iokit-open-service` operation today (the C probe-runner doesn't
+implement iokit attempts yet). The suite asserts
+`attempt.outcome != "unsupported"` so a regression to an
+unsupported action would fail the suite loudly rather than silently
+passing.
 
 ## Invariants
 
@@ -27,8 +27,6 @@ the suite loudly rather than silently passing.
   this (op, filter) pair. The result has
   `outcome == "prediction_unavailable"`, `rc == -1` (sentinel),
   `filter_type_id == null`, `errno == null`, `error == null`.
-- The cross-check (`--sonoma-cross-check`) emits a `skipped` step
-  whose `error` includes the string `prediction_unavailable`.
 - The attempt portion of the step runs to completion with a supported
   action so the envelope shape is exercised.
 
@@ -39,8 +37,6 @@ the suite loudly rather than silently passing.
 - `runner_result.steps[0].sandbox_check.rc == -1`.
 - `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
   `attempt.rc` is populated.
-- `sonoma_cross_check.steps[0].status == "skipped"` with an error
-  message containing `"prediction_unavailable"`.
 
 ## Fixtures
 

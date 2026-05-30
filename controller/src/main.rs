@@ -17,7 +17,6 @@ mod runner_commands;
 mod runner_manager;
 mod runner_select;
 mod sandbox_log;
-mod sonoma_cross_check;
 mod utils;
 
 use std::ffi::OsString;

@@ -42,28 +42,28 @@ import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 result = env.get("result") or {}
-runner = env.get("data", {}).get("runner_result") or {}
-outcome = runner.get("normalized_outcome")
-if result.get("ok") is True or outcome == "ok":
+if result.get("ok") is True:
     raise SystemExit(
-        "PHASE 0 — request with runner.mode=debuggable was accepted. "
-        "Passes when X2 lands and the debuggable mode is removed; "
-        "such specimens then fail bad_request."
+        "request with runner.mode=debuggable was accepted. "
+        "`debuggable` is not a valid runner mode; specimens "
+        "carrying it must fail at the controller's runner.mode "
+        "parse step."
     )
 
-# Acceptable rejection paths after X2: bad_request (preferred), or the
-# controller's runner-mode parse failure.
-if outcome == "bad_request":
-    err = runner.get("error") or ""
-    if "debuggable" not in err and "mode" not in err.lower():
-        raise SystemExit(f"expected error to identify the removed mode, got {err!r}")
-else:
-    top_err = (result.get("error") or "")
-    if "debuggable" not in top_err and "mode" not in top_err.lower():
-        raise SystemExit(
-            f"expected explicit rejection of runner.mode=debuggable. "
-            f"got outcome={outcome!r}, top-level error={top_err!r}"
-        )
+# parse_runner_selector_value returns
+# Err("invalid runner.mode value: debuggable"), which cmd_run wraps
+# in a tool_error envelope before any runner is invoked.
+outcome = result.get("normalized_outcome")
+if outcome != "tool_error":
+    raise SystemExit(
+        f"expected normalized_outcome=tool_error from controller-side "
+        f"parse rejection (got {outcome!r})"
+    )
+top_err = result.get("error") or ""
+if "debuggable" not in top_err:
+    raise SystemExit(
+        f"expected error to name the rejected mode (got {top_err!r})"
+    )
 PY
 ASSERT_RC=$?
 set -e

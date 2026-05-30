@@ -3,12 +3,12 @@ import Foundation
 
 /*
  * CWorkerValidatorTests — drives runCWorker + runValidator together
- * via CWorker's postApplied hook, the way the Step 6.3c integration
- * in PWRunnerService will. Proves the host-side orchestration shape:
- * worker applies the policy, validator queries the worker_pid while
- * the worker is sandboxed, both children's outputs flow back to the
- * host as a single coherent envelope (attempts + verdicts indexed by
- * step_id).
+ * via CWorker's postApplied hook, the way CWorkerOrchestrator
+ * drives them in production. Proves the host-side orchestration
+ * shape: worker applies the policy, validator queries the
+ * worker_pid while the worker is sandboxed, both children's outputs
+ * flow back to the host as a single coherent envelope (attempts +
+ * verdicts indexed by step_id).
  *
  * The combined-test bar is intentionally low for this chunk: a single
  * scenario that exercises every wire. Scenario coverage breadth lives
@@ -70,8 +70,8 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
             )
 
             // Validator probes correspond one-to-one with the
-            // worker's slots by step_id. PWRunnerService will build
-            // these from PWRunnerProbeStep.sandbox_check in Step 6.3c.
+            // worker's slots by step_id. CWorkerOrchestrator builds
+            // these from PWRunnerProbeStep.sandbox_check in production.
             let validatorProbes: [ValidatorProbe] = [
                 ValidatorProbe(stepId: "s_read_etc_hosts",
                                operation: "file-read-data",
@@ -125,10 +125,9 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
             try expectFalse(vOut.sentSigkill, "validator didn't need SIGKILL")
             try expectEqual(vOut.verdicts.count, 2, "one verdict per probe")
 
-            // Verdicts indexed by step_id so the integration code can
-            // join attempts + sandbox_checks per step. This is the
-            // shape PWRunnerService will assemble into
-            // PWRunnerStepResult in Step 6.3c.
+            // Verdicts indexed by step_id so the orchestrator can
+            // join attempts + sandbox_checks per step into the
+            // PWRunnerStepResult envelope.
             var byStep = [String: ValidatorVerdict]()
             for v in vOut.verdicts {
                 if let sid = v.stepId { byStep[sid] = v }

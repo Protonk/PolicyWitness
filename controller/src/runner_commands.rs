@@ -169,7 +169,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 }
                 let kind = RunnerKind::parse(raw.as_ref())
                     .ok_or_else(|| format!("invalid value for --kind: {raw}"))?;
-                if matches!(kind, RunnerKind::Debuggable | RunnerKind::Standard) {
+                if matches!(kind, RunnerKind::Standard) {
                     return Err(format!(
                         "runner install does not accept kind={}",
                         kind.as_str()
@@ -208,7 +208,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     }
 
     // byoxpc is the only kind `runner install` accepts. The CLI parser above
-    // already rejects standard/debuggable; here we accept an explicit
+    // already rejects standard; here we accept an explicit
     // `--kind byoxpc` and otherwise default to it, and reject anything that
     // somehow surfaced as a different variant (defensive).
     let kind = kind_override.unwrap_or(RunnerKind::Byoxpc);
@@ -546,7 +546,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         RunnerKind::Byoxpc => RunnerConnectionKind::MachService {
             privileged: matches!(record.scope, RunnerScope::System),
         },
-        RunnerKind::Debuggable | RunnerKind::Standard => {
+        RunnerKind::Standard => {
             return Err("external runners cannot be built-in kinds".to_string());
         }
     };

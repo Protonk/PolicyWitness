@@ -3,16 +3,14 @@ import Foundation
 
 /*
  * ValidatorClient — Swift driver for `sb_api_validator --batch <pid>`.
- * Per RUNNER-RESHAPE-PLAN Step 6.3 (R9 part 2). Mirrors the protocol
- * pinned by tests/suites/validator_batch_mode: NDJSON probes in on
- * stdin, NDJSON verdicts out on stdout, exit 0 on clean EOF, per-probe
- * failures surface as verdicts with outcome ∈ {parse_error, bad_filter}
- * rather than aborting the run.
+ * Mirrors the protocol pinned by tests/suites/validator_batch_mode:
+ * NDJSON probes in on stdin, NDJSON verdicts out on stdout, exit 0
+ * on clean EOF, per-probe failures surface as verdicts with outcome
+ * ∈ {parse_error, bad_filter} rather than aborting the run.
  *
  * Like CWorker.swift, this module is self-contained — it doesn't depend
- * on PWRunnerService and produces its own typed output. The integration
- * into the runner host happens in Step 6.3c when PWRunnerService gains
- * the use_c_worker flag and starts driving both children together.
+ * on PWRunnerService and produces its own typed output. Both children
+ * are driven together by CWorkerOrchestrator.
  *
  * Flow:
  *   1. Create stdin + stdout pipes.
@@ -117,10 +115,9 @@ public enum ValidatorClientResult {
     /// before the error fired: the validator PID if posix_spawn
     /// succeeded, exit/signal status if the child was reaped, raw byte
     /// count read from stdout, and any verdict lines parsed cleanly
-    /// before the failure. Step 6.5's degraded validator_* outcomes
-    /// will surface this evidence so a consumer can see "validator
-    /// died mid-stream after 3 of 256 verdicts" rather than just
-    /// "validator failed."
+    /// before the failure. The degraded validator_* outcomes surface
+    /// this evidence so a consumer can see "validator died mid-stream
+    /// after 3 of 256 verdicts" rather than just "validator failed."
     ///
     /// `partial` is nil only when the failure happened before any
     /// process state existed (probe serialization, pipe creation,
@@ -185,8 +182,7 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
     // can drive them interleaved via poll(). Without this, the writer
     // blocks once the kernel pipe buffer (64 KiB on macOS) is full,
     // and a validator that emits verdicts faster than we drain them
-    // would deadlock against us. This is the post-Step-6.4 audit
-    // BLOCKER fix.
+    // would deadlock against us.
     let stdinFlags = fcntl(stdinPipe[1], F_GETFL, 0)
     if stdinFlags >= 0 { _ = fcntl(stdinPipe[1], F_SETFL, stdinFlags | O_NONBLOCK) }
     let stdoutFlags = fcntl(stdoutPipe[0], F_GETFL, 0)
@@ -461,6 +457,3 @@ private func verdictFromJSONObject(_ obj: [String: Any], rawLine: String) -> Val
     )
 }
 
-// (readToEOF helper removed in the post-Step-6.4 audit remediation;
-// runValidator now drives both pipes via poll(), so the old
-// write-then-drain path is gone.)

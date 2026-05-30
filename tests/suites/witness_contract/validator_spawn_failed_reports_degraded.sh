@@ -51,17 +51,16 @@ runner = env.get("data", {}).get("runner_result") or {}
 outcome = runner.get("normalized_outcome")
 err = runner.get("error") or ""
 
-# Today this request fails decode because the override key doesn't exist.
 if outcome == "bad_request" and "validator_executable_path" in err:
     raise SystemExit(
-        "PHASE 0 — _test_overrides.validator_executable_path is not yet a recognized field. "
-        "Passes when R12 lands (override) and R11 lands (validator_spawn_failed outcome)."
+        "_test_overrides.validator_executable_path was rejected as "
+        "an unrecognized field; it should route through "
+        "ValidatorClient.runValidator's posix_spawn path."
     )
 
 if outcome != "validator_spawn_failed":
     raise SystemExit(
-        f"PHASE 0 — expected normalized_outcome=validator_spawn_failed (got {outcome!r}). "
-        "Passes when R11 lands."
+        f"expected normalized_outcome=validator_spawn_failed (got {outcome!r})."
     )
 
 # Degradation property: attempts still observed even though verdicts are missing.

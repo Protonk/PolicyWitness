@@ -34,14 +34,6 @@ enum PWRunnerWire {
     static let sandboxFilterIokitUserClientClass = "iokit_user_client_class"
     static let sandboxFilterSysctlName = "sysctl_name"
     static let sandboxCheckScopePost = "post_sandbox"
-
-    static let instrumentationPhasePre = "pre_sandbox"
-    static let instrumentationPhasePost = "post_sandbox"
-
-    static let instrumentationKindDylibLoad = "dylib_load"
-    static let instrumentationKindDebugWait = "debug_wait"
-    static let instrumentationKindExecmemProbe = "execmem_probe"
-    static let instrumentationKindDyldEnv = "dyld_env"
 }
 
 // Canonical normalized_outcome values. Every emit site in the runner stack
@@ -55,13 +47,12 @@ enum PWRunnerWire {
 // against it. PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 public enum NormalizedOutcome {
-    // ----- emitted by the worker (WorkerEntry.swift), forwarded by host
+    // ----- emitted by the C worker (pw-probe-runner), forwarded by host
     public static let ok = "ok"
     public static let badPolicy = "bad_policy"
     public static let sandboxApplyFailed = "sandbox_apply_failed"
 
-    // ----- emitted by both the host short-circuit and the worker
-    // (libsandbox load is checked at both layers; either may emit)
+    // ----- emitted by the host short-circuit (pre-spawn libsandbox check)
     public static let libsandboxUnavailable = "libsandbox_unavailable"
 
     // ----- emitted by the host short-circuit (PWRunnerService.swift)
@@ -69,25 +60,20 @@ public enum NormalizedOutcome {
     public static let alreadyRan = "already_ran"
     public static let workerSpawnFailed = "worker_spawn_failed"
 
-    // ----- emitted by the host classifier (WorkerProcess.swift)
+    // ----- emitted by the host classifier (CWorker.swift sentinel
+    // observation + CWorkerOrchestrator classification)
     public static let runnerSandboxDenied = "runner_sandbox_denied"
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
 
-    // ----- emitted by the host classifier on the C-worker code path
-    // (PWRunnerService.swift after Step 6.8). These cover the validator
-    // child's failure modes that the C-worker path observes but the
-    // legacy Swift-worker path doesn't (the Swift worker bundles
-    // sandbox_check into its own process; the new path runs the
-    // validator as a separate child).
-    //
-    // Default top-level semantics: any validator_* outcome makes
-    // `result.ok=false`, `rc=1`. The attempt channel is still
-    // populated and machine-readable, but a missing prediction
-    // channel is a runner evidence failure even when the observation
-    // channel completed. Consumers can opt to consume the partial
-    // envelope as degraded evidence; the runner does not silently
-    // upgrade an attempts-only run to `ok`.
+    // ----- emitted by the host classifier on the validator child
+    // failure modes. Default top-level semantics: any validator_*
+    // outcome makes `result.ok=false`, `rc=1`. The attempt channel
+    // is still populated and machine-readable, but a missing
+    // prediction channel is a runner evidence failure even when the
+    // observation channel completed. Consumers can opt to consume
+    // the partial envelope as degraded evidence; the runner does not
+    // silently upgrade an attempts-only run to `ok`.
     public static let validatorSpawnFailed = "validator_spawn_failed"
     public static let validatorNoReply = "validator_no_reply"
     public static let validatorDecodeFailure = "validator_decode_failure"
@@ -106,9 +92,8 @@ public enum NormalizedOutcome {
 /// source_drift enforces that every constant has a row in
 /// tests/INDEX.md's attempt-outcome matrix.
 ///
-/// `not_run_worker_died` is specific to the C-worker code path
-/// (RUNNER-RESHAPE-PLAN Step 6.8). The host sees a slot with
-/// completed=0 because the worker exited before reaching it.
+/// `not_run_worker_died` signals that the host saw a slot with
+/// completed=0 because the C worker exited before reaching it.
 /// Distinct from the per-attempt failure outcomes (`open_failed`,
 /// etc.) — those mean "the attempt itself ran and produced a
 /// failure"; `not_run_worker_died` means "the attempt never had a
@@ -155,7 +140,6 @@ public struct PWRunnerRunSpec: Codable {
     public var run_kind: String?
     public var policy: PWRunnerPolicySpec
     public var probe_plan: [PWRunnerProbeStep]
-    public var instrumentation: PWRunnerInstrumentation?
     public var _test_overrides: PWRunnerTestOverrides?
 
     public init(
@@ -164,7 +148,6 @@ public struct PWRunnerRunSpec: Codable {
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec,
         probe_plan: [PWRunnerProbeStep],
-        instrumentation: PWRunnerInstrumentation? = nil,
         _test_overrides: PWRunnerTestOverrides? = nil
     ) {
         self.schema_version = schema_version
@@ -172,7 +155,6 @@ public struct PWRunnerRunSpec: Codable {
         self.run_kind = run_kind
         self.policy = policy
         self.probe_plan = probe_plan
-        self.instrumentation = instrumentation
         self._test_overrides = _test_overrides
     }
 }
@@ -192,32 +174,19 @@ public struct PWRunnerRunSpec: Codable {
 //
 // Currently supported keys and the boundaries they re-route:
 //
-// | key                       | consumed at                                                   | drives outcome           |
-// | ------------------------- | ------------------------------------------------------------- | ------------------------ |
-// | `libsandbox_path`           | `SandboxLib.load(path:)` via PWRunnerService.swift +          | `libsandbox_unavailable`    |
-// |                             | WorkerEntry.swift (defense-in-depth; host short-circuits      |                             |
-// |                             | first today, so the worker line is reached only if that       |                             |
-// |                             | ordering ever changes)                                        |                             |
-// | `worker_executable_path`    | `posix_spawn` path in WorkerProcess.spawnWorker               | `worker_spawn_failed`       |
-// | `worker_timeout_ms`         | host-side deadline in WorkerProcess.run (floored at 50ms)     | `runner_timeout`            |
-// | `validator_executable_path` | `posix_spawn` path in ValidatorClient.runValidator (C-worker  | `validator_spawn_failed`    |
-// |                             | code path; Step 6.8 wires the consumer). Parallel to          |                             |
-// |                             | `worker_executable_path` for the validator child.             |                             |
+// | key                         | consumed at                                                   | drives outcome              |
+// | --------------------------- | ------------------------------------------------------------- | --------------------------- |
+// | `libsandbox_path`           | `SandboxLib.load(path:)` via PWRunnerService.swift (host-     | `libsandbox_unavailable`    |
+// |                             | side pre-spawn check)                                         |                             |
+// | `worker_executable_path`    | `posix_spawn` path in CWorker.spawn (pw-probe-runner)         | `worker_spawn_failed`       |
+// | `worker_timeout_ms`         | host-side deadline in CWorker.run (floored at 50ms)           | `runner_timeout`            |
+// | `validator_executable_path` | `posix_spawn` path in ValidatorClient.runValidator. Parallel  | `validator_spawn_failed`    |
+// |                             | to `worker_executable_path` for the validator child.          |                             |
 // | `worker_post_apply_hang_ms` | passed to pw-probe-runner as `--post-apply-hang-ms <N>`;      | `runner_timeout`            |
-// |                             | the C worker nanosleeps for N ms AFTER all slot results       | (C-worker path)             |
+// |                             | the C worker nanosleeps for N ms AFTER all slot results       |                             |
 // |                             | are durable but BEFORE writing the `done` sentinel, pushing   |                             |
-// |                             | host past its sentinel_timeout. Replaces the Swift-only       |                             |
-// |                             | `debug_wait` instrumentation port so the runner_timeout       |                             |
-// |                             | suite keeps exercising the host deadline path on the new      |                             |
-// |                             | architecture.                                                 |                             |
-// | `use_c_worker`              | selects PWRunnerService.runSpecimen's code path. After        | (no specific outcome —      |
-// |                             | Step 6.8b the C-worker path (pw-probe-runner +                |  selects which orchestration|
-// |                             | sb_api_validator --batch via CWorkerOrchestrator) is the      |  assembles the envelope;    |
-// |                             | default. Set to false to opt into the legacy Swift worker —   |  the C path populates       |
-// |                             | rollback escape hatch until Step 7 retires it. Precedence:    |  validator_subprocess +     |
-// |                             | explicit override wins; if absent AND `instrumentation` is    |  steps[].drift)             |
-// |                             | set the runner auto-falls-back to Swift (instrumentation is   |                             |
-// |                             | Swift-only); otherwise default to C.                          |                             |
+// |                             | host past its sentinel_timeout. Drives the runner_timeout     |                             |
+// |                             | suite.                                                        |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -228,22 +197,19 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
     public var worker_post_apply_hang_ms: Int?
-    public var use_c_worker: Bool?
 
     public init(
         libsandbox_path: String? = nil,
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
-        worker_post_apply_hang_ms: Int? = nil,
-        use_c_worker: Bool? = nil
+        worker_post_apply_hang_ms: Int? = nil
     ) {
         self.libsandbox_path = libsandbox_path
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
-        self.use_c_worker = use_c_worker
     }
 }
 
@@ -313,148 +279,6 @@ public struct PWRunnerProbeStep: Codable {
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
-    }
-}
-
-public struct PWRunnerInstrumentation: Codable {
-    public var version: Int
-    public var ports: [PWRunnerInstrumentationPort]
-
-    public init(version: Int = 1, ports: [PWRunnerInstrumentationPort]) {
-        self.version = version
-        self.ports = ports
-    }
-}
-
-public struct PWRunnerInstrumentationPort: Codable {
-    public var kind: String
-    public var phase: String?
-    public var label: String?
-    public var path: String?
-    public var symbol: String?
-    public var sleep_ms: Int?
-    public var size_bytes: Int?
-    public var keys: [String]?
-    public var expected: [String: String]?
-    public var reveal_values: Bool?
-
-    public init(
-        kind: String,
-        phase: String? = nil,
-        label: String? = nil,
-        path: String? = nil,
-        symbol: String? = nil,
-        sleep_ms: Int? = nil,
-        size_bytes: Int? = nil,
-        keys: [String]? = nil,
-        expected: [String: String]? = nil,
-        reveal_values: Bool? = nil
-    ) {
-        self.kind = kind
-        self.phase = phase
-        self.label = label
-        self.path = path
-        self.symbol = symbol
-        self.sleep_ms = sleep_ms
-        self.size_bytes = size_bytes
-        self.keys = keys
-        self.expected = expected
-        self.reveal_values = reveal_values
-    }
-}
-
-public struct PWRunnerInstrumentationReport: Codable {
-    public var version: Int
-    public var ports: [PWRunnerInstrumentationPortReport]
-
-    public init(version: Int, ports: [PWRunnerInstrumentationPortReport]) {
-        self.version = version
-        self.ports = ports
-    }
-}
-
-public struct PWRunnerInstrumentationPortReport: Codable {
-    public var kind: String
-    public var phase: String?
-    public var label: String?
-    public var status: String
-    public var error: String?
-    public var dylib: PWRunnerInstrumentationDylibReport?
-    public var debug_wait: PWRunnerInstrumentationDebugWaitReport?
-    public var execmem_probe: PWRunnerInstrumentationExecmemReport?
-    public var dyld_env: PWRunnerInstrumentationDyldEnvReport?
-
-    public init(
-        kind: String,
-        phase: String? = nil,
-        label: String? = nil,
-        status: String,
-        error: String? = nil,
-        dylib: PWRunnerInstrumentationDylibReport? = nil,
-        debug_wait: PWRunnerInstrumentationDebugWaitReport? = nil,
-        execmem_probe: PWRunnerInstrumentationExecmemReport? = nil,
-        dyld_env: PWRunnerInstrumentationDyldEnvReport? = nil
-    ) {
-        self.kind = kind
-        self.phase = phase
-        self.label = label
-        self.status = status
-        self.error = error
-        self.dylib = dylib
-        self.debug_wait = debug_wait
-        self.execmem_probe = execmem_probe
-        self.dyld_env = dyld_env
-    }
-}
-
-public struct PWRunnerInstrumentationDylibReport: Codable {
-    public var path: String
-    public var symbol: String?
-    public var symbol_found: Bool?
-
-    public init(path: String, symbol: String? = nil, symbol_found: Bool? = nil) {
-        self.path = path
-        self.symbol = symbol
-        self.symbol_found = symbol_found
-    }
-}
-
-public struct PWRunnerInstrumentationDebugWaitReport: Codable {
-    public var sleep_ms: Int
-
-    public init(sleep_ms: Int) {
-        self.sleep_ms = sleep_ms
-    }
-}
-
-public struct PWRunnerInstrumentationExecmemReport: Codable {
-    public var size_bytes: Int
-    public var mmap_succeeded: Bool
-    public var errno: Int?
-
-    public init(size_bytes: Int, mmap_succeeded: Bool, errno: Int? = nil) {
-        self.size_bytes = size_bytes
-        self.mmap_succeeded = mmap_succeeded
-        self.errno = errno
-    }
-}
-
-public struct PWRunnerInstrumentationDyldEnvReport: Codable {
-    public var keys_present: [String]
-    public var keys_missing: [String]
-    public var expected_mismatch: [String]
-    public var values: [String: String]?
-
-    public init(
-        keys_present: [String],
-        keys_missing: [String],
-        expected_mismatch: [String],
-        values: [String: String]? = nil
-    ) {
-        self.keys_present = keys_present
-        self.keys_missing = keys_missing
-        self.expected_mismatch = expected_mismatch
-        self.values = values
     }
 }
 
@@ -850,11 +674,13 @@ public struct PWRunnerSubprocess: Codable {
 /// is non-nil for a completed run.
 ///
 /// `validator_subprocess` is nil on the runner response when the
-/// validator path didn't run — either the runner host fell through to
-/// the legacy Swift-worker code path (which doesn't spawn a separate
-/// validator), or the validator child failed to spawn before any
-/// metadata could be captured. In the latter case `normalized_outcome`
-/// is set to `validator_spawn_failed` (Step 6.5).
+/// validator child didn't run. Two cases reach this: every probe in
+/// the plan had an (operation, filter) pair in the
+/// `prediction_unavailable` set (the orchestrator skipped the
+/// validator and synthesized verdicts locally), or the validator
+/// child failed to spawn before any metadata could be captured.
+/// In the latter case `normalized_outcome` is set to
+/// `validator_spawn_failed`.
 public struct PWRunnerValidatorSubprocess: Codable {
     public var pid: Int
     public var term_signal: Int?
@@ -885,12 +711,12 @@ public struct PWRunnerRunResult: Codable {
     //       against the sandboxed worker_pid, and adds `steps[].drift`
     //       (nullable bool) capturing validator-prediction vs
     //       attempt-observation disagreement per step.
-    //       `validator_subprocess` is nil when the host fell through to
-    //       the legacy Swift-worker path (the validator isn't spawned in
-    //       that path). `drift` is nil when no comparison is possible
-    //       (e.g. validator wasn't run, or the validator skipped this
-    //       step for a known-unreliable prediction). Top-level `pid`
-    //       semantics from v3 are preserved.
+    //       `validator_subprocess` is nil when no validator child ran
+    //       (every probe was in the prediction-unavailable set, or the
+    //       child failed to spawn). `drift` is nil when no comparison
+    //       is possible (validator wasn't run for the step, or the
+    //       (validator-allow, ambiguous-deny) asymmetry applies).
+    //       Top-level `pid` semantics from v3 are preserved.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -904,7 +730,6 @@ public struct PWRunnerRunResult: Codable {
     public var sandboxed_after_apply: Bool?
     public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
-    public var instrumentation: PWRunnerInstrumentationReport?
     public var runner_subprocess: PWRunnerSubprocess?
     public var validator_subprocess: PWRunnerValidatorSubprocess?
     public var test_overrides: PWRunnerTestOverrides?
@@ -923,7 +748,6 @@ public struct PWRunnerRunResult: Codable {
         sandboxed_after_apply: Bool? = nil,
         deny_signal_total: PWRunnerSignalResult? = nil,
         steps: [PWRunnerStepResult],
-        instrumentation: PWRunnerInstrumentationReport? = nil,
         runner_subprocess: PWRunnerSubprocess? = nil,
         validator_subprocess: PWRunnerValidatorSubprocess? = nil,
         test_overrides: PWRunnerTestOverrides? = nil
@@ -941,7 +765,6 @@ public struct PWRunnerRunResult: Codable {
         self.sandboxed_after_apply = sandboxed_after_apply
         self.deny_signal_total = deny_signal_total
         self.steps = steps
-        self.instrumentation = instrumentation
         self.runner_subprocess = runner_subprocess
         self.validator_subprocess = validator_subprocess
         self.test_overrides = test_overrides

@@ -18,8 +18,8 @@ run_test() {
 }
 
 # Order is alphabetical except happy_path_baseline runs first as the
-# regression sentinel — if the baseline fails, every other PHASE 0
-# failure becomes ambiguous.
+# regression sentinel — if the baseline fails, every other failure
+# becomes ambiguous.
 run_test "${SUITE_DIR}/happy_path_baseline.sh"
 
 run_test "${SUITE_DIR}/attempt_outcome_matrix_enforced.sh"
@@ -36,7 +36,6 @@ run_test "${SUITE_DIR}/debuggable_mode_rejected.sh"
 run_test "${SUITE_DIR}/first_deny_diagnostic_populated.sh"
 run_test "${SUITE_DIR}/instrumentation_field_rejected.sh"
 run_test "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"
-run_test "${SUITE_DIR}/validator_handles_none_filter.sh"
 run_test "${SUITE_DIR}/validator_spawn_failed_reports_degraded.sh"
 run_test "${SUITE_DIR}/validator_subprocess_populated.sh"
 run_test "${SUITE_DIR}/worker_post_apply_hang_seam.sh"

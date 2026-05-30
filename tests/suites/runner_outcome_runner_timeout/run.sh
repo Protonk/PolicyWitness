@@ -11,7 +11,7 @@ PW_TEST_ID="host_kills_hung_worker"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "worker hangs in post-sandbox instrumentation; host times out and SIGKILLs"
+test_step "run" "C worker hangs after applying; host times out and SIGKILLs"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -20,18 +20,17 @@ fi
 # This suite proves the host enforces its own deadline even when the
 # worker survives sandbox apply. We do not test the *client*-side timeout
 # (--timeout-ms) — that surfaces xpc_timeout from pw-runner-client, a
-# different code path. Here we want the host's WorkerProcess deadline to
-# fire, classify as runner_timeout, and SIGKILL the worker.
+# different code path. Here we want the host's deadline to fire,
+# classify as runner_timeout, and SIGKILL the worker.
 #
 # Mechanism:
-#   - worker_timeout_ms=2000 lowers the default 90s host deadline.
-#   - A post_sandbox debug_wait port sleeps 8000ms in the worker, well
-#     past the host's deadline.
-#   - When the host hits 2000ms with no frame received, it SIGKILLs the
+#   - worker_timeout_ms=2000 lowers the default host deadline.
+#   - worker_post_apply_hang_ms=8000 instructs pw-probe-runner to sleep
+#     8000ms AFTER all step slots are durable but BEFORE writing the
+#     `done` sentinel — keeping it alive well past the host deadline.
+#   - When the host hits 2000ms with no `done` sentinel, it SIGKILLs the
 #     worker (term_signal=9, host-issued — not sandbox-issued) and
-#     classifies as runner_timeout. The timedOut branch in
-#     classifyWorkerResult takes precedence over the term_signal=9 path
-#     that would otherwise be runner_sandbox_denied.
+#     classifies as runner_timeout.
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 /usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
@@ -46,15 +45,10 @@ specimen = {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
     },
-    "instrumentation": {
-        "version": 1,
-        "ports": [
-            {"kind": "debug_wait", "phase": "post_sandbox", "sleep_ms": 8000}
-        ],
-    },
     "probe_plan": [],
     "_test_overrides": {
         "worker_timeout_ms": 2000,
+        "worker_post_apply_hang_ms": 8000,
     },
 }
 Path(sys.argv[1]).write_text(json.dumps(specimen, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -98,8 +92,8 @@ if outcome != "runner_timeout":
     raise SystemExit(
         f"expected normalized_outcome=runner_timeout (got {outcome!r}); "
         f"the host deadline override did not fire, or it raced with worker "
-        f"completion. The debug_wait port should have held the worker open "
-        f"for 8s — well past the 2s host deadline."
+        f"completion. worker_post_apply_hang_ms should have held the C "
+        f"worker open for 8s — well past the 2s host deadline."
     )
 
 # The host SIGKILLs the worker on timeout, so term_signal should be 9
@@ -129,8 +123,8 @@ if overrides.get("worker_timeout_ms") != 2000:
     )
 
 # Sanity: the run should finish near the 2s host deadline, not the 8s
-# instrumentation sleep. Generous bound — anything under 6s proves the
-# host shortened the worker's life rather than waiting for the sleep.
+# post-apply hang. Generous bound — anything under 6s proves the host
+# shortened the worker's life rather than waiting for the sleep.
 if elapsed >= 6000:
     raise SystemExit(
         f"run took {elapsed}ms — expected close to the 2000ms host deadline. "

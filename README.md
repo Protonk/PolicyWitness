@@ -19,22 +19,12 @@ Each step may include multiple evidence channels:
 
 ## Runner modes
 
-PolicyWitness supports three runner modes. All three return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
+PolicyWitness supports two runner modes. Both return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
 
 - `standard`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step. Default when no runner is specified.
-- `debuggable`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step.
-- `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`.
+- `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`. Use this when probes require entitlements the standard runner doesn't ship — debug-attach (`com.apple.security.get-task-allow`), custom dylib loading, JIT, DYLD env, etc.
 
 PolicyWitness treats entitlements as a first-class input alongside SBPL. Register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
-
-### Instrumentation
-
-Instrumentation ports are part of the debuggable runner (or external runners with matching entitlements), allowing closer inspection.
-
-- `dyld_env`: report expected `DYLD_*` env vars (observation only); to set them, use an external runner installed with `--env KEY=VALUE`.
-- `dylib_load`: load a dylib and optionally call a symbol (`com.apple.security.cs.disable-library-validation`)
-- `debug_wait`: pause before sandbox apply for debugger attach (`com.apple.security.get-task-allow`)
-- `execmem_probe`: attempt JIT `mmap` (MAP_JIT, PROT_READ|PROT_WRITE) and report success/failure (`com.apple.security.cs.allow-jit`; falls back to legacy RWX if available)
 
 ## What Ships
 
@@ -44,12 +34,11 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/policy-witness` (Rust controller)
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
-  - `Contents/MacOS/sb_api_validator` (C `sandbox_check` validator helper)
   - `Contents/MacOS/sbpl-preflight` (SBPL compile/preflight helper)
-  - `Contents/XPCServices/PWRunner.xpc` (Swift runner, standard mode; one XPC host + one worker per specimen)
-    - `Contents/MacOS/pw-probe-runner` (bundle-local C worker helper, proven in isolation; production traffic flips in the runner reshape Step 6)
-  - `Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable mode; one XPC host + one worker per specimen)
-    - `Contents/MacOS/pw-probe-runner` (same helper, signed inside the debuggable service bundle)
+  - `Contents/MacOS/sb_api_validator` (diagnostic copy of the validator CLI; production traffic uses the bundle-local copy embedded inside each XPC service)
+  - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host + two short-lived children per specimen)
+    - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
+    - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 ## Where To Learn

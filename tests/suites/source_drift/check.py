@@ -38,7 +38,6 @@ PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
 PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
 PROBE_RUNNER = RUNNER_DIR / "ProbeRunner.swift"
 CWORKER_ORCHESTRATOR = RUNNER_DIR / "CWorkerOrchestrator.swift"
-SONOMA_CROSS_CHECK = REPO_ROOT / "controller" / "src" / "sonoma_cross_check.rs"
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
@@ -101,10 +100,10 @@ def build_sh_swift_files() -> set[str]:
 
 def build_sh_c_files() -> set[str]:
     """Collect every C source file build.sh declares as an XPC_RUNNER_*_SHIM
-    relative to XPC_ROOT. As of Step 6.2 there are two: PWSandboxCheckShim.c
-    (the existing sandbox_check trampoline) and PWCWorkerShim.c (atomic +
-    shm_open helpers for the Swift CWorker driver). Adding a third shim is
-    a single line edit here and a matching declaration in build.sh."""
+    relative to XPC_ROOT. Currently two: PWSandboxCheckShim.c (the
+    sandbox_check trampoline) and PWCWorkerShim.c (atomic + shm_open
+    helpers for the Swift CWorker driver). Adding a third shim is a
+    single line edit here and a matching declaration in build.sh."""
     text = BUILD_SH.read_text(encoding="utf-8")
     shim_re = re.compile(
         r'^XPC_RUNNER_(?:SANDBOX|CWORKER)_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
@@ -319,11 +318,10 @@ def check_normalized_outcomes_have_matrix_rows() -> list[str]:
 
 
 def check_attempt_outcomes_have_matrix_rows() -> list[str]:
-    """Parallel to check_normalized_outcomes_have_matrix_rows but for the
-    AttemptOutcome enum. The Step 6.7 attempt-outcome catalog needs the
-    same drift guardrail so a new attempt outcome added to the enum
-    can't ship without a row explaining where it gets emitted and how
-    it's covered."""
+    """Parallel to check_normalized_outcomes_have_matrix_rows but for
+    the AttemptOutcome enum. Same drift guardrail so a new attempt
+    outcome added to the enum can't ship without a row explaining
+    where it gets emitted and how it's covered."""
     problems: list[str] = []
     outcomes = parse_attempt_outcomes()
     matrix = parse_attempt_outcome_matrix()
@@ -344,12 +342,12 @@ def check_attempt_outcomes_have_matrix_rows() -> list[str]:
 # Prediction-unavailable (op, filter) pair agreement.
 #
 # Three sources of truth must list the same set of pairs:
-#   - runner/ProbeRunner.swift::predictionUnavailableOpFilters
-#   - controller/src/sonoma_cross_check.rs::PREDICTION_UNAVAILABLE_PAIRS
+#   - runner/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
+#   - runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror
 #   - PolicyWitness.md "Filter kinds where prediction is unavailable"
 #
 # A pair added to one but not the other means a request that should skip
-# in both runtimes only skips in one, or that the documented contract
+# in the runner only skips in one path, or that the documented contract
 # diverges from the runtime — both bad.
 # ---------------------------------------------------------------------------
 
@@ -414,13 +412,12 @@ def parse_pwrunner_wire_filter_constants() -> dict[str, str]:
 
 
 def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
-    """The Step 6.8a CWorkerOrchestrator carries its own host-side
-    mirror of the prediction_unavailable (op, filter) pair set. It's a
-    fourth source of truth that source_drift now also enforces against
-    the Swift / Rust / docs sets, so a future addition to one of those
-    three doesn't leave the orchestrator silently routing the new pair
-    through the validator (producing bad_filter responses instead of
-    the synthesized prediction_unavailable verdict)."""
+    """CWorkerOrchestrator carries its own host-side mirror of the
+    prediction_unavailable (op, filter) pair set. source_drift
+    enforces it against the Swift / docs sets so a future addition
+    to either doesn't leave the orchestrator silently routing the
+    new pair through the validator (producing bad_filter responses
+    instead of the synthesized prediction_unavailable verdict)."""
     text = CWORKER_ORCHESTRATOR.read_text(encoding="utf-8")
     block_re = re.compile(
         r'predictionUnavailableOpFiltersHostMirror[^\[]*\[(.*?)\n\]',
@@ -455,21 +452,6 @@ def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     return pairs
 
 
-def parse_rust_prediction_unavailable_pairs() -> set[tuple[str, str]]:
-    text = SONOMA_CROSS_CHECK.read_text(encoding="utf-8")
-    block_re = re.compile(
-        r'PREDICTION_UNAVAILABLE_PAIRS:[^=]*=\s*&\[(.*?)\];',
-        re.DOTALL,
-    )
-    match = block_re.search(text)
-    if match is None:
-        fail("could not locate PREDICTION_UNAVAILABLE_PAIRS in controller/src/sonoma_cross_check.rs")
-        sys.exit(2)
-    body = match.group(1)
-    pair_re = re.compile(r'\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)')
-    return {(m.group(1), m.group(2)) for m in pair_re.finditer(body)}
-
-
 def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     """Extract (op, filter) pairs from PolicyWitness.md "Currently in
     this category:" bullets, formatted as
@@ -493,7 +475,6 @@ def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
 
 def check_prediction_unavailable_agreement() -> list[str]:
     swift_pairs = parse_swift_prediction_unavailable_pairs()
-    rust_pairs = parse_rust_prediction_unavailable_pairs()
     docs_pairs = parse_docs_prediction_unavailable_pairs()
     orch_pairs = parse_orchestrator_prediction_unavailable_pairs()
     problems: list[str] = []
@@ -503,7 +484,6 @@ def check_prediction_unavailable_agreement() -> list[str]:
     # messages name the disagreeing source clearly.
     canonical = swift_pairs
     others = [
-        ("rust (sonoma_cross_check.rs)", rust_pairs),
         ("docs (PolicyWitness.md)", docs_pairs),
         ("orchestrator host-mirror (CWorkerOrchestrator.swift)", orch_pairs),
     ]

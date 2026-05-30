@@ -53,13 +53,14 @@ overrides = runner.get("test_overrides") or {}
 
 if outcome == "bad_request" and "worker_post_apply_hang_ms" in (runner.get("error") or ""):
     raise SystemExit(
-        "PHASE 0 — _test_overrides.worker_post_apply_hang_ms is not a recognized field. "
-        "Passes when R12b lands (the override + C worker honoring it)."
+        "_test_overrides.worker_post_apply_hang_ms was rejected as "
+        "an unrecognized field. The override should be plumbed through "
+        "CWorkerOrchestrator into pw-probe-runner's --post-apply-hang-ms argv."
     )
 
 if outcome != "runner_timeout":
     raise SystemExit(
-        f"PHASE 0 — expected normalized_outcome=runner_timeout (got {outcome!r}). "
+        f"expected normalized_outcome=runner_timeout (got {outcome!r}). "
         "Either the override isn't honored, or the worker isn't actually hanging."
     )
 

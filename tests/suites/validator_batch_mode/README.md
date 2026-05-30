@@ -4,11 +4,10 @@ Pins the contract for `sb_api_validator --batch <pid>`: reads NDJSON
 probe lines from stdin, writes NDJSON verdict lines to stdout (one
 verdict per probe, in input order), exits 0 on clean EOF.
 
-This is the per-run validator invocation shape the C probe-runner will
-use in RUNNER-RESHAPE-PLAN Step 5 — one validator process for all
-probes in a run instead of spawning one per probe. The per-probe CLI
-mode (used by `controller/src/sonoma_cross_check.rs` today) is
-preserved unchanged.
+This is the per-run validator invocation shape the runner uses —
+one validator process for all probes in a run instead of spawning
+one per probe. The per-probe CLI mode is preserved for diagnostic
+tooling.
 
 ## Invariants
 
@@ -54,7 +53,7 @@ four sandbox_check outcomes plus all parser failure modes:
   30` with a profile that defaults allow but denies file-read-data
   under `/etc`. Targeting an unsandboxed PID (e.g. `$$`) would return
   allow for everything and leave the deny + error verdict-classifier
-  branches uncovered (post-Step-4 audit finding 6).
+  branches uncovered.
 
 ## Run
 

@@ -2,9 +2,9 @@
  * pw_probe_runner_abi.h — shared-memory ABI between the runner host
  * (Swift, unsandboxed) and pw-probe-runner (C, sandboxed worker).
  *
- * Per RUNNER-RESHAPE-PLAN.md R5/R8. The host mmaps a single anonymous
- * shared region pre-spawn, populates step inputs, pre-touches every
- * page, and hands the FD to the worker via posix_spawn file actions.
+ * The host mmaps a single anonymous shared region pre-spawn,
+ * populates step inputs, pre-touches every page, and hands the FD
+ * to the worker via posix_spawn file actions.
  * After the worker's sandbox_apply() returns successfully it reads its
  * own inputs from the slots, runs each attempt as stack-only POSIX
  * code (no allocations post-apply), writes results to the same slots,

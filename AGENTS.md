@@ -9,7 +9,7 @@ PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by
 Pick what you’re changing:
 
 - **CLI behavior / JSON contract** → `controller/README.md`, `controller/src/main.rs`
-- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/services/PWRunner/`, `runner/services/PWRunnerDebug/`
+- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/services/PWRunner/`
 - **Runner API types** → `runner/PWRunnerAPI.swift`
 - **Runner client (NSXPCConnection wrapper)** → `runner/runner-client/`
 - **Build + signing** → `build.sh`, `SIGNING.md`
@@ -22,7 +22,7 @@ Pick what you’re changing:
 
 - **Specimen**: the unit of input for a run — policy (SBPL + params) plus a probe plan.
 - **Controller**: the host-side orchestrator (`dist/PolicyWitness.app/Contents/MacOS/policy-witness`) that drives the runner and prints a JSON envelope.
-- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`). The XPC host validates the request, spawns two short-lived children (`pw-probe-runner` for sandboxed attempts + `sb_api_validator --batch` for `sandbox_check` verdicts), joins their outputs into one JSON envelope, and replies. The legacy Swift in-binary worker (`--apply-and-probe-worker`) survives as a rollback escape hatch reachable via `_test_overrides.use_c_worker: false` or by setting `instrumentation` on the request; it's slated for removal in Step 7 alongside instrumentation. All processes are single-use per specimen.
+- **Runner**: the ephemeral XPC service (`dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc`). The XPC host validates the request, spawns two short-lived children (`pw-probe-runner` for sandboxed attempts + `sb_api_validator --batch` for `sandbox_check` verdicts), joins their outputs into one JSON envelope, and replies. All processes are single-use per specimen.
 - **Probe step**: a `sandbox_check` query paired with an attempted operation (`file` or `mach_lookup`).
 
 ## What Ships (bundle layout contract)
@@ -32,13 +32,10 @@ The `.app` layout is a contract: tests and evidence generation assume these path
 - `dist/PolicyWitness.app/Contents/MacOS/policy-witness` (Rust controller / orchestrator)
 - `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client` (Swift client that talks to `PWRunner.xpc`)
 - `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper for sandbox denials)
-- `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator` (C sandbox_check cross-check helper)
-- `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift runner, standard; one XPC host + one worker per specimen)
-  - `…/PWRunner.xpc/Contents/MacOS/pw-probe-runner` (C worker helper embedded bundle-locally; default code path after Step 6.8b — the runner host resolves it relative to its own bundle so built-in and BYOXPC runners both pick up the correct copy)
+- `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator` (diagnostic copy of the validator CLI; production traffic uses the bundle-local copy below)
+- `dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host + two short-lived children per specimen)
+  - `…/PWRunner.xpc/Contents/MacOS/pw-probe-runner` (C worker helper embedded bundle-locally — the runner host resolves it relative to its own bundle so built-in and BYOXPC runners both pick up the correct copy)
   - `…/PWRunner.xpc/Contents/MacOS/sb_api_validator` (sandbox_check batch validator, also bundle-local for BYOXPC parity)
-- `dist/PolicyWitness.app/Contents/XPCServices/PWRunnerDebug.xpc` (Swift runner, debuggable; one XPC host + one worker per specimen)
-  - `…/PWRunnerDebug.xpc/Contents/MacOS/pw-probe-runner` (same bundle-local C worker, embedded in the debuggable bundle)
-  - `…/PWRunnerDebug.xpc/Contents/MacOS/sb_api_validator` (same validator, debuggable bundle copy)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json` (embedded inventory: hashes + signing/entitlements metadata)
 - `dist/PolicyWitness.app/Contents/Resources/Evidence/symbols.json` (best-effort marker inventory)
 
@@ -62,7 +59,7 @@ Documentation should be stateless: describe current behavior without historical 
 - **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
 - **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
 - **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
-- **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift` and `CWorkerOrchestrator.swift`; post-apply work belongs in `pw-probe-runner` (the C worker — default after Step 6.8b) or `WorkerEntry.swift` (the legacy Swift worker — rollback path until Step 7 retires it).
+- **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift` and `CWorkerOrchestrator.swift`; post-apply work belongs in `pw-probe-runner` (the C worker).
 
 ## Dev Workflow (fast path)
 
@@ -150,18 +147,17 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 | Key | Type | Boundary it re-routes | Outcome it lets you reach |
 | --- | --- | --- | --- |
 | `libsandbox_path` | string | `SandboxLib.load(path:)` → `dlopen(path)` (host first, then worker on the same value) | `libsandbox_unavailable` |
-| `worker_executable_path` | string | `posix_spawn(path, ...)` inside `WorkerProcess.spawnWorker` | `worker_spawn_failed` |
-| `worker_timeout_ms` | integer (ms, floored at 50) | Host-side `kqueue`/poll deadline in `WorkerProcess.run` | `runner_timeout` |
+| `worker_executable_path` | string | `posix_spawn(path, ...)` inside `CWorker.spawn` (pw-probe-runner) | `worker_spawn_failed` |
+| `worker_timeout_ms` | integer (ms, floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |
-| `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` (C-worker path) |
-| `use_c_worker` | bool | Selects the runner code path explicitly. After Step 6.8b the C-worker path (`pw-probe-runner` + `sb_api_validator --batch` via `CWorkerOrchestrator`) is the default. Set to `false` to opt into the legacy Swift worker — kept as a rollback escape hatch until Step 7 retires it. Precedence: an explicit value (true or false) always wins; absent + `instrumentation` set on the request → auto-fallback to Swift (instrumentation is Swift-worker-only); absent + no instrumentation → C. | (no specific outcome — selects which orchestration assembles the envelope; the C path populates `validator_subprocess` and `steps[].drift`) |
+| `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |
 
-A hostile value drives a real failure: a `/nonexistent/...` path makes `dlopen` or `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `instrumentation.debug_wait` makes the host's deadline fire before the worker exits naturally. The classifier in `WorkerProcess.classifyWorkerResult` is the same code that runs in production — only its *input* is steered.
+A hostile value drives a real failure: a `/nonexistent/...` path makes `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `worker_post_apply_hang_ms` makes the host's deadline fire before the C worker flips its `done` sentinel. The classifier in `CWorkerOrchestrator` is the same code that runs in production — only its *input* is steered.
 
 **Adding a new override.** When you need to cover another outcome:
 
 1. Add the optional field to `PWRunnerTestOverrides` (additive — no schema bump).
-2. Plumb it from `PWRunnerService.runSpecimen` (or `WorkerEntry` if it's worker-side) into the boundary it re-routes. Default to the production value when unset.
+2. Plumb it from `PWRunnerService.runSpecimen` into the boundary it re-routes (either host-side in `CWorkerOrchestrator` / `CWorker` / `ValidatorClient`, or worker-side via a `pw-probe-runner` argv flag). Default to the production value when unset.
 3. Make sure the boundary uses the override at the place where the real OS call happens (not a wrapper that returns early on the override). The point is to *trigger* a real condition, not fake a result.
 4. Mirror it back: every `PWRunnerRunResult` constructed on the affected code path should pass `test_overrides: parsed._test_overrides` so the audit signal survives.
 5. Add a `tests/suites/runner_outcome_<name>/run.sh` suite that follows the four assertions above.
@@ -179,6 +175,6 @@ Treat these as environment constraints, not PolicyWitness regressions. If you se
 
 ## Maintenance checklist (when changing things)
 
-- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift`, the worker plumbing (`runner/WorkerEntry.swift`, `runner/WorkerProcess.swift`, `runner/PWRunnerWorkerWire.swift`), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
+- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift`, the worker plumbing (`runner/CWorker.swift`, `runner/CWorkerOrchestrator.swift`, `runner/ValidatorClient.swift`, plus `pw-probe-runner` and `sb_api_validator` if the C side is affected), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
 - If you change shipped paths: update `build.sh`, `tests/build-evidence.py`, tests that locate binaries, and any docs that enumerate the bundle layout.
 - If you change evidence fields: update `controller/src/main.rs`, any tests that validate output, and the docs that describe evidence channels.

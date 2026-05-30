@@ -1,8 +1,7 @@
 //! Helpers for reading and patching request JSON.
 //!
 //! We never mutate user-provided request files. Any injected fields (runner
-//! mode, instrumentation, debug wait) are written to a temp copy and used for
-//! the single run.
+//! mode) are written to a temp copy and used for the single run.
 
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -13,34 +12,6 @@ pub fn read_json_file(path: &Path, label: &str) -> Result<Value, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| format!("failed to read {label}: {e}"))?;
     serde_json::from_str(&text).map_err(|e| format!("failed to parse {label}: {e}"))
-}
-
-pub fn load_instrumentation_value(raw: &str) -> Result<Value, String> {
-    let raw = raw.trim();
-    let path = if let Some(rest) = raw.strip_prefix('@') {
-        Some(PathBuf::from(rest))
-    } else {
-        let candidate = Path::new(raw);
-        if candidate.exists() {
-            Some(candidate.to_path_buf())
-        } else {
-            None
-        }
-    };
-
-    let value = if let Some(path) = path {
-        // Accept @path or a bare path when the file exists.
-        read_json_file(&path, "instrumentation")
-            .map_err(|e| format!("failed to read instrumentation: {e}"))?
-    } else {
-        serde_json::from_str(raw)
-            .map_err(|e| format!("failed to parse instrumentation JSON: {e}"))?
-    };
-
-    if !value.is_object() {
-        return Err("instrumentation must be a JSON object".to_string());
-    }
-    Ok(value)
 }
 
 pub fn write_temp_request(value: &Value) -> Result<PathBuf, String> {

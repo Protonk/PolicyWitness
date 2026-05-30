@@ -18,7 +18,6 @@ Core controller modules:
 - `controller/src/runner_select.rs` — runner selection + provenance
 - `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
 - `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
-- `controller/src/sonoma_cross_check.rs` — `sb_api_validator` cross-check flow
 - `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate
 
 Support modules:
@@ -39,23 +38,24 @@ Standalone helper tools (embedded into the `.app`):
   - Captures unified-log sandbox deny lines by PID + process name
 - `controller/src/bin/sbpl-preflight.rs` → `dist/PolicyWitness.app/Contents/MacOS/sbpl-preflight`
   - Compiles SBPL policies and reports compiler errors before the runner launches
-- `controller/tools/sb_api_validator/sb_api_validator` → `dist/PolicyWitness.app/Contents/MacOS/sb_api_validator`
-  - Direct `sandbox_check` cross-check helper (used by `--sonoma-cross-check`)
+- `controller/tools/sb_api_validator/sb_api_validator` — embedded inside
+  each XPC service bundle as `…/Contents/MacOS/sb_api_validator`. The
+  runner host launches it once per run in `--batch` NDJSON mode to
+  cross-check `sandbox_check` verdicts inline alongside the C worker.
 - `controller/tools/pw_probe_runner/pw_probe_runner` → embedded INSIDE
   each XPC service bundle at
   `…/Contents/XPCServices/<svc>.xpc/Contents/MacOS/pw-probe-runner`
   (not in the app's top-level `Contents/MacOS/`). The runner host
   resolves it relative to its own bundle so built-in and BYOXPC
-  runners both pick up the correct copy. It implements the Step 5 C
-  worker shared-memory ABI and attempt loop; the production host still
-  uses the legacy Swift worker until RUNNER-RESHAPE-PLAN Step 6.
+  runners both pick up the correct copy. It owns the post-apply
+  syscall surface and is the runner's production code path.
 
 ## CLI surface (contract)
 
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|debuggable|byoxpc>] [--instrumentation <json|@path>] [--sonoma-cross-check]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
 ```
 
@@ -68,39 +68,35 @@ Runs a **single runner evaluation** against the selected runner service:
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance (one XPC host + one worker process), applies the policy exactly once inside the worker, executes the probe plan, and returns the runner's structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
-- The embedded `sb_api_validator` supports two invocation shapes:
-  per-probe CLI (`sb_api_validator [--json] <pid> <operation> <filter_type> [<filter_value>]`,
-  used by `--sonoma-cross-check` today) and batch mode
-  (`sb_api_validator --batch <pid>`, reads NDJSON probes from stdin
-  and writes NDJSON verdicts to stdout). Batch mode is the per-run
-  invocation the C probe-runner (RUNNER-RESHAPE-PLAN Step 5) will
-  adopt — one validator process per run instead of one per probe.
-  See `tests/suites/validator_batch_mode/README.md` for the wire
-  contract.
-- If `--sonoma-cross-check` is provided, the controller runs the embedded
-  `sb_api_validator` against the runner PID while it is paused post-sandbox
-  (a post-sandbox `debug_wait` port is injected to hold the runner open).
+- The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
+  process per run) co-launched by the C-worker code path inside the
+  runner host. The validator reads NDJSON probes from stdin and writes
+  NDJSON verdicts to stdout; the host joins the verdicts into
+  `runner_result.steps[*].validator` and surfaces process metadata as
+  `runner_result.validator_subprocess`. See
+  `tests/suites/validator_batch_mode/README.md` for the wire contract.
+  Validator coverage rules:
   - **Predicted** filter kinds (the validator calls `sandbox_check`):
     `path`, `global_name`, `local_name`, `none`. `none`-filter probes
     call `sandbox_check(pid, op, 0)` with no filter argument and emit
-    `filter_value: null` / `filter_type_id: 0` in the cross-check verdict.
+    `filter_value: null` / `filter_type_id: 0` in the verdict.
   - **Skipped — prediction unavailable** (verified-unreliable op+filter
     pairs the runner accepts but deliberately does not predict for; see
     `PolicyWitness.md` "Filter kinds where prediction is unavailable"):
     `(iokit-open-service, iokit_registry_entry_class)`,
     `(iokit-open-user-client, iokit_user_client_class)`,
-    `(sysctl-read, sysctl_name)`. The cross-check returns `status:
-    "skipped"` with an error string containing `prediction_unavailable`;
-    Channel A (the runner's `attempt` result) is the reliable evidence.
-  - **Skipped — unsupported by validator**: other filter kinds the
-    runner can author but the validator doesn't yet handle (`MACH_PORT`,
-    ...) still surface as `status: "skipped"` with an `unsupported
-    filter.kind` error; see `RUNNER-RESHAPE-PLAN.md` R2 for the
-    expansion work. `PREFERENCE_DOMAIN` is intentionally not exposed in
-    `validateSandboxChecks` pending a broader enforcement probe.
+    `(sysctl-read, sysctl_name)`. The runner short-circuits to
+    `sandbox_check.outcome="prediction_unavailable"` (`rc=-1`); the
+    `attempt` result is the reliable evidence.
+  - **Rejected upstream**: filter kinds the validator could in
+    principle author but the runner refuses to admit into the probe
+    plan (`MACH_PORT`, `PREFERENCE_DOMAIN`, …). `validateSandboxChecks`
+    rejects requests carrying these as `bad_request` before any worker
+    spawn; adding one to the supported set requires empirical
+    verification that the userland predicate matches kernel
+    enforcement (see `tests/suites/witness_contract/harness/verify_filter_id.sh`).
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.runner_provenance` and `data.app_provenance` to keep results auditable.
-- If `--instrumentation` is provided, the controller injects the instrumentation object into the request JSON (without modifying the original file).
 
 Exit codes:
 
@@ -126,7 +122,6 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   no process-name fallback (avoids over-attribution to concurrent
   runners). Consumers can branch on `first_deny != null` directly.
 - `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
-- `data.sonoma_cross_check`: optional `sandbox_check` cross-check report (best-effort)
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 
@@ -153,8 +148,9 @@ Optional:
 If `required_entitlements` is present, the controller enforces a **superset**
 check against the runner’s recorded entitlements before dispatch.
 
-Built-in modes are `standard` (default) and `debuggable`.
-If `runner.mode` is present and an external runner is selected, it must equal `byoxpc` — the only supported external runner kind.
+The only built-in mode is `standard` (default). If `runner.mode` is
+present and an external runner is selected, it must equal `byoxpc` —
+the only supported external runner kind.
 
 ### `runner` (external runner manager)
 

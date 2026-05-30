@@ -9,8 +9,7 @@ worker.
 ## Invariants
 
 - The override is honored only at the `posix_spawn` boundary inside
-  `WorkerProcess.spawnWorker`. The classifier and envelope assembly
-  run for real.
+  `CWorker.spawn`. The classifier and envelope assembly run for real.
 - The override is mirrored back into `runner_result.test_overrides`.
 
 ## Success criteria

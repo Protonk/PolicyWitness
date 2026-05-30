@@ -20,9 +20,9 @@ fi
 # Spawn a sandboxed child via /usr/bin/sandbox-exec to serve as the
 # target PID. Targeting an unsandboxed PID (e.g. $$) would return
 # allow for everything, leaving the deny and error verdict-classifier
-# branches uncovered (post-Step-4 audit finding 6). The profile
-# allows everything by default but denies file-read-data under /etc,
-# which gives us a stable deny verdict for a path-filter probe.
+# branches uncovered. The profile allows everything by default but
+# denies file-read-data under /etc, which gives us a stable deny
+# verdict for a path-filter probe.
 PROFILE_FILE="${PW_TEST_ARTIFACTS}/target.sb"
 cat >"${PROFILE_FILE}" <<'EOF'
 (version 1)
@@ -48,9 +48,9 @@ REQUEST_FILE="${PW_TEST_ARTIFACTS}/probes.ndjson"
 RESPONSE_FILE="${PW_TEST_ARTIFACTS}/verdicts.ndjson"
 
 # Request covers all four verdict outcomes (allow, deny, error,
-# parse_error) plus the two parser-hardening regressions from the
-# post-Step-4 audit (findings 1 + 2: trailing garbage, overlong
-# line). The deny probe targets /tmp/foo rather than the policy's
+# parse_error) plus two parser-hardening regressions (trailing
+# garbage, overlong line). The deny probe targets /tmp/foo rather
+# than the policy's
 # literal denied /etc subpath because sandbox_check's verdict for
 # path filters under (allow default + deny subpath /etc) drifts
 # from the policy structure — the drift is reproducible and

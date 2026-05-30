@@ -1,10 +1,10 @@
 # runner_outcome_runner_timeout
 
 Drives `normalized_outcome = "runner_timeout"` end-to-end by combining
-`_test_overrides.worker_timeout_ms = 2000` with a post-sandbox
-`debug_wait` of 8000ms. The worker survives sandbox apply but hangs in
-the instrumentation port; the host's deadline fires first and SIGKILLs
-the worker.
+`_test_overrides.worker_timeout_ms = 2000` with
+`_test_overrides.worker_post_apply_hang_ms = 8000`. The C worker
+survives sandbox apply but hangs in `pw-probe-runner`'s post-apply
+seam; the host's deadline fires first and SIGKILLs it.
 
 ## Invariants
 

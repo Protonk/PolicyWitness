@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-exec "${ROOT_DIR}/tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh"

@@ -41,9 +41,9 @@ There is intentionally no `opt_in` suite runner; opt-in tests are meant to be
 invoked explicitly so resource-heavy or flaky tests are never run by accident.
 
 GUI session note: tests that install or bootstrap launchd services (for example
-`runner_instrumentation_dyld_env`) require a logged-in desktop session. Run
-them from a local Terminal.app window; SSH/CI or sandboxed harnesses will skip
-with a non-GUI session message.
+`runner_auth_external`) require a logged-in desktop session. Run them from a
+local Terminal.app window; SSH/CI or sandboxed harnesses will skip with a
+non-GUI session message.
 
 If you see `permission denied`, either invoke with `bash` or make the script
 executable (these tests are regular shell scripts).
@@ -65,41 +65,6 @@ Optional standard overrides:
 - **When to run:** After changing BYOXPC install/verify behavior or runner-mode selection.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
 
-### pw_runner_specimen
-
-- **Location:** `tests/suites/runner_debuggable/opt_in/pw_runner_specimen.sh`
-- **Purpose:** Validate the PWRunner “run” execution lane:
-  - SBPL apply + probe execution (single runner instance),
-  - Channel D (`sandbox_check`) vs Channel A (attempt outcome) consistency,
-  - Channel B deny-signal accounting (only if the policy uses SBPL `send-signal`),
-  - Channel C unified-log correlation via `sandbox-log-observer`.
-- **Opt-in reason:** Requires Unified Logging access and an unsandboxed caller
-  (in sandboxed harnesses, XPC lookup and log capture can be blocked).
-- **Resource dependency:** `dist/PolicyWitness.app` built + `log show` access.
-- **When to run:** After changing `runner/PWRunner*` runner behavior or `policy-witness run`.
-- **Artifacts:** `tests/out/suites/runner_debuggable/pw_runner_specimen/artifacts/*`
-
-### runner_instrumentation_dylib
-
-- **Location:** `tests/suites/runner_debuggable/opt_in/runner_instrumentation_dylib.sh`
-- **Purpose:** Validate the `dylib_load` instrumentation port by building a tiny
-  dylib, loading it pre-sandbox, and verifying the symbol runs.
-- **Opt-in reason:** Requires a compiler toolchain and dynamic library loading.
-- **Resource dependency:** `dist/PolicyWitness.app` built + Xcode Command Line Tools.
-- **When to run:** After changing instrumentation port handling or runner entitlements.
-- **Artifacts:** `tests/out/suites/runner_debuggable/runner_instrumentation_dylib/artifacts/*`
-
-### runner_instrumentation_dyld_env
-
-- **Location:** `tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh`
-- **Purpose:** Validate BYOXPC runner env injection and the `dyld_env` port.
-- **Opt-in reason:** Requires launchd service install/bootstrapping and an
-  unsandboxed caller; can be blocked in sandboxed harnesses.
-- **Resource dependency:** `dist/PolicyWitness.app` built + Xcode Command Line Tools.
-- **When to run:** After changing `policy-witness runner install` or
-  instrumentation env handling.
-- **Artifacts:** `tests/out/suites/runner_byoxpc/runner_instrumentation_dyld_env/artifacts/*`
-
 ### runner_auth_external
 
 - **Location:** `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
@@ -115,8 +80,8 @@ Optional standard overrides:
 
 When you add an opt-in test, document it here with:
 
-- **Suite name:** use the runner suite name (for example `runner_debuggable` or
-  `runner_byoxpc`) so results group under `tests/out/suites/<suite>/`.
+- **Suite name:** use the runner suite name (for example `runner_byoxpc`)
+  so results group under `tests/out/suites/<suite>/`.
 - **Location:** the script path under `tests/suites/runner_*/opt_in/`.
 - **Purpose:** the behavior under test.
 - **Opt-in reason:** the resource or OS behavior that makes it non-default.

@@ -48,8 +48,8 @@ runner = env.get("data", {}).get("runner_result") or {}
 vsub = runner.get("validator_subprocess")
 if vsub is None:
     raise SystemExit(
-        "PHASE 0 — runner_result.validator_subprocess is absent. "
-        "Passes when R10 lands (the response schema bump that adds the field)."
+        "runner_result.validator_subprocess is absent — it should be "
+        "populated on every run that spawns the validator child."
     )
 if not isinstance(vsub.get("pid"), int):
     raise SystemExit(f"expected validator_subprocess.pid to be int (got {vsub!r})")

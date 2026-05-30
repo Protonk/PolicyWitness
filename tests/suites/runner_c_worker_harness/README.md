@@ -1,10 +1,9 @@
 # runner_c_worker_harness
 
-Proves the new C probe-runner (`pw-probe-runner`, RUNNER-RESHAPE-PLAN
-R5/R6/R7/R8) in isolation, before the runner host actually invokes it.
-The Step 5 plan is explicit about this: build/sign/embed the helper,
-prove the shared-memory ABI, then flip production traffic in Step 6.
-This suite is what "prove" means.
+Proves the C probe-runner (`pw-probe-runner`) in isolation. The
+harness drives the same shared-memory ABI the production runner
+host uses, so a failure here is a clean signal that the worker ABI
+itself broke rather than the host wiring around it.
 
 ## What's pinned
 
@@ -19,8 +18,7 @@ Six scenarios, each driven by `harness.c`:
    - slot completed with `rc=0`, `observed_path=/private/etc/hosts`.
 
 2. **bare_deny_default** — `(deny default)` and nothing else.
-   This is the downstream bug-report shape the pre-Step-5 Swift
-   worker died on. Asserts that the C worker:
+   Asserts that the C worker:
    - still fires `applied` + `done`,
    - reports the kernel deny via the slot (`rc=1`, `errno` ∈
      {EPERM=1, EACCES=13}),
@@ -28,19 +26,19 @@ Six scenarios, each driven by `harness.c`:
 
 3. **exit_byte_clean** — happy path again, but the assertion is
    strictly on `sent_sigkill == false` and `exit_code == 0`. Pins
-   the R7/R8 exit-byte contract: the worker observes
+   the exit-byte contract: the worker observes
    `header.exit_requested == 1` from shared memory, calls `_exit(0)`,
    and the harness reaps it before its grace timer fires.
 
 4. **max_slots_deny_default** — bare `(deny default)` with all 256
    slots populated as `PW_ATTEMPT_NONE`. Asserts that every slot
    completes across the full shared-memory region after apply. This
-   pins the multi-page R8 ABI rather than only the first-slot smoke
+   pins the multi-page ABI rather than only the first-slot smoke
    path.
 
 5. **sigkill_fallback** — happy path through `done`, then the harness
    intentionally withholds `exit_requested`. Asserts that the host-side
-   grace timer sends SIGKILL and reaps the worker. This pins the R8
+   grace timer sends SIGKILL and reaps the worker. Pins the SIGKILL
    fallback path without needing a synthetic SBPL rule that denies
    `_exit`.
 
@@ -65,15 +63,9 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
 - A policy-driven `_exit` denial. The suite covers the same host-side
   SIGKILL fallback by withholding `exit_requested`; it does not prove
   that a real SBPL rule can deny `_exit`.
-- Production wiring. The runner host (PWRunnerService) still spawns
-  the legacy Swift worker; it does not invoke `pw-probe-runner`.
-  Step 6 wires production traffic and is gated on this suite being
-  green.
 - ABI version drift. The header has `_Static_assert`s pinning the
   layout sizes at compile time, but a value-level ABI change (e.g.
-  renaming a slot field) wouldn't be caught here. Source-drift
-  enforcement for the worker ABI is a candidate for Step 6's
-  `source_drift` extension.
+  renaming a slot field) wouldn't be caught here.
 
 ## Build / run
 
@@ -84,8 +76,7 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
 
 `harness.c` is compiled once per suite run into
 `tests/out/.../harness.runner_c_worker`. It uses the `PWRunner.xpc`
-bundle's copy of `pw-probe-runner`; `PWRunnerDebug.xpc`'s copy is
-identical (same source, signed separately).
+bundle's copy of `pw-probe-runner`.
 
 ## Artifacts
 

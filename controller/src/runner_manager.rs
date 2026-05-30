@@ -19,11 +19,12 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 #[serde(rename_all = "lowercase")]
 pub enum RunnerKind {
     Standard,
-    Debuggable,
-    // The alias accepts legacy on-disk registry entries carrying
-    // `kind: "machme"` and stores them as Byoxpc; new input that uses
-    // the literal "machme" string is rejected by RunnerKind::parse.
-    #[serde(alias = "machme")]
+    // The aliases accept legacy on-disk registry entries carrying
+    // `kind: "machme"` or `kind: "debuggable"` and coerce them to
+    // Byoxpc on load so upgraded integrators don't have a stranded
+    // registry. New input that uses either string is rejected by
+    // RunnerKind::parse.
+    #[serde(alias = "machme", alias = "debuggable")]
     Byoxpc,
 }
 
@@ -31,7 +32,6 @@ impl RunnerKind {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "standard" => Some(RunnerKind::Standard),
-            "debuggable" => Some(RunnerKind::Debuggable),
             "byoxpc" => Some(RunnerKind::Byoxpc),
             _ => None,
         }
@@ -40,7 +40,6 @@ impl RunnerKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             RunnerKind::Standard => "standard",
-            RunnerKind::Debuggable => "debuggable",
             RunnerKind::Byoxpc => "byoxpc",
         }
     }
@@ -514,12 +513,26 @@ mod tests {
     }
 
     #[test]
-    fn caller_facing_parse_rejects_machme() {
-        // RunnerKind::parse is for CLI / specimen input where we want a clean
-        // error pointing at byoxpc, not silent migration.
+    fn legacy_debuggable_kind_deserializes_as_byoxpc() {
+        // Registries written by older builds may carry
+        // `"kind": "debuggable"`. The serde alias coerces them to
+        // Byoxpc so upgraded integrators don't have a stranded
+        // registry. Re-serializing produces "byoxpc" — same one-shot
+        // migration shape as the machme alias.
+        let kind: RunnerKind = serde_json::from_str("\"debuggable\"")
+            .expect("legacy debuggable should deserialize");
+        assert_eq!(kind, RunnerKind::Byoxpc);
+        let round_trip = serde_json::to_string(&kind).unwrap();
+        assert_eq!(round_trip, "\"byoxpc\"");
+    }
+
+    #[test]
+    fn caller_facing_parse_rejects_legacy_aliases() {
+        // RunnerKind::parse is for CLI / specimen input where we want a
+        // clean error pointing at byoxpc, not silent migration.
         assert_eq!(RunnerKind::parse("machme"), None);
+        assert_eq!(RunnerKind::parse("debuggable"), None);
         assert_eq!(RunnerKind::parse("byoxpc"), Some(RunnerKind::Byoxpc));
         assert_eq!(RunnerKind::parse("standard"), Some(RunnerKind::Standard));
-        assert_eq!(RunnerKind::parse("debuggable"), Some(RunnerKind::Debuggable));
     }
 }

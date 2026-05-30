@@ -3,14 +3,16 @@ import Darwin
 import Security
 
 // PWRunnerService is the unsandboxed half of the runner: the XPC service
-// host that authenticates the caller, validates the request, spawns a
-// short-lived worker through WorkerProcess, and translates the worker's
-// report into the public PWRunnerRunResult shape before replying via XPC.
+// host that authenticates the caller, validates the request, drives the
+// C worker plus batch validator through CWorkerOrchestrator, and
+// translates their joined output into the public PWRunnerRunResult
+// shape before replying via XPC.
 //
-// The companion file is WorkerEntry.swift, which is the sandboxed half
-// — it runs inside the worker process, applies the policy to itself,
-// and executes the probe plan. Anything that must observe the applied
-// sandbox belongs there, not here.
+// The companion files are CWorker.swift (host-side launcher for
+// pw-probe-runner), ValidatorClient.swift (host-side launcher for
+// sb_api_validator --batch), and CWorkerOrchestrator.swift (joins
+// their outputs). Anything that must observe the applied sandbox
+// belongs in those sandboxed children, not here.
 //
 // What does NOT belong in this file: calls to applySandboxPolicy,
 // libsandbox state that survives past the load check, runSandboxCheck
@@ -128,6 +130,29 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         }
         didRun = true
 
+        // Reject requests carrying unsupported top-level keys
+        // explicitly. Swift's JSONDecoder silently ignores unknown
+        // keys, so without this pre-check a request with one of those
+        // keys would decode into PWRunnerRunSpec as if the field
+        // didn't exist — silently dropping the data while letting the
+        // caller think the field was honoured. The guard is
+        // load-bearing; see witness_contract/instrumentation_field_rejected.sh.
+        if let rejected = rejectedRetiredRequestKey(in: request) {
+            let resp = PWRunnerRunResult(
+                specimen_id: "<rejected>",
+                run_kind: nil,
+                rc: 1,
+                normalized_outcome: NormalizedOutcome.badRequest,
+                error: "request carries unsupported top-level field '\(rejected)'",
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: "unknown",
+                steps: []
+            )
+            replyAndExit(resp)
+            return
+        }
+
         let parsed: PWRunnerRunSpec
         do {
             parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: request)
@@ -205,92 +230,18 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        // ---- C-worker code path (the default after Step 6.8b).
-        // Production traffic runs through pw-probe-runner +
-        // sb_api_validator --batch via CWorkerOrchestrator. The
-        // legacy Swift worker below survives as the opt-out path
-        // for any caller that pins `use_c_worker: false` — kept as
-        // a rollback escape hatch for the transition. Step 7's
-        // instrumentation/debuggable removals + the eventual Swift
-        // worker retirement land in a separate sequence.
-        //
-        // Routing precedence (highest first):
-        //   1. _test_overrides.use_c_worker is explicit → honour it.
-        //   2. parsed.instrumentation is set → Swift worker only.
-        //      Instrumentation (debug_wait etc.) is a Swift-worker
-        //      feature; the C worker doesn't implement it. Until
-        //      Step 7 retires instrumentation entirely, an
-        //      instrumentation-using request auto-falls-back so
-        //      callers don't have to know about the routing change.
-        //   3. Otherwise → C-worker default.
-        let useCWorker: Bool = {
-            if let explicit = parsed._test_overrides?.use_c_worker {
-                return explicit
-            }
-            if parsed.instrumentation != nil {
-                return false
-            }
-            return true
-        }()
-        if useCWorker {
-            // C-worker-specific validation: catches probe_plan shapes
-            // the C worker would otherwise mishandle (duplicate
-            // step_ids → Dictionary trap; unknown attempt combos →
-            // silent successful no-op). bad_request before any
-            // process work happens.
-            if let problem = CWorkerOrchestrator.validateProbePlanForCWorker(parsed.probe_plan) {
-                let resp = PWRunnerRunResult(
-                    specimen_id: parsed.specimen_id,
-                    run_kind: parsed.run_kind,
-                    rc: 1,
-                    normalized_outcome: NormalizedOutcome.badRequest,
-                    error: problem,
-                    pid: Int(getpid()),
-                    bundle_id: bundleString("CFBundleIdentifier"),
-                    policy_format: parsed.policy.format,
-                    policy_sha256: policyHash,
-                    steps: [],
-                    test_overrides: parsed._test_overrides
-                )
-                replyAndExit(resp)
-                return
-            }
-            let workerPath = parsed._test_overrides?.worker_executable_path
-                ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
-            let validatorPath = parsed._test_overrides?.validator_executable_path
-                ?? CWorkerOrchestrator.defaultValidatorExecutablePath()
-            let cResp = CWorkerOrchestrator.run(
-                parsed: parsed,
-                policyHash: policyHash,
-                bundleId: bundleString("CFBundleIdentifier"),
-                workerExecutablePath: workerPath,
-                validatorExecutablePath: validatorPath
-            )
-            // path_diagnostics enrichment runs on both paths so the
-            // wire shape stays consistent regardless of which worker
-            // produced the attempts.
-            var enrichedResp = cResp
-            enrichedResp.steps = enrichPathDiagnostics(steps: cResp.steps)
-            replyAndExit(enrichedResp)
-            return
-        }
-
-        let workerRun = WorkerProcess.run(
-            requestData: request,
-            expectedStepCount: parsed.probe_plan.count,
-            executablePathOverride: parsed._test_overrides?.worker_executable_path,
-            timeoutMsOverride: parsed._test_overrides?.worker_timeout_ms,
-            specimenId: parsed.specimen_id
-        )
-
-        switch workerRun {
-        case .failure(let err):
+        // C-worker-specific validation: catches probe_plan shapes
+        // the C worker would otherwise mishandle (duplicate
+        // step_ids → Dictionary trap; unknown attempt combos →
+        // silent successful no-op). bad_request before any
+        // process work happens.
+        if let problem = CWorkerOrchestrator.validateProbePlanForCWorker(parsed.probe_plan) {
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
                 run_kind: parsed.run_kind,
                 rc: 1,
-                normalized_outcome: NormalizedOutcome.workerSpawnFailed,
-                error: err.description,
+                normalized_outcome: NormalizedOutcome.badRequest,
+                error: problem,
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: parsed.policy.format,
@@ -299,45 +250,60 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 test_overrides: parsed._test_overrides
             )
             replyAndExit(resp)
-
-        case .success(let worker):
-            let report = worker.report
-            let enrichedSteps = enrichPathDiagnostics(steps: report?.steps ?? [])
-            let resp = PWRunnerRunResult(
-                specimen_id: parsed.specimen_id,
-                run_kind: parsed.run_kind,
-                rc: worker.rc,
-                normalized_outcome: worker.normalized_outcome,
-                error: worker.error,
-                pid: report?.worker_pid ?? worker.subprocess.pid,
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
-                policy_sha256: report?.policy_sha256 ?? policyHash,
-                sandboxed_after_apply: report?.sandboxed_after_apply,
-                deny_signal_total: report?.deny_signal_total,
-                steps: enrichedSteps,
-                instrumentation: report?.instrumentation,
-                runner_subprocess: worker.subprocess,
-                test_overrides: parsed._test_overrides
-            )
-            replyAndExit(resp)
+            return
         }
+        let workerPath = parsed._test_overrides?.worker_executable_path
+            ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
+        let validatorPath = parsed._test_overrides?.validator_executable_path
+            ?? CWorkerOrchestrator.defaultValidatorExecutablePath()
+        let cResp = CWorkerOrchestrator.run(
+            parsed: parsed,
+            policyHash: policyHash,
+            bundleId: bundleString("CFBundleIdentifier"),
+            workerExecutablePath: workerPath,
+            validatorExecutablePath: validatorPath
+        )
+        // path_diagnostics enrichment is host-side; the host's
+        // realpath(3) is not blocked by the worker's (deny default)
+        // policy.
+        var enrichedResp = cResp
+        enrichedResp.steps = enrichPathDiagnostics(steps: cResp.steps)
+        replyAndExit(enrichedResp)
     }
 }
 
+// Top-level request keys that are not part of PWRunnerRunSpec.
+// Swift's JSONDecoder ignores unknown keys by default, so a request
+// that sets one of these would otherwise decode as if the field
+// were absent. We do an extra JSONSerialization pass to flag the
+// unsupported key explicitly so callers get a clean bad_request
+// instead of a silent drop.
+private let retiredRequestKeys: [String] = [
+    "instrumentation",
+]
+
+private func rejectedRetiredRequestKey(in request: Data) -> String? {
+    guard let object = try? JSONSerialization.jsonObject(with: request) else {
+        return nil
+    }
+    guard let dict = object as? [String: Any] else {
+        return nil
+    }
+    for key in retiredRequestKeys where dict[key] != nil {
+        return key
+    }
+    return nil
+}
+
 // path_diagnostics is computed here in the unsandboxed host rather
-// than in the worker (per RUNNER-RESHAPE-PLAN.md Step 3 / R4). The
-// host's realpath(3) is not blocked by a worker (deny default)
-// policy, so realpath_resolved is populated more reliably than the
-// pre-Step-3 producer could manage. The fallback chain
-// (wellKnownSymlinksResolved when realpath is unavailable) is
-// retained for hosts that for any reason can't stat the path.
+// than in the worker. The host's realpath(3) is not blocked by a
+// worker (deny default) policy, so realpath_resolved is reliably
+// populated. The fallback chain (wellKnownSymlinksResolved when
+// realpath is unavailable) is retained for hosts that for any
+// reason can't stat the path.
 //
-// The schema/wire shape is unchanged: path_diagnostics still appears
-// on path-filter sandbox_check results and only on those. Consumers
-// that branched on `path_diagnostics != nil` behave identically; the
-// only observable difference is that realpath_resolved is less often
-// null. The producer change is documented in PolicyWitness.md.
+// path_diagnostics appears on path-filter sandbox_check results
+// only.
 func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] {
     return steps.map { step in
         guard step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterPath,

@@ -119,10 +119,10 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(result.schema_version, 4)
             try expectNil(result.test_overrides)
             try expectNotNil(result.runner_subprocess)
-            // validator_subprocess defaults to nil on the legacy path.
-            // Production wiring (Step 6.8) populates it when the host
-            // takes the C-worker code path. v4 consumers branching on
-            // `validator_subprocess != nil` see the right value.
+            // validator_subprocess is nil when the host didn't spawn
+            // a validator child for this run (e.g. okResult fixture
+            // here, or every probe was in the prediction-unavailable
+            // set in a real run).
             try expectNil(result.validator_subprocess)
         }
 

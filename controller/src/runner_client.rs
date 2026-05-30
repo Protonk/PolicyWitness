@@ -10,7 +10,6 @@ use std::process::{Command, Stdio};
 
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
-use crate::sonoma_cross_check::{run_sonoma_cross_check, SonomaCrossCheckPlan, SonomaCrossCheckReport};
 use crate::utils::{now_unix_ms, truncate_output};
 
 #[derive(Serialize)]
@@ -99,46 +98,3 @@ pub fn run_pw_runner_client(
     Ok(parse_runner_client_output(&argv, started, ended, &out))
 }
 
-pub fn run_pw_runner_client_with_cross_check(
-    service_name: &str,
-    request_path: &std::path::Path,
-    timeout_ms: u64,
-    connection: &RunnerConnectionKind,
-    plan: SonomaCrossCheckPlan,
-) -> Result<(RunnerClientRun, Option<Value>, Option<SonomaCrossCheckReport>), String> {
-    let tool = resolve_contents_macos_tool("pw-runner-client")?;
-    let mut argv = vec![
-        tool.into_os_string(),
-        OsString::from("run"),
-        OsString::from("--timeout-ms"),
-        OsString::from(format!("{timeout_ms}")),
-    ];
-    match connection {
-        RunnerConnectionKind::XpcService => {}
-        RunnerConnectionKind::MachService { privileged } => {
-            argv.push(OsString::from("--mach-service"));
-            if *privileged {
-                argv.push(OsString::from("--privileged"));
-            }
-        }
-    }
-    argv.push(OsString::from(service_name));
-    argv.push(request_path.as_os_str().to_os_string());
-
-    let started = now_unix_ms();
-    let child = Command::new(&argv[0])
-        .args(&argv[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("failed to spawn pw-runner-client: {e}"))?;
-
-    let report = run_sonoma_cross_check(&plan);
-
-    let out = child
-        .wait_with_output()
-        .map_err(|e| format!("failed to wait for pw-runner-client: {e}"))?;
-    let ended = now_unix_ms();
-    let (runner_client, parsed) = parse_runner_client_output(&argv, started, ended, &out);
-    Ok((runner_client, parsed, Some(report)))
-}

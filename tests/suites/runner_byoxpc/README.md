@@ -13,7 +13,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 
 ## Opt-in tests
 
-- `tests/suites/runner_byoxpc/opt_in/runner_instrumentation_dyld_env.sh`
+- `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
 
 ## Artifacts
 

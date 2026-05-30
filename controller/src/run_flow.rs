@@ -13,22 +13,14 @@ use crate::cli;
 use crate::evidence;
 use crate::json_contract;
 use crate::policy_preflight::{run_policy_preflight, PolicyPreflightCapture};
-use crate::request_patch::{load_instrumentation_value, read_json_file, write_temp_request};
-use crate::runner_client::{
-    run_pw_runner_client, run_pw_runner_client_with_cross_check, RunnerClientRun,
-};
+use crate::request_patch::{read_json_file, write_temp_request};
+use crate::runner_client::{run_pw_runner_client, RunnerClientRun};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
     parse_runner_selector_value, resolve_runner_target, runner_provenance_from_target,
     RunnerProvenance,
 };
 use crate::sandbox_log::{capture_sandbox_logs_last, match_step_denies, SandboxLogCapture};
-use crate::sonoma_cross_check::{
-    apply_sonoma_cross_check_runner_results, extract_sonoma_cross_check_specs,
-    inject_sonoma_cross_check_instrumentation, sonoma_cross_check_skipped,
-    sonoma_cross_check_unavailable, sonoma_cross_check_wait_ms,
-    SonomaCrossCheckPlan, SonomaCrossCheckReport,
-};
 use crate::utils::now_unix_ms;
 
 pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
@@ -59,7 +51,6 @@ pub struct RunData {
     pub runner_client: RunnerClientRun,
     pub runner_result: Option<Value>,
     pub sandbox_log_capture: Option<SandboxLogCapture>,
-    pub sonoma_cross_check: Option<SonomaCrossCheckReport>,
     pub runner_startup_diagnostics: Option<RunnerStartupDiagnostics>,
     pub runner_sandbox_diagnostics: Option<RunnerSandboxDiagnostics>,
 }
@@ -125,9 +116,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut request_path: Option<std::path::PathBuf> = None;
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut log_last = DEFAULT_LOG_LAST.to_string();
-    let mut instrumentation_arg: Option<String> = None;
     let mut runner_mode_arg: Option<String> = None;
-    let mut sonoma_cross_check_enabled = false;
 
     let mut idx = 0usize;
     while idx < args.len() {
@@ -168,18 +157,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     .ok_or_else(|| "missing value for --runner-mode".to_string())?;
                 runner_mode_arg = Some(value.to_string());
                 idx += 2;
-            }
-            "--instrumentation" => {
-                let value = args
-                    .get(idx + 1)
-                    .and_then(|s| s.to_str())
-                    .ok_or_else(|| "missing value for --instrumentation".to_string())?;
-                instrumentation_arg = Some(value.to_string());
-                idx += 2;
-            }
-            "--sonoma-cross-check" => {
-                sonoma_cross_check_enabled = true;
-                idx += 1;
             }
             _ => return Err(format!("unknown argument: {arg}")),
         }
@@ -269,7 +246,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             runner_client,
             runner_result: None,
             sandbox_log_capture: None,
-            sonoma_cross_check: None,
             runner_startup_diagnostics: None,
             runner_sandbox_diagnostics: None,
         };
@@ -288,78 +264,18 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         return Ok(1);
     }
 
-    if let Some(arg) = instrumentation_arg.as_deref() {
-        let instrumentation = load_instrumentation_value(arg)?;
-        let obj = request_value
-            .as_object_mut()
-            .ok_or_else(|| "request.json must be a JSON object".to_string())?;
-        if obj.contains_key("instrumentation") {
-            return Err("request.json already includes instrumentation; remove it or omit --instrumentation".to_string());
-        }
-        obj.insert("instrumentation".to_string(), instrumentation);
-        request_modified = true;
-    }
-
-    let mut sonoma_cross_check_report: Option<SonomaCrossCheckReport> = None;
-    let mut sonoma_cross_check_plan: Option<SonomaCrossCheckPlan> = None;
-
-    if sonoma_cross_check_enabled {
-        let specs = extract_sonoma_cross_check_specs(&request_value)?;
-        if specs.is_empty() {
-            sonoma_cross_check_report =
-                Some(sonoma_cross_check_skipped("no sandbox_check steps".to_string()));
-        } else {
-            match crate::app_layout::resolve_contents_macos_tool("sb_api_validator") {
-                Ok(tool_path) => {
-                    let wait_ms = sonoma_cross_check_wait_ms(specs.len());
-                    // Inject a post-sandbox delay so the runner stays alive for cross-checking.
-                    inject_sonoma_cross_check_instrumentation(&mut request_value, wait_ms)?;
-                    request_modified = true;
-                    sonoma_cross_check_plan = Some(SonomaCrossCheckPlan {
-                        tool_path,
-                        process_name: runner_target.process_name.clone(),
-                        wait_ms,
-                        specs,
-                    });
-                }
-                Err(err) => {
-                    sonoma_cross_check_report = Some(sonoma_cross_check_unavailable(err));
-                }
-            }
-        }
-    }
-
     let request_path_for_runner = if request_modified {
         write_temp_request(&request_value)?
     } else {
         request_path.clone()
     };
 
-    let (runner_client, runner_result, sonoma_cross_check_from_run) =
-        if let Some(plan) = sonoma_cross_check_plan {
-            run_pw_runner_client_with_cross_check(
-                &runner_target.service_name,
-                &request_path_for_runner,
-                timeout_ms,
-                &runner_target.connection,
-                plan,
-            )?
-        } else {
-            let (runner_client, runner_result) = run_pw_runner_client(
-                &runner_target.service_name,
-                &request_path_for_runner,
-                timeout_ms,
-                &runner_target.connection,
-            )?;
-            (runner_client, runner_result, None)
-        };
-
-    let mut sonoma_cross_check =
-        sonoma_cross_check_report.or(sonoma_cross_check_from_run);
-
-    if let (Some(report), Some(result)) = (sonoma_cross_check.as_mut(), runner_result.as_ref()) {
-        apply_sonoma_cross_check_runner_results(report, result);
-    }
+    let (runner_client, runner_result) = run_pw_runner_client(
+        &runner_target.service_name,
+        &request_path_for_runner,
+        timeout_ms,
+        &runner_target.connection,
+    )?;
 
     let runner_pid = runner_result
         .as_ref()
@@ -460,7 +376,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         runner_client,
         runner_result,
         sandbox_log_capture,
-        sonoma_cross_check,
         runner_startup_diagnostics,
         runner_sandbox_diagnostics,
     };

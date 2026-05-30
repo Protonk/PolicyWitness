@@ -45,13 +45,10 @@ spec = {
         # The runner's attempt machinery doesn't have an IOKit attempt
         # kind today. We pair the sandbox_check with a benign file
         # open_read so the attempt slot in the envelope is populated by
-        # a SUPPORTED action — the prior placeholder ("access") was not
-        # a real action and silently returned outcome=unsupported. This
-        # exercise does NOT observe the iokit-open-service operation;
-        # the assertion below is about the prediction path (rc=-1,
-        # outcome=prediction_unavailable), not Channel A coverage of
-        # the IOKit operation. Real iokit attempts will land when the
-        # C probe-runner (Step 4) adds the operation kind.
+        # a SUPPORTED action. This exercise does NOT observe the
+        # iokit-open-service operation; the assertion below is about
+        # the prediction path (rc=-1, outcome=prediction_unavailable),
+        # not Channel A coverage of the IOKit operation.
         "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
@@ -60,7 +57,7 @@ PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" --sonoma-cross-check >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
 RC=$?
 set -e
 
@@ -114,18 +111,6 @@ if attempt.get("outcome") == "unsupported":
     )
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
-
-# Cross-check must mirror the prediction_unavailable signal.
-cross = env.get("data", {}).get("sonoma_cross_check") or {}
-cross_steps = cross.get("steps") or []
-if not cross_steps:
-    raise SystemExit("expected sonoma_cross_check.steps to be present")
-cstep = cross_steps[0]
-if cstep.get("status") != "skipped":
-    raise SystemExit(f"expected cross-check status=skipped, got {cstep.get('status')!r}")
-err = cstep.get("error") or ""
-if "prediction_unavailable" not in err:
-    raise SystemExit(f"expected cross-check error to identify prediction_unavailable (got {err!r})")
 PY
 ASSERT_RC=$?
 set -e
@@ -134,4 +119,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "prediction_unavailable surfaced; attempt observed; cross-check mirrored" "{}"
+test_pass "prediction_unavailable surfaced; attempt observed" "{}"

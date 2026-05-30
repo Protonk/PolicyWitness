@@ -2,14 +2,13 @@ import Darwin
 import Foundation
 
 /*
- * CWorker — Swift driver for pw-probe-runner. Per RUNNER-RESHAPE-PLAN
- * Step 6.2 (R9 part 1). Owns the host side of the shared-memory ABI
- * defined in controller/tools/pw_probe_runner/pw_probe_runner_abi.h
- * and mirrored as offset constants below.
+ * CWorker — Swift driver for pw-probe-runner. Owns the host side of
+ * the shared-memory ABI defined in
+ * controller/tools/pw_probe_runner/pw_probe_runner_abi.h and mirrored
+ * as offset constants below.
  *
- * This module is intentionally self-contained: it does not depend on
- * PWRunnerService, WorkerProcess, or any of the legacy Swift-worker
- * machinery. The integration into PWRunnerService is Step 6.3.
+ * This module is intentionally self-contained: PWRunnerService
+ * drives it through CWorkerOrchestrator and never reaches in.
  *
  * Flow (mirrors tests/suites/runner_c_worker_harness/harness.c):
  *   1. shm_open + ftruncate + mmap a PWShmLayout.regionBytes region;
@@ -18,7 +17,7 @@ import Foundation
  *      param_count; populate slot inputs from the request; populate
  *      param keys/values from policy.params.
  *   3. Pre-touch every page so the worker's post-apply writes never
- *      depend on lazy allocation (R8).
+ *      depend on lazy allocation.
  *   4. Release-store `prepared = 1`.
  *   5. Create ready + policy pipes. Mark parent-side ends FD_CLOEXEC.
  *   6. posix_spawn pw-probe-runner with FDs dup'd to 0/3/4.
@@ -30,17 +29,15 @@ import Foundation
  *  11. Reconstruct CWorkerStepResult per slot by reading the shm
  *      output fields once `completed == 1`.
  *
- * Errors are surfaced via CWorkerRunError; the caller (Step 6.3 code
- * in PWRunnerService) maps them to the runner's normalized_outcome
- * vocabulary. Nothing in this module reaches into PWRunnerAPI's
- * existing types.
+ * Errors are surfaced via CWorkerRunError; CWorkerOrchestrator maps
+ * them to the runner's normalized_outcome vocabulary. Nothing in
+ * this module reaches into PWRunnerAPI's existing types.
  */
 
 // MARK: - ABI mirror
 
 /// Wire-stable layout of the shm region. Mirrors pw_probe_runner_abi.h.
-/// A future ABI bump in the C header MUST update these constants;
-/// source_drift (Step 6.5 extension) will enforce.
+/// A future ABI bump in the C header MUST update these constants.
 public enum PWShmLayout {
     public static let abiVersion: UInt32   = 2
 
@@ -146,7 +143,7 @@ public struct CWorkerInput {
     /// `--post-apply-hang-ms <N>`. When > 0, the worker sleeps for
     /// N ms after every slot is durable but before flipping `done`;
     /// drives the host's `runner_timeout` outcome from a real
-    /// specimen. Production callers pass nil. Step 6.6 / R12b.
+    /// specimen. Production callers pass nil.
     public var postApplyHangMs: Int?
 
     public init(workerExecutablePath: String,
@@ -605,7 +602,7 @@ private func readString(_ base: UnsafePointer<UInt8>, offset: Int, max: Int) -> 
 
 // MARK: - Misc helpers
 
-// Shared with ValidatorClient.swift (Step 6.3b). Internal-scope so both
+// Shared with ValidatorClient.swift. Internal-scope so both
 // drivers see the same helper without code duplication.
 func sleepNs(_ ns: UInt64) {
     var ts = timespec(tv_sec: Int(ns / 1_000_000_000), tv_nsec: Int(ns % 1_000_000_000))
@@ -615,7 +612,7 @@ func sleepNs(_ ns: UInt64) {
 /// Convert a [String] into a NULL-terminated argv array of C strings the
 /// posix_spawn family expects. Each cstring is allocated and freed in the
 /// scope of the body closure.
-// Shared with ValidatorClient.swift (Step 6.3b). Internal-scope.
+// Shared with ValidatorClient.swift. Internal-scope.
 func withCStringArrayCopy<R>(_ strings: [String],
                              _ body: (UnsafePointer<UnsafeMutablePointer<CChar>?>) -> R) -> R {
     let cStrings: [UnsafeMutablePointer<CChar>?] = strings.map { strdup($0) }

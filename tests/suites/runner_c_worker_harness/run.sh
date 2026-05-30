@@ -9,8 +9,7 @@ PW_TEST_SUITE="runner_c_worker_harness"
 SUITE_DIR="${ROOT_DIR}/tests/suites/runner_c_worker_harness"
 ABI_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
 
-# pw-probe-runner lives bundle-locally inside each XPC service per
-# RUNNER-RESHAPE-PLAN R5. Either copy works; we use PWRunner.xpc's.
+# pw-probe-runner lives bundle-locally inside each XPC service.
 WORKER_PATH="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
 
 # Compile the harness once for the whole suite. xcrun won't have a

@@ -23,22 +23,26 @@ PolicyWitness is **specimen-first**:
     below).
 - `runner/SandboxApply.swift`
   - Policy hashing and single-shot `sandbox_apply` path.
-- `runner/Instrumentation.swift`
-  - Instrumentation ports and `InstrumentationState`.
 - `runner/ProbeRunner.swift`
   - `sandbox_check` and probe attempts (file + mach-lookup).
 - `runner/PathUtils.swift`
   - Path normalization and fd-based observation helpers.
 - `runner/Signals.swift`
   - Deny-signal handler and counters.
-- `runner/PWRunnerWorkerWire.swift`
-  - Internal length-prefixed JSON framing and worker report type.
-- `runner/WorkerEntry.swift`
-  - Worker-mode entry point and sandboxed apply/probe execution.
-- `runner/WorkerProcess.swift`
-  - Host-side worker spawn, IPC, reap, and outcome classification.
+- `runner/CWorker.swift`
+  - Host-side driver for `pw-probe-runner`: shm_open + mmap + posix_spawn,
+    sentinel polling, and the post-apply hook.
+- `runner/ValidatorClient.swift`
+  - Host-side driver for `sb_api_validator --batch`: concurrent
+    stdin/stdout via `poll()` to avoid pipe deadlock, partial-evidence
+    failure result.
+- `runner/CWorkerOrchestrator.swift`
+  - Joins the C worker and the validator child into a single
+    `PWRunnerRunResult`. Owns probe-plan validation,
+    `prediction_unavailable` host mirror, classification, and drift.
 - `runner/PWRunnerService.swift`
-  - Orchestrates the host flow (decode → validate → spawn worker → reply).
+  - Orchestrates the host flow (decode → validate → drive C worker +
+    validator → reply).
   - The host enforces caller authorization, loads libsandbox once to fail
     fast on missing dynamic loaders, computes `policy_sha256`, and never
     calls `sandbox_apply` on itself.
@@ -75,9 +79,11 @@ unset.
 
 | Key | Default | Re-routed boundary | Outcome it lets you reach |
 | --- | --- | --- | --- |
-| `libsandbox_path` | `/usr/lib/libsandbox.dylib` | `dlopen` in `SandboxLib.load(path:)` (host + worker) | `libsandbox_unavailable` |
-| `worker_executable_path` | `_NSGetExecutablePath()` | `posix_spawn` path in `WorkerProcess.spawnWorker` | `worker_spawn_failed` |
-| `worker_timeout_ms` | 90000 (floored at 50) | `WorkerProcess` host-side deadline | `runner_timeout` |
+| `libsandbox_path` | `/usr/lib/libsandbox.dylib` | `dlopen` in `SandboxLib.load(path:)` (host pre-spawn check) | `libsandbox_unavailable` |
+| `worker_executable_path` | bundle-local `pw-probe-runner` | `posix_spawn` path in `CWorker.spawn` | `worker_spawn_failed` |
+| `worker_timeout_ms` | 60000 (floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
+| `validator_executable_path` | bundle-local `sb_api_validator` | `posix_spawn` path in `ValidatorClient.runValidator` | `validator_spawn_failed` |
+| `worker_post_apply_hang_ms` | 0 (disabled) | `--post-apply-hang-ms` argv to `pw-probe-runner` | `runner_timeout` |
 
 See `AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test
@@ -87,19 +93,16 @@ recipe, and the rules for adding a new override.
   - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
 
 - `runner/services/PWRunner/`
-  - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard runner XPC service bundle.
-- `runner/services/PWRunnerDebug/`
-  - `Info.plist`, `Entitlements.plist`, `main.swift` for the debuggable runner XPC service bundle.
+  - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard runner XPC service bundle. Debug-attach inspection goes through BYOXPC.
 
 - `controller/tools/pw_probe_runner/pw_probe_runner.c` (+
   `pw_probe_runner_abi.h`) — the C worker that owns the post-apply
-  syscall surface per RUNNER-RESHAPE-PLAN R5/R6/R7/R8. Built once
-  and embedded inside each XPC service bundle as
-  `…/Contents/MacOS/pw-probe-runner` (not the app's top-level
-  `Contents/MacOS/`) so built-in and BYOXPC runners both resolve
-  the binary relative to their own bundle. Proven in isolation by
-  the `runner_c_worker_harness` suite; not yet invoked by the
-  production runner host (Step 6 wires that flip).
+  syscall surface. Built once and embedded inside each XPC service
+  bundle as `…/Contents/MacOS/pw-probe-runner` (not the app's
+  top-level `Contents/MacOS/`) so built-in and BYOXPC runners both
+  resolve the binary relative to their own bundle. Driven by
+  `CWorker.swift`; the `runner_c_worker_harness` suite exercises it
+  in isolation as a regression pin.
 
 ## Specimen inputs
 
@@ -115,11 +118,12 @@ Each probe step reports both a `sandbox_check` and an `attempt` result:
 - `pid` at the top level is the sandboxed worker PID when
   `runner_subprocess` is present. `runner_subprocess` carries the worker's
   `exit_code` or `term_signal` plus a `partial_steps` marker. The
-  classifier in `WorkerProcess.swift` maps worker exit status to
-  `normalized_outcome`: a complete report + clean exit → `ok`; any fatal
-  signal with no report → `runner_sandbox_denied` (the precise signal
-  stays in `runner_subprocess.term_signal`); host-side timeout →
-  `runner_timeout`; failure to `posix_spawn` → `worker_spawn_failed`.
+  classifier in `CWorkerOrchestrator` maps the sentinel state + waitpid
+  outcome to `normalized_outcome`: `done` sentinel flipped + clean exit →
+  `ok`; signal-before-done → `runner_sandbox_denied` (the precise signal
+  stays in `runner_subprocess.term_signal`); host SIGKILL after sentinel
+  timeout → `runner_timeout`; failure to `posix_spawn` →
+  `worker_spawn_failed`.
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
   `filter_value` and a best-effort `effective_filter_value` (for `path` filters,
   this is the runner’s normalized path). It also reports `pid`, `operation`,
@@ -131,9 +135,9 @@ Each probe step reports both a `sandbox_check` and an `attempt` result:
 
 ## Entitlements and sandboxing (important distinction)
 
-The standard built-in runner ships with minimal entitlements. The debuggable
-built-in runner (and some external runners) include hardened-runtime exceptions
-for inspection and controlled extensibility (debug attach / dynamic loading /
+The standard built-in runner ships with minimal entitlements. External
+(BYOXPC) runners can carry additional hardened-runtime exceptions for
+inspection and controlled extensibility (debug attach / dynamic loading /
 dyld env / executable memory). These do **not** make sandbox policy “dynamic”.
 
 ## Caller authorization (built-in only)
@@ -169,27 +173,6 @@ Invariants:
 
 The controller provides a `policy-witness runner` manager to install/register
 these services and to enforce entitlements supersets before dispatch.
-
-## Instrumentation port (opt-in)
-
-The specimen schema includes an optional `instrumentation` object that activates
-entitlement-backed adapters in a controlled, auditable way. When present, the
-runner executes requested ports at `phase: pre_sandbox` (default) or
-`phase: post_sandbox`, then includes `instrumentation` results in the run JSON.
-
-Supported ports (v1):
-
-- `dylib_load`: `dlopen` a specified dylib and optionally call a symbol (uses
-  `com.apple.security.cs.disable-library-validation`).
-- `debug_wait`: sleep for `sleep_ms` before sandbox apply to allow debugger
-  attach (uses `com.apple.security.get-task-allow`).
-- `execmem_probe`: attempt a JIT mapping (`MAP_JIT`, `PROT_READ|PROT_WRITE`) and report success/failure (uses
-  `com.apple.security.cs.allow-jit`).
-- `dyld_env`: report whether expected `DYLD_*` env vars are present; the runner
-  cannot set these at runtime, so use an external runner with launchd
-  `EnvironmentVariables`.
-
-Default behavior is unchanged: if `instrumentation` is omitted, nothing runs.
 
 ## Agent note: “nested sandbox” harnesses
 

@@ -3,10 +3,10 @@
 // PolicyWitness Swift runner — test-only SwiftPM manifest.
 //
 // This package mirrors the source set that build.sh compiles into the
-// PWRunner.xpc and PWRunnerDebug.xpc service binaries, but as a plain
-// library target so we can run unit tests against it. Production builds
-// continue to go through build.sh; SwiftPM is *not* a parallel build path
-// for the shipped app bundle.
+// PWRunner.xpc service binary, but as a plain library target so we can
+// run unit tests against it. Production builds continue to go through
+// build.sh; SwiftPM is *not* a parallel build path for the shipped app
+// bundle.
 //
 // The test target is an executableTarget (not a testTarget) because XCTest
 // is shipped with full Xcode, not Command Line Tools — and contributors
@@ -64,13 +64,9 @@ let package = Package(
                 "PWRunnerAPI.swift",
                 "SandboxLib.swift",
                 "SandboxApply.swift",
-                "Instrumentation.swift",
                 "ProbeRunner.swift",
                 "PathUtils.swift",
                 "Signals.swift",
-                "PWRunnerWorkerWire.swift",
-                "WorkerEntry.swift",
-                "WorkerProcess.swift",
                 "CWorker.swift",
                 "ValidatorClient.swift",
                 "CWorkerOrchestrator.swift",

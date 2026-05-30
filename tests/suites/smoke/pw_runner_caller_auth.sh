@@ -12,7 +12,6 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 CLIENT_BIN="${PW_APP_DIR}/Contents/MacOS/pw-runner-client"
 REQUEST_JSON="${ROOT_DIR}/tests/fixtures/pw_runner/specimen_file_read_deny.json"
 RUNNER_STD_BUNDLE="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc"
-RUNNER_DBG_BUNDLE="${PW_APP_DIR}/Contents/XPCServices/PWRunnerDebug.xpc"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 
@@ -31,9 +30,6 @@ fi
 if ! require_runner_bundle "${RUNNER_STD_BUNDLE}"; then
   exit 0
 fi
-if ! require_runner_bundle "${RUNNER_DBG_BUNDLE}"; then
-  exit 0
-fi
 
 read_bundle_id() {
   local info_plist="$1"
@@ -41,10 +37,8 @@ read_bundle_id() {
 }
 
 STD_INFO_PLIST="${RUNNER_STD_BUNDLE}/Contents/Info.plist"
-DBG_INFO_PLIST="${RUNNER_DBG_BUNDLE}/Contents/Info.plist"
 STD_SERVICE="$(read_bundle_id "${STD_INFO_PLIST}")"
-DBG_SERVICE="$(read_bundle_id "${DBG_INFO_PLIST}")"
-if [[ -z "${STD_SERVICE}" || -z "${DBG_SERVICE}" ]]; then
+if [[ -z "${STD_SERVICE}" ]]; then
   test_fail "failed to read CFBundleIdentifier from built-in runner Info.plist"
 fi
 
@@ -101,9 +95,8 @@ if payload.get("normalized_outcome") == "ok":
 PY
 }
 
-test_step "authorized_call" "authorized client can reach built-in runners"
+test_step "authorized_call" "authorized client can reach built-in runner"
 run_client_expect_ok "${STD_SERVICE}" "std"
-run_client_expect_ok "${DBG_SERVICE}" "dbg"
 
 test_step "unauthorized_adhoc" "ad-hoc client is rejected by built-in runner"
 BAD_CLIENT="${PW_TEST_ARTIFACTS}/pw-runner-client.adhoc"

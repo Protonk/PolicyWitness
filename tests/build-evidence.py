@@ -269,12 +269,12 @@ def main() -> int:
             entries.append(entry)
 
             # Sibling binaries inside the XPC bundle's MacOS dir (e.g.
-            # pw-probe-runner per RUNNER-RESHAPE-PLAN.md R5). These
-            # are signed individually before the XPC bundle seal is
-            # computed so the bundle codesign records their hashes;
-            # we surface them here so an evidence consumer can see
-            # the embedded helper's sha256 / lc_uuid / entitlements
-            # without having to descend into the bundle.
+            # pw-probe-runner, sb_api_validator). These are signed
+            # individually before the XPC bundle seal is computed so
+            # the bundle codesign records their hashes; we surface
+            # them here so an evidence consumer can see the embedded
+            # helper's sha256 / lc_uuid / entitlements without having
+            # to descend into the bundle.
             svc_macos_dir = svc_bundle / "Contents" / "MacOS"
             for sibling in sorted(svc_macos_dir.iterdir()):
                 if sibling.name == svc_name or not sibling.is_file():

@@ -1,8 +1,8 @@
 //! CLI contract integration tests for the controller binary.
 //!
 //! These tests run the built dist/PolicyWitness.app to validate the end-to-end
-//! envelope shape and instrumentation injection behavior. They are gated behind
-//! PW_INTEGRATION=1 so `cargo test --tests` can run without a built app.
+//! envelope shape. They are gated behind PW_INTEGRATION=1 so
+//! `cargo test --tests` can run without a built app.
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -123,138 +123,6 @@ fn specimen_smoke_file_read_deny() {
     let step = &steps[0];
     let sb = step.get("sandbox_check").cloned().unwrap_or_default();
     assert_eq!(sb.get("outcome").and_then(|v| v.as_str()), Some("deny"));
-}
-
-#[test]
-fn instrumentation_injects_by_flag() {
-    if !integration_enabled() {
-        return;
-    }
-    let bin = require_pw_bin();
-
-    let specimen = repo_root()
-        .join("tests")
-        .join("fixtures")
-        .join("pw_runner")
-        .join("specimen_file_read_deny.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
-
-    let instrumentation = repo_root()
-        .join("tests")
-        .join("fixtures")
-        .join("instrumentation")
-        .join("debug_wait.json");
-    assert!(
-        instrumentation.exists(),
-        "missing instrumentation fixture: {}",
-        instrumentation.display()
-    );
-
-    let out = run_pw(
-        &bin,
-        &[
-            "run",
-            "--instrumentation",
-            instrumentation.to_str().expect("instrumentation path utf8"),
-            specimen.to_str().expect("specimen path utf8"),
-        ],
-    );
-
-    assert!(
-        out.status.success(),
-        "instrumentation run failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
-        out.status.code(),
-        String::from_utf8_lossy(&out.stderr),
-        String::from_utf8_lossy(&out.stdout)
-    );
-
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
-    let runner = envelope
-        .get("data")
-        .and_then(|v| v.get("runner_result"))
-        .cloned()
-        .expect("missing data.runner_result");
-    let inst = runner
-        .get("instrumentation")
-        .cloned()
-        .expect("missing runner_result.instrumentation");
-    let ports = inst
-        .get("ports")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
-    assert!(!ports.is_empty(), "expected instrumentation ports");
-    let port = &ports[0];
-    assert_eq!(
-        port.get("kind").and_then(|v| v.as_str()),
-        Some("debug_wait")
-    );
-    assert_eq!(
-        port.get("status").and_then(|v| v.as_str()),
-        Some("ok")
-    );
-}
-
-#[test]
-fn instrumentation_rejects_existing() {
-    if !integration_enabled() {
-        return;
-    }
-    let bin = require_pw_bin();
-
-    let specimen = repo_root()
-        .join("tests")
-        .join("fixtures")
-        .join("pw_runner")
-        .join("specimen_instrumentation_debug_wait.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
-
-    let instrumentation = repo_root()
-        .join("tests")
-        .join("fixtures")
-        .join("instrumentation")
-        .join("debug_wait.json");
-    assert!(
-        instrumentation.exists(),
-        "missing instrumentation fixture: {}",
-        instrumentation.display()
-    );
-
-    let out = run_pw(
-        &bin,
-        &[
-            "run",
-            "--instrumentation",
-            instrumentation.to_str().expect("instrumentation path utf8"),
-            specimen.to_str().expect("specimen path utf8"),
-        ],
-    );
-
-    assert!(
-        !out.status.success(),
-        "expected failure when instrumentation already present"
-    );
-    assert_eq!(out.status.code(), Some(2));
-
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
-    assert_eq!(
-        envelope
-            .get("result")
-            .and_then(|v| v.get("normalized_outcome"))
-            .and_then(|v| v.as_str()),
-        Some("tool_error")
-    );
-    let error = envelope
-        .get("result")
-        .and_then(|v| v.get("error"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    assert!(
-        error.contains("instrumentation"),
-        "expected error to mention instrumentation (got {error:?})"
-    );
 }
 
 #[test]
@@ -413,14 +281,10 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
 
 #[test]
 fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
-    // Repro of the downstream report: under `(deny default)` the runner
-    // worker can't stat /etc/hosts. The pre-RUNNER-RESHAPE-PLAN-Step-3
-    // producer (worker-side) hit this stat block and emitted
-    // realpath_resolved=null, relying on wellKnownSymlinksResolved as
-    // the fallback for firmlink_resolved and data_volume_form. After
-    // Step 3 the producer is host-side (unsandboxed), so
-    // realpath_resolved is populated even under (deny default). Either
-    // way, the derived forms must be present and correct — that is the
+    // Under `(deny default)` the worker can't stat /etc/hosts.
+    // path_diagnostics is computed by the unsandboxed host (so
+    // realpath_resolved is reliably populated), but the derived
+    // forms must be present and correct regardless — that is the
     // load-bearing assertion this test pins.
     if !integration_enabled() {
         return;
@@ -494,18 +358,18 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
 
 #[test]
 fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() {
-    // Pins the Step 3 (R4) producer move: path_diagnostics is computed
-    // by the unsandboxed runner host (PWRunnerService.enrichPathDiagnostics)
-    // after the worker reports back. The host's realpath(3) is NOT
-    // blocked by the worker's (deny default) policy, so realpath_resolved
-    // is populated even when the worker itself couldn't stat the path.
+    // path_diagnostics is computed by the unsandboxed runner host
+    // (PWRunnerService.enrichPathDiagnostics) after the worker
+    // reports back. The host's realpath(3) is NOT blocked by the
+    // worker's (deny default) policy, so realpath_resolved is
+    // populated even when the worker itself couldn't stat the path.
     //
-    // This is the positive assertion the survives_strict_sandbox test
-    // deliberately avoided: a regression that moves path_diagnostics
-    // computation back into the worker (or otherwise prevents host
-    // realpath from running) silently breaks the Step-3 contract
-    // without breaking the shape-only assertions above. This test
-    // catches that.
+    // This is the positive assertion the survives_strict_sandbox
+    // test deliberately avoided: a regression that moves
+    // path_diagnostics computation back into the worker (or
+    // otherwise prevents host realpath from running) silently breaks
+    // the host-producer contract without breaking the shape-only
+    // assertions above. This test catches that.
     if !integration_enabled() {
         return;
     }
@@ -531,7 +395,8 @@ fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() 
         .unwrap_or_else(|| panic!(
             "expected realpath_resolved to be a populated string under \
              (deny default) — the host should compute it without the \
-             worker's sandbox restriction. Step 3 (R4) producer regression?"
+             worker's sandbox restriction. Did path_diagnostics move \
+             back into the worker?"
         ));
 
     // /etc/hosts resolves to /private/etc/hosts on every shipped macOS

@@ -12,22 +12,18 @@ the architecture behind it.
 
 ## Invariants
 
-- The suite is **off the default battery** during the runner reshape
-  (`RUNNER-RESHAPE-PLAN.md`). Most tests are expected to fail until
-  the corresponding plan row lands; each failure prints a precise
-  "PASSES WHEN: …" line naming the gating row.
-- `happy_path_baseline.sh` passes today and should pass after every
-  step of the reshape. If it ever fails mid-refactor, stop and
-  investigate before continuing.
-- Tests are stateless: named for what they assert, not for the row
-  number that gates them. When the reshape is complete and the suite
-  is fully green, it promotes to a permanent regression suite.
+- The suite is **off the default battery** because it carries a few
+  load-bearing regression guards against re-introduction of removed
+  request fields (`instrumentation`) and runner modes
+  (`runner.mode=debuggable`).
+- `happy_path_baseline.sh` is the regression sentinel — it must pass
+  in every run. If it fails, stop and investigate before continuing.
+- Tests are stateless: named for what they assert, not for any
+  plan-row number.
 
 ## Success criteria
 
-- Every test passes. Today: only `happy_path_baseline` does.
-- Once fully green, the suite migrates from this `Contract` tier into
-  `Baseline` and runs in the default battery.
+- Every test passes.
 
 ## Fixtures
 
@@ -45,4 +41,4 @@ the architecture behind it.
 ./tests/run.sh --suite witness_contract
 ```
 
-Not invoked by `tests/run.sh --all` during the reshape — run on demand.
+Not invoked by `tests/run.sh --all` — run on demand.
