@@ -39,6 +39,7 @@ XPC_RUNNER_WORKER_ENTRY_FILE="${XPC_ROOT}/WorkerEntry.swift"
 XPC_RUNNER_WORKER_PROCESS_FILE="${XPC_ROOT}/WorkerProcess.swift"
 XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/CWorker.swift"
 XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/ValidatorClient.swift"
+XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/CWorkerOrchestrator.swift"
 XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/PWRunnerService.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/PWSandboxCheckShim.c"
 XPC_RUNNER_CWORKER_SHIM="${XPC_ROOT}/PWCWorkerShim.c"
@@ -289,6 +290,10 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" 1>&2
     exit 2
   fi
+  if [[ ! -f "${XPC_RUNNER_CWORKER_ORCH_FILE}" ]]; then
+    echo "ERROR: missing ${XPC_RUNNER_CWORKER_ORCH_FILE}" 1>&2
+    exit 2
+  fi
   if [[ ! -f "${XPC_RUNNER_SERVICE_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SERVICE_FILE}" 1>&2
     exit 2
@@ -352,6 +357,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_WORKER_PROCESS_FILE}" \
       "${XPC_RUNNER_CWORKER_FILE}" \
       "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
+      "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
       "${XPC_RUNNER_SERVICE_FILE}" \
       "${svc_main}" "${shim_obj}" "${cworker_shim_obj}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"

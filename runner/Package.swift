@@ -73,6 +73,7 @@ let package = Package(
                 "WorkerProcess.swift",
                 "CWorker.swift",
                 "ValidatorClient.swift",
+                "CWorkerOrchestrator.swift",
                 "PWRunnerService.swift",
             ],
             swiftSettings: [

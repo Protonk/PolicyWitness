@@ -208,6 +208,12 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | `debug_wait` instrumentation port so the runner_timeout       |                             |
 // |                             | suite keeps exercising the host deadline path on the new      |                             |
 // |                             | architecture.                                                 |                             |
+// | `use_c_worker`              | gates PWRunnerService.runSpecimen onto the C-worker code      | (no specific outcome —      |
+// |                             | path (pw-probe-runner + sb_api_validator --batch via          |  routes the request through |
+// |                             | CWorkerOrchestrator). Default-false: production traffic       |  the new orchestration that |
+// |                             | continues through the legacy Swift worker. Step 6.8b will     |  produces the v4 envelope   |
+// |                             | flip the default once the gated path has been broadly         |  with validator_subprocess  |
+// |                             | exercised.                                                    |  + steps[].drift)           |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -218,19 +224,22 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
     public var worker_post_apply_hang_ms: Int?
+    public var use_c_worker: Bool?
 
     public init(
         libsandbox_path: String? = nil,
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
-        worker_post_apply_hang_ms: Int? = nil
+        worker_post_apply_hang_ms: Int? = nil,
+        use_c_worker: Bool? = nil
     ) {
         self.libsandbox_path = libsandbox_path
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
+        self.use_c_worker = use_c_worker
     }
 }
 

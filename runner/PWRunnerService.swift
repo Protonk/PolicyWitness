@@ -205,6 +205,32 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        // ---- C-worker code path (gated by _test_overrides.use_c_worker).
+        // Per RUNNER-RESHAPE-PLAN Step 6.8a. Default-false during the
+        // transition: production traffic continues through the Swift
+        // worker below. Step 6.8b flips the default once the gated
+        // path has been broadly exercised.
+        if parsed._test_overrides?.use_c_worker == true {
+            let workerPath = parsed._test_overrides?.worker_executable_path
+                ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
+            let validatorPath = parsed._test_overrides?.validator_executable_path
+                ?? CWorkerOrchestrator.defaultValidatorExecutablePath()
+            let cResp = CWorkerOrchestrator.run(
+                parsed: parsed,
+                policyHash: policyHash,
+                bundleId: bundleString("CFBundleIdentifier"),
+                workerExecutablePath: workerPath,
+                validatorExecutablePath: validatorPath
+            )
+            // path_diagnostics enrichment runs on both paths so the
+            // wire shape stays consistent regardless of which worker
+            // produced the attempts.
+            var enrichedResp = cResp
+            enrichedResp.steps = enrichPathDiagnostics(steps: cResp.steps)
+            replyAndExit(enrichedResp)
+            return
+        }
+
         let workerRun = WorkerProcess.run(
             requestData: request,
             expectedStepCount: parsed.probe_plan.count,

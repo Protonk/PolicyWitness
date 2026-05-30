@@ -152,6 +152,7 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 | `worker_timeout_ms` | integer (ms, floored at 50) | Host-side `kqueue`/poll deadline in `WorkerProcess.run` | `runner_timeout` |
 | `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` (C-worker path) |
+| `use_c_worker` | bool | Routes `PWRunnerService.runSpecimen` onto the C-worker code path (`pw-probe-runner` + `sb_api_validator --batch` via `CWorkerOrchestrator`). Default-false during the transition: production traffic continues through the legacy Swift worker. Step 6.8b flips the default. | (no specific outcome — gates the orchestration that produces the v4 envelope with `validator_subprocess` + `steps[].drift`) |
 
 A hostile value drives a real failure: a `/nonexistent/...` path makes `dlopen` or `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `instrumentation.debug_wait` makes the host's deadline fire before the worker exits naturally. The classifier in `WorkerProcess.classifyWorkerResult` is the same code that runs in production — only its *input* is steered.
 
