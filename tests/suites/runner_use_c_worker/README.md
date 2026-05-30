@@ -1,13 +1,14 @@
 # runner_use_c_worker
 
-End-to-end coverage for the C-worker code path gated by
-`_test_overrides.use_c_worker=true` (RUNNER-RESHAPE-PLAN Step 6.8a).
-PWRunnerService still routes through the legacy Swift worker by
-default; this suite exercises the alternative path while it sits
-behind the flag, ahead of Step 6.8b's default flip.
+End-to-end coverage for the C-worker code path (the production
+default after RUNNER-RESHAPE-PLAN Step 6.8b). Specimens here set
+`_test_overrides.use_c_worker: true` explicitly so the assertions
+stay deterministic against the orchestration code under test even
+if a future routing change moves the defaults again.
 
-The gated path runs `pw-probe-runner` (attempts) + `sb_api_validator
---batch` (sandbox_check verdicts) as two children of the XPC service,
+The C-worker path runs `pw-probe-runner` (attempts) +
+`sb_api_validator --batch` (sandbox_check verdicts) as two children
+of the XPC service,
 joined into a single `PWRunnerRunResult` envelope by
 `CWorkerOrchestrator`. Step 6.4's v4 schema additions
 (`validator_subprocess`, `steps[].drift`) carry the new evidence.
@@ -62,9 +63,11 @@ controller → XPC service → orchestrator → both children:
 - **`sandbox_apply_failed`.** The Step 6.5 vocabulary handles it;
   e2e coverage via a malformed-SBPL specimen is straightforward but
   not yet scripted.
-- **The default flip.** Step 6.8b makes the C-worker path the
-  default; until then, this suite is the only consumer of the
-  gated path.
+- **Routing default semantics.** The suite always sets
+  `use_c_worker: true` explicitly so the assertions don't depend on
+  the routing precedence chain in PWRunnerService. Default routing
+  (the implicit-flag behaviour) is exercised by the rest of the
+  default battery; this suite focuses on the orchestration shape.
 
 ## Run
 

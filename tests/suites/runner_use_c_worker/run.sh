@@ -528,8 +528,155 @@ PY
 run_happy_default_allow
 run_bare_deny_default
 run_prediction_unavailable_pair
+# ---- test_id: drift_null_for_dac_eacces (PR I #1 regression) -------------
+#
+# A real chmod 000 file owned by us returns EACCES from open(),
+# despite policy (allow default). The validator predicts allow, the
+# attempt observes EACCES — but the denial came from filesystem DAC,
+# not from the kernel sandbox. Reporting drift=true would be dishonest
+# attribution (validator was right about sandbox; the failure had
+# nothing to do with libsandbox). Post-fix the orchestrator
+# classifies file EPERM/EACCES as deniedAmbiguous and returns
+# drift=null for the (allow, ambiguous) case.
+
+run_drift_null_for_dac_eacces() {
+  local test_id="drift_null_for_dac_eacces"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "(allow default) + file with mode 000 → drift=null (EACCES is ambiguous between sandbox and DAC; used to surface as drift=true)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local target="${PW_TEST_ARTIFACTS}/no-read.txt"
+  : >"${target}"
+  chmod 000 "${target}"
+  # Cleanup on exit so the artifacts dir can be removed cleanly.
+  trap 'chmod 600 "'"${target}"'" 2>/dev/null || true' RETURN
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  /usr/bin/python3 - "${specimen}" "${target}" <<'PY'
+import json, sys
+from pathlib import Path
+spec = {
+    "schema_version": 1,
+    "specimen_id": "use_c_worker_dac_eacces_drift",
+    "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+    "probe_plan": [{
+        "step_id": "s_dac",
+        "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": sys.argv[2]}},
+        "attempt": {"kind": "file", "action": "open_read", "target": sys.argv[2]},
+    }],
+    "_test_overrides": {"use_c_worker": True},
+}
+Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "ok"
+s = r["steps"][0]
+# Validator predicts allow under (allow default).
+assert s["sandbox_check"]["outcome"] == "allow", \
+    "validator should allow under (allow default): {0}".format(s["sandbox_check"]["outcome"])
+assert s["attempt"]["outcome"] == "open_failed"
+# EACCES = 13. The kernel returned it; we don't know if sandbox or
+# DAC caused it.
+assert s["attempt"]["errno"] == 13, "expected EACCES (13), got {0}".format(s["attempt"]["errno"])
+# Critical: drift must be null. (allow, ambiguous-deny) → null per
+# the asymmetric drift rule.
+assert s["drift"] is None, \
+    "drift should be null for (allow, ambiguous-EACCES), got {0}".format(s["drift"])
+print("ok: DAC EACCES yields drift=null when validator predicts allow")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "drift=null for DAC EACCES (validator=allow, observation=ambiguous)" "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: access_failure_classified (PR I #2 regression) -------------
+#
+# A file/access attempt that fails with EPERM/EACCES used to land as
+# attempt.outcome="unsupported" because buildAttemptResult had no
+# case for attemptActionAccess. Post-fix the C worker's access(R_OK)
+# call is mapped to AttemptOutcome.accessFailed with the errno
+# preserved.
+
+run_access_failure_classified() {
+  local test_id="access_failure_classified"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "(deny file-read-data /private/etc) + file/access on /etc/hosts → outcome=access_failed (was 'unsupported')"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_access_failed",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)(deny file-read-data (subpath \"/private/etc\"))"},
+  "probe_plan": [{
+    "step_id": "s_access",
+    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
+    "attempt": {"kind": "file", "action": "access", "target": "/etc/hosts"}
+  }],
+  "_test_overrides": { "use_c_worker": true }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+s = r["steps"][0]
+# Attempt was access(R_OK) which the worker DOES run. It fails
+# because the deny rule covers /private/etc (canonical form of
+# /etc/hosts). Pre-fix the orchestrator surfaced this as
+# outcome=unsupported even though the syscall ran.
+assert s["attempt"]["outcome"] == "access_failed", \
+    "expected outcome=access_failed, got {0!r} (pre-fix this was 'unsupported')".format(s["attempt"]["outcome"])
+assert s["attempt"]["rc"] == 1
+# EPERM (1) or EACCES (13). The kernel sandbox kills the access
+# call; either errno is plausible across macOS revisions.
+assert s["attempt"]["errno"] in (1, 13), \
+    "expected EPERM/EACCES, got {0}".format(s["attempt"]["errno"])
+print("ok: file/access failure classified as access_failed (not unsupported)")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "file/access failure surfaces as access_failed with errno preserved" "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_duplicate_step_id_rejected
 run_unsupported_attempt_rejected
 run_worker_timeout_ms_honored
 run_drift_null_for_non_policy_failure
 run_sandbox_check_pid_matches_worker
+run_drift_null_for_dac_eacces
+run_access_failure_classified

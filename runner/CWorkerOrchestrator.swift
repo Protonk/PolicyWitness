@@ -525,6 +525,8 @@ private func buildAttemptResult(
             return AttemptOutcome.openFailed
         case PWRunnerWire.attemptActionUnlink:
             return AttemptOutcome.unlinkFailed
+        case PWRunnerWire.attemptActionAccess:
+            return AttemptOutcome.accessFailed
         case PWRunnerWire.attemptActionMachLookup:
             return AttemptOutcome.lookupFailed
         default:
@@ -559,27 +561,39 @@ private func computeDrift(
     // the validator predicted allow would flood the envelope with
     // false libsandbox-drift signals.
     //
-    // The classification:
-    //   - attempt.outcome == ok            → kernel allowed
-    //   - attempt is a sandbox-deny-class  → kernel denied
-    //   - everything else (ENOENT, missing service, etc.) → not a
-    //     verdict about sandbox enforcement; drift is undefined
+    // Asymmetric: EPERM/EACCES on a file op is AMBIGUOUS — the kernel
+    // sandbox produces those errnos, but so does ordinary Unix DAC
+    // (chmod 000, owner mismatch, etc). Without a deny-event-log
+    // cross-reference we can't tell the two apart from rc/errno alone.
+    // So:
+    //   - (validator=allow, observation=ambiguous-deny) → nil
+    //     ("we observed a failure but can't attribute it to libsandbox")
+    //   - (validator=deny,  observation=ambiguous-deny) → false
+    //     ("agreement on direction — small risk of crediting libsandbox
+    //      for a DAC denial, accepted because the signal is mostly right")
+    // Mach kr=1100 is unambiguous (no DAC analogue) so it always
+    // counts as strong sandbox evidence.
     let observation = observationFromAttempt(attempt)
     switch (sandboxCheck.outcome, observation) {
-    case (SandboxCheckOutcome.allow, .allowed): return false
-    case (SandboxCheckOutcome.allow, .denied):  return true   // libsandbox drift
-    case (SandboxCheckOutcome.deny,  .allowed): return true   // libsandbox drift
-    case (SandboxCheckOutcome.deny,  .denied):  return false
-    default:                                     return nil
+    case (SandboxCheckOutcome.allow, .allowed):                return false
+    case (SandboxCheckOutcome.allow, .deniedStrongEvidence):   return true   // libsandbox drift
+    case (SandboxCheckOutcome.allow, .deniedAmbiguous):        return nil    // could be DAC, not sandbox
+    case (SandboxCheckOutcome.deny,  .allowed):                return true   // libsandbox drift
+    case (SandboxCheckOutcome.deny,  .deniedStrongEvidence):   return false
+    case (SandboxCheckOutcome.deny,  .deniedAmbiguous):        return false  // directional agreement
+    default:                                                    return nil
     }
 }
 
 private enum AttemptObservation {
-    case allowed       // attempt.outcome == ok
-    case denied        // sandbox-denial-class failure (EPERM/EACCES on file,
-                       //   BOOTSTRAP_NOT_PRIVILEGED-class kr on mach)
-    case undefined     // ENOENT, missing service, unsupported, worker died,
-                       //   or any failure that isn't itself a sandbox verdict
+    case allowed                 // attempt.outcome == ok
+    case deniedStrongEvidence    // mach kr=1100 (BOOTSTRAP_NOT_PRIVILEGED;
+                                 //   no DAC analogue, so unambiguous sandbox)
+    case deniedAmbiguous         // file EPERM/EACCES (sandbox OR DAC; can't
+                                 //   tell from rc/errno alone)
+    case undefined               // ENOENT, missing service, unsupported,
+                                 //   worker died — failures that aren't
+                                 //   themselves sandbox verdicts
 }
 
 private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> AttemptObservation {
@@ -588,13 +602,16 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
     }
     switch attempt.outcome {
     case AttemptOutcome.openFailed,
-         AttemptOutcome.unlinkFailed:
+         AttemptOutcome.unlinkFailed,
+         AttemptOutcome.accessFailed:
         // POSIX file ops: EPERM (1) and EACCES (13) are the kernel's
-        // sandbox-deny signals. Any other errno (ENOENT, EISDIR, EIO,
-        // EROFS, etc.) is a non-policy failure — the sandbox isn't
-        // saying anything one way or the other about this path.
+        // sandbox-deny signals — but they're also ordinary Unix DAC
+        // signals (mode bits, owner mismatch, immutable flag, etc.).
+        // Classify as deniedAmbiguous so the drift logic above can
+        // suppress false libsandbox-drift attribution when the
+        // validator's prediction is allow.
         switch attempt.errno {
-        case Int(EPERM), Int(EACCES): return .denied
+        case Int(EPERM), Int(EACCES): return .deniedAmbiguous
         default:                       return .undefined
         }
     case AttemptOutcome.lookupFailed:
@@ -605,7 +622,7 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
         // The worker writes the kr verbatim into attempt.error as
         // "bootstrap_look_up: kr=<N>"; parse that substring.
         if let msg = attempt.error, msg.contains("kr=1100") {
-            return .denied
+            return .deniedStrongEvidence
         }
         return .undefined
     case AttemptOutcome.bootstrapPortFailed,

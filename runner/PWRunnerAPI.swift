@@ -118,6 +118,7 @@ public enum AttemptOutcome {
     public static let ok = "ok"
     public static let openFailed = "open_failed"
     public static let unlinkFailed = "unlink_failed"
+    public static let accessFailed = "access_failed"
     public static let lookupFailed = "lookup_failed"
     public static let bootstrapPortFailed = "bootstrap_port_failed"
     public static let unsupported = "unsupported"
@@ -213,9 +214,10 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | Step 6.8b the C-worker path (pw-probe-runner +                |  selects which orchestration|
 // |                             | sb_api_validator --batch via CWorkerOrchestrator) is the      |  assembles the envelope;    |
 // |                             | default. Set to false to opt into the legacy Swift worker —   |  the C path populates       |
-// |                             | rollback escape hatch until Step 7 retires it. A request      |  validator_subprocess +     |
-// |                             | with `instrumentation` set auto-falls-back to Swift           |  steps[].drift)             |
-// |                             | regardless of this flag (instrumentation is Swift-only).      |                             |
+// |                             | rollback escape hatch until Step 7 retires it. Precedence:    |  validator_subprocess +     |
+// |                             | explicit override wins; if absent AND `instrumentation` is    |  steps[].drift)             |
+// |                             | set the runner auto-falls-back to Swift (instrumentation is   |                             |
+// |                             | Swift-only); otherwise default to C.                          |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test

@@ -203,14 +203,23 @@ unsandboxed and spawns a short-lived worker that applies the specimen policy.
 - `validator_subprocess: { pid, exit_code, term_signal } | null` — the
   `sb_api_validator --batch` child the host spawns alongside the C
   worker (the default code path after the runner reshape) to collect
-  `sandbox_check` verdicts against the sandboxed worker_pid. Populated
-  on every default run. `null` only when the request opted out of the
-  C-worker path (`_test_overrides.use_c_worker: false`, or
-  `instrumentation` set on the request — both route to the legacy
-  Swift worker, which doesn't spawn a separate validator), or when
-  the validator failed to spawn before any metadata could be captured.
-  Exactly one of `exit_code` (clean exit) or `term_signal` (SIGKILL
-  fallback) is non-null on a completed run.
+  `sandbox_check` verdicts against the sandboxed worker_pid.
+  `null` when no validator child was spawned, which happens in three
+  cases:
+    1. The request opted out of the C-worker path
+       (`_test_overrides.use_c_worker: false`, or `instrumentation`
+       set — both route to the legacy Swift worker, which doesn't
+       spawn a separate validator).
+    2. Every probe in the plan had an (operation, filter) pair in
+       the `prediction_unavailable` set — the orchestrator skipped
+       the validator entirely because there were no probes to send,
+       and synthesized the per-step `sandbox_check.outcome =
+       "prediction_unavailable"` verdicts locally.
+    3. The validator failed to spawn before any metadata could be
+       captured (surfaced as `normalized_outcome =
+       "validator_spawn_failed"`).
+  Otherwise populated, with exactly one of `exit_code` (clean exit)
+  or `term_signal` (SIGKILL fallback) non-null.
 - `steps[].drift: bool | null` — disagreement between the validator's
   predicted verdict and the attempt's observed verdict for the step.
   `true` when they disagree about allow/deny (libsandbox-drift evidence;
