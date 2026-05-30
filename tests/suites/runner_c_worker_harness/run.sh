@@ -329,7 +329,7 @@ PY
 run_params_round_trip() {
   local test_id="params_round_trip"
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc when TARGET=/etc"
+  test_step "harness" "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc/hosts when TARGET=/private/etc"
 
   if ! check_prereqs; then
     test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
@@ -362,10 +362,17 @@ r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 #       parsed but its value didn't reach the compiled profile,
 #       so the kernel allowed /etc/hosts.
 #   (c) compile + apply succeeded AND slot rc=1 with errno=EPERM:
-#       the param TARGET=/etc reached the compiled profile, the
-#       kernel saw the deny rule, and the open was denied.
+#       the param TARGET=/private/etc reached the compiled profile,
+#       the kernel saw the deny rule, and the open was denied.
 #
 # (c) is the only outcome that proves end-to-end round-trip.
+#
+# SBPL subpath matches the kernel-canonical path, NOT user-visible
+# aliases — /etc realpaths to /private/etc on macOS, so TARGET must
+# be /private/etc for the deny rule to fire on a /etc/hosts open.
+# This is a SBPL semantic detail, not a worker concern; both the C
+# harness (harness.c::populate_params_target) and this assertion text
+# document it so a future debugger doesn't waste time on /etc.
 assert r["ready_byte_received"], "pre-apply ready byte not received"
 assert r["apply_rc"] == 0, \
     f"sandbox_compile_string + apply failed (apply_rc={r['apply_rc']}); params didn't construct the profile"
@@ -379,12 +386,12 @@ assert len(slots) == 1, f"expected 1 slot, got {len(slots)}"
 s = slots[0]
 assert s["completed"] == 1, f"slot not marked completed: {s}"
 assert s["rc"] == 1, \
-    f"TARGET=/etc should make /etc/hosts open fail with EPERM; got rc={s['rc']} errno={s['errno']}. " \
+    f"TARGET=/private/etc should make /etc/hosts open fail with EPERM; got rc={s['rc']} errno={s['errno']}. " \
     f"This means the param didn't reach the kernel — likely a worker bug in the sandbox_set_param path."
 assert s["errno"] in (1, 13), \
     f"expected errno EPERM (1) or EACCES (13) for the param-driven kernel deny, got {s['errno']}"
 
-print(f"ok: TARGET=/etc round-tripped; kernel denied /etc/hosts with errno={s['errno']}")
+print(f"ok: TARGET=/private/etc round-tripped; kernel denied /etc/hosts with errno={s['errno']}")
 PY
   local arc=$?
   set -e

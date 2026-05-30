@@ -137,24 +137,78 @@ func runCWorkerTests(_ tk: TestKit) {
                            "expected EPERM/EACCES for param-driven kernel deny, got \(s.errnoVal)")
         }
 
-        // ---- input validation: per-slot field size cap ---------------------
-        tk.run("slot input over the ABI cap is rejected pre-spawn") {
-            let oversized = String(repeating: "x", count: PWShmLayout.stepIdMax + 16)
-            let input = CWorkerInput(
-                workerExecutablePath: "/nonexistent",  // never reached
+        // ---- input validation: every bounded field rejects pre-spawn -------
+        // Table-driven so a regression in any single field (target,
+        // param key, param value) doesn't silently slip through. The
+        // worker path is "/nonexistent" because validation has to fire
+        // before any FD or process work happens.
+        tk.run("oversized step_id rejected pre-spawn") {
+            let big = String(repeating: "x", count: PWShmLayout.stepIdMax + 16)
+            let result = runCWorker(CWorkerInput(
+                workerExecutablePath: "/nonexistent",
                 policy: "(version 1)(allow default)",
-                slots: [
-                    CWorkerSlotInput(stepId: oversized,
-                                     attemptKind: .none,
-                                     target: "/tmp")
-                ]
-            )
-            let result = runCWorker(input)
+                slots: [CWorkerSlotInput(stepId: big,
+                                         attemptKind: .none,
+                                         target: "/tmp")]
+            ))
             switch result {
             case .failure(.slotInputTooLong(let field, _, _)):
-                try expectEqual(field, "step_id", "wrong field reported")
+                try expectEqual(field, "step_id", "wrong field reported for oversized step_id")
             default:
-                throw TestFailure(message: "expected slotInputTooLong, got \(result)")
+                throw TestFailure(message: "expected slotInputTooLong(step_id), got \(result)")
+            }
+        }
+
+        tk.run("oversized target rejected pre-spawn") {
+            let big = String(repeating: "x", count: PWShmLayout.targetMax + 16)
+            let result = runCWorker(CWorkerInput(
+                workerExecutablePath: "/nonexistent",
+                policy: "(version 1)(allow default)",
+                slots: [CWorkerSlotInput(stepId: "ok",
+                                         attemptKind: .fileOpenRead,
+                                         target: big)]
+            ))
+            switch result {
+            case .failure(.slotInputTooLong(let field, _, _)):
+                try expectEqual(field, "target", "wrong field reported for oversized target")
+            default:
+                throw TestFailure(message: "expected slotInputTooLong(target), got \(result)")
+            }
+        }
+
+        tk.run("oversized param key rejected pre-spawn") {
+            let big = String(repeating: "k", count: PWShmLayout.paramKeyMax + 4)
+            let result = runCWorker(CWorkerInput(
+                workerExecutablePath: "/nonexistent",
+                policy: "(version 1)(allow default)",
+                params: [CWorkerParam(key: big, value: "v")],
+                slots: [CWorkerSlotInput(stepId: "ok",
+                                         attemptKind: .none,
+                                         target: "")]
+            ))
+            switch result {
+            case .failure(.paramInputTooLong(let field, _, _)):
+                try expectEqual(field, "key", "wrong field reported for oversized param key")
+            default:
+                throw TestFailure(message: "expected paramInputTooLong(key), got \(result)")
+            }
+        }
+
+        tk.run("oversized param value rejected pre-spawn") {
+            let big = String(repeating: "v", count: PWShmLayout.paramValueMax + 4)
+            let result = runCWorker(CWorkerInput(
+                workerExecutablePath: "/nonexistent",
+                policy: "(version 1)(allow default)",
+                params: [CWorkerParam(key: "TARGET", value: big)],
+                slots: [CWorkerSlotInput(stepId: "ok",
+                                         attemptKind: .none,
+                                         target: "")]
+            ))
+            switch result {
+            case .failure(.paramInputTooLong(let field, _, _)):
+                try expectEqual(field, "value", "wrong field reported for oversized param value")
+            default:
+                throw TestFailure(message: "expected paramInputTooLong(value), got \(result)")
             }
         }
     }

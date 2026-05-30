@@ -144,12 +144,15 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
                             "NONE-filter network-outbound under (allow default) → allow")
         }
 
-        // Smaller assertion: postApplied isn't called when applied
-        // never fires (e.g. sandbox_apply fails). The driver's
-        // contract says the hook fires the first iteration after we
-        // observe applied; if we never observe applied, the hook
-        // should never fire.
-        tk.run("postApplied hook does not fire when sandbox_apply fails") {
+        // Driver-contract pin: the hook fires the first iteration
+        // AFTER we observe `applied`. This fixture uses malformed
+        // SBPL so sandbox_compile_string fails inside the worker;
+        // `applied` is never written, so the hook must not run.
+        // (We can't easily produce a real sandbox_apply failure from
+        // a unit test — apply almost always succeeds when compile
+        // does — but the same gating semantics cover that path:
+        // applied=0 ⇒ hook never fires.)
+        tk.run("postApplied hook does not fire when compile fails") {
             guard bothBinariesExist() else {
                 FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
                 return
@@ -172,6 +175,80 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
             try expectFalse(out.applied, "applied should never fire for malformed policy")
             try expectEqual(hookFiredCount, 0,
                             "hook fired \(hookFiredCount) times when applied was never observed")
+        }
+
+        // Validator spawn failure: nonexistent binary. Partial should
+        // be nil because the failure happens before any FD or process
+        // state exists. Post-Step-6.4 audit (PR G #2).
+        tk.run("validator spawn failure returns partial=nil") {
+            let result = runValidator(ValidatorClientInput(
+                executablePath: "/usr/local/no-such-validator-\(getpid())",
+                targetPid: getpid(),
+                probes: [
+                    ValidatorProbe(stepId: "x",
+                                   operation: "network-outbound",
+                                   filterType: "NONE",
+                                   filterValue: nil)
+                ]
+            ))
+            switch result {
+            case .failure(let err, let partial):
+                guard case .spawnFailed = err else {
+                    throw TestFailure(message: "expected spawnFailed, got \(err)")
+                }
+                try expectNil(partial,
+                              "partial should be nil — no process state existed")
+            case .success:
+                throw TestFailure(message: "expected spawn failure for nonexistent path")
+            }
+        }
+
+        // Deadlock regression: 256 probes with long path values force
+        // > 64 KiB of NDJSON onto stdin while the validator is
+        // concurrently emitting verdicts to stdout. Pre-fix, this
+        // deadlocked because runValidator wrote-then-read; the
+        // validator's stdout filled before stdin drained. The new
+        // poll() loop interleaves both directions. The assertion is
+        // structural ("everything completed") rather than verdict
+        // count because the test target is the I/O harness, not the
+        // validator's filter coverage.
+        tk.run("256 probes with long paths drive both pipes without deadlock") {
+            guard bothBinariesExist() else {
+                FileHandle.standardOutput.write(Data("  SKIP  sb_api_validator missing\n".utf8))
+                return
+            }
+            // Padding to push each probe line near 1 KiB → 256 lines ≈ 250 KiB total.
+            let longPath = "/etc/" + String(repeating: "x", count: 900)
+            var probes: [ValidatorProbe] = []
+            for i in 0..<256 {
+                probes.append(ValidatorProbe(
+                    stepId: "deadlock_\(i)",
+                    operation: "file-read-data",
+                    filterType: "PATH",
+                    filterValue: longPath
+                ))
+            }
+            let result = runValidator(ValidatorClientInput(
+                executablePath: validatorPathForCV(),
+                targetPid: getpid(),    // unsandboxed → predictable verdict shape
+                probes: probes,
+                verdictReadTimeoutMs: 10_000,
+                exitGraceMs: 2_000
+            ))
+            switch result {
+            case .success(let out):
+                try expectEqual(out.verdicts.count, 256,
+                                "expected one verdict per probe; pipe interleave didn't drop any")
+                try expectEqual(out.exitCode, Int32(0), "validator clean-exited")
+                try expectFalse(out.sentSigkill, "no SIGKILL needed")
+                try expectTrue(out.rawStdoutBytes > 0, "stdout was drained")
+            case .failure(let err, let partial):
+                let drained = partial?.rawStdoutBytes ?? 0
+                let parsed = partial?.verdicts.count ?? 0
+                throw TestFailure(
+                    message: "deadlock-regression run failed: \(err); drained=\(drained) parsed=\(parsed)"
+                )
+            }
         }
     }
 }

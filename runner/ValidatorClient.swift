@@ -64,9 +64,30 @@ public struct ValidatorVerdict {
 public struct ValidatorOutput {
     public var validatorPid: pid_t
     public var verdicts: [ValidatorVerdict]
-    public var exitCode: Int32?            // nil if signaled
+    public var exitCode: Int32?            // nil if signaled or still alive
     public var termSignal: Int32?
     public var sentSigkill: Bool
+    /// Total bytes drained from the validator's stdout. Equal to the
+    /// concatenated verdict-line byte length on a clean run; useful on
+    /// partial-failure returns to distinguish "validator never wrote
+    /// anything" (0) from "validator wrote a partial stream that
+    /// failed to parse mid-line" (> 0 with verdicts.count smaller
+    /// than expected).
+    public var rawStdoutBytes: Int
+
+    public init(validatorPid: pid_t,
+                verdicts: [ValidatorVerdict],
+                exitCode: Int32? = nil,
+                termSignal: Int32? = nil,
+                sentSigkill: Bool = false,
+                rawStdoutBytes: Int = 0) {
+        self.validatorPid = validatorPid
+        self.verdicts = verdicts
+        self.exitCode = exitCode
+        self.termSignal = termSignal
+        self.sentSigkill = sentSigkill
+        self.rawStdoutBytes = rawStdoutBytes
+    }
 }
 
 public enum ValidatorClientError: Error, CustomStringConvertible {
@@ -92,7 +113,19 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
 
 public enum ValidatorClientResult {
     case success(ValidatorOutput)
-    case failure(ValidatorClientError)
+    /// On failure, the driver returns whatever partial state it captured
+    /// before the error fired: the validator PID if posix_spawn
+    /// succeeded, exit/signal status if the child was reaped, raw byte
+    /// count read from stdout, and any verdict lines parsed cleanly
+    /// before the failure. Step 6.5's degraded validator_* outcomes
+    /// will surface this evidence so a consumer can see "validator
+    /// died mid-stream after 3 of 256 verdicts" rather than just
+    /// "validator failed."
+    ///
+    /// `partial` is nil only when the failure happened before any
+    /// process state existed (probe serialization, pipe creation,
+    /// posix_spawn itself).
+    case failure(error: ValidatorClientError, partial: ValidatorOutput?)
 }
 
 // MARK: - Driver
@@ -118,31 +151,47 @@ public struct ValidatorClientInput {
 }
 
 public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult {
-    // Build the NDJSON probe payload up-front so a serialization failure
-    // is caught before any FD or child-process state exists.
+    // ===== Phase 1: pre-spawn. Any failure here returns .failure with
+    // partial=nil because no process or pipe state exists yet. =====
+
     let payload: Data
     do {
         payload = try serializeProbes(input.probes)
     } catch let e as ValidatorClientError {
-        return .failure(e)
+        return .failure(error: e, partial: nil)
     } catch {
-        return .failure(.probeSerializationFailed(String(describing: error)))
+        return .failure(error: .probeSerializationFailed(String(describing: error)),
+                        partial: nil)
     }
 
-    // Pipes.
     var stdinPipe = [Int32](repeating: -1, count: 2)
     var stdoutPipe = [Int32](repeating: -1, count: 2)
     if pipe(&stdinPipe) != 0 {
-        return .failure(.pipeFailed("stdin: \(String(cString: strerror(errno)))"))
+        return .failure(
+            error: .pipeFailed("stdin: \(String(cString: strerror(errno)))"),
+            partial: nil
+        )
     }
     if pipe(&stdoutPipe) != 0 {
         close(stdinPipe[0]); close(stdinPipe[1])
-        return .failure(.pipeFailed("stdout: \(String(cString: strerror(errno)))"))
+        return .failure(
+            error: .pipeFailed("stdout: \(String(cString: strerror(errno)))"),
+            partial: nil
+        )
     }
     _ = fcntl(stdinPipe[1], F_SETFD, FD_CLOEXEC)
     _ = fcntl(stdoutPipe[0], F_SETFD, FD_CLOEXEC)
+    // Both parent-side pipe ends must be nonblocking so the I/O loop
+    // can drive them interleaved via poll(). Without this, the writer
+    // blocks once the kernel pipe buffer (64 KiB on macOS) is full,
+    // and a validator that emits verdicts faster than we drain them
+    // would deadlock against us. This is the post-Step-6.4 audit
+    // BLOCKER fix.
+    let stdinFlags = fcntl(stdinPipe[1], F_GETFL, 0)
+    if stdinFlags >= 0 { _ = fcntl(stdinPipe[1], F_SETFL, stdinFlags | O_NONBLOCK) }
+    let stdoutFlags = fcntl(stdoutPipe[0], F_GETFL, 0)
+    if stdoutFlags >= 0 { _ = fcntl(stdoutPipe[0], F_SETFL, stdoutFlags | O_NONBLOCK) }
 
-    // posix_spawn.
     var fa: posix_spawn_file_actions_t? = nil
     posix_spawn_file_actions_init(&fa)
     defer { posix_spawn_file_actions_destroy(&fa) }
@@ -154,7 +203,6 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
         "--batch",
         String(input.targetPid),
     ]
-
     var pid: pid_t = 0
     let spawnRC = withCStringArrayCopy(argv) { argvPtr in
         posix_spawn(&pid, input.executablePath, &fa, nil, argvPtr, nil)
@@ -162,80 +210,170 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
     if spawnRC != 0 {
         close(stdinPipe[0]); close(stdinPipe[1])
         close(stdoutPipe[0]); close(stdoutPipe[1])
-        return .failure(.spawnFailed(String(cString: strerror(spawnRC))))
+        return .failure(
+            error: .spawnFailed(String(cString: strerror(spawnRC))),
+            partial: nil
+        )
     }
-    // Close child-owned ends.
+    // Close child-owned ends in the parent.
     close(stdinPipe[0])
     close(stdoutPipe[1])
 
-    // Write probes to stdin and close. The validator's fgets loop sees
-    // EOF and exits after emitting its last verdict.
-    let writeRC: Int = payload.withUnsafeBytes { raw -> Int in
-        guard let base = raw.baseAddress else { return 0 }
-        var written = 0
-        while written < raw.count {
-            let n = Darwin.write(stdinPipe[1], base.advanced(by: written), raw.count - written)
-            if n < 0 {
-                if errno == EINTR { continue }
-                return -1
-            }
-            written += n
+    // ===== Phase 2: post-spawn. From here on, every failure path
+    // captures partial state — parsed verdicts, raw byte count, exit
+    // disposition — so the caller can surface degraded evidence. =====
+
+    var stdoutBytes = Data()
+    var writeOffset = 0
+    var stdinOpen = true
+    var stdoutOpen = true
+    var ioError: ValidatorClientError? = nil
+    let deadline = Date().addingTimeInterval(TimeInterval(input.verdictReadTimeoutMs) / 1000.0)
+
+    // Interleave writes (payload → validator stdin) with reads
+    // (validator stdout → stdoutBytes). poll() returns when either FD
+    // is ready or the 100 ms tick fires (whichever first) so the
+    // deadline check stays sharp.
+    while stdinOpen || stdoutOpen {
+        if Date() > deadline {
+            ioError = .verdictReadFailed(
+                "exceeded \(input.verdictReadTimeoutMs) ms I/O deadline; "
+                + "wrote \(writeOffset) of \(payload.count) probe bytes; "
+                + "drained \(stdoutBytes.count) stdout bytes"
+            )
+            break
         }
-        return written
-    }
-    close(stdinPipe[1])
-    if writeRC < 0 {
-        let why = String(cString: strerror(errno))
-        _ = kill(pid, SIGKILL)
-        var st: Int32 = 0
-        _ = waitpid(pid, &st, 0)
-        close(stdoutPipe[0])
-        return .failure(.probeWriteFailed(why))
+
+        var pfds: [pollfd] = []
+        if stdinOpen {
+            pfds.append(pollfd(fd: stdinPipe[1],
+                               events: Int16(POLLOUT),
+                               revents: 0))
+        }
+        if stdoutOpen {
+            pfds.append(pollfd(fd: stdoutPipe[0],
+                               events: Int16(POLLIN),
+                               revents: 0))
+        }
+
+        let pollRC = pfds.withUnsafeMutableBufferPointer { buf -> Int32 in
+            guard let base = buf.baseAddress else { return 0 }
+            return poll(base, nfds_t(buf.count), 100)
+        }
+        if pollRC < 0 {
+            if errno == EINTR { continue }
+            ioError = .verdictReadFailed("poll: \(String(cString: strerror(errno)))")
+            break
+        }
+        if pollRC == 0 { continue }  // tick, recheck deadline
+
+        for pfd in pfds {
+            // Writer side: drain payload bytes into stdin as the kernel
+            // buffer drains. When all bytes are out, close stdin to
+            // signal EOF to the validator's fgets loop.
+            if pfd.fd == stdinPipe[1] && stdinOpen {
+                if (pfd.revents & Int16(POLLOUT)) != 0 {
+                    let remaining = payload.count - writeOffset
+                    if remaining > 0 {
+                        let n = payload.withUnsafeBytes { raw -> Int in
+                            guard let base = raw.baseAddress else { return 0 }
+                            return Darwin.write(stdinPipe[1],
+                                                base.advanced(by: writeOffset),
+                                                remaining)
+                        }
+                        if n > 0 {
+                            writeOffset += n
+                        } else if n < 0 && errno != EAGAIN && errno != EINTR {
+                            ioError = .probeWriteFailed(
+                                "write after \(writeOffset)/\(payload.count) bytes: "
+                                + String(cString: strerror(errno))
+                            )
+                            close(stdinPipe[1])
+                            stdinOpen = false
+                        }
+                    }
+                    if writeOffset >= payload.count {
+                        close(stdinPipe[1])
+                        stdinOpen = false
+                    }
+                }
+                if (pfd.revents & (Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL))) != 0 {
+                    if writeOffset < payload.count {
+                        ioError = .probeWriteFailed(
+                            "stdin closed by peer after \(writeOffset)/\(payload.count) bytes"
+                        )
+                    }
+                    close(stdinPipe[1])
+                    stdinOpen = false
+                }
+            }
+            // Reader side: append every available byte until EOF.
+            if pfd.fd == stdoutPipe[0] && stdoutOpen {
+                if (pfd.revents & Int16(POLLIN)) != 0 {
+                    var buf = [UInt8](repeating: 0, count: 8192)
+                    let n = buf.withUnsafeMutableBufferPointer { bp -> Int in
+                        guard let base = bp.baseAddress else { return 0 }
+                        return Darwin.read(stdoutPipe[0], base, bp.count)
+                    }
+                    if n > 0 {
+                        stdoutBytes.append(contentsOf: buf.prefix(n))
+                    } else if n == 0 {
+                        stdoutOpen = false  // validator EOF'd stdout
+                    } else if errno != EAGAIN && errno != EINTR {
+                        ioError = .verdictReadFailed(
+                            "read after \(stdoutBytes.count) bytes: "
+                            + String(cString: strerror(errno))
+                        )
+                        stdoutOpen = false
+                    }
+                }
+                if (pfd.revents & (Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL))) != 0 {
+                    // Drain whatever the kernel still has buffered.
+                    var buf = [UInt8](repeating: 0, count: 8192)
+                    let n = buf.withUnsafeMutableBufferPointer { bp -> Int in
+                        guard let base = bp.baseAddress else { return 0 }
+                        return Darwin.read(stdoutPipe[0], base, bp.count)
+                    }
+                    if n > 0 {
+                        stdoutBytes.append(contentsOf: buf.prefix(n))
+                    } else {
+                        stdoutOpen = false
+                    }
+                }
+            }
+        }
+
+        if ioError != nil { break }
     }
 
-    // Drain stdout to EOF. The validator buffers nothing meaningful in
-    // practice — a small probe count produces a small response.
-    let stdoutData: Data
-    do {
-        stdoutData = try readToEOF(fd: stdoutPipe[0],
-                                   deadlineMs: input.verdictReadTimeoutMs)
-    } catch let e as ValidatorClientError {
-        close(stdoutPipe[0])
-        _ = kill(pid, SIGKILL)
-        var st: Int32 = 0
-        _ = waitpid(pid, &st, 0)
-        return .failure(e)
-    } catch {
-        close(stdoutPipe[0])
-        _ = kill(pid, SIGKILL)
-        var st: Int32 = 0
-        _ = waitpid(pid, &st, 0)
-        return .failure(.verdictReadFailed(String(describing: error)))
-    }
+    // Idempotent close — paths above may have already closed stdin.
+    if stdinOpen { close(stdinPipe[1]) }
     close(stdoutPipe[0])
 
-    // Parse verdicts. A malformed line is a hard fail — every line the
-    // validator emits is a JSON object by contract.
+    // Parse verdicts up to the first malformed line. A parse failure
+    // doesn't drop the prior verdicts — they're real evidence.
     var verdicts: [ValidatorVerdict] = []
-    let raw = String(data: stdoutData, encoding: .utf8) ?? ""
+    var parseError: ValidatorClientError? = nil
+    let raw = String(data: stdoutBytes, encoding: .utf8) ?? ""
     for line in raw.split(separator: "\n", omittingEmptySubsequences: true) {
         let lineStr = String(line)
         guard let lineData = lineStr.data(using: .utf8) else { continue }
-        let parsed: Any
         do {
-            parsed = try JSONSerialization.jsonObject(with: lineData, options: [])
+            let parsed = try JSONSerialization.jsonObject(with: lineData, options: [])
+            guard let obj = parsed as? [String: Any] else {
+                parseError = .verdictParseFailed(line: lineStr,
+                                                 why: "verdict line is not a JSON object")
+                break
+            }
+            verdicts.append(verdictFromJSONObject(obj, rawLine: lineStr))
         } catch {
-            return .failure(.verdictParseFailed(line: lineStr,
-                                                 why: String(describing: error)))
+            parseError = .verdictParseFailed(line: lineStr,
+                                             why: String(describing: error))
+            break
         }
-        guard let obj = parsed as? [String: Any] else {
-            return .failure(.verdictParseFailed(line: lineStr,
-                                                 why: "verdict line is not a JSON object"))
-        }
-        verdicts.append(verdictFromJSONObject(obj, rawLine: lineStr))
     }
 
-    // Reap.
+    // Reap with grace + SIGKILL fallback.
     var status: Int32 = 0
     var reaped: pid_t = 0
     var sentSigkill = false
@@ -263,13 +401,23 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
         termSignal = status & 0x7f
     }
 
-    return .success(ValidatorOutput(
+    let output = ValidatorOutput(
         validatorPid: pid,
         verdicts: verdicts,
         exitCode: exitCode,
         termSignal: termSignal,
-        sentSigkill: sentSigkill
-    ))
+        sentSigkill: sentSigkill,
+        rawStdoutBytes: stdoutBytes.count
+    )
+
+    // ioError takes precedence over parseError — an I/O failure means
+    // we have a possibly-truncated stdout that the parser may then
+    // also have rejected, but the I/O failure is the root cause to
+    // report. Either way, every parsed verdict is in `output.verdicts`.
+    if let err = ioError ?? parseError {
+        return .failure(error: err, partial: output)
+    }
+    return .success(output)
 }
 
 // MARK: - Probe serialization
@@ -313,36 +461,6 @@ private func verdictFromJSONObject(_ obj: [String: Any], rawLine: String) -> Val
     )
 }
 
-// MARK: - Helpers
-
-private func readToEOF(fd: Int32, deadlineMs: Int) throws -> Data {
-    // Set nonblocking so the loop can yield rather than blocking
-    // forever on a hung validator (which shouldn't happen, but the
-    // deadline is cheap insurance).
-    let flags = fcntl(fd, F_GETFL, 0)
-    if flags >= 0 { _ = fcntl(fd, F_SETFL, flags | O_NONBLOCK) }
-
-    var out = Data()
-    var buf = [UInt8](repeating: 0, count: 8192)
-    let pollNs: UInt64 = 5_000_000
-    let iters = max(1, deadlineMs * 1_000_000 / Int(pollNs))
-    for _ in 0..<iters {
-        let n = buf.withUnsafeMutableBufferPointer { bp -> Int in
-            guard let base = bp.baseAddress else { return 0 }
-            return Darwin.read(fd, base, bp.count)
-        }
-        if n > 0 {
-            out.append(contentsOf: buf.prefix(n))
-            continue                       // keep reading until EOF
-        }
-        if n == 0 { return out }            // EOF — validator exited
-        if errno == EINTR { continue }
-        if errno == EAGAIN { sleepNs(pollNs); continue }
-        throw ValidatorClientError.verdictReadFailed(
-            "read: \(String(cString: strerror(errno)))"
-        )
-    }
-    throw ValidatorClientError.verdictReadFailed(
-        "exceeded \(deadlineMs) ms deadline draining validator stdout"
-    )
-}
+// (readToEOF helper removed in the post-Step-6.4 audit remediation;
+// runValidator now drives both pipes via poll(), so the old
+// write-then-drain path is gone.)
