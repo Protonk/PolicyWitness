@@ -51,9 +51,12 @@ guards for the request-validation and drift-classification rules:
 4. **duplicate_step_id_rejected** — request with two probes that
    share a `step_id`. Asserts `normalized_outcome == "bad_request"`
    before any worker spawn (pre-spawn `validateProbePlanForCWorker`).
-5. **unsupported_attempt_rejected** — request with an
-   `attempt.kind`/`action` combination the C worker doesn't
-   implement. Same pre-spawn bad_request shape.
+5. **unsupported_attempt_per_step_skip** — two-step plan: a valid
+   file probe plus a step with an `attempt.kind`/`action` combo the
+   C worker doesn't implement. Asserts the run completes (`ok`), the
+   good step runs end-to-end, and the unrecognized step gets
+   `attempt.outcome == "unsupported"` while its `sandbox_check`
+   verdict still runs. `drift` is `null` for the unsupported step.
 6. **worker_timeout_ms_honored** — `_test_overrides.worker_timeout_ms`
    paired with `_test_overrides.worker_post_apply_hang_ms` makes the
    host SIGKILL the hung C worker. Asserts `runner_timeout`.

@@ -288,26 +288,34 @@ PY
   test_pass "duplicate step_id → bad_request before spawn (no XPC crash)" "{\"stdout\":\"${run_stdout}\"}"
 }
 
-# ---- test_id: unsupported_attempt_rejected (PR H #2 regression) ----------
+# ---- test_id: unsupported_attempt_per_step_skip --------------------------
 
-run_unsupported_attempt_rejected() {
-  local test_id="unsupported_attempt_rejected"
+run_unsupported_attempt_per_step_skip() {
+  local test_id="unsupported_attempt_per_step_skip"
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "unknown (kind, action) combo → bad_request (used to silently report outcome=ok for an op that never ran)"
+  test_step "run" "unknown (kind, action) combo → per-step attempt.outcome=unsupported (run still ok; sibling step + sandbox_check verdict survive)"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
+  # Two probes: a valid file probe and one with an unknown
+  # attempt (kind, action). Pins both halves of the per-step skip
+  # contract: the good step runs normally AND the unrecognized
+  # step's sandbox_check verdict still runs while its attempt
+  # surfaces as outcome=unsupported.
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
   "schema_version": 1,
-  "specimen_id": "use_c_worker_bogus_attempt",
-  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
-  "probe_plan": [{
-    "step_id": "s1",
-    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
-    "attempt": {"kind": "file", "action": "totally_not_a_real_action", "target": "/etc/hosts"}
-  }]
+  "specimen_id": "use_c_worker_mixed_attempt_support",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read-data)"},
+  "probe_plan": [
+    {"step_id": "good",
+     "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
+     "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}},
+    {"step_id": "unknown_attempt",
+     "sandbox_check": {"operation": "iokit-open-user-client", "filter": {"kind": "none"}},
+     "attempt": {"kind": "iokit", "action": "open", "target": "irrelevant"}}
+  ]
 }
 EOF
 
@@ -322,13 +330,35 @@ EOF
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "bad_request", "outcome={0}".format(r["normalized_outcome"])
-assert r["rc"] == 1
-err = r.get("error") or ""
-assert "unsupported attempt" in err, "error should name unsupported attempt: {0!r}".format(err)
-assert "totally_not_a_real_action" in err, "error should echo the bad action: {0!r}".format(err)
-assert r["steps"] == []
-print("ok: unknown (kind, action) rejected pre-spawn as bad_request")
+
+# Run completes; the unsupported-attempt step doesn't kill the plan.
+assert r["normalized_outcome"] == "ok", "outcome={0!r}".format(r["normalized_outcome"])
+assert r["rc"] == 0
+
+steps = r["steps"]
+assert len(steps) == 2, "expected both steps in envelope, got {0}".format(len(steps))
+
+# Step 0: the good probe runs end-to-end as a sanity check.
+good = steps[0]
+assert good["step_id"] == "good"
+assert good["sandbox_check"]["outcome"] == "allow", good["sandbox_check"]
+assert good["attempt"]["outcome"] == "ok", good["attempt"]
+assert good["drift"] is False, "drift={0!r}".format(good["drift"])
+
+# Step 1: unknown attempt kind. sandbox_check still ran (none-filter
+# probe under the iokit-open-user-client op isn't in the
+# prediction-unavailable set), attempt is unsupported, drift is null.
+ua = steps[1]
+assert ua["step_id"] == "unknown_attempt"
+sb = ua["sandbox_check"]
+assert sb["outcome"] in ("allow", "deny"), "sandbox_check should produce a verdict, got {0!r}".format(sb["outcome"])
+at = ua["attempt"]
+assert at["outcome"] == "unsupported", "attempt.outcome={0!r}".format(at["outcome"])
+err = at.get("error") or ""
+assert "iokit" in err and "open" in err, "attempt.error should name kind+action, got {0!r}".format(err)
+assert ua["drift"] is None, "drift should be null when attempt didn't produce a verdict, got {0!r}".format(ua["drift"])
+
+print("ok: unknown attempt downgrades to per-step skip; sibling step + sandbox_check verdict survive")
 PY
   local arc=$?
   set -e
@@ -338,7 +368,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "unknown (kind, action) → bad_request (no silent ok)" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "unknown attempt → per-step skip; sibling step + sandbox_check verdict survive" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: worker_timeout_ms_honored (PR H #3 regression) ------------
@@ -666,7 +696,7 @@ PY
 }
 
 run_duplicate_step_id_rejected
-run_unsupported_attempt_rejected
+run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
 run_drift_null_for_non_policy_failure
 run_sandbox_check_pid_matches_worker

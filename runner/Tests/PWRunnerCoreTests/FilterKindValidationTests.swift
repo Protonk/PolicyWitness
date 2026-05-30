@@ -105,4 +105,61 @@ func runFilterKindValidationTests(_ tk: TestKit) {
             })
         }
     }
+
+    tk.group("validateProbePlanForCWorker") {
+
+        tk.run("duplicate step_id is still a plan-killer") {
+            // Joining outputs back to steps by step_id requires
+            // unique ids; the orchestrator's Dictionary construction
+            // would crash otherwise.
+            let steps = [
+                PWRunnerProbeStep(
+                    step_id: "dup",
+                    sandbox_check: PWRunnerSandboxCheck(
+                        operation: "file-read-data",
+                        filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")
+                    ),
+                    attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts")
+                ),
+                PWRunnerProbeStep(
+                    step_id: "dup",
+                    sandbox_check: PWRunnerSandboxCheck(
+                        operation: "file-read-data",
+                        filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")
+                    ),
+                    attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts")
+                ),
+            ]
+            let err = CWorkerOrchestrator.validateProbePlanForCWorker(steps)
+            try expectNotNil(err, "duplicate step_id must be rejected")
+            if let err = err {
+                try expectContains(err, "duplicate step_id")
+            }
+        }
+
+        tk.run("unknown attempt kind is NOT a plan-killer") {
+            // Symmetric to the unknown-filter-kind behavior: the
+            // unrecognized step downgrades to per-step skip in the
+            // step builder rather than killing sibling steps.
+            let steps = [
+                PWRunnerProbeStep(
+                    step_id: "good",
+                    sandbox_check: PWRunnerSandboxCheck(
+                        operation: "file-read-data",
+                        filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")
+                    ),
+                    attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts")
+                ),
+                PWRunnerProbeStep(
+                    step_id: "unknown_attempt",
+                    sandbox_check: PWRunnerSandboxCheck(
+                        operation: "iokit-open-user-client",
+                        filter: PWRunnerSandboxFilter(kind: "none", value: nil)
+                    ),
+                    attempt: PWRunnerAttempt(kind: "iokit", action: "open", target: "irrelevant")
+                ),
+            ]
+            try expectNil(CWorkerOrchestrator.validateProbePlanForCWorker(steps))
+        }
+    }
 }

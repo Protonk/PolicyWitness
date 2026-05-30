@@ -274,10 +274,13 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   ran. Distinct from the failure-mode-specific validator outcomes
   so a consumer can recognize the attempts-only degradation mode.
 - `bad_request` — request rejected before any worker spawn. Causes
-  include: JSON decode failure, unknown `sandbox_check` operation
-  or filter kind (`validateSandboxChecks`), unsupported top-level
-  field (e.g. `instrumentation`), duplicate `step_id`, or attempt
-  `kind`/`action` combination the C worker doesn't implement.
+  include: JSON decode failure, empty `sandbox_check.operation`
+  (`validateSandboxChecks`), unsupported top-level field (e.g.
+  `instrumentation`), or duplicate `step_id` in the probe plan.
+  Unknown `filter.kind` and unsupported `(attempt.kind,
+  attempt.action)` combos do NOT produce `bad_request` — they
+  downgrade to per-step `prediction_unavailable` and `unsupported`
+  respectively (see the per-step sections below).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
 - `sandbox_apply_failed` — the C worker reached `sandbox_apply` but
@@ -356,6 +359,21 @@ accepts) — those steps short-circuit to
 `rc == -1` per-step. The plan is not rejected; sibling steps with
 predicted kinds run normally and the attempt for the
 unpredicted step still produces evidence.
+
+### Attempt kinds the runner implements
+
+The C worker implements these `(attempt.kind, attempt.action)`
+combinations:
+
+- `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
+- `("mach_lookup", "mach_lookup")` — `bootstrap_look_up` on `target`.
+
+Specimens are free to author probes with other attempt combinations
+(`("iokit", "open")`, future kinds, etc.) — those steps surface
+`step.attempt.outcome = "unsupported"` per-step. The `sandbox_check`
+verdict for the same step still runs normally; only the attempt
+slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
+(no attempt verdict to compare against).
 
 ### Filter kinds where prediction is unavailable
 

@@ -180,28 +180,25 @@ public enum CWorkerOrchestrator {
     /// malformed; nil when it's safe to orchestrate. Callers map a
     /// non-nil return to bad_request.
     ///
-    /// Two checks today:
-    ///   1. step_ids must be unique. The orchestrator joins the
-    ///      worker's per-slot outputs and the validator's verdicts
-    ///      back to steps by step_id; a duplicate would crash the
-    ///      Dictionary(uniqueKeysWithValues:) constructor and kill
-    ///      the XPC service.
-    ///   2. every (attempt.kind, attempt.action) pair must map to a
-    ///      known PWAttemptKind. The C worker silently treats
-    ///      PW_ATTEMPT_NONE as a no-op that writes completed=1, so a
-    ///      typo'd attempt action would otherwise surface as a
-    ///      successful "ok" observation for an operation that never
-    ///      ran. Surface the typo loudly instead.
+    /// Only one plan-killing check today: step_ids must be unique.
+    /// The orchestrator joins the worker's per-slot outputs and the
+    /// validator's verdicts back to steps by step_id; a duplicate
+    /// would crash the Dictionary(uniqueKeysWithValues:) constructor
+    /// and kill the XPC service.
+    ///
+    /// Unsupported (attempt.kind, attempt.action) combos are NOT
+    /// plan-killers — they downgrade to per-step
+    /// `attempt.outcome = "unsupported"` in the step builder,
+    /// mirroring the per-step skip behavior for unknown filter
+    /// kinds. The slot is mapped to PW_ATTEMPT_NONE so the C worker
+    /// no-ops it; the validator's sandbox_check verdict for that
+    /// step still runs.
     public static func validateProbePlanForCWorker(_ plan: [PWRunnerProbeStep]) -> String? {
         var seenStepIds: Set<String> = []
         seenStepIds.reserveCapacity(plan.count)
         for step in plan {
             if !seenStepIds.insert(step.step_id).inserted {
                 return "duplicate step_id '\(step.step_id)' in probe_plan"
-            }
-            if mapAttemptKindOrNil(step.attempt) == nil {
-                return "step '\(step.step_id)' has unsupported attempt "
-                     + "(kind='\(step.attempt.kind)', action='\(step.attempt.action)')"
             }
         }
         return nil
@@ -234,9 +231,10 @@ private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSl
 }
 
 /// (kind, action) → C-worker PWAttemptKind. Returns nil for any
-/// combo the C worker can't execute; callers MUST reject those
-/// pre-spawn via `validateProbePlanForCWorker` so a malformed
-/// specimen surfaces as bad_request rather than a silent rc=0 slot.
+/// combo the C worker can't execute. The orchestrator falls back
+/// to PW_ATTEMPT_NONE (worker no-ops the slot) and the step builder
+/// then emits `attempt.outcome = "unsupported"` so the rc=0 slot
+/// isn't misread as a successful observation.
 private func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
     switch (attempt.kind, attempt.action) {
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenRead):
@@ -497,6 +495,24 @@ private func buildAttemptResult(
     step: PWRunnerProbeStep,
     slot: CWorkerSlotResult?
 ) -> PWRunnerAttemptResult {
+    // Unsupported attempt (kind, action): the orchestrator routed
+    // the slot to PW_ATTEMPT_NONE so the worker no-ops it; surface
+    // that here as outcome="unsupported" rather than letting the
+    // rc=0 no-op masquerade as a successful "ok" observation. The
+    // sandbox_check verdict for this step still runs and gets
+    // attached normally; drift falls out as null because the
+    // attempt didn't produce an allow/deny verdict.
+    if mapAttemptKindOrNil(step.attempt) == nil {
+        return PWRunnerAttemptResult(
+            rc: -1,
+            errno: nil,
+            outcome: AttemptOutcome.unsupported,
+            error: "kind='\(step.attempt.kind)', action='\(step.attempt.action)' not implemented",
+            requested_path: step.attempt.target,
+            normalized_path: nil,
+            observed_path: nil
+        )
+    }
     // Slot missing → worker never reached the step. Surface as
     // not_run_worker_died so consumers can tell "the attempt failed"
     // (slot present, rc non-zero) from "the attempt never ran"
