@@ -52,11 +52,20 @@ public enum CWorkerOrchestrator {
         let workerParams = workerParamsFromPolicy(parsed.policy)
         let validatorProbes = validatorProbesFromProbePlan(parsed.probe_plan)
 
+        // _test_overrides.worker_timeout_ms drives the sentinel deadline
+        // on the C-worker path the same way it drives the kqueue
+        // deadline on the Swift-worker path. Floored at 50 ms to match
+        // WorkerProcess's existing contract — a smaller deadline fires
+        // before any real worker can complete its post-apply work and
+        // would just generate spurious runner_timeouts.
         let workerInput = CWorkerInput(
             workerExecutablePath: workerExecutablePath,
             policy: parsed.policy.sbpl_source ?? "",
             params: workerParams,
             slots: workerSlots,
+            sentinelTimeoutMs: timeoutMsForCWorker(
+                override: parsed._test_overrides?.worker_timeout_ms
+            ),
             postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms
         )
 
@@ -143,13 +152,21 @@ public enum CWorkerOrchestrator {
             .path
     }
 
-    /// sb_api_validator lives at the app's top-level
-    /// `Contents/MacOS/sb_api_validator`. The XPC service bundle is
-    /// nested at `<app>/Contents/XPCServices/<service>.xpc`, so we
-    /// walk up three levels to the app bundle and into its MacOS dir.
+    /// sb_api_validator is embedded both bundle-local (alongside
+    /// pw-probe-runner inside each XPC service) AND at the app's
+    /// top-level. The bundle-local copy is preferred so BYOXPC
+    /// runners — which live outside any app bundle — still find a
+    /// validator. The app-level path is the fallback for older
+    /// layouts where the bundle-local copy may be missing.
     public static func defaultValidatorExecutablePath() -> String {
-        let serviceURL = Bundle.main.bundleURL
-        let appURL = serviceURL
+        let bundleURL = Bundle.main.bundleURL
+        let bundleLocal = bundleURL
+            .appendingPathComponent("Contents/MacOS/sb_api_validator")
+            .path
+        if FileManager.default.isExecutableFile(atPath: bundleLocal) {
+            return bundleLocal
+        }
+        let appURL = bundleURL
             .deletingLastPathComponent()   // XPCServices/
             .deletingLastPathComponent()   // Contents/
             .deletingLastPathComponent()   // <app>.app/
@@ -157,6 +174,53 @@ public enum CWorkerOrchestrator {
             .appendingPathComponent("Contents/MacOS/sb_api_validator")
             .path
     }
+
+    // ---- validation -----------------------------------------------------
+
+    /// Pre-spawn validation specific to the C-worker code path.
+    /// Returns a human-readable error string when the plan is
+    /// malformed; nil when it's safe to orchestrate. Callers map a
+    /// non-nil return to bad_request.
+    ///
+    /// Two checks today:
+    ///   1. step_ids must be unique. The orchestrator joins the
+    ///      worker's per-slot outputs and the validator's verdicts
+    ///      back to steps by step_id; a duplicate would crash the
+    ///      Dictionary(uniqueKeysWithValues:) constructor and kill
+    ///      the XPC service.
+    ///   2. every (attempt.kind, attempt.action) pair must map to a
+    ///      known PWAttemptKind. The C worker silently treats
+    ///      PW_ATTEMPT_NONE as a no-op that writes completed=1, so a
+    ///      typo'd attempt action would otherwise surface as a
+    ///      successful "ok" observation for an operation that never
+    ///      ran. Surface the typo loudly instead.
+    public static func validateProbePlanForCWorker(_ plan: [PWRunnerProbeStep]) -> String? {
+        var seenStepIds: Set<String> = []
+        seenStepIds.reserveCapacity(plan.count)
+        for step in plan {
+            if !seenStepIds.insert(step.step_id).inserted {
+                return "duplicate step_id '\(step.step_id)' in probe_plan"
+            }
+            if mapAttemptKindOrNil(step.attempt) == nil {
+                return "step '\(step.step_id)' has unsupported attempt "
+                     + "(kind='\(step.attempt.kind)', action='\(step.attempt.action)')"
+            }
+        }
+        return nil
+    }
+}
+
+// MARK: - Helpers
+
+/// Resolve the sentinel-timeout for the C worker from the request's
+/// `_test_overrides.worker_timeout_ms`. Floor matches WorkerProcess.swift's
+/// existing 50 ms minimum so the Swift-worker and C-worker paths
+/// honour the override identically. nil/absent → CWorkerInput default
+/// (60s — long enough for any real specimen).
+private func timeoutMsForCWorker(override: Int?) -> Int {
+    let cWorkerDefault = 60_000
+    guard let v = override else { return cWorkerDefault }
+    return max(50, v)
 }
 
 // MARK: - Translation: request → driver inputs
@@ -171,7 +235,11 @@ private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSl
     }
 }
 
-private func mapAttemptKind(_ attempt: PWRunnerAttempt) -> PWAttemptKind {
+/// (kind, action) → C-worker PWAttemptKind. Returns nil for any
+/// combo the C worker can't execute; callers MUST reject those
+/// pre-spawn via `validateProbePlanForCWorker` so a malformed
+/// specimen surfaces as bad_request rather than a silent rc=0 slot.
+private func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
     switch (attempt.kind, attempt.action) {
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenRead):
         return .fileOpenRead
@@ -181,17 +249,20 @@ private func mapAttemptKind(_ attempt: PWRunnerAttempt) -> PWAttemptKind {
         return .fileCreate
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionUnlink):
         return .fileUnlink
+    case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionAccess):
+        return .fileAccess
     case (PWRunnerWire.attemptKindMachLookup, PWRunnerWire.attemptActionMachLookup):
         return .machLookup
     default:
-        // The Swift wire vocabulary includes (kind, action) combos the
-        // C worker doesn't implement (e.g. file/access). For those the
-        // slot is filled but `attempt_kind` is NONE; the worker will
-        // mark completed=1 with rc=0 and no observation. The step's
-        // attempt outcome then surfaces as "unsupported" through the
-        // builder so consumers see why the attempt didn't fire.
-        return .none
+        return nil
     }
+}
+
+/// Force-unwrap variant used after validation has run. validation
+/// guarantees every plan step maps to a known kind; the orchestrator's
+/// build path only ever sees a validated plan.
+private func mapAttemptKind(_ attempt: PWRunnerAttempt) -> PWAttemptKind {
+    return mapAttemptKindOrNil(attempt) ?? .none
 }
 
 private func workerParamsFromPolicy(_ policy: PWRunnerPolicySpec) -> [CWorkerParam] {
@@ -290,12 +361,21 @@ private func buildStepResults(
         }
     )
 
+    // sandbox_check.pid is consistently the sandboxed worker PID:
+    // matches the legacy Swift-worker path's contract, lets unified-log
+    // correlation use a single PID per run, and gives both
+    // validator-backed AND synthesized verdicts the same per-step pid.
+    // Falls back to the host PID only when no worker exists (spawn
+    // failed before pid was known).
+    let sbCheckPid = Int(workerOutput?.workerPid ?? pid_t(getpid()))
+
     var results: [PWRunnerStepResult] = []
     results.reserveCapacity(probePlan.count)
     for step in probePlan {
         let sandboxCheck = buildSandboxCheckResult(
             step: step,
-            verdict: verdictsByStep[step.step_id]
+            verdict: verdictsByStep[step.step_id],
+            sandboxCheckPid: sbCheckPid
         )
         let attempt = buildAttemptResult(
             step: step,
@@ -316,7 +396,8 @@ private func buildStepResults(
 
 private func buildSandboxCheckResult(
     step: PWRunnerProbeStep,
-    verdict: ValidatorVerdict?
+    verdict: ValidatorVerdict?,
+    sandboxCheckPid: Int
 ) -> PWRunnerSandboxCheckResult {
     let opFilterPair = PredictionUnavailablePair(
         operation: step.sandbox_check.operation,
@@ -332,7 +413,7 @@ private func buildSandboxCheckResult(
         return PWRunnerSandboxCheckResult(
             rc: -1,
             outcome: SandboxCheckOutcome.predictionUnavailable,
-            pid: Int(getpid()),
+            pid: sandboxCheckPid,
             operation: step.sandbox_check.operation,
             scope: scope,
             filter_kind: kind,
@@ -352,7 +433,7 @@ private func buildSandboxCheckResult(
         return PWRunnerSandboxCheckResult(
             rc: 0,
             outcome: SandboxCheckOutcome.error,
-            pid: Int(getpid()),
+            pid: sandboxCheckPid,
             operation: step.sandbox_check.operation,
             scope: scope,
             filter_kind: kind,
@@ -368,7 +449,7 @@ private func buildSandboxCheckResult(
     return PWRunnerSandboxCheckResult(
         rc: v.rc ?? -1,
         outcome: mapValidatorOutcomeToSandboxCheckOutcome(v.outcome),
-        pid: 0,
+        pid: sandboxCheckPid,
         operation: v.operation ?? step.sandbox_check.operation,
         scope: scope,
         filter_kind: kind,
@@ -468,22 +549,73 @@ private func computeDrift(
     sandboxCheck: PWRunnerSandboxCheckResult,
     attempt: PWRunnerAttemptResult
 ) -> Bool? {
-    // Per the Step 6.4 schema doc: drift is the validator-vs-attempt
-    // disagreement about allow/deny. nil when no comparison possible.
-    switch sandboxCheck.outcome {
-    case SandboxCheckOutcome.allow:
-        if attempt.outcome == AttemptOutcome.ok { return false }
-        // Any non-ok attempt outcome that isn't a worker-died-class
-        // signal is observable disagreement (allow predicted, deny
-        // observed).
-        if attempt.outcome == AttemptOutcome.notRunWorkerDied { return nil }
-        return true
-    case SandboxCheckOutcome.deny:
-        if attempt.outcome == AttemptOutcome.ok { return true }
-        if attempt.outcome == AttemptOutcome.notRunWorkerDied { return nil }
-        return false
+    // Per the Step 6.4 schema doc + the PR H #5 correction: drift is
+    // the validator-vs-attempt disagreement about *sandbox enforcement*
+    // — not just any allow/deny disagreement.
+    //
+    // An ENOENT file open or a BOOTSTRAP_UNKNOWN_SERVICE mach lookup
+    // is a failure but NOT a sandbox denial — the file doesn't exist,
+    // the service doesn't exist. Treating those as "kernel denied" when
+    // the validator predicted allow would flood the envelope with
+    // false libsandbox-drift signals.
+    //
+    // The classification:
+    //   - attempt.outcome == ok            → kernel allowed
+    //   - attempt is a sandbox-deny-class  → kernel denied
+    //   - everything else (ENOENT, missing service, etc.) → not a
+    //     verdict about sandbox enforcement; drift is undefined
+    let observation = observationFromAttempt(attempt)
+    switch (sandboxCheck.outcome, observation) {
+    case (SandboxCheckOutcome.allow, .allowed): return false
+    case (SandboxCheckOutcome.allow, .denied):  return true   // libsandbox drift
+    case (SandboxCheckOutcome.deny,  .allowed): return true   // libsandbox drift
+    case (SandboxCheckOutcome.deny,  .denied):  return false
+    default:                                     return nil
+    }
+}
+
+private enum AttemptObservation {
+    case allowed       // attempt.outcome == ok
+    case denied        // sandbox-denial-class failure (EPERM/EACCES on file,
+                       //   BOOTSTRAP_NOT_PRIVILEGED-class kr on mach)
+    case undefined     // ENOENT, missing service, unsupported, worker died,
+                       //   or any failure that isn't itself a sandbox verdict
+}
+
+private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> AttemptObservation {
+    if attempt.outcome == AttemptOutcome.ok {
+        return .allowed
+    }
+    switch attempt.outcome {
+    case AttemptOutcome.openFailed,
+         AttemptOutcome.unlinkFailed:
+        // POSIX file ops: EPERM (1) and EACCES (13) are the kernel's
+        // sandbox-deny signals. Any other errno (ENOENT, EISDIR, EIO,
+        // EROFS, etc.) is a non-policy failure — the sandbox isn't
+        // saying anything one way or the other about this path.
+        switch attempt.errno {
+        case Int(EPERM), Int(EACCES): return .denied
+        default:                       return .undefined
+        }
+    case AttemptOutcome.lookupFailed:
+        // bootstrap_look_up returns BOOTSTRAP_NOT_PRIVILEGED (1100)
+        // when the kernel sandbox denies the lookup, and
+        // BOOTSTRAP_UNKNOWN_SERVICE (1102) when the service simply
+        // isn't registered. Only the former is a sandbox verdict.
+        // The worker writes the kr verbatim into attempt.error as
+        // "bootstrap_look_up: kr=<N>"; parse that substring.
+        if let msg = attempt.error, msg.contains("kr=1100") {
+            return .denied
+        }
+        return .undefined
+    case AttemptOutcome.bootstrapPortFailed,
+         AttemptOutcome.unsupported,
+         AttemptOutcome.notRunWorkerDied:
+        // Setup or shape failures — the syscall the policy would
+        // gate never ran. No verdict to surface.
+        return .undefined
     default:
-        return nil   // prediction_unavailable, error, missing → no comparison
+        return .undefined
     }
 }
 
@@ -543,17 +675,27 @@ private func classify(
                 error: "sandbox_apply returned \(out.applyRC) inside pw-probe-runner"
             )
         }
-        if out.sentSigkill || !out.done {
-            // Host couldn't observe `done` within the sentinel
-            // deadline. The bug-report shape: worker died from a
-            // post-apply signal (sandbox kill) is indistinguishable
-            // here from runner_timeout from this side; the term_signal
-            // on runner_subprocess lets a consumer tell them apart.
-            // For 6.8a we lean toward runner_timeout — the worker's
-            // sandbox-kill exit path is rare under the C worker
-            // because its post-apply syscall surface is so small.
-            // A future refinement could inspect out.termSignal to
-            // distinguish.
+        // sentSigkill means the HOST sent SIGKILL after its grace
+        // timer expired. The worker's termSignal=9 is then evidence
+        // of the host's kill, NOT of a sandbox denial. Always classify
+        // as runner_timeout in that case. Only consider termSignal as
+        // sandbox-denial evidence when the worker died from a signal
+        // we did NOT send.
+        if out.sentSigkill {
+            return ClassifiedRun(
+                outcome: NormalizedOutcome.runnerTimeout,
+                rc: 1,
+                error: "pw-probe-runner did not flip done within sentinel deadline; host SIGKILL grace fired"
+            )
+        }
+        if !out.done {
+            // done sentinel never flipped AND host didn't SIGKILL — the
+            // worker exited on its own without writing done. If it
+            // exited from a signal, attribute that to the sandbox
+            // (the worker's post-apply syscall surface is tiny; the
+            // most likely external cause is a sandbox kill). Otherwise
+            // surface as runner_timeout — the worker exited cleanly
+            // but failed to write done within the sentinel window.
             if let sig = out.termSignal, sig != 0 {
                 return ClassifiedRun(
                     outcome: NormalizedOutcome.runnerSandboxDenied,

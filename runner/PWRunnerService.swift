@@ -211,6 +211,28 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         // worker below. Step 6.8b flips the default once the gated
         // path has been broadly exercised.
         if parsed._test_overrides?.use_c_worker == true {
+            // C-worker-specific validation: catches probe_plan shapes
+            // the C worker would otherwise mishandle (duplicate
+            // step_ids → Dictionary trap; unknown attempt combos →
+            // silent successful no-op). bad_request before any
+            // process work happens.
+            if let problem = CWorkerOrchestrator.validateProbePlanForCWorker(parsed.probe_plan) {
+                let resp = PWRunnerRunResult(
+                    specimen_id: parsed.specimen_id,
+                    run_kind: parsed.run_kind,
+                    rc: 1,
+                    normalized_outcome: NormalizedOutcome.badRequest,
+                    error: problem,
+                    pid: Int(getpid()),
+                    bundle_id: bundleString("CFBundleIdentifier"),
+                    policy_format: parsed.policy.format,
+                    policy_sha256: policyHash,
+                    steps: [],
+                    test_overrides: parsed._test_overrides
+                )
+                replyAndExit(resp)
+                return
+            }
             let workerPath = parsed._test_overrides?.worker_executable_path
                 ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
             let validatorPath = parsed._test_overrides?.validator_executable_path

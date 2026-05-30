@@ -23,6 +23,7 @@ enum PWRunnerWire {
     static let attemptActionOpenWrite = "open_write"
     static let attemptActionCreate = "create"
     static let attemptActionUnlink = "unlink"
+    static let attemptActionAccess = "access"
     static let attemptActionMachLookup = "bootstrap_look_up"
 
     static let sandboxFilterNone = "none"

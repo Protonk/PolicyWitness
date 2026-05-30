@@ -37,6 +37,7 @@ BUILD_SH = REPO_ROOT / "build.sh"
 PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
 PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
 PROBE_RUNNER = RUNNER_DIR / "ProbeRunner.swift"
+CWORKER_ORCHESTRATOR = RUNNER_DIR / "CWorkerOrchestrator.swift"
 SONOMA_CROSS_CHECK = REPO_ROOT / "controller" / "src" / "sonoma_cross_check.rs"
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
@@ -412,6 +413,48 @@ def parse_pwrunner_wire_filter_constants() -> dict[str, str]:
     return {m.group(1): m.group(2) for m in const_re.finditer(body)}
 
 
+def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
+    """The Step 6.8a CWorkerOrchestrator carries its own host-side
+    mirror of the prediction_unavailable (op, filter) pair set. It's a
+    fourth source of truth that source_drift now also enforces against
+    the Swift / Rust / docs sets, so a future addition to one of those
+    three doesn't leave the orchestrator silently routing the new pair
+    through the validator (producing bad_filter responses instead of
+    the synthesized prediction_unavailable verdict)."""
+    text = CWORKER_ORCHESTRATOR.read_text(encoding="utf-8")
+    block_re = re.compile(
+        r'predictionUnavailableOpFiltersHostMirror[^\[]*\[(.*?)\n\]',
+        re.DOTALL,
+    )
+    match = block_re.search(text)
+    if match is None:
+        fail("could not locate predictionUnavailableOpFiltersHostMirror in runner/CWorkerOrchestrator.swift")
+        sys.exit(2)
+    body = match.group(1)
+    wire = parse_pwrunner_wire_filter_constants()
+    pair_re = re.compile(
+        r'\.init\(operation:\s*"([^"]+)"\s*,\s*filterKind:\s*(?:PWRunnerWire\.([A-Za-z]+)|"([^"]+)")',
+    )
+    pairs: set[tuple[str, str]] = set()
+    for m in pair_re.finditer(body):
+        operation = m.group(1)
+        const_name = m.group(2)
+        literal = m.group(3)
+        if const_name:
+            kind = wire.get(const_name)
+            if kind is None:
+                fail(
+                    f"predictionUnavailableOpFiltersHostMirror references "
+                    f"PWRunnerWire.{const_name} but no such constant is "
+                    f"defined in runner/PWRunnerAPI.swift"
+                )
+                sys.exit(2)
+        else:
+            kind = literal
+        pairs.add((operation, kind))
+    return pairs
+
+
 def parse_rust_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     text = SONOMA_CROSS_CHECK.read_text(encoding="utf-8")
     block_re = re.compile(
@@ -452,22 +495,26 @@ def check_prediction_unavailable_agreement() -> list[str]:
     swift_pairs = parse_swift_prediction_unavailable_pairs()
     rust_pairs = parse_rust_prediction_unavailable_pairs()
     docs_pairs = parse_docs_prediction_unavailable_pairs()
+    orch_pairs = parse_orchestrator_prediction_unavailable_pairs()
     problems: list[str] = []
-    for label_a, set_a, label_b, set_b in [
-        ("swift (ProbeRunner.swift)", swift_pairs,
-         "rust (sonoma_cross_check.rs)", rust_pairs),
-        ("swift (ProbeRunner.swift)", swift_pairs,
-         "docs (PolicyWitness.md)", docs_pairs),
-        ("rust (sonoma_cross_check.rs)", rust_pairs,
-         "docs (PolicyWitness.md)", docs_pairs),
-    ]:
-        for pair in sorted(set_a - set_b):
+    # Treat the Swift ProbeRunner set as the canonical source and
+    # compare every other source against it. A single canonical
+    # reduces N^2 pair comparisons to N — and makes the failure
+    # messages name the disagreeing source clearly.
+    canonical = swift_pairs
+    others = [
+        ("rust (sonoma_cross_check.rs)", rust_pairs),
+        ("docs (PolicyWitness.md)", docs_pairs),
+        ("orchestrator host-mirror (CWorkerOrchestrator.swift)", orch_pairs),
+    ]
+    for label, other in others:
+        for pair in sorted(canonical - other):
             problems.append(
-                f"  prediction_unavailable: {pair} listed in {label_a} but not {label_b}"
+                f"  prediction_unavailable: {pair} in swift (ProbeRunner.swift) but missing from {label}"
             )
-        for pair in sorted(set_b - set_a):
+        for pair in sorted(other - canonical):
             problems.append(
-                f"  prediction_unavailable: {pair} listed in {label_b} but not {label_a}"
+                f"  prediction_unavailable: {pair} in {label} but missing from swift (ProbeRunner.swift)"
             )
     return problems
 

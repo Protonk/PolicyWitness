@@ -236,6 +236,300 @@ PY
   test_pass "(op,filter) in prediction_unavailable set: verdict synthesized, drift=null" "{\"stdout\":\"${run_stdout}\"}"
 }
 
+# ---- test_id: duplicate_step_id_rejected (PR H #1 regression) ------------
+
+run_duplicate_step_id_rejected() {
+  local test_id="duplicate_step_id_rejected"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "two probe steps with the same step_id → bad_request (used to trap the Dictionary join and kill the XPC service)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_dup_step_id",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+  "probe_plan": [
+    {"step_id": "dup", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}},
+    {"step_id": "dup", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}}
+  ],
+  "_test_overrides": { "use_c_worker": true }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "bad_request", "outcome={0}".format(r["normalized_outcome"])
+assert r["rc"] == 1
+assert "duplicate step_id" in (r.get("error") or ""), \
+    "error should name the duplicate: {0!r}".format(r.get("error"))
+assert r.get("runner_subprocess") is None, "no worker should have spawned"
+assert r.get("validator_subprocess") is None, "no validator should have spawned"
+assert r["steps"] == []
+print("ok: duplicate step_id rejected pre-spawn as bad_request")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "duplicate step_id → bad_request before spawn (no XPC crash)" "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: unsupported_attempt_rejected (PR H #2 regression) ----------
+
+run_unsupported_attempt_rejected() {
+  local test_id="unsupported_attempt_rejected"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "unknown (kind, action) combo → bad_request (used to silently report outcome=ok for an op that never ran)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_bogus_attempt",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+  "probe_plan": [{
+    "step_id": "s1",
+    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
+    "attempt": {"kind": "file", "action": "totally_not_a_real_action", "target": "/etc/hosts"}
+  }],
+  "_test_overrides": { "use_c_worker": true }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "bad_request", "outcome={0}".format(r["normalized_outcome"])
+assert r["rc"] == 1
+err = r.get("error") or ""
+assert "unsupported attempt" in err, "error should name unsupported attempt: {0!r}".format(err)
+assert "totally_not_a_real_action" in err, "error should echo the bad action: {0!r}".format(err)
+assert r["steps"] == []
+print("ok: unknown (kind, action) rejected pre-spawn as bad_request")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "unknown (kind, action) → bad_request (no silent ok)" "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: worker_timeout_ms_honored (PR H #3 regression) ------------
+
+run_worker_timeout_ms_honored() {
+  local test_id="worker_timeout_ms_honored"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "worker_timeout_ms=500 + worker_post_apply_hang_ms=1500 → runner_timeout (used to be ignored, returning ok after the full hang)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_timeout",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+  "probe_plan": [{
+    "step_id": "s1",
+    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
+    "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
+  }],
+  "_test_overrides": {
+    "use_c_worker": true,
+    "worker_timeout_ms": 500,
+    "worker_post_apply_hang_ms": 1500
+  }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "runner_timeout", "outcome={0}".format(r["normalized_outcome"])
+assert r["rc"] == 1
+# Mirror-back of both overrides should survive into the response.
+to = r["test_overrides"]
+assert to["worker_timeout_ms"] == 500
+assert to["worker_post_apply_hang_ms"] == 1500
+print("ok: worker_timeout_ms drives the C-worker sentinel deadline; outcome=runner_timeout")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "worker_timeout_ms honored on C-worker path (sentinel fires before hang completes)" "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: drift_null_for_non_policy_failure (PR H #5 regression) ----
+#
+# The audit reproducer: (allow default) + mach_lookup of a missing
+# service. Validator says allow (per the policy). bootstrap_look_up
+# returns BOOTSTRAP_UNKNOWN_SERVICE (kr=1102) because the service
+# doesn't exist — not because the sandbox denied it. Pre-fix the
+# orchestrator treated every non-ok attempt as a deny observation,
+# so this case surfaced as drift=true. Post-fix the orchestrator
+# inspects the failure kind: only EPERM/EACCES on file and
+# BOOTSTRAP_NOT_PRIVILEGED (kr=1100) on mach count as denials.
+
+run_drift_null_for_non_policy_failure() {
+  local test_id="drift_null_for_non_policy_failure"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "(allow default) + mach_lookup of a missing service → drift=null (BOOTSTRAP_UNKNOWN_SERVICE isn't a sandbox verdict; used to surface as drift=true)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_unknown_service_drift",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+  "probe_plan": [{
+    "step_id": "s_unknown_service",
+    "sandbox_check": {"operation": "mach-lookup", "filter": {"kind": "global_name", "value": "com.pw.test.no-such-service"}},
+    "attempt": {"kind": "mach_lookup", "action": "bootstrap_look_up", "target": "com.pw.test.no-such-service"}
+  }],
+  "_test_overrides": { "use_c_worker": true }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "ok", "outcome={0}".format(r["normalized_outcome"])
+s = r["steps"][0]
+# Validator predicts allow (the service name isn't in any deny rule).
+assert s["sandbox_check"]["outcome"] == "allow", \
+    "validator should allow unknown service under (allow default): {0}".format(s["sandbox_check"]["outcome"])
+# Attempt failed at the kernel: BOOTSTRAP_UNKNOWN_SERVICE.
+assert s["attempt"]["outcome"] == "lookup_failed", \
+    "attempt outcome: {0}".format(s["attempt"]["outcome"])
+err = s["attempt"].get("error") or ""
+assert "kr=1102" in err, "error should name BOOTSTRAP_UNKNOWN_SERVICE kr=1102: {0!r}".format(err)
+# Critical: drift must be null. Pre-fix it was true because every
+# non-ok attempt counted as a deny observation.
+assert s["drift"] is None, \
+    "drift should be null for non-policy failure (kr=1102), got {0}".format(s["drift"])
+print("ok: missing-service lookup yields drift=null (not libsandbox drift)")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "drift=null for BOOTSTRAP_UNKNOWN_SERVICE (non-policy failure)" "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: sandbox_check_pid_matches_worker (PR H #7 regression) ------
+
+run_sandbox_check_pid_matches_worker() {
+  local test_id="sandbox_check_pid_matches_worker"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "sandbox_check.pid on every step matches the worker PID (pre-fix was 0 for validator-backed, host PID for synthesized)"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_sb_pid",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+  "probe_plan": [
+    {"step_id": "s_validator", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}},
+    {"step_id": "s_synth", "sandbox_check": {"operation": "iokit-open-service", "filter": {"kind": "iokit_registry_entry_class", "value": "IOSurfaceRoot"}}, "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}}
+  ],
+  "_test_overrides": { "use_c_worker": true }
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+worker_pid = r["runner_subprocess"]["pid"]
+for s in r["steps"]:
+    sb_pid = s["sandbox_check"]["pid"]
+    assert sb_pid == worker_pid, \
+        "step {0}: sandbox_check.pid={1}, expected worker_pid={2}".format(s["step_id"], sb_pid, worker_pid)
+print("ok: sandbox_check.pid == worker_pid for both validator-backed and synthesized verdicts")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "sandbox_check.pid is the worker PID on both validator-backed and synthesized verdicts" "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_happy_default_allow
 run_bare_deny_default
 run_prediction_unavailable_pair
+run_duplicate_step_id_rejected
+run_unsupported_attempt_rejected
+run_worker_timeout_ms_honored
+run_drift_null_for_non_policy_failure
+run_sandbox_check_pid_matches_worker

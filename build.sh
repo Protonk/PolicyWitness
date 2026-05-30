@@ -367,6 +367,14 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     # BYOXPC runners (per RUNNER-RESHAPE-PLAN.md R5).
     cp "${PW_PROBE_RUNNER_BIN}" "${svc_bundle}/Contents/MacOS/pw-probe-runner"
     chmod +x "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+
+    # Embed sb_api_validator alongside pw-probe-runner for the same
+    # bundle-local resolution reason — BYOXPC runners live outside any
+    # app bundle, so the orchestrator's app-level fallback would miss.
+    # The orchestrator checks bundle-local first (post-Step-6.8a audit
+    # finding #6).
+    cp "${SB_API_VALIDATOR_BIN}" "${svc_bundle}/Contents/MacOS/sb_api_validator"
+    chmod +x "${svc_bundle}/Contents/MacOS/sb_api_validator"
   done
 else
   echo "==> Skipping embedded XPC build (BUILD_XPC=0)"
@@ -410,11 +418,13 @@ if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
       exit 2
     fi
 
-    # Sign embedded helpers (e.g. pw-probe-runner) BEFORE sealing the
-    # bundle, so the bundle codesign records their hashes. Without
-    # this, codesign may refuse to validate the sealed bundle because
-    # the helpers carry no signature when the seal is computed.
+    # Sign embedded helpers (e.g. pw-probe-runner, sb_api_validator)
+    # BEFORE sealing the bundle, so the bundle codesign records their
+    # hashes. Without this, codesign may refuse to validate the
+    # sealed bundle because the helpers carry no signature when the
+    # seal is computed.
     sign_macho "${svc_bundle}/Contents/MacOS/pw-probe-runner"
+    sign_macho "${svc_bundle}/Contents/MacOS/sb_api_validator"
 
     codesign --force --options runtime --timestamp \
       --entitlements "${svc_entitlements}" \
