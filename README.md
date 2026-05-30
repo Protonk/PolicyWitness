@@ -2,20 +2,20 @@
 
 >Read the [user guide](PolicyWitness.md) for more detail
 
-PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork. 
+PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork.
 
 ## Flow
 
 >Specimens -> Runs -> Steps -> Evidence
 
-PolicyWitness operates on specimen, packages of SBPL + entitlements and probe plans. The controller launches a fresh runner for each specimen. The runner is two processes: an unsandboxed XPC host that validates the request and spawns a short-lived worker, and a worker that applies the policy to itself and executes the probe plan step by step inside the sandbox. The split keeps the XPC reply path alive even when the specimen policy is a strict `(deny default)` profile that would otherwise block the host's own runtime. Each step performs an explicit attempt, records rc plus errno or kr, and also runs `sandbox_check` with the same operation and filter so you can compare predicted vs observed outcomes. The worker returns a single JSON report to the host, the host translates it into the public JSON envelope, and both processes exit.
+PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner` (sandboxed C worker that applies the specimen policy to itself and runs the probe plan) and `sb_api_validator --batch` (queries `sandbox_check` for each probe against the worker's sandboxed PID). The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
 
-Each step may include multiple evidence channels:
+Each step records two parallel verdicts:
 
-- **A**: in-band attempt result (rc/errno/kr)
-- **B**: deterministic side effects (for example SBPL `send-signal`)
-- **C**: out-of-band unified-log correlation (best-effort)
-- **D**: `sandbox_check` prediction and "am I sandboxed" confirmation
+- **Attempt** (`steps[].attempt`): in-band kernel response — `rc`, `errno`, mach `kr` — from actually performing the operation inside the sandboxed worker.
+- **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` verdict for the same operation + filter against the same PID, supplied by the validator.
+
+`steps[].drift` flags disagreement between the two. Unified-log evidence for kernel denies is attached out-of-band (best-effort) via `data.sandbox_log_capture` and `data.runner_sandbox_diagnostics.first_deny`.
 
 ## Runner modes
 

@@ -2,7 +2,7 @@
 
 This file is for contributors and agents.
 
-PolicyWitness is a sandbox runner instrumentation harness. Each run is driven by a specimen — an SBPL policy plus a probe plan — which is handed to a fresh `PWRunner.xpc` instance. The XPC host stays unsandboxed; it spawns a short-lived worker process that applies the specimen policy to itself, executes the probe plan, returns a JSON report, and exits. The host then replies via XPC and exits too.
+PolicyWitness is a sandbox witness harness. Each run is driven by a specimen — an SBPL policy plus a probe plan — handed to a fresh `PWRunner.xpc` instance. The XPC host stays unsandboxed; it spawns two short-lived children per specimen (`pw-probe-runner` for sandboxed attempts and `sb_api_validator --batch` for `sandbox_check` verdicts), joins their outputs into one JSON envelope, replies, and exits.
 
 ## Quick Router (open first)
 
@@ -47,11 +47,9 @@ The shipped CLI is intentionally small:
 
 - `policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]`
 
-Profile-per-service XPC probe commands are not part of the CLI; do not re-introduce them without an explicit design decision.
-
 ## Documentation
 
-Documentation should be stateless: describe current behavior without historical change notes. Reserve history for `README.md` only.
+Describe current behavior. Don't add change-history notes to docs — `git log` is authoritative.
 
 ## Core ideas
 
@@ -106,9 +104,9 @@ SwiftPM is test-only here. Production builds still go through `build.sh`; the Sw
 
 **When to add a unit test rather than an e2e suite.** Reach for `runner_unit` when:
 
-1. The behavior is a small pure function that backs an outcome decision (e.g. `classifyWorkerResult`, `effectiveWorkerTimeoutSeconds`, `partialStepOutput`, BSD wait-status decoders). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
+1. The behavior is a small pure function that backs an outcome decision (e.g. the orchestrator's drift computation, `CWorker`'s sentinel-deadline math, `ValidatorClient`'s verdict-by-step-id join). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
 2. The outcome is unreachable from a real specimen because something upstream short-circuits it (`sandbox_apply_failed` is hidden behind controller-side preflight; `runner_failed` requires an intermediate failure no fixture can produce).
-3. You're testing a failure mode of a small helper (frame truncation, oversized prefix, EOF before any bytes) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
+3. You're testing a failure mode of a small helper (validator partial-evidence on EOF, prediction-unavailable host-mirror agreement) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
 
 Don't reach for `runner_unit` when:
 
@@ -146,7 +144,7 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 
 | Key | Type | Boundary it re-routes | Outcome it lets you reach |
 | --- | --- | --- | --- |
-| `libsandbox_path` | string | `SandboxLib.load(path:)` → `dlopen(path)` (host first, then worker on the same value) | `libsandbox_unavailable` |
+| `libsandbox_path` | string | `SandboxLib.load(path:)` → `dlopen(path)` in the host's pre-spawn check | `libsandbox_unavailable` |
 | `worker_executable_path` | string | `posix_spawn(path, ...)` inside `CWorker.spawn` (pw-probe-runner) | `worker_spawn_failed` |
 | `worker_timeout_ms` | integer (ms, floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |

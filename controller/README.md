@@ -4,7 +4,7 @@ This is developer documentation for the Rust code in `controller/`. It builds th
 
 - `dist/PolicyWitness.app/Contents/MacOS/policy-witness`
 
-PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run. The runner is itself a host/worker pair: the XPC host stays unsandboxed and the worker process applies the specimen policy. The controller treats this as an implementation detail of the runner — it only consumes the host's reply.
+PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run. The runner is an unsandboxed XPC host plus two sandboxed children (`pw-probe-runner` for attempts, `sb_api_validator --batch` for `sandbox_check` verdicts) joined into one envelope. The controller treats that as an implementation detail of the runner — it only consumes the host's reply.
 
 For the Swift runner implementation details, see `runner/README.md`.
 
@@ -66,14 +66,14 @@ Runs a **single runner evaluation** against the selected runner service:
 - Reads a request JSON file (runner request schema) that contains:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
-- Starts a fresh runner instance (one XPC host + one worker process), applies the policy exactly once inside the worker, executes the probe plan, and returns the runner's structured JSON result.
+- Starts a fresh runner instance (one XPC host + two short-lived children), applies the policy exactly once inside the C worker, executes the probe plan and validator batch in parallel, and returns the runner's structured JSON result.
 - Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
-  process per run) co-launched by the C-worker code path inside the
-  runner host. The validator reads NDJSON probes from stdin and writes
-  NDJSON verdicts to stdout; the host joins the verdicts into
-  `runner_result.steps[*].validator` and surfaces process metadata as
-  `runner_result.validator_subprocess`. See
+  process per run), spawned by the runner host alongside the C
+  worker. It reads NDJSON probes from stdin and writes NDJSON
+  verdicts to stdout; the host folds each verdict into the matching
+  `runner_result.steps[*].sandbox_check` block and surfaces process
+  metadata as `runner_result.validator_subprocess`. See
   `tests/suites/validator_batch_mode/README.md` for the wire contract.
   Validator coverage rules:
   - **Predicted** filter kinds (the validator calls `sandbox_check`):
@@ -112,8 +112,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
 - `data.policy_preflight`: SBPL compile report from `sbpl-preflight` (best-effort)
 - `data.runner_startup_diagnostics`: extra context when XPC startup fails
-  (rare after the host/worker split, since the unsandboxed host always
-  replies unless launchd or codesign reject the bundle outright)
+  (rare in practice — the unsandboxed host always replies unless launchd
+  or codesign reject the bundle outright)
 - `data.runner_sandbox_diagnostics`: present when
   `normalized_outcome == "runner_sandbox_denied"`. Carries
   `first_deny: { operation, path, raw_line }` — the first unified-log

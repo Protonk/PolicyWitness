@@ -5,11 +5,15 @@ This directory contains the Swift implementation of the **ephemeral sandbox runn
 PolicyWitness is **specimen-first**:
 
 - The controller (`policy-witness`) starts a fresh XPC runner instance per specimen.
-- The runner XPC host starts unsandboxed, spawns a short-lived worker, and the
-  worker applies the requested seatbelt profile exactly once (SBPL source +
-  parameters), executes the probe plan, returns JSON to the host, and exits.
-- The host never applies the specimen policy, so default-deny policies cannot
-  block the XPC reply path.
+- The XPC host stays unsandboxed and spawns two short-lived children:
+  - `pw-probe-runner` — the sandboxed C worker that applies the specimen
+    policy (SBPL source + params) exactly once to itself and runs the
+    probe plan's attempts.
+  - `sb_api_validator --batch` — queries `sandbox_check` for each probe
+    against the worker's PID.
+- The host joins both children's outputs into a single `PWRunnerRunResult`
+  envelope and replies. Because the host never applies the specimen
+  policy, default-deny policies can't block the XPC reply path.
 
 ## Key files
 
@@ -46,6 +50,29 @@ PolicyWitness is **specimen-first**:
   - The host enforces caller authorization, loads libsandbox once to fail
     fast on missing dynamic loaders, computes `policy_sha256`, and never
     calls `sandbox_apply` on itself.
+- `runner/runner-client/main.swift`
+  - Builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`: a
+    thin `NSXPCConnection` wrapper that forwards JSON bytes and prints
+    the runner's JSON reply.
+- `runner/services/PWRunner/`
+  - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard
+    runner XPC service bundle. Debug-attach inspection goes through
+    BYOXPC.
+
+External to `runner/` but conceptually part of the runner:
+
+- `controller/tools/pw_probe_runner/pw_probe_runner.c` (+ `pw_probe_runner_abi.h`)
+  — the C worker that owns the post-apply syscall surface. Built once
+  and embedded inside each XPC service bundle as
+  `…/Contents/MacOS/pw-probe-runner` (not the app's top-level
+  `Contents/MacOS/`) so built-in and BYOXPC runners both resolve the
+  binary relative to their own bundle. Driven by `CWorker.swift`; the
+  `runner_c_worker_harness` suite exercises it in isolation as a
+  regression pin.
+- `controller/tools/sb_api_validator/sb_api_validator.c` — the batch
+  validator. Same bundle-local embedding story; driven by
+  `ValidatorClient.swift`; wire contract pinned by
+  `tests/suites/validator_batch_mode/`.
 
 ## Unit tests (SwiftPM)
 
@@ -89,21 +116,6 @@ See `AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test
 recipe, and the rules for adding a new override.
 
-- `runner/runner-client/main.swift` → builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`
-  - Thin `NSXPCConnection` wrapper that forwards JSON bytes and prints the runner’s JSON reply.
-
-- `runner/services/PWRunner/`
-  - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard runner XPC service bundle. Debug-attach inspection goes through BYOXPC.
-
-- `controller/tools/pw_probe_runner/pw_probe_runner.c` (+
-  `pw_probe_runner_abi.h`) — the C worker that owns the post-apply
-  syscall surface. Built once and embedded inside each XPC service
-  bundle as `…/Contents/MacOS/pw-probe-runner` (not the app's
-  top-level `Contents/MacOS/`) so built-in and BYOXPC runners both
-  resolve the binary relative to their own bundle. Driven by
-  `CWorker.swift`; the `runner_c_worker_harness` suite exercises it
-  in isolation as a regression pin.
-
 ## Specimen inputs
 
 The runner consumes a `PWRunnerRunSpec` which contains:
@@ -113,25 +125,38 @@ The runner consumes a `PWRunnerRunSpec` which contains:
 
 ## Run result highlights
 
-Each probe step reports both a `sandbox_check` and an `attempt` result:
+Top-level fields:
 
-- `pid` at the top level is the sandboxed worker PID when
-  `runner_subprocess` is present. `runner_subprocess` carries the worker's
-  `exit_code` or `term_signal` plus a `partial_steps` marker. The
-  classifier in `CWorkerOrchestrator` maps the sentinel state + waitpid
-  outcome to `normalized_outcome`: `done` sentinel flipped + clean exit →
-  `ok`; signal-before-done → `runner_sandbox_denied` (the precise signal
-  stays in `runner_subprocess.term_signal`); host SIGKILL after sentinel
-  timeout → `runner_timeout`; failure to `posix_spawn` →
-  `worker_spawn_failed`.
+- `pid` is the sandboxed C worker's PID when `runner_subprocess` is
+  present; use it for unified-log correlation.
+- `runner_subprocess` carries the worker's `{ exit_code, term_signal,
+  partial_steps }`. The classifier in `CWorkerOrchestrator` maps the
+  sentinel state + waitpid outcome to `normalized_outcome`: `done`
+  sentinel flipped + clean exit → `ok`; signal-before-done →
+  `runner_sandbox_denied` (the precise signal stays in
+  `term_signal`); host SIGKILL after sentinel timeout →
+  `runner_timeout`; failure to `posix_spawn` → `worker_spawn_failed`.
+- `validator_subprocess` carries the validator child's
+  `{ pid, exit_code, term_signal }`, or is `null` when no validator
+  ran (every probe was in the prediction-unavailable set, or
+  spawning the validator failed).
+
+Per-step fields under `steps[]`:
+
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
-  `filter_value` and a best-effort `effective_filter_value` (for `path` filters,
-  this is the runner’s normalized path). It also reports `pid`, `operation`,
-  `filter_type_id`, and `errno`/`error` when the check call fails.
-- `attempt` always includes `exit_code` and `syscall_errno` (explicit `null` when
-  not applicable), and for file attempts it includes `requested_path`,
-  `normalized_path`, and `observed_path` (fd-based when available). The `rc`
-  and `errno` fields are retained for compatibility.
+  `filter_value` and a best-effort `effective_filter_value` (for `path`
+  filters, the runner's normalized path). It also reports `pid`,
+  `operation`, `filter_type_id`, and `errno`/`error` when the check
+  call fails.
+- `attempt` always includes `exit_code` and `syscall_errno` (explicit
+  `null` when not applicable), and for file attempts it includes
+  `requested_path`, `normalized_path`, and `observed_path` (fd-based
+  when available). The `rc` and `errno` fields are retained for
+  compatibility.
+- `drift` is a bool when both verdicts are available and comparable,
+  or `null` when no comparison is possible (validator didn't run for
+  the step, op+filter is in the prediction-unavailable set, or the
+  attempt didn't produce a verdict).
 
 ## Entitlements and sandboxing (important distinction)
 
@@ -155,8 +180,10 @@ opt in by adding the same keys.
 Sandbox policy variation is driven by the specimen itself:
 
 - the controller supplies SBPL,
-- the runner worker applies it once to itself,
-- the runner’s witness is defined by mandatory multi-channel evidence (see the controller docs).
+- `pw-probe-runner` applies it once to itself before running probes,
+- the runner's witness pairs the attempt result with the validator's
+  `sandbox_check` verdict for each probe and surfaces disagreement
+  as `steps[].drift`.
 
 ## External runner services
 

@@ -84,9 +84,9 @@ Minimal skeleton (copy/paste):
 ```
 Notes:
 - All path rules live inside `policy.sbpl_source`; there is no `path_membership` field.
-- `probe_plan` may be empty when you only want to exercise sandbox apply
-  (the validator subprocess still launches and writes per-step
-  verdicts when steps are present).
+- `probe_plan` may be empty when you only want to exercise sandbox
+  apply (the validator child is only spawned when there are probes
+  to query).
 
 ### Policy
 
@@ -189,82 +189,111 @@ Example:
 
 ## Run output (per step)
 
-Runner responses use `schema_version = 4`. The XPC service process stays
-unsandboxed and spawns a short-lived worker that applies the specimen policy.
-`data.runner_result.pid` names that worker process when
-`runner_subprocess` is present; use it for sandbox unified-log correlation.
-`runner_subprocess` records `{ pid, term_signal, exit_code, partial_steps }`.
+Runner responses use `schema_version = 4`. The XPC service host stays
+unsandboxed and spawns two children per specimen: `pw-probe-runner`
+(the sandboxed C worker that applies the policy and runs probe
+attempts) and `sb_api_validator --batch` (queries `sandbox_check`
+verdicts against the worker's PID). `data.runner_result.pid` names
+the worker process when `runner_subprocess` is present; use it for
+unified-log correlation. `runner_subprocess` records
+`{ pid, term_signal, exit_code, partial_steps }`.
+`validator_subprocess` records the validator child's
+`{ pid, exit_code, term_signal }` or is `null` when no validator
+ran (see below).
 
-`schema_version = 4` (additive to v3):
+Top-level fields beyond `pid` / `runner_subprocess`:
 
-- `validator_subprocess: { pid, exit_code, term_signal } | null` — the
-  `sb_api_validator --batch` child the host spawns alongside the C
-  worker to collect `sandbox_check` verdicts against the sandboxed
-  worker_pid. `null` when no validator child was spawned, which
-  happens in two cases:
+- `validator_subprocess: { pid, exit_code, term_signal } | null` —
+  populated whenever the validator child ran. Exactly one of
+  `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
+  non-null. `null` in two cases:
     1. Every probe in the plan had an (operation, filter) pair in
        the `prediction_unavailable` set — the orchestrator skipped
-       the validator entirely because there were no probes to send,
-       and synthesized the per-step `sandbox_check.outcome =
-       "prediction_unavailable"` verdicts locally.
+       the validator entirely and synthesized the per-step
+       `sandbox_check.outcome = "prediction_unavailable"` verdicts
+       locally.
     2. The validator failed to spawn before any metadata could be
        captured (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
-  Otherwise populated, with exactly one of `exit_code` (clean exit)
-  or `term_signal` (SIGKILL fallback) non-null.
-- `steps[].drift: bool | null` — disagreement between the validator's
-  predicted verdict and the attempt's observed verdict for the step.
-  `true` when they disagree about allow/deny (libsandbox-drift evidence;
-  the property PolicyWitness exists to surface). `false` when they
-  agree. `null` when no comparison is possible: the validator wasn't
-  run, the validator skipped this step (e.g. an op+filter pair in
-  `prediction_unavailable`), or the attempt didn't produce a verdict.
-  Encoded as explicit JSON null at v4 — consumers introspecting the
-  raw JSON see the key whether or not a comparison was possible, so
-  "absent" reliably means "v3 producer."
-- Top-level `pid` semantics from v3 are preserved: when
-  `runner_subprocess` is present, it names the sandboxed worker
-  process for unified-log correlation. `validator_subprocess.pid` is
-  the validator's PID and is a separate process.
+- `steps[].drift: bool | null` — disagreement between the
+  validator's predicted verdict and the attempt's observed verdict
+  for the step. `true` when they disagree about allow/deny
+  (libsandbox-drift evidence; the property PolicyWitness exists to
+  surface). `false` when they agree. `null` when no comparison is
+  possible: the validator wasn't run, the validator skipped this
+  step (e.g. an op+filter pair in `prediction_unavailable`), or the
+  attempt didn't produce a verdict. Encoded as explicit JSON `null`
+  so the key is always present.
 
 `data.runner_result.normalized_outcome` values the runner can produce
 (controller-level outcomes like `bad_policy`, `missing_params`, and
 `policy_too_large` are documented elsewhere on this page):
 
-- `ok` — worker wrote a complete report and exited cleanly.
-- `runner_sandbox_denied` — worker spawned, applied the policy, and was
-  terminated by a fatal signal before writing a report. The kernel sandbox
-  is the overwhelming cause on macOS; the precise signal is preserved in
-  `runner_subprocess.term_signal` (commonly `9` for SIGKILL, or `5`/`6` for
-  SIGTRAP/SIGABRT from Swift's runtime when an allocation trap fires under
-  a `(deny default)` profile that blocks `mach_vm_allocate`-class traps).
-  `data.sandbox_log_capture.deny_events` carries the matching unified-log
-  evidence when available.
-- `runner_timeout` — worker did not exit and did not write a report within
-  the host's deadline. The host SIGKILLs the worker before replying.
+- `ok` — worker completed the probe plan and the validator returned
+  verdicts for every non-skipped probe; both children clean-exited.
+- `runner_sandbox_denied` — worker spawned, applied the policy, then
+  was terminated by a fatal signal before flipping its `done`
+  sentinel. The kernel sandbox is the overwhelming cause on macOS;
+  the precise signal is preserved in `runner_subprocess.term_signal`
+  (commonly `9` for SIGKILL, or `5`/`6` for SIGTRAP/SIGABRT from
+  runtime allocation traps under `(deny default)`).
+  `data.sandbox_log_capture.deny_events` carries the matching
+  unified-log evidence when available.
+- `runner_timeout` — worker did not flip `done` within the host's
+  sentinel deadline. The host SIGKILLs the worker before replying.
+- `runner_failed` — worker exited cleanly but didn't reach `done`,
+  or hit a non-fatal failure mode that doesn't fit the other
+  outcomes. Reachable only as a defense-in-depth path; no
+  deterministic specimen produces it.
 - `worker_spawn_failed` — host could not `posix_spawn` the worker
   (filesystem/codesign/quota error). Worker never ran.
-- `bad_request` — request JSON failed to decode or referenced an unknown
-  sandbox operation. No worker is spawned.
-- `libsandbox_unavailable` — libsandbox could not be opened on this host.
-- `sandbox_apply_failed` — worker reached `sandbox_apply` but libsandbox
-  rejected the policy (returned non-zero). The worker reports this and
-  exits cleanly; the host forwards it.
+- `validator_spawn_failed` — host could not `posix_spawn` the
+  validator child. `result.ok=false`; attempts are still surfaced
+  in `steps[*].attempt` as degraded evidence.
+- `validator_no_reply` — validator started but exited without
+  emitting the expected number of verdicts. Partial verdicts (if
+  any) appear in `steps[*].sandbox_check`; missing verdicts surface
+  as `null`.
+- `validator_decode_failure` — validator emitted bytes the host
+  couldn't parse as NDJSON verdicts.
+- `validator_unavailable` — envelope has attempts but no validator
+  ran. Distinct from the failure-mode-specific validator outcomes
+  so a consumer can recognize the attempts-only degradation mode.
+- `bad_request` — request rejected before any worker spawn. Causes
+  include: JSON decode failure, unknown `sandbox_check` operation
+  or filter kind (`validateSandboxChecks`), unsupported top-level
+  field (e.g. `instrumentation`), duplicate `step_id`, or attempt
+  `kind`/`action` combination the C worker doesn't implement.
+- `libsandbox_unavailable` — libsandbox could not be opened on this
+  host (the host pre-spawn check failed `dlopen`).
+- `sandbox_apply_failed` — the C worker reached `sandbox_apply` but
+  libsandbox rejected the policy (non-zero `apply_rc` written to
+  shared memory before the worker exits). E2e-unreachable in
+  practice because the controller's preflight catches the same
+  inputs upstream as `bad_policy`.
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
-`xpc_error`, `xpc_timeout`, `xpc_proxy_type_mismatch`, and `xpc_no_reply`
-are synthesized by `pw-runner-client` when the XPC peer itself can't be
-reached. After the host/worker split they should be rare: the unsandboxed
-host always replies unless launchd or codesign reject the bundle outright.
+`xpc_error`, `xpc_timeout`, `xpc_proxy_type_mismatch`, and
+`xpc_no_reply` are synthesized by `pw-runner-client` when the XPC
+peer itself can't be reached. Rare in practice — the unsandboxed
+host always replies unless launchd or codesign reject the bundle
+outright.
 
-The request schema includes a `_test_overrides` field that exists to
-simplify build and test procedures. It is not for public consumption.
+The request schema also accepts an optional `_test_overrides`
+field; see the [`_test_overrides` reference in AGENTS.md][overrides]
+for the supported keys and their boundaries. Production runs leave
+the field unset; the one exception users may want to reach for
+directly is `worker_post_apply_hang_ms` for debugger attach (see
+[Debug-attach to the worker](#debug-attach-to-the-worker)).
+
+[overrides]: AGENTS.md#testing-normalized_outcome-failure-paths-via-_test_overrides
 
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
 - `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
+- `steps[].drift`: `bool | null` — see the field description above.
 
 Notes:
 - `scope` is `post_sandbox` for runner-hosted checks.
@@ -345,15 +374,14 @@ matching code lives in
 mirrored host-side by
 `runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
 both lists and this doc must agree (source_drift enforces).
-- `path_diagnostics` is emitted only for path-filter checks. Introduced in
-  runner response `schema_version = 2`; consumers branching on
-  `schema_version` can rely on its presence on any path-filter check at v2+.
-  It carries the candidate kernel-side forms of the check path so a caller
-  can see which prefix libsandbox could have been comparing against when a
-  `(subpath ...)` rule denies a path that looked like it should match.
-  Fields: `{ input, realpath_resolved, firmlink_resolved, data_volume_form }`.
-  The runner still passes the raw `filter_value` to `sandbox_check` — this
-  block is observation only.
+- `path_diagnostics` is emitted on every path-filter `sandbox_check`
+  result. It carries the candidate kernel-side forms of the check
+  path so a caller can see which prefix libsandbox could have been
+  comparing against when a `(subpath ...)` rule denies a path that
+  looked like it should match. Fields: `{ input, realpath_resolved,
+  firmlink_resolved, data_volume_form }`. The runner still passes
+  the raw `filter_value` to `sandbox_check` — this block is
+  observation only.
 
   Producer: `path_diagnostics` is computed by the unsandboxed runner
   host (`PWRunnerService.enrichPathDiagnostics`) after the worker
@@ -606,10 +634,12 @@ Registry location:
     directly.
   - For the full deny list (when one isn't enough), see
     `data.sandbox_log_capture.deny_events`.
-  - `data.runner_result.runner_subprocess.term_signal` carries the exit
-    signal; a bare `(deny default)` policy almost always produces this
-    outcome unless the specimen adds enough `(allow ...)` entries to keep
-    the worker's encode-and-write path alive.
+  - `data.runner_result.runner_subprocess.term_signal` carries the
+    exit signal. The C worker has a minimal post-apply syscall
+    surface (shm writes only), so most `(deny default)` policies
+    don't actually kill it; if you see `runner_sandbox_denied`, the
+    `first_deny` line usually names the specific operation the
+    policy needs to allow.
 - `normalized_outcome` is `worker_spawn_failed`: the host could not
   `posix_spawn` the worker. Verify the bundle is signed and on a writable
   filesystem; `pgrep -fl PWRunner` should show no stragglers.
