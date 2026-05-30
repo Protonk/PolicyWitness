@@ -203,11 +203,11 @@ def parse_index_rows() -> dict[str, str]:
     return rows
 
 
-def parse_matrix_outcomes() -> set[str]:
+def _parse_matrix_section(heading: str) -> set[str]:
     text = TESTS_INDEX.read_text(encoding="utf-8")
-    parts = text.split("## Normalized outcome coverage matrix", 1)
+    parts = text.split(heading, 1)
     if len(parts) != 2:
-        fail("tests/INDEX.md is missing the 'Normalized outcome coverage matrix' section")
+        fail(f"tests/INDEX.md is missing the {heading!r} section")
         sys.exit(2)
     matrix_text = parts[1]
     # Stop at the next ## heading if present.
@@ -218,20 +218,35 @@ def parse_matrix_outcomes() -> set[str]:
     return {m.group(1) for m in row_re.finditer(matrix_text)}
 
 
-def parse_normalized_outcomes() -> set[str]:
+def parse_matrix_outcomes() -> set[str]:
+    return _parse_matrix_section("## Normalized outcome coverage matrix")
+
+
+def parse_attempt_outcome_matrix() -> set[str]:
+    return _parse_matrix_section("## Attempt outcome coverage matrix")
+
+
+def _parse_swift_enum_constants(enum_name: str) -> set[str]:
     text = PWRUNNER_API.read_text(encoding="utf-8")
-    # public enum NormalizedOutcome { ... public static let foo = "bar" ... }
     enum_re = re.compile(
-        r'public enum NormalizedOutcome\s*\{(.*?)\n\}',
+        r'public enum ' + re.escape(enum_name) + r'\s*\{(.*?)\n\}',
         re.DOTALL,
     )
     match = enum_re.search(text)
     if match is None:
-        fail("could not locate NormalizedOutcome enum in runner/PWRunnerAPI.swift")
+        fail(f"could not locate {enum_name} enum in runner/PWRunnerAPI.swift")
         sys.exit(2)
     body = match.group(1)
     constant_re = re.compile(r'public static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"')
     return {m.group(1) for m in constant_re.finditer(body)}
+
+
+def parse_normalized_outcomes() -> set[str]:
+    return _parse_swift_enum_constants("NormalizedOutcome")
+
+
+def parse_attempt_outcomes() -> set[str]:
+    return _parse_swift_enum_constants("AttemptOutcome")
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +313,28 @@ def check_normalized_outcomes_have_matrix_rows() -> list[str]:
         problems.append(
             f"  matrix: coverage matrix lists {outcome!r} but no NormalizedOutcome "
             f"constant by that name exists"
+        )
+    return problems
+
+
+def check_attempt_outcomes_have_matrix_rows() -> list[str]:
+    """Parallel to check_normalized_outcomes_have_matrix_rows but for the
+    AttemptOutcome enum. The Step 6.7 attempt-outcome catalog needs the
+    same drift guardrail so a new attempt outcome added to the enum
+    can't ship without a row explaining where it gets emitted and how
+    it's covered."""
+    problems: list[str] = []
+    outcomes = parse_attempt_outcomes()
+    matrix = parse_attempt_outcome_matrix()
+    for outcome in sorted(outcomes - matrix):
+        problems.append(
+            f"  matrix: AttemptOutcome.{outcome} has no row in tests/INDEX.md "
+            f"attempt-outcome coverage matrix"
+        )
+    for outcome in sorted(matrix - outcomes):
+        problems.append(
+            f"  matrix: attempt-outcome matrix lists {outcome!r} but no "
+            f"AttemptOutcome constant by that name exists"
         )
     return problems
 
@@ -465,6 +502,7 @@ def main() -> int:
     problems.extend(check_baseline_in_run_sh_defaults())
     problems.extend(check_runner_outcome_suites_have_matrix_rows())
     problems.extend(check_normalized_outcomes_have_matrix_rows())
+    problems.extend(check_attempt_outcomes_have_matrix_rows())
     problems.extend(check_prediction_unavailable_agreement())
 
     if problems:
@@ -480,13 +518,15 @@ def main() -> int:
 
     suite_count = len(suites_with_run_sh())
     outcome_count = len(parse_normalized_outcomes())
+    attempt_outcome_count = len(parse_attempt_outcomes())
     pu_pairs = parse_swift_prediction_unavailable_pairs()
     print(
         f"all drift checks pass: "
         f"{len(swift_manifests['disk (runner/*.swift)'])} swift, "
         f"{len(c_manifests['disk (runner/*.c)'])} c, "
         f"{suite_count} suites, "
-        f"{outcome_count} outcomes, "
+        f"{outcome_count} normalized outcomes, "
+        f"{attempt_outcome_count} attempt outcomes, "
         f"{len(pu_pairs)} prediction_unavailable pairs."
     )
     return 0

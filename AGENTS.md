@@ -150,6 +150,8 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 | `libsandbox_path` | string | `SandboxLib.load(path:)` → `dlopen(path)` (host first, then worker on the same value) | `libsandbox_unavailable` |
 | `worker_executable_path` | string | `posix_spawn(path, ...)` inside `WorkerProcess.spawnWorker` | `worker_spawn_failed` |
 | `worker_timeout_ms` | integer (ms, floored at 50) | Host-side `kqueue`/poll deadline in `WorkerProcess.run` | `runner_timeout` |
+| `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |
+| `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` (C-worker path) |
 
 A hostile value drives a real failure: a `/nonexistent/...` path makes `dlopen` or `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `instrumentation.debug_wait` makes the host's deadline fire before the worker exits naturally. The classifier in `WorkerProcess.classifyWorkerResult` is the same code that runs in production — only its *input* is steered.
 

@@ -270,7 +270,7 @@ func runAttempt(_ attempt: PWRunnerAttempt) -> PWRunnerAttemptResult {
     case PWRunnerWire.attemptKindMachLookup:
         return runMachLookupAttempt(action: attempt.action, name: attempt.target)
     default:
-        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported attempt.kind")
+        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: AttemptOutcome.unsupported, error: "unsupported attempt.kind")
     }
 }
 
@@ -288,7 +288,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             return PWRunnerAttemptResult(
                 rc: 1,
                 errno: Int(errno),
-                outcome: "open_failed",
+                outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
                 normalized_path: normalizedPath,
@@ -301,7 +301,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
         return PWRunnerAttemptResult(
             rc: 0,
             errno: nil,
-            outcome: "ok",
+            outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
             normalized_path: normalizedPath,
@@ -314,7 +314,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             return PWRunnerAttemptResult(
                 rc: 1,
                 errno: Int(errno),
-                outcome: "open_failed",
+                outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
                 normalized_path: normalizedPath,
@@ -328,7 +328,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
         return PWRunnerAttemptResult(
             rc: 0,
             errno: nil,
-            outcome: "ok",
+            outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
             normalized_path: normalizedPath,
@@ -341,7 +341,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             return PWRunnerAttemptResult(
                 rc: 1,
                 errno: Int(errno),
-                outcome: "open_failed",
+                outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
                 normalized_path: normalizedPath,
@@ -353,7 +353,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
         return PWRunnerAttemptResult(
             rc: 0,
             errno: nil,
-            outcome: "ok",
+            outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
             normalized_path: normalizedPath,
@@ -366,7 +366,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             return PWRunnerAttemptResult(
                 rc: 1,
                 errno: Int(errno),
-                outcome: "unlink_failed",
+                outcome: AttemptOutcome.unlinkFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
                 normalized_path: normalizedPath,
@@ -376,7 +376,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
         return PWRunnerAttemptResult(
             rc: 0,
             errno: nil,
-            outcome: "ok",
+            outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
             normalized_path: normalizedPath,
@@ -387,7 +387,7 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
         return PWRunnerAttemptResult(
             rc: 1,
             errno: nil,
-            outcome: "unsupported",
+            outcome: AttemptOutcome.unsupported,
             error: "unsupported file action",
             requested_path: requestedPath,
             normalized_path: normalizedPath,
@@ -398,14 +398,14 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
 
 private func runMachLookupAttempt(action: String, name: String) -> PWRunnerAttemptResult {
     guard action == PWRunnerWire.attemptActionMachLookup else {
-        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "unsupported", error: "unsupported mach_lookup action")
+        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: AttemptOutcome.unsupported, error: "unsupported mach_lookup action")
     }
 
     // Use the task bootstrap port to mirror how launchd resolves Mach services.
     var bootstrap: mach_port_t = 0
     let kr = task_get_special_port(mach_task_self_, task_special_port_t(TASK_BOOTSTRAP_PORT), &bootstrap)
     if kr != KERN_SUCCESS {
-        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "bootstrap_port_failed", error: "task_get_special_port failed kr=\(kr)")
+        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: AttemptOutcome.bootstrapPortFailed, error: "task_get_special_port failed kr=\(kr)")
     }
 
     var servicePort: mach_port_t = 0
@@ -413,10 +413,10 @@ private func runMachLookupAttempt(action: String, name: String) -> PWRunnerAttem
         bootstrap_look_up(bootstrap, ptr, &servicePort)
     }
     if kr2 != KERN_SUCCESS {
-        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: "lookup_failed", error: "bootstrap_look_up failed kr=\(kr2)")
+        return PWRunnerAttemptResult(rc: 1, errno: nil, outcome: AttemptOutcome.lookupFailed, error: "bootstrap_look_up failed kr=\(kr2)")
     }
     mach_port_deallocate(mach_task_self_, servicePort)
-    return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: "ok", error: nil)
+    return PWRunnerAttemptResult(rc: 0, errno: nil, outcome: AttemptOutcome.ok, error: nil)
 }
 
 // Best-effort "am I sandboxed" check for reporting purposes.

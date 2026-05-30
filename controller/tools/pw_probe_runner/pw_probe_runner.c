@@ -79,23 +79,36 @@ typedef struct {
     int ready_fd;
     int policy_fd;
     uint32_t step_count;
+    /* Post-apply hang gate (RUNNER-RESHAPE-PLAN R12b /
+     * _test_overrides.worker_post_apply_hang_ms). When > 0, the
+     * worker calls nanosleep(N ms) AFTER every slot's `completed`
+     * flag is written but BEFORE the `done` sentinel flips. Pushes
+     * the host past its sentinel deadline so the runner_timeout
+     * outcome is reachable from a real test specimen on the C-worker
+     * path. Defaults to 0 (no hang). Safe to leave 0 in production. */
+    long post_apply_hang_ms;
 } pw_args_t;
 
 static void print_usage(FILE *to) {
     fprintf(to,
         "usage: pw-probe-runner --shm-fd <N> --ready-fd <N> --step-count <N>\n"
-        "                       [--policy-fd <N>]\n"
+        "                       [--policy-fd <N>] [--post-apply-hang-ms <N>]\n"
         "\n"
-        "  --shm-fd N        FD of the host's pw_shm_region mapping.\n"
-        "  --ready-fd N      FD the worker writes one byte to just\n"
-        "                    before sandbox_apply(). Pre-apply only;\n"
-        "                    post-apply readiness is the `applied`\n"
-        "                    sentinel in shm.\n"
-        "  --step-count N    Number of populated slots, 0..%u.\n"
-        "  --policy-fd N     Optional FD with the SBPL policy text.\n"
-        "                    Defaults to stdin (FD 0).\n"
+        "  --shm-fd N             FD of the host's pw_shm_region mapping.\n"
+        "  --ready-fd N           FD the worker writes one byte to just\n"
+        "                         before sandbox_apply(). Pre-apply only;\n"
+        "                         post-apply readiness is the `applied`\n"
+        "                         sentinel in shm.\n"
+        "  --step-count N         Number of populated slots, 0..%u.\n"
+        "  --policy-fd N          Optional FD with the SBPL policy text.\n"
+        "                         Defaults to stdin (FD 0).\n"
+        "  --post-apply-hang-ms N Optional test-seam. Sleep N ms AFTER\n"
+        "                         all slot results are durable but BEFORE\n"
+        "                         flipping the `done` sentinel. Drives the\n"
+        "                         host's runner_timeout outcome from a\n"
+        "                         real specimen.\n"
         "\n"
-        "  --version         Print ABI version and exit.\n",
+        "  --version              Print ABI version and exit.\n",
         PW_SHM_MAX_STEPS);
 }
 
@@ -110,16 +123,18 @@ static int parse_int_arg(const char *value, long *out) {
 }
 
 static int parse_args(int argc, char **argv, pw_args_t *args) {
-    args->shm_fd     = -1;
-    args->ready_fd   = -1;
-    args->policy_fd  = STDIN_FILENO;
-    args->step_count = 0;
+    args->shm_fd             = -1;
+    args->ready_fd           = -1;
+    args->policy_fd          = STDIN_FILENO;
+    args->step_count         = 0;
+    args->post_apply_hang_ms = 0;
 
     int i = 1;
     while (i < argc) {
         const char *flag = argv[i];
         if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
-            strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0) {
+            strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
+            strcmp(flag, "--post-apply-hang-ms") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
                 return -1;
@@ -147,6 +162,15 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->policy_fd = (int)v;
+            } else if (strcmp(flag, "--post-apply-hang-ms") == 0) {
+                /* Cap at one minute. The host's runner_timeout deadline is
+                 * its own setting; the hang just has to exceed it. A bogus
+                 * multi-day value would burn CPU + clog the test process. */
+                if (v < 0 || v > 60 * 1000) {
+                    fprintf(stderr, "pw-probe-runner: --post-apply-hang-ms %ld out of range (0..60000)\n", v);
+                    return -1;
+                }
+                args->post_apply_hang_ms = v;
             } else {
                 if (v < 0 || (unsigned long)v > (unsigned long)PW_SHM_MAX_STEPS) {
                     fprintf(stderr, "pw-probe-runner: --step-count %ld out of range\n", v);
@@ -589,6 +613,23 @@ int main(int argc, char **argv) {
      * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
         run_attempt(&slots[i]);
+    }
+
+    /* Test-seam hang. nanosleep IS a syscall and could be denied by a
+     * maximally hostile policy — but R12b's contract is for tests
+     * running under cooperative policies (typically allow-default
+     * with a long-enough host deadline that the hang exceeds it). On
+     * an apply-default policy that survives slot execution at all,
+     * nanosleep will too. The post-done spin loop is unaffected; this
+     * fires before done flips, so a hung host observes
+     * applied=1, done=0 — exactly the runner_timeout shape. */
+    if (args.post_apply_hang_ms > 0) {
+        long ns = args.post_apply_hang_ms * 1000000L;
+        struct timespec ts = {
+            .tv_sec  = ns / 1000000000L,
+            .tv_nsec = ns % 1000000000L,
+        };
+        nanosleep(&ts, NULL);
     }
 
     atomic_store_explicit(&hdr->done, 1u, memory_order_release);

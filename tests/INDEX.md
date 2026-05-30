@@ -82,7 +82,27 @@ column says why, and the closest unit or harness coverage is named.
 | `runner_sandbox_denied` | host classifier (WorkerProcess.classifyWorkerResult) | `runner_sandbox_denied`; unit-pinned by `runner_unit` / `WorkerProcessClassifyTests` | The bug-report specimen, verbatim. |
 | `runner_timeout` | host classifier | `runner_outcome_runner_timeout`; unit-pinned by `runner_unit` | Driven via `_test_overrides.worker_timeout_ms` plus a long `debug_wait`. |
 | `runner_failed` | host classifier; worker self-report on encode failure | `runner_unit` / `WorkerProcessClassifyTests` | E2e unreachable today because the failure modes that produce it (worker exits non-zero with no report; worker self-reports during a teardown error) don't surface from any deterministic specimen. Unit tests cover the classifier branch. |
+| `validator_spawn_failed` | host classifier (C-worker path; PWRunnerService) | none yet (Step 6.8 wires the path) | Driven via `_test_overrides.validator_executable_path` once the C-worker path is the default. `result.ok=false`, `rc=1`; attempts still surfaced as degraded evidence. |
+| `validator_no_reply` | host classifier (C-worker path) | none yet (Step 6.8) | Validator child started but exited without emitting the expected verdict count. `ValidatorClientResult.failure` carries the partial verdicts as degraded evidence; classifier emits this outcome. |
+| `validator_decode_failure` | host classifier (C-worker path) | none yet (Step 6.8) | Validator emitted bytes the host couldn't parse as NDJSON verdicts. Same partial-evidence treatment as `validator_no_reply`. |
+| `validator_unavailable` | host classifier (C-worker path) | none yet (Step 6.8) | Synthesized when the envelope has attempts but no verdicts. Distinct from the failure-mode-specific outcomes above so a consumer can recognize "PW ran in attempts-only degradation mode" as a known state. |
 | `xpc_error` | client (`pw-runner-client`) synthetic reply | none (e2e requires renaming the `.xpc` bundle out from under launchd) | Reachable in practice when the bundle is missing or launchd refuses to spawn the host. Documented in `PolicyWitness.md` troubleshooting. |
 | `xpc_timeout` | client synthetic reply | none (e2e requires a slow specimen plus tight `--timeout-ms`) | Trigger is real (`--timeout-ms 50` plus a long `debug_wait`) but not currently scripted. |
 | `xpc_proxy_type_mismatch` | client synthetic reply | none (no realistic trigger) | Fires only if the remote XPC proxy doesn't conform to `PWRunnerProtocol`. Defense-in-depth for a code path that should never run with our matched client/host. |
 | `xpc_no_reply` | client synthetic reply | none (no realistic trigger) | Fires only if the XPC reply never arrives but no error fires either. Defense-in-depth. |
+
+## Attempt outcome coverage matrix
+
+Every value in `runner/PWRunnerAPI.swift::AttemptOutcome` must appear
+exactly once in this matrix; `source_drift` enforces the rule
+mechanically alongside the NormalizedOutcome matrix above.
+
+| outcome | emitted by | primary coverage | notes |
+| --- | --- | --- | --- |
+| `ok` | worker (ProbeRunner / pw-probe-runner) | every smoke / happy-path suite | The attempt ran and the kernel allowed the operation. |
+| `open_failed` | worker (file open_read / open_write / create) | `runner_sandbox_denied`, blackbox file-deny cases | Covers both kernel deny (EPERM / EACCES) and ENOENT-class failures; the kernel verdict is in `attempt.errno`. |
+| `unlink_failed` | worker (file unlink) | `runner_unit` / unit coverage | E2e coverage requires a specimen that exercises unlink; the unit-level Codable shape is covered. |
+| `lookup_failed` | worker (mach_lookup bootstrap_look_up) | `runner_debuggable` / `core_mach_simple` | The kernel return code is preserved in the error message (e.g. `kr=1102` BOOTSTRAP_UNKNOWN_SERVICE). |
+| `bootstrap_port_failed` | worker (mach_lookup) | none (no realistic trigger) | Fires only if `task_get_special_port(TASK_BOOTSTRAP_PORT)` itself fails — defense-in-depth for an OS-level failure that shouldn't happen on a healthy macOS host. |
+| `unsupported` | worker (unknown attempt.kind or unknown action) | `runner_outcome_bad_request` (close) | The runner validates attempt shape before the worker runs; this branch fires only if a future caller adds a new attempt.kind to the schema before the worker learns to handle it. |
+| `not_run_worker_died` | host classifier (C-worker path; PWRunnerService) | none yet (Step 6.8 wires the path) | Synthesized when a slot's `completed=0` after the worker exited — distinguishes "the attempt itself failed" from "the worker never reached this slot." Distinct from `unsupported`, which means the worker reached the slot but didn't know what to do. |

@@ -73,11 +73,54 @@ public enum NormalizedOutcome {
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
 
+    // ----- emitted by the host classifier on the C-worker code path
+    // (PWRunnerService.swift after Step 6.8). These cover the validator
+    // child's failure modes that the C-worker path observes but the
+    // legacy Swift-worker path doesn't (the Swift worker bundles
+    // sandbox_check into its own process; the new path runs the
+    // validator as a separate child).
+    //
+    // Default top-level semantics: any validator_* outcome makes
+    // `result.ok=false`, `rc=1`. The attempt channel is still
+    // populated and machine-readable, but a missing prediction
+    // channel is a runner evidence failure even when the observation
+    // channel completed. Consumers can opt to consume the partial
+    // envelope as degraded evidence; the runner does not silently
+    // upgrade an attempts-only run to `ok`.
+    public static let validatorSpawnFailed = "validator_spawn_failed"
+    public static let validatorNoReply = "validator_no_reply"
+    public static let validatorDecodeFailure = "validator_decode_failure"
+    public static let validatorUnavailable = "validator_unavailable"
+
     // ----- synthesized by pw-runner-client when the XPC peer is unreachable
     public static let xpcError = "xpc_error"
     public static let xpcTimeout = "xpc_timeout"
     public static let xpcProxyTypeMismatch = "xpc_proxy_type_mismatch"
     public static let xpcNoReply = "xpc_no_reply"
+}
+
+/// Canonical step.attempt.outcome values. Parallels NormalizedOutcome
+/// and SandboxCheckOutcome: new constants are added here (with the
+/// matching wire string) before any emit site uses them, and
+/// source_drift enforces that every constant has a row in
+/// tests/INDEX.md's attempt-outcome matrix.
+///
+/// `not_run_worker_died` is specific to the C-worker code path
+/// (RUNNER-RESHAPE-PLAN Step 6.8). The host sees a slot with
+/// completed=0 because the worker exited before reaching it.
+/// Distinct from the per-attempt failure outcomes (`open_failed`,
+/// etc.) — those mean "the attempt itself ran and produced a
+/// failure"; `not_run_worker_died` means "the attempt never had a
+/// chance." Consumers should treat the latter as missing evidence,
+/// not as a verdict.
+public enum AttemptOutcome {
+    public static let ok = "ok"
+    public static let openFailed = "open_failed"
+    public static let unlinkFailed = "unlink_failed"
+    public static let lookupFailed = "lookup_failed"
+    public static let bootstrapPortFailed = "bootstrap_port_failed"
+    public static let unsupported = "unsupported"
+    public static let notRunWorkerDied = "not_run_worker_died"
 }
 
 // Canonical step.sandbox_check.outcome values. New constants should be
@@ -149,12 +192,22 @@ public struct PWRunnerRunSpec: Codable {
 //
 // | key                       | consumed at                                                   | drives outcome           |
 // | ------------------------- | ------------------------------------------------------------- | ------------------------ |
-// | `libsandbox_path`         | `SandboxLib.load(path:)` via PWRunnerService.swift +          | `libsandbox_unavailable` |
-// |                           | WorkerEntry.swift (defense-in-depth; host short-circuits      |                          |
-// |                           | first today, so the worker line is reached only if that       |                          |
-// |                           | ordering ever changes)                                        |                          |
-// | `worker_executable_path`  | `posix_spawn` path in WorkerProcess.spawnWorker               | `worker_spawn_failed`    |
-// | `worker_timeout_ms`       | host-side deadline in WorkerProcess.run (floored at 50ms)     | `runner_timeout`         |
+// | `libsandbox_path`           | `SandboxLib.load(path:)` via PWRunnerService.swift +          | `libsandbox_unavailable`    |
+// |                             | WorkerEntry.swift (defense-in-depth; host short-circuits      |                             |
+// |                             | first today, so the worker line is reached only if that       |                             |
+// |                             | ordering ever changes)                                        |                             |
+// | `worker_executable_path`    | `posix_spawn` path in WorkerProcess.spawnWorker               | `worker_spawn_failed`       |
+// | `worker_timeout_ms`         | host-side deadline in WorkerProcess.run (floored at 50ms)     | `runner_timeout`            |
+// | `validator_executable_path` | `posix_spawn` path in ValidatorClient.runValidator (C-worker  | `validator_spawn_failed`    |
+// |                             | code path; Step 6.8 wires the consumer). Parallel to          |                             |
+// |                             | `worker_executable_path` for the validator child.             |                             |
+// | `worker_post_apply_hang_ms` | passed to pw-probe-runner as `--post-apply-hang-ms <N>`;      | `runner_timeout`            |
+// |                             | the C worker nanosleeps for N ms AFTER all slot results       | (C-worker path)             |
+// |                             | are durable but BEFORE writing the `done` sentinel, pushing   |                             |
+// |                             | host past its sentinel_timeout. Replaces the Swift-only       |                             |
+// |                             | `debug_wait` instrumentation port so the runner_timeout       |                             |
+// |                             | suite keeps exercising the host deadline path on the new      |                             |
+// |                             | architecture.                                                 |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -163,15 +216,21 @@ public struct PWRunnerTestOverrides: Codable {
     public var libsandbox_path: String?
     public var worker_executable_path: String?
     public var worker_timeout_ms: Int?
+    public var validator_executable_path: String?
+    public var worker_post_apply_hang_ms: Int?
 
     public init(
         libsandbox_path: String? = nil,
         worker_executable_path: String? = nil,
-        worker_timeout_ms: Int? = nil
+        worker_timeout_ms: Int? = nil,
+        validator_executable_path: String? = nil,
+        worker_post_apply_hang_ms: Int? = nil
     ) {
         self.libsandbox_path = libsandbox_path
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
+        self.validator_executable_path = validator_executable_path
+        self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
     }
 }
 

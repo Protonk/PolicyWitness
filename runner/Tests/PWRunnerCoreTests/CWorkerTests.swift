@@ -211,5 +211,48 @@ func runCWorkerTests(_ tk: TestKit) {
                 throw TestFailure(message: "expected paramInputTooLong(value), got \(result)")
             }
         }
+
+        // ---- postApplyHangMs test seam (Step 6.6 / R12b) -------------------
+        // Drives the sentinel-timeout window from a real specimen.
+        // The host's sentinelTimeoutMs (300 ms here) is shorter than
+        // the worker's post-apply hang (800 ms), so `done` never
+        // flips inside the deadline. The host then signals
+        // exit_requested in spite of done=0; the worker's spin loop
+        // observes it AFTER the hang completes and clean-exits.
+        // The success criterion is the saw_done=false shape — not a
+        // SIGKILL — proving the runner_timeout-class condition is
+        // observable on the C-worker path.
+        tk.run("postApplyHangMs > sentinelTimeoutMs produces done=false") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "hang_seam",
+                                     attemptKind: .fileOpenRead,
+                                     target: "/etc/hosts")
+                ],
+                sentinelTimeoutMs: 300,
+                exitGraceMs: 2_000,
+                postApplyHangMs: 800
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker reported setup failure: \(result)")
+            }
+            try expectTrue(out.applied, "applied should still flip — hang is post-apply")
+            try expectFalse(out.done,
+                            "done should not flip inside 300ms when worker hangs 800ms post-apply")
+            // The worker eventually completes — slot was filled — but the
+            // host gave up polling and went to exit_requested. The
+            // exitGraceMs (2s) is wide enough for the worker to wake
+            // from nanosleep, observe exit_requested, and _exit(0).
+            try expectFalse(out.sentSigkill,
+                            "host should not need SIGKILL — worker exits cleanly post-hang")
+            try expectEqual(out.exitCode, Int32(0))
+        }
     }
 }

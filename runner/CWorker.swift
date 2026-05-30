@@ -142,6 +142,12 @@ public struct CWorkerInput {
     public var readyByteTimeoutMs: Int
     public var sentinelTimeoutMs: Int
     public var exitGraceMs: Int
+    /// Optional test-seam routed to pw-probe-runner as
+    /// `--post-apply-hang-ms <N>`. When > 0, the worker sleeps for
+    /// N ms after every slot is durable but before flipping `done`;
+    /// drives the host's `runner_timeout` outcome from a real
+    /// specimen. Production callers pass nil. Step 6.6 / R12b.
+    public var postApplyHangMs: Int?
 
     public init(workerExecutablePath: String,
                 policy: String,
@@ -149,7 +155,8 @@ public struct CWorkerInput {
                 slots: [CWorkerSlotInput],
                 readyByteTimeoutMs: Int = 1_000,
                 sentinelTimeoutMs: Int = 60_000,
-                exitGraceMs: Int = 1_000) {
+                exitGraceMs: Int = 1_000,
+                postApplyHangMs: Int? = nil) {
         self.workerExecutablePath = workerExecutablePath
         self.policy = policy
         self.params = params
@@ -157,6 +164,7 @@ public struct CWorkerInput {
         self.readyByteTimeoutMs = readyByteTimeoutMs
         self.sentinelTimeoutMs = sentinelTimeoutMs
         self.exitGraceMs = exitGraceMs
+        self.postApplyHangMs = postApplyHangMs
     }
 }
 
@@ -369,12 +377,16 @@ public func runCWorker(_ input: CWorkerInput,
     posix_spawn_file_actions_adddup2(&fa, readyPipe[1], 4)
 
     let stepCountStr = String(input.slots.count)
-    let argv: [String] = [
+    var argv: [String] = [
         "pw-probe-runner",
         "--shm-fd", "3",
         "--ready-fd", "4",
         "--step-count", stepCountStr,
     ]
+    if let hangMs = input.postApplyHangMs, hangMs > 0 {
+        argv.append("--post-apply-hang-ms")
+        argv.append(String(hangMs))
+    }
     var pid: pid_t = 0
     let spawnRC = withCStringArrayCopy(argv) { argvPtr in
         posix_spawn(&pid, input.workerExecutablePath, &fa, nil, argvPtr, nil)
