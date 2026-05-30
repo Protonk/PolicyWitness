@@ -275,20 +275,34 @@ private func validatorProbesFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [Valid
     var probes: [ValidatorProbe] = []
     probes.reserveCapacity(plan.count)
     for step in plan {
+        let kind = step.sandbox_check.filter.kind
         let opFilterPair = PredictionUnavailablePair(
             operation: step.sandbox_check.operation,
-            filterKind: step.sandbox_check.filter.kind
+            filterKind: kind
         )
         if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair) {
             // Don't ask the validator about this pair. The verdict is
             // synthesized as prediction_unavailable in the step builder.
             continue
         }
+        if !knownFilterKinds.contains(kind) {
+            // Unknown filter kind: skip the validator probe and let the
+            // step builder synthesize prediction_unavailable. Avoids
+            // killing the whole plan when a specimen mixes a recognized
+            // probe with one whose filter kind hasn't been verified.
+            continue
+        }
+        // NONE-filter probes must not carry a filter_value in the
+        // validator wire (the validator rejects it as bad_filter).
+        // Callers commonly pass "" for kind=none — coerce that to nil.
+        let filterValue: String? = (kind == PWRunnerWire.sandboxFilterNone)
+            ? nil
+            : step.sandbox_check.filter.value
         probes.append(ValidatorProbe(
             stepId: step.step_id,
             operation: step.sandbox_check.operation,
-            filterType: mapFilterKindToValidator(step.sandbox_check.filter.kind),
-            filterValue: step.sandbox_check.filter.value
+            filterType: mapFilterKindToValidator(kind),
+            filterValue: filterValue
         ))
     }
     return probes
@@ -404,9 +418,15 @@ private func buildSandboxCheckResult(
     let kind = step.sandbox_check.filter.kind
     let value = step.sandbox_check.filter.value
 
-    // Skipped pair: synthesize prediction_unavailable per the existing
-    // contract (same shape ProbeRunner's short-circuit emits).
-    if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair) {
+    // Synthesize prediction_unavailable in two cases that share the
+    // wire shape: (a) a known op+filter pair that empirically drifts
+    // from kernel enforcement, and (b) a filter kind the runner
+    // doesn't know how to validate (e.g. preference_domain,
+    // mach_port). In both cases the validator wasn't asked, the
+    // attempt is the reliable evidence, and the consumer-visible
+    // shape is identical.
+    if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair)
+        || !knownFilterKinds.contains(kind) {
         return PWRunnerSandboxCheckResult(
             rc: -1,
             outcome: SandboxCheckOutcome.predictionUnavailable,

@@ -7,6 +7,7 @@ FileHandle.standardOutput.write(Data("PWRunnerCore unit tests\n".utf8))
 runSandboxApplyTests(tk)
 runEnvelopeInvariantTests(tk)
 runPredictionUnavailableTests(tk)
+runFilterKindValidationTests(tk)
 runCWorkerTests(tk)
 runCWorkerValidatorTests(tk)
 

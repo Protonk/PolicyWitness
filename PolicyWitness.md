@@ -219,11 +219,25 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   validator's predicted verdict and the attempt's observed verdict
   for the step. `true` when they disagree about allow/deny
   (libsandbox-drift evidence; the property PolicyWitness exists to
-  surface). `false` when they agree. `null` when no comparison is
-  possible: the validator wasn't run, the validator skipped this
-  step (e.g. an op+filter pair in `prediction_unavailable`), or the
-  attempt didn't produce a verdict. Encoded as explicit JSON `null`
-  so the key is always present.
+  surface). `false` when they agree.
+  `null` when no comparison is possible. Three cases produce `null`:
+    1. The validator wasn't run for this step (the step's filter
+       kind is unknown to the runner, or the (op, filter) pair is
+       in the prediction-unavailable set, or no validator child ran
+       at all).
+    2. The attempt didn't produce an allow/deny verdict (the attempt
+       errored before reaching the kernel, or the attempt outcome is
+       `not_run_worker_died`).
+    3. The attempt observed a *DAC*-ambiguous failure — EPERM or
+       EACCES on a file/access path — while the validator predicted
+       `allow`. Filesystem permissions and the sandbox both surface
+       as EPERM/EACCES from a file open; the runner can't tell them
+       apart from rc/errno alone, so `(validator=allow,
+       attempt=ambiguous-deny)` is reported as `null` instead of
+       `true` to avoid false libsandbox-drift attribution. Strong
+       deny evidence (mach `kr=1100`, etc.) is unambiguous and does
+       produce `drift=true` when the validator predicted `allow`.
+  Encoded as explicit JSON `null` so the key is always present.
 
 `data.runner_result.normalized_outcome` values the runner can produce
 (controller-level outcomes like `bad_policy`, `missing_params`, and
@@ -330,16 +344,29 @@ Notes:
   that key on `rc == 0` for "allow" must check `outcome` first so the
   sentinel is not misread.
 
+### Filter kinds the runner predicts
+
+The runner predicts (asks `sandbox_check` about) these filter kinds:
+`none`, `path`, `global_name`, `local_name`,
+`iokit_registry_entry_class`, `iokit_user_client_class`,
+`sysctl_name`. Specimens are free to author probes with other
+filter kinds (`preference_domain`, `mach_port`, anything else SBPL
+accepts) — those steps short-circuit to
+`step.sandbox_check.outcome = "prediction_unavailable"` with
+`rc == -1` per-step. The plan is not rejected; sibling steps with
+predicted kinds run normally and the attempt for the
+unpredicted step still produces evidence.
+
 ### Filter kinds where prediction is unavailable
 
-Some `(operation, filter_kind)` pairs have a documented mismatch
-between `sandbox_check`'s userland verdict and the kernel's actual
-enforcement. For these, the runner accepts the filter in specimens
-(so policies can be authored), accepts and enforces the policy
-correctly at compile/apply time, but skips `sandbox_check` entirely
-and emits `step.sandbox_check.outcome = "prediction_unavailable"`
-with `step.sandbox_check.rc == -1` instead of a misleading
-`allow`/`deny`. The attempt still runs and provides the real evidence.
+Even within the predicted set, some `(operation, filter_kind)` pairs
+have a documented mismatch between `sandbox_check`'s userland
+verdict and the kernel's actual enforcement. For these, the runner
+accepts the filter in specimens (so policies can be authored),
+accepts and enforces the policy correctly at compile/apply time,
+but skips `sandbox_check` entirely and emits the same
+`prediction_unavailable` shape as for unknown filter kinds. The
+attempt still runs and provides the real evidence.
 
 The contract is keyed on the `(operation, filter_kind)` pair, not on
 the filter kind alone — a filter kind that drifts for one operation
@@ -619,9 +646,14 @@ Registry location:
 - System scope install fails: use `--scope user` or run with admin privileges.
 - Verify fails with no reply: check launchd state and the service plist.
 - BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
-- `normalized_outcome` is `runner_sandbox_denied` and you expected `ok`: the
-  worker was terminated by the kernel sandbox (or by a Swift-runtime trap
-  triggered by a denied `mach_vm_allocate`) before writing its report.
+- `normalized_outcome` is `runner_sandbox_denied` and you expected
+  `ok`: uncommon. The C worker's post-apply syscall surface is small
+  (just shared-memory stores and a nanosleep), so most `(deny default)`
+  policies don't actually kill it. The residual cases that do produce
+  this outcome are policies that explicitly deny one of the syscalls
+  in the worker's post-apply path, or kernel-issued aborts on the
+  worker process for an unrelated reason. The worker was terminated
+  by a fatal signal before flipping its `done` sentinel.
   - **Quickest read:** `data.runner_sandbox_diagnostics.first_deny` carries
     the first kernel deny attributed to the worker PID — `operation`,
     `path` if applicable, and the raw unified-log line. Use this when you

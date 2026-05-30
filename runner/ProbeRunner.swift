@@ -65,29 +65,35 @@ private enum SpecValidationError: Error, CustomStringConvertible {
     }
 }
 
+// Filter kinds the runner knows how to validate, predict, and route to
+// the sb_api_validator. Unknown kinds are still accepted in the
+// probe_plan — they fall through to per-step prediction_unavailable
+// in the step builder instead of killing the whole plan with
+// bad_request. This bounds the blast radius when a specimen mixes a
+// recognized probe with one whose filter kind hasn't been verified.
+let knownFilterKinds: Set<String> = [
+    PWRunnerWire.sandboxFilterNone,
+    PWRunnerWire.sandboxFilterPath,
+    PWRunnerWire.sandboxFilterGlobalName,
+    PWRunnerWire.sandboxFilterLocalName,
+    PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
+    PWRunnerWire.sandboxFilterIokitUserClientClass,
+    PWRunnerWire.sandboxFilterSysctlName,
+]
+
 func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
-    let allowedKinds: Set<String> = [
-        PWRunnerWire.sandboxFilterNone,
-        PWRunnerWire.sandboxFilterPath,
-        PWRunnerWire.sandboxFilterGlobalName,
-        PWRunnerWire.sandboxFilterLocalName,
-        PWRunnerWire.sandboxFilterIokitRegistryEntryClass,
-        PWRunnerWire.sandboxFilterIokitUserClientClass,
-        PWRunnerWire.sandboxFilterSysctlName,
-    ]
     for step in steps {
         let op = step.sandbox_check.operation.trimmingCharacters(in: .whitespacesAndNewlines)
         if op.isEmpty {
             throw SpecValidationError.invalidSandboxCheck(stepId: step.step_id, message: "operation is empty")
         }
         let kind = step.sandbox_check.filter.kind
-        if !allowedKinds.contains(kind) {
-            throw SpecValidationError.invalidSandboxCheck(
-                stepId: step.step_id,
-                message: "unsupported filter.kind \(kind)"
-            )
-        }
-        if kind != PWRunnerWire.sandboxFilterNone {
+        // Value-required check applies only to known kinds that take
+        // a value. Unknown kinds skip both predictions and validator
+        // probes, so their value isn't consulted.
+        let needsValue = knownFilterKinds.contains(kind)
+            && kind != PWRunnerWire.sandboxFilterNone
+        if needsValue {
             let value = step.sandbox_check.filter.value?.trimmingCharacters(in: .whitespacesAndNewlines)
             if value == nil || value == "" {
                 throw SpecValidationError.invalidSandboxCheck(
