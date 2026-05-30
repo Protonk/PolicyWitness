@@ -201,13 +201,16 @@ unsandboxed and spawns a short-lived worker that applies the specimen policy.
 `schema_version = 4` (additive to v3):
 
 - `validator_subprocess: { pid, exit_code, term_signal } | null` — the
-  `sb_api_validator --batch` child the host spawns alongside the worker
-  to collect `sandbox_check` verdicts against the sandboxed worker_pid.
-  `null` when the runner host fell through to the legacy Swift-worker
-  path (the validator isn't spawned in that path) or when the validator
-  failed to spawn before any metadata could be captured. Exactly one of
-  `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
-  non-null on a completed run.
+  `sb_api_validator --batch` child the host spawns alongside the C
+  worker (the default code path after the runner reshape) to collect
+  `sandbox_check` verdicts against the sandboxed worker_pid. Populated
+  on every default run. `null` only when the request opted out of the
+  C-worker path (`_test_overrides.use_c_worker: false`, or
+  `instrumentation` set on the request — both route to the legacy
+  Swift worker, which doesn't spawn a separate validator), or when
+  the validator failed to spawn before any metadata could be captured.
+  Exactly one of `exit_code` (clean exit) or `term_signal` (SIGKILL
+  fallback) is non-null on a completed run.
 - `steps[].drift: bool | null` — disagreement between the validator's
   predicted verdict and the attempt's observed verdict for the step.
   `true` when they disagree about allow/deny (libsandbox-drift evidence;

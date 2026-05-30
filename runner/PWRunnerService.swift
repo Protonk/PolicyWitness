@@ -205,12 +205,34 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        // ---- C-worker code path (gated by _test_overrides.use_c_worker).
-        // Per RUNNER-RESHAPE-PLAN Step 6.8a. Default-false during the
-        // transition: production traffic continues through the Swift
-        // worker below. Step 6.8b flips the default once the gated
-        // path has been broadly exercised.
-        if parsed._test_overrides?.use_c_worker == true {
+        // ---- C-worker code path (the default after Step 6.8b).
+        // Production traffic runs through pw-probe-runner +
+        // sb_api_validator --batch via CWorkerOrchestrator. The
+        // legacy Swift worker below survives as the opt-out path
+        // for any caller that pins `use_c_worker: false` — kept as
+        // a rollback escape hatch for the transition. Step 7's
+        // instrumentation/debuggable removals + the eventual Swift
+        // worker retirement land in a separate sequence.
+        //
+        // Routing precedence (highest first):
+        //   1. _test_overrides.use_c_worker is explicit → honour it.
+        //   2. parsed.instrumentation is set → Swift worker only.
+        //      Instrumentation (debug_wait etc.) is a Swift-worker
+        //      feature; the C worker doesn't implement it. Until
+        //      Step 7 retires instrumentation entirely, an
+        //      instrumentation-using request auto-falls-back so
+        //      callers don't have to know about the routing change.
+        //   3. Otherwise → C-worker default.
+        let useCWorker: Bool = {
+            if let explicit = parsed._test_overrides?.use_c_worker {
+                return explicit
+            }
+            if parsed.instrumentation != nil {
+                return false
+            }
+            return true
+        }()
+        if useCWorker {
             // C-worker-specific validation: catches probe_plan shapes
             // the C worker would otherwise mishandle (duplicate
             // step_ids → Dictionary trap; unknown attempt combos →

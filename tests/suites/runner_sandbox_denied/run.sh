@@ -54,6 +54,17 @@ specimen = {
             },
         }
     ],
+    # Force the Swift worker. This suite exercises the
+    # `runner_sandbox_denied` outcome via a v2 deny-default policy
+    # that the Swift worker can't survive (allocation traps in
+    # Swift's runtime fire SIGKILL post-apply). The C worker has a
+    # tiny post-apply syscall surface and DOES survive the same
+    # policy — it's the whole point of the runner reshape. So the
+    # specific failure mode this suite pins is Swift-worker
+    # specific. A future suite can cover the analogous C-worker
+    # runner_sandbox_denied path (worker dies from an explicit
+    # sandbox-induced signal) once a deterministic specimen exists.
+    "_test_overrides": {"use_c_worker": False},
 }
 Path(sys.argv[1]).write_text(json.dumps(specimen, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY

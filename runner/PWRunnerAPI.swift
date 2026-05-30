@@ -209,12 +209,13 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | `debug_wait` instrumentation port so the runner_timeout       |                             |
 // |                             | suite keeps exercising the host deadline path on the new      |                             |
 // |                             | architecture.                                                 |                             |
-// | `use_c_worker`              | gates PWRunnerService.runSpecimen onto the C-worker code      | (no specific outcome —      |
-// |                             | path (pw-probe-runner + sb_api_validator --batch via          |  routes the request through |
-// |                             | CWorkerOrchestrator). Default-false: production traffic       |  the new orchestration that |
-// |                             | continues through the legacy Swift worker. Step 6.8b will     |  produces the v4 envelope   |
-// |                             | flip the default once the gated path has been broadly         |  with validator_subprocess  |
-// |                             | exercised.                                                    |  + steps[].drift)           |
+// | `use_c_worker`              | selects PWRunnerService.runSpecimen's code path. After        | (no specific outcome —      |
+// |                             | Step 6.8b the C-worker path (pw-probe-runner +                |  selects which orchestration|
+// |                             | sb_api_validator --batch via CWorkerOrchestrator) is the      |  assembles the envelope;    |
+// |                             | default. Set to false to opt into the legacy Swift worker —   |  the C path populates       |
+// |                             | rollback escape hatch until Step 7 retires it. A request      |  validator_subprocess +     |
+// |                             | with `instrumentation` set auto-falls-back to Swift           |  steps[].drift)             |
+// |                             | regardless of this flag (instrumentation is Swift-only).      |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
