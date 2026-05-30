@@ -137,6 +137,89 @@ func runCWorkerTests(_ tk: TestKit) {
                            "expected EPERM/EACCES for param-driven kernel deny, got \(s.errnoVal)")
         }
 
+        // ---- many params: ABI cap accommodates real-world profile closures -
+        // Real SBPL profile closures bind 100+ derived params once
+        // (import "system.sb") and friends are resolved. This test
+        // proves the host-side param array writer and the C worker's
+        // param-table reader both handle a count well above 16 (the
+        // previous cap). The policy doesn't reference all the params
+        // — `sandbox_compile_string` accepts unreferenced params
+        // silently — so we're testing the wire/abi machinery, not
+        // SBPL macro expansion.
+        tk.run("many params (128) round-trip through the shm region") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let n = 128
+            var params: [CWorkerParam] = []
+            params.reserveCapacity(n)
+            for i in 0..<n {
+                // Distinct keys; values are short so we don't pressure
+                // the per-param byte budget. The point is the array
+                // length, not the per-entry size.
+                params.append(CWorkerParam(key: "PARAM_\(i)", value: "v\(i)"))
+            }
+            // Policy uses one of the params to also exercise the apply
+            // path; the rest are bound but unreferenced. TARGET_0 is
+            // /private/etc so /etc/hosts is denied (same shape as the
+            // round-trip test above, just buried inside a 128-param
+            // dict).
+            params[0] = CWorkerParam(key: "TARGET_0", value: "/private/etc")
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)(deny file-read-data (subpath (param \"TARGET_0\")))",
+                params: params,
+                slots: [
+                    CWorkerSlotInput(stepId: "many_params_probe",
+                                     attemptKind: .fileOpenRead,
+                                     target: "/etc/hosts")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed with \(n) params: \(result)")
+            }
+            try expectEqual(out.applyRC, Int32(0),
+                            "sandbox_apply must succeed with \(n) params; if not, " +
+                            "host wrote past the region or worker rejected the count")
+            try expectTrue(out.applied, "applied sentinel with \(n) params")
+            try expectTrue(out.done, "done sentinel with \(n) params")
+            try expectFalse(out.sentSigkill, "worker should clean-exit with \(n) params")
+            try expectEqual(out.slots.count, 1)
+            let s = out.slots[0]
+            try expectTrue(s.completed, "slot completed with \(n) params")
+            try expectEqual(s.rc, Int32(1),
+                            "TARGET_0=/private/etc inside a \(n)-param dict should still " +
+                            "make /etc/hosts open fail; rc=0 means the param wasn't found " +
+                            "by the kernel")
+        }
+
+        tk.run("over-cap params rejected pre-spawn") {
+            // Symmetric guard: exceeding PWShmLayout.maxParams must
+            // fail validation, not silently truncate or corrupt the
+            // region.
+            var params: [CWorkerParam] = []
+            for i in 0..<(PWShmLayout.maxParams + 1) {
+                params.append(CWorkerParam(key: "K\(i)", value: "v"))
+            }
+            let result = runCWorker(CWorkerInput(
+                workerExecutablePath: "/nonexistent",
+                policy: "(version 1)(allow default)",
+                params: params,
+                slots: [
+                    CWorkerSlotInput(stepId: "x",
+                                     attemptKind: .fileOpenRead,
+                                     target: "/etc/hosts")
+                ]
+            ))
+            guard case .failure(let err) = result else {
+                throw TestFailure(message: "expected pre-spawn rejection for over-cap params")
+            }
+            let msg = String(describing: err)
+            try expectContains(msg, "policy params")
+        }
+
         // ---- input validation: every bounded field rejects pre-spawn -------
         // Table-driven so a regression in any single field (target,
         // param key, param value) doesn't silently slip through. The

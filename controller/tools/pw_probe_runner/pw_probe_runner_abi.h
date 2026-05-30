@@ -37,20 +37,27 @@
 /*
  * ABI version 2 adds a fixed-size params region after the slots so
  * the host can deliver `policy.params` (SBPL parameters used inside
- * the policy text via `(param "NAME")`). v1 hosts must NOT spawn a
- * v2 worker: the worker checks abi_version on entry and aborts on
- * mismatch.
+ * the policy text via `(param "NAME")`). Bumping this constant is
+ * a structural ABI break — the worker checks abi_version on entry
+ * and aborts on mismatch, so a host built with one version will
+ * never successfully drive a worker built with another. In
+ * practice host + worker ship together (the worker binary is
+ * bundle-local inside each XPC service), so the check is a
+ * defense-in-depth tripwire rather than a live compatibility
+ * boundary.
  */
-#define PW_PROBE_RUNNER_ABI_VERSION 2u
+#define PW_PROBE_RUNNER_ABI_VERSION 3u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
- * 2 KiB + 16 params × 512 B + 64 B header = 520 KiB + 64 B per run.
- * The cap is chosen to fit comfortably in one page-aligned anonymous
- * mapping while still being deep enough for any plausible specimen
- * plan. */
+ * 2 KiB + 1024 params × 512 B + 64 B header = ~1.02 MiB per run.
+ * The slot cap is chosen to fit comfortably in one page-aligned
+ * anonymous mapping while still being deep enough for any plausible
+ * specimen plan. The param cap is sized for real-world SBPL profile
+ * closures (Apple system profiles bind 100+ derived params once
+ * imports are resolved), with substantial headroom. */
 #define PW_SHM_MAX_STEPS    256u
 #define PW_SHM_SLOT_BYTES   2048u
-#define PW_SHM_MAX_PARAMS   16u
+#define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
 #define PW_SHM_HEADER_BYTES 64u
 #define PW_SHM_REGION_BYTES                                                  \

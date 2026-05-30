@@ -39,13 +39,13 @@ import Foundation
 /// Wire-stable layout of the shm region. Mirrors pw_probe_runner_abi.h.
 /// A future ABI bump in the C header MUST update these constants.
 public enum PWShmLayout {
-    public static let abiVersion: UInt32   = 2
+    public static let abiVersion: UInt32   = 3
 
     public static let headerBytes: Int     = 64
     public static let slotBytes: Int       = 2048
     public static let maxSteps: Int        = 256
     public static let paramBytes: Int      = 512
-    public static let maxParams: Int       = 16
+    public static let maxParams: Int       = 1024
 
     public static let regionBytes: Int =
         headerBytes + maxSteps * slotBytes + maxParams * paramBytes
