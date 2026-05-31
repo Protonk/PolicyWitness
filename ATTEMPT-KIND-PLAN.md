@@ -2,7 +2,8 @@
 
 ## Context
 
-PolicyWitness currently supports two attempt kinds, `file` and `mach_lookup`.
+After Phase 1, PolicyWitness supports three curated attempt kinds:
+`file`, `mach_lookup`, and `sysctl`.
 Real macOS sandbox profiles author rules across many more operations; an
 external corpus survey of 627 profiles ranked twelve `sandbox_check` kinds by
 how often each is authored and rated each against five executability /
@@ -13,7 +14,8 @@ The honest distribution is:
 
 - **3 well-behaved kinds (wire):** `file`, `mach_lookup`, `sysctl_read`.
   Single syscall family, public API, errno-clean failure, stable target.
-  Cover 82% / 59% / 11% of the corpus respectively. Two already done.
+  Cover 82% / 59% / 11% of the corpus respectively. All three are
+  now represented by built-in attempt kinds.
 - **7 messy kinds (case-work):** `generic`, `iokit`, `ipc`, `mach`, `process`,
   `socket`, `user_preference`. Each kind is a heterogeneous bucket whose
   constituent ops need per-op target hygiene, recipe authoring, and safety
@@ -22,11 +24,11 @@ The honest distribution is:
   executability / determinism / non-destructiveness gates architecturally.
 
 The hybrid plan: **enumerate the wire tier in PW; ship an `exec` extension
-point for the case-work tier; the never tier remains unsupported.** Adding
-`sysctl_read` covers the third well-behaved kind. The `exec` kind plus a
-named-augment interface (`policy.augments: ["exec_baseline"]`) lets the
-caller author their own per-op probes for the case-work tier without
-importing each op's safety burden into PW source.
+point for the case-work tier; the never tier remains unsupported.** Phase 1
+covered the third well-behaved kind (`sysctl_read`). Phase 2 adds the `exec`
+kind plus a named-augment interface (`policy.augments:
+["exec_baseline"]`) so callers can author their own per-op probes for the
+case-work tier without importing each op's safety burden into PW source.
 
 Goal across both phases: PW commits to one curated atlas of three attempt
 kinds plus one open-ended extension mechanism. PW does not chase Apple's
@@ -35,12 +37,30 @@ the surface they care about.
 
 ---
 
-## Phase 1 — Add `sysctl_read` as the third wire-tier attempt kind
+## Phase 1 — Add `sysctl_read` as the third wire-tier attempt kind (complete)
 
-Small, well-scoped, no ABI risk. Closes the third corpus-frequency wire-tier
-op and replaces the placeholder `file open_read` attempt currently used by
-`runner_filter_sysctl_name` (the suite that pins the prediction-unavailable
-behavior for `(sysctl-read, sysctl_name)`) with a real sysctl probe.
+**Status: complete.** This phase is implemented in the current worktree:
+`PW_ATTEMPT_SYSCTL_READ = 7`, Swift `PWAttemptKind.sysctlRead = 7`,
+`attempt.kind="sysctl" / action="read"`, `AttemptOutcome.sysctlFailed`
+(`"sysctl_failed"`), drift-classifier handling for sysctl errnos, real
+Channel A coverage in `runner_filter_sysctl_name`, and source-drift
+enforcement for C/Swift attempt-kind enum agreement.
+
+Validated with:
+
+- `git diff --check`
+- `swift build --package-path runner`
+- `IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' make build`
+- `tests/run.sh --suite source_drift --suite runner_unit --suite runner_filter_sysctl_name`
+- `tests/run.sh --suite runner_c_worker_harness`
+- `tests/run.sh --suite runner_use_c_worker`
+
+The original implementation shape was: small, well-scoped, no ABI risk.
+It closes the third corpus-frequency wire-tier op and replaces the
+placeholder `file open_read` attempt currently used by
+`runner_filter_sysctl_name` (the suite that pins the
+prediction-unavailable behavior for `(sysctl-read, sysctl_name)`) with a
+real sysctl probe.
 
 ### Wire surface
 
@@ -177,6 +197,103 @@ rc / term_signal / stdout / stderr, and surfaces the result the same way
 file / mach_lookup / sysctl_read do. The augment interface gives the caller
 a clean opt-in for the SBPL baseline `posix_spawn` needs.
 
+Phase 2 ships as four checkpoints, each independently buildable and
+testable. Sequencing is strict — later checkpoints assume earlier ones
+have landed:
+
+1. **Controller augment plumbing (complete).** Added `policy.augments`
+   resolution in the controller before `sbpl-preflight`; proved
+   request splicing, hash reporting, unknown-name rejection, and
+   runner-forwarding behavior with tests.
+   `runner/augments/exec_baseline.sb` ships as a **single-line
+   comment-only file** (no SBPL rules), so the wire/hash/preflight
+   machinery exercises end-to-end without granting any permissions
+   yet. Augments are listed in the signed evidence manifest under
+   `kind: "augment"`. The user-facing surface
+   (`policy.augments`, `data.policy_augmentation`,
+   `augments: append-only allow-only`) is documented in
+   PolicyWitness.md → Augments.
+
+   *Status: complete.*
+
+   Validated with:
+   - `cargo test --bin policy-witness` — augments module unit tests pass
+     (7 cases including the strip-without-apply mutation-tracking case
+     `stripped_noop_when_empty_array` / `stripped_noop_when_null_field`).
+   - `PW_INTEGRATION=1 cargo test --test cli_contract` — augment
+     integration cases pass: `augment_applied_emits_policy_augmentation_block`
+     (asserts the run reaches `ok`, preflight's `policy_sha256` equals
+     `applied_sha256`, and runner's `policy_sha256` equals
+     `applied_sha256`); `unknown_augment_short_circuits_to_bad_request`;
+     `invalid_augment_name_rejected_as_bad_request`;
+     `absent_augments_omits_policy_augmentation_block`.
+   - `swift run --package-path runner PWRunnerCoreTests` — `AugmentTests`
+     (4 cases) pass.
+   - `tests/run.sh --suite source_drift --suite unit --suite runner_unit
+     --suite runner_outcome_bad_request --suite runner_use_c_worker
+     --suite integration --suite smoke` — clean.
+   - `IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' make
+     build` — bundle assembled with
+     `Contents/Resources/Augments/exec_baseline.sb` present and sealed
+     by the outer codesign; `manifest.json` records the augment with
+     `kind: "augment"` and a sha256.
+
+2. **ABI v4 layout + layout guard (complete).** Defined the C slot
+   layout (`PW_SHM_SLOT_BYTES = 8192`), Swift offsets, bounds, and the
+   new `runner_abi_layout` suite that compiles a C printer and asserts
+   agreement against `PWShmLayout`. Landed before the exec runtime
+   behavior so any future C/Swift offset drift is a mechanical test
+   failure, not a runtime artifact. ABI version bumped 3 → 4;
+   `PW_ATTEMPT_EXEC_SPAWN = 8` reserved at the wire level but the
+   worker doesn't dispatch to it yet (the exec output fields are
+   zero-initialised by the host's pre-spawn memset and no run_attempt
+   case writes them — the eventual sentinel conventions ship with the
+   runtime in checkpoint 3).
+
+   *Status: complete.*
+
+   Validated with:
+   - `cargo build --manifest-path controller --release` — `pw-probe-runner`
+     compiles against the new struct; `_Static_assert` confirms the slot
+     budget at 8192.
+   - `swift build --package-path runner` — `PWShmLayout` compiles;
+     `PWAttemptKind.execSpawn = 8` mirrors C.
+   - `tests/run.sh --suite runner_abi_layout` — 46 C↔Swift layout
+     values agree; `diff.json` shows zero mismatches and no
+     missing-in-either-direction entries.
+   - `tests/run.sh --suite source_drift --suite runner_unit
+     --suite runner_c_worker_harness --suite runner_use_c_worker
+     --suite runner_outcome_bad_request --suite integration
+     --suite smoke` — 24/24 pass against the v4 bundled worker
+     (49/49 in `runner_unit`; the 256-slot harness test passes against
+     the larger 2.6 MiB region).
+   - `IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)' make
+     build` — bundle assembled; the bundled `pw-probe-runner` reports
+     `abi=4 slot_bytes=8192`.
+
+3. **Exec runtime.** Implement the narrow `exec` / `spawn` attempt,
+   bounded argv, child status capture, output capture per the
+   resource-setup decision below, and drift classification. If real
+   `exec_baseline.sb` content is needed to write the exec-success
+   tests before checkpoint 4 lands, this checkpoint may use a
+   **fixture-private augment file** under `tests/fixtures/` (not the
+   shipped `runner/augments/exec_baseline.sb`) with a minimal handful
+   of allows just sufficient for `/bin/true` to spawn under
+   `(deny default)` plus the fixture augment. The shipped augment
+   stays empty until checkpoint 4.
+4. **Empirical `exec_baseline`.** Author the actual
+   `runner/augments/exec_baseline.sb` contents from denial logs
+   against a realistic helper (libSystem-dynamic, not statically
+   linked), document the recipe in `runner/augments/README.md`, and
+   flip the checkpoint-3 fixture-private test (if any) to assert
+   success against the shipped augment. The user-facing promise that
+   `augments: ["exec_baseline"]` lets exec attempts succeed under
+   minimal-deny becomes real here.
+
+Each checkpoint should land as a separate PR (or at least a separate
+commit) so the bisect history is clean and any individual checkpoint
+is independently revertible.
+
 ### Wire surface — attempt
 
 - `runner/PWRunnerAPI.swift::PWRunnerWire`
@@ -186,6 +303,11 @@ a clean opt-in for the SBPL baseline `posix_spawn` needs.
   - Add `public var args: [String]?` (optional argv beyond argv[0];
     helper paths interpret it).
 - Request shape: `attempt: { kind: "exec", action: "spawn", target: "<path-to-helper>", args: ["..."] }`.
+  `target` must be an absolute helper path in Phase 2. `args` is
+  bounded by count and per-argument byte length in the worker ABI.
+  No environment field is added initially; the worker should use an
+  explicit empty/minimal environment unless implementation discovers
+  a macOS loader requirement that must be documented.
 
 ### Wire surface — augments
 
@@ -308,6 +430,44 @@ iteratively against a real test fixture:
    The augment needs to cover dyld + shared-cache mapping + code-sign
    verification, not just the literal exec syscall.
 
+### Critical design decision — exec post-apply resources
+
+Decide this before editing the C worker ABI. The existing worker design is
+intentionally simple after `sandbox_apply`: fixed inputs, no hidden resource
+acquisition, and shared-memory writes as the durable output channel. An exec
+attempt complicates that because stdout/stderr capture needs pipes,
+`posix_spawn_file_actions`, polling, reads, and child reaping.
+
+Preferred starting model:
+
+- Pre-read exec slot inputs before `sandbox_apply`.
+- Pre-create per-exec stdout/stderr pipes before `sandbox_apply`.
+- Pre-build or otherwise pre-allocate any `posix_spawn_file_actions`
+  state before `sandbox_apply` if the API permits a stable prepared
+  representation.
+- After `sandbox_apply`, the attempt path should primarily call
+  `posix_spawn`, drain already-created pipe FDs, `waitpid`, and write
+  results to shared memory.
+
+Reason: if pipe creation or file-action setup happens post-apply, an
+unaugmented minimal-deny profile may fail before the operation under test
+(`posix_spawn`) is reached. That would blur the witness: the attempt would
+report an exec failure, but the observed denial might be pipe/file-action
+setup rather than process execution.
+
+If this model fails empirically, make an explicit choice before continuing:
+
+- make pipe / file-action setup part of `exec_baseline` and document that
+  unaugmented exec can fail during setup, not only at spawn;
+- or defer stdout/stderr capture from Phase 2, keep only child PID/status
+  and spawn errno, and add output capture later;
+- or pre-create only pipes and keep file-action setup post-apply if testing
+  proves that setup is allocation-free and not sandbox-gated in practice.
+
+Do not silently degrade to whichever failure occurs first. The plan and tests
+must preserve the difference between "the sandbox blocked spawn" and "the
+worker failed to set up the observation frame."
+
 ### C worker — exec attempt and ABI v3 → v4 bump
 
 exec needs structural slot changes (argv, child PID, separate
@@ -319,40 +479,52 @@ the existing "structural change = ABI bump" rule.
 - `controller/tools/pw_probe_runner/pw_probe_runner_abi.h`
   - `PW_PROBE_RUNNER_ABI_VERSION` 3 → 4.
   - Append `PW_ATTEMPT_EXEC_SPAWN = 8` to `pw_attempt_kind_t`.
-  - New optional input fields on `pw_shm_slot_t` (allocated from the
-    existing reserved padding; the slot stays 2048 bytes total —
-    `_Static_assert` enforces):
+  - New optional input fields on `pw_shm_slot_t`:
     - `argv_count: u32` (0..PW_SHM_MAX_ARGV; e.g. 16)
     - `argv: char[PW_SHM_MAX_ARGV][PW_SHM_ARGV_BYTES]` (e.g. 16×128 = 2 KiB)
-      — packed argv strings. Slot capacity may need to grow; if so,
-      bump `PW_SHM_SLOT_BYTES` and update the region size math.
+      — packed argv strings.
   - New optional output fields on `pw_shm_slot_t`:
     - `child_pid: i32` (0 when no child was spawned)
     - `child_exit_code: i32` (-1 when child was signaled or no child ran)
     - `child_term_signal: i32` (0 when child clean-exited or no child ran)
     - `child_stdout: char[PW_SHM_CHILD_OUTPUT_BYTES]` (e.g. 1024)
     - `child_stderr: char[PW_SHM_CHILD_OUTPUT_BYTES]` (e.g. 1024)
-  - Final slot size: pick `PW_SHM_SLOT_BYTES` (probably 4096 or 6144)
-    that fits both file/mach/sysctl outputs AND exec inputs+outputs,
-    re-validate the `_Static_assert`s, recompute region bytes.
-  - **Slot capacity is the design call to make at the start of
-    Phase 2.** Picking conservatively (e.g. 6144 bytes/slot, 256
-    slots = 1.5 MiB region) gives headroom for future attempt kinds
-    without another ABI bump.
+  - **Committed slot capacity: `PW_SHM_SLOT_BYTES = 8192`.** Existing
+    slot consumes ~1.5 KiB; the new exec fields add ~4.1 KiB (argv
+    table ~2 KiB + child_pid/exit_code/term_signal 12 B + child_stdout
+    1 KiB + child_stderr 1 KiB), totalling ~5.6 KiB needed minimum.
+    8 KiB gives ~2.4 KiB of headroom — room for one or two more
+    attempt kinds with similar wire surface before another ABI bump.
+    Region size at this value: 64 + 256×8192 + 1024×512 ≈ 2.6 MiB,
+    well within a single page-aligned anonymous mapping.
+  - Add a layout drift guard. The guard is a tiny C printer compiled
+    against `pw_probe_runner_abi.h` at test time, which emits each
+    `sizeof()` / `offsetof()` value to stdout as `KEY=VALUE` lines.
+    A test driver parses Swift `PWShmLayout` constants and asserts
+    line-by-line agreement. Parser-only source_drift over the header
+    is insufficient because C struct member offsets depend on
+    compiler-applied padding the parser doesn't model. Shape mirrors
+    `tests/suites/runner_c_worker_harness/harness.c`: a small C file
+    under a new `tests/suites/runner_abi_layout/` suite, compiled
+    on demand by the suite driver and run as a subprocess. Manual
+    mirrored constants alone are not enough for an ABI bump this
+    large.
 - `controller/tools/pw_probe_runner/pw_probe_runner.c`
   - Update the version check + region-size math for v4.
   - New `case PW_ATTEMPT_EXEC_SPAWN:` in `run_attempt`. Implementation:
-    construct argv from slot.argv table; create stdout + stderr pipes
-    locally inside the worker; `posix_spawn(target, argv, ...)` with
-    pipes dup'd via `posix_spawn_file_actions_adddup2`; drain both
-    pipes with `poll()` until child exits or sentinel deadline fires;
-    `waitpid` and capture exit_code + term_signal into the new slot
-    fields. Write `rc = child_exit_code` (0 = success, non-zero =
-    failure) and `errno_val = 0` on clean spawn; on spawn failure
-    write `rc = -1` and `errno_val = spawn errno`.
+    construct argv from the slot argv table; use the resource-setup
+    model chosen above for stdout/stderr; `posix_spawn(target, argv, ...)`
+    with pipes dup'd to the child when output capture is enabled; drain
+    both pipes with `poll()` until child exits or the bounded child
+    deadline fires; `waitpid` and capture exit_code + term_signal into
+    the new slot fields. Write `rc = child_exit_code` (0 = success,
+    non-zero = failure) and `errno_val = 0` on clean spawn; on spawn
+    failure write `rc = -1` and `errno_val = spawn errno`.
   - Truncate stdout/stderr to `PW_SHM_CHILD_OUTPUT_BYTES - 1` and
     NUL-terminate. Add a trailing "... [truncated]" marker when
-    content exceeded the buffer.
+    content exceeded the buffer. If output capture is deferred, omit
+    these fields from Phase 2's response contract and docs instead of
+    emitting misleading empty strings.
 
 ### Swift / orchestrator
 
@@ -362,11 +534,13 @@ the existing "structural change = ABI bump" rule.
 - `runner/CWorker.swift::PWAttemptKind`: add `execSpawn = 8`.
 - `runner/CWorker.swift::CWorkerSlotInput`: add
   `optional args: [String]` and validate count + per-arg length
-  against the new ABI caps.
+  against the new ABI caps before shm allocation.
 - `runner/CWorker.swift::CWorkerSlotResult`: add
   `optional childPid: Int32, childExitCode: Int32?,
   childTermSignal: Int32?, childStdout: String?, childStderr: String?`.
-  Read these from the new shm slot offsets.
+  Read these from the new shm slot offsets. If stdout/stderr capture is
+  deferred by the critical design decision above, omit `childStdout` /
+  `childStderr` until the ABI actually carries them.
 - `runner/CWorkerOrchestrator.swift::mapAttemptKindOrNil`: add
   `case (PWRunnerWire.attemptKindExec, PWRunnerWire.attemptActionSpawn): return .execSpawn`.
 - `runner/CWorkerOrchestrator.swift::workerSlotsFromProbePlan`: thread
@@ -375,18 +549,22 @@ the existing "structural change = ABI bump" rule.
   `case PWRunnerWire.attemptActionSpawn:` returning
   `AttemptOutcome.execFailed` when child rc != 0 or spawn failed;
   populate the new optional response fields with childPid,
-  childExitCode/childTermSignal, stdout/stderr from the slot.
+  childExitCode/childTermSignal, stdout/stderr from the slot when
+  present.
 - `runner/CWorkerOrchestrator.swift::observationFromAttempt` (drift
-  classifier): treat `exec_failed` with `errno=EPERM` from posix_spawn
-  itself as **strong deny** (the sandbox blocked the spawn — that's a
-  clean signal). Treat `exec_failed` from a child exiting non-zero as
-  **non-policy failure** → `drift=null` (the child's exit code
-  encodes a verdict the runner has no way to interpret).
+  classifier): treat `exec_failed` with `errno=EPERM` or `EACCES`
+  from `posix_spawn` itself as **strong deny** (the sandbox blocked
+  spawn — that's a clean signal). Treat setup failures before
+  `posix_spawn` and child non-zero exits as **non-policy failure** →
+  `drift=null` (the child exit code encodes a verdict the runner has
+  no way to interpret).
 - `runner/PWRunnerAPI.swift::AttemptOutcome`: add
   `static let execFailed = "exec_failed"`.
 - `runner/PWRunnerAPI.swift::PWRunnerAttemptResult`: add optional
   fields `child_pid`, `child_exit_code`, `child_term_signal`,
-  `stdout`, `stderr` (Codable; nil for non-exec attempts).
+  `stdout`, `stderr` (Codable; nil for non-exec attempts). Only add
+  `stdout` / `stderr` in the same change that implements real bounded
+  capture.
 
 ### Sandbox-policy interaction (the augment story in practice)
 
@@ -414,6 +592,13 @@ the existing "structural change = ABI bump" rule.
 ### Tests
 
 - `runner/Tests/PWRunnerCoreTests/CWorkerTests.swift`
+  - The ABI v4 layout agreement is enforced by the new
+    `runner_abi_layout` suite (see "C worker — exec attempt and ABI
+    v3 → v4 bump" above), not by a unit test inside the SwiftPM
+    target. The suite gates the mirrored Swift `PWShmLayout`
+    constants against C `sizeof`/`offsetof` before any exec
+    behavior tests run; if the suite fails, no later checkpoint may
+    proceed.
   - Unit: drive the C worker with `(allow default)` plus an exec
     attempt invoking `/bin/true`. Assert
     `attempt.outcome == "ok"`, `child_exit_code == 0`,
@@ -425,7 +610,13 @@ the existing "structural change = ABI bump" rule.
     surfaced via `attempt.errno`, `child_pid == 0`.
   - Unit: drive a helper that writes to stdout/stderr and exits 0.
     Assert the captured bytes round-trip via `attempt.stdout` /
-    `attempt.stderr` (within the configured truncation).
+    `attempt.stderr` (within the configured truncation). If output
+    capture is deferred, replace this with a test documenting the
+    absence of output fields.
+  - Unit/e2e: pin the chosen post-apply resource setup model. If pipes
+    and file actions are pre-created, include a minimal-deny test that
+    proves the unaugmented failure is attributable to `posix_spawn`
+    rather than setup.
 - New unit test file `runner/Tests/PWRunnerCoreTests/AugmentTests.swift`
   - (Augment resolution itself lives in Rust — see the integration
     tests below. Swift-side unit coverage is for `PWRunnerPolicySpec`
@@ -448,9 +639,11 @@ the existing "structural change = ABI bump" rule.
   - New case `exec_attempt_without_baseline_fails_cleanly`: same minimal
     `(deny default)` without the augment. Expects
     `attempt.outcome == "exec_failed"` with `attempt.errno == EPERM`
-    (spawn errno) and `attempt.error` mentioning posix_spawn. Does
-    NOT assert on `first_deny` (see the sandbox-policy interaction
-    note above).
+    or `EACCES` from `posix_spawn` and `attempt.error` mentioning
+    posix_spawn. If the selected resource setup model can fail before
+    spawn, split that into a separate setup-failure assertion rather
+    than using it as the spawn-deny test. Does NOT assert on
+    `first_deny` (see the sandbox-policy interaction note above).
 - Test fixture helper (test-only, not shipped):
   - Lives under `tests/suites/runner_use_c_worker/exec_fixture/helper.c`.
   - Built on demand by `runner_use_c_worker/run.sh` via xcrun clang
@@ -479,13 +672,17 @@ the existing "structural change = ABI bump" rule.
   - "Common decode errors" updated: `unknown augment '<name>'` rejected
     as bad_request before any runner invocation.
   - Add an explicit "schema_version notes" paragraph: Phase 2 adds
-    `data.policy_augmentation`, `attempt.{stdout,stderr,child_*}`,
-    and the `exec` attempt kind as **additive optional fields under
-    the existing schema_version=4 contract.** Consumers that
-    introspect the raw JSON see the new keys but don't need to
+    `data.policy_augmentation`, the `exec` attempt kind, child status
+    fields under `steps[].attempt`, and stdout/stderr fields if bounded
+    output capture remains in Phase 2. These are **additive optional
+    fields under the existing schema_version=4 contract.** Consumers
+    that introspect the raw JSON see the new keys but don't need to
     branch on schema_version to handle them. This is a deliberate
     compatibility decision — not a schema-version bump — because no
     existing v4 field changes shape.
+  - Document the selected post-apply resource setup model. Consumers
+    should know whether `exec_failed` means spawn was denied, child
+    exited non-zero, or the worker could not set up capture resources.
 - `runner/README.md` augments directory documented (mentioning the
   controller-side resolution, not a runner-side concept).
 - `runner/augments/README.md`: NEW. Explains the augment authoring
@@ -501,14 +698,19 @@ the existing "structural change = ABI bump" rule.
 
 ### Validation
 
-- `tests/run.sh --suite source_drift --suite unit --suite runner_unit --suite runner_use_c_worker --suite integration`
+- `tests/run.sh --suite source_drift --suite unit --suite runner_unit --suite runner_c_worker_harness --suite runner_use_c_worker --suite integration`
 - Source-drift counts: 9 attempt outcomes → 10; attempt-kind enum
   agreement check passes for the new `EXEC_SPAWN = 8`; region-size
   `_Static_assert` passes with the new slot byte count.
+- ABI layout agreement passes: C `sizeof` / `offsetof` values match
+  Swift `PWShmLayout` for every header, slot, param, and exec field.
 - New augment-resolution integration tests must pass.
 - The two new exec e2e cases must demonstrate both the augmented-policy
   success path and the unaugmented-policy clean failure (with errno,
   NOT with `first_deny`).
+- The resource-setup model is explicitly tested. A failure before
+  `posix_spawn` must not be accepted as proof that a sandbox denied
+  process execution.
 - Notarization: `make notarize` rebuilds, signs the new
   `Contents/Resources/Augments/` directory contents as part of the app
   bundle, and ships. The test fixture helper is NOT signed or
@@ -516,22 +718,20 @@ the existing "structural change = ABI bump" rule.
 
 ### Sizing
 
-~150 lines C in `run_attempt` (spawn + pipe-drain + waitpid loop +
-child output capture), ~60 lines C in the v4 ABI struct/region
-updates, ~40 lines Swift in `PWShmLayout` for the new offsets,
-~50 lines Swift in `CWorker.swift` for slot input/output fields,
-~30 lines Swift in the orchestrator (map + drift classifier),
-~120 lines Rust in `controller/src/run_flow.rs` for augment
-resolution + hash computation + envelope synthesis, ~200 lines
-tests (unit + integration + e2e), ~60 lines test fixture C helper +
+~150 lines C in `run_attempt` if stdout/stderr capture stays in Phase 2
+(spawn + pipe-drain + waitpid loop + child output capture), ~60 lines C
+in the v4 ABI struct/region updates, ~40 lines Swift in `PWShmLayout`
+for the new offsets, ~50 lines Swift in `CWorker.swift` for slot
+input/output fields, ~30 lines Swift in the orchestrator (map + drift
+classifier), ~120 lines Rust in `controller/src/run_flow.rs` for augment
+resolution + hash computation + envelope synthesis, ~200+ lines tests
+(unit + integration + e2e + ABI layout guard), ~60 lines test fixture C helper +
 build script, ~100 lines docs, one new
 `runner/augments/exec_baseline.sb` (authoring is empirical; sizing
-TBD), one new `runner/augments/README.md`. One PR; substantially
-larger than Phase 1 and structurally significant (ABI bump). Worth
-splitting if implementation proves longer than expected: the augment
-interface can ship first (without exec) so the augmentation
-machinery is validated independently, then the exec attempt kind
-follows.
+TBD), one new `runner/augments/README.md`. Substantially larger than
+Phase 1 and structurally significant (ABI bump). Prefer checkpointed
+PRs by default: augment machinery first, ABI/layout guard second, exec
+runtime third, empirical `exec_baseline` last.
 
 ---
 
@@ -552,22 +752,33 @@ for these probes. Documented as caller's responsibility.
 
 ## Sequence
 
-1. **Phase 1** ships first as a small, self-contained addition. No
-   worker ABI bump (append-only enum value), no new wire fields beyond
-   the attempt kind enum, no augment machinery. Adds the source-drift
-   guard for C/Swift attempt-kind enum agreement which Phase 2 also
-   relies on. Should be a single PR closing the third wire-tier op.
-2. **Phase 2** ships second. Larger, introduces the augment interface
-   (controller-side resolution) and the exec attempt kind (with a
-   worker ABI v3 → v4 bump for the new slot fields). The two are
-   designed for each other — shipping exec without an augment story
-   would force callers into ad-hoc baseline authoring. If Phase 2
-   proves too large for one PR, the augment interface can ship first
-   on its own (validates the controller-side splicing machinery
-   against a no-op augment), then exec follows in a second PR.
-   Decisions deferred to implementation time are flagged inline:
-   - The exact `exec_baseline.sb` contents (empirical authoring).
-   - The final `PW_SHM_SLOT_BYTES` value at v4 (pick conservatively).
+1. **Phase 1 is complete.** It shipped the third wire-tier attempt kind
+   (`sysctl` / `read`) without a worker ABI bump, replaced the
+   `runner_filter_sysctl_name` placeholder attempt with real Channel A
+   evidence, added `sysctl_failed`, and added the source-drift guard for
+   C/Swift attempt-kind enum agreement.
+2. **Phase 2 ships as four checkpoints** (detailed at the top of the
+   Phase 2 section): controller augment plumbing → ABI v4 layout +
+   layout guard → exec runtime → empirical `exec_baseline`. Each
+   checkpoint should leave the tree buildable and testable.
+3. **Decisions already committed (no further deliberation needed):**
+   - `PW_SHM_SLOT_BYTES = 8192` for v4.
+   - Layout guard ships as a new `runner_abi_layout` suite that
+     compiles a C printer and asserts agreement against `PWShmLayout`.
+   - Checkpoint-1 ships `runner/augments/exec_baseline.sb` as a
+     comment-only no-op file; checkpoint-3 may use a fixture-private
+     augment if needed; checkpoint-4 fills in the real content.
+   - Post-apply resource setup commitment: the preferred model
+     (pre-apply pipes + file_actions, post-apply only posix_spawn +
+     drain + waitpid + shm writes) is the target. If empirical
+     testing during checkpoint 3 shows it fails, the implementer
+     stops and raises an explicit decision per the "Critical design
+     decision" section — they do not silently degrade.
+4. **Deferred by design:**
+   - The exact `exec_baseline.sb` contents, which must be authored
+     empirically from deny logs during checkpoint 4.
+   - Any fallback choice for post-apply resource setup, surfaced
+     only if checkpoint 3's empirical testing forces it.
 
 Each phase is independently shippable, testable, and reversible.
 Neither changes the response schema version (currently 4) — both

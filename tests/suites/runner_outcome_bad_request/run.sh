@@ -98,20 +98,24 @@ test_pass "Swift decode failure surfaced as bad_request" "{}"
 
 
 # ----------------------------------------------------------------------
-# Case 2: unknown_filter_kind
+# Case 2: missing_required_filter_value
 # ----------------------------------------------------------------------
-# Fully Swift-decodable spec with one probe step whose sandbox_check.filter.kind
-# is "not-a-real-kind". This passes JSON decode then trips
-# validateSandboxChecks at the host (`unsupported filter.kind ...`).
+# Fully Swift-decodable spec with one probe step whose sandbox_check.filter
+# is `kind=path, value=""`. This passes JSON decode, then trips
+# validateSandboxChecks at the host ("filter.value required for kind path").
 #
-# Note: the plan called this case "unknown_sandbox_operation", but the
-# operation field is only checked for emptiness — any non-empty string
-# passes. The supported-set check is on filter.kind, so that's the
-# field this case exercises.
+# This used to be an `unknown_filter_kind` case (filter.kind set to
+# something not in knownFilterKinds). After the unknown-kind path was
+# downgraded to per-step prediction_unavailable rather than a
+# plan-killer, "unknown kind" no longer reaches bad_request. The
+# value-required branch is the remaining filter-side bad_request
+# trigger and exercises the same emit site
+# (PWRunnerService.runSpecimen catching SpecValidationError from
+# validateSandboxChecks in runner/ProbeRunner.swift).
 
-PW_TEST_ID="unknown_filter_kind"
+PW_TEST_ID="missing_required_filter_value"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "probe step with unsupported filter.kind — expect bad_request"
+test_step "run" "probe step with kind=path but empty value — expect bad_request"
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen_filter.json"
 /usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
@@ -121,7 +125,7 @@ from pathlib import Path
 
 spec = {
     "schema_version": 1,
-    "specimen_id": "bad_filter_kind_probe",
+    "specimen_id": "missing_required_filter_value_probe",
     "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
@@ -131,7 +135,9 @@ spec = {
             "step_id": "p1",
             "sandbox_check": {
                 "operation": "file-read-data",
-                "filter": {"kind": "not-a-real-kind", "value": ""},
+                # kind=path requires a non-empty value; empty/missing
+                # value is the trigger validateSandboxChecks asserts on.
+                "filter": {"kind": "path", "value": ""},
             },
             "attempt": {"kind": "file", "action": "open_read", "target": "/tmp/x"},
         }
@@ -149,7 +155,7 @@ RC=$?
 set -e
 
 if [[ "${RC}" -eq 0 ]]; then
-  test_fail "expected non-zero exit when filter.kind is unsupported (rc=${RC})" \
+  test_fail "expected non-zero exit when filter.value is missing for a kind that requires one (rc=${RC})" \
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
@@ -169,13 +175,14 @@ outcome = runner.get("normalized_outcome")
 if outcome != "bad_request":
     raise SystemExit(
         f"expected normalized_outcome=bad_request (got {outcome!r}); "
-        f"validateSandboxChecks may have been changed to accept this filter.kind."
+        f"validateSandboxChecks may have been changed to accept "
+        f"kind=path with an empty value."
     )
 
 error_msg = runner.get("error") or ""
-if "not-a-real-kind" not in error_msg and "filter.kind" not in error_msg:
+if "filter.value required" not in error_msg and "kind path" not in error_msg:
     raise SystemExit(
-        f"expected error to identify the unknown filter.kind; got error={error_msg!r}"
+        f"expected error to identify the missing-value rejection; got error={error_msg!r}"
     )
 
 if runner.get("runner_subprocess") is not None:
@@ -186,4 +193,4 @@ if runner.get("steps"):
     raise SystemExit(f"expected empty steps (got {runner.get('steps')!r})")
 PY
 
-test_pass "unsupported filter.kind surfaced as bad_request" "{}"
+test_pass "missing required filter.value surfaced as bad_request" "{}"

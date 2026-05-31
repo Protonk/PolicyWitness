@@ -43,6 +43,12 @@ XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/runner-client/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/services"
 XPC_SERVICE_NAMES=("PWRunner")
 
+# Named SBPL augments callers opt into via policy.augments. Copied into
+# Contents/Resources/Augments/ at bundle assembly time; the controller
+# resolves them before sbpl-preflight. Non-executable resources — sealed
+# by the outer app codesign at the end of the build.
+XPC_AUGMENTS_DIR="${XPC_ROOT}/augments"
+
 # Host-side sandbox_check cross-check helper.
 SB_API_VALIDATOR_DIR="${ROOT_DIR}/controller/tools/sb_api_validator"
 SB_API_VALIDATOR_SRC="${SB_API_VALIDATOR_DIR}/sb_api_validator.c"
@@ -236,6 +242,30 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
 # per-probe modes outside any runner flow.
 cp "${SB_API_VALIDATOR_BIN}" "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
+
+# Copy named augments under Contents/Resources/Augments/. The
+# controller reads from this directory when resolving
+# request.policy.augments before sbpl-preflight. Augments are
+# resources, not executables; the outer codesign at the end of the
+# build seals them as part of the app bundle.
+if [[ -d "${XPC_AUGMENTS_DIR}" ]]; then
+  AUGMENTS_OUT_DIR="${APP_BUNDLE}/Contents/Resources/Augments"
+  mkdir -p "${AUGMENTS_OUT_DIR}"
+  augments_found=0
+  for augment_src in "${XPC_AUGMENTS_DIR}"/*.sb; do
+    if [[ ! -f "${augment_src}" ]]; then
+      continue
+    fi
+    augments_found=1
+    cp "${augment_src}" "${AUGMENTS_OUT_DIR}/"
+  done
+  if [[ "${augments_found}" == "0" ]]; then
+    echo "WARN: no augments found in ${XPC_AUGMENTS_DIR}; Contents/Resources/Augments will be empty" 1>&2
+  fi
+else
+  echo "ERROR: missing augments source dir at ${XPC_AUGMENTS_DIR}" 1>&2
+  exit 2
+fi
 
 # ---- Build embedded XPC components ----------------------------------------
 

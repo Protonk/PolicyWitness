@@ -222,10 +222,18 @@ private func timeoutMsForCWorker(override: Int?) -> Int {
 
 private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSlotInput] {
     return plan.map { step in
-        CWorkerSlotInput(
+        // Exec attempts pass argv[1..N] via attempt.args; other kinds
+        // ignore the field. Defensive: only thread the args when the
+        // resolved attempt kind is .execSpawn so a caller that
+        // mistakenly populates args on a file probe doesn't pay the
+        // shm-write cost for ignored bytes.
+        let kind = mapAttemptKind(step.attempt)
+        let args: [String] = (kind == .execSpawn) ? (step.attempt.args ?? []) : []
+        return CWorkerSlotInput(
             stepId: step.step_id,
-            attemptKind: mapAttemptKind(step.attempt),
-            target: step.attempt.target
+            attemptKind: kind,
+            target: step.attempt.target,
+            args: args
         )
     }
 }
@@ -251,6 +259,8 @@ private func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
         return .machLookup
     case (PWRunnerWire.attemptKindSysctl, PWRunnerWire.attemptActionRead):
         return .sysctlRead
+    case (PWRunnerWire.attemptKindExec, PWRunnerWire.attemptActionSpawn):
+        return .execSpawn
     default:
         return nil
     }
@@ -545,6 +555,11 @@ private func buildAttemptResult(
     // Slot completed. Map the C-worker rc/errno into the host's
     // attempt outcome vocabulary. The error string the worker wrote
     // already names which call failed (open / unlink / etc).
+    //
+    // Exec attempts are special: rc != 0 may mean either spawn-failed
+    // (child_pid == 0) or child-exited-non-zero (child_pid > 0). Both
+    // map to outcome=exec_failed, but the drift classifier uses
+    // child_pid downstream to distinguish them.
     let outcome: String = {
         if s.rc == 0 {
             return AttemptOutcome.ok
@@ -564,6 +579,8 @@ private func buildAttemptResult(
             return AttemptOutcome.lookupFailed
         case PWRunnerWire.attemptActionRead:
             return AttemptOutcome.sysctlFailed
+        case PWRunnerWire.attemptActionSpawn:
+            return AttemptOutcome.execFailed
         default:
             return AttemptOutcome.unsupported
         }
@@ -578,7 +595,12 @@ private func buildAttemptResult(
         normalized_path: nil,        // path canonicalization for file
                                      // attempts is left to host-side
                                      // enrichment (see enrichPathDiagnostics)
-        observed_path: s.observedPath
+        observed_path: s.observedPath,
+        child_pid: s.childPid.map { Int($0) },
+        child_exit_code: s.childExitCode.map { Int($0) },
+        child_term_signal: s.childTermSignal.map { Int($0) },
+        stdout: s.childStdout,
+        stderr: s.childStderr
     )
 }
 
@@ -670,6 +692,29 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
         case .none:
             return .undefined
         }
+    case AttemptOutcome.execFailed:
+        // Exec drift attribution keys on child_pid:
+        //   child_pid > 0  → spawn succeeded; rc carries the helper's
+        //                    own exit code, which is not a sandbox
+        //                    verdict. Treat as non-policy failure.
+        //   child_pid == 0 → spawn never produced a child. errno carries
+        //                    the posix_spawn errno. EPERM / EACCES are
+        //                    the kernel sandbox's spawn deny signals
+        //                    (no DAC analogue for spawn itself —
+        //                    unlike file ops, posix_spawn's deny is a
+        //                    clean sandbox tell). ENOENT means the
+        //                    target binary doesn't exist; other errnos
+        //                    are non-policy reasons (out of fds, etc).
+        let childPid = attempt.child_pid ?? 0
+        if childPid > 0 {
+            return .undefined
+        }
+        switch attempt.errno {
+        case Int(EPERM), Int(EACCES):
+            return .deniedStrongEvidence
+        default:
+            return .undefined
+        }
     case AttemptOutcome.bootstrapPortFailed,
          AttemptOutcome.unsupported,
          AttemptOutcome.notRunWorkerDied:
@@ -714,7 +759,9 @@ private func classify(
     case .failure(let err):
         switch err {
         case .slotCountExceeded, .paramCountExceeded,
-             .slotInputTooLong, .paramInputTooLong:
+             .slotInputTooLong, .paramInputTooLong,
+             .argvCountExceeded, .argvEntryTooLong,
+             .execTargetNotAbsolute:
             return ClassifiedRun(outcome: NormalizedOutcome.badRequest,
                                  rc: 1, error: err.description)
         case .shmSetupFailed, .pipeFailed, .policyWriteFailed:

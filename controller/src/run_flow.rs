@@ -9,6 +9,7 @@ use std::ffi::OsString;
 use std::path::Path;
 
 use crate::app_layout::app_root_from_current_exe;
+use crate::augments::{resolve_augments, AugmentResolution, PolicyAugmentation};
 use crate::cli;
 use crate::evidence;
 use crate::json_contract;
@@ -45,6 +46,7 @@ pub struct RunData {
     pub runner_registry_id: Option<String>,
     pub runner_provenance: RunnerProvenance,
     pub app_provenance: Option<AppProvenance>,
+    pub policy_augmentation: Option<PolicyAugmentation>,
     pub policy_preflight: Option<PolicyPreflightCapture>,
     pub timeout_ms: u64,
     pub log_last: String,
@@ -211,7 +213,70 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let runner_target = resolve_runner_target(&app_root, &selector)?;
     let runner_provenance = runner_provenance_from_target(&runner_target);
 
-    let mut policy_preflight = match run_policy_preflight(&request_path) {
+    // Resolve named augments BEFORE preflight so the compiled bytes
+    // preflight sees match what the runner will actually compile.
+    let augment_resolution = resolve_augments(&mut request_value, &app_root);
+    if augment_resolution.request_was_mutated() {
+        // Strip-without-apply (null or [] augments) still mutates the
+        // request and MUST trigger a temp-file write — otherwise the
+        // runner reads the original on-disk file with the augments
+        // key still present, violating the "runner sees no
+        // augment-aware shape" contract.
+        request_modified = true;
+    }
+    let policy_augmentation = match augment_resolution {
+        AugmentResolution::NotPresent | AugmentResolution::StrippedNoOp => None,
+        AugmentResolution::Applied(aug) => Some(aug),
+        AugmentResolution::BadRequest(err) => {
+            let runner_client = synthetic_runner_client(&format!(
+                "runner not invoked; augment resolution failed: {err}"
+            ));
+            let data = RunData {
+                request_path: request_path.to_string_lossy().to_string(),
+                runner_service_bundle_id: runner_target
+                    .bundle_id
+                    .clone()
+                    .unwrap_or_else(|| runner_target.service_name.clone()),
+                runner_service_executable: runner_target.process_name.clone(),
+                runner_service_name: runner_target.service_name.clone(),
+                runner_registry_id: runner_target.registry_id.clone(),
+                runner_provenance,
+                app_provenance,
+                policy_augmentation: None,
+                policy_preflight: None,
+                timeout_ms,
+                log_last,
+                runner_client,
+                runner_result: None,
+                sandbox_log_capture: None,
+                runner_startup_diagnostics: None,
+                runner_sandbox_diagnostics: None,
+            };
+            let result = json_contract::JsonResult {
+                ok: false,
+                rc: None,
+                exit_code: Some(1),
+                normalized_outcome: Some("bad_request".to_string()),
+                errno: None,
+                error: Some(err),
+                stderr: None,
+                stdout: None,
+            };
+            json_contract::print_envelope("run", result, &data)?;
+            return Ok(1);
+        }
+    };
+
+    // Persist any in-memory request mutations (runner mode injection or
+    // augment splicing) to a temp file BEFORE preflight so preflight and
+    // the runner both see the same bytes.
+    let request_path_for_run = if request_modified {
+        write_temp_request(&request_value)?
+    } else {
+        request_path.clone()
+    };
+
+    let mut policy_preflight = match run_policy_preflight(&request_path_for_run) {
         Ok(report) => Some(report),
         Err(err) => Some(PolicyPreflightCapture::unavailable(err)),
     };
@@ -240,6 +305,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             runner_registry_id: runner_target.registry_id.clone(),
             runner_provenance,
             app_provenance,
+            policy_augmentation,
             policy_preflight: preflight,
             timeout_ms,
             log_last,
@@ -264,15 +330,9 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         return Ok(1);
     }
 
-    let request_path_for_runner = if request_modified {
-        write_temp_request(&request_value)?
-    } else {
-        request_path.clone()
-    };
-
     let (runner_client, runner_result) = run_pw_runner_client(
         &runner_target.service_name,
-        &request_path_for_runner,
+        &request_path_for_run,
         timeout_ms,
         &runner_target.connection,
     )?;
@@ -370,6 +430,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         runner_registry_id: runner_target.registry_id.clone(),
         runner_provenance,
         app_provenance,
+        policy_augmentation,
         policy_preflight,
         timeout_ms,
         log_last,

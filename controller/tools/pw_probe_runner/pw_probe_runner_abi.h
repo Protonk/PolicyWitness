@@ -35,28 +35,27 @@
 #include <stdint.h>
 
 /*
- * ABI version 2 adds a fixed-size params region after the slots so
- * the host can deliver `policy.params` (SBPL parameters used inside
- * the policy text via `(param "NAME")`). Bumping this constant is
- * a structural ABI break — the worker checks abi_version on entry
- * and aborts on mismatch, so a host built with one version will
- * never successfully drive a worker built with another. In
- * practice host + worker ship together (the worker binary is
- * bundle-local inside each XPC service), so the check is a
- * defense-in-depth tripwire rather than a live compatibility
- * boundary.
+ * ABI version 4 grows the slot from 2 KiB to 8 KiB to carry exec-attempt
+ * payload: a bounded argv table plus child status + stdout/stderr capture.
+ * Existing field offsets shift because the argv table is interposed
+ * between the inputs and the v3 outputs; the version bump makes this
+ * a hard host↔worker compatibility boundary, defended by the
+ * abi_version check at worker entry. In practice host + worker ship
+ * together (the worker binary is bundle-local inside each XPC service),
+ * so the check is a defense-in-depth tripwire rather than a live
+ * compatibility boundary.
  */
-#define PW_PROBE_RUNNER_ABI_VERSION 3u
+#define PW_PROBE_RUNNER_ABI_VERSION 4u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
- * 2 KiB + 1024 params × 512 B + 64 B header = ~1.02 MiB per run.
+ * 8 KiB + 1024 params × 512 B + 64 B header = ~2.56 MiB per run.
  * The slot cap is chosen to fit comfortably in one page-aligned
  * anonymous mapping while still being deep enough for any plausible
  * specimen plan. The param cap is sized for real-world SBPL profile
  * closures (Apple system profiles bind 100+ derived params once
  * imports are resolved), with substantial headroom. */
 #define PW_SHM_MAX_STEPS    256u
-#define PW_SHM_SLOT_BYTES   2048u
+#define PW_SHM_SLOT_BYTES   8192u
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
 #define PW_SHM_HEADER_BYTES 64u
@@ -71,6 +70,19 @@
 #define PW_SHM_TARGET_MAX        512u   /* path, mach-service name, or sysctl name */
 #define PW_SHM_OBSERVED_PATH_MAX 1024u  /* PATH_MAX on macOS */
 #define PW_SHM_ERROR_MAX          256u  /* optional failure-cause string */
+
+/* Bounded argv table for exec attempts. argv_count is the number of
+ * populated entries [0..PW_SHM_MAX_ARGV]; entries beyond it are
+ * undefined. Each entry holds a NUL-terminated string up to
+ * PW_SHM_ARGV_BYTES - 1 bytes. The runner host enforces both bounds
+ * before shm allocation. */
+#define PW_SHM_MAX_ARGV          16u
+#define PW_SHM_ARGV_BYTES        128u
+
+/* Per-stream child output capture for exec attempts. Sized to give
+ * useful diagnostic context without ballooning the slot; output past
+ * the buffer is truncated and tagged. */
+#define PW_SHM_CHILD_OUTPUT_BYTES 1024u
 
 /* Bounded string sizes inside a param slot. SBPL param names are
  * typically short identifiers; values can be paths or other long
@@ -90,6 +102,13 @@
  * should run." The worker still writes completed = 1 so the host
  * can distinguish "received but skipped" from "worker died before
  * reaching this slot."
+ *
+ * PW_ATTEMPT_EXEC_SPAWN is declared at ABI v4 so the host↔worker
+ * shm layout carries the necessary argv / child-status fields, but
+ * the worker does not yet implement the `case` for it — a slot with
+ * kind=EXEC_SPAWN currently lands in the default branch and reports
+ * the unsupported-attempt outcome. The implementation lands in a
+ * later change (the runtime exec path).
  */
 typedef enum {
     PW_ATTEMPT_NONE             = 0,
@@ -100,6 +119,7 @@ typedef enum {
     PW_ATTEMPT_FILE_ACCESS      = 5,
     PW_ATTEMPT_MACH_LOOKUP      = 6,
     PW_ATTEMPT_SYSCTL_READ      = 7,
+    PW_ATTEMPT_EXEC_SPAWN       = 8,
 } pw_attempt_kind_t;
 
 /*
@@ -145,18 +165,46 @@ typedef struct {
  * can read every other output field with regular loads — the
  * release/acquire pair on `completed` synchronizes the rest of the
  * slot.
+ *
+ * argv_count + argv carry exec-attempt input; child_pid /
+ * child_exit_code / child_term_signal / child_stdout / child_stderr
+ * carry exec-attempt output. Non-exec attempts leave the exec fields
+ * zeroed (the region is memset to zero by the host before populating
+ * any slot). Both ends of the exec wiring land in a later change;
+ * checkpoint 2 defines the layout so a future field-offset drift
+ * across host and worker is caught by the runner_abi_layout suite.
  */
 typedef struct {
     /* Inputs (host writes pre-spawn; worker reads post-apply). */
     char     step_id[PW_SHM_STEP_ID_MAX];
     uint32_t attempt_kind;                       /* pw_attempt_kind_t */
     char     target[PW_SHM_TARGET_MAX];
+    uint32_t argv_count;                         /* exec: 0..PW_SHM_MAX_ARGV */
+    char     argv[PW_SHM_MAX_ARGV][PW_SHM_ARGV_BYTES];
 
     /* Outputs (worker writes post-apply; host reads once completed). */
     int32_t  rc;
     int32_t  errno_val;
     char     observed_path[PW_SHM_OBSERVED_PATH_MAX];
     char     error[PW_SHM_ERROR_MAX];
+    /* Exec output fields (ABI v4). Populated by the run_attempt
+     * EXEC_SPAWN case. Sentinel conventions when no child ran:
+     *   child_pid          == 0  (spawn failed; errno_val carries the
+     *                              posix_spawn errno; child_exit_code
+     *                              and child_term_signal stay at -1/0)
+     *   child_exit_code    == -1 (child was signaled OR no child ran)
+     *   child_term_signal  == 0  (child clean-exited OR no child ran)
+     * When child_pid > 0 the spawn succeeded — exactly one of
+     * child_exit_code (clean exit) or child_term_signal (signal
+     * termination) carries the verdict. The drift classifier reads
+     * child_pid to distinguish a sandbox-blocked spawn (child_pid==0,
+     * errno EPERM/EACCES → strong deny) from a child non-zero exit
+     * (child_pid>0, rc!=0 → non-policy failure). */
+    int32_t  child_pid;
+    int32_t  child_exit_code;
+    int32_t  child_term_signal;
+    char     child_stdout[PW_SHM_CHILD_OUTPUT_BYTES];
+    char     child_stderr[PW_SHM_CHILD_OUTPUT_BYTES];
     _Atomic uint32_t completed;
 
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
@@ -164,12 +212,19 @@ typedef struct {
      * _Static_assert below at compile time. */
     uint8_t  reserved[PW_SHM_SLOT_BYTES
                       - PW_SHM_STEP_ID_MAX
-                      - sizeof(uint32_t)
+                      - sizeof(uint32_t)                       /* attempt_kind */
                       - PW_SHM_TARGET_MAX
-                      - sizeof(int32_t)
-                      - sizeof(int32_t)
+                      - sizeof(uint32_t)                       /* argv_count */
+                      - (PW_SHM_MAX_ARGV * PW_SHM_ARGV_BYTES)
+                      - sizeof(int32_t)                        /* rc */
+                      - sizeof(int32_t)                        /* errno_val */
                       - PW_SHM_OBSERVED_PATH_MAX
                       - PW_SHM_ERROR_MAX
+                      - sizeof(int32_t)                        /* child_pid */
+                      - sizeof(int32_t)                        /* child_exit_code */
+                      - sizeof(int32_t)                        /* child_term_signal */
+                      - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stdout */
+                      - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
                       - sizeof(_Atomic uint32_t)];
 } pw_shm_slot_t;
 

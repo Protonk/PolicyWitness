@@ -4,6 +4,7 @@
 //! that focus on runner selection, evidence capture, and JSON output.
 
 mod app_layout;
+mod augments;
 mod bundle;
 mod cli;
 mod evidence;

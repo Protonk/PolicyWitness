@@ -38,14 +38,29 @@ import Foundation
 
 /// Wire-stable layout of the shm region. Mirrors pw_probe_runner_abi.h.
 /// A future ABI bump in the C header MUST update these constants.
+/// The runner_abi_layout suite compiles a C printer against
+/// pw_probe_runner_abi.h at test time and asserts that every
+/// constant + offset here matches the C-side `sizeof` / `offsetof`,
+/// so a drift between this enum and the header fails as a test
+/// rather than a runtime shm misalignment.
 public enum PWShmLayout {
-    public static let abiVersion: UInt32   = 3
+    public static let abiVersion: UInt32   = 4
 
     public static let headerBytes: Int     = 64
-    public static let slotBytes: Int       = 2048
+    public static let slotBytes: Int       = 8192
     public static let maxSteps: Int        = 256
     public static let paramBytes: Int      = 512
     public static let maxParams: Int       = 1024
+
+    // Exec-attempt input bounds (ABI v4). argvBytes is the per-entry
+    // byte cap (including the trailing NUL); maxArgv is the number of
+    // entries the slot's argv table holds. The runner host validates
+    // both before shm allocation.
+    public static let maxArgv: Int          = 16
+    public static let argvBytes: Int        = 128
+    // Exec-attempt output bounds (ABI v4). Per-stream child output
+    // capture; output past the buffer is truncated and tagged.
+    public static let childOutputBytes: Int = 1024
 
     public static let regionBytes: Int =
         headerBytes + maxSteps * slotBytes + maxParams * paramBytes
@@ -63,20 +78,31 @@ public enum PWShmLayout {
     public static let slotsOffset: Int    = headerBytes
     public static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
 
-    // Slot field offsets (from the slot's base).
+    // Slot field offsets (from the slot's base). ABI v4 interposes
+    // argv_count + argv between the v3 inputs and the v3 outputs, so
+    // rc / errno_val / observed_path / error / completed offsets all
+    // shifted relative to v3 by (sizeof(uint32_t) + maxArgv*argvBytes)
+    // = 2052 bytes.
     public static let stepIdMax: Int           = 64
     public static let targetMax: Int           = 512
     public static let observedPathMax: Int     = 1024
     public static let errorMax: Int            = 256
 
-    public static let slotStepIdOffset: Int       = 0
-    public static let slotAttemptKindOffset: Int  = 64
-    public static let slotTargetOffset: Int       = 68
-    public static let slotRcOffset: Int           = 580
-    public static let slotErrnoOffset: Int        = 584
-    public static let slotObservedPathOffset: Int = 588
-    public static let slotErrorOffset: Int        = 1612
-    public static let slotCompletedOffset: Int    = 1868
+    public static let slotStepIdOffset: Int           = 0
+    public static let slotAttemptKindOffset: Int      = 64
+    public static let slotTargetOffset: Int           = 68
+    public static let slotArgvCountOffset: Int        = 580
+    public static let slotArgvOffset: Int             = 584
+    public static let slotRcOffset: Int               = 2632
+    public static let slotErrnoValOffset: Int         = 2636
+    public static let slotObservedPathOffset: Int     = 2640
+    public static let slotErrorOffset: Int            = 3664
+    public static let slotChildPidOffset: Int         = 3920
+    public static let slotChildExitCodeOffset: Int    = 3924
+    public static let slotChildTermSignalOffset: Int  = 3928
+    public static let slotChildStdoutOffset: Int      = 3932
+    public static let slotChildStderrOffset: Int      = 4956
+    public static let slotCompletedOffset: Int        = 5980
 
     // Param field offsets (from the param's base).
     public static let paramKeyMax: Int    = 128
@@ -86,6 +112,11 @@ public enum PWShmLayout {
 }
 
 /// Mirrors pw_attempt_kind_t in the C ABI. Wire-stable: NEVER renumber.
+///
+/// `execSpawn` is the C worker's `posix_spawn` attempt kind, dispatched
+/// from wire requests with `kind="exec", action="spawn"` via
+/// `CWorkerOrchestrator.mapAttemptKindOrNil`. See PolicyWitness.md →
+/// Attempt kinds for the wire contract.
 public enum PWAttemptKind: UInt32 {
     case none           = 0
     case fileOpenRead   = 1
@@ -95,6 +126,7 @@ public enum PWAttemptKind: UInt32 {
     case fileAccess     = 5
     case machLookup     = 6
     case sysctlRead     = 7
+    case execSpawn      = 8
 }
 
 // MARK: - C atomic shim binding
@@ -114,11 +146,19 @@ public struct CWorkerSlotInput {
     public var stepId: String
     public var attemptKind: PWAttemptKind
     public var target: String
+    /// argv[1..N] for exec attempts. `target` is argv[0]; the C worker
+    /// reads the full argv table (argv_count = 1 + args.count) out of
+    /// the shm slot and passes it straight to `posix_spawn`. Capped
+    /// per the ABI: count ≤ PWShmLayout.maxArgv - 1, per-arg UTF-8
+    /// length ≤ PWShmLayout.argvBytes - 1 (room for the trailing NUL).
+    /// Ignored for non-exec attempts.
+    public var args: [String]
 
-    public init(stepId: String, attemptKind: PWAttemptKind, target: String) {
+    public init(stepId: String, attemptKind: PWAttemptKind, target: String, args: [String] = []) {
         self.stepId = stepId
         self.attemptKind = attemptKind
         self.target = target
+        self.args = args
     }
 }
 
@@ -146,6 +186,14 @@ public struct CWorkerInput {
     /// drives the host's `runner_timeout` outcome from a real
     /// specimen. Production callers pass nil.
     public var postApplyHangMs: Int?
+    /// Optional test-seam routed to pw-probe-runner as
+    /// `--exec-child-deadline-ms <N>`. Overrides the worker's
+    /// default per-exec wall-clock cap (10s). Test cases that pin
+    /// the deadline-fired behavior pass a short value (e.g. 500)
+    /// against a long-running helper so the bounded-runtime path
+    /// runs in seconds rather than tens of seconds. Production
+    /// callers pass nil.
+    public var execChildDeadlineMs: Int?
 
     public init(workerExecutablePath: String,
                 policy: String,
@@ -154,7 +202,8 @@ public struct CWorkerInput {
                 readyByteTimeoutMs: Int = 1_000,
                 sentinelTimeoutMs: Int = 60_000,
                 exitGraceMs: Int = 1_000,
-                postApplyHangMs: Int? = nil) {
+                postApplyHangMs: Int? = nil,
+                execChildDeadlineMs: Int? = nil) {
         self.workerExecutablePath = workerExecutablePath
         self.policy = policy
         self.params = params
@@ -163,6 +212,7 @@ public struct CWorkerInput {
         self.sentinelTimeoutMs = sentinelTimeoutMs
         self.exitGraceMs = exitGraceMs
         self.postApplyHangMs = postApplyHangMs
+        self.execChildDeadlineMs = execChildDeadlineMs
     }
 }
 
@@ -173,6 +223,15 @@ public struct CWorkerSlotResult {
     public var observedPath: String?
     public var error: String?
     public var completed: Bool
+    /// Exec output fields, populated only when the slot's attempt
+    /// kind was `.execSpawn`. Non-exec slots leave these nil so the
+    /// orchestrator can branch on `childPid != nil` rather than
+    /// inspecting kind.
+    public var childPid: Int32?
+    public var childExitCode: Int32?
+    public var childTermSignal: Int32?
+    public var childStdout: String?
+    public var childStderr: String?
 }
 
 public struct CWorkerOutput {
@@ -192,6 +251,9 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     case paramCountExceeded(Int)
     case slotInputTooLong(field: String, stepId: String, max: Int)
     case paramInputTooLong(field: String, key: String, max: Int)
+    case argvCountExceeded(stepId: String, count: Int, max: Int)
+    case argvEntryTooLong(stepId: String, index: Int, max: Int)
+    case execTargetNotAbsolute(stepId: String, target: String)
     case shmSetupFailed(String)
     case pipeFailed(String)
     case spawnFailed(String)
@@ -207,6 +269,15 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
             return "slot \(stepId) \(field) exceeds ABI max (\(max) bytes including NUL)"
         case .paramInputTooLong(let field, let key, let max):
             return "param \(key) \(field) exceeds ABI max (\(max) bytes including NUL)"
+        case .argvCountExceeded(let stepId, let count, let max):
+            // The wire-visible cap is one less than maxArgv: argv[0] is
+            // the binary path (slot.target) and exec args occupy
+            // argv[1..N].
+            return "slot \(stepId) exec args count \(count) exceeds ABI max (\(max))"
+        case .argvEntryTooLong(let stepId, let index, let max):
+            return "slot \(stepId) exec args[\(index)] exceeds ABI max (\(max) bytes including NUL)"
+        case .execTargetNotAbsolute(let stepId, let target):
+            return "slot \(stepId) exec target must be an absolute path (got \(target.isEmpty ? "<empty>" : target))"
         case .shmSetupFailed(let why): return "shm setup: \(why)"
         case .pipeFailed(let why):     return "pipe: \(why)"
         case .spawnFailed(let why):    return "posix_spawn: \(why)"
@@ -249,6 +320,36 @@ public func runCWorker(_ input: CWorkerInput,
         if slot.target.utf8.count >= PWShmLayout.targetMax {
             return .failure(.slotInputTooLong(field: "target", stepId: slot.stepId,
                                               max: PWShmLayout.targetMax))
+        }
+        // Exec args validation: bound count + per-entry byte length so
+        // any overrun fails pre-spawn with a clean bad_request rather
+        // than truncating in shm. argv[0] is target; args fill
+        // argv[1..maxArgv-1], so the count cap is one less than maxArgv.
+        if slot.attemptKind == .execSpawn {
+            // Reject non-absolute exec targets pre-spawn. The contract
+            // (PWRunnerAPI.swift::PWRunnerAttempt + PolicyWitness.md →
+            // Attempt kinds) is that exec.target is an absolute path
+            // to the helper binary. A relative path would otherwise
+            // be resolved against the worker's cwd at posix_spawn
+            // time, which is sandbox-dependent and not what callers
+            // typically intend.
+            if !slot.target.hasPrefix("/") {
+                return .failure(.execTargetNotAbsolute(stepId: slot.stepId,
+                                                        target: slot.target))
+            }
+            let argsMax = PWShmLayout.maxArgv - 1
+            if slot.args.count > argsMax {
+                return .failure(.argvCountExceeded(stepId: slot.stepId,
+                                                    count: slot.args.count,
+                                                    max: argsMax))
+            }
+            for (idx, arg) in slot.args.enumerated() {
+                if arg.utf8.count >= PWShmLayout.argvBytes {
+                    return .failure(.argvEntryTooLong(stepId: slot.stepId,
+                                                       index: idx,
+                                                       max: PWShmLayout.argvBytes))
+                }
+            }
         }
     }
     for p in input.params {
@@ -323,6 +424,25 @@ public func runCWorker(_ input: CWorkerInput,
                  slot.attemptKind.rawValue)
         writeString(slotBase, offset: PWShmLayout.slotTargetOffset,
                     value: slot.target, max: PWShmLayout.targetMax)
+        // Exec slots: argv[0] is target; args occupy argv[1..argv_count-1].
+        // Other slots leave argv_count = 0 (host memset already zeroed
+        // the table) so the worker's EXEC_SPAWN case sees a clean
+        // argv_count == 0 → 1 fallback for kinds that aren't dispatched
+        // here.
+        if slot.attemptKind == .execSpawn {
+            let argvCount = 1 + slot.args.count
+            writeU32(slotBase, offset: PWShmLayout.slotArgvCountOffset, UInt32(argvCount))
+            // Write argv[0] = target.
+            let argvBase = slotBase.advanced(by: PWShmLayout.slotArgvOffset)
+            writeString(argvBase, offset: 0,
+                        value: slot.target, max: PWShmLayout.argvBytes)
+            // Write argv[1..N] = args.
+            for (j, arg) in slot.args.enumerated() {
+                writeString(argvBase,
+                            offset: (j + 1) * PWShmLayout.argvBytes,
+                            value: arg, max: PWShmLayout.argvBytes)
+            }
+        }
     }
 
     // ---- Populate params.
@@ -384,6 +504,10 @@ public func runCWorker(_ input: CWorkerInput,
     if let hangMs = input.postApplyHangMs, hangMs > 0 {
         argv.append("--post-apply-hang-ms")
         argv.append(String(hangMs))
+    }
+    if let deadlineMs = input.execChildDeadlineMs, deadlineMs > 0 {
+        argv.append("--exec-child-deadline-ms")
+        argv.append(String(deadlineMs))
     }
     var pid: pid_t = 0
     let spawnRC = withCStringArrayCopy(argv) { argvPtr in
@@ -484,18 +608,39 @@ public func runCWorker(_ input: CWorkerInput,
         let stepId = readString(slotBase, offset: PWShmLayout.slotStepIdOffset,
                                 max: PWShmLayout.stepIdMax)
         let rc = readI32(slotBase, offset: PWShmLayout.slotRcOffset)
-        let errnoVal = readI32(slotBase, offset: PWShmLayout.slotErrnoOffset)
+        let errnoVal = readI32(slotBase, offset: PWShmLayout.slotErrnoValOffset)
         let observedRaw = readString(slotBase, offset: PWShmLayout.slotObservedPathOffset,
                                      max: PWShmLayout.observedPathMax)
         let errorRaw = readString(slotBase, offset: PWShmLayout.slotErrorOffset,
                                   max: PWShmLayout.errorMax)
+
+        // Exec output fields. Only read when the input slot was exec
+        // (we trust input.slots[i].attemptKind here because the host
+        // wrote the slot's attempt_kind field with that value;
+        // re-reading the shm field would just round-trip the same
+        // value). Non-exec slots leave these nil so the orchestrator's
+        // `childPid != nil` branch works.
+        let isExec = input.slots[i].attemptKind == .execSpawn
+        let childPid:        Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildPidOffset)        : nil
+        let childExitCode:   Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildExitCodeOffset)   : nil
+        let childTermSignal: Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildTermSignalOffset) : nil
+        let childStdout: String? = isExec ? readString(slotBase, offset: PWShmLayout.slotChildStdoutOffset,
+                                                       max: PWShmLayout.childOutputBytes) : nil
+        let childStderr: String? = isExec ? readString(slotBase, offset: PWShmLayout.slotChildStderrOffset,
+                                                       max: PWShmLayout.childOutputBytes) : nil
+
         slotResults.append(CWorkerSlotResult(
             stepId: stepId,
             rc: rc,
             errnoVal: errnoVal,
             observedPath: observedRaw.isEmpty ? nil : observedRaw,
             error: errorRaw.isEmpty ? nil : errorRaw,
-            completed: completed != 0
+            completed: completed != 0,
+            childPid: childPid,
+            childExitCode: childExitCode,
+            childTermSignal: childTermSignal,
+            childStdout: (childStdout?.isEmpty ?? true) ? nil : childStdout,
+            childStderr: (childStderr?.isEmpty ?? true) ? nil : childStderr
         ))
     }
 

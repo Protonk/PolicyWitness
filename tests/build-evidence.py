@@ -294,8 +294,30 @@ def main() -> int:
                     sib_entry["entitlements_error"] = sib_err
                 entries.append(sib_entry)
 
+    # Named SBPL augments under Contents/Resources/Augments/. Augments
+    # are controller-resolved fragments that mutate the policy bytes
+    # the runner compiles, so downstream consumers need provenance for
+    # the shipped contents (sha256) just as they do for Mach-O
+    # helpers. Augments are not executables, so we omit lc_uuid /
+    # entitlements / symbol-table fields.
+    augments_dir = contents_dir / "Resources" / "Augments"
+    if augments_dir.exists():
+        for augment_path in sorted(augments_dir.glob("*.sb")):
+            if not augment_path.is_file():
+                continue
+            entries.append({
+                "id": f"augments/{augment_path.name}",
+                "kind": "augment",
+                "rel_path": rel_path(app_bundle, augment_path),
+                "sha256": sha256_file(augment_path),
+            })
+
     symbols_entries: list[Dict[str, Any]] = []
     for entry in entries:
+        # Augments and other non-Mach-O resources have no exported
+        # symbol table; skip them rather than asking `nm` to fail.
+        if entry.get("kind") == "augment":
+            continue
         abs_path = app_bundle / entry["rel_path"]
         syms, err = exported_pw_symbols(abs_path)
         if err:

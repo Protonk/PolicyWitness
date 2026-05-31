@@ -695,6 +695,101 @@ PY
   test_pass "file/access failure surfaces as access_failed with errno preserved" "{\"stdout\":\"${run_stdout}\"}"
 }
 
+# ---- test_id: exec_attempt_without_baseline_fails_cleanly ----------------
+#
+# Drives the wire+orchestrator integration for the new `exec` /
+# `spawn` attempt kind end-to-end. Under `(deny default)` with no
+# augment, posix_spawn is denied by the kernel sandbox; the
+# orchestrator must surface this as outcome=exec_failed with
+# child_pid==0 and errno∈{EPERM,EACCES}. That sentinel pair is the
+# clean "sandbox blocked spawn" tell — anything else (child_pid>0,
+# or a different errno, or a setup-failure error string) means the
+# resource-setup model has regressed and the witness is no longer
+# honest.
+#
+# Augmented-success coverage (an exec attempt that actually runs
+# under deny-default + the shipped exec_baseline augment) lands
+# alongside the empirical exec_baseline.sb in checkpoint 4.
+
+run_exec_attempt_without_baseline_fails_cleanly() {
+  local test_id="exec_attempt_without_baseline_fails_cleanly"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "(deny default) + exec /usr/bin/true → exec_failed with child_pid=0, errno EPERM/EACCES from posix_spawn"
+
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_exec_unaugmented",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"},
+  "probe_plan": [{
+    "step_id": "s_exec",
+    "sandbox_check": {"operation": "process-exec", "filter": {"kind": "path", "value": "/usr/bin/true"}},
+    "attempt": {"kind": "exec", "action": "spawn", "target": "/usr/bin/true"}
+  }]
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+
+# Run itself completed cleanly — the worker spawned, applied the
+# policy, ran the attempt (which was denied), and exited.
+assert r["normalized_outcome"] == "ok", "outcome={0}".format(r["normalized_outcome"])
+assert r["runner_subprocess"]["exit_code"] == 0, \
+    "worker should clean-exit even when its attempt is denied"
+
+s = r["steps"][0]
+a = s["attempt"]
+assert a["outcome"] == "exec_failed", \
+    "expected outcome=exec_failed, got {0!r}".format(a["outcome"])
+assert a["rc"] == -1, "spawn-failure rc sentinel: expected -1, got {0}".format(a["rc"])
+# THE LOAD-BEARING PIN: child_pid must be 0. If it's > 0, spawn
+# actually happened and the failure was the child's own exit code —
+# that would mean the worker's resource-setup model leaked
+# post-apply or the deny default policy isn't blocking spawn.
+assert a["child_pid"] == 0, \
+    "child_pid must be 0 when posix_spawn was blocked; got {0}".format(a["child_pid"])
+# EPERM (1) or EACCES (13) from posix_spawn. Anything else means
+# the failure came from a different source (e.g., a pre-spawn
+# setup syscall) — also a witness-honesty regression.
+assert a["errno"] in (1, 13), \
+    "expected EPERM/EACCES from posix_spawn; got errno={0}".format(a["errno"])
+# Error string should identify posix_spawn — pins the message
+# format so a future refactor can't silently move the failure
+# attribution.
+assert a.get("error") and "posix_spawn" in a["error"], \
+    "error should identify posix_spawn; got {0!r}".format(a.get("error"))
+# child_exit_code stays at the "no child ran" sentinel.
+assert a["child_exit_code"] == -1, \
+    "child_exit_code sentinel for spawn failure: expected -1, got {0}".format(a["child_exit_code"])
+assert a["child_term_signal"] == 0, \
+    "child_term_signal sentinel for spawn failure: expected 0, got {0}".format(a["child_term_signal"])
+
+print("ok: unaugmented exec fails cleanly via posix_spawn — child_pid=0, errno {0}".format(a["errno"]))
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "unaugmented exec under (deny default) → posix_spawn EPERM/EACCES with child_pid=0" "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_duplicate_step_id_rejected
 run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
@@ -702,3 +797,4 @@ run_drift_null_for_non_policy_failure
 run_sandbox_check_pid_matches_worker
 run_drift_null_for_dac_eacces
 run_access_failure_classified
+run_exec_attempt_without_baseline_fails_cleanly

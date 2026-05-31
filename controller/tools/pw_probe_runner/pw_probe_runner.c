@@ -34,8 +34,11 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <mach/mach.h>
+#include <poll.h>
 #include <sandbox.h>
 #include <servers/bootstrap.h>
+#include <signal.h>
+#include <spawn.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,10 +48,27 @@
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "pw_probe_runner_abi.h"
+
+/*
+ * Bounded child deadline for exec attempts. The worker enforces a
+ * per-attempt wall-clock cap so a hung helper can't escalate into
+ * the host's worker-level sentinel timeout (which would also lose
+ * the per-step error attribution). When the deadline fires the
+ * worker SIGKILLs the child's process group and records
+ * "child exceeded N-second deadline" as the slot error. Capped
+ * well under the host's default sentinelTimeoutMs (60s) so the
+ * per-attempt failure has time to drain and surface before the
+ * host gives up on the whole worker. Overridable per-run via the
+ * `--exec-child-deadline-ms` test seam. */
+#define PW_EXEC_CHILD_DEADLINE_MS_DEFAULT 10000L
+#define PW_EXEC_CHILD_DEADLINE_MS_MAX     60000L
+
+static long g_exec_child_deadline_ms = PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
@@ -86,6 +106,9 @@ typedef struct {
      * runner_timeout outcome is reachable from a real test specimen.
      * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
+    /* Per-exec wall-clock budget. Test seam — production callers
+     * leave this at 0 to use PW_EXEC_CHILD_DEADLINE_MS_DEFAULT. */
+    long exec_child_deadline_ms;
 } pw_args_t;
 
 static void print_usage(FILE *to) {
@@ -106,9 +129,14 @@ static void print_usage(FILE *to) {
         "                         flipping the `done` sentinel. Drives the\n"
         "                         host's runner_timeout outcome from a\n"
         "                         real specimen.\n"
+        "  --exec-child-deadline-ms N  Optional test-seam. Per-exec\n"
+        "                         attempt wall-clock cap; default %ld ms.\n"
+        "                         Helpers exceeding the deadline are\n"
+        "                         SIGKILL'd (process group) and the slot\n"
+        "                         reports the deadline in error.\n"
         "\n"
         "  --version              Print ABI version and exit.\n",
-        PW_SHM_MAX_STEPS);
+        PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
 }
 
 static int parse_int_arg(const char *value, long *out) {
@@ -122,18 +150,20 @@ static int parse_int_arg(const char *value, long *out) {
 }
 
 static int parse_args(int argc, char **argv, pw_args_t *args) {
-    args->shm_fd             = -1;
-    args->ready_fd           = -1;
-    args->policy_fd          = STDIN_FILENO;
-    args->step_count         = 0;
-    args->post_apply_hang_ms = 0;
+    args->shm_fd                 = -1;
+    args->ready_fd               = -1;
+    args->policy_fd              = STDIN_FILENO;
+    args->step_count             = 0;
+    args->post_apply_hang_ms     = 0;
+    args->exec_child_deadline_ms = 0;
 
     int i = 1;
     while (i < argc) {
         const char *flag = argv[i];
         if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
-            strcmp(flag, "--post-apply-hang-ms") == 0) {
+            strcmp(flag, "--post-apply-hang-ms") == 0 ||
+            strcmp(flag, "--exec-child-deadline-ms") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
                 return -1;
@@ -170,6 +200,14 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->post_apply_hang_ms = v;
+            } else if (strcmp(flag, "--exec-child-deadline-ms") == 0) {
+                if (v <= 0 || v > PW_EXEC_CHILD_DEADLINE_MS_MAX) {
+                    fprintf(stderr,
+                            "pw-probe-runner: --exec-child-deadline-ms %ld out of range (1..%ld)\n",
+                            v, PW_EXEC_CHILD_DEADLINE_MS_MAX);
+                    return -1;
+                }
+                args->exec_child_deadline_ms = v;
             } else {
                 if (v < 0 || (unsigned long)v > (unsigned long)PW_SHM_MAX_STEPS) {
                     fprintf(stderr, "pw-probe-runner: --step-count %ld out of range\n", v);
@@ -399,12 +437,461 @@ static void attempt_sysctl_read(pw_shm_slot_t *slot) {
     slot->errno_val = 0;
 }
 
+/* ---- exec attempt machinery (ABI v4) ------------------------------------ */
+
+/*
+ * Exec attempts need pipes + posix_spawn_file_actions to capture
+ * stdout/stderr. Both of those are syscalls/allocations that we MUST
+ * perform pre-apply so the witness honestly reports "the sandbox
+ * blocked posix_spawn", not "the worker couldn't even set up the
+ * observation frame." See ATTEMPT-KIND-PLAN.md → Phase 2 → Critical
+ * design decision.
+ *
+ * Resources are parallel to the slot array (index-aligned). Slots
+ * whose kind is not PW_ATTEMPT_EXEC_SPAWN leave their resource entry
+ * at its default zero state and never visit attempt_exec_spawn.
+ */
+typedef struct {
+    int stdout_rfd;                 /* parent's read end; -1 when unused */
+    int stdout_wfd;                 /* parent's copy of child's stdout; closed post-spawn */
+    int stderr_rfd;
+    int stderr_wfd;
+    posix_spawn_file_actions_t actions;
+    posix_spawnattr_t           attr;
+    int actions_initialized;        /* 1 if posix_spawn_file_actions_init was called */
+    int attr_initialized;           /* 1 if posix_spawnattr_init was called */
+    int setup_failed;               /* 1 if pre-apply setup failed for this slot */
+    int setup_errno;
+    char setup_error[PW_SHM_ERROR_MAX];
+} pw_exec_resources_t;
+
+static pw_exec_resources_t exec_resources[PW_SHM_MAX_STEPS];
+
+static void exec_resources_reset_all(void) {
+    for (uint32_t i = 0; i < PW_SHM_MAX_STEPS; i++) {
+        exec_resources[i].stdout_rfd          = -1;
+        exec_resources[i].stdout_wfd          = -1;
+        exec_resources[i].stderr_rfd          = -1;
+        exec_resources[i].stderr_wfd          = -1;
+        exec_resources[i].actions_initialized = 0;
+        exec_resources[i].attr_initialized    = 0;
+        exec_resources[i].setup_failed        = 0;
+        exec_resources[i].setup_errno         = 0;
+        exec_resources[i].setup_error[0]      = '\0';
+    }
+}
+
+/* Pre-apply: walk every slot, and for each exec slot create both pipes
+ * and build the posix_spawn_file_actions handle that wires them to the
+ * child's STDOUT/STDERR. Per-slot failures are recorded into the
+ * resource entry (and surfaced by attempt_exec_spawn at execution
+ * time) so a transient resource shortage on one exec slot doesn't kill
+ * the whole run.
+ *
+ * IMPORTANT: this MUST be called before sandbox_apply. After
+ * sandbox_apply the worker should only call posix_spawn + close/poll/
+ * read/waitpid; opening new pipes post-apply would muddy the
+ * "sandbox blocked spawn" reading. */
+static void setup_exec_resources(pw_shm_slot_t *slots, uint32_t step_count) {
+    for (uint32_t i = 0; i < step_count; i++) {
+        if (slots[i].attempt_kind != PW_ATTEMPT_EXEC_SPAWN) continue;
+        pw_exec_resources_t *r = &exec_resources[i];
+
+        int out_pipe[2] = {-1, -1};
+        int err_pipe[2] = {-1, -1};
+        if (pipe(out_pipe) != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "pipe(stdout): %s", strerror(errno));
+            continue;
+        }
+        if (pipe(err_pipe) != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "pipe(stderr): %s", strerror(errno));
+            close(out_pipe[0]); close(out_pipe[1]);
+            continue;
+        }
+
+        r->stdout_rfd = out_pipe[0];
+        r->stdout_wfd = out_pipe[1];
+        r->stderr_rfd = err_pipe[0];
+        r->stderr_wfd = err_pipe[1];
+
+        if (posix_spawn_file_actions_init(&r->actions) != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "posix_spawn_file_actions_init: %s", strerror(errno));
+            close(out_pipe[0]); close(out_pipe[1]);
+            close(err_pipe[0]); close(err_pipe[1]);
+            r->stdout_rfd = r->stdout_wfd = r->stderr_rfd = r->stderr_wfd = -1;
+            continue;
+        }
+        r->actions_initialized = 1;
+
+        if (posix_spawnattr_init(&r->attr) != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "posix_spawnattr_init: %s", strerror(errno));
+            continue;
+        }
+        r->attr_initialized = 1;
+
+        /*
+         * Two attr flags carry the witness-honesty guarantees:
+         *
+         *   POSIX_SPAWN_CLOEXEC_DEFAULT — Darwin extension. Closes
+         *     every inherited FD in the child EXCEPT those mentioned
+         *     in this file_actions handle. Without this, the helper
+         *     would inherit the worker's shm fd (FD 3 carries the
+         *     result region), the policy-pipe read end (would expose
+         *     the SBPL source), and every OTHER exec slot's pipe ends.
+         *     With it, the child sees exactly the FDs we explicitly
+         *     dup/open below — nothing more.
+         *
+         *   POSIX_SPAWN_SETPGROUP + setpgroup(0) — puts the child in
+         *     its own process group with pgid == child_pid. Lets the
+         *     deadline path kill(-pgid, SIGKILL) the whole helper
+         *     tree (any sub-children the helper spawns) rather than
+         *     leaking grandchildren.
+         */
+        short flags = (short)(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP);
+        if (posix_spawnattr_setflags(&r->attr, flags) != 0 ||
+            posix_spawnattr_setpgroup(&r->attr, 0) != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno ? errno : EINVAL;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "posix_spawnattr_set*: %s", strerror(errno));
+            continue;
+        }
+
+        /* File actions: child gets stdin from /dev/null (so a helper
+         * that read(STDIN) gets EOF rather than blocking on an
+         * inherited fd that doesn't exist under CLOEXEC_DEFAULT),
+         * stdout/stderr dup'd from our pipes. addopen runs in the
+         * child after fork, so the FD it produces is one of the
+         * CLOEXEC_DEFAULT exceptions. */
+        int rc = 0;
+        rc |= posix_spawn_file_actions_addopen(&r->actions, STDIN_FILENO,
+                                                "/dev/null", O_RDONLY, 0);
+        rc |= posix_spawn_file_actions_adddup2(&r->actions, out_pipe[1], STDOUT_FILENO);
+        rc |= posix_spawn_file_actions_adddup2(&r->actions, err_pipe[1], STDERR_FILENO);
+        /* Close the originals after the adddup2 so the child doesn't
+         * carry the pipe-source fds redundantly. CLOEXEC_DEFAULT would
+         * close them anyway but we're explicit so future readers see
+         * the intent. */
+        rc |= posix_spawn_file_actions_addclose(&r->actions, out_pipe[1]);
+        rc |= posix_spawn_file_actions_addclose(&r->actions, err_pipe[1]);
+        rc |= posix_spawn_file_actions_addclose(&r->actions, out_pipe[0]);
+        rc |= posix_spawn_file_actions_addclose(&r->actions, err_pipe[0]);
+        if (rc != 0) {
+            r->setup_failed = 1;
+            r->setup_errno = errno ? errno : EINVAL;
+            snprintf(r->setup_error, sizeof(r->setup_error),
+                     "posix_spawn_file_actions_add*: rc=%d", rc);
+            /* Leave actions_initialized=1 so the destroy in cleanup
+             * still runs and frees any partial state. */
+        }
+    }
+}
+
+/* Drain a single stream into the slot buffer. Returns updated `*used`
+ * via the in/out parameter, and sets *overflow when content exceeded
+ * the buffer. Reads up to one buffered chunk per call so the caller's
+ * poll loop can interleave both streams. */
+static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow) {
+    char buf[256];
+    ssize_t n;
+    for (;;) {
+        n = read(fd, buf, sizeof(buf));
+        if (n < 0 && errno == EINTR) continue;
+        break;
+    }
+    if (n <= 0) return (int)n;            /* 0 = EOF; <0 = error */
+    size_t room = (cap > *used + 1u) ? (cap - 1u - *used) : 0u;
+    size_t to_copy = ((size_t)n < room) ? (size_t)n : room;
+    if (to_copy > 0) memcpy(dst + *used, buf, to_copy);
+    *used += to_copy;
+    if ((size_t)n > to_copy) *overflow = 1;
+    return (int)n;
+}
+
+static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
+    /* Sentinel conventions when no child runs (header documents these). */
+    slot->child_pid          = 0;
+    slot->child_exit_code    = -1;
+    slot->child_term_signal  = 0;
+    slot->child_stdout[0]    = '\0';
+    slot->child_stderr[0]    = '\0';
+
+    if (r->setup_failed) {
+        slot->rc = -1;
+        slot->errno_val = r->setup_errno;
+        size_t n = strnlen(r->setup_error, sizeof(r->setup_error));
+        if (n >= sizeof(slot->error)) n = sizeof(slot->error) - 1u;
+        memcpy(slot->error, r->setup_error, n);
+        slot->error[n] = '\0';
+        return;
+    }
+    if (!r->actions_initialized) {
+        slot->rc = -1;
+        slot->errno_val = EINVAL;
+        snprintf(slot->error, sizeof(slot->error),
+                 "exec slot: file_actions not prepared");
+        return;
+    }
+
+    /* Build argv from slot->target + slot->argv[1..argv_count-1].
+     * The host always writes argv[0] = target plus the caller's args,
+     * so argv_count is at least 1 when the host populated the slot;
+     * be defensive (use slot->target as the sole entry) if a slot
+     * somehow arrives with argv_count == 0. */
+    uint32_t total = slot->argv_count;
+    if (total == 0u) total = 1u;
+    if (total > PW_SHM_MAX_ARGV) total = PW_SHM_MAX_ARGV;
+
+    char *argv_local[PW_SHM_MAX_ARGV + 1];
+    /* Defensive NUL-terminate every populated argv entry; the host
+     * bounds these but a stray missing NUL would let posix_spawn
+     * read past the slot field. */
+    argv_local[0] = slot->target;
+    for (uint32_t i = 1u; i < total; i++) {
+        slot->argv[i][PW_SHM_ARGV_BYTES - 1u] = '\0';
+        argv_local[i] = slot->argv[i];
+    }
+    argv_local[total] = NULL;
+
+    /* Pass an EMPTY environment per the plan: the exec attempt is a
+     * witness for the kernel's sandbox enforcement against
+     * posix_spawn, not for environment-variable behavior. Inheriting
+     * the worker's environ would leak dyld/DYLD_* settings and TMPDIR
+     * into the helper. macOS dyld uses the shared cache without env
+     * for system binaries; helpers that rely on PATH or HOME must
+     * pass absolute paths via target/args anyway. */
+    static char *empty_envp[] = { NULL };
+
+    pid_t child = 0;
+    int spawn_rc = posix_spawn(&child, slot->target, &r->actions, &r->attr,
+                               argv_local, empty_envp);
+    if (spawn_rc != 0) {
+        /* posix_spawn returns an errno-style value rather than -1+errno. */
+        slot->rc = -1;
+        slot->errno_val = spawn_rc;
+        snprintf(slot->error, sizeof(slot->error),
+                 "posix_spawn: %s", strerror(spawn_rc));
+        return;
+    }
+
+    slot->child_pid = (int32_t)child;
+    /* The child is now its own process-group leader (pgid == child)
+     * thanks to POSIX_SPAWN_SETPGROUP. Stash the pgid so the deadline
+     * path can SIGKILL the whole tree. */
+    pid_t child_pgid = child;
+
+    /* Close the parent's copy of the write ends. The child holds them
+     * (via the dup2'd STDOUT/STDERR), and once the child exits the
+     * kernel closes its references; the read end then sees EOF. If we
+     * leave the parent's write ends open here, the read end would
+     * never see EOF and the poll loop would spin until the bounded
+     * deadline. */
+    if (r->stdout_wfd >= 0) { close(r->stdout_wfd); r->stdout_wfd = -1; }
+    if (r->stderr_wfd >= 0) { close(r->stderr_wfd); r->stderr_wfd = -1; }
+
+    /* Compute a monotonic deadline. A hung helper would otherwise
+     * escalate into a worker-level sentinel timeout (host SIGKILLs
+     * the worker, error attribution lost). The deadline gives us a
+     * chance to surface "child exceeded deadline" cleanly while
+     * still under the host's larger budget. */
+    struct timespec deadline_ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &deadline_ts) != 0) {
+        /* Should not happen on any supported macOS. Fall back to a
+         * permissive deadline so we still bound the run rather than
+         * blocking forever. */
+        deadline_ts.tv_sec = 0; deadline_ts.tv_nsec = 0;
+    }
+    long deadline_ms_total = g_exec_child_deadline_ms;
+    deadline_ts.tv_sec  += deadline_ms_total / 1000L;
+    deadline_ts.tv_nsec += (deadline_ms_total % 1000L) * 1000000L;
+    if (deadline_ts.tv_nsec >= 1000000000L) {
+        deadline_ts.tv_sec += 1;
+        deadline_ts.tv_nsec -= 1000000000L;
+    }
+
+    /* Drain stdout + stderr interleaved, bounded by the deadline. */
+    size_t stdout_n = 0, stderr_n = 0;
+    int stdout_overflow = 0, stderr_overflow = 0;
+    int stdout_open = 1, stderr_open = 1;
+    int deadline_expired = 0;
+
+    while (stdout_open || stderr_open) {
+        struct timespec now_ts;
+        clock_gettime(CLOCK_MONOTONIC, &now_ts);
+        long remaining_ms =
+            (long)(deadline_ts.tv_sec  - now_ts.tv_sec)  * 1000L +
+            (long)(deadline_ts.tv_nsec - now_ts.tv_nsec) / 1000000L;
+        if (remaining_ms <= 0) { deadline_expired = 1; break; }
+
+        struct pollfd pfds[2];
+        nfds_t npfds = 0;
+        int stdout_idx = -1, stderr_idx = -1;
+        if (stdout_open) {
+            pfds[npfds].fd = r->stdout_rfd;
+            pfds[npfds].events = POLLIN;
+            pfds[npfds].revents = 0;
+            stdout_idx = (int)npfds; npfds++;
+        }
+        if (stderr_open) {
+            pfds[npfds].fd = r->stderr_rfd;
+            pfds[npfds].events = POLLIN;
+            pfds[npfds].revents = 0;
+            stderr_idx = (int)npfds; npfds++;
+        }
+        /* Cap each poll() at the remaining budget so we revisit the
+         * deadline check at least once per second. */
+        int poll_ms = (remaining_ms > 1000L) ? 1000 : (int)remaining_ms;
+        int pr = poll(pfds, npfds, poll_ms);
+        if (pr < 0 && errno == EINTR) continue;
+        if (pr < 0) break;                /* poll error — abandon drain */
+        if (pr == 0) continue;            /* short poll, retry under deadline */
+
+        if (stdout_idx >= 0 && (pfds[stdout_idx].revents & (POLLIN | POLLHUP))) {
+            int n = drain_one(r->stdout_rfd, slot->child_stdout,
+                              sizeof(slot->child_stdout), &stdout_n, &stdout_overflow);
+            if (n <= 0) stdout_open = 0;
+        } else if (stdout_idx >= 0 &&
+                   (pfds[stdout_idx].revents & (POLLERR | POLLNVAL))) {
+            stdout_open = 0;
+        }
+        if (stderr_idx >= 0 && (pfds[stderr_idx].revents & (POLLIN | POLLHUP))) {
+            int n = drain_one(r->stderr_rfd, slot->child_stderr,
+                              sizeof(slot->child_stderr), &stderr_n, &stderr_overflow);
+            if (n <= 0) stderr_open = 0;
+        } else if (stderr_idx >= 0 &&
+                   (pfds[stderr_idx].revents & (POLLERR | POLLNVAL))) {
+            stderr_open = 0;
+        }
+    }
+
+    /* Append truncation marker when content overflowed the buffer.
+     * The marker eats the tail of the buffer so the resulting string
+     * stays NUL-terminated within PW_SHM_CHILD_OUTPUT_BYTES. */
+    static const char marker[] = "\n... [truncated]";
+    const size_t mlen = sizeof(marker) - 1u;
+    if (stdout_overflow) {
+        size_t start = (stdout_n + mlen + 1u > sizeof(slot->child_stdout))
+            ? sizeof(slot->child_stdout) - 1u - mlen
+            : stdout_n;
+        memcpy(slot->child_stdout + start, marker, mlen);
+        stdout_n = start + mlen;
+    }
+    if (stdout_n >= sizeof(slot->child_stdout)) stdout_n = sizeof(slot->child_stdout) - 1u;
+    slot->child_stdout[stdout_n] = '\0';
+
+    if (stderr_overflow) {
+        size_t start = (stderr_n + mlen + 1u > sizeof(slot->child_stderr))
+            ? sizeof(slot->child_stderr) - 1u - mlen
+            : stderr_n;
+        memcpy(slot->child_stderr + start, marker, mlen);
+        stderr_n = start + mlen;
+    }
+    if (stderr_n >= sizeof(slot->child_stderr)) stderr_n = sizeof(slot->child_stderr) - 1u;
+    slot->child_stderr[stderr_n] = '\0';
+
+    /* Reap. WNOHANG first to find out whether the drain loop exited
+     * because the child finished or because the deadline fired with
+     * the child still alive. */
+    int status = 0;
+    pid_t reaped = waitpid(child, &status, WNOHANG);
+    if (reaped == 0) {
+        /* Still alive — either deadline_expired is set, or the drain
+         * loop saw an error. In either case the child has to go now;
+         * a runaway helper must not be allowed to outlive its
+         * attempt slot. SIGKILL the whole process group to take down
+         * any sub-children too. */
+        if (kill(-child_pgid, SIGKILL) != 0 && errno != ESRCH) {
+            /* Fall back to killing just the leader. ESRCH means the
+             * pgroup was already empty (e.g., the leader raced with
+             * us into exit) — harmless. */
+            (void)kill(child, SIGKILL);
+        }
+        /* Block until the kernel reports the signaled child. SIGKILL
+         * is uncatchable, so this completes promptly. */
+        do {
+            reaped = waitpid(child, &status, 0);
+        } while (reaped < 0 && errno == EINTR);
+    } else if (reaped < 0) {
+        if (errno == EINTR) {
+            /* Retry blocking, since WNOHANG retries on EINTR are
+             * unusual and most callers expect a final answer. */
+            do {
+                reaped = waitpid(child, &status, 0);
+            } while (reaped < 0 && errno == EINTR);
+        }
+    }
+
+    /* Read ends are no longer needed; close before recording the
+     * result. */
+    if (r->stdout_rfd >= 0) { close(r->stdout_rfd); r->stdout_rfd = -1; }
+    if (r->stderr_rfd >= 0) { close(r->stderr_rfd); r->stderr_rfd = -1; }
+
+    if (reaped < 0) {
+        slot->rc = -1;
+        slot->errno_val = errno;
+        snprintf(slot->error, sizeof(slot->error),
+                 "waitpid: %s", strerror(errno));
+        return;
+    }
+
+    if (WIFEXITED(status)) {
+        slot->child_exit_code   = WEXITSTATUS(status);
+        slot->child_term_signal = 0;
+        slot->rc                = slot->child_exit_code;
+        slot->errno_val         = 0;
+        if (deadline_expired) {
+            /* Edge case: the helper happened to finish between the
+             * deadline-expired check and the WNOHANG waitpid. Surface
+             * the natural exit code but still mark the deadline in
+             * the error string so a downstream consumer can see that
+             * the run was bounded. */
+            snprintf(slot->error, sizeof(slot->error),
+                     "child completed at the %ld-second deadline boundary",
+                     deadline_ms_total / 1000L);
+        }
+    } else if (WIFSIGNALED(status)) {
+        slot->child_exit_code   = -1;
+        slot->child_term_signal = WTERMSIG(status);
+        slot->rc                = -1;
+        slot->errno_val         = 0;
+        if (deadline_expired && slot->child_term_signal == SIGKILL) {
+            snprintf(slot->error, sizeof(slot->error),
+                     "child exceeded %ld-second deadline; SIGKILL'd",
+                     deadline_ms_total / 1000L);
+        } else {
+            snprintf(slot->error, sizeof(slot->error),
+                     "child signaled: signal=%d", slot->child_term_signal);
+        }
+    } else {
+        slot->rc                = -1;
+        slot->errno_val         = 0;
+        snprintf(slot->error, sizeof(slot->error),
+                 "child did not exit or signal: status=%d", status);
+    }
+}
+
 /* Dispatch on attempt_kind. Initializes slot outputs to "ok defaults"
  * before the per-kind helper runs so a kind that leaves a field
  * untouched lands at a known state. `completed` is the LAST write
  * (release ordering) so the host's acquire-load of completed
- * synchronizes with every other slot write. */
-static void run_attempt(pw_shm_slot_t *slot) {
+ * synchronizes with every other slot write.
+ *
+ * The slot_idx parameter is required by PW_ATTEMPT_EXEC_SPAWN to find
+ * its pre-apply-prepared pipe/file_actions resources; other kinds
+ * ignore it. */
+static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx) {
     slot->rc = 0;
     slot->errno_val = 0;
     slot->observed_path[0] = '\0';
@@ -419,6 +906,9 @@ static void run_attempt(pw_shm_slot_t *slot) {
     case PW_ATTEMPT_FILE_ACCESS:      attempt_file_access(slot);          break;
     case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
     case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;
+    case PW_ATTEMPT_EXEC_SPAWN:
+        attempt_exec_spawn(slot, &exec_resources[slot_idx]);
+        break;
     default:
         slot->rc = -1;
         slot->errno_val = ENOSYS;
@@ -533,6 +1023,19 @@ int main(int argc, char **argv) {
         params[i].value[PW_SHM_PARAM_VALUE_MAX - 1u] = '\0';
     }
 
+    /* Pre-apply: for every exec slot, create stdout/stderr pipes and
+     * build the posix_spawn_file_actions handle that wires them to the
+     * child. Doing this before sandbox_apply is load-bearing: the
+     * post-apply worker should only call posix_spawn + close/poll/
+     * read/waitpid so a sandbox-denied spawn surfaces cleanly rather
+     * than being masked by a denied pipe() or denied
+     * posix_spawn_file_actions_init(). */
+    if (args.exec_child_deadline_ms > 0) {
+        g_exec_child_deadline_ms = args.exec_child_deadline_ms;
+    }
+    exec_resources_reset_all();
+    setup_exec_resources(slots, step_count);
+
     /* Read policy text into a fixed buffer. SBPL policies are
      * typically small (KiB); cap at 256 KiB so a runaway producer
      * fails loudly rather than allocating unboundedly or silently
@@ -623,7 +1126,7 @@ int main(int argc, char **argv) {
     /* Run attempts. Dispatch by attempt_kind; each helper writes
      * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
-        run_attempt(&slots[i]);
+        run_attempt(&slots[i], i);
     }
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a

@@ -21,10 +21,15 @@ Two cases, each `result.ok == false` and `runner_subprocess == null`:
   structure to pass the Rust preflight. Asserts
   `normalized_outcome == "bad_request"` and the error mentions
   "request decode failed".
-- **`unknown_filter_kind`** — Swift-decodable spec whose probe step has
-  `sandbox_check.filter.kind == "not-a-real-kind"`. Asserts
-  `normalized_outcome == "bad_request"` and the error identifies the
-  bad kind. Exercises the `validateSandboxChecks` branch.
+- **`missing_required_filter_value`** — Swift-decodable spec whose probe
+  step has `sandbox_check.filter.kind == "path"` with an empty
+  `value`. Asserts `normalized_outcome == "bad_request"` and the error
+  mentions "filter.value required". Exercises the
+  `validateSandboxChecks` value-required branch.
+  (Was `unknown_filter_kind`; unknown kinds now downgrade to per-step
+  `prediction_unavailable` rather than killing the plan, so the
+  remaining filter-side `bad_request` trigger is the
+  missing-required-value check.)
 
 ## Fixtures
 

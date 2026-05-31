@@ -120,8 +120,16 @@ recipe, and the rules for adding a new override.
 
 The runner consumes a `PWRunnerRunSpec` which contains:
 
-- `policy`: `sbpl` source (with optional `params`)
+- `policy`: `sbpl` source (with optional `params` and `augments`)
 - `probe_plan`: ordered probe steps (sandbox_check + attempt)
+
+`policy.augments` is resolved upstream by the controller (the runner
+itself is augment-agnostic — by the time a request reaches
+`PWRunnerService.runSpecimen`, the field has been stripped and any
+named augment contents have been spliced onto `policy.sbpl_source`).
+See PolicyWitness.md → Augments for the wire surface and the
+single shipped augment (`exec_baseline`, currently a no-op
+placeholder).
 
 ## Run result highlights
 

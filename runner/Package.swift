@@ -54,6 +54,7 @@ let package = Package(
                 "README.md",
                 "PWSandboxCheckShim.c",
                 "PWCWorkerShim.c",
+                "augments",
                 "include",
                 "include_cworker",
                 "runner-client",

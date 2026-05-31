@@ -111,6 +111,12 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
 - `data.policy_preflight`: SBPL compile report from `sbpl-preflight` (best-effort)
+- `data.policy_augmentation`: present only when `policy.augments` (see
+  PolicyWitness.md → Augments) was non-empty. Records
+  `{ applied: [name, ...], original_sha256, applied_sha256 }` so
+  downstream readers can distinguish the caller's submitted source
+  from the spliced source the runner actually compiled. Absent on
+  every run that did not opt into augments.
 - `data.runner_startup_diagnostics`: extra context when XPC startup fails
   (rare in practice — the unsandboxed host always replies unless launchd
   or codesign reject the bundle outright)

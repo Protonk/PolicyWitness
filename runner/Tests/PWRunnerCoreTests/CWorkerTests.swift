@@ -395,5 +395,341 @@ func runCWorkerTests(_ tk: TestKit) {
                             "host should not need SIGKILL — worker exits cleanly post-hang")
             try expectEqual(out.exitCode, Int32(0))
         }
+
+        // ---- exec attempt: happy path (/usr/bin/true) ---------------------------
+        // Spawn succeeds, child clean-exits 0, sentinels look exactly
+        // like the "no child output" success state.
+        tk.run("exec /usr/bin/true under (allow default) → ok, child_pid>0, child_exit_code=0") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_true",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/true")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            try expectTrue(out.applied)
+            try expectTrue(out.done)
+            try expectEqual(out.slots.count, 1)
+            let s = out.slots[0]
+            try expectTrue(s.completed)
+            try expectEqual(s.rc, Int32(0), "/usr/bin/true returns 0")
+            try expectEqual(s.errnoVal, Int32(0))
+            try expectNotNil(s.childPid)
+            try expectTrue((s.childPid ?? 0) > 0, "child_pid should be > 0 on successful spawn")
+            try expectEqual(s.childExitCode, Int32(0))
+            try expectEqual(s.childTermSignal, Int32(0))
+        }
+
+        // ---- exec attempt: non-zero exit (/usr/bin/false) -----------------------
+        // Spawn succeeds, child exits 1. Witness honesty: rc reflects
+        // the helper's verdict, NOT a sandbox event.
+        tk.run("exec /usr/bin/false → exec_failed semantics with child_pid>0, child_exit_code=1") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_false",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/false")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            let s = out.slots[0]
+            try expectTrue(s.completed)
+            try expectEqual(s.rc, Int32(1), "/usr/bin/false exits 1")
+            try expectTrue((s.childPid ?? 0) > 0, "spawn should succeed; only the child exited non-zero")
+            try expectEqual(s.childExitCode, Int32(1))
+            try expectEqual(s.childTermSignal, Int32(0))
+        }
+
+        // ---- exec attempt: target missing -----------------------------------
+        // posix_spawn returns ENOENT (errno-style return value). The
+        // worker never produces a child, so child_pid stays 0 (the
+        // sentinel that lets the drift classifier distinguish "sandbox
+        // blocked spawn" from "child exited non-zero").
+        tk.run("exec /nonexistent → exec_failed with child_pid=0, errno=ENOENT") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_missing",
+                                     attemptKind: .execSpawn,
+                                     target: "/var/empty/pw_does_not_exist")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            let s = out.slots[0]
+            try expectTrue(s.completed)
+            try expectEqual(s.rc, Int32(-1), "spawn failure: rc=-1 sentinel")
+            try expectEqual(s.errnoVal, Int32(ENOENT))
+            try expectEqual(s.childPid, Int32(0),
+                            "child_pid must be 0 when spawn failed — drift classifier keys on this")
+            try expectEqual(s.childExitCode, Int32(-1),
+                            "child_exit_code stays at -1 sentinel when no child ran")
+        }
+
+        // ---- exec attempt: spawn blocked by sandbox -------------------------
+        // THE LOAD-BEARING PIN. The failure must come from posix_spawn
+        // (child_pid==0 + EPERM/EACCES), NOT from pipe()/file_actions
+        // setup. If this flips to a different errno or to child_pid>0,
+        // the worker is no longer honoring "post-apply syscall surface
+        // is minimal" and the witness is unreliable.
+        tk.run("exec /usr/bin/true under (deny default) → spawn EPERM/EACCES, child_pid=0") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(deny default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_deny",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/true")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            try expectTrue(out.applied,
+                "worker must reach sandbox_apply — pre-apply setup must not fail")
+            let s = out.slots[0]
+            try expectTrue(s.completed)
+            try expectEqual(s.childPid, Int32(0),
+                "child_pid==0 pins the failure attribution to posix_spawn (not setup)")
+            try expectEqual(s.rc, Int32(-1))
+            // EPERM (1) or EACCES (13). The kernel doesn't promise
+            // which one for sandbox-denied spawn; both are valid.
+            let errnoVal = s.errnoVal
+            try expectTrue(errnoVal == Int32(EPERM) || errnoVal == Int32(EACCES),
+                "expected EPERM or EACCES from sandbox-denied posix_spawn; got errno=\(errnoVal)")
+            // The error string should mention posix_spawn so a reader can
+            // tell at a glance what was blocked.
+            try expectNotNil(s.error)
+            try expectTrue((s.error ?? "").contains("posix_spawn"),
+                "error string should identify posix_spawn as the failure source")
+        }
+
+        // ---- exec argv bounds: count over the cap ---------------------------
+        // 16-entry argv table includes argv[0] (target), so up to 15
+        // caller-supplied args fit. The 16th args entry must be
+        // rejected pre-spawn so an over-long argv never reaches the
+        // worker.
+        tk.run("exec args count exceeding maxArgv-1 rejected pre-spawn") {
+            // Don't need the worker; this rejection happens before spawn.
+            let tooManyArgs = (0..<(PWShmLayout.maxArgv)).map { "arg\($0)" }
+            try expectEqual(tooManyArgs.count, PWShmLayout.maxArgv,
+                            "test setup: should generate exactly maxArgv args (= argsMax + 1)")
+            let input = CWorkerInput(
+                workerExecutablePath: "/usr/usr/bin/false",  // unused; rejected before spawn
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_too_many_args",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/true",
+                                     args: tooManyArgs)
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .failure(let err) = result else {
+                throw TestFailure(message: "expected argv-count rejection; got \(result)")
+            }
+            guard case .argvCountExceeded = err else {
+                throw TestFailure(message: "expected argvCountExceeded; got \(err)")
+            }
+        }
+
+        // ---- exec argv bounds: per-entry byte length ------------------------
+        tk.run("exec args entry exceeding argvBytes rejected pre-spawn") {
+            let bigArg = String(repeating: "x", count: PWShmLayout.argvBytes)
+            let input = CWorkerInput(
+                workerExecutablePath: "/usr/usr/bin/false",
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_arg_too_long",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/true",
+                                     args: [bigArg])
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .failure(let err) = result else {
+                throw TestFailure(message: "expected argv-entry rejection; got \(result)")
+            }
+            guard case .argvEntryTooLong = err else {
+                throw TestFailure(message: "expected argvEntryTooLong; got \(err)")
+            }
+        }
+
+        // ---- exec absolute-path enforcement ---------------------------------
+        // Non-absolute exec targets are rejected pre-spawn (bad_request
+        // path). Worker is never invoked; the test doesn't need the
+        // bundle.
+        tk.run("exec target without leading slash rejected pre-spawn") {
+            let input = CWorkerInput(
+                workerExecutablePath: "/usr/bin/false",
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_relative",
+                                     attemptKind: .execSpawn,
+                                     target: "usr/bin/true")  // relative
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .failure(let err) = result else {
+                throw TestFailure(message: "expected absolute-path rejection; got \(result)")
+            }
+            guard case .execTargetNotAbsolute = err else {
+                throw TestFailure(message: "expected execTargetNotAbsolute; got \(err)")
+            }
+        }
+
+        // ---- exec deadline-fired SIGKILL ------------------------------------
+        // A hung helper would otherwise escalate into the host's
+        // worker-level sentinel timeout. With a short
+        // execChildDeadlineMs the worker bounds the per-exec wait,
+        // SIGKILLs the child's process group, and surfaces the
+        // deadline-kill cleanly. Pin: outcome=exec_failed,
+        // child_term_signal=SIGKILL (9), error mentions deadline.
+        tk.run("exec helper hung past deadline → SIGKILL + exec_failed with deadline error") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            guard FileManager.default.isExecutableFile(atPath: "/bin/sleep") else {
+                FileHandle.standardOutput.write(Data("  SKIP  /bin/sleep missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_hang",
+                                     attemptKind: .execSpawn,
+                                     target: "/bin/sleep",
+                                     args: ["10"])
+                ],
+                // Plenty of host budget so the deadline path runs to
+                // completion rather than being preempted by the host.
+                sentinelTimeoutMs: 30_000,
+                exitGraceMs: 5_000,
+                execChildDeadlineMs: 500
+            )
+            let start = Date()
+            let result = runCWorker(input)
+            let elapsed = Date().timeIntervalSince(start)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            // The whole run must finish well under the host's sentinel
+            // budget — proving the deadline + SIGKILL path actually
+            // cut the wait, rather than the host SIGKILL'ing the
+            // worker.
+            try expectTrue(elapsed < 10.0,
+                "deadline should fire ~500ms in; total elapsed=\(elapsed)s should be << helper sleep (10s)")
+            let s = out.slots[0]
+            try expectTrue(s.completed)
+            try expectEqual(s.rc, Int32(-1))
+            try expectTrue((s.childPid ?? 0) > 0, "spawn succeeded; deadline applies post-spawn")
+            try expectEqual(s.childTermSignal, Int32(SIGKILL),
+                "deadline kill should arrive as SIGKILL on the child")
+            try expectEqual(s.childExitCode, Int32(-1),
+                "child_exit_code sentinel when signaled")
+            try expectNotNil(s.error)
+            try expectTrue((s.error ?? "").contains("deadline"),
+                "error should mention the deadline; got \(s.error ?? "nil")")
+        }
+
+        // ---- exec hermetic environment --------------------------------------
+        // The worker passes an empty envp. /usr/bin/env prints the
+        // environment one variable per line. Under our spawn the
+        // helper sees an empty environment, so stdout is empty.
+        tk.run("exec child receives empty environment (envp = {NULL})") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            guard FileManager.default.isExecutableFile(atPath: "/usr/bin/env") else {
+                FileHandle.standardOutput.write(Data("  SKIP  /usr/bin/env missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_env",
+                                     attemptKind: .execSpawn,
+                                     target: "/usr/bin/env")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            let s = out.slots[0]
+            try expectEqual(s.rc, Int32(0))
+            // /usr/bin/env with no inherited env should produce no
+            // stdout. childStdout reader normalizes empty → nil.
+            try expectNil(s.childStdout,
+                "exec child should receive empty env; got stdout=\(s.childStdout ?? "nil")")
+        }
+
+        // ---- exec stdout/stderr round-trip via /bin/echo --------------------
+        // Use /bin/echo as a portable fixture that doesn't require
+        // building our own helper for the unit suite. Echo writes its
+        // args to stdout followed by a newline; nothing to stderr.
+        tk.run("exec /bin/echo round-trips stdout into the slot") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "exec_echo",
+                                     attemptKind: .execSpawn,
+                                     target: "/bin/echo",
+                                     args: ["hello", "world"])
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            let s = out.slots[0]
+            try expectEqual(s.rc, Int32(0))
+            try expectEqual(s.childExitCode, Int32(0))
+            try expectNotNil(s.childStdout)
+            // /bin/echo's exact output is "hello world\n".
+            try expectEqual(s.childStdout, "hello world\n")
+            // stderr is empty; reader normalizes empty to nil.
+            try expectNil(s.childStderr)
+        }
     }
 }

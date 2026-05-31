@@ -19,6 +19,7 @@ enum PWRunnerWire {
     static let attemptKindFile = "file"
     static let attemptKindMachLookup = "mach_lookup"
     static let attemptKindSysctl = "sysctl"
+    static let attemptKindExec = "exec"
 
     static let attemptActionOpenRead = "open_read"
     static let attemptActionOpenWrite = "open_write"
@@ -27,6 +28,7 @@ enum PWRunnerWire {
     static let attemptActionAccess = "access"
     static let attemptActionMachLookup = "bootstrap_look_up"
     static let attemptActionRead = "read"
+    static let attemptActionSpawn = "spawn"
 
     static let sandboxFilterNone = "none"
     static let sandboxFilterPath = "path"
@@ -108,6 +110,7 @@ public enum AttemptOutcome {
     public static let accessFailed = "access_failed"
     public static let lookupFailed = "lookup_failed"
     public static let sysctlFailed = "sysctl_failed"
+    public static let execFailed = "exec_failed"
     public static let bootstrapPortFailed = "bootstrap_port_failed"
     public static let unsupported = "unsupported"
     public static let notRunWorkerDied = "not_run_worker_died"
@@ -221,15 +224,25 @@ public struct PWRunnerPolicySpec: Codable {
     public var format: String
     public var sbpl_source: String?
     public var params: [String: String]?
+    // Named augments the caller opts into (e.g. "exec_baseline"). The
+    // controller resolves each name to a file under
+    // Contents/Resources/Augments/<name>.sb, appends the contents to
+    // sbpl_source before preflight, and strips this field from the
+    // request forwarded to the runner. The runner is augment-agnostic;
+    // this field exists on the wire so callers can author their request
+    // without controller-private knowledge.
+    public var augments: [String]?
 
     public init(
         format: String,
         sbpl_source: String? = nil,
-        params: [String: String]? = nil
+        params: [String: String]? = nil,
+        augments: [String]? = nil
     ) {
         self.format = format
         self.sbpl_source = sbpl_source
         self.params = params
+        self.augments = augments
     }
 }
 
@@ -255,7 +268,7 @@ public struct PWRunnerSandboxFilter: Codable {
 }
 
 public struct PWRunnerAttempt: Codable {
-    // "file" | "mach_lookup" | "sysctl"
+    // "file" | "mach_lookup" | "sysctl" | "exec"
     public var kind: String
     // For kind=file:
     //   action: open_read | open_write | create | unlink | access
@@ -266,13 +279,22 @@ public struct PWRunnerAttempt: Codable {
     // For kind=sysctl:
     //   action: read
     //   target: sysctl name
+    // For kind=exec:
+    //   action: spawn
+    //   target: absolute path to a helper binary (becomes argv[0])
+    //   args:   optional argv[1..N]; caps from PWShmLayout.maxArgv-1
+    //           and PWShmLayout.argvBytes apply (per-arg byte cap
+    //           includes the trailing NUL). Absent / nil treated as
+    //           an empty list.
     public var action: String
     public var target: String
+    public var args: [String]?
 
-    public init(kind: String, action: String, target: String) {
+    public init(kind: String, action: String, target: String, args: [String]? = nil) {
         self.kind = kind
         self.action = action
         self.target = target
+        self.args = args
     }
 }
 
@@ -481,6 +503,25 @@ public struct PWRunnerAttemptResult: Codable {
     public var normalized_path: String?
     public var observed_path: String?
 
+    /// Exec-attempt outputs. All five are nil for non-exec attempts and
+    /// are emitted as explicit JSON null (when populated) or omitted
+    /// entirely (when nil) so a sysctl/file/mach result envelope does
+    /// not grow five new null fields it has no use for.
+    ///
+    /// `child_pid > 0` means `posix_spawn` succeeded and a child was
+    /// reaped (even if it exited non-zero). `child_pid == 0` means
+    /// spawn failed before producing a child (sandbox blocked spawn,
+    /// target missing, etc.) — `errno` carries the spawn errno in
+    /// that case. The orchestrator's drift classifier reads
+    /// `child_pid` to distinguish a sandbox-blocked spawn (strong
+    /// deny evidence) from a child non-zero exit (non-policy
+    /// failure).
+    public var child_pid: Int?
+    public var child_exit_code: Int?
+    public var child_term_signal: Int?
+    public var stdout: String?
+    public var stderr: String?
+
     public init(
         rc: Int,
         errno: Int? = nil,
@@ -488,7 +529,12 @@ public struct PWRunnerAttemptResult: Codable {
         error: String? = nil,
         requested_path: String? = nil,
         normalized_path: String? = nil,
-        observed_path: String? = nil
+        observed_path: String? = nil,
+        child_pid: Int? = nil,
+        child_exit_code: Int? = nil,
+        child_term_signal: Int? = nil,
+        stdout: String? = nil,
+        stderr: String? = nil
     ) {
         self.rc = rc
         self.exit_code = rc
@@ -499,6 +545,11 @@ public struct PWRunnerAttemptResult: Codable {
         self.requested_path = requested_path
         self.normalized_path = normalized_path
         self.observed_path = observed_path
+        self.child_pid = child_pid
+        self.child_exit_code = child_exit_code
+        self.child_term_signal = child_term_signal
+        self.stdout = stdout
+        self.stderr = stderr
     }
 
     enum CodingKeys: String, CodingKey {
@@ -511,6 +562,11 @@ public struct PWRunnerAttemptResult: Codable {
         case requested_path
         case normalized_path
         case observed_path
+        case child_pid
+        case child_exit_code
+        case child_term_signal
+        case stdout
+        case stderr
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -544,6 +600,18 @@ public struct PWRunnerAttemptResult: Codable {
         } else {
             try container.encodeNil(forKey: .observed_path)
         }
+        // Exec output fields: emit when non-nil (as explicit JSON
+        // value), omit the key entirely when nil. A non-exec
+        // attempt's envelope therefore does not grow five new null
+        // keys; an exec attempt's envelope always carries all five
+        // (the orchestrator populates them from the shm slot,
+        // including child_pid == 0 / child_exit_code == -1 when
+        // spawn failed).
+        try container.encodeIfPresent(child_pid, forKey: .child_pid)
+        try container.encodeIfPresent(child_exit_code, forKey: .child_exit_code)
+        try container.encodeIfPresent(child_term_signal, forKey: .child_term_signal)
+        try container.encodeIfPresent(stdout, forKey: .stdout)
+        try container.encodeIfPresent(stderr, forKey: .stderr)
     }
 
     public init(from decoder: Decoder) throws {
@@ -557,6 +625,11 @@ public struct PWRunnerAttemptResult: Codable {
         requested_path = try container.decodeIfPresent(String.self, forKey: .requested_path)
         normalized_path = try container.decodeIfPresent(String.self, forKey: .normalized_path)
         observed_path = try container.decodeIfPresent(String.self, forKey: .observed_path)
+        child_pid = try container.decodeIfPresent(Int.self, forKey: .child_pid)
+        child_exit_code = try container.decodeIfPresent(Int.self, forKey: .child_exit_code)
+        child_term_signal = try container.decodeIfPresent(Int.self, forKey: .child_term_signal)
+        stdout = try container.decodeIfPresent(String.self, forKey: .stdout)
+        stderr = try container.decodeIfPresent(String.self, forKey: .stderr)
     }
 }
 

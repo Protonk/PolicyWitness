@@ -10,6 +10,7 @@ runPredictionUnavailableTests(tk)
 runFilterKindValidationTests(tk)
 runCWorkerTests(tk)
 runCWorkerValidatorTests(tk)
+runAugmentTests(tk)
 
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))
 exit(tk.exitCode())

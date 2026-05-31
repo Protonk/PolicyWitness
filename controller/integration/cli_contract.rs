@@ -411,6 +411,265 @@ fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() 
 }
 
 #[test]
+fn augment_applied_emits_policy_augmentation_block() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    // exec_baseline is shipped as a comment-only no-op in checkpoint 1.
+    // Splicing it into a permissive policy must succeed end-to-end and
+    // populate data.policy_augmentation with distinct original/applied
+    // hashes.
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-augment-applied-{}.json",
+        std::process::id()
+    ));
+    let request = r#"{
+        "schema_version": 1,
+        "specimen_id": "augment_applied",
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(allow default)\n",
+            "augments": ["exec_baseline"]
+        },
+        "probe_plan": []
+    }"#;
+    std::fs::write(&tmp, request).expect("write augment request");
+
+    let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
+    let _ = std::fs::remove_file(&tmp);
+
+    // The augmented run must succeed end-to-end. Asserting on exit
+    // status + normalized_outcome catches regressions that preserve
+    // the policy_augmentation block but break preflight or the
+    // runner — e.g. a future bug that forwards the augments key past
+    // controller resolution would cause the runner to reject the
+    // spec, and we'd still see policy_augmentation in the envelope.
+    assert!(
+        out.status.success(),
+        "augmented run failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
+        out.status.code(),
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&stdout).expect("parse run envelope");
+    assert_eq!(
+        envelope
+            .pointer("/result/normalized_outcome")
+            .and_then(|v| v.as_str()),
+        Some("ok"),
+        "augmented run did not reach ok: envelope={envelope}"
+    );
+
+    let aug = envelope
+        .pointer("/data/policy_augmentation")
+        .cloned()
+        .expect("data.policy_augmentation missing on augmented run");
+    let applied: Vec<String> = aug
+        .get("applied")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(applied, vec!["exec_baseline".to_string()]);
+
+    let original = aug
+        .get("original_sha256")
+        .and_then(|v| v.as_str())
+        .expect("original_sha256 missing");
+    let applied_hash = aug
+        .get("applied_sha256")
+        .and_then(|v| v.as_str())
+        .expect("applied_sha256 missing");
+    assert_ne!(
+        original, applied_hash,
+        "splicing a non-empty augment must change the policy hash"
+    );
+    assert_eq!(original.len(), 64);
+    assert_eq!(applied_hash.len(), 64);
+
+    // Preflight must have run against the spliced source. Hard
+    // assertion (not if-let) — a regression that runs preflight on
+    // the pre-splice request would silently produce the wrong
+    // compile report.
+    let preflight_sha = envelope
+        .pointer("/data/policy_preflight/policy_sha256")
+        .and_then(|v| v.as_str())
+        .expect("data.policy_preflight.policy_sha256 missing");
+    assert_eq!(
+        preflight_sha, applied_hash,
+        "policy_preflight.policy_sha256 must equal applied_sha256 — preflight ran on the pre-splice source"
+    );
+
+    // The runner must have run against the spliced source. Hard
+    // assertion catches a regression that forwards the original
+    // request to the runner while still emitting policy_augmentation.
+    let runner_sha = envelope
+        .pointer("/data/runner_result/policy_sha256")
+        .and_then(|v| v.as_str())
+        .expect("data.runner_result.policy_sha256 missing — runner may not have been invoked");
+    assert_eq!(
+        runner_sha, applied_hash,
+        "runner_result.policy_sha256 must equal applied_sha256 when augments are spliced"
+    );
+}
+
+#[test]
+fn unknown_augment_short_circuits_to_bad_request() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-augment-unknown-{}.json",
+        std::process::id()
+    ));
+    let request = r#"{
+        "schema_version": 1,
+        "specimen_id": "augment_unknown",
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(allow default)\n",
+            "augments": ["this_augment_definitely_does_not_exist_42"]
+        },
+        "probe_plan": []
+    }"#;
+    std::fs::write(&tmp, request).expect("write augment request");
+
+    let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
+    let _ = std::fs::remove_file(&tmp);
+
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "expected exit code 1 (bad augment); stderr:\n{}\nstdout:\n{}",
+        String::from_utf8_lossy(&out.stderr),
+        String::from_utf8_lossy(&out.stdout)
+    );
+
+    let envelope: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
+        .expect("parse run envelope");
+    assert_eq!(
+        envelope
+            .pointer("/result/normalized_outcome")
+            .and_then(|v| v.as_str()),
+        Some("bad_request")
+    );
+    let error = envelope
+        .pointer("/result/error")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        error.contains("this_augment_definitely_does_not_exist_42"),
+        "result.error should name the bad augment (got {error:?})"
+    );
+
+    // Runner must NOT have been invoked. data.runner_result is null
+    // and runner_client.argv carries the synthetic marker.
+    assert!(
+        envelope
+            .pointer("/data/runner_result")
+            .map(|v| v.is_null())
+            .unwrap_or(true),
+        "data.runner_result must be absent/null when augment resolution fails"
+    );
+    let argv: Vec<String> = envelope
+        .pointer("/data/runner_client/argv")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(
+        argv,
+        vec!["(runner not invoked)".to_string()],
+        "runner_client.argv should mark the runner as not invoked"
+    );
+
+    // data.policy_augmentation must be absent/null — we never produced
+    // an applied list because resolution failed.
+    assert!(
+        envelope
+            .pointer("/data/policy_augmentation")
+            .map(|v| v.is_null())
+            .unwrap_or(true),
+        "data.policy_augmentation should be absent/null when augment resolution fails"
+    );
+}
+
+#[test]
+fn invalid_augment_name_rejected_as_bad_request() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-augment-invalid-{}.json",
+        std::process::id()
+    ));
+    // "../etc/passwd" is the canonical traversal attempt; the resolver
+    // must reject it for shape, not for whether the file exists.
+    let request = r#"{
+        "schema_version": 1,
+        "specimen_id": "augment_invalid",
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(allow default)\n",
+            "augments": ["../etc/passwd"]
+        },
+        "probe_plan": []
+    }"#;
+    std::fs::write(&tmp, request).expect("write augment request");
+
+    let out = run_pw(&bin, &["run", tmp.to_str().expect("tmp path utf8")]);
+    let _ = std::fs::remove_file(&tmp);
+
+    assert_eq!(out.status.code(), Some(1));
+    let envelope: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
+        .expect("parse run envelope");
+    assert_eq!(
+        envelope
+            .pointer("/result/normalized_outcome")
+            .and_then(|v| v.as_str()),
+        Some("bad_request")
+    );
+}
+
+#[test]
+fn absent_augments_omits_policy_augmentation_block() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+
+    let specimen = repo_root()
+        .join("tests")
+        .join("fixtures")
+        .join("pw_runner")
+        .join("specimen_file_read_deny.json");
+    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen utf8")]);
+    let envelope: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
+            .expect("parse run envelope");
+    let aug = envelope.pointer("/data/policy_augmentation");
+    assert!(
+        aug.map(|v| v.is_null()).unwrap_or(true),
+        "data.policy_augmentation should be absent/null for a request without augments \
+         (got {aug:?})"
+    );
+}
+
+#[test]
 fn preflight_records_import_provenance_for_system_sb() {
     if !integration_enabled() {
         return;

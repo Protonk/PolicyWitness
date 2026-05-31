@@ -166,6 +166,82 @@ The preflight envelope also records the imports closure:
   downstream auditor decide whether a closure hash is verifiable on their
   machine.
 
+### Augments
+
+`policy.augments` is an optional array of named SBPL fragments shipped
+inside the signed app bundle under
+`Contents/Resources/Augments/<name>.sb`. The controller resolves each
+name **before** invoking `sbpl-preflight`, appends the augment's
+contents to `policy.sbpl_source`, computes both the
+original-source and applied-source sha256, and strips the `augments`
+field from the request forwarded to the runner. Both preflight and
+the runner therefore see the same bytes, and the runner has no
+augment-aware code path.
+
+```json
+"policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1)\n(deny default)\n",
+  "augments": ["exec_baseline"]
+}
+```
+
+Resolution rules:
+
+- Augment names must match `^[A-Za-z0-9_]+$`. Anything else (including
+  `..`, path separators, or empty strings) is rejected with
+  `normalized_outcome = "bad_request"` before the runner is invoked.
+- A name that doesn't resolve to
+  `<app>/Contents/Resources/Augments/<name>.sb` is rejected with
+  `bad_request` and `error = "unknown augment '<name>'"`.
+- The `augments` field being absent, `null`, or `[]` is treated as
+  "no augments." In the empty/null cases the field is still stripped
+  from the request before forwarding so the runner sees no
+  augment-aware shape.
+
+Splicing semantics:
+
+- Augments are **append-only and allow-only.** Each shipped augment
+  contains only `(allow ...)` rules; the author commits not to emit
+  `(deny ...)`.
+- SBPL is last-match-wins, so an augment's `(allow process-exec)`
+  overrides a caller's earlier `(deny process-exec)` for the
+  operations the augment covers. A caller opting into an augment
+  consents to this override; the controller does not warn about
+  overlap.
+
+Envelope reporting:
+
+- `data.policy_augmentation` is present only when augments were
+  applied. Shape:
+
+  ```json
+  "policy_augmentation": {
+    "applied": ["exec_baseline"],
+    "original_sha256": "<sha256 of policy.sbpl_source as submitted>",
+    "applied_sha256":  "<sha256 of source after augments appended>"
+  }
+  ```
+
+  When augments were applied, `data.runner_result.policy_sha256`
+  (the hash the runner computed over the bytes it actually compiled)
+  equals `applied_sha256`. A consumer that wants "what the caller
+  submitted" reads `original_sha256` instead.
+
+Shipped augments:
+
+- **`exec_baseline`** — the SBPL baseline `posix_spawn` needs to
+  succeed under a minimal-deny policy (see "Attempt kinds the runner
+  implements" → `exec` / `spawn`). Currently ships as a comment-only
+  no-op file: the wire surface (`augments` field), controller
+  resolution, hash reporting, envelope reporting, and exec attempt
+  runtime are all load-bearing today, but the augment itself grants
+  no permissions yet — `policy.augments: ["exec_baseline"]` against
+  a `(deny default)` policy still produces `exec_failed` because the
+  baseline isn't yet authored to allow `process-exec*`,
+  `file-read*` of `/usr/lib`, etc. Real SBPL contents are authored
+  empirically from deny logs in a later change.
+
 ### Probe plan steps
 
 Each step has:
@@ -200,6 +276,18 @@ unified-log correlation. `runner_subprocess` records
 `validator_subprocess` records the validator child's
 `{ pid, exit_code, term_signal }` or is `null` when no validator
 ran (see below).
+
+The `exec` attempt kind adds five optional per-step fields under
+`steps[].attempt` — `child_pid`, `child_exit_code`,
+`child_term_signal`, `stdout`, `stderr` — populated only for
+`("exec", "spawn")` attempts. These are **additive optional fields
+under the existing schema_version=4 contract** (no version bump):
+consumers that don't introspect them see no shape change, and
+consumers that branch on `attempt.outcome == "exec_failed"` see all
+five fields exactly when an exec attempt's slot was filled. A
+non-exec attempt's envelope omits the keys entirely so a sysctl /
+file / mach result envelope does not grow five null fields it has
+no use for.
 
 Top-level fields beyond `pid` / `runner_subprocess`:
 
@@ -370,6 +458,67 @@ combinations:
 - `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
 - `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
 - `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
+- `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
+  binary. `target` is the absolute path to the helper (becomes
+  argv[0]). Optional `args: ["…", …]` supplies argv[1..N]; capped at
+  15 entries with each entry up to 127 UTF-8 bytes (the ABI's
+  `argv_count` includes argv[0], the per-entry budget reserves a
+  trailing NUL). The runner pre-creates stdout/stderr pipes
+  pre-apply (so the post-apply syscall surface stays minimal — see
+  "Augments" → `exec_baseline` for the policy contract), drains both
+  streams interleaved while the child runs, reaps via `waitpid`, and
+  surfaces:
+  - `attempt.child_pid`: child PID when spawn succeeded, `0` when
+    spawn was blocked / target missing / setup failed. This is the
+    sentinel `steps[].drift` keys on to distinguish a sandbox-denied
+    spawn (`child_pid == 0` + `errno ∈ {EPERM, EACCES}` →
+    libsandbox-drift evidence if validator predicted allow) from a
+    helper that simply exited non-zero (`child_pid > 0` →
+    non-policy failure, drift always null).
+  - `attempt.child_exit_code`: helper's exit status on clean exit,
+    `-1` when the child was signaled or no child ran.
+  - `attempt.child_term_signal`: signal number when the child was
+    killed by a signal, `0` when clean-exited or no child ran.
+  - `attempt.stdout` / `attempt.stderr`: captured bytes up to 1023
+    per stream; output past the buffer is truncated and tagged with
+    a trailing `\n... [truncated]` marker. Absent (key omitted) when
+    the stream produced no bytes.
+  - `attempt.rc`: helper's exit code when spawn succeeded (so `rc ==
+    0` means the helper itself reported success); `-1` when spawn
+    failed.
+  - `attempt.outcome`: `"ok"` when spawn succeeded AND the helper
+    exited 0; `"exec_failed"` for every other terminal state
+    (spawn-blocked, target missing, helper non-zero exit, helper
+    signaled).
+
+  A minimal `(deny default)` policy will block `posix_spawn` itself.
+  The intended escape hatch is `policy.augments: ["exec_baseline"]`
+  (see "Augments"), but the shipped augment is currently a
+  comment-only no-op — opting into it under `(deny default)` still
+  produces `exec_failed` today. The augment's real SBPL contents
+  (the allow rules `posix_spawn` + dyld + code-sign verification
+  need to succeed) are authored empirically in a later change;
+  until then, exec attempts that need to succeed must run under a
+  policy that explicitly allows the required surface (e.g.
+  `(import "system.sb")` or a hand-rolled `(allow process-exec*)`
+  plus the dyld file-read scope).
+
+  The runner also enforces a bounded per-exec deadline (10 seconds
+  by default) so a hung helper can't escalate into a worker-level
+  sentinel timeout. When the deadline fires the worker SIGKILLs the
+  child's process group and surfaces `outcome="exec_failed"` with
+  `child_term_signal=9` and `error` containing
+  `"child exceeded N-second deadline; SIGKILL'd"`. The helper is
+  spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT` (so it inherits only
+  the runner's stdin=/dev/null + stdout/stderr pipes — no shm fd,
+  no policy fd, no other exec slots' pipes) and an empty
+  environment.
+
+  Note that `data.runner_sandbox_diagnostics.first_deny` does NOT
+  identify the denied syscall for an exec attempt — that
+  diagnostic fires only for the `runner_sandbox_denied` outcome and
+  is PID-scoped to the worker, not its children. Per-child deny
+  correlation is a separate enhancement.
 
 Specimens are free to author probes with other attempt combinations
 (`("iokit", "open")`, future kinds, etc.) — those steps surface
