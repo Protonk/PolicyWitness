@@ -230,18 +230,26 @@ Envelope reporting:
 
 Shipped augments:
 
-- **`exec_baseline`** — the minimum SBPL needed for `posix_spawn` of
-  a libSystem-dynamic helper to succeed under a `(deny default)`
-  policy. Three rules: `(allow process-exec*)`, `(allow
-  process-fork)`, `(allow file-read*)`. Empirically derived against
-  `tests/suites/runner_use_c_worker/exec_fixture/helper.c` on
-  Darwin 23.6.0 (macOS 15) by starting from a broad set and removing
-  each rule until removal broke the helper; the three above were the
-  minimum that broke. The augment is `(allow)`-only — appended after
-  the caller's source, so caller-authored denies for the same
-  operations are overridden (the documented contract). See
-  `runner/augments/README.md` for the authoring protocol and
+- **`exec_baseline`** — three `(allow ...)` rules that let a
+  libSystem-dynamic helper `posix_spawn` under `(deny default)`:
+  `(allow process-exec*)`, `(allow process-fork)`, and an
+  **unconditional** `(allow file-read*)`. Empirically derived
+  against `tests/suites/runner_use_c_worker/exec_fixture/helper.c`
+  on macOS 14.8.3 (build 23J220, Darwin 23.6.0); see
+  `runner/augments/README.md → "exec_baseline derivation
+  transcript"` for the candidate rules, removal matrix, and
   re-verification recipe.
+
+  **This is a pragmatic baseline, not a narrow minimum.**
+  `(allow file-read*)` is unconditional because the kernel reads
+  the target binary's bytes before exec and the augment can't
+  predict the caller's chosen helper path. Because augments are
+  appended after the caller's source and SBPL is last-match-wins,
+  this allow overrides any caller-authored `(deny file-read* ...)`.
+  Specimens that probe file-read denial cannot be composed with
+  `exec_baseline` — see `runner/augments/README.md → "exec_baseline
+  composition limits"` for the two failure patterns and the
+  workarounds.
 
 ### Probe plan steps
 

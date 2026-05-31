@@ -303,7 +303,9 @@ have landed:
    (`(allow process-exec*)`, `(allow process-fork)`, `(allow
    file-read*)`) — empirically derived against
    `tests/suites/runner_use_c_worker/exec_fixture/helper.c` on
-   Darwin 23.6.0 (macOS 15). Documented the authoring protocol in
+   macOS 14.8.3 (build 23J220, Darwin 23.6.0). Documented the
+   authoring protocol + composition limits + per-os derivation
+   transcript in
    `runner/augments/README.md`. Added e2e cases
    (`exec_attempt_with_baseline_succeeds`,
    `exec_attempt_args_and_stderr_round_trip`,

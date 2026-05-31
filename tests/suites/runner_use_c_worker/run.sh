@@ -750,7 +750,7 @@ run_exec_attempt_without_baseline_fails_cleanly() {
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"},
   "probe_plan": [{
     "step_id": "s_exec",
-    "sandbox_check": {"operation": "process-exec", "filter": {"kind": "path", "value": "/usr/bin/true"}},
+    "sandbox_check": {"operation": "process-exec*", "filter": {"kind": "path", "value": "/usr/bin/true"}},
     "attempt": {"kind": "exec", "action": "spawn", "target": "/usr/bin/true"}
   }]
 }
@@ -775,6 +775,18 @@ assert r["runner_subprocess"]["exit_code"] == 0, \
     "worker should clean-exit even when its attempt is denied"
 
 s = r["steps"][0]
+# Prediction channel: process-exec* + path is a working sandbox_check
+# invocation (the canonical SBPL operation name carries the star;
+# the unstar'd "process-exec" returns EINVAL from sandbox_check on
+# this macOS revision). The validator should predict deny against
+# (deny default).
+assert s["sandbox_check"]["outcome"] == "deny", \
+    "sandbox_check outcome={0!r} (validator should predict deny under deny-default)".format(
+        s["sandbox_check"]["outcome"])
+# Both channels agree on deny, so drift is False, not None.
+assert s.get("drift") is False, \
+    "drift should be False (validator+attempt agree on deny); got {0!r}".format(s.get("drift"))
+
 a = s["attempt"]
 assert a["outcome"] == "exec_failed", \
     "expected outcome=exec_failed, got {0!r}".format(a["outcome"])
@@ -859,7 +871,7 @@ spec = {
   },
   "probe_plan": [{
     "step_id": "s_exec",
-    "sandbox_check": {"operation": "process-exec",
+    "sandbox_check": {"operation": "process-exec*",
                       "filter": {"kind": "path", "value": sys.argv[2]}},
     "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2]},
   }],
@@ -892,7 +904,19 @@ assert r["policy_sha256"] == aug["applied_sha256"], \
     "runner_result.policy_sha256 ({0}) != applied_sha256 ({1}) — runner did not compile spliced source".format(
         r["policy_sha256"], aug["applied_sha256"])
 
-a = r["steps"][0]["attempt"]
+s = r["steps"][0]
+# Prediction channel: validator must predict allow against the
+# spliced (deny default) + exec_baseline policy. Pins that the
+# validator (a) accepts process-exec* + path and (b) sees the
+# spliced policy, not the pre-splice source. drift=false because
+# attempt + validator both say allow.
+assert s["sandbox_check"]["outcome"] == "allow", \
+    "sandbox_check should predict allow when augment grants process-exec*; got {0!r}".format(
+        s["sandbox_check"]["outcome"])
+assert s.get("drift") is False, \
+    "drift should be False (validator+attempt agree on allow); got {0!r}".format(s.get("drift"))
+
+a = s["attempt"]
 assert a["outcome"] == "ok", "attempt outcome={0}".format(a["outcome"])
 assert a["rc"] == 0, "attempt rc={0}".format(a["rc"])
 assert a["child_pid"] > 0, "child_pid={0} (spawn should have produced a child)".format(a["child_pid"])
@@ -902,7 +926,7 @@ assert a.get("stdout") == "exec_fixture: hello from helper\n", \
     "stdout round-trip mismatch: {0!r}".format(a.get("stdout"))
 assert a.get("stderr") is None, "stderr={0!r}".format(a.get("stderr"))
 
-print("ok: augmented exec under (deny default) reached ok via exec_baseline")
+print("ok: augmented exec under (deny default) reached ok via exec_baseline; prediction agrees")
 PY
   local arc=$?
   set -e
@@ -949,7 +973,7 @@ spec = {
   },
   "probe_plan": [{
     "step_id": "s_exec_args",
-    "sandbox_check": {"operation": "process-exec",
+    "sandbox_check": {"operation": "process-exec*",
                       "filter": {"kind": "path", "value": sys.argv[2]}},
     "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2],
                 "args": ["--stderr", "hello-stderr"]},
@@ -968,14 +992,20 @@ PY
   /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
-a = env["data"]["runner_result"]["steps"][0]["attempt"]
+s = env["data"]["runner_result"]["steps"][0]
+assert s["sandbox_check"]["outcome"] == "allow", \
+    "sandbox_check should predict allow under augment; got {0!r}".format(
+        s["sandbox_check"]["outcome"])
+assert s.get("drift") is False, \
+    "drift should be False (validator+attempt agree); got {0!r}".format(s.get("drift"))
+a = s["attempt"]
 assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
 assert a["rc"] == 0
 assert a.get("stdout") == "exec_fixture: hello from helper\n", \
     "stdout={0!r}".format(a.get("stdout"))
 assert a.get("stderr") == "hello-stderr\n", \
     "stderr={0!r} (args may not have reached the helper)".format(a.get("stderr"))
-print("ok: args reached helper, stdout/stderr round-tripped")
+print("ok: args reached helper, stdout/stderr round-tripped, prediction agrees")
 PY
   local arc=$?
   set -e
@@ -1020,7 +1050,7 @@ spec = {
   },
   "probe_plan": [{
     "step_id": "s_exec_trunc",
-    "sandbox_check": {"operation": "process-exec",
+    "sandbox_check": {"operation": "process-exec*",
                       "filter": {"kind": "path", "value": sys.argv[2]}},
     "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2],
                 "args": ["--stdout-bytes", "4096"]},
@@ -1039,7 +1069,10 @@ PY
   /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
-a = env["data"]["runner_result"]["steps"][0]["attempt"]
+s = env["data"]["runner_result"]["steps"][0]
+assert s["sandbox_check"]["outcome"] == "allow"
+assert s.get("drift") is False
+a = s["attempt"]
 assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
 out = a.get("stdout") or ""
 # Buffer is PW_SHM_CHILD_OUTPUT_BYTES (1024); reader is 1023 bytes + NUL.

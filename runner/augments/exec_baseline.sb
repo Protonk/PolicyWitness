@@ -1,15 +1,33 @@
-; exec_baseline — minimum SBPL needed for posix_spawn of a
-; libSystem-dynamic helper to succeed under (deny default).
+; exec_baseline — SBPL allows that let posix_spawn of a
+; libSystem-dynamic helper succeed under (deny default).
 ;
 ; Empirically derived against tests/suites/runner_use_c_worker/
-; exec_fixture/helper.c on macOS 15 (Darwin 23.6.0).  See
-; runner/augments/README.md for the authoring protocol and how to
-; re-verify on a new macOS revision.
+; exec_fixture/helper.c on:
+;   ProductName:    macOS
+;   ProductVersion: 14.8.3
+;   BuildVersion:   23J220
+;   uname -r:       23.6.0  (Darwin 23.x is macOS 14 / Sonoma)
+;
+; See runner/augments/README.md → "exec_baseline derivation
+; transcript" for the candidate rules, removal matrix, and
+; re-verification recipe on a new macOS revision.
+;
+; NOT A NARROW BASELINE. (allow file-read*) is unconditional and
+; covers EVERY path the worker can read. The augment was kept broad
+; on purpose: the kernel reads the target binary's bytes before
+; exec, dyld reads from /usr/lib + the shared cache + (sometimes)
+; the binary's adjacent dylibs, and callers pass helper paths from
+; anywhere on disk. Narrowing file-read* by subpath would force
+; callers to standardize helper locations, which breaks the
+; case-work tier's "helpers can be wherever you build them"
+; promise. The cost: this augment cannot be composed with
+; specimens that probe file-read denial. See README → composition.
 ;
 ; Append-only / allow-only contract: callers opting into this
-; augment via `policy.augments: ["exec_baseline"]` consent to having
-; these operations allowed even if their own source denied them
-; (SBPL is last-match-wins and augments are appended).
+; augment via `policy.augments: ["exec_baseline"]` consent to
+; having these operations allowed even if their own source denied
+; them. SBPL is last-match-wins and augments are appended after
+; the caller's source.
 
 (allow process-exec*)
 (allow process-fork)

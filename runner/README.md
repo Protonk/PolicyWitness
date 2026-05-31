@@ -128,8 +128,8 @@ itself is augment-agnostic — by the time a request reaches
 `PWRunnerService.runSpecimen`, the field has been stripped and any
 named augment contents have been spliced onto `policy.sbpl_source`).
 See PolicyWitness.md → Augments for the wire surface and the
-single shipped augment (`exec_baseline`, currently a no-op
-placeholder).
+single shipped augment (`exec_baseline` — three allows that let a
+libSystem-dynamic helper spawn under `(deny default)`).
 
 ## Run result highlights
 

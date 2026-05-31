@@ -417,10 +417,11 @@ fn augment_applied_emits_policy_augmentation_block() {
     }
     let bin = require_pw_bin();
 
-    // exec_baseline is shipped as a comment-only no-op in checkpoint 1.
+    // exec_baseline ships as three (allow ...) rules in checkpoint 4.
     // Splicing it into a permissive policy must succeed end-to-end and
     // populate data.policy_augmentation with distinct original/applied
-    // hashes.
+    // hashes; the hash difference proves the controller actually
+    // appended bytes regardless of what those bytes grant.
     let tmp = std::env::temp_dir().join(format!(
         "pw-augment-applied-{}.json",
         std::process::id()
