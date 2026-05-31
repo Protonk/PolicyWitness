@@ -444,8 +444,40 @@ static void attempt_sysctl_read(pw_shm_slot_t *slot) {
  * stdout/stderr. Both of those are syscalls/allocations that we MUST
  * perform pre-apply so the witness honestly reports "the sandbox
  * blocked posix_spawn", not "the worker couldn't even set up the
- * observation frame." See ATTEMPT-KIND-PLAN.md → Phase 2 → Critical
- * design decision.
+ * observation frame."
+ *
+ * Why this matters: the rest of the worker is intentionally simple
+ * after sandbox_apply — fixed inputs, no hidden resource
+ * acquisition, shared-memory writes as the durable output channel.
+ * The exec attempt is the one place that needs pipe creation, a
+ * posix_spawn_file_actions handle, an interleaved poll/read drain,
+ * and waitpid. If any of those pre-spawn setup syscalls happen
+ * AFTER sandbox_apply, an unaugmented (deny default) policy can
+ * fail the setup syscall before posix_spawn is reached. The
+ * attempt would surface as exec_failed but the per-attempt error
+ * attribution would point at pipe()/file_actions_init() — not at
+ * the process execution the caller actually wanted to probe.
+ * That blurs the witness in exactly the case we exist to surface.
+ *
+ * The contract this enforces, tested by
+ * `tests/suites/runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly`:
+ * under (deny default), the failure attribution MUST be
+ * posix_spawn itself (child_pid == 0 + errno ∈ {EPERM, EACCES} +
+ * error contains "posix_spawn"). Any other failure source means
+ * the post-apply syscall surface has grown and the witness is
+ * unreliable.
+ *
+ * Three deliberate fallbacks exist if the preferred model fails
+ * empirically on a future macOS revision (do NOT silently degrade
+ * to whichever failure happens first):
+ *
+ *   1. Move pipe/file-action setup into the augment surface and
+ *      document that unaugmented exec can fail during setup, not
+ *      just at spawn (loses witness purity but preserves observability).
+ *   2. Drop stdout/stderr capture from the worker and report only
+ *      child_pid/status/spawn errno (smaller post-apply surface).
+ *   3. Pre-create only pipes and keep file-action setup post-apply
+ *      iff empirically proven allocation-free and not sandbox-gated.
  *
  * Resources are parallel to the slot array (index-aligned). Slots
  * whose kind is not PW_ATTEMPT_EXEC_SPAWN leave their resource entry

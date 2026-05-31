@@ -532,6 +532,59 @@ verdict for the same step still runs normally; only the attempt
 slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 (no attempt verdict to compare against).
 
+### Attempt kinds PW deliberately does not implement
+
+The built-in attempt-kind catalog (file, mach_lookup, sysctl, exec)
+is a small curated set rather than a mirror of every
+`sandbox_check` operation. The omissions are intentional. Future
+contributors proposing to add a new built-in kind should read this
+section first.
+
+A 2026 corpus survey of 627 SBPL profiles ranked twelve
+`sandbox_check` kinds by authoring frequency and rated each
+against five gates (executability, determinism,
+non-destructiveness, narrow blast radius, no privilege required).
+PW's built-in set is the three well-behaved kinds that passed all
+gates (file, mach_lookup, sysctl) plus an `exec` extension point
+for the case-work tier. The other nine are deliberately omitted:
+
+- **Case-work tier (7 kinds — supported only via `exec`):**
+  `generic`, `iokit`, `ipc`, `mach`, `process`, `socket`,
+  `user_preference`. Each is a heterogeneous bucket whose
+  constituent ops need per-op target hygiene, recipe authoring,
+  and safety judgment that PW can't make on the caller's behalf.
+  Callers who need to test these surfaces ship their own helper
+  binary and drive it through an `exec` attempt — PW provides
+  the bounded, hermetic spawn frame (see
+  "Attempt kinds the runner implements" → `("exec", "spawn")`)
+  but doesn't carry per-op SBPL atlases for kinds where the
+  authoring burden belongs to the caller.
+
+- **Never tier (3 kinds — unsupported through any built-in):**
+  `network`, `signal`, `system`. These fail one or more of the
+  five gates architecturally:
+    - `network` connect/listen probes are destructive (open real
+      sockets), non-deterministic (depend on remote reachability),
+      and have wide blast radius (firewall/router state).
+    - `signal` delivery is destructive (target processes
+      observe signals) and racy (delivery timing is
+      uncontrollable from userland).
+    - `system` ops cover privileged actions (mounting filesystems,
+      modifying kernel state) that require elevation PW
+      deliberately doesn't request.
+
+  `exec` attempts on `network`/`signal`/`system` surfaces are not
+  blocked by PW — the caller's helper can do whatever it wants
+  under the applied policy — but PW makes no commitment to
+  determinism or non-destructiveness for these probes. The
+  caller owns the safety judgment.
+
+The choice to extend via `exec` rather than enumerate every kind
+in PW source is the architectural commitment behind Phase 2:
+PW provides a stable harness inside which callers exercise the
+surface they care about, rather than chasing Apple's syscall
+surface as it evolves.
+
 ### Filter kinds where prediction is unavailable
 
 Even within the predicted set, some `(operation, filter_kind)` pairs
