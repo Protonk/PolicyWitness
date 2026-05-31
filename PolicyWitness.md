@@ -230,17 +230,18 @@ Envelope reporting:
 
 Shipped augments:
 
-- **`exec_baseline`** — the SBPL baseline `posix_spawn` needs to
-  succeed under a minimal-deny policy (see "Attempt kinds the runner
-  implements" → `exec` / `spawn`). Currently ships as a comment-only
-  no-op file: the wire surface (`augments` field), controller
-  resolution, hash reporting, envelope reporting, and exec attempt
-  runtime are all load-bearing today, but the augment itself grants
-  no permissions yet — `policy.augments: ["exec_baseline"]` against
-  a `(deny default)` policy still produces `exec_failed` because the
-  baseline isn't yet authored to allow `process-exec*`,
-  `file-read*` of `/usr/lib`, etc. Real SBPL contents are authored
-  empirically from deny logs in a later change.
+- **`exec_baseline`** — the minimum SBPL needed for `posix_spawn` of
+  a libSystem-dynamic helper to succeed under a `(deny default)`
+  policy. Three rules: `(allow process-exec*)`, `(allow
+  process-fork)`, `(allow file-read*)`. Empirically derived against
+  `tests/suites/runner_use_c_worker/exec_fixture/helper.c` on
+  Darwin 23.6.0 (macOS 15) by starting from a broad set and removing
+  each rule until removal broke the helper; the three above were the
+  minimum that broke. The augment is `(allow)`-only — appended after
+  the caller's source, so caller-authored denies for the same
+  operations are overridden (the documented contract). See
+  `runner/augments/README.md` for the authoring protocol and
+  re-verification recipe.
 
 ### Probe plan steps
 
@@ -492,16 +493,12 @@ combinations:
     signaled).
 
   A minimal `(deny default)` policy will block `posix_spawn` itself.
-  The intended escape hatch is `policy.augments: ["exec_baseline"]`
-  (see "Augments"), but the shipped augment is currently a
-  comment-only no-op — opting into it under `(deny default)` still
-  produces `exec_failed` today. The augment's real SBPL contents
-  (the allow rules `posix_spawn` + dyld + code-sign verification
-  need to succeed) are authored empirically in a later change;
-  until then, exec attempts that need to succeed must run under a
-  policy that explicitly allows the required surface (e.g.
-  `(import "system.sb")` or a hand-rolled `(allow process-exec*)`
-  plus the dyld file-read scope).
+  Callers who want exec attempts to succeed under a deny-by-default
+  policy opt into `policy.augments: ["exec_baseline"]` (see
+  "Augments") — three `(allow ...)` rules are sufficient to let a
+  libSystem-dynamic helper spawn, load dyld, and reach `main`.
+  Callers who need to allow more (network, IOKit, specific filesystem
+  subpaths) compose their own additional allows on top of the augment.
 
   The runner also enforces a bounded per-exec deadline (10 seconds
   by default) so a hung helper can't escalate into a worker-level

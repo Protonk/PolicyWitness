@@ -8,6 +8,30 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="runner_use_c_worker"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
+# ---- exec_fixture helper (built on demand by exec_* test cases) ----------
+#
+# Source lives under tests/suites/runner_use_c_worker/exec_fixture/helper.c;
+# the compiled binary lands in tests/out/<run>/exec_fixture/helper. Not
+# in the app bundle, not signed, not notarized — purely a test fixture
+# the exec attempt cases drive through PW.
+EXEC_FIXTURE_SRC="${ROOT_DIR}/tests/suites/runner_use_c_worker/exec_fixture/helper.c"
+EXEC_FIXTURE_BIN="${PW_TEST_OUT_DIR}/exec_fixture/helper"
+exec_fixture_built=0
+
+ensure_exec_fixture() {
+  if [[ "${exec_fixture_built}" -eq 1 ]]; then return 0; fi
+  if [[ ! -f "${EXEC_FIXTURE_SRC}" ]]; then
+    return 1
+  fi
+  mkdir -p "$(dirname "${EXEC_FIXTURE_BIN}")"
+  if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
+       -o "${EXEC_FIXTURE_BIN}" "${EXEC_FIXTURE_SRC}" 2>"${PW_TEST_OUT_DIR}/exec_fixture/build.err"; then
+    return 1
+  fi
+  exec_fixture_built=1
+  return 0
+}
+
 # ---- test_id: happy_default_allow ----------------------------------------
 
 run_happy_default_allow() {
@@ -790,6 +814,256 @@ PY
   test_pass "unaugmented exec under (deny default) → posix_spawn EPERM/EACCES with child_pid=0" "{\"stdout\":\"${run_stdout}\"}"
 }
 
+# ---- test_id: exec_attempt_with_baseline_succeeds ------------------------
+#
+# Companion to exec_attempt_without_baseline_fails_cleanly. Same
+# (deny default) policy, but the caller opts into the shipped
+# `exec_baseline` augment. The controller splices the augment into
+# the caller's source; the worker compiles the spliced bytes and
+# posix_spawn now succeeds. Pins the user-facing contract that
+# `augments: ["exec_baseline"]` is sufficient to let a
+# libSystem-dynamic helper run under minimal-deny.
+#
+# Asserts:
+#   - normalized_outcome == "ok"
+#   - data.policy_augmentation present, applied == ["exec_baseline"],
+#     original_sha256 != applied_sha256
+#   - runner_result.policy_sha256 == applied_sha256
+#     (proves the runner compiled the spliced source, not the
+#     pre-splice source)
+#   - attempt.outcome == "ok" with child_pid > 0, child_exit_code == 0,
+#     stdout round-trips the helper's marker line
+
+run_exec_attempt_with_baseline_succeeds() {
+  local test_id="exec_attempt_with_baseline_succeeds"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "build" "compile exec_fixture/helper.c"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+  if ! ensure_exec_fixture; then
+    test_skip "could not build exec_fixture helper (clang missing?)" \
+      "{\"src\":\"${EXEC_FIXTURE_SRC}\"}"
+    return 0
+  fi
+  test_step "run" "(deny default) + augments:[exec_baseline] + exec fixture helper → ok"
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import json, sys
+spec = {
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_exec_baseline_succeeds",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(deny default)\n",
+    "augments": ["exec_baseline"],
+  },
+  "probe_plan": [{
+    "step_id": "s_exec",
+    "sandbox_check": {"operation": "process-exec",
+                      "filter": {"kind": "path", "value": sys.argv[2]}},
+    "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2]},
+  }],
+}
+open(sys.argv[1], "w").write(json.dumps(spec))
+PY
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+assert env["result"]["normalized_outcome"] == "ok", \
+    "top-level outcome={0}".format(env["result"]["normalized_outcome"])
+
+aug = env["data"].get("policy_augmentation")
+assert aug is not None, "data.policy_augmentation missing on augmented run"
+assert aug["applied"] == ["exec_baseline"], \
+    "applied={0!r}".format(aug["applied"])
+assert aug["original_sha256"] != aug["applied_sha256"], \
+    "hashes should differ when augment splices content"
+
+r = env["data"]["runner_result"]
+assert r["policy_sha256"] == aug["applied_sha256"], \
+    "runner_result.policy_sha256 ({0}) != applied_sha256 ({1}) — runner did not compile spliced source".format(
+        r["policy_sha256"], aug["applied_sha256"])
+
+a = r["steps"][0]["attempt"]
+assert a["outcome"] == "ok", "attempt outcome={0}".format(a["outcome"])
+assert a["rc"] == 0, "attempt rc={0}".format(a["rc"])
+assert a["child_pid"] > 0, "child_pid={0} (spawn should have produced a child)".format(a["child_pid"])
+assert a["child_exit_code"] == 0, "child_exit_code={0}".format(a["child_exit_code"])
+assert a["child_term_signal"] == 0, "child_term_signal={0}".format(a["child_term_signal"])
+assert a.get("stdout") == "exec_fixture: hello from helper\n", \
+    "stdout round-trip mismatch: {0!r}".format(a.get("stdout"))
+assert a.get("stderr") is None, "stderr={0!r}".format(a.get("stderr"))
+
+print("ok: augmented exec under (deny default) reached ok via exec_baseline")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "augmented exec under (deny default) reached ok via exec_baseline" \
+    "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: exec_attempt_args_and_stderr_round_trip --------------------
+#
+# Drives the exec attempt with caller-supplied args + stderr output.
+# Pins:
+#   - args ["--stderr", "hello-stderr"] reach the helper as argv[1..]
+#   - attempt.stderr round-trips the helper's stderr write
+#   - attempt.stdout still carries the default marker
+#   - exit code propagates (0 in this case)
+
+run_exec_attempt_args_and_stderr_round_trip() {
+  local test_id="exec_attempt_args_and_stderr_round_trip"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+  if ! ensure_exec_fixture; then
+    test_skip "could not build exec_fixture helper" \
+      "{\"src\":\"${EXEC_FIXTURE_SRC}\"}"
+    return 0
+  fi
+  test_step "run" "exec helper --stderr 'hello-stderr' → stderr round-trips, stdout still default"
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import json, sys
+spec = {
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_exec_args_stderr",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(deny default)\n",
+    "augments": ["exec_baseline"],
+  },
+  "probe_plan": [{
+    "step_id": "s_exec_args",
+    "sandbox_check": {"operation": "process-exec",
+                      "filter": {"kind": "path", "value": sys.argv[2]}},
+    "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2],
+                "args": ["--stderr", "hello-stderr"]},
+  }],
+}
+open(sys.argv[1], "w").write(json.dumps(spec))
+PY
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+a = env["data"]["runner_result"]["steps"][0]["attempt"]
+assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
+assert a["rc"] == 0
+assert a.get("stdout") == "exec_fixture: hello from helper\n", \
+    "stdout={0!r}".format(a.get("stdout"))
+assert a.get("stderr") == "hello-stderr\n", \
+    "stderr={0!r} (args may not have reached the helper)".format(a.get("stderr"))
+print("ok: args reached helper, stdout/stderr round-tripped")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "exec args + stdout/stderr round-trip through the worker" \
+    "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: exec_attempt_stdout_truncation_marker ----------------------
+#
+# Helper writes more bytes to stdout than the slot can hold
+# (PW_SHM_CHILD_OUTPUT_BYTES = 1024). The worker must truncate AND
+# append the "... [truncated]" marker so a consumer can tell the
+# output was capped.
+
+run_exec_attempt_stdout_truncation_marker() {
+  local test_id="exec_attempt_stdout_truncation_marker"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+  if ! ensure_exec_fixture; then
+    test_skip "could not build exec_fixture helper" \
+      "{\"src\":\"${EXEC_FIXTURE_SRC}\"}"
+    return 0
+  fi
+  test_step "run" "exec helper --stdout-bytes 4096 → captured up to 1023 bytes with truncation marker"
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
+import json, sys
+spec = {
+  "schema_version": 1,
+  "specimen_id": "use_c_worker_exec_truncation",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(deny default)\n",
+    "augments": ["exec_baseline"],
+  },
+  "probe_plan": [{
+    "step_id": "s_exec_trunc",
+    "sandbox_check": {"operation": "process-exec",
+                      "filter": {"kind": "path", "value": sys.argv[2]}},
+    "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2],
+                "args": ["--stdout-bytes", "4096"]},
+  }],
+}
+open(sys.argv[1], "w").write(json.dumps(spec))
+PY
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+a = env["data"]["runner_result"]["steps"][0]["attempt"]
+assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
+out = a.get("stdout") or ""
+# Buffer is PW_SHM_CHILD_OUTPUT_BYTES (1024); reader is 1023 bytes + NUL.
+# Truncation marker eats the tail: "\n... [truncated]" is 16 bytes.
+assert len(out) > 0, "stdout should not be empty"
+assert len(out) < 1024, "stdout {0} bytes should fit in the slot buffer".format(len(out))
+assert "[truncated]" in out, "truncation marker missing from captured stdout (len={0})".format(len(out))
+# Body should be 'A' fill before the marker.
+body = out.split("\n... [truncated]")[0]
+assert set(body) == {"A"}, "body should be 'A' fill, got chars {0!r}".format(set(body))
+print("ok: stdout truncated to {0} bytes with marker; body is 'A' fill".format(len(out)))
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "oversized stdout truncated with [truncated] marker" \
+    "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_duplicate_step_id_rejected
 run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
@@ -798,3 +1072,6 @@ run_sandbox_check_pid_matches_worker
 run_drift_null_for_dac_eacces
 run_access_failure_classified
 run_exec_attempt_without_baseline_fails_cleanly
+run_exec_attempt_with_baseline_succeeds
+run_exec_attempt_args_and_stderr_round_trip
+run_exec_attempt_stdout_truncation_marker

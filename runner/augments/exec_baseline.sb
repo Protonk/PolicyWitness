@@ -1,1 +1,16 @@
-; exec_baseline — empty no-op placeholder; real SBPL rules land in checkpoint 4.
+; exec_baseline — minimum SBPL needed for posix_spawn of a
+; libSystem-dynamic helper to succeed under (deny default).
+;
+; Empirically derived against tests/suites/runner_use_c_worker/
+; exec_fixture/helper.c on macOS 15 (Darwin 23.6.0).  See
+; runner/augments/README.md for the authoring protocol and how to
+; re-verify on a new macOS revision.
+;
+; Append-only / allow-only contract: callers opting into this
+; augment via `policy.augments: ["exec_baseline"]` consent to having
+; these operations allowed even if their own source denied them
+; (SBPL is last-match-wins and augments are appended).
+
+(allow process-exec*)
+(allow process-fork)
+(allow file-read*)

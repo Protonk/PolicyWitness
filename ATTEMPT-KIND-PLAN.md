@@ -271,24 +271,54 @@ have landed:
      build` — bundle assembled; the bundled `pw-probe-runner` reports
      `abi=4 slot_bytes=8192`.
 
-3. **Exec runtime.** Implement the narrow `exec` / `spawn` attempt,
-   bounded argv, child status capture, output capture per the
-   resource-setup decision below, and drift classification. If real
-   `exec_baseline.sb` content is needed to write the exec-success
-   tests before checkpoint 4 lands, this checkpoint may use a
-   **fixture-private augment file** under `tests/fixtures/` (not the
-   shipped `runner/augments/exec_baseline.sb`) with a minimal handful
-   of allows just sufficient for `/bin/true` to spawn under
-   `(deny default)` plus the fixture augment. The shipped augment
-   stays empty until checkpoint 4.
-4. **Empirical `exec_baseline`.** Author the actual
-   `runner/augments/exec_baseline.sb` contents from denial logs
-   against a realistic helper (libSystem-dynamic, not statically
-   linked), document the recipe in `runner/augments/README.md`, and
-   flip the checkpoint-3 fixture-private test (if any) to assert
-   success against the shipped augment. The user-facing promise that
-   `augments: ["exec_baseline"]` lets exec attempts succeed under
-   minimal-deny becomes real here.
+3. **Exec runtime (complete).** Implemented the narrow `exec` /
+   `spawn` attempt with bounded argv, child status capture
+   (child_pid / child_exit_code / child_term_signal), stdout/stderr
+   capture with truncation marker, monotonic per-exec deadline +
+   SIGKILL of the child process group on expiry,
+   POSIX_SPAWN_CLOEXEC_DEFAULT + /dev/null on stdin so the child
+   inherits no worker-internal fds, empty envp for hermetic
+   environment, absolute-path enforcement on the target, and the
+   child_pid sentinel-keyed drift classifier (sandbox-blocked spawn
+   → strong deny; helper non-zero exit → non-policy failure).
+
+   *Status: complete.*
+
+   Validated with:
+   - `cargo test --bin policy-witness` — clean.
+   - `swift run --package-path runner PWRunnerCoreTests` — 59/59
+     (10 new exec unit tests including the load-bearing
+     deny-default spawn pin, the deadline-fires SIGKILL pin, the
+     absolute-path rejection pin, and the empty-env pin).
+   - `tests/run.sh --suite runner_use_c_worker` —
+     `exec_attempt_without_baseline_fails_cleanly` passes: drives
+     the orchestrator+wire path against `(deny default)` + exec
+     `/usr/bin/true`, asserts `child_pid==0` +
+     `errno∈{EPERM,EACCES}` + `error contains "posix_spawn"`.
+   - `IDENTITY='Developer ID Application: Adam Hyland (42D369QV8E)'
+     make build` — clean rebuild + sign.
+
+4. **Empirical `exec_baseline` (complete).** Authored the actual
+   `runner/augments/exec_baseline.sb` contents — three rules
+   (`(allow process-exec*)`, `(allow process-fork)`, `(allow
+   file-read*)`) — empirically derived against
+   `tests/suites/runner_use_c_worker/exec_fixture/helper.c` on
+   Darwin 23.6.0 (macOS 15). Documented the authoring protocol in
+   `runner/augments/README.md`. Added e2e cases
+   (`exec_attempt_with_baseline_succeeds`,
+   `exec_attempt_args_and_stderr_round_trip`,
+   `exec_attempt_stdout_truncation_marker`) that pin the
+   user-facing promise that `augments: ["exec_baseline"]` lets a
+   libSystem-dynamic helper spawn cleanly under `(deny default)`.
+
+   *Status: complete.*
+
+   Validated with:
+   - `tests/run.sh --suite runner_use_c_worker` — 13/13 (10
+     pre-existing + 3 new exec_baseline e2e cases).
+   - Bundle signed with the new augment;
+     `Contents/Resources/Augments/exec_baseline.sb` carries the
+     three-rule content; evidence manifest records the new sha256.
 
 Each checkpoint should land as a separate PR (or at least a separate
 commit) so the bisect history is clean and any individual checkpoint
