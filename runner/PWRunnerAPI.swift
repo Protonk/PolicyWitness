@@ -18,6 +18,7 @@ enum PWRunnerWire {
 
     static let attemptKindFile = "file"
     static let attemptKindMachLookup = "mach_lookup"
+    static let attemptKindSysctl = "sysctl"
 
     static let attemptActionOpenRead = "open_read"
     static let attemptActionOpenWrite = "open_write"
@@ -25,6 +26,7 @@ enum PWRunnerWire {
     static let attemptActionUnlink = "unlink"
     static let attemptActionAccess = "access"
     static let attemptActionMachLookup = "bootstrap_look_up"
+    static let attemptActionRead = "read"
 
     static let sandboxFilterNone = "none"
     static let sandboxFilterPath = "path"
@@ -105,6 +107,7 @@ public enum AttemptOutcome {
     public static let unlinkFailed = "unlink_failed"
     public static let accessFailed = "access_failed"
     public static let lookupFailed = "lookup_failed"
+    public static let sysctlFailed = "sysctl_failed"
     public static let bootstrapPortFailed = "bootstrap_port_failed"
     public static let unsupported = "unsupported"
     public static let notRunWorkerDied = "not_run_worker_died"
@@ -252,14 +255,17 @@ public struct PWRunnerSandboxFilter: Codable {
 }
 
 public struct PWRunnerAttempt: Codable {
-    // "file" | "mach_lookup"
+    // "file" | "mach_lookup" | "sysctl"
     public var kind: String
     // For kind=file:
-    //   action: open_read | open_write | create | unlink
+    //   action: open_read | open_write | create | unlink | access
     //   target: path
     // For kind=mach_lookup:
     //   action: bootstrap_look_up
     //   target: mach service name
+    // For kind=sysctl:
+    //   action: read
+    //   target: sysctl name
     public var action: String
     public var target: String
 

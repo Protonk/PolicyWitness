@@ -68,7 +68,7 @@
 /* Bounded string sizes inside a slot. They add up below the slot
  * budget; the remainder is reserved padding for future fields. */
 #define PW_SHM_STEP_ID_MAX        64u
-#define PW_SHM_TARGET_MAX        512u   /* path or mach-service name */
+#define PW_SHM_TARGET_MAX        512u   /* path, mach-service name, or sysctl name */
 #define PW_SHM_OBSERVED_PATH_MAX 1024u  /* PATH_MAX on macOS */
 #define PW_SHM_ERROR_MAX          256u  /* optional failure-cause string */
 
@@ -99,6 +99,7 @@ typedef enum {
     PW_ATTEMPT_FILE_UNLINK      = 4,
     PW_ATTEMPT_FILE_ACCESS      = 5,
     PW_ATTEMPT_MACH_LOOKUP      = 6,
+    PW_ATTEMPT_SYSCTL_READ      = 7,
 } pw_attempt_kind_t;
 
 /*

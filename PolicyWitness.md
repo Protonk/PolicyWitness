@@ -314,8 +314,10 @@ The runner echoes step results with additional context:
 
 Notes:
 - `scope` is `post_sandbox` for runner-hosted checks.
-- `requested_path`, `normalized_path`, and `observed_path` are present for file
-  attempts; non-file attempts carry explicit `null` for these fields.
+- `requested_path` echoes the attempt target for every attempt kind
+  (path, Mach service name, sysctl name, etc.). `normalized_path` and
+  `observed_path` are file-path diagnostics; non-file attempts carry
+  explicit `null` for those fields.
 - `filter_value` is the exact string the runner passes to `sandbox_check`,
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
@@ -366,7 +368,8 @@ The C worker implements these `(attempt.kind, attempt.action)`
 combinations:
 
 - `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
-- `("mach_lookup", "mach_lookup")` — `bootstrap_look_up` on `target`.
+- `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
+- `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
 
 Specimens are free to author probes with other attempt combinations
 (`("iokit", "open")`, future kinds, etc.) — those steps surface

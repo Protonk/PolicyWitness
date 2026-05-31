@@ -18,6 +18,10 @@ The check has two halves:
         coverage matrix in tests/INDEX.md.
      e. Every NormalizedOutcome constant in runner/PWRunnerAPI.swift
         has a row in the coverage matrix.
+     f. Every AttemptOutcome constant has a row in the attempt-outcome
+        coverage matrix.
+     g. The C and Swift C-worker attempt-kind enums agree by raw value
+        and name.
 
 Exit codes:
   0 — everything agrees
@@ -38,6 +42,8 @@ PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
 PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
 PROBE_RUNNER = RUNNER_DIR / "ProbeRunner.swift"
 CWORKER_ORCHESTRATOR = RUNNER_DIR / "CWorkerOrchestrator.swift"
+CWORKER_SWIFT = RUNNER_DIR / "CWorker.swift"
+PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "pw_probe_runner_abi.h"
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
@@ -339,6 +345,84 @@ def check_attempt_outcomes_have_matrix_rows() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# C-worker attempt-kind enum agreement.
+#
+# The host writes PWAttemptKind raw values into shm; the C worker reads those
+# values as pw_attempt_kind_t. A mismatch is not a schema error, it is a runtime
+# lie about which syscall ran. Keep the enums mechanically locked.
+# ---------------------------------------------------------------------------
+
+def _camel_to_screaming_snake(value: str) -> str:
+    step1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', value)
+    step2 = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', step1)
+    return step2.upper()
+
+
+def parse_c_attempt_kinds() -> dict[int, str]:
+    text = PW_PROBE_RUNNER_ABI.read_text(encoding="utf-8")
+    block_re = re.compile(r'typedef enum\s*\{(.*?)\}\s*pw_attempt_kind_t;', re.DOTALL)
+    match = block_re.search(text)
+    if match is None:
+        fail("could not locate pw_attempt_kind_t in pw_probe_runner_abi.h")
+        sys.exit(2)
+    kinds: dict[int, str] = {}
+    for m in re.finditer(r'\bPW_ATTEMPT_([A-Z0-9_]+)\s*=\s*(\d+)', match.group(1)):
+        kinds[int(m.group(2))] = m.group(1)
+    if not kinds:
+        fail("pw_attempt_kind_t contains no parseable PW_ATTEMPT_* entries")
+        sys.exit(2)
+    return kinds
+
+
+def parse_swift_attempt_kinds() -> dict[int, str]:
+    text = CWORKER_SWIFT.read_text(encoding="utf-8")
+    enum_re = re.compile(r'public enum PWAttemptKind:\s*UInt32\s*\{(.*?)\n\}', re.DOTALL)
+    match = enum_re.search(text)
+    if match is None:
+        fail("could not locate PWAttemptKind in runner/CWorker.swift")
+        sys.exit(2)
+    kinds: dict[int, str] = {}
+    for m in re.finditer(r'\bcase\s+([A-Za-z][A-Za-z0-9]*)\s*=\s*(\d+)', match.group(1)):
+        kinds[int(m.group(2))] = _camel_to_screaming_snake(m.group(1))
+    if not kinds:
+        fail("PWAttemptKind contains no parseable case entries")
+        sys.exit(2)
+    return kinds
+
+
+def check_attempt_kind_enum_agreement() -> list[str]:
+    problems: list[str] = []
+    c_kinds = parse_c_attempt_kinds()
+    swift_kinds = parse_swift_attempt_kinds()
+
+    c_values = set(c_kinds)
+    swift_values = set(swift_kinds)
+    for value in sorted(c_values - swift_values):
+        problems.append(
+            f"  attempt-kind: C PW_ATTEMPT_{c_kinds[value]}={value} has no "
+            f"matching PWAttemptKind raw value"
+        )
+    for value in sorted(swift_values - c_values):
+        problems.append(
+            f"  attempt-kind: Swift PWAttemptKind.{swift_kinds[value]}={value} "
+            f"has no matching pw_attempt_kind_t value"
+        )
+
+    if c_values:
+        expected = set(range(0, max(c_values) + 1))
+        for value in sorted(expected - c_values):
+            problems.append(f"  attempt-kind: pw_attempt_kind_t has a numeric gap at {value}")
+
+    for value in sorted(c_values & swift_values):
+        if c_kinds[value] != swift_kinds[value]:
+            problems.append(
+                f"  attempt-kind: value {value} is PW_ATTEMPT_{c_kinds[value]} in C "
+                f"but PWAttemptKind.{swift_kinds[value]} in Swift"
+            )
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # Prediction-unavailable (op, filter) pair agreement.
 #
 # Three sources of truth must list the same set of pairs:
@@ -530,6 +614,7 @@ def main() -> int:
     problems.extend(check_runner_outcome_suites_have_matrix_rows())
     problems.extend(check_normalized_outcomes_have_matrix_rows())
     problems.extend(check_attempt_outcomes_have_matrix_rows())
+    problems.extend(check_attempt_kind_enum_agreement())
     problems.extend(check_prediction_unavailable_agreement())
 
     if problems:

@@ -137,6 +137,64 @@ func runCWorkerTests(_ tk: TestKit) {
                            "expected EPERM/EACCES for param-driven kernel deny, got \(s.errnoVal)")
         }
 
+        // ---- sysctl_read: third curated attempt family -----------------------
+        tk.run("sysctl_read under allow-default succeeds") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "sysctl_osrelease",
+                                     attemptKind: .sysctlRead,
+                                     target: "kern.osrelease")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            try expectTrue(out.applied, "applied sentinel")
+            try expectTrue(out.done, "done sentinel")
+            try expectFalse(out.sentSigkill, "worker should clean-exit")
+            try expectEqual(out.slots.count, 1)
+            let s = out.slots[0]
+            try expectTrue(s.completed, "slot completed")
+            try expectEqual(s.rc, Int32(0), "kern.osrelease sysctl read should succeed")
+            try expectEqual(s.errnoVal, Int32(0), "successful sysctl read should not set errno")
+        }
+
+        tk.run("sysctl_read under mismatched allow is denied") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(deny default)(allow sysctl-read (sysctl-name \"kern.osversion\"))",
+                slots: [
+                    CWorkerSlotInput(stepId: "sysctl_osrelease_denied",
+                                     attemptKind: .sysctlRead,
+                                     target: "kern.osrelease")
+                ]
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker failed: \(result)")
+            }
+            try expectTrue(out.applied, "applied sentinel")
+            try expectTrue(out.done, "done sentinel")
+            try expectFalse(out.sentSigkill, "worker should clean-exit")
+            try expectEqual(out.slots.count, 1)
+            let s = out.slots[0]
+            try expectTrue(s.completed, "slot completed")
+            try expectEqual(s.rc, Int32(1), "kern.osrelease should be denied by the sysctl-name policy")
+            try expectTrue(s.errnoVal == 1 || s.errnoVal == 13,
+                           "expected EPERM (1) or EACCES (13), got \(s.errnoVal)")
+        }
+
         // ---- many params: ABI cap accommodates real-world profile closures -
         // Real SBPL profile closures bind 100+ derived params once
         // (import "system.sb") and friends are resolved. This test

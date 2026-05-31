@@ -307,7 +307,7 @@ run_unsupported_attempt_per_step_skip() {
 {
   "schema_version": 1,
   "specimen_id": "use_c_worker_mixed_attempt_support",
-  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read-data)"},
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read*)"},
   "probe_plan": [
     {"step_id": "good",
      "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},

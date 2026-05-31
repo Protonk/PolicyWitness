@@ -16,11 +16,10 @@
  *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
  *   6. sandbox_apply(). Write apply_rc to header.
  *   7. Write applied sentinel (release ordering).
- *   8. For each populated slot: run the attempt (stub today; Chunk
- *      3 wires real implementations). Slot output writes use
- *      regular stores; the slot's `completed` flag is written with
- *      release ordering so the host's acquire-load of completed
- *      pairs with all preceding writes.
+ *   8. For each populated slot: run the requested attempt. Slot
+ *      output writes use regular stores; the slot's `completed` flag
+ *      is written with release ordering so the host's acquire-load of
+ *      completed pairs with all preceding writes.
  *   9. Write done sentinel.
  *  10. Spin loop: poll exit_requested with acquire ordering, _exit(0)
  *      when set. The spin is bounded by
@@ -44,6 +43,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
@@ -388,6 +388,17 @@ static void attempt_mach_lookup(pw_shm_slot_t *slot) {
     slot->errno_val = 0;
 }
 
+static void attempt_sysctl_read(pw_shm_slot_t *slot) {
+    char buf[4096];
+    size_t len = sizeof(buf);
+    if (sysctlbyname(slot->target, buf, &len, NULL, 0) != 0) {
+        fail_from_errno(slot, "sysctlbyname");
+        return;
+    }
+    slot->rc = 0;
+    slot->errno_val = 0;
+}
+
 /* Dispatch on attempt_kind. Initializes slot outputs to "ok defaults"
  * before the per-kind helper runs so a kind that leaves a field
  * untouched lands at a known state. `completed` is the LAST write
@@ -407,6 +418,7 @@ static void run_attempt(pw_shm_slot_t *slot) {
     case PW_ATTEMPT_FILE_UNLINK:      attempt_file_unlink(slot);          break;
     case PW_ATTEMPT_FILE_ACCESS:      attempt_file_access(slot);          break;
     case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
+    case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;
     default:
         slot->rc = -1;
         slot->errno_val = ENOSYS;

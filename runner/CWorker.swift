@@ -94,6 +94,7 @@ public enum PWAttemptKind: UInt32 {
     case fileUnlink     = 4
     case fileAccess     = 5
     case machLookup     = 6
+    case sysctlRead     = 7
 }
 
 // MARK: - C atomic shim binding

@@ -249,14 +249,16 @@ private func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
         return .fileAccess
     case (PWRunnerWire.attemptKindMachLookup, PWRunnerWire.attemptActionMachLookup):
         return .machLookup
+    case (PWRunnerWire.attemptKindSysctl, PWRunnerWire.attemptActionRead):
+        return .sysctlRead
     default:
         return nil
     }
 }
 
-/// Force-unwrap variant used after validation has run. validation
-/// guarantees every plan step maps to a known kind; the orchestrator's
-/// build path only ever sees a validated plan.
+/// Fallback variant used for the shm slot. Unsupported attempts map to
+/// PW_ATTEMPT_NONE so the worker no-ops the slot; buildAttemptResult
+/// later surfaces the per-step `unsupported` outcome.
 private func mapAttemptKind(_ attempt: PWRunnerAttempt) -> PWAttemptKind {
     return mapAttemptKindOrNil(attempt) ?? .none
 }
@@ -547,10 +549,8 @@ private func buildAttemptResult(
         if s.rc == 0 {
             return AttemptOutcome.ok
         }
-        // The C worker uses the error-message convention "open(...): X"
-        // for file failures and "bootstrap_look_up: kr=N" for mach
-        // failures. We dispatch on the attempt kind instead of parsing
-        // the message — kind is authoritative.
+        // Dispatch on the attempt action rather than parsing the worker's
+        // error string — the requested action is authoritative.
         switch step.attempt.action {
         case PWRunnerWire.attemptActionOpenRead,
              PWRunnerWire.attemptActionOpenWrite,
@@ -562,6 +562,8 @@ private func buildAttemptResult(
             return AttemptOutcome.accessFailed
         case PWRunnerWire.attemptActionMachLookup:
             return AttemptOutcome.lookupFailed
+        case PWRunnerWire.attemptActionRead:
+            return AttemptOutcome.sysctlFailed
         default:
             return AttemptOutcome.unsupported
         }
@@ -619,8 +621,8 @@ private func computeDrift(
 
 private enum AttemptObservation {
     case allowed                 // attempt.outcome == ok
-    case deniedStrongEvidence    // mach kr=1100 (BOOTSTRAP_NOT_PRIVILEGED;
-                                 //   no DAC analogue, so unambiguous sandbox)
+    case deniedStrongEvidence    // mach kr=1100 or sysctl errno that has no
+                                 //   known non-policy analogue here
     case deniedAmbiguous         // file EPERM/EACCES (sandbox OR DAC; can't
                                  //   tell from rc/errno alone)
     case undefined               // ENOENT, missing service, unsupported,
@@ -657,6 +659,17 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
             return .deniedStrongEvidence
         }
         return .undefined
+    case AttemptOutcome.sysctlFailed:
+        switch attempt.errno {
+        case Int(EPERM), Int(EACCES):
+            return .deniedAmbiguous
+        case Int(ENOENT), Int(ENOMEM):
+            return .undefined
+        case .some(_):
+            return .deniedStrongEvidence
+        case .none:
+            return .undefined
+        }
     case AttemptOutcome.bootstrapPortFailed,
          AttemptOutcome.unsupported,
          AttemptOutcome.notRunWorkerDied:

@@ -13,14 +13,6 @@ This suite documents that the prediction_unavailable contract is not
 iokit-specific — the userland predicate's drift from kernel
 enforcement applies to syscall-level operations too.
 
-## What this suite does NOT cover
-
-The attempt slot is a benign file `open_read` placeholder — there is
-no Channel A coverage of the `sysctl-read` operation today (the
-C probe-runner doesn't implement sysctl attempts yet). The suite
-asserts `attempt.outcome != "unsupported"` so a regression to an
-unsupported action would fail loudly.
-
 ## Invariants
 
 - `validateSandboxChecks` accepts `sysctl_name` as a filter kind.
@@ -30,15 +22,19 @@ unsupported action would fail loudly.
   `filter_type_id == null`, `errno == null`, `error == null`.
 - The cross-check emits a `skipped` step with an error containing
   `"prediction_unavailable"`.
-- The attempt slot runs to completion with a supported action.
+- The attempt slot runs a real `sysctl` / `read` attempt against
+  `kern.osrelease` and reports the kernel denial as
+  `attempt.outcome == "sysctl_failed"`.
 
 ## Success criteria
 
 - `result.ok == true`.
 - `runner_result.steps[0].sandbox_check.outcome == "prediction_unavailable"`.
 - `runner_result.steps[0].sandbox_check.rc == -1`.
-- `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
-  `attempt.rc` is populated.
+- `runner_result.steps[0].attempt.outcome == "sysctl_failed"` with
+  `attempt.errno` set to EPERM or EACCES.
+- `runner_result.steps[0].drift == null` because the prediction
+  channel is deliberately unavailable for this op+filter pair.
 
 ## Fixtures
 

@@ -37,11 +37,7 @@ spec = {
             "operation": "sysctl-read",
             "filter": {"kind": "sysctl_name", "value": "kern.osrelease"},
         },
-        # Sysctl attempts aren't a runner attempt kind today; we pair
-        # with a benign file open_read so the attempt slot is populated
-        # for envelope shape checks. This does NOT observe sysctl-read;
-        # the assertion below is about the prediction path.
-        "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
+        "attempt": {"kind": "sysctl", "action": "read", "target": "kern.osrelease"},
     }],
 }
 Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -88,11 +84,17 @@ if sb.get("errno") is not None:
 attempt = steps[0].get("attempt") or {}
 if attempt.get("outcome") == "unsupported":
     raise SystemExit(
-        f"attempt placeholder is using an unsupported action; the runner "
+        f"sysctl attempt is using an unsupported action; the runner "
         f"returned outcome=unsupported. Got: {attempt!r}"
     )
+if attempt.get("outcome") != "sysctl_failed":
+    raise SystemExit(f"expected attempt.outcome=sysctl_failed, got {attempt!r}")
 if attempt.get("rc") is None:
     raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
+if attempt.get("errno") not in (1, 13):
+    raise SystemExit(f"expected EPERM/EACCES from denied sysctl read, got {attempt!r}")
+if steps[0].get("drift") is not None:
+    raise SystemExit(f"expected drift=null for prediction_unavailable sysctl check, got {steps[0].get('drift')!r}")
 PY
 ASSERT_RC=$?
 set -e
@@ -101,4 +103,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "sysctl_name: prediction_unavailable surfaced; attempt observed" "{}"
+test_pass "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed" "{}"

@@ -28,7 +28,7 @@ PolicyWitness is **specimen-first**:
 - `runner/SandboxApply.swift`
   - Policy hashing and single-shot `sandbox_apply` path.
 - `runner/ProbeRunner.swift`
-  - `sandbox_check` and probe attempts (file + mach-lookup).
+  - `sandbox_check` helpers and shared prediction-unavailable metadata.
 - `runner/PathUtils.swift`
   - Path normalization and fd-based observation helpers.
 - `runner/Signals.swift`
@@ -149,10 +149,10 @@ Per-step fields under `steps[]`:
   `operation`, `filter_type_id`, and `errno`/`error` when the check
   call fails.
 - `attempt` always includes `exit_code` and `syscall_errno` (explicit
-  `null` when not applicable), and for file attempts it includes
-  `requested_path`, `normalized_path`, and `observed_path` (fd-based
-  when available). The `rc` and `errno` fields are retained for
-  compatibility.
+  `null` when not applicable). `requested_path` echoes the attempt
+  target for every attempt kind; `normalized_path` and `observed_path`
+  are file-path diagnostics and are `null` for non-file attempts. The
+  `rc` and `errno` fields are retained for compatibility.
 - `drift` is a bool when both verdicts are available and comparable,
   or `null` when no comparison is possible (validator didn't run for
   the step, op+filter is in the prediction-unavailable set, or the
