@@ -435,12 +435,31 @@ Notes:
   verification fixture. For filter kinds in the
   prediction_unavailable set, no `filter_type_id` is emitted (see the
   next section).
-- `outcome`: `allow`, `deny`, `error`, or `prediction_unavailable`. The
-  last value is emitted when the runner deliberately skips
-  `sandbox_check` for an op+filter combination where the userland
-  predicate is empirically known to drift from kernel enforcement.
-  Channel A (the `attempt` result) remains the reliable evidence for
-  those probes; the prediction is honestly absent rather than wrong.
+- `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
+  `prediction_unavailable`.
+    - `allow` / `deny`: `sandbox_check` returned a clean verdict.
+    - `error`: `sandbox_check` returned a non-EINVAL failure
+      (rare in practice). `error` is always populated with
+      `strerror(errno)` — consumers should never see
+      `outcome == "error"` with `error == null`.
+    - `unsupported_operation`: `sandbox_check` returned `rc=-1` +
+      `errno=22` (EINVAL), which most commonly means the operation
+      name is one libsandbox doesn't recognize. SBPL family
+      operations must be passed to `sandbox_check` in their
+      wildcard form — e.g. `process-exec*`, not the bare
+      `process-exec`. `error` is always populated with a message
+      naming the rejected operation and the wildcard hint. Treat
+      this as a per-step skip (parallel to the attempt-side
+      `unsupported` outcome): the step still runs the attempt
+      channel for the observation, but the prediction channel
+      yields no allow/deny verdict so `drift` is `null`.
+    - `prediction_unavailable`: emitted when the runner deliberately
+      skips `sandbox_check` for an op+filter combination where the
+      userland predicate is empirically known to drift from kernel
+      enforcement (see "Filter kinds where prediction is
+      unavailable" below). Channel A (the `attempt` result) remains
+      the reliable evidence for those probes; the prediction is
+      honestly absent rather than wrong.
   When `outcome == "prediction_unavailable"`, `rc` is the sentinel
   `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
   that key on `rc == 0` for "allow" must check `outcome` first so the

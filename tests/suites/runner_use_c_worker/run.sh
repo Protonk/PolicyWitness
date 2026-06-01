@@ -1097,6 +1097,113 @@ PY
     "{\"stdout\":\"${run_stdout}\"}"
 }
 
+# ---- test_id: sandbox_check_unsupported_operation_diagnostic -------------
+#
+# Reporter's repro: a probe step whose sandbox_check.operation is a
+# bare name libsandbox doesn't accept (e.g. "process-exec" instead
+# of the canonical "process-exec*") produced outcome=error with
+# error=null pre-fix — a silent diagnostic loss. After the fix the
+# step surfaces a distinct outcome ("unsupported_operation") with a
+# populated error string that names the rejected operation and
+# hints at the wildcard form. drift stays null but now the cause
+# is documented by the outcome rather than mysteriously absent.
+#
+# Two-step specimen: a bare process-exec step + a star process-exec*
+# step exercise the asymmetry in one run. Both attempts run cleanly
+# (the issue is on the prediction channel only).
+
+run_sandbox_check_unsupported_operation_diagnostic() {
+  local test_id="sandbox_check_unsupported_operation_diagnostic"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "bare process-exec → outcome=unsupported_operation with diagnostic; star process-exec* → outcome=allow"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "unsupported_operation_repro",
+  "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
+  "probe_plan": [
+    {
+      "step_id": "bare",
+      "sandbox_check": {"operation": "process-exec", "filter": {"kind": "none"}},
+      "attempt": {"kind": "sysctl", "action": "read", "target": "kern.osrelease"}
+    },
+    {
+      "step_id": "wild",
+      "sandbox_check": {"operation": "process-exec*", "filter": {"kind": "none"}},
+      "attempt": {"kind": "sysctl", "action": "read", "target": "kern.osrelease"}
+    }
+  ]
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normalized_outcome"])
+
+steps = {s["step_id"]: s for s in r["steps"]}
+assert set(steps) == {"bare", "wild"}, "unexpected step ids: {0}".format(set(steps))
+
+# Bare step: distinct outcome + populated error + drift=null.
+bare = steps["bare"]
+bc = bare["sandbox_check"]
+assert bc["outcome"] == "unsupported_operation", \
+    "bare process-exec expected outcome=unsupported_operation; got {0!r} — diagnostic-loss regression".format(
+        bc["outcome"])
+assert bc.get("error"), \
+    "bare step's sandbox_check.error must be populated (the whole point of this case); got {0!r}".format(
+        bc.get("error"))
+assert "process-exec" in bc["error"], \
+    "error should name the rejected operation; got {0!r}".format(bc["error"])
+assert "wildcard" in bc["error"], \
+    "error should hint at the wildcard convention; got {0!r}".format(bc["error"])
+# rc is the validator's reported value: -1 for the EINVAL path.
+assert bc.get("rc") == -1, "bare sandbox_check rc expected -1; got {0!r}".format(bc.get("rc"))
+assert bc.get("errno") == 22, "bare sandbox_check errno expected 22 (EINVAL); got {0!r}".format(bc.get("errno"))
+# drift falls out as null because there's no allow/deny verdict to
+# compare against — but now the outcome explains why, vs the
+# mysteriously-absent drift the pre-fix shape produced.
+assert bare.get("drift") is None, \
+    "bare drift should be null when sandbox_check has no verdict to compare; got {0!r}".format(bare.get("drift"))
+# The attempt still ran cleanly (the issue was only on the prediction channel).
+assert bare["attempt"]["outcome"] == "ok", \
+    "bare attempt should have run cleanly; got {0!r}".format(bare["attempt"]["outcome"])
+
+# Wild step: unchanged shape, validator + attempt agree on allow.
+wild = steps["wild"]
+assert wild["sandbox_check"]["outcome"] == "allow", \
+    "wild process-exec* expected outcome=allow; got {0!r}".format(wild["sandbox_check"]["outcome"])
+assert wild["sandbox_check"].get("error") is None, \
+    "wild sandbox_check.error should be null on allow; got {0!r}".format(wild["sandbox_check"].get("error"))
+assert wild.get("drift") is False, \
+    "wild drift should be False (validator+attempt agree on allow); got {0!r}".format(wild.get("drift"))
+assert wild["attempt"]["outcome"] == "ok"
+
+print("ok: bare process-exec → unsupported_operation with diagnostic; wild process-exec* → allow")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "bare check operation surfaces as unsupported_operation with populated diagnostic" \
+    "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_duplicate_step_id_rejected
 run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
@@ -1108,3 +1215,4 @@ run_exec_attempt_without_baseline_fails_cleanly
 run_exec_attempt_with_baseline_succeeds
 run_exec_attempt_args_and_stderr_round_trip
 run_exec_attempt_stdout_truncation_marker
+run_sandbox_check_unsupported_operation_diagnostic

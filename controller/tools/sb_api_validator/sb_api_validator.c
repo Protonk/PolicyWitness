@@ -268,8 +268,30 @@ static int parse_probe_line(const char *line,
     return 0;
 }
 
-/* Emit one NDJSON verdict for a successful probe.
- * Shape: {"step_id","rc","errno","outcome","filter_type_id","error":null} */
+/* Emit one NDJSON verdict for a probe that reached sandbox_check.
+ * Shape:
+ *   {"step_id","operation","filter_type","filter_type_id","filter_value",
+ *    "rc","errno","outcome","error":<string|null>}
+ *
+ * Outcome classification:
+ *   rc == 0                          → "allow"   (error: null)
+ *   rc == 1 && errno == 0            → "deny"    (error: null)
+ *   rc == -1 && errno == EINVAL      → "unsupported_operation"
+ *                                      (error: names the op + wildcard hint)
+ *   rc < 0 (any other errno)         → "error"   (error: strerror(errno))
+ *   anything else                    → "error"   (error: "sandbox_check
+ *                                      returned unexpected rc/errno")
+ *
+ * unsupported_operation is the distinct path for "libsandbox doesn't
+ * recognize this operation name" — most commonly a caller passing the
+ * unstar'd form of an SBPL family operation (e.g. process-exec instead
+ * of process-exec*). Surfacing it separately from "error" lets
+ * downstream consumers treat it as a per-step skip rather than a
+ * runtime failure, parallel to how unsupported attempt kinds are
+ * handled. The error string always names the operation and offers
+ * the wildcard-form hint generically (no static atlas of known
+ * stars in PW source — the caller's own knowledge of the SBPL
+ * vocabulary is what fixes it). */
 static void emit_verdict(const char *step_id,
                          const char *operation,
                          const char *filter_type,
@@ -285,12 +307,42 @@ static void emit_verdict(const char *step_id,
     if (filter_value) print_json_string(filter_value); else printf("null");
     printf(",\"rc\":%d", rc);
     printf(",\"errno\":%d", err);
+
     const char *outcome;
-    if (rc == 0) outcome = "allow";
-    else if (rc == 1 && err == 0) outcome = "deny";
-    else outcome = "error";
+    char error_buf[512];
+    const char *error_reason = NULL;  /* NULL → emit JSON null */
+
+    if (rc == 0) {
+        outcome = "allow";
+    } else if (rc == 1 && err == 0) {
+        outcome = "deny";
+    } else if (rc == -1 && err == EINVAL) {
+        outcome = "unsupported_operation";
+        /* The operation string is caller-controlled and may contain
+         * any printable byte; print_json_string() escapes it for the
+         * envelope, but snprintf truncating mid-escape is still safe
+         * because we pass the raw operation to print_json_string
+         * below, not through this buffer. */
+        snprintf(error_buf, sizeof(error_buf),
+                 "sandbox_check returned EINVAL for operation '%s'; "
+                 "SBPL family operations are typically passed to "
+                 "sandbox_check in their wildcard form "
+                 "(e.g. process-exec*, file-read*).",
+                 operation ? operation : "(null)");
+        error_reason = error_buf;
+    } else {
+        outcome = "error";
+        snprintf(error_buf, sizeof(error_buf),
+                 "sandbox_check rc=%d errno=%d: %s",
+                 rc, err, strerror(err));
+        error_reason = error_buf;
+    }
+
     printf(",\"outcome\":\"%s\"", outcome);
-    printf(",\"error\":null}\n");
+    printf(",\"error\":");
+    if (error_reason) print_json_string(error_reason);
+    else              printf("null");
+    printf("}\n");
     fflush(stdout);
 }
 

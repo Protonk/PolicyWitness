@@ -490,16 +490,23 @@ private func buildSandboxCheckResult(
 }
 
 /// The validator emits its own outcome vocabulary (allow / deny /
-/// error / parse_error / bad_filter). Map to the host's
-/// SandboxCheckOutcome catalog: allow/deny/error pass through;
-/// parse_error and bad_filter both surface as `error` with the
-/// validator's outcome string in the error field via the verdict
-/// itself (set upstream).
+/// error / unsupported_operation / parse_error / bad_filter). Map
+/// to the host's SandboxCheckOutcome catalog:
+///   - allow / deny → same
+///   - unsupported_operation → same (distinct outcome so consumers
+///     can route bare-op-name failures as per-step skips rather
+///     than runtime errors; the validator's error string is
+///     threaded through PWRunnerSandboxCheckResult.error)
+///   - everything else (error / parse_error / bad_filter / unknown)
+///     folds into SandboxCheckOutcome.error with the validator's
+///     own error string in the error field via the verdict itself
+///     (set upstream)
 private func mapValidatorOutcomeToSandboxCheckOutcome(_ vOutcome: String) -> String {
     switch vOutcome {
-    case "allow": return SandboxCheckOutcome.allow
-    case "deny":  return SandboxCheckOutcome.deny
-    default:      return SandboxCheckOutcome.error
+    case "allow":                  return SandboxCheckOutcome.allow
+    case "deny":                   return SandboxCheckOutcome.deny
+    case "unsupported_operation":  return SandboxCheckOutcome.unsupportedOperation
+    default:                       return SandboxCheckOutcome.error
     }
 }
 

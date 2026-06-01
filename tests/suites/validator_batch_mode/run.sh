@@ -139,16 +139,29 @@ if deny.get("outcome") != "deny":
 if deny.get("rc") != 1 or deny.get("errno") != 0:
     raise SystemExit(f"s_path_deny expected rc=1 errno=0, got rc={deny.get('rc')!r} errno={deny.get('errno')!r}")
 
-# Error path (rc!=0, errno!=0): sandbox_check returns EINVAL for an
-# unknown operation name. Exercises the "else → error" branch of the
-# verdict classifier (audit finding 6).
+# Unsupported-operation path (rc=-1, errno=EINVAL): sandbox_check
+# returns EINVAL for an operation name libsandbox doesn't recognize.
+# The verdict classifier routes this to its own outcome
+# ("unsupported_operation") rather than folding into the generic
+# "error" — surfaces what went wrong AND lets the orchestrator
+# treat the step as a per-step skip rather than a runtime error.
+# Pin the populated error string too — a verdict that emits an
+# unsupported_operation outcome with `error: null` is a regression
+# of the diagnostic-loss bug this case exists to prevent.
 err_v = by_step.get("s_op_error")
 if err_v is None:
     raise SystemExit(f"missing verdict for s_op_error: {verdicts!r}")
-if err_v.get("outcome") != "error":
-    raise SystemExit(f"s_op_error expected outcome=error for unknown op, got {err_v!r}")
-if err_v.get("errno") == 0:
-    raise SystemExit(f"s_op_error expected errno != 0 for unknown op, got {err_v!r}")
+if err_v.get("outcome") != "unsupported_operation":
+    raise SystemExit(f"s_op_error expected outcome=unsupported_operation for unknown op, got {err_v!r}")
+if err_v.get("errno") != 22:  # EINVAL on macOS
+    raise SystemExit(f"s_op_error expected errno=22 (EINVAL), got {err_v!r}")
+err_msg = err_v.get("error") or ""
+if not err_msg:
+    raise SystemExit(f"s_op_error expected non-null error string, got {err_v!r}")
+if "this-op-does-not-exist" not in err_msg:
+    raise SystemExit(f"s_op_error error should name the rejected operation; got {err_msg!r}")
+if "wildcard" not in err_msg:
+    raise SystemExit(f"s_op_error error should hint at wildcard form; got {err_msg!r}")
 
 # e1: bad_filter (filter_type=BAD with filter_value present)
 e1 = by_step.get("e1")
@@ -199,7 +212,7 @@ for v in verdicts:
     if v.get("schema_version") != 1:
         raise SystemExit(f"unexpected schema_version: {v!r}")
 
-print("ok: 10 verdicts validated (3 allow + 1 deny + 1 error + 1 bad_filter + 4 parse_error)")
+print("ok: 10 verdicts validated (3 allow + 1 deny + 1 unsupported_operation + 1 bad_filter + 4 parse_error)")
 PY
 ASSERT_RC=$?
 set -e

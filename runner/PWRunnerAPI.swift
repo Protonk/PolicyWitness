@@ -138,6 +138,17 @@ public enum SandboxCheckOutcome {
     public static let deny = "deny"
     public static let error = "error"
     public static let predictionUnavailable = "prediction_unavailable"
+    /// libsandbox doesn't recognize the operation name (sandbox_check
+    /// returned rc=-1 + errno=EINVAL). Most commonly a caller passing
+    /// the unstar'd form of an SBPL family operation
+    /// (e.g. "process-exec" instead of the canonical "process-exec*").
+    /// Surfaced as a distinct outcome so consumers can treat it as a
+    /// per-step skip rather than a runtime failure — parallel to how
+    /// unsupported attempt kinds are handled. `error` is always
+    /// populated with the rejected operation name + the wildcard-form
+    /// hint. `drift` is null for these steps because there's no
+    /// allow/deny verdict to compare against.
+    public static let unsupportedOperation = "unsupported_operation"
 }
 
 public struct PWRunnerRunSpec: Codable {
