@@ -454,12 +454,22 @@ Notes:
       channel for the observation, but the prediction channel
       yields no allow/deny verdict so `drift` is `null`.
     - `prediction_unavailable`: emitted when the runner deliberately
-      skips `sandbox_check` for an op+filter combination where the
-      userland predicate is empirically known to drift from kernel
-      enforcement (see "Filter kinds where prediction is
-      unavailable" below). Channel A (the `attempt` result) remains
-      the reliable evidence for those probes; the prediction is
-      honestly absent rather than wrong.
+      skips `sandbox_check` for a step where the userland predicate
+      is structurally suspect. Two triggers:
+        - **op+filter pair** known to drift from kernel enforcement
+          (iokit / sysctl families — see "Filter kinds where
+          prediction is unavailable" below).
+        - **per-step host condition**: a `path` filter whose
+          `filter_value` doesn't resolve via `realpath` on the host.
+          For absent paths the kernel ENOENTs file-* access vectors
+          before reaching the sandbox layer, so a libsandbox verdict
+          for that path is a userland canonicalization artifact, not
+          a kernel prediction. `error` is populated naming the
+          unresolved path; `path_diagnostics.realpath_resolved` is
+          `null` as a second tell.
+      Channel A (the `attempt` result) remains the reliable evidence
+      for these probes; the prediction is honestly absent rather
+      than wrong.
   When `outcome == "prediction_unavailable"`, `rc` is the sentinel
   `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
   that key on `rc == 0` for "allow" must check `outcome` first so the

@@ -1204,6 +1204,122 @@ PY
     "{\"stdout\":\"${run_stdout}\"}"
 }
 
+# ---- test_id: sandbox_check_path_unresolved_prediction_unavailable -------
+#
+# Per-step host condition: a path-filter target that doesn't
+# resolve on the host short-circuits to prediction_unavailable.
+# The kernel ENOENTs file-* access before reaching the sandbox
+# layer for absent paths, so libsandbox's verdict for such a path
+# is a userland canonicalization artifact — surfacing it as
+# "deny" would mislead consumers that filter on outcome to detect
+# real kernel-side denials.
+#
+# Reporter's repro shape: one resolvable + one unresolvable path
+# under the same allow rule. The resolvable step's verdict is
+# unchanged; the unresolvable step is now prediction_unavailable
+# with the gate's reason populated in `error`. drift=null falls
+# out for the unresolvable step (no allow/deny to compare) but
+# the cause is now self-documented by the outcome rather than
+# silently undefined.
+
+run_sandbox_check_path_unresolved_prediction_unavailable() {
+  local test_id="sandbox_check_path_unresolved_prediction_unavailable"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "run" "resolvable path → unchanged; unresolvable path → prediction_unavailable with populated error"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+
+  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
+  cat >"${specimen}" <<'EOF'
+{
+  "schema_version": 1,
+  "specimen_id": "path_unresolved_repro",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(deny default)\n(allow file-read-data (subpath \"/usr/lib\"))\n"
+  },
+  "probe_plan": [
+    {
+      "step_id": "exists",
+      "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/usr/lib/dyld"}},
+      "attempt": {"kind": "file", "action": "open_read", "target": "/usr/lib/dyld"}
+    },
+    {
+      "step_id": "absent",
+      "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/usr/lib/NONEXISTENT_pw_repro"}},
+      "attempt": {"kind": "file", "action": "open_read", "target": "/usr/lib/NONEXISTENT_pw_repro"}
+    }
+  ]
+}
+EOF
+
+  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
+  set +e
+  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  set -e
+
+  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
+  set +e
+  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+import json, sys
+env = json.loads(open(sys.argv[1]).read())
+r = env["data"]["runner_result"]
+assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normalized_outcome"])
+steps = {s["step_id"]: s for s in r["steps"]}
+assert set(steps) == {"exists", "absent"}, "unexpected step ids: {0}".format(set(steps))
+
+# Resolvable step: validator runs, allow + drift=False, attempt ok.
+ex = steps["exists"]
+assert ex["sandbox_check"]["outcome"] == "allow", \
+    "resolvable path expected sb_check=allow; got {0!r}".format(ex["sandbox_check"]["outcome"])
+assert ex["sandbox_check"].get("filter_type_id") is not None, \
+    "resolvable path should carry a filter_type_id (proves validator ran); got {0!r}".format(
+        ex["sandbox_check"].get("filter_type_id"))
+assert ex.get("drift") is False, "resolvable path drift expected False; got {0!r}".format(ex.get("drift"))
+assert ex["attempt"]["outcome"] == "ok"
+
+# Unresolvable step: validator skipped, prediction_unavailable +
+# rc sentinel + populated error + filter_type_id null + drift null.
+ab = steps["absent"]
+sb = ab["sandbox_check"]
+assert sb["outcome"] == "prediction_unavailable", \
+    "absent path expected prediction_unavailable; got {0!r} (silent diagnostic regression)".format(sb["outcome"])
+assert sb["rc"] == -1, "prediction_unavailable rc sentinel: expected -1; got {0!r}".format(sb["rc"])
+assert sb.get("filter_type_id") is None, \
+    "validator must not have been asked; expected filter_type_id=null, got {0!r}".format(sb.get("filter_type_id"))
+err = sb.get("error") or ""
+assert err, "prediction_unavailable.error must be populated for the path-unresolved gate; got {0!r}".format(err)
+assert "/usr/lib/NONEXISTENT_pw_repro" in err, \
+    "error must name the unresolved path; got {0!r}".format(err)
+assert "did not resolve" in err, "error should explain the gate reason; got {0!r}".format(err)
+assert ab.get("drift") is None, \
+    "drift should be null (no allow/deny to compare); got {0!r}".format(ab.get("drift"))
+# Attempt still runs and carries the real evidence — the kernel
+# ENOENT comes through as open_failed with errno=2.
+assert ab["attempt"]["outcome"] == "open_failed"
+assert ab["attempt"].get("errno") == 2, \
+    "attempt errno expected 2 (ENOENT); got {0!r}".format(ab["attempt"].get("errno"))
+
+# path_diagnostics enrichment still runs for both steps — consumers
+# can see realpath_resolved=null for the absent path as a second
+# tell about WHY the gate fired.
+ab_diag = sb.get("path_diagnostics") or {}
+assert ab_diag.get("realpath_resolved") is None, \
+    "absent path's realpath_resolved should be null; got {0!r}".format(ab_diag.get("realpath_resolved"))
+
+print("ok: resolvable path unchanged; absent path → prediction_unavailable with populated reason")
+PY
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
+    return 0
+  fi
+  test_pass "path filter unresolved → prediction_unavailable with populated diagnostic" \
+    "{\"stdout\":\"${run_stdout}\"}"
+}
+
 run_duplicate_step_id_rejected
 run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
@@ -1216,3 +1332,4 @@ run_exec_attempt_with_baseline_succeeds
 run_exec_attempt_args_and_stderr_round_trip
 run_exec_attempt_stdout_truncation_marker
 run_sandbox_check_unsupported_operation_diagnostic
+run_sandbox_check_path_unresolved_prediction_unavailable

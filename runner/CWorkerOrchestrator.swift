@@ -302,6 +302,16 @@ private func validatorProbesFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [Valid
             // probe with one whose filter kind hasn't been verified.
             continue
         }
+        // Per-step path-resolution gate: when the path filter doesn't
+        // resolve via realpath, the kernel won't reach a sandbox
+        // decision (file ops ENOENT first), so any libsandbox verdict
+        // for the path is a userland canonicalization artifact rather
+        // than a kernel prediction. Skip the validator probe; the
+        // step builder synthesizes prediction_unavailable so consumers
+        // see the prediction was honestly absent rather than wrong.
+        if pathFilterIsUnresolvable(kind, step.sandbox_check.filter.value) {
+            continue
+        }
         // NONE-filter probes must not carry a filter_value in the
         // validator wire (the validator rejects it as bad_filter).
         // Callers commonly pass "" for kind=none — coerce that to nil.
@@ -316,6 +326,20 @@ private func validatorProbesFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [Valid
         ))
     }
     return probes
+}
+
+/// True when the step's filter is a path whose value does not
+/// resolve on the host via realpath. The kernel's file-op vectors
+/// (open, access, …) ENOENT before they reach the sandbox layer for
+/// absent paths, so a libsandbox verdict for such a path is a
+/// userland artifact, not a kernel prediction. We skip the
+/// validator probe and synthesize prediction_unavailable for these
+/// steps; the attempt channel still runs and carries the real
+/// observation. NONE-filter and resolvable paths are unaffected.
+private func pathFilterIsUnresolvable(_ kind: String, _ value: String?) -> Bool {
+    guard kind == PWRunnerWire.sandboxFilterPath else { return false }
+    guard let v = value, !v.isEmpty else { return false }
+    return canonicalizePath(v).resolved == nil
 }
 
 /// Host-side mirror of ProbeRunner's predictionUnavailableOpFilters.
@@ -428,13 +452,25 @@ private func buildSandboxCheckResult(
     let kind = step.sandbox_check.filter.kind
     let value = step.sandbox_check.filter.value
 
-    // Synthesize prediction_unavailable in two cases that share the
-    // wire shape: (a) a known op+filter pair that empirically drifts
-    // from kernel enforcement, and (b) a filter kind the runner
-    // doesn't know how to validate (e.g. preference_domain,
-    // mach_port). In both cases the validator wasn't asked, the
-    // attempt is the reliable evidence, and the consumer-visible
-    // shape is identical.
+    // Synthesize prediction_unavailable in three cases that share
+    // the wire shape:
+    //
+    //   (a) a known op+filter pair that empirically drifts from
+    //       kernel enforcement (iokit/sysctl families);
+    //   (b) a filter kind the runner doesn't know how to validate
+    //       (e.g. preference_domain, mach_port);
+    //   (c) per-step host condition: a path-filter value that
+    //       doesn't resolve via realpath. For absent paths the
+    //       kernel never reaches a sandbox decision (file-* ops
+    //       ENOENT first), so whatever verdict libsandbox returns
+    //       is a userland-side canonicalization artifact, not a
+    //       prediction the kernel would produce. We surface the
+    //       gate's reason in `error` so a consumer can see which
+    //       branch fired without having to inspect path_diagnostics.
+    //
+    // In all three cases the validator wasn't asked, the attempt
+    // is the reliable evidence, and the consumer-visible shape is
+    // identical (rc=-1, drift=null).
     if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair)
         || !knownFilterKinds.contains(kind) {
         return PWRunnerSandboxCheckResult(
@@ -449,6 +485,29 @@ private func buildSandboxCheckResult(
             filter_type_id: nil,
             errno: nil,
             error: nil,
+            path_diagnostics: nil
+        )
+    }
+    if pathFilterIsUnresolvable(kind, value) {
+        // path_diagnostics is added later by PWRunnerService's
+        // enrichPathDiagnostics pass (which always runs for
+        // path-kind results), so a consumer can still see
+        // realpath_resolved=null alongside this outcome.
+        let target = value ?? ""
+        return PWRunnerSandboxCheckResult(
+            rc: -1,
+            outcome: SandboxCheckOutcome.predictionUnavailable,
+            pid: sandboxCheckPid,
+            operation: step.sandbox_check.operation,
+            scope: scope,
+            filter_kind: kind,
+            filter_value: value,
+            effective_filter_value: value,
+            filter_type_id: nil,
+            errno: nil,
+            error: "target path \(target.debugDescription) did not resolve on the host; "
+                + "the kernel ENOENTs file-* access before reaching the sandbox check, "
+                + "so libsandbox's verdict for this path is not a kernel prediction",
             path_diagnostics: nil
         )
     }
