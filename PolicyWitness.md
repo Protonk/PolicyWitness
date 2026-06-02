@@ -133,6 +133,17 @@ Before the runner is invoked, the host compiles the policy with
 sent to libsandbox and no imports are resolved. The cap is in place to bound
 preflight work — far above any real-world hand-written profile.
 
+When the source passes the size cap and the params check but
+libsandbox itself rejects the policy at compile time (syntax error,
+unknown operation, malformed filter, etc.), preflight returns
+`result.normalized_outcome = "bad_policy"` and exit code 1. The
+runner is not invoked. `data.compile_error` carries the
+libsandbox-side diagnostic (often cryptic — "expected pattern, got
+boolean" is the canonical example for a malformed filter
+argument). `bad_policy` is distinct from `missing_params` and
+`policy_too_large` above, both of which gate before the policy
+reaches libsandbox.
+
 The preflight envelope also records the imports closure:
 
 - `imports`: each entry is `{name, resolved_path, sha256, size_bytes,
@@ -299,11 +310,18 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   populated whenever the validator child ran. Exactly one of
   `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
   non-null. `null` in two cases:
-    1. Every probe in the plan had an (operation, filter) pair in
-       the `prediction_unavailable` set — the orchestrator skipped
-       the validator entirely and synthesized the per-step
-       `sandbox_check.outcome = "prediction_unavailable"` verdicts
-       locally.
+    1. No validator probes remained after orchestrator-side
+       filtering, so the validator was never spawned. This covers an
+       empty `probe_plan`, plus any plan where every step's
+       `sandbox_check` falls into one of the
+       `prediction_unavailable` buckets — `(operation, filter_kind)`
+       pair in the empirically-drifting set (iokit / sysctl
+       families), filter kind the runner doesn't predict
+       (`preference_domain`, `mach_port`, etc.), or path filter
+       whose `filter_value` doesn't resolve via `realpath` on the
+       host. The orchestrator synthesizes
+       `sandbox_check.outcome = "prediction_unavailable"` for each
+       skipped step locally.
     2. The validator failed to spawn before any metadata could be
        captured (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
@@ -412,6 +430,46 @@ Notes:
   `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
   that key on `rc == 0` for "allow" must check `outcome` first so the
   sentinel is not misread.
+
+`steps[].attempt.outcome` values:
+
+- `ok` — the attempt's syscall returned success (allow).
+- `open_failed` — file `open()` (for `open_read` / `open_write` /
+  `create`) returned non-zero; errno in `attempt.errno`. EPERM /
+  EACCES are ambiguous between sandbox and DAC (see
+  [Top-level fields](#top-level-fields) → `drift`).
+- `unlink_failed` — file `unlink()` returned non-zero; errno in
+  `attempt.errno`.
+- `access_failed` — file `access(R_OK)` returned non-zero; errno in
+  `attempt.errno`.
+- `lookup_failed` — `bootstrap_look_up` returned a non-success
+  Mach kernel return code; the `kr` is preserved in
+  `attempt.error` as `"bootstrap_look_up: kr=<N>"`. `kr=1100`
+  (`BOOTSTRAP_NOT_PRIVILEGED`) is the sandbox-deny signal;
+  `kr=1102` (`BOOTSTRAP_UNKNOWN_SERVICE`) means the service simply
+  isn't registered.
+- `sysctl_failed` — `sysctlbyname()` returned non-zero; errno in
+  `attempt.errno`. EPERM / EACCES are ambiguous; ENOENT / ENOMEM
+  are non-policy failures.
+- `exec_failed` — `posix_spawn` was blocked, the target was
+  missing, the helper exited non-zero, the helper was signaled, or
+  the per-exec deadline fired. See
+  [Attempt kinds the runner implements](#attempt-kinds-the-runner-implements)
+  → `("exec", "spawn")` for the `child_pid` sentinel rules that
+  distinguish a sandbox-denied spawn from a helper that simply
+  exited non-zero.
+- `bootstrap_port_failed` — couldn't obtain the worker's bootstrap
+  port via `task_get_special_port(TASK_BOOTSTRAP_PORT)` — a
+  precondition failure for `mach_lookup` rather than a verdict on
+  the lookup itself. Rare.
+- `unsupported` — the `(attempt.kind, attempt.action)` combination
+  isn't in PolicyWitness's implemented set. Per-step skip: the
+  worker no-ops this slot; the `sandbox_check` verdict still runs;
+  `drift` is `null` for the step.
+- `not_run_worker_died` — the worker exited before reaching this
+  slot. Distinct from a per-attempt failure: the attempt itself
+  never ran, so the absent verdict is a missing-evidence signal
+  rather than a deny attribution.
 
 ### path_diagnostics
 
@@ -821,7 +879,12 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "policy": { "sbpl": "(version 1) (deny default)" },
+  "schema_version": 1,
+  "specimen_id": "byoxpc_smoke",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (deny default)"
+  },
   "probe_plan": [],
   "runner": {
     "service": "com.yourteam.policy-witness.PWRunner",
