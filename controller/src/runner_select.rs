@@ -12,7 +12,7 @@ use crate::app_layout::{
     resolve_pw_runner_bundle_info, PW_RUNNER_STANDARD_SERVICE_DIR,
 };
 use crate::evidence;
-use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerScope, RunnerSignature};
+use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature};
 
 #[derive(Default)]
 pub struct RunnerSelector {
@@ -232,17 +232,27 @@ pub fn resolve_runner_target(
 
     let registry_path = runner_manager::runner_registry_path()?;
     let registry = runner_manager::load_registry(&registry_path)?;
+    let record = find_external_record(&registry, selector)?;
+    resolve_external_target(record, selector)
+}
 
-    let record = if let Some(id) = selector.runner_id.as_ref() {
+/// Find the registry record a selector points at, by id (preferred) or
+/// service name. Pure over the loaded registry so the by-id / by-service /
+/// not-found branches are unit-testable without reading `$HOME`. The id and
+/// service branches are mutually exclusive: when an id is set, a matching
+/// service is NOT consulted as a fallback.
+fn find_external_record<'a>(
+    registry: &'a RunnerRegistry,
+    selector: &RunnerSelector,
+) -> Result<&'a RunnerRecord, String> {
+    if let Some(id) = selector.runner_id.as_ref() {
         registry.runners.iter().find(|r| &r.id == id)
     } else if let Some(service) = selector.runner_service.as_ref() {
         registry.runners.iter().find(|r| &r.service_name == service)
     } else {
         None
     }
-    .ok_or_else(|| "external runner not found in registry".to_string())?;
-
-    resolve_external_target(record, selector)
+    .ok_or_else(|| "external runner not found in registry".to_string())
 }
 
 /// Resolve a registry record + selector into a concrete external target.
@@ -412,6 +422,20 @@ mod tests {
         }
     }
 
+    fn record_named(id: &str, service: &str) -> RunnerRecord {
+        let mut r = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &[]);
+        r.id = id.to_string();
+        r.service_name = service.to_string();
+        r
+    }
+
+    fn registry_of(records: Vec<RunnerRecord>) -> RunnerRegistry {
+        RunnerRegistry {
+            schema_version: runner_manager::RUNNER_REGISTRY_SCHEMA_VERSION,
+            runners: records,
+        }
+    }
+
     // ---- cheap batch: selector parsing + mode parsing + conflict guards ------
 
     #[test]
@@ -573,5 +597,75 @@ mod tests {
         let selector = selector_with(None, &[], true);
         let err = err_of(resolve_external_target(&record, &selector));
         assert_eq!(err, "external runners cannot be built-in kinds");
+    }
+
+    // ---- registry record lookup (pure over a loaded registry) ---------------
+
+    #[test]
+    fn find_external_record_by_id() {
+        let reg = registry_of(vec![record_named("a", "svc-a"), record_named("b", "svc-b")]);
+        let sel = RunnerSelector {
+            runner_id: Some("b".to_string()),
+            ..Default::default()
+        };
+        let rec = find_external_record(&reg, &sel).expect("found");
+        assert_eq!(rec.id, "b");
+    }
+
+    #[test]
+    fn find_external_record_by_service_when_no_id() {
+        let reg = registry_of(vec![record_named("a", "svc-a"), record_named("b", "svc-b")]);
+        let sel = RunnerSelector {
+            runner_service: Some("svc-a".to_string()),
+            ..Default::default()
+        };
+        let rec = find_external_record(&reg, &sel).expect("found");
+        assert_eq!(rec.id, "a");
+    }
+
+    #[test]
+    fn find_external_record_prefers_id_over_service() {
+        // When an id is present the service is ignored entirely.
+        let reg = registry_of(vec![record_named("a", "svc-a"), record_named("b", "svc-b")]);
+        let sel = RunnerSelector {
+            runner_id: Some("a".to_string()),
+            runner_service: Some("svc-b".to_string()),
+            ..Default::default()
+        };
+        let rec = find_external_record(&reg, &sel).expect("found");
+        assert_eq!(rec.id, "a");
+    }
+
+    #[test]
+    fn find_external_record_id_miss_does_not_fall_back_to_service() {
+        // id set but unmatched → the service branch is NOT consulted, so the
+        // lookup fails even though the service would have matched.
+        let reg = registry_of(vec![record_named("a", "svc-a")]);
+        let sel = RunnerSelector {
+            runner_id: Some("missing".to_string()),
+            runner_service: Some("svc-a".to_string()),
+            ..Default::default()
+        };
+        let err = find_external_record(&reg, &sel).unwrap_err();
+        assert_eq!(err, "external runner not found in registry");
+    }
+
+    #[test]
+    fn find_external_record_not_found() {
+        let reg = registry_of(vec![record_named("a", "svc-a")]);
+        let sel = RunnerSelector {
+            runner_id: Some("zzz".to_string()),
+            ..Default::default()
+        };
+        let err = find_external_record(&reg, &sel).unwrap_err();
+        assert_eq!(err, "external runner not found in registry");
+    }
+
+    #[test]
+    fn find_external_record_empty_selector_is_not_found() {
+        let reg = registry_of(vec![record_named("a", "svc-a")]);
+        let sel = RunnerSelector::default();
+        let err = find_external_record(&reg, &sel).unwrap_err();
+        assert_eq!(err, "external runner not found in registry");
     }
 }
