@@ -243,7 +243,9 @@ private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSl
 /// to PW_ATTEMPT_NONE (worker no-ops the slot) and the step builder
 /// then emits `attempt.outcome = "unsupported"` so the rc=0 slot
 /// isn't misread as a successful observation.
-private func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
+// `internal` (not `private`) so AttemptOutcomeMappingTests can assert the
+// Layer-1 routing table agrees with buildAttemptResult's outcome switch.
+func mapAttemptKindOrNil(_ attempt: PWRunnerAttempt) -> PWAttemptKind? {
     switch (attempt.kind, attempt.action) {
     case (PWRunnerWire.attemptKindFile, PWRunnerWire.attemptActionOpenRead):
         return .fileOpenRead
@@ -569,7 +571,12 @@ private func mapValidatorOutcomeToSandboxCheckOutcome(_ vOutcome: String) -> Str
     }
 }
 
-private func buildAttemptResult(
+// `internal` (not `private`) so AttemptOutcomeMappingTests can drive the
+// (kind, action, slot) → AttemptOutcome mapping directly. This is the
+// third host classifier alongside computeDrift/classify; the test pins
+// each cell so the two stacked tables (kind routing + the rc!=0 action
+// switch) can't silently drift apart.
+func buildAttemptResult(
     step: PWRunnerProbeStep,
     slot: CWorkerSlotResult?
 ) -> PWRunnerAttemptResult {
