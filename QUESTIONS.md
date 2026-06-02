@@ -2,19 +2,15 @@
 
 ## When should I use PolicyWitness?
 
-PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses — i.e., whether the prediction tooling everyone else relies on would mislead you on this policy. You could use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases.
+PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses. Alternatively, you could use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases.
 
-## When would I not want to use PolicyWitness?
+## When would I need PolicyWitness?
 
-Nearly every case. Most macOS callers neither author SBPL profiles nor call `sandbox_check` directly, so the cross-channel comparison PW exists to produce isn't a question they need answered — Apple's entitlements model and their app's actual runtime behavior cover the practical sandbox question for them. Caveat: `sandbox_check` itself is technically deprecated, so the usual route of querying it for sandbox decisions doesn't have promised behavior — which is the gap PW is built to map.
-
-## How does PolicyWitness compare to `sandbox-exec`?
-
-`sandbox-exec` is the stock macOS CLI that applies a given SBPL profile to itself and then execs a target command, which runs under that profile. It compiles the profile through the same libsandbox machinery PolicyWitness uses, and a small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces. PolicyWitness exists because the judgment calls those scripts have to make — distinguishing DAC failures from sandbox failures, knowing which `sandbox_check` predictions are unreliable on the current macOS revision, handling unresolvable paths — are easier to maintain in one shared codebase than to rediscover per team.
+Almost never. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces. PolicyWitness exists because the judgment calls those scripts have to make — distinguishing DAC failures from sandbox failures, knowing which `sandbox_check` predictions are unreliable on the current macOS revision, handling unresolvable paths — are easier to maintain in one shared codebase than to rediscover per project.
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
-PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope — the kernel's `F_GETPATH`-canonical `observed_path` for file ops; the bootstrap return code that distinguishes sandbox-deny (`kr=1100`) from service-missing (`kr=1102`) for mach lookups; errno bucketing for sysctl; and the full spawn-and-reap shape (child_pid, exit code, termination signal, captured stdout/stderr) for exec. That detail is what a real consumer would observe at runtime against the same policy, recorded once in machine-readable form.
+PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope — the kernel's `F_GETPATH`-canonical `observed_path` for file ops; the bootstrap return code that distinguishes sandbox-deny (`kr=1100`) from service-missing (`kr=1102`) for mach lookups; errno bucketing for sysctl; and the full spawn-and-reap shape (child_pid, exit code, termination signal, captured stdout/stderr) for exec.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
@@ -26,12 +22,12 @@ PolicyWitness reports uncertainty as a distinct outcome with the reason populate
 
 ## What versions of SBPL are supported?
 
-`(version 1)` is the officially supported SBPL profile prologue, but a small fraction of the profiles Apple ships under `/System/Library/Sandbox/Profiles/` open with `(version 2)` or `(version 3)` — the higher numbers are not documented in any public reference. PolicyWitness compiles whatever the host's `sandbox_compile_string` accepts (the same surface `sandbox-exec` compiles against), so all three work.
+`(version 1)` is the officially supported SBPL profile prologue, but a small fraction of the profiles Apple ships under `/System/Library/Sandbox/Profiles/` open with `(version 2)` or `(version 3)` — the higher numbers are not documented in any public reference. PolicyWitness compiles whatever the host's `sandbox_compile_string` accepts, so all three work.
 
 ## How do I use imports with PolicyWitness?
 
-PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`). What PolicyWitness adds is preflight-time provenance: every resolved import shows up in the envelope with its absolute path, sha256, size, and mtime, plus a `policy_closure_sha256` field covering the source bytes joined with the sorted set of resolved imports. The closure hash is reproducible iff every imported file is content-identical on the verifying host, so a hash match across two runs is evidence that the bytes that actually compiled were the same.
+PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
 
 ## Is evidence from runs comparable across macOS versions?
 
-No. The host's libsandbox, the imports closure, and the drift surface all vary by macOS release — `policy_closure_sha256` covers file bytes that change between releases, the prediction-unavailable set was verified against specific builds, and the operations libsandbox accepts shift over time. In practice the vast majority of policy decisions are stable across versions, but PolicyWitness exists for the tiny fraction where they aren't.
+No. The host's libsandbox, the imports closure, and the drift surface all vary by macOS release. In practice the vast majority of policy decisions are stable across versions, but PolicyWitness exists for the tiny fraction where they aren't.
