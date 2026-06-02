@@ -23,3 +23,15 @@ Yes — via the `exec` attempt kind plus the named-augment interface. Callers sh
 ## How does PolicyWitness handle uncertainty in its verdicts?
 
 PolicyWitness reports uncertainty as a distinct outcome with the reason populated, so a consumer can branch on it explicitly. Each step in a run carries two verdicts the consumer reads: the validator's prediction at `sandbox_check.outcome` and the cross-channel comparison at `drift`. The prediction reports `prediction_unavailable` when the validator wasn't asked (an op+filter pair empirically known to drift, an unknown filter kind, or a path that doesn't resolve on the host) and `unsupported_operation` when libsandbox returned EINVAL on the operation name — both with `error` populated naming the trigger. The drift comparison reports `null` when no comparison is possible — when the prediction is unavailable, when the attempt didn't produce a verdict, or when the attempt's failure is ambiguous between sandbox and DAC (file EPERM/EACCES, where the same errno could be a `chmod 000` rather than a sandbox deny).
+
+## What versions of SBPL are supported?
+
+`(version 1)` is the officially supported SBPL profile prologue, but a small fraction of the profiles Apple ships under `/System/Library/Sandbox/Profiles/` open with `(version 2)` or `(version 3)` — the higher numbers are not documented in any public reference. PolicyWitness compiles whatever the host's `sandbox_compile_string` accepts (the same surface `sandbox-exec` compiles against), so all three work.
+
+## How do I use imports with PolicyWitness?
+
+PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`). What PolicyWitness adds is preflight-time provenance: every resolved import shows up in the envelope with its absolute path, sha256, size, and mtime, plus a `policy_closure_sha256` field covering the source bytes joined with the sorted set of resolved imports. The closure hash is reproducible iff every imported file is content-identical on the verifying host, so a hash match across two runs is evidence that the bytes that actually compiled were the same.
+
+## Is evidence from runs comparable across macOS versions?
+
+No. The host's libsandbox, the imports closure, and the drift surface all vary by macOS release — `policy_closure_sha256` covers file bytes that change between releases, the prediction-unavailable set was verified against specific builds, and the operations libsandbox accepts shift over time. In practice the vast majority of policy decisions are stable across versions, but PolicyWitness exists for the tiny fraction where they aren't.
