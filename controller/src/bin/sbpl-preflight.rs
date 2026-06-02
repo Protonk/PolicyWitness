@@ -27,7 +27,7 @@ use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 use std::time::UNIX_EPOCH;
 
-// Verified empirically on macOS 14.8.3 build 23J220 (see IMPORTS-PLAN.md §B):
+// Verified empirically on macOS 14.8.3 build 23J220:
 // - Bare names with extension (e.g. "system.sb") resolve from the two
 //   directories listed in IMPORT_SEARCH_PATHS, tried in order.
 // - Names without `.sb` do NOT auto-append; libsandbox reports
