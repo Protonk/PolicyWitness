@@ -90,9 +90,9 @@ target works on Command Line Tools alone (full Xcode not required).
 `@testable import` it. Production builds keep going through `build.sh`;
 SwiftPM's `.build/` tree is gitignored.
 
-See `AGENTS.md` → "Swift runner unit tests (SwiftPM)" for the contract,
-when to reach for a unit test vs an e2e suite, the rules around stubbing
-`@convention(c)` C function pointers, and how to add a new test file.
+See `runner/AGENTS.md` → "Swift runner unit tests (SwiftPM)" for the
+contract, when to reach for a unit test vs an e2e suite, the rules around
+stubbing `@convention(c)` C function pointers, and how to add a new test file.
 
 ## Test seam: `_test_overrides`
 
@@ -112,7 +112,7 @@ unset.
 | `validator_executable_path` | bundle-local `sb_api_validator` | `posix_spawn` path in `ValidatorClient.runValidator` | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | 0 (disabled) | `--post-apply-hang-ms` argv to `pw-probe-runner` | `runner_timeout` |
 
-See `AGENTS.md` → "Testing `normalized_outcome` failure paths via
+See `runner/AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test
 recipe, and the rules for adding a new override.
 
