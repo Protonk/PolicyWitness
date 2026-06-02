@@ -634,9 +634,9 @@ Currently in this category:
 Adding a pair to this set requires empirical verification via
 `tests/suites/witness_contract/harness/verify_filter_id.sh`. The
 matching code lives in
-`runner/ProbeRunner.swift::predictionUnavailableOpFilters` and is
+`runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters` and is
 mirrored host-side by
-`runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
+`runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
 both lists must agree (source_drift enforces).
 
 ### Attempt kinds the runner implements

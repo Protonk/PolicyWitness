@@ -48,7 +48,7 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
    - `data.runner_result.test_overrides.<key>` equals the value you sent. Without this, a stale build that ignores the override would pass.
    - Structural fields downstream of the failure are appropriately empty (`runner_subprocess == null` when the host short-circuits; `steps == []`; etc.).
 
-**Supported override keys** (defined in `runner/PWRunnerAPI.swift::PWRunnerTestOverrides`):
+**Supported override keys** (defined in `runner/Sources/PWRunnerCore/PWRunnerAPI.swift::PWRunnerTestOverrides`):
 
 | Key | Type | Boundary it re-routes | Outcome it lets you reach |
 | --- | --- | --- | --- |

@@ -22,7 +22,7 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="runner_abi_layout"
 SUITE_DIR="${ROOT_DIR}/tests/suites/runner_abi_layout"
 ABI_HEADER_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
-SWIFT_LAYOUT_FILE="${ROOT_DIR}/runner/CWorker.swift"
+SWIFT_LAYOUT_FILE="${ROOT_DIR}/runner/Sources/PWRunnerCore/CWorker.swift"
 
 # ----------------------------------------------------------------------
 # Case 1: c_swift_layout_agreement

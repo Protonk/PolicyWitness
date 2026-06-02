@@ -111,7 +111,7 @@ test_pass "Swift decode failure surfaced as bad_request" "{}"
 # value-required branch is the remaining filter-side bad_request
 # trigger and exercises the same emit site
 # (PWRunnerService.runSpecimen catching SpecValidationError from
-# validateSandboxChecks in runner/ProbeRunner.swift).
+# validateSandboxChecks in runner/Sources/PWRunnerCore/ProbeRunner.swift).
 
 PW_TEST_ID="missing_required_filter_value"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

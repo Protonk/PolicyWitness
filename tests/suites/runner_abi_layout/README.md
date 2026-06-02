@@ -13,7 +13,7 @@ cannot model.
 2. Runs the printer to harvest `sizeof`, `offsetof`, and `#define`
    values from the C side — these are ground truth, including any
    compiler-applied struct padding.
-3. Parses the `PWShmLayout` enum out of `runner/CWorker.swift`,
+3. Parses the `PWShmLayout` enum out of `runner/Sources/PWRunnerCore/CWorker.swift`,
    resolving derived constants (e.g. `regionBytes = headerBytes +
    maxSteps * slotBytes + maxParams * paramBytes`).
 4. For every printer line, derives the expected Swift constant name

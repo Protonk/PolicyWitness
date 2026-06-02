@@ -3,10 +3,16 @@
 
 The check has two halves:
 
-1. Source-set drift between the two compile paths that ship Swift to
-   PWRunner.xpc. build.sh and runner/Package.swift both enumerate the
-   same set of Swift files; a file added to one but not the other never
-   reaches the missing path. Same applies to the C shim.
+1. Source-set drift between build.sh's hand-maintained swiftc invocation
+   and the on-disk runner source tree. build.sh enumerates the Swift
+   files (and C shims) that ship in PWRunner.xpc by explicit path; the
+   test-only SwiftPM package (runner/Package.swift) compiles the same set
+   but discovers it automatically by SwiftPM convention (everything under
+   Sources/PWRunnerCore and the two Sources/<Shim> dirs). So the SwiftPM
+   side == on-disk by construction, and the drift that can actually ship a
+   broken binary is build.sh lagging the tree: a file added under
+   Sources/PWRunnerCore but missing from build.sh never reaches the XPC
+   binary (and vice versa). We compare build.sh against disk directly.
 
 2. Test-registry drift across what should be self-consistent project
    discipline:
@@ -17,7 +23,7 @@ The check has two halves:
         suite directory.
      d. Every runner_outcome_<X> suite corresponds to an outcome in the
         coverage matrix in tests/COVERAGE.md.
-     e. Every NormalizedOutcome constant in runner/PWRunnerAPI.swift
+     e. Every NormalizedOutcome constant in runner/Sources/PWRunnerCore/PWRunnerAPI.swift
         has a row in the coverage matrix.
      f. Every AttemptOutcome constant has a row in the attempt-outcome
         coverage matrix.
@@ -39,11 +45,20 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RUNNER_DIR = REPO_ROOT / "runner"
 BUILD_SH = REPO_ROOT / "build.sh"
-PACKAGE_SWIFT = RUNNER_DIR / "Package.swift"
-PWRUNNER_API = RUNNER_DIR / "PWRunnerAPI.swift"
-PROBE_RUNNER = RUNNER_DIR / "ProbeRunner.swift"
-CWORKER_ORCHESTRATOR = RUNNER_DIR / "CWorkerOrchestrator.swift"
-CWORKER_SWIFT = RUNNER_DIR / "CWorker.swift"
+# Runner sources live under SwiftPM-convention target dirs. The source-set
+# checks discover the on-disk set by walking these; the per-symbol contract
+# checks below read specific files out of the core target. Both reference
+# these dirs rather than the runner root, so the suite survives moving a
+# file within Sources/ — only relocating a target dir touches this list.
+CORE_DIR = RUNNER_DIR / "Sources" / "PWRunnerCore"
+SHIM_DIRS = [
+    RUNNER_DIR / "Sources" / "PWSandboxCheckShim",
+    RUNNER_DIR / "Sources" / "PWCWorkerShim",
+]
+PWRUNNER_API = CORE_DIR / "PWRunnerAPI.swift"
+PROBE_RUNNER = CORE_DIR / "ProbeRunner.swift"
+CWORKER_ORCHESTRATOR = CORE_DIR / "CWorkerOrchestrator.swift"
+CWORKER_SWIFT = CORE_DIR / "CWorker.swift"
 PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "pw_probe_runner_abi.h"
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
@@ -54,30 +69,32 @@ TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
 TESTS_README = REPO_ROOT / "tests" / "README.md"
 TESTS_COVERAGE = REPO_ROOT / "tests" / "COVERAGE.md"
 
-EXCLUDED_SUBDIRS = {"services", "runner-client", "Tests", "include"}
-EXCLUDED_FILES = {"Package.swift", "README.md", ".gitignore"}
-
 
 def fail(msg: str) -> None:
     sys.stderr.write(msg + "\n")
 
 
 # ---------------------------------------------------------------------------
-# Source manifest checks (pre-existing behavior — unchanged)
+# Source manifest checks.
+#
+# Both halves return paths relative to runner/ (POSIX), e.g.
+# "Sources/PWRunnerCore/CWorker.swift", so the disk walk and build.sh's
+# "${XPC_ROOT}/<path>" captures compare directly without name-vs-path
+# normalization. Discovery is recursive under the target dirs, so the suite
+# does not assume any particular flat layout — moving a file within a target
+# is invisible here; only adding/removing a compiled file (or forgetting to
+# wire it into build.sh) trips the diff.
 # ---------------------------------------------------------------------------
 
 def disk_swift_files() -> set[str]:
-    out: set[str] = set()
-    for path in RUNNER_DIR.iterdir():
-        if path.is_dir() or path.name in EXCLUDED_FILES:
-            continue
-        if path.suffix == ".swift":
-            out.add(path.name)
-    return out
+    return {p.relative_to(RUNNER_DIR).as_posix() for p in CORE_DIR.rglob("*.swift")}
 
 
 def disk_c_files() -> set[str]:
-    return {p.name for p in RUNNER_DIR.iterdir() if p.is_file() and p.suffix == ".c"}
+    out: set[str] = set()
+    for shim_dir in SHIM_DIRS:
+        out.update(p.relative_to(RUNNER_DIR).as_posix() for p in shim_dir.rglob("*.c"))
+    return out
 
 
 def build_sh_swift_files() -> set[str]:
@@ -121,21 +138,6 @@ def build_sh_c_files() -> set[str]:
         re.MULTILINE,
     )
     return {m.group(1) for m in shim_re.finditer(text)}
-
-
-def package_swift_sources(target_name: str) -> set[str]:
-    text = PACKAGE_SWIFT.read_text(encoding="utf-8")
-    target_re = re.compile(
-        r'\.(?:target|executableTarget)\(\s*name:\s*"'
-        + re.escape(target_name)
-        + r'".*?sources:\s*\[(.*?)\]',
-        re.DOTALL,
-    )
-    match = target_re.search(text)
-    if match is None:
-        fail(f"could not find target {target_name!r} with a sources: array in Package.swift")
-        sys.exit(2)
-    return set(re.findall(r'"([^"]+)"', match.group(1)))
 
 
 def diff_sets(label: str, manifests: dict[str, set[str]]) -> list[str]:
@@ -253,7 +255,7 @@ def _parse_swift_enum_constants(enum_name: str) -> set[str]:
     )
     match = enum_re.search(text)
     if match is None:
-        fail(f"could not locate {enum_name} enum in runner/PWRunnerAPI.swift")
+        fail(f"could not locate {enum_name} enum in runner/Sources/PWRunnerCore/PWRunnerAPI.swift")
         sys.exit(2)
     body = match.group(1)
     constant_re = re.compile(r'public static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"')
@@ -392,7 +394,7 @@ def parse_swift_attempt_kinds() -> dict[int, str]:
     enum_re = re.compile(r'public enum PWAttemptKind:\s*UInt32\s*\{(.*?)\n\}', re.DOTALL)
     match = enum_re.search(text)
     if match is None:
-        fail("could not locate PWAttemptKind in runner/CWorker.swift")
+        fail("could not locate PWAttemptKind in runner/Sources/PWRunnerCore/CWorker.swift")
         sys.exit(2)
     kinds: dict[int, str] = {}
     for m in re.finditer(r'\bcase\s+([A-Za-z][A-Za-z0-9]*)\s*=\s*(\d+)', match.group(1)):
@@ -439,8 +441,8 @@ def check_attempt_kind_enum_agreement() -> list[str]:
 # Prediction-unavailable (op, filter) pair agreement.
 #
 # Three sources of truth must list the same set of pairs:
-#   - runner/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
-#   - runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror
+#   - runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
+#   - runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror
 #   - PolicyWitness.md "Filter kinds where prediction is unavailable"
 #
 # A pair added to one but not the other means a request that should skip
@@ -461,7 +463,7 @@ def parse_swift_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     )
     match = block_re.search(text)
     if match is None:
-        fail("could not locate predictionUnavailableOpFilters in runner/ProbeRunner.swift")
+        fail("could not locate predictionUnavailableOpFilters in runner/Sources/PWRunnerCore/ProbeRunner.swift")
         sys.exit(2)
     body = match.group(1)
     # Map the Swift constant references to their wire strings via the
@@ -481,7 +483,7 @@ def parse_swift_prediction_unavailable_pairs() -> set[tuple[str, str]]:
                 fail(
                     f"predictionUnavailableOpFilters references "
                     f"PWRunnerWire.{const_name} but no such constant is "
-                    f"defined in runner/PWRunnerAPI.swift"
+                    f"defined in runner/Sources/PWRunnerCore/PWRunnerAPI.swift"
                 )
                 sys.exit(2)
         else:
@@ -522,7 +524,7 @@ def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     )
     match = block_re.search(text)
     if match is None:
-        fail("could not locate predictionUnavailableOpFiltersHostMirror in runner/CWorkerOrchestrator.swift")
+        fail("could not locate predictionUnavailableOpFiltersHostMirror in runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift")
         sys.exit(2)
     body = match.group(1)
     wire = parse_pwrunner_wire_filter_constants()
@@ -540,7 +542,7 @@ def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
                 fail(
                     f"predictionUnavailableOpFiltersHostMirror references "
                     f"PWRunnerWire.{const_name} but no such constant is "
-                    f"defined in runner/PWRunnerAPI.swift"
+                    f"defined in runner/Sources/PWRunnerCore/PWRunnerAPI.swift"
                 )
                 sys.exit(2)
         else:
@@ -601,21 +603,17 @@ def check_prediction_unavailable_agreement() -> list[str]:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    # SwiftPM auto-discovers the same files off disk (convention layout, no
+    # sources: arrays to parse), so the load-bearing comparison is build.sh
+    # vs the on-disk Sources/ tree — that is the pair that can actually ship a
+    # PWRunner.xpc missing a file.
     swift_manifests = {
-        "disk (runner/*.swift)": disk_swift_files(),
+        "disk (runner/Sources/PWRunnerCore/**/*.swift)": disk_swift_files(),
         "build.sh (PWRunner.xpc swiftc)": build_sh_swift_files(),
-        "Package.swift (PWRunnerCore target)": package_swift_sources("PWRunnerCore"),
     }
-    # Each C shim is its own SwiftPM target with its own sources block;
-    # the union of those source sets has to match disk and build.sh.
-    package_c_sources = (
-        package_swift_sources("PWSandboxCheckShim")
-        | package_swift_sources("PWCWorkerShim")
-    )
     c_manifests = {
-        "disk (runner/*.c)": disk_c_files(),
+        "disk (runner/Sources/<shim>/**/*.c)": disk_c_files(),
         "build.sh (XPC_RUNNER_*_SHIM)": build_sh_c_files(),
-        "Package.swift (PWSandboxCheckShim + PWCWorkerShim sources)": package_c_sources,
     }
 
     problems: list[str] = []
@@ -647,8 +645,8 @@ def main() -> int:
     pu_pairs = parse_swift_prediction_unavailable_pairs()
     print(
         f"all drift checks pass: "
-        f"{len(swift_manifests['disk (runner/*.swift)'])} swift, "
-        f"{len(c_manifests['disk (runner/*.c)'])} c, "
+        f"{len(swift_manifests['disk (runner/Sources/PWRunnerCore/**/*.swift)'])} swift, "
+        f"{len(c_manifests['disk (runner/Sources/<shim>/**/*.c)'])} c, "
         f"{suite_count} suites, "
         f"{outcome_count} normalized outcomes, "
         f"{attempt_outcome_count} attempt outcomes, "

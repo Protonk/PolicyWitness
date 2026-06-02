@@ -10,7 +10,7 @@ PW_TEST_ID="attempt_outcome_matrix_enforced"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "check" "AttemptOutcome enum exists and source_drift enforces a matrix row per constant"
 
-API_FILE="${ROOT_DIR}/runner/PWRunnerAPI.swift"
+API_FILE="${ROOT_DIR}/runner/Sources/PWRunnerCore/PWRunnerAPI.swift"
 COVERAGE_FILE="${ROOT_DIR}/tests/COVERAGE.md"
 DRIFT_CHECK="${ROOT_DIR}/tests/suites/source_drift/check.py"
 
@@ -28,7 +28,7 @@ drift = Path(sys.argv[3]).read_text(encoding="utf-8")
 # 1. AttemptOutcome enum must exist in PWRunnerAPI.swift.
 if "public enum AttemptOutcome" not in api:
     raise SystemExit(
-        "AttemptOutcome enum is not defined in runner/PWRunnerAPI.swift."
+        "AttemptOutcome enum is not defined in runner/Sources/PWRunnerCore/PWRunnerAPI.swift."
     )
 
 # 2. tests/COVERAGE.md must contain a matrix section for attempt outcomes.

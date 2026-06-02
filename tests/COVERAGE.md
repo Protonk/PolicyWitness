@@ -5,7 +5,7 @@ the runner can emit. They are reference tables for `tests/README.md`'s suite
 coverage map — start there for the per-suite view.
 
 `source_drift` enforces both matrices mechanically: every value in
-`runner/PWRunnerAPI.swift::NormalizedOutcome` and `::AttemptOutcome` must appear
+`runner/Sources/PWRunnerCore/PWRunnerAPI.swift::NormalizedOutcome` and `::AttemptOutcome` must appear
 here exactly once. New outcomes are added here in the same change that
 introduces the constant. "Untestable" rows are not unmaintained — the notes
 column says why, and names the closest unit or harness coverage.

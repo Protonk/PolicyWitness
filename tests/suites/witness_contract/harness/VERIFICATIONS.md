@@ -25,7 +25,7 @@ previously-documented constant, source of BBX-001) fails — returns
 allow on the denied value.
 
 The code uses ID 2 (`PW_SANDBOX_FILTER_GLOBAL_NAME` in
-`runner/ProbeRunner.swift`). ID 12 is presumably an alias or aliased
+`runner/Sources/PWRunnerCore/ProbeRunner.swift`). ID 12 is presumably an alias or aliased
 predicate path. Uniqueness of ID 2 is NOT proven — "selected working
 ID" rather than "the correct value." Both IDs produce identical
 verdicts across the scan, so the distinction is invisible to
@@ -45,7 +45,7 @@ allow on `SomeNonexistentService`). The kernel correctly enforces the
 deny rule (probe baseline allow, post-apply kr=-536870174 =
 kIOReturnNotPermitted). `sandbox_check` is unreliable for this
 op+filter — routed to `prediction_unavailable` in
-`runner/ProbeRunner.swift::predictionUnavailableOpFilters`.
+`runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters`.
 
 ### (iokit-open-user-client, iokit_user_client_class)
 

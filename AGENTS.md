@@ -9,10 +9,10 @@ PolicyWitness is a sandbox witness harness. Each run is driven by a specimen —
 Pick what you’re changing:
 
 - **CLI behavior / JSON contract** → `controller/README.md`, `controller/src/main.rs`
-- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/services/PWRunner/`
+- **Runner service (self-sandboxing witness)** → `runner/README.md`, `runner/Services/PWRunner/`
 - **Runner test machinery (unit tests, `_test_overrides`)** → `runner/AGENTS.md`
-- **Runner API types** → `runner/PWRunnerAPI.swift`
-- **Runner client (NSXPCConnection wrapper)** → `runner/runner-client/`
+- **Runner API types** → `runner/Sources/PWRunnerCore/PWRunnerAPI.swift`
+- **Runner client (NSXPCConnection wrapper)** → `runner/Clients/PWRunnerClient/`
 - **Build + signing** → `build.sh`, `SIGNING.md`
 - **Evidence generation / manifests** → `tests/build-evidence.py`
 - **Tests** → `tests/README.md`, `tests/run.sh --all`
@@ -105,6 +105,6 @@ Treat these as environment constraints, not PolicyWitness regressions. If you se
 
 ## Maintenance checklist (when changing things)
 
-- If you change the specimen schema: update `runner/PWRunnerAPI.swift`, `runner/PWRunnerService.swift`, the worker plumbing (`runner/CWorker.swift`, `runner/CWorkerOrchestrator.swift`, `runner/ValidatorClient.swift`, plus `pw-probe-runner` and `sb_api_validator` if the C side is affected), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
+- If you change the specimen schema: update `runner/Sources/PWRunnerCore/PWRunnerAPI.swift`, `runner/Sources/PWRunnerCore/PWRunnerService.swift`, the worker plumbing (`runner/Sources/PWRunnerCore/CWorker.swift`, `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift`, `runner/Sources/PWRunnerCore/ValidatorClient.swift`, plus `pw-probe-runner` and `sb_api_validator` if the C side is affected), fixtures under `tests/fixtures/`, and any controller parsing assumptions.
 - If you change shipped paths: update `build.sh`, `tests/build-evidence.py`, tests that locate binaries, and any docs that enumerate the bundle layout.
 - If you change evidence fields: update `controller/src/main.rs`, any tests that validate output, and the docs that describe evidence channels.

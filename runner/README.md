@@ -17,44 +17,50 @@ PolicyWitness is **specimen-first**:
 
 ## Key files
 
-- `runner/PWRunnerAPI.swift`
+The runner follows SwiftPM-convention layout: the core library sources
+compiled into `PWRunner.xpc` live under `runner/Sources/PWRunnerCore/`,
+each C shim under its own `runner/Sources/<Shim>/` (with `include/`), the
+thin XPC client under `runner/Clients/PWRunnerClient/`, and the service
+bundle scaffolding under `runner/Services/PWRunner/`.
+
+- `Sources/PWRunnerCore/PWRunnerAPI.swift`
   - `PWRunnerProtocol` (`runSpecimen(Data) -> Data`)
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
-- `runner/SandboxLib.swift`
+- `Sources/PWRunnerCore/SandboxLib.swift`
   - Explicit `dlopen` + `dlsym` bindings for libsandbox.
   - `SandboxLib.load(path:)` defaults to `/usr/lib/libsandbox.dylib`;
     re-routed by `_test_overrides.libsandbox_path` (see "Test seam"
     below).
-- `runner/SandboxApply.swift`
+- `Sources/PWRunnerCore/SandboxApply.swift`
   - Policy hashing and single-shot `sandbox_apply` path.
-- `runner/ProbeRunner.swift`
+- `Sources/PWRunnerCore/ProbeRunner.swift`
   - `sandbox_check` helpers and shared prediction-unavailable metadata.
-- `runner/PathUtils.swift`
+- `Sources/PWRunnerCore/PathUtils.swift`
   - Path normalization and fd-based observation helpers.
-- `runner/Signals.swift`
+- `Sources/PWRunnerCore/Signals.swift`
   - Deny-signal handler and counters.
-- `runner/CWorker.swift`
+- `Sources/PWRunnerCore/CWorker.swift`
   - Host-side driver for `pw-probe-runner`: shm_open + mmap + posix_spawn,
     sentinel polling, and the post-apply hook.
-- `runner/ValidatorClient.swift`
+- `Sources/PWRunnerCore/ValidatorClient.swift`
   - Host-side driver for `sb_api_validator --batch`: concurrent
     stdin/stdout via `poll()` to avoid pipe deadlock, partial-evidence
     failure result.
-- `runner/CWorkerOrchestrator.swift`
+- `Sources/PWRunnerCore/CWorkerOrchestrator.swift`
   - Joins the C worker and the validator child into a single
     `PWRunnerRunResult`. Owns probe-plan validation,
     `prediction_unavailable` host mirror, classification, and drift.
-- `runner/PWRunnerService.swift`
+- `Sources/PWRunnerCore/PWRunnerService.swift`
   - Orchestrates the host flow (decode → validate → drive C worker +
     validator → reply).
   - The host enforces caller authorization, loads libsandbox once to fail
     fast on missing dynamic loaders, computes `policy_sha256`, and never
     calls `sandbox_apply` on itself.
-- `runner/runner-client/main.swift`
+- `Clients/PWRunnerClient/main.swift`
   - Builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`: a
     thin `NSXPCConnection` wrapper that forwards JSON bytes and prints
     the runner's JSON reply.
-- `runner/services/PWRunner/`
+- `Services/PWRunner/`
   - `Info.plist`, `Entitlements.plist`, `main.swift` for the standard
     runner XPC service bundle. Debug-attach inspection goes through
     BYOXPC.

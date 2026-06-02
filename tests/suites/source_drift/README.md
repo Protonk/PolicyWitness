@@ -1,19 +1,27 @@
 # source_drift
 
-Cross-checks the runner source manifests for drift between the
-on-disk file set, `build.sh`'s `XPC_RUNNER_*_FILE` references, and
-`runner/Package.swift`'s `sources:` arrays. A file added to one
-manifest but not the other never ships to the missing path — the
-production binary loses the file, or the unit-test target does, with
-no other signal.
+Cross-checks the runner source manifest for drift between the on-disk
+source tree and `build.sh`'s `XPC_RUNNER_*` references. The test-only
+SwiftPM package (`runner/Package.swift`) follows convention and
+auto-discovers the same files (no `sources:` arrays to drift), so the
+SwiftPM source set equals on-disk by construction; the comparison that
+can actually ship a broken `PWRunner.xpc` is build.sh vs the tree. A
+file added under `Sources/PWRunnerCore/` but not wired into build.sh
+(or vice versa) never reaches the production binary — with no other
+signal.
 
 ## Invariants
 
-- The three sources of truth (disk, build.sh, Package.swift) must
-  agree on the runner/ root file set.
-- Subdirectories under `runner/services/`, `runner/runner-client/`,
-  `runner/Tests/`, and `runner/include/` are managed separately and
-  are not part of the check.
+- The two sources of truth (the on-disk `runner/Sources/` tree and
+  build.sh's `XPC_RUNNER_*_FILE` / `XPC_RUNNER_*_SHIM` set) must agree
+  on the compiled file set, compared as `runner/`-relative paths.
+- Discovery is recursive under the target dirs
+  (`Sources/PWRunnerCore`, `Sources/PWSandboxCheckShim`,
+  `Sources/PWCWorkerShim`), so moving a file within a target is
+  invisible here; only adding/removing a compiled file trips the diff.
+- `runner/Tests/`, `runner/Clients/`, `runner/Services/`, and
+  `runner/augments/` are managed separately and are not part of the
+  source-set check.
 
 ## Success criteria
 
