@@ -43,6 +43,71 @@ ensure_harness() {
   fi
 }
 
+# Shared spawn boilerplate for the scenarios added later in this file
+# (the original six cases predate it and keep their inline form). Begins
+# the test, runs one harness scenario, and leaves the JSON at RESULT_FILE.
+# Returns non-zero (after test_skip) when prereqs are missing so the
+# caller can `|| return 0`; calls test_fail (which exits) if the harness
+# itself errors.
+run_harness_case() {
+  local test_id="$1" scenario="$2" desc="$3"
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  test_step "harness" "${desc}"
+  if ! check_prereqs; then
+    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
+    return 1
+  fi
+  ensure_harness
+  RESULT_FILE="${PW_TEST_ARTIFACTS}/result.json"
+  set +e
+  "${HARNESS_BIN}" "${WORKER_PATH}" "${scenario}" >"${RESULT_FILE}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
+  local rc=$?
+  set -e
+  if [[ "${rc}" -ne 0 ]]; then
+    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
+    return 1
+  fi
+  return 0
+}
+
+# Turn a python assertion exit code into a pass/fail. The python block is
+# expected to print a one-line ok message on success (used as the pass note).
+finish_from_assert_log() {
+  local arc="$1"
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${RESULT_FILE}\"}"
+  fi
+  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${RESULT_FILE}\"}"
+}
+
+# Uniform assertion for the pre-apply self-defense scenarios: the worker
+# must exit with a specific code, having flipped no sentinels and written
+# no ready byte.
+run_refusal_case() {
+  local test_id="$1" scenario="$2" expect_code="$3" desc="$4"
+  run_harness_case "${test_id}" "${scenario}" "${desc}" || return 0
+  set +e
+  PW_EXPECT_CODE="${expect_code}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, os, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+want = int(os.environ["PW_EXPECT_CODE"])
+assert r["exit_code"] == want, \
+    f"expected worker exit_code={want}, got exit_code={r['exit_code']!r} term_signal={r['term_signal']!r}"
+assert r["term_signal"] is None, f"worker should exit with a code, not a signal: {r}"
+assert not r["applied"], f"applied must stay false on a pre-apply refusal: {r}"
+assert not r["done"], f"done must stay false on a pre-apply refusal: {r}"
+assert not r["ready_byte_received"], f"ready byte must not precede a pre-apply refusal: {r}"
+assert not r["sent_sigkill"], f"worker should self-exit; no SIGKILL fallback expected: {r}"
+print(f"ok: worker refused with exit_code={want}; no ready/applied/done")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
 # ---- test_id: happy_default_allow ----------------------------------------
 
 run_happy_default_allow() {
@@ -403,9 +468,122 @@ PY
   test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
 }
 
+# ---- test_id: unlink_allow / unlink_deny (PW_ATTEMPT_FILE_UNLINK) ----------
+
+run_unlink_allow() {
+  run_harness_case "unlink_allow" "unlink_allow" \
+    "file unlink under (allow default): worker removes the harness temp file" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert r["applied"] and r["done"] and r["exit_code"] == 0, f"worker did not complete cleanly: {r}"
+s = r["slots"][0]
+assert s["completed"] == 1, f"slot not completed: {s}"
+assert s["rc"] == 0, f"unlink under (allow default) should succeed: {s}"
+assert r["target_exists_after"] is False, f"target should be gone after a successful unlink: {r}"
+print("ok: unlink removed the target under (allow default)")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+run_unlink_deny() {
+  run_harness_case "unlink_deny" "unlink_deny" \
+    "file unlink under (deny default): worker is denied; target survives" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert r["applied"] and r["done"] and r["exit_code"] == 0, f"worker did not complete cleanly: {r}"
+s = r["slots"][0]
+assert s["completed"] == 1, f"slot not completed: {s}"
+assert s["rc"] == 1, f"unlink under (deny default) should be denied (rc=1): {s}"
+assert s["errno"] in (1, 13), f"expected EPERM(1)/EACCES(13) on the kernel deny, got errno={s['errno']}: {s}"
+assert r["target_exists_after"] is True, f"target must survive a denied unlink: {r}"
+print(f"ok: unlink denied (errno={s['errno']}); target survived under (deny default)")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+# ---- test_id: create_allow (PW_ATTEMPT_FILE_CREATE) ------------------------
+
+run_create_allow() {
+  run_harness_case "create_allow" "create_allow" \
+    "file create under (allow default): worker creates the (absent) target" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert r["applied"] and r["done"] and r["exit_code"] == 0, f"worker did not complete cleanly: {r}"
+s = r["slots"][0]
+assert s["completed"] == 1, f"slot not completed: {s}"
+assert s["rc"] == 0, f"create under (allow default) should succeed: {s}"
+# F_GETPATH canonicalizes the fd while it is open; the create path should
+# resolve under /private/... (or wherever TMPDIR points), not be empty.
+assert s["observed_path"], f"create should capture observed_path from the open fd: {s}"
+assert r["target_exists_after"] is True, f"target must exist after a successful create: {r}"
+print(f"ok: create made the target (observed_path={s['observed_path']})")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+# ---- test_id: compile_failure (worker survives malformed SBPL) -------------
+
+run_compile_failure() {
+  run_harness_case "compile_failure" "compile_failure" \
+    "malformed SBPL: apply_rc=-1, done flips, applied stays 0, worker still clean-exits" || return 0
+  set +e
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+# The compile fails before the ready byte and before apply, so:
+assert r["ready_byte_received"] is False, f"compile fails before the ready byte: {r}"
+assert r["applied"] is False, f"applied must stay false when compile fails: {r}"
+assert r["apply_rc"] == -1, f"apply_rc must be -1 on compile failure (got {r['apply_rc']}): {r}"
+# ...but the worker still flips done and honors the exit byte rather than dying.
+assert r["done"] is True, f"done must flip so the host stops polling: {r}"
+assert r["sent_sigkill"] is False, f"worker should clean-exit on the exit byte, not need SIGKILL: {r}"
+assert r["exit_code"] == 0, f"worker should _exit(0) after reporting the compile failure: {r}"
+# No attempts ran.
+assert r["slots"][0]["completed"] == 0, f"no slot should run when compile fails: {r['slots'][0]}"
+print("ok: worker reported compile failure (apply_rc=-1, done) and clean-exited")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
 run_happy_default_allow
 run_bare_deny_default
 run_exit_byte_clean
 run_max_slots_deny_default
 run_sigkill_fallback
 run_params_round_trip
+
+# #1 — file attempt kinds (unlink/create) with no other execution coverage.
+run_unlink_allow
+run_unlink_deny
+run_create_allow
+
+# #2 — pre-apply self-defense / refusal branches.
+run_compile_failure
+run_refusal_case "abi_mismatch_refused"        "abi_mismatch"        4 \
+  "header abi_version != worker build → exit 4, no apply"
+run_refusal_case "prepared_unset_refused"      "prepared_unset"      5 \
+  "host did not set prepared=1 → exit 5, no apply"
+run_refusal_case "step_count_overflow_refused" "step_count_overflow" 6 \
+  "header step_count > PW_SHM_MAX_STEPS → exit 6"
+run_refusal_case "policy_overflow_refused"     "policy_overflow"     7 \
+  "policy exceeds the 256 KiB cap → exit 7"
+run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
+  "header param_count > PW_SHM_MAX_PARAMS → exit 8"

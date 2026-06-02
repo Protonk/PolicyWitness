@@ -36,8 +36,10 @@ run_test "${SUITE_DIR}/debuggable_mode_rejected.sh"
 run_test "${SUITE_DIR}/first_deny_diagnostic_populated.sh"
 run_test "${SUITE_DIR}/instrumentation_field_rejected.sh"
 run_test "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"
+run_test "${SUITE_DIR}/validator_decode_failure_reports_degraded.sh"
 run_test "${SUITE_DIR}/validator_spawn_failed_reports_degraded.sh"
 run_test "${SUITE_DIR}/validator_subprocess_populated.sh"
+run_test "${SUITE_DIR}/validator_unavailable_reports_degraded.sh"
 run_test "${SUITE_DIR}/worker_post_apply_hang_seam.sh"
 
 if [[ ${failures} -ne 0 ]]; then

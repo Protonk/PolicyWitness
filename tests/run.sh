@@ -77,7 +77,7 @@ while [[ $# -gt 0 ]]; do
       cat <<'EOF'
 usage:
   tests/run.sh --all
-  tests/run.sh --suite <preflight|source_drift|unit|integration|runner_unit|runner_apply_isolation_v2|runner_apply_isolation_v3|runner_outcome_libsandbox_unavailable|runner_outcome_worker_spawn_failed|runner_outcome_runner_timeout|runner_outcome_bad_request|runner_filter_iokit_registry_entry_class|runner_filter_iokit_user_client_class|runner_filter_sysctl_name|validator_batch_mode|runner_abi_layout|runner_c_worker_harness|runner_use_c_worker|runner_byoxpc|smoke|blackbox_menagerie|blackbox_e2e|anomalies|witness_contract> [--suite <name> ...]
+  tests/run.sh --suite <preflight|source_drift|unit|integration|runner_unit|runner_apply_isolation_v2|runner_apply_isolation_v3|runner_outcome_libsandbox_unavailable|runner_outcome_worker_spawn_failed|runner_outcome_runner_timeout|runner_outcome_bad_request|runner_filter_iokit_registry_entry_class|runner_filter_iokit_user_client_class|runner_filter_sysctl_name|validator_batch_mode|runner_abi_layout|runner_c_worker_harness|runner_use_c_worker|runner_byoxpc|smoke|blackbox_menagerie|blackbox_e2e|sbpl_allowdeny_consistency|witness_contract> [--suite <name> ...]
   tests/run.sh --describe [--all|--suite <name> ...]
 EOF
       exit 0
@@ -90,15 +90,15 @@ EOF
 done
 
 if [[ ${#suites[@]} -eq 0 ]]; then
-  suites=(preflight source_drift unit integration runner_unit runner_apply_isolation_v2 runner_apply_isolation_v3 runner_outcome_libsandbox_unavailable runner_outcome_worker_spawn_failed runner_outcome_runner_timeout runner_outcome_bad_request runner_filter_iokit_registry_entry_class runner_filter_iokit_user_client_class runner_filter_sysctl_name validator_batch_mode runner_abi_layout runner_c_worker_harness runner_use_c_worker anomalies)
+  suites=(preflight source_drift unit integration runner_unit runner_apply_isolation_v2 runner_apply_isolation_v3 runner_outcome_libsandbox_unavailable runner_outcome_worker_spawn_failed runner_outcome_runner_timeout runner_outcome_bad_request runner_filter_iokit_registry_entry_class runner_filter_iokit_user_client_class runner_filter_sysctl_name validator_batch_mode runner_abi_layout runner_c_worker_harness runner_use_c_worker sbpl_allowdeny_consistency)
 fi
 
 if [[ ${describe} -eq 1 ]]; then
-  echo "==> [describe] suite map (tests/INDEX.md)"
-  if [[ -f "${ROOT_DIR}/tests/INDEX.md" ]]; then
-    cat "${ROOT_DIR}/tests/INDEX.md"
+  echo "==> [describe] suite map (tests/README.md)"
+  if [[ -f "${ROOT_DIR}/tests/README.md" ]]; then
+    cat "${ROOT_DIR}/tests/README.md"
   else
-    echo "missing: ${ROOT_DIR}/tests/INDEX.md" 1>&2
+    echo "missing: ${ROOT_DIR}/tests/README.md" 1>&2
   fi
 fi
 

@@ -18,4 +18,4 @@ checked into the repo so tests are hermetic.
 - Keep paths stable and avoid environment-specific values.
 - Prefer minimal specimens unless the case requires a larger corpus.
 - If a fixture implies a new contract, update the relevant suite README and
-  `tests/INDEX.md`.
+  the suite-coverage table in `tests/README.md`.

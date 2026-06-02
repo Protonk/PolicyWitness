@@ -94,7 +94,7 @@ public enum NormalizedOutcome {
 /// and SandboxCheckOutcome: new constants are added here (with the
 /// matching wire string) before any emit site uses them, and
 /// source_drift enforces that every constant has a row in
-/// tests/INDEX.md's attempt-outcome matrix.
+/// tests/COVERAGE.md's attempt-outcome matrix.
 ///
 /// `not_run_worker_died` signals that the host saw a slot with
 /// completed=0 because the C worker exited before reaching it.

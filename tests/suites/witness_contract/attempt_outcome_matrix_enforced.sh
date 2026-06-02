@@ -11,12 +11,12 @@ test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "check" "AttemptOutcome enum exists and source_drift enforces a matrix row per constant"
 
 API_FILE="${ROOT_DIR}/runner/PWRunnerAPI.swift"
-INDEX_FILE="${ROOT_DIR}/tests/INDEX.md"
+COVERAGE_FILE="${ROOT_DIR}/tests/COVERAGE.md"
 DRIFT_CHECK="${ROOT_DIR}/tests/suites/source_drift/check.py"
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-/usr/bin/python3 - "${API_FILE}" "${INDEX_FILE}" "${DRIFT_CHECK}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+/usr/bin/python3 - "${API_FILE}" "${COVERAGE_FILE}" "${DRIFT_CHECK}" >"${ASSERT_LOG}" 2>&1 <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -31,10 +31,10 @@ if "public enum AttemptOutcome" not in api:
         "AttemptOutcome enum is not defined in runner/PWRunnerAPI.swift."
     )
 
-# 2. tests/INDEX.md must contain a matrix section for attempt outcomes.
+# 2. tests/COVERAGE.md must contain a matrix section for attempt outcomes.
 if "## Attempt outcome coverage matrix" not in index:
     raise SystemExit(
-        "tests/INDEX.md has no 'Attempt outcome coverage matrix' section."
+        "tests/COVERAGE.md has no 'Attempt outcome coverage matrix' section."
     )
 
 # 3. source_drift's check must reference attempt outcomes.

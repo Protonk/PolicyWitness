@@ -181,6 +181,27 @@ pub fn infer_record_kind(record: &RunnerRecord) -> RunnerKind {
     record.kind.unwrap_or(RunnerKind::Byoxpc)
 }
 
+/// Fail fast when a selected runner doesn't carry the entitlements the
+/// caller required. Shared by the built-in and external resolution paths
+/// so the enforcement (a security gate — it blocks the launch) lives in
+/// one tested place. `subject` names the runner in the error so the two
+/// call sites keep their distinct messages ("built-in runner ...",
+/// "external runner ...").
+fn enforce_required_entitlements(
+    required: &[String],
+    entitlements: Option<&RunnerEntitlements>,
+    subject: &str,
+) -> Result<(), String> {
+    if required.is_empty() {
+        return Ok(());
+    }
+    let ent = entitlements.ok_or_else(|| format!("{subject} entitlements unavailable"))?;
+    if !runner_manager::entitlements_superset(required, ent) {
+        return Err(format!("{subject} does not satisfy required entitlements"));
+    }
+    Ok(())
+}
+
 pub fn resolve_runner_target(
     app_root: &Path,
     selector: &RunnerSelector,
@@ -201,16 +222,11 @@ pub fn resolve_runner_target(
             return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
         }
         let target = builtin_runner_target(app_root, kind)?;
-        if !selector.required_entitlements.is_empty() {
-            let ent = target
-                .entitlements
-                .as_ref()
-                .ok_or_else(|| "built-in runner entitlements unavailable".to_string())?;
-            // Enforce entitlements before launching so mismatches fail fast.
-            if !runner_manager::entitlements_superset(&selector.required_entitlements, ent) {
-                return Err("built-in runner does not satisfy required entitlements".to_string());
-            }
-        }
+        enforce_required_entitlements(
+            &selector.required_entitlements,
+            target.entitlements.as_ref(),
+            "built-in runner",
+        )?;
         return Ok(target);
     }
 
@@ -226,6 +242,18 @@ pub fn resolve_runner_target(
     }
     .ok_or_else(|| "external runner not found in registry".to_string())?;
 
+    resolve_external_target(record, selector)
+}
+
+/// Resolve a registry record + selector into a concrete external target.
+/// Split out of `resolve_runner_target` so its guard ladder (mode-vs-kind
+/// agreement, the entitlement gate, and the built-in-kind rejection) is
+/// unit-testable from a hand-built `RunnerRecord` — the registry lookup
+/// that precedes it needs `$HOME`, this doesn't.
+fn resolve_external_target(
+    record: &RunnerRecord,
+    selector: &RunnerSelector,
+) -> Result<RunnerTarget, String> {
     let record_kind = infer_record_kind(record);
     if let Some(mode) = selector.mode {
         if mode != record_kind {
@@ -237,14 +265,11 @@ pub fn resolve_runner_target(
         }
     }
 
-    if !selector.required_entitlements.is_empty()
-        && !runner_manager::entitlements_superset(
-            &selector.required_entitlements,
-            &record.entitlements,
-        )
-    {
-        return Err("external runner does not satisfy required entitlements".to_string());
-    }
+    enforce_required_entitlements(
+        &selector.required_entitlements,
+        Some(&record.entitlements),
+        "external runner",
+    )?;
 
     let connection = match record_kind {
         RunnerKind::Byoxpc => RunnerConnectionKind::MachService {
@@ -331,5 +356,222 @@ mod tests {
         assert_eq!(selector.required_entitlements.len(), 1);
         assert_eq!(selector.mode, Some(RunnerKind::Byoxpc));
         let _ = fs::remove_file(&path);
+    }
+
+    // ---- builders -----------------------------------------------------------
+
+    fn ent(keys: &[&str]) -> RunnerEntitlements {
+        RunnerEntitlements {
+            raw_plist: None,
+            keys: keys.iter().map(|s| s.to_string()).collect(),
+            error: None,
+        }
+    }
+
+    fn external_record(
+        kind: Option<RunnerKind>,
+        scope: RunnerScope,
+        ent_keys: &[&str],
+    ) -> RunnerRecord {
+        RunnerRecord {
+            id: "runner-ext".to_string(),
+            service_name: "com.example.runner".to_string(),
+            bundle_path: "/opt/pw/Runner.app".to_string(),
+            executable_path: "/opt/pw/Runner.app/Contents/MacOS/PWRunner".to_string(),
+            bundle_id: Some("com.example.runner".to_string()),
+            scope,
+            protocol_version: runner_manager::RUNNER_PROTOCOL_VERSION,
+            signature: RunnerSignature {
+                team_id: None,
+                identity: None,
+                cdhash: None,
+                valid: true,
+                adhoc: true,
+            },
+            entitlements: ent(ent_keys),
+            installed_at_unix_ms: 0,
+            kind,
+        }
+    }
+
+    fn selector_with(mode: Option<RunnerKind>, required: &[&str], external: bool) -> RunnerSelector {
+        RunnerSelector {
+            runner_id: external.then(|| "runner-ext".to_string()),
+            required_entitlements: required.iter().map(|s| s.to_string()).collect(),
+            mode,
+            ..Default::default()
+        }
+    }
+
+    // RunnerTarget doesn't implement Debug, so `.unwrap_err()` won't compile
+    // on a Result<RunnerTarget, _>. Unwrap the error explicitly instead.
+    fn err_of(result: Result<RunnerTarget, String>) -> String {
+        match result {
+            Ok(_) => panic!("expected an error, got Ok(RunnerTarget)"),
+            Err(e) => e,
+        }
+    }
+
+    // ---- cheap batch: selector parsing + mode parsing + conflict guards ------
+
+    #[test]
+    fn parses_legacy_top_level_fields() {
+        // The legacy top-level shape is documented as still accepted; a
+        // regression dropping it would otherwise pass silently.
+        let value = json!({
+            "runner_id": "legacy-id",
+            "runner_service": "com.legacy.svc",
+            "required_entitlements": ["com.apple.security.cs.allow-jit"],
+            "runner_mode": "byoxpc"
+        });
+        let s = parse_runner_selector_value(&value).expect("parse");
+        assert_eq!(s.runner_id.as_deref(), Some("legacy-id"));
+        assert_eq!(s.runner_service.as_deref(), Some("com.legacy.svc"));
+        assert_eq!(s.required_entitlements.len(), 1);
+        assert_eq!(s.mode, Some(RunnerKind::Byoxpc));
+    }
+
+    #[test]
+    fn nested_runner_takes_precedence_over_legacy_top_level() {
+        let value = json!({
+            "runner": { "id": "nested-id" },
+            "runner_id": "legacy-id"
+        });
+        let s = parse_runner_selector_value(&value).expect("parse");
+        assert_eq!(s.runner_id.as_deref(), Some("nested-id"));
+    }
+
+    #[test]
+    fn parse_runner_mode_rejects_machme_with_byoxpc_hint() {
+        let err = parse_runner_mode("machme", "runner.mode").unwrap_err();
+        assert!(err.contains("byoxpc"), "message should steer to byoxpc: {err}");
+        assert!(err.contains("runner.mode"), "message should name the field: {err}");
+    }
+
+    #[test]
+    fn parse_runner_mode_rejects_unknown_value() {
+        let err = parse_runner_mode("bogus", "runner_mode").unwrap_err();
+        assert!(err.contains("invalid runner_mode value"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_rejects_standard_mode_with_external_selector() {
+        // Errors before any filesystem access, so the app_root is irrelevant.
+        let selector = RunnerSelector {
+            runner_id: Some("runner-ext".to_string()),
+            mode: Some(RunnerKind::Standard),
+            ..Default::default()
+        };
+        let err = err_of(resolve_runner_target(Path::new("/nonexistent"), &selector));
+        assert!(
+            err.contains("cannot be combined with an external runner"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn resolve_rejects_byoxpc_mode_without_external_selector() {
+        let selector = RunnerSelector {
+            mode: Some(RunnerKind::Byoxpc),
+            ..Default::default()
+        };
+        let err = err_of(resolve_runner_target(Path::new("/nonexistent"), &selector));
+        assert!(
+            err.contains("requires runner.id or runner.service"),
+            "got: {err}"
+        );
+    }
+
+    // ---- entitlement enforcement gate (security-relevant) -------------------
+
+    #[test]
+    fn entitlement_gate_skips_when_nothing_required() {
+        // Empty required short-circuits before the None check.
+        assert!(enforce_required_entitlements(&[], None, "built-in runner").is_ok());
+    }
+
+    #[test]
+    fn entitlement_gate_passes_on_superset() {
+        let e = ent(&["A", "B"]);
+        assert!(
+            enforce_required_entitlements(&["A".to_string()], Some(&e), "external runner").is_ok()
+        );
+    }
+
+    #[test]
+    fn entitlement_gate_blocks_on_shortfall() {
+        let e = ent(&["A"]);
+        let err = enforce_required_entitlements(
+            &["A".to_string(), "B".to_string()],
+            Some(&e),
+            "external runner",
+        )
+        .unwrap_err();
+        assert_eq!(err, "external runner does not satisfy required entitlements");
+    }
+
+    #[test]
+    fn entitlement_gate_blocks_when_entitlements_unavailable() {
+        let err =
+            enforce_required_entitlements(&["A".to_string()], None, "built-in runner").unwrap_err();
+        assert_eq!(err, "built-in runner entitlements unavailable");
+    }
+
+    // ---- external target resolution (mode/kind, connection, gate) -----------
+
+    #[test]
+    fn external_target_byoxpc_user_is_unprivileged_mach_service() {
+        let record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &[]);
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &[], true);
+        let target = resolve_external_target(&record, &selector).expect("resolve");
+        assert_eq!(target.kind, RunnerKind::Byoxpc);
+        assert_eq!(target.registry_id.as_deref(), Some("runner-ext"));
+        assert_eq!(target.service_name, "com.example.runner");
+        match target.connection {
+            RunnerConnectionKind::MachService { privileged } => assert!(!privileged),
+            other => panic!("expected unprivileged MachService, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn external_target_byoxpc_system_is_privileged_mach_service() {
+        let record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::System, &[]);
+        let selector = selector_with(None, &[], true);
+        let target = resolve_external_target(&record, &selector).expect("resolve");
+        match target.connection {
+            RunnerConnectionKind::MachService { privileged } => assert!(privileged),
+            other => panic!("expected privileged MachService, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn external_target_rejects_mode_kind_mismatch() {
+        // Record infers Standard (kind=Some(Standard)); requesting byoxpc mismatches.
+        let record = external_record(Some(RunnerKind::Standard), RunnerScope::User, &[]);
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &[], true);
+        let err = err_of(resolve_external_target(&record, &selector));
+        assert!(err.contains("runner.mode mismatch"), "got: {err}");
+        assert!(
+            err.contains("requested byoxpc") && err.contains("registry has standard"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn external_target_enforces_required_entitlements() {
+        let record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &["A"]);
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &["A", "B"], true);
+        let err = err_of(resolve_external_target(&record, &selector));
+        assert_eq!(err, "external runner does not satisfy required entitlements");
+    }
+
+    #[test]
+    fn external_target_rejects_builtin_kind_record() {
+        // A record that infers Standard with no mode requested: the
+        // connection match rejects it as a built-in kind.
+        let record = external_record(Some(RunnerKind::Standard), RunnerScope::User, &[]);
+        let selector = selector_with(None, &[], true);
+        let err = err_of(resolve_external_target(&record, &selector));
+        assert_eq!(err, "external runners cannot be built-in kinds");
     }
 }

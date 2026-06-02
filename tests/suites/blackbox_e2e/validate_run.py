@@ -100,7 +100,8 @@ for exp in expected_steps:
     if exp_outcome and sb_outcome != exp_outcome:
         skip(
             f"{step_id}: expected sandbox_check {exp_outcome} (got {sb_outcome!r}); "
-            "host sandbox_check appears unreliable (see anomalies suite)"
+            "host sandbox_check appears unreliable (see the runner_filter_* suites "
+            "and PolicyWitness.md's prediction-unavailable notes)"
         )
 
     exit_code = attempt.get("exit_code")

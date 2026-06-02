@@ -12,10 +12,11 @@ The check has two halves:
    discipline:
      a. Every tests/suites/<name>/ with run.sh has README.md.
      b. Every Baseline-tier suite is in tests/run.sh's default list.
-     c. Every tests/suites/<name>/ has a row in tests/INDEX.md, and
-        every INDEX row maps to a real suite directory.
+     c. Every tests/suites/<name>/ has a row in the suite-coverage
+        table in tests/README.md, and every table row maps to a real
+        suite directory.
      d. Every runner_outcome_<X> suite corresponds to an outcome in the
-        coverage matrix in tests/INDEX.md.
+        coverage matrix in tests/COVERAGE.md.
      e. Every NormalizedOutcome constant in runner/PWRunnerAPI.swift
         has a row in the coverage matrix.
      f. Every AttemptOutcome constant has a row in the attempt-outcome
@@ -47,7 +48,11 @@ PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
-TESTS_INDEX = REPO_ROOT / "tests" / "INDEX.md"
+# The suite-coverage table lives in tests/README.md; the per-outcome
+# coverage matrices live in tests/COVERAGE.md. (Both were formerly one
+# tests/INDEX.md.)
+TESTS_README = REPO_ROOT / "tests" / "README.md"
+TESTS_COVERAGE = REPO_ROOT / "tests" / "COVERAGE.md"
 
 EXCLUDED_SUBDIRS = {"services", "runner-client", "Tests", "include"}
 EXCLUDED_FILES = {"Package.swift", "README.md", ".gitignore"}
@@ -194,26 +199,34 @@ def default_suites_from_run_sh() -> set[str]:
 
 
 def parse_index_rows() -> dict[str, str]:
-    """Return {suite_name: tier} parsed from the suite table in INDEX.md.
+    """Return {suite_name: tier} parsed from the suite-coverage table
+    in tests/README.md.
 
-    Only the first markdown table is considered; matrix rows below the
-    Normalized outcome coverage matrix heading are skipped.
+    Only the table under the "## Suite coverage" heading is considered;
+    parsing stops at the next "## " heading so prose tables elsewhere in
+    the README can't leak in.
     """
-    text = TESTS_INDEX.read_text(encoding="utf-8")
-    # Split off the matrix section so we only parse the suite table.
-    cut = text.split("## Normalized outcome coverage matrix", 1)[0]
+    text = TESTS_README.read_text(encoding="utf-8")
+    parts = text.split("## Suite coverage", 1)
+    if len(parts) != 2:
+        fail("tests/README.md is missing the '## Suite coverage' section")
+        sys.exit(2)
+    section = parts[1]
+    next_heading = re.search(r'^##\s', section, re.MULTILINE)
+    if next_heading:
+        section = section[: next_heading.start()]
     rows: dict[str, str] = {}
     row_re = re.compile(r'^\|\s*`([a-z][a-z0-9_]*)`\s*\|\s*([A-Za-z][^|]*?)\s*\|', re.MULTILINE)
-    for match in row_re.finditer(cut):
+    for match in row_re.finditer(section):
         rows[match.group(1)] = match.group(2).strip()
     return rows
 
 
 def _parse_matrix_section(heading: str) -> set[str]:
-    text = TESTS_INDEX.read_text(encoding="utf-8")
+    text = TESTS_COVERAGE.read_text(encoding="utf-8")
     parts = text.split(heading, 1)
     if len(parts) != 2:
-        fail(f"tests/INDEX.md is missing the {heading!r} section")
+        fail(f"tests/COVERAGE.md is missing the {heading!r} section")
         sys.exit(2)
     matrix_text = parts[1]
     # Stop at the next ## heading if present.
@@ -270,9 +283,9 @@ def check_index_vs_disk() -> list[str]:
     in_index = set(parse_index_rows().keys())
 
     for name in sorted(on_disk - in_index):
-        problems.append(f"  INDEX: tests/suites/{name}/ exists but has no row in tests/INDEX.md")
+        problems.append(f"  README: tests/suites/{name}/ exists but has no row in tests/README.md's suite-coverage table")
     for name in sorted(in_index - on_disk):
-        problems.append(f"  INDEX: tests/INDEX.md has a row for {name!r} but no such tests/suites/{name}/ exists")
+        problems.append(f"  README: tests/README.md has a suite-coverage row for {name!r} but no such tests/suites/{name}/ exists")
     return problems
 
 
@@ -312,7 +325,7 @@ def check_normalized_outcomes_have_matrix_rows() -> list[str]:
     matrix = parse_matrix_outcomes()
     for outcome in sorted(outcomes - matrix):
         problems.append(
-            f"  matrix: NormalizedOutcome.{outcome} has no row in tests/INDEX.md "
+            f"  matrix: NormalizedOutcome.{outcome} has no row in tests/COVERAGE.md "
             f"coverage matrix"
         )
     for outcome in sorted(matrix - outcomes):
@@ -333,7 +346,7 @@ def check_attempt_outcomes_have_matrix_rows() -> list[str]:
     matrix = parse_attempt_outcome_matrix()
     for outcome in sorted(outcomes - matrix):
         problems.append(
-            f"  matrix: AttemptOutcome.{outcome} has no row in tests/INDEX.md "
+            f"  matrix: AttemptOutcome.{outcome} has no row in tests/COVERAGE.md "
             f"attempt-outcome coverage matrix"
         )
     for outcome in sorted(matrix - outcomes):

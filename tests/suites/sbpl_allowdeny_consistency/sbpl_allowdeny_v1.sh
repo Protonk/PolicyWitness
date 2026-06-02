@@ -5,9 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-export PW_TEST_QUIET=1
-
-PW_TEST_SUITE="anomalies"
+PW_TEST_SUITE="sbpl_allowdeny_consistency"
 PW_TEST_ID="sbpl_allowdeny_v1"
 
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
@@ -179,10 +177,10 @@ set -e
 
 if [[ ${PY_STATUS} -ne 0 ]]; then
   if [[ -z "${PY_ERR}" ]]; then
-    PY_ERR="anomaly validation failed"
+    PY_ERR="allow/deny consistency validation failed"
   fi
   PY_ERR="${PY_ERR//$'\n'/ }"
   test_fail "${PY_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-test_pass_note "sandbox_check aligned with allow/deny policy" "{}"
+test_pass "sandbox_check aligned with allow/deny policy across 4 allow/deny steps" "{}"

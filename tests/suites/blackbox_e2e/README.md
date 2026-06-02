@@ -30,7 +30,8 @@ attempt results, or denial classification.
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
 
 The suite will also skip a case if `sandbox_check` returns outcomes that
-contradict the expected policy (see the `anomalies` suite for known host bugs).
+contradict the expected policy (see the `runner_filter_*` suites and
+PolicyWitness.md's prediction-unavailable notes for known host divergences).
 
 ## Artifacts
 

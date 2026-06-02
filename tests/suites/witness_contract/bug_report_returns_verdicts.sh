@@ -53,8 +53,14 @@ if not steps:
         f"specimen should produce a verdict for each probe."
     )
 sb = steps[0].get("sandbox_check") or {}
-if sb.get("outcome") not in ("allow", "deny"):
-    raise SystemExit(f"expected sandbox_check.outcome in (allow,deny), got {sb.get('outcome')!r}")
+# Policy is (deny default)(allow file-read-data), so the file-read-data
+# verdict is deterministically allow. Pin it: accepting deny here would let
+# a flipped-verdict regression pass while the step still "produces a verdict".
+if sb.get("outcome") != "allow":
+    raise SystemExit(
+        f"expected sandbox_check.outcome=allow for (allow file-read-data), "
+        f"got {sb.get('outcome')!r}"
+    )
 PY
 ASSERT_RC=$?
 set -e

@@ -7,7 +7,11 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Six scenarios, each driven by `harness.c`:
+Fifteen scenarios, each driven by `harness.c`. The first six are the
+core lifecycle; the rest cover individual attempt kinds and the worker's
+pre-apply self-defense branches.
+
+### Core lifecycle
 
 1. **happy_default_allow** — `(allow default)` policy with one
    `file_open_read /etc/hosts` slot. Asserts:
@@ -54,6 +58,39 @@ Six scenarios, each driven by `harness.c`:
    semantic detail: `(subpath ...)` matches against kernel-canonical
    paths, so the symlink target is what fires the rule.)
 
+### File attempt kinds
+
+These drive the two attempt kinds that no other suite executes. The
+harness owns the on-disk target (it is unsandboxed); the worker is what
+runs the unlink/create under the scenario policy, and the harness reports
+`target_exists_after` as the durable proof.
+
+7. **unlink_allow** — `PW_ATTEMPT_FILE_UNLINK` under `(allow default)`:
+   `rc=0` and the harness-created target is gone afterward.
+8. **unlink_deny** — same under `(deny default)`: `rc=1`, `errno` ∈
+   {EPERM=1, EACCES=13}, and the target survives.
+9. **create_allow** — `PW_ATTEMPT_FILE_CREATE` under `(allow default)`
+   against an absent path: `rc=0`, `observed_path` captured from the open
+   fd, and the target exists afterward.
+
+### Pre-apply self-defense
+
+The worker refuses or survives bad input before `sandbox_apply`. The
+controller preflight makes these e2e-unreachable, so the harness — which
+pipes policy straight to the worker — is the only vehicle that reaches
+them. Each asserts the exact worker exit code with no `applied`/`done`
+sentinel and no ready byte (except compile_failure, which flips `done`).
+
+10. **compile_failure** — malformed SBPL (missing close paren).
+    `apply_rc=-1`, `applied` stays 0, `done` flips so the host stops
+    polling, and the worker still `_exit(0)`s on the exit byte instead of
+    dying. The "honest even on bad input" contract.
+11. **abi_mismatch** — header `abi_version` ≠ the worker's build → exit 4.
+12. **prepared_unset** — host never set `prepared=1` → exit 5.
+13. **step_count_overflow** — header `step_count > PW_SHM_MAX_STEPS` → exit 6.
+14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7.
+15. **param_count_overflow** — header `param_count > PW_SHM_MAX_PARAMS` → exit 8.
+
 The host-side harness logic (shm setup, full-region pre-touch,
 posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated in
 `harness.c` so the bash driver only orchestrates and asserts.
@@ -63,9 +100,12 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
 - A policy-driven `_exit` denial. The suite covers the same host-side
   SIGKILL fallback by withholding `exit_requested`; it does not prove
   that a real SBPL rule can deny `_exit`.
-- ABI version drift. The header has `_Static_assert`s pinning the
-  layout sizes at compile time, but a value-level ABI change (e.g.
-  renaming a slot field) wouldn't be caught here.
+- Silent ABI *semantic* drift. The worker's runtime refusal when the
+  header `abi_version` disagrees is covered (abi_mismatch), and the
+  header has `_Static_assert`s pinning layout sizes at compile time — but
+  a change that keeps the version constant while altering a field's
+  meaning (e.g. renaming/repurposing a slot field) wouldn't be caught
+  here. `runner_abi_layout` guards the struct layout separately.
 
 ## Build / run
 
@@ -83,7 +123,9 @@ bundle's copy of `pw-probe-runner`.
 Each test_id writes:
 - `result.json`: the JSON envelope `harness.c` emits, containing
   `{ ready_byte_received, applied, apply_rc, done, sent_sigkill,
-  exit_code, term_signal, slots: [...] }`.
+  exit_code, term_signal, slots: [...], target_exists_after }`
+  (`target_exists_after` is null except for the file unlink/create
+  scenarios).
 - `harness.stderr`: stderr from the harness (and the worker, since
   stderr is inherited).
 - `assert.log`: stdout/stderr of the Python assertion block.

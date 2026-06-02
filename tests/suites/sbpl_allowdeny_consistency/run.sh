@@ -16,7 +16,7 @@ run_test() {
   fi
 }
 
-run_test "${ROOT_DIR}/tests/suites/anomalies/sbpl_allowdeny_v1.sh"
+run_test "${ROOT_DIR}/tests/suites/sbpl_allowdeny_consistency/sbpl_allowdeny_v1.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1
