@@ -1,27 +1,21 @@
 # PolicyWitness User Guide
 
-PolicyWitness runs sandbox specimens and prints a single JSON result to stdout.
-This guide covers usage only.
+PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md); for the project-level pitch see [README.md](README.md).
 
-## Choose your runner
+Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
 
-PolicyWitness supports two runner modes:
+## Contents
 
-1) Standard runner (built-in)
-- Default path; minimal entitlements (no debug allowances).
-- Select with `runner.mode="standard"` or `--runner-mode standard`.
+- [Quick start](#quick-start)
+- [Specimen format](#specimen-format)
+- [Output envelope](#output-envelope)
+- [What PolicyWitness understands](#what-policywitness-understands)
+- [Operating](#operating)
+- [External runners (BYOXPC)](#external-runners-byoxpc)
 
-2) BYOXPC runner (external XPC bundle)
-- Use when you need extra entitlements; supply a signed `.xpc` bundle.
-- Service name must match the bundle's `CFBundleIdentifier` (no override).
-- Install with `policy-witness runner install --kind byoxpc ...`.
-- Tested by `tests/suites/runner_byoxpc/run.sh` (opt-in; GUI session required).
+## Quick start
 
-If no runner is specified, PolicyWitness uses the built-in standard runner.
-Use BYOXPC when probes require debug-attach, DYLD env, custom dylib loading,
-JIT, or other entitlements the standard runner doesn't ship.
-
-## Quick start (standard runner)
+Quick start uses the built-in standard runner. If you need entitlements the standard runner doesn't ship — debug-attach, DYLD env, custom dylib loading, JIT — see [External runners (BYOXPC)](#external-runners-byoxpc) below.
 
 Set a convenience variable:
 
@@ -60,7 +54,9 @@ Run it:
 $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 ```
 
-## Specimen format (request JSON)
+## Specimen format
+
+### Top-level shape
 
 Top-level fields:
 
@@ -105,7 +101,7 @@ resolves them against the system profile search path. `(param "NAME")`
 substitution uses values from `policy.params`. `string-append` of param
 references is supported by the compiler.
 
-#### Policy preflight diagnostics
+### Policy preflight
 
 Before the runner is invoked, the host compiles the policy with
 `sbpl-preflight`. The preflight envelope exposes:
@@ -235,10 +231,7 @@ Shipped augments:
   `(allow process-exec*)`, `(allow process-fork)`, and an
   **unconditional** `(allow file-read*)`. Empirically derived
   against `tests/suites/runner_use_c_worker/exec_fixture/helper.c`
-  on macOS 14.8.3 (build 23J220, Darwin 23.6.0); see
-  `runner/augments/README.md → "exec_baseline derivation
-  transcript"` for the candidate rules, removal matrix, and
-  re-verification recipe.
+  on macOS 14.8.3 (build 23J220, Darwin 23.6.0).
 
   **This is a pragmatic baseline, not a narrow minimum.**
   `(allow file-read*)` is unconditional because the kernel reads
@@ -247,9 +240,7 @@ Shipped augments:
   appended after the caller's source and SBPL is last-match-wins,
   this allow overrides any caller-authored `(deny file-read* ...)`.
   Specimens that probe file-read denial cannot be composed with
-  `exec_baseline` — see `runner/augments/README.md → "exec_baseline
-  composition limits"` for the two failure patterns and the
-  workarounds.
+  `exec_baseline`.
 
 ### Probe plan steps
 
@@ -272,7 +263,9 @@ Example:
 }
 ```
 
-## Run output (per step)
+## Output envelope
+
+### Shape and schema_version
 
 Runner responses use `schema_version = 4`. The XPC service host stays
 unsandboxed and spawns two children per specimen: `pw-probe-runner`
@@ -284,7 +277,7 @@ unified-log correlation. `runner_subprocess` records
 `{ pid, term_signal, exit_code, partial_steps }`.
 `validator_subprocess` records the validator child's
 `{ pid, exit_code, term_signal }` or is `null` when no validator
-ran (see below).
+ran (see [Top-level fields](#top-level-fields) below).
 
 The `exec` attempt kind adds five optional per-step fields under
 `steps[].attempt` — `child_pid`, `child_exit_code`,
@@ -297,6 +290,8 @@ five fields exactly when an exec attempt's slot was filled. A
 non-exec attempt's envelope omits the keys entirely so a sysctl /
 file / mach result envelope does not grow five null fields it has
 no use for.
+
+### Top-level fields
 
 Top-level fields beyond `pid` / `runner_subprocess`:
 
@@ -335,6 +330,138 @@ Top-level fields beyond `pid` / `runner_subprocess`:
        deny evidence (mach `kr=1100`, etc.) is unambiguous and does
        produce `drift=true` when the validator predicted `allow`.
   Encoded as explicit JSON `null` so the key is always present.
+
+The request schema also accepts an optional `_test_overrides`
+field. The leading underscore is intentional: it marks `_test_overrides`
+as a private, unsupported field used by the project's own tests to
+reach failure paths that production specimens can't construct.
+Production callers should leave it unset. The one exception users
+may want to reach for directly is `worker_post_apply_hang_ms` for
+debugger attach (see [Debug-attach to the worker](#debug-attach-to-the-worker)).
+
+### Per-step shape
+
+The runner echoes step results with additional context:
+
+- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
+- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
+- `steps[].drift`: `bool | null` — see the field description above.
+
+Notes:
+- `scope` is `post_sandbox` for runner-hosted checks.
+- `requested_path` echoes the attempt target for every attempt kind
+  (path, Mach service name, sysctl name, etc.). `normalized_path` and
+  `observed_path` are file-path diagnostics; non-file attempts carry
+  explicit `null` for those fields.
+- `filter_value` is the exact string the runner passes to `sandbox_check`,
+  except when `outcome == "prediction_unavailable"` — in that case no
+  `sandbox_check` call is made; `filter_value` is echoed back from the
+  request unchanged for cross-referencing with the specimen.
+- `effective_filter_value` is a canonicalized/realpath form used for reporting only.
+- `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
+  (mach-lookup local). The global-name ID was previously documented
+  as `16` based on a now-invalidated external reference; empirical
+  verification against actual kernel enforcement (see
+  `tests/suites/witness_contract/harness/verify_filter_id.sh`) shows
+  `2` works correctly under strict verification (deny on the policy's
+  denied value AND allow on a sibling un-denied value). ID `12` also
+  passes the same strict verification across the scan to 200 —
+  presumably an alias or aliased predicate path — so `2` is the
+  selected working ID, not the uniquely correct one. The local-name
+  ID (`17`) has not been re-verified by the same methodology and may
+  also be incorrect; it is documented here unchanged pending a
+  verification fixture. For filter kinds in the
+  prediction_unavailable set, no `filter_type_id` is emitted (see
+  [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
+- `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
+  `prediction_unavailable`.
+    - `allow` / `deny`: `sandbox_check` returned a clean verdict.
+    - `error`: `sandbox_check` returned a non-EINVAL failure
+      (rare in practice). `error` is always populated with
+      `strerror(errno)` — consumers should never see
+      `outcome == "error"` with `error == null`.
+    - `unsupported_operation`: `sandbox_check` returned `rc=-1` +
+      `errno=22` (EINVAL), which most commonly means the operation
+      name is one libsandbox doesn't recognize. SBPL family
+      operations must be passed to `sandbox_check` in their
+      wildcard form — e.g. `process-exec*`, not the bare
+      `process-exec`. `error` is always populated with a message
+      naming the rejected operation and the wildcard hint. Treat
+      this as a per-step skip (parallel to the attempt-side
+      `unsupported` outcome): the step still runs the attempt
+      channel for the observation, but the prediction channel
+      yields no allow/deny verdict so `drift` is `null`.
+    - `prediction_unavailable`: emitted when the runner deliberately
+      skips `sandbox_check` for a step where the userland predicate
+      is structurally suspect. Two triggers:
+        - **op+filter pair** known to drift from kernel enforcement
+          (iokit / sysctl families — see
+          [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
+        - **per-step host condition**: a `path` filter whose
+          `filter_value` doesn't resolve via `realpath` on the host.
+          For absent paths the kernel ENOENTs file-* access vectors
+          before reaching the sandbox layer, so a libsandbox verdict
+          for that path is a userland canonicalization artifact, not
+          a kernel prediction. `error` is populated naming the
+          unresolved path; `path_diagnostics.realpath_resolved` is
+          `null` as a second tell.
+      Channel A (the `attempt` result) remains the reliable evidence
+      for these probes; the prediction is honestly absent rather
+      than wrong.
+  When `outcome == "prediction_unavailable"`, `rc` is the sentinel
+  `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
+  that key on `rc == 0` for "allow" must check `outcome` first so the
+  sentinel is not misread.
+
+### path_diagnostics
+
+`path_diagnostics` is emitted on every path-filter `sandbox_check`
+result. It carries the candidate kernel-side forms of the check
+path so a caller can see which prefix libsandbox could have been
+comparing against when a `(subpath ...)` rule denies a path that
+looked like it should match. Fields: `{ input, realpath_resolved,
+firmlink_resolved, data_volume_form }`. The runner still passes
+the raw `filter_value` to `sandbox_check` — this block is
+observation only.
+
+Producer: `path_diagnostics` is computed by the unsandboxed runner
+host (`PWRunnerService.enrichPathDiagnostics`) after the worker
+process returns. The host's `realpath(3)` is not blocked by the
+worker's `(deny default)` policy, so `realpath_resolved` is reliably
+populated even under restrictive sandboxes.
+
+At v2+ all four keys are always emitted: a string when computed, an
+explicit `null` when the computation didn't produce a value. Consumers
+can therefore distinguish "computed and the result was null" (key
+present, value `null`) from "diagnostic was not emitted at all" (key
+absent or the entire `path_diagnostics` object absent).
+- `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
+  Computed in the unsandboxed host; under normal conditions this is
+  populated whenever the file exists. Null only when the host's own
+  `realpath` fails (path doesn't exist, permission denied at the
+  host level, etc.). The other forms below remain computable in that
+  case.
+- `firmlink_resolved`: the realpath result rewritten through
+  `/usr/share/firmlinks`. When realpath returned null, the host
+  falls back to a pure-string substitution of the standard userspace
+  symlinks (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`)
+  before applying firmlinks, so `/etc/hosts` still lands at
+  `/System/Volumes/Data/private/etc/hosts` in the rare case the
+  host's `realpath` fails. The firmlinks map is loaded eagerly and
+  has a built-in fallback mirroring the standard mappings on
+  Catalina+.
+- `data_volume_form`: heuristic shortcut that prepends
+  `/System/Volumes/Data` to paths under `/private/`. Computed from the
+  same fallback basis as `firmlink_resolved`, so it is populated for the
+  common case even when realpath is unavailable.
+
+Capture the sandbox_check argument quickly (no interpose needed):
+
+```sh
+jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome, path_diagnostics}' run.json
+```
+
+### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
 (controller-level outcomes like `bad_policy`, `missing_params`, and
@@ -377,7 +504,7 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   Unknown `filter.kind` and unsupported `(attempt.kind,
   attempt.action)` combos do NOT produce `bad_request` — they
   downgrade to per-step `prediction_unavailable` and `unsupported`
-  respectively (see the per-step sections below).
+  respectively (see the per-step sections above).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
 - `sandbox_apply_failed` — the C worker reached `sandbox_apply` but
@@ -394,86 +521,7 @@ peer itself can't be reached. Rare in practice — the unsandboxed
 host always replies unless launchd or codesign reject the bundle
 outright.
 
-The request schema also accepts an optional `_test_overrides`
-field; see the [`_test_overrides` reference in AGENTS.md][overrides]
-for the supported keys and their boundaries. Production runs leave
-the field unset; the one exception users may want to reach for
-directly is `worker_post_apply_hang_ms` for debugger attach (see
-[Debug-attach to the worker](#debug-attach-to-the-worker)).
-
-[overrides]: AGENTS.md#testing-normalized_outcome-failure-paths-via-_test_overrides
-
-The runner echoes step results with additional context:
-
-- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
-- `steps[].drift`: `bool | null` — see the field description above.
-
-Notes:
-- `scope` is `post_sandbox` for runner-hosted checks.
-- `requested_path` echoes the attempt target for every attempt kind
-  (path, Mach service name, sysctl name, etc.). `normalized_path` and
-  `observed_path` are file-path diagnostics; non-file attempts carry
-  explicit `null` for those fields.
-- `filter_value` is the exact string the runner passes to `sandbox_check`,
-  except when `outcome == "prediction_unavailable"` — in that case no
-  `sandbox_check` call is made; `filter_value` is echoed back from the
-  request unchanged for cross-referencing with the specimen.
-- `effective_filter_value` is a canonicalized/realpath form used for reporting only.
-- `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
-  (mach-lookup local). The global-name ID was previously documented
-  as `16` based on a now-invalidated external reference; empirical
-  verification against actual kernel enforcement (see
-  `tests/suites/witness_contract/harness/verify_filter_id.sh`) shows
-  `2` works correctly under strict verification (deny on the policy's
-  denied value AND allow on a sibling un-denied value). ID `12` also
-  passes the same strict verification across the scan to 200 —
-  presumably an alias or aliased predicate path — so `2` is the
-  selected working ID, not the uniquely correct one. The local-name
-  ID (`17`) has not been re-verified by the same methodology and may
-  also be incorrect; it is documented here unchanged pending a
-  verification fixture. For filter kinds in the
-  prediction_unavailable set, no `filter_type_id` is emitted (see the
-  next section).
-- `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
-  `prediction_unavailable`.
-    - `allow` / `deny`: `sandbox_check` returned a clean verdict.
-    - `error`: `sandbox_check` returned a non-EINVAL failure
-      (rare in practice). `error` is always populated with
-      `strerror(errno)` — consumers should never see
-      `outcome == "error"` with `error == null`.
-    - `unsupported_operation`: `sandbox_check` returned `rc=-1` +
-      `errno=22` (EINVAL), which most commonly means the operation
-      name is one libsandbox doesn't recognize. SBPL family
-      operations must be passed to `sandbox_check` in their
-      wildcard form — e.g. `process-exec*`, not the bare
-      `process-exec`. `error` is always populated with a message
-      naming the rejected operation and the wildcard hint. Treat
-      this as a per-step skip (parallel to the attempt-side
-      `unsupported` outcome): the step still runs the attempt
-      channel for the observation, but the prediction channel
-      yields no allow/deny verdict so `drift` is `null`.
-    - `prediction_unavailable`: emitted when the runner deliberately
-      skips `sandbox_check` for a step where the userland predicate
-      is structurally suspect. Two triggers:
-        - **op+filter pair** known to drift from kernel enforcement
-          (iokit / sysctl families — see "Filter kinds where
-          prediction is unavailable" below).
-        - **per-step host condition**: a `path` filter whose
-          `filter_value` doesn't resolve via `realpath` on the host.
-          For absent paths the kernel ENOENTs file-* access vectors
-          before reaching the sandbox layer, so a libsandbox verdict
-          for that path is a userland canonicalization artifact, not
-          a kernel prediction. `error` is populated naming the
-          unresolved path; `path_diagnostics.realpath_resolved` is
-          `null` as a second tell.
-      Channel A (the `attempt` result) remains the reliable evidence
-      for these probes; the prediction is honestly absent rather
-      than wrong.
-  When `outcome == "prediction_unavailable"`, `rc` is the sentinel
-  `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
-  that key on `rc == 0` for "allow" must check `outcome` first so the
-  sentinel is not misread.
+## What PolicyWitness understands
 
 ### Filter kinds the runner predicts
 
@@ -487,132 +535,6 @@ accepts) — those steps short-circuit to
 `rc == -1` per-step. The plan is not rejected; sibling steps with
 predicted kinds run normally and the attempt for the
 unpredicted step still produces evidence.
-
-### Attempt kinds the runner implements
-
-The C worker implements these `(attempt.kind, attempt.action)`
-combinations:
-
-- `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
-- `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
-- `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
-- `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
-  binary. `target` is the absolute path to the helper (becomes
-  argv[0]). Optional `args: ["…", …]` supplies argv[1..N]; capped at
-  15 entries with each entry up to 127 UTF-8 bytes (the ABI's
-  `argv_count` includes argv[0], the per-entry budget reserves a
-  trailing NUL). The runner pre-creates stdout/stderr pipes
-  pre-apply (so the post-apply syscall surface stays minimal — see
-  "Augments" → `exec_baseline` for the policy contract), drains both
-  streams interleaved while the child runs, reaps via `waitpid`, and
-  surfaces:
-  - `attempt.child_pid`: child PID when spawn succeeded, `0` when
-    spawn was blocked / target missing / setup failed. This is the
-    sentinel `steps[].drift` keys on to distinguish a sandbox-denied
-    spawn (`child_pid == 0` + `errno ∈ {EPERM, EACCES}` →
-    libsandbox-drift evidence if validator predicted allow) from a
-    helper that simply exited non-zero (`child_pid > 0` →
-    non-policy failure, drift always null).
-  - `attempt.child_exit_code`: helper's exit status on clean exit,
-    `-1` when the child was signaled or no child ran.
-  - `attempt.child_term_signal`: signal number when the child was
-    killed by a signal, `0` when clean-exited or no child ran.
-  - `attempt.stdout` / `attempt.stderr`: captured bytes up to 1023
-    per stream; output past the buffer is truncated and tagged with
-    a trailing `\n... [truncated]` marker. Absent (key omitted) when
-    the stream produced no bytes.
-  - `attempt.rc`: helper's exit code when spawn succeeded (so `rc ==
-    0` means the helper itself reported success); `-1` when spawn
-    failed.
-  - `attempt.outcome`: `"ok"` when spawn succeeded AND the helper
-    exited 0; `"exec_failed"` for every other terminal state
-    (spawn-blocked, target missing, helper non-zero exit, helper
-    signaled).
-
-  A minimal `(deny default)` policy will block `posix_spawn` itself.
-  Callers who want exec attempts to succeed under a deny-by-default
-  policy opt into `policy.augments: ["exec_baseline"]` (see
-  "Augments") — three `(allow ...)` rules are sufficient to let a
-  libSystem-dynamic helper spawn, load dyld, and reach `main`.
-  Callers who need to allow more (network, IOKit, specific filesystem
-  subpaths) compose their own additional allows on top of the augment.
-
-  The runner also enforces a bounded per-exec deadline (10 seconds
-  by default) so a hung helper can't escalate into a worker-level
-  sentinel timeout. When the deadline fires the worker SIGKILLs the
-  child's process group and surfaces `outcome="exec_failed"` with
-  `child_term_signal=9` and `error` containing
-  `"child exceeded N-second deadline; SIGKILL'd"`. The helper is
-  spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT` (so it inherits only
-  the runner's stdin=/dev/null + stdout/stderr pipes — no shm fd,
-  no policy fd, no other exec slots' pipes) and an empty
-  environment.
-
-  Note that `data.runner_sandbox_diagnostics.first_deny` does NOT
-  identify the denied syscall for an exec attempt — that
-  diagnostic fires only for the `runner_sandbox_denied` outcome and
-  is PID-scoped to the worker, not its children. Per-child deny
-  correlation is a separate enhancement.
-
-Specimens are free to author probes with other attempt combinations
-(`("iokit", "open")`, future kinds, etc.) — those steps surface
-`step.attempt.outcome = "unsupported"` per-step. The `sandbox_check`
-verdict for the same step still runs normally; only the attempt
-slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
-(no attempt verdict to compare against).
-
-### Attempt kinds PW deliberately does not implement
-
-The built-in attempt-kind catalog (file, mach_lookup, sysctl, exec)
-is a small curated set rather than a mirror of every
-`sandbox_check` operation. The omissions are intentional. Future
-contributors proposing to add a new built-in kind should read this
-section first.
-
-A 2026 corpus survey of 627 SBPL profiles ranked twelve
-`sandbox_check` kinds by authoring frequency and rated each
-against five gates (executability, determinism,
-non-destructiveness, narrow blast radius, no privilege required).
-PW's built-in set is the three well-behaved kinds that passed all
-gates (file, mach_lookup, sysctl) plus an `exec` extension point
-for the case-work tier. The other nine are deliberately omitted:
-
-- **Case-work tier (7 kinds — supported only via `exec`):**
-  `generic`, `iokit`, `ipc`, `mach`, `process`, `socket`,
-  `user_preference`. Each is a heterogeneous bucket whose
-  constituent ops need per-op target hygiene, recipe authoring,
-  and safety judgment that PW can't make on the caller's behalf.
-  Callers who need to test these surfaces ship their own helper
-  binary and drive it through an `exec` attempt — PW provides
-  the bounded, hermetic spawn frame (see
-  "Attempt kinds the runner implements" → `("exec", "spawn")`)
-  but doesn't carry per-op SBPL atlases for kinds where the
-  authoring burden belongs to the caller.
-
-- **Never tier (3 kinds — unsupported through any built-in):**
-  `network`, `signal`, `system`. These fail one or more of the
-  five gates architecturally:
-    - `network` connect/listen probes are destructive (open real
-      sockets), non-deterministic (depend on remote reachability),
-      and have wide blast radius (firewall/router state).
-    - `signal` delivery is destructive (target processes
-      observe signals) and racy (delivery timing is
-      uncontrollable from userland).
-    - `system` ops cover privileged actions (mounting filesystems,
-      modifying kernel state) that require elevation PW
-      deliberately doesn't request.
-
-  `exec` attempts on `network`/`signal`/`system` surfaces are not
-  blocked by PW — the caller's helper can do whatever it wants
-  under the applied policy — but PW makes no commitment to
-  determinism or non-destructiveness for these probes. The
-  caller owns the safety judgment.
-
-The choice to extend via `exec` rather than enumerate every kind
-in PW source is the architectural commitment behind Phase 2:
-PW provides a stable harness inside which callers exercise the
-surface they care about, rather than chasing Apple's syscall
-surface as it evolves.
 
 ### Filter kinds where prediction is unavailable
 
@@ -657,54 +579,78 @@ matching code lives in
 `runner/ProbeRunner.swift::predictionUnavailableOpFilters` and is
 mirrored host-side by
 `runner/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
-both lists and this doc must agree (source_drift enforces).
-- `path_diagnostics` is emitted on every path-filter `sandbox_check`
-  result. It carries the candidate kernel-side forms of the check
-  path so a caller can see which prefix libsandbox could have been
-  comparing against when a `(subpath ...)` rule denies a path that
-  looked like it should match. Fields: `{ input, realpath_resolved,
-  firmlink_resolved, data_volume_form }`. The runner still passes
-  the raw `filter_value` to `sandbox_check` — this block is
-  observation only.
+both lists must agree (source_drift enforces).
 
-  Producer: `path_diagnostics` is computed by the unsandboxed runner
-  host (`PWRunnerService.enrichPathDiagnostics`) after the worker
-  process returns. The host's `realpath(3)` is not blocked by the
-  worker's `(deny default)` policy, so `realpath_resolved` is reliably
-  populated even under restrictive sandboxes.
+### Attempt kinds the runner implements
 
-  At v2+ all four keys are always emitted: a string when computed, an
-  explicit `null` when the computation didn't produce a value. Consumers
-  can therefore distinguish "computed and the result was null" (key
-  present, value `null`) from "diagnostic was not emitted at all" (key
-  absent or the entire `path_diagnostics` object absent).
-  - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
-    Computed in the unsandboxed host; under normal conditions this is
-    populated whenever the file exists. Null only when the host's own
-    `realpath` fails (path doesn't exist, permission denied at the
-    host level, etc.). The other forms below remain computable in that
-    case.
-  - `firmlink_resolved`: the realpath result rewritten through
-    `/usr/share/firmlinks`. When realpath returned null, the host
-    falls back to a pure-string substitution of the standard userspace
-    symlinks (`/etc`, `/tmp`, `/var` → `/private/{etc,tmp,var}`)
-    before applying firmlinks, so `/etc/hosts` still lands at
-    `/System/Volumes/Data/private/etc/hosts` in the rare case the
-    host's `realpath` fails. The firmlinks map is loaded eagerly and
-    has a built-in fallback mirroring the standard mappings on
-    Catalina+.
-  - `data_volume_form`: heuristic shortcut that prepends
-    `/System/Volumes/Data` to paths under `/private/`. Computed from the
-    same fallback basis as `firmlink_resolved`, so it is populated for the
-    common case even when realpath is unavailable.
+The C worker implements these `(attempt.kind, attempt.action)`
+combinations:
 
-Capture the sandbox_check argument quickly (no interpose needed):
+- `("file", "open_read" | "open_write" | "create" | "unlink" | "access")` — exercise file ops on `target`.
+- `("mach_lookup", "bootstrap_look_up")` — `bootstrap_look_up` on `target`.
+- `("sysctl", "read")` — `sysctlbyname(target, ...)` read of a sysctl name such as `kern.osrelease`.
+- `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
+  binary. `target` is the absolute path to the helper (becomes
+  argv[0]). Optional `args: ["…", …]` supplies argv[1..N]; capped at
+  15 entries with each entry up to 127 UTF-8 bytes (the ABI's
+  `argv_count` includes argv[0], the per-entry budget reserves a
+  trailing NUL). The runner pre-creates stdout/stderr pipes
+  pre-apply (so the post-apply syscall surface stays minimal — see
+  [Augments](#augments) → `exec_baseline` for the policy contract),
+  drains both streams interleaved while the child runs, reaps via
+  `waitpid`, and surfaces these fields under `attempt`:
 
-```sh
-jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome, path_diagnostics}' run.json
-```
+  | field | populated when | sentinel when not | semantics |
+  | --- | --- | --- | --- |
+  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | The drift classifier keys on `child_pid==0` + `errno∈{EPERM,EACCES}` to attribute a sandbox-denied spawn vs `child_pid>0` for a helper non-zero exit (treated as non-policy failure). |
+  | `child_exit_code` | child clean-exited | `-1` — child was signaled or no child ran | |
+  | `child_term_signal` | child killed by a signal | `0` — clean-exited or no child ran | |
+  | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | Captured up to 1023 bytes per stream; output past the buffer is truncated and tagged with a trailing `\n... [truncated]` marker. |
+  | `rc` | always populated | (n/a) | Helper's exit code on spawn success (`rc==0` means the helper itself reported success); `-1` when spawn failed. |
+  | `outcome` | always populated | (n/a) | `"ok"` when spawn succeeded AND the helper exited 0; `"exec_failed"` for every other terminal state (spawn-blocked, target missing, helper non-zero exit, helper signaled). |
 
-## Debug-attach to the worker
+  A minimal `(deny default)` policy will block `posix_spawn` itself.
+  Callers who want exec attempts to succeed under a deny-by-default
+  policy opt into `policy.augments: ["exec_baseline"]` (see
+  [Augments](#augments)) — three `(allow ...)` rules are sufficient
+  to let a libSystem-dynamic helper spawn, load dyld, and reach
+  `main`. Callers who need to allow more (network, IOKit, specific
+  filesystem subpaths) compose their own additional allows on top
+  of the augment.
+
+  The runner also enforces a bounded per-exec deadline (10 seconds
+  by default) so a hung helper can't escalate into a worker-level
+  sentinel timeout. When the deadline fires the worker SIGKILLs the
+  child's process group and surfaces `outcome="exec_failed"` with
+  `child_term_signal=9` and `error` containing
+  `"child exceeded N-second deadline; SIGKILL'd"`. The helper is
+  spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT` (so it inherits only
+  the runner's stdin=/dev/null + stdout/stderr pipes — no shm fd,
+  no policy fd, no other exec slots' pipes) and an empty
+  environment.
+
+  Note that `data.runner_sandbox_diagnostics.first_deny` does NOT
+  identify the denied syscall for an exec attempt — that
+  diagnostic fires only for the `runner_sandbox_denied` outcome and
+  is PID-scoped to the worker, not its children. Per-child deny
+  correlation is a separate enhancement.
+
+Specimens are free to author probes with other attempt combinations
+(`("iokit", "open")`, future kinds, etc.) — those steps surface
+`step.attempt.outcome = "unsupported"` per-step. The `sandbox_check`
+verdict for the same step still runs normally; only the attempt
+slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
+(no attempt verdict to compare against).
+
+## Operating
+
+### Common flags
+
+- `--timeout-ms <n>`: runner RPC timeout (default 240000)
+- `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
+- `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
+
+### Debug-attach to the worker
 
 To pause the worker for a debugger attach, set
 `_test_overrides.worker_post_apply_hang_ms: <N>` on the request. The
@@ -721,6 +667,52 @@ time:
 ```sh
 $PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
 ```
+
+### Troubleshooting
+
+- Service not found: run `policy-witness runner list` and confirm the service name.
+- System scope install fails: use `--scope user` or run with admin privileges.
+- Verify fails with no reply: check launchd state and the service plist.
+- BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
+- `normalized_outcome` is `runner_sandbox_denied` and you expected
+  `ok`: uncommon. The C worker's post-apply syscall surface is small
+  (just shared-memory stores and a nanosleep), so most `(deny default)`
+  policies don't actually kill it. The residual cases that do produce
+  this outcome are policies that explicitly deny one of the syscalls
+  in the worker's post-apply path, or kernel-issued aborts on the
+  worker process for an unrelated reason. The worker was terminated
+  by a fatal signal before flipping its `done` sentinel.
+  - **Quickest read:** `data.runner_sandbox_diagnostics.first_deny` carries
+    the first kernel deny attributed to the worker PID — `operation`,
+    `path` if applicable, and the raw unified-log line. Use this when you
+    want one line that names the cause.
+  - `data.runner_sandbox_diagnostics.first_deny` is `null` when log capture
+    was blocked/unavailable or when no deny event matches the worker PID
+    (rare; usually means the capture window missed the event). The outer
+    `runner_sandbox_diagnostics` object is present whenever the outcome is
+    `runner_sandbox_denied`, so consumers can branch on `first_deny != null`
+    directly.
+  - For the full deny list (when one isn't enough), see
+    `data.sandbox_log_capture.deny_events`.
+  - `data.runner_result.runner_subprocess.term_signal` carries the
+    exit signal. The C worker has a minimal post-apply syscall
+    surface (shm writes only), so most `(deny default)` policies
+    don't actually kill it; if you see `runner_sandbox_denied`, the
+    `first_deny` line usually names the specific operation the
+    policy needs to allow.
+- `normalized_outcome` is `worker_spawn_failed`: the host could not
+  `posix_spawn` the worker. Verify the bundle is signed and on a writable
+  filesystem; `pgrep -fl PWRunner` should show no stragglers.
+- If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
+  run from a normal Terminal to confirm behavior.
+
+Common decode errors (quick fixes)
+- `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
+- `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
+- `unknown field 'path_membership'`: path rules belong in `policy.sbpl_source` as SBPL, not as JSON fields.
+- `runner.mode=debuggable` or top-level `instrumentation` field rejected:
+  these are not supported. Install a BYOXPC runner with the entitlements
+  you need and select it via `runner.id` or `runner.service`.
 
 ## External runners (BYOXPC)
 
@@ -890,55 +882,3 @@ Registry location:
 ```
 ~/Library/Application Support/PolicyWitness/runners.json
 ```
-
-## Common flags
-
-- `--timeout-ms <n>`: runner RPC timeout (default 240000)
-- `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
-- `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
-
-## Troubleshooting
-
-- Service not found: run `policy-witness runner list` and confirm the service name.
-- System scope install fails: use `--scope user` or run with admin privileges.
-- Verify fails with no reply: check launchd state and the service plist.
-- BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
-- `normalized_outcome` is `runner_sandbox_denied` and you expected
-  `ok`: uncommon. The C worker's post-apply syscall surface is small
-  (just shared-memory stores and a nanosleep), so most `(deny default)`
-  policies don't actually kill it. The residual cases that do produce
-  this outcome are policies that explicitly deny one of the syscalls
-  in the worker's post-apply path, or kernel-issued aborts on the
-  worker process for an unrelated reason. The worker was terminated
-  by a fatal signal before flipping its `done` sentinel.
-  - **Quickest read:** `data.runner_sandbox_diagnostics.first_deny` carries
-    the first kernel deny attributed to the worker PID — `operation`,
-    `path` if applicable, and the raw unified-log line. Use this when you
-    want one line that names the cause.
-  - `data.runner_sandbox_diagnostics.first_deny` is `null` when log capture
-    was blocked/unavailable or when no deny event matches the worker PID
-    (rare; usually means the capture window missed the event). The outer
-    `runner_sandbox_diagnostics` object is present whenever the outcome is
-    `runner_sandbox_denied`, so consumers can branch on `first_deny != null`
-    directly.
-  - For the full deny list (when one isn't enough), see
-    `data.sandbox_log_capture.deny_events`.
-  - `data.runner_result.runner_subprocess.term_signal` carries the
-    exit signal. The C worker has a minimal post-apply syscall
-    surface (shm writes only), so most `(deny default)` policies
-    don't actually kill it; if you see `runner_sandbox_denied`, the
-    `first_deny` line usually names the specific operation the
-    policy needs to allow.
-- `normalized_outcome` is `worker_spawn_failed`: the host could not
-  `posix_spawn` the worker. Verify the bundle is signed and on a writable
-  filesystem; `pgrep -fl PWRunner` should show no stragglers.
-- If you are running inside a sandboxed automation harness, XPC lookup can be blocked;
-  run from a normal Terminal to confirm behavior.
-
-Common decode errors (quick fixes)
-- `missing field 'policy'`: add a top-level `policy` object with `format` and `sbpl_source`.
-- `keyNotFound(... "specimen_id" ...)`: add a top-level `specimen_id` string.
-- `unknown field 'path_membership'`: path rules belong in `policy.sbpl_source` as SBPL, not as JSON fields.
-- `runner.mode=debuggable` or top-level `instrumentation` field rejected:
-  these are not supported. Install a BYOXPC runner with the entitlements
-  you need and select it via `runner.id` or `runner.service`.
