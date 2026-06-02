@@ -670,7 +670,12 @@ private func buildAttemptResult(
     )
 }
 
-private func computeDrift(
+// `internal` (not `private`) so DriftClassifierTests can drive the
+// validator-vs-kernel truth table directly. This is the conceptual
+// core of PolicyWitness — the test pins the *semantics* of every
+// (predicted, observed) cell so the classifier can be reorganized,
+// split, or moved without silently changing what "drift" means.
+func computeDrift(
     sandboxCheck: PWRunnerSandboxCheckResult,
     attempt: PWRunnerAttemptResult
 ) -> Bool? {
