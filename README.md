@@ -1,8 +1,12 @@
 # PolicyWitness
 
->Read the [user guide](PolicyWitness.md) for more detail, or the [FAQ](QUESTIONS.md) for shorter answers to common questions.
+>Read the [user guide](PolicyWitness.md) for more detail.
 
-PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies with observable evidence. Sandbox outcomes are easy to misread without clear attribution and consistent output. PolicyWitness ties each result to a specific runner instance and emits a stable JSON envelope so you can audit, diff, and automate tests without guesswork.
+PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy plus a probe plan applied to a sandboxed worker, and exercises steps against both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
+
+## Build
+
+Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.md](SIGNING.md)).
 
 ## Flow
 
@@ -10,23 +14,21 @@ PolicyWitness is a macOS sandbox witness harness for verifying sandbox policies 
 
 PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner` (sandboxed C worker that applies the specimen policy to itself and runs the probe plan) and `sb_api_validator --batch` (queries `sandbox_check` for each probe against the worker's sandboxed PID). The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
 
-Each step records two parallel verdicts:
+Each step records two parallel verdicts plus the cross-channel comparison:
 
 - **Attempt** (`steps[].attempt`): in-band kernel response — `rc`, `errno`, mach `kr` — from actually performing the operation inside the sandboxed worker.
 - **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` verdict for the same operation + filter against the same PID, supplied by the validator.
+- **Drift** (`steps[].drift`): the validator-vs-attempt comparison. `true` when they disagree about allow/deny with strong-evidence backing; `false` when they agree; `null` when no comparison is possible (validator skipped, attempt didn't produce a verdict, DAC/sandbox ambiguity, etc.).
 
-`steps[].drift` flags disagreement between the two. Unified-log evidence for kernel denies is attached out-of-band (best-effort) via `data.sandbox_log_capture` and `data.runner_sandbox_diagnostics.first_deny`.
+Unified-log evidence for kernel denies is attached out-of-band (best-effort).
 
-## Runner modes
+## Entitlements + SBPL
 
-PolicyWitness supports two runner modes. Both return the same JSON envelope and speak the same NSXPC protocol; they differ only in how the runner process is supplied and registered.
+macOS sandboxing isn't just SBPL: a process's effective sandbox is its SBPL profile applied on top of the entitlements its binary was codesigned with. The same SBPL can yield different kernel behavior depending on which entitlements are granted, so a specimen has to describe both halves to be a faithful witness.
 
-- `standard`: built-in XPC service embedded in `dist/PolicyWitness.app`; no install step. Default when no runner is specified.
-- `byoxpc`: user-supplied `.xpc` bundle (optionally self-signed) installed with `policy-witness runner install --kind byoxpc`. Use this when probes require entitlements the standard runner doesn't ship — debug-attach (`com.apple.security.get-task-allow`), custom dylib loading, JIT, DYLD env, etc.
+By default SBPL is applied to a process holding no entitlements. To observe a different combination, copy the bundled XPC service, sign it with your own entitlements plist (Developer ID or ad-hoc), and install it via `policy-witness runner install --kind byoxpc`. Specimens then select it via `runner.id` or `runner.service`. See the user guide ([PolicyWitness.md](PolicyWitness.md)) for the install recipe.
 
-PolicyWitness treats entitlements as a first-class input alongside SBPL. Register an externally signed runner with the entitlements your probes require, then apply a per-specimen SBPL policy on top to test temporary restrictions or entitlements + SBPL combinations in a single run.
-
-## What Ships
+## What ships
 
 This repo builds a single distributable app bundle:
 
@@ -35,19 +37,22 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
   - `Contents/MacOS/sbpl-preflight` (SBPL compile/preflight helper)
-  - `Contents/MacOS/sb_api_validator` (diagnostic copy of the validator CLI; production traffic uses the bundle-local copy embedded inside each XPC service)
+  - `Contents/MacOS/sb_api_validator` (diagnostic copy of the validator CLI)
   - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host + two short-lived children per specimen)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
-## Where To Learn
+## Where to learn
 
-- Repo orientation: [AGENTS.md](AGENTS.md)
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Testing: [tests/README.md](tests/README.md)
-- Implementation details:
+- Using the app:
+  - User guide: [PolicyWitness.md](PolicyWitness.md)
+  - FAQ: [QUESTIONS.md](QUESTIONS.md)
   - Signing/distribution: [SIGNING.md](SIGNING.md)
-  - Using the app and workflows: [PolicyWitness.md](PolicyWitness.md)
+- Implementation details:
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
+- Contributing:
+  - Repo orientation: [AGENTS.md](AGENTS.md)
+  - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+  - Testing: [tests/README.md](tests/README.md)

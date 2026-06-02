@@ -2,7 +2,7 @@
 
 ## When should I use PolicyWitness?
 
-PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses — i.e., whether the prediction tooling everyone else relies on would mislead you on this policy. Use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases — a saved corpus of PW runs is the audit trail that catches a change before downstream consumers do.
+PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses — i.e., whether the prediction tooling everyone else relies on would mislead you on this policy. You could use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases.
 
 ## When would I not want to use PolicyWitness?
 
@@ -14,7 +14,7 @@ Nearly every case. Most macOS callers neither author SBPL profiles nor call `san
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
-PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope — the kernel's `F_GETPATH`-canonical `observed_path` for file ops; the bootstrap return code that distinguishes sandbox-deny (`kr=1100`) from service-missing (`kr=1102`) for mach lookups; errno bucketing for sysctl; and the full spawn-and-reap shape (child_pid, exit code, termination signal, captured stdout/stderr) for exec. That detail is what a real consumer would observe at runtime against the same policy, recorded once in machine-readable form rather than reconstructed per-team from ad-hoc syscall traces.
+PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope — the kernel's `F_GETPATH`-canonical `observed_path` for file ops; the bootstrap return code that distinguishes sandbox-deny (`kr=1100`) from service-missing (`kr=1102`) for mach lookups; errno bucketing for sysctl; and the full spawn-and-reap shape (child_pid, exit code, termination signal, captured stdout/stderr) for exec. That detail is what a real consumer would observe at runtime against the same policy, recorded once in machine-readable form.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
