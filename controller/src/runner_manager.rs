@@ -101,6 +101,16 @@ pub struct RunnerRegistry {
 }
 
 pub fn runner_registry_path() -> Result<PathBuf, String> {
+    // Ops/test seam: point PW at an alternate registry without touching
+    // $HOME. Mirrors the PW_VERIFY_EVIDENCE override in run_flow.rs. The
+    // resolve path also accepts an explicit override argument (see
+    // runner_select::resolve_runner_target_with_registry) so unit tests
+    // need not mutate this process-global env var.
+    if let Ok(path) = std::env::var("PW_RUNNER_REGISTRY") {
+        if !path.is_empty() {
+            return Ok(PathBuf::from(path));
+        }
+    }
     let home = std::env::var("HOME")
         .map_err(|_| "HOME is not set; cannot locate runner registry".to_string())?;
     Ok(Path::new(&home)

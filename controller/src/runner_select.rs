@@ -206,6 +206,21 @@ pub fn resolve_runner_target(
     app_root: &Path,
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
+    resolve_runner_target_with_registry(app_root, selector, None)
+}
+
+/// `resolve_runner_target` with the external-registry location injectable.
+/// Production passes `None` (resolve from `PW_RUNNER_REGISTRY` / `$HOME` via
+/// `runner_registry_path`); tests pass `Some(path)` to a fixture registry so
+/// the whole external chain — `load_registry → find_external_record →
+/// resolve_external_target → enforce_required_entitlements` — is exercisable
+/// at the public boundary without mutating the process-global env. The
+/// override is consulted lazily: the built-in branch never touches it.
+pub fn resolve_runner_target_with_registry(
+    app_root: &Path,
+    selector: &RunnerSelector,
+    registry_path_override: Option<&Path>,
+) -> Result<RunnerTarget, String> {
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
     if matches!(selector.mode, Some(RunnerKind::Standard)) && needs_external {
         return Err(
@@ -230,7 +245,10 @@ pub fn resolve_runner_target(
         return Ok(target);
     }
 
-    let registry_path = runner_manager::runner_registry_path()?;
+    let registry_path = match registry_path_override {
+        Some(path) => path.to_path_buf(),
+        None => runner_manager::runner_registry_path()?,
+    };
     let registry = runner_manager::load_registry(&registry_path)?;
     let record = find_external_record(&registry, selector)?;
     resolve_external_target(record, selector)
@@ -667,5 +685,70 @@ mod tests {
         let sel = RunnerSelector::default();
         let err = find_external_record(&reg, &sel).unwrap_err();
         assert_eq!(err, "external runner not found in registry");
+    }
+
+    // ---- public-boundary external resolution (registry injected, no $HOME) ---
+    // These drive the true entry point `resolve_runner_target_with_registry`
+    // against an on-disk fixture, so the whole external chain — load_registry
+    // → find_external_record → resolve_external_target →
+    // enforce_required_entitlements — is pinned at the boundary callers use.
+    // Any of those helpers can be re-inlined and these still hold; only a
+    // change in the security OUTCOME fails them. No process-global env is
+    // touched, so they are parallel-safe.
+
+    fn registry_fixture(reg: &RunnerRegistry) -> PathBuf {
+        let path = temp_path();
+        fs::write(&path, serde_json::to_string(reg).expect("serialize registry"))
+            .expect("write registry fixture");
+        path
+    }
+
+    #[test]
+    fn resolve_via_registry_blocks_external_runner_missing_entitlements() {
+        // The registry record carries only "A"; the caller requires "A"+"B".
+        // The gate must refuse the launch even though the runner exists and
+        // its mode matches.
+        let reg = registry_of(vec![external_record(
+            Some(RunnerKind::Byoxpc),
+            RunnerScope::User,
+            &["A"],
+        )]);
+        let path = registry_fixture(&reg);
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &["A", "B"], true);
+        let err = err_of(resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            &selector,
+            Some(&path),
+        ));
+        assert_eq!(err, "external runner does not satisfy required entitlements");
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn resolve_via_registry_admits_external_runner_with_sufficient_entitlements() {
+        // Positive companion: same record, caller requires only "A" (a
+        // subset). The gate passes and the target is built from the
+        // looked-up record — proving the gate is REACHED through the real
+        // registry lookup, not short-circuited before it.
+        let reg = registry_of(vec![external_record(
+            Some(RunnerKind::Byoxpc),
+            RunnerScope::User,
+            &["A"],
+        )]);
+        let path = registry_fixture(&reg);
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &["A"], true);
+        let target = resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            &selector,
+            Some(&path),
+        )
+        .expect("resolve");
+        assert_eq!(target.kind, RunnerKind::Byoxpc);
+        assert_eq!(target.registry_id.as_deref(), Some("runner-ext"));
+        match target.connection {
+            RunnerConnectionKind::MachService { privileged } => assert!(!privileged),
+            other => panic!("expected unprivileged MachService, got {other:?}"),
+        }
+        let _ = fs::remove_file(&path);
     }
 }
