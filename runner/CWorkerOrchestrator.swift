@@ -812,13 +812,22 @@ private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
 
 // MARK: - Classifier
 
-private struct ClassifiedRun {
+// `internal` (not `private`) so HostOutcomeClassifierTests can read the
+// classified outcome. Pairs with the `classify` visibility note below.
+struct ClassifiedRun {
     let outcome: String
     let rc: Int
     let error: String?
 }
 
-private func classify(
+// `internal` (not `private`) so HostOutcomeClassifierTests can drive the
+// worker/validator → NormalizedOutcome decision directly. This is the
+// host's counterpart to computeDrift — the test pins each run shape to
+// its outcome so the branch ladder can be reorganized without silently
+// changing what the controller reports (and reaches outcomes no e2e
+// specimen can produce: validator_no_reply, runner_failed,
+// runner_sandbox_denied).
+func classify(
     workerResult: CWorkerRunResult,
     validatorResult: ValidatorClientResult?,
     expectedVerdictCount: Int
