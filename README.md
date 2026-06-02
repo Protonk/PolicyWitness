@@ -2,11 +2,7 @@
 
 >Read the [user guide](PolicyWitness.md) for more detail.
 
-PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy plus a probe plan applied to a sandboxed worker, and exercises steps against both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
-
-## Build
-
-Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.md](SIGNING.md)).
+PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy applied to a sandboxed worker plus a probe plan, exercising both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
 
 ## Flow
 
@@ -42,6 +38,8 @@ This repo builds a single distributable app bundle:
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
+
+Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.md](SIGNING.md)).
 
 ## Where to learn
 
