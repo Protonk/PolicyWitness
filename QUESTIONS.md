@@ -6,9 +6,13 @@ The following questions are answered briefly with exhaustive detail remanded to 
 
 PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses. Alternatively, you could use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases.
 
-## When would I need PolicyWitness?
+## Who needs to use PolicyWitness?
 
-Almost never. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces. PolicyWitness exists because the judgment calls those scripts have to make are easier to maintain in one shared codebase than to rediscover per project.
+Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces.
+
+## Why might I want to use PolicyWitness even if I don't need to?
+
+Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call.
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
@@ -20,7 +24,7 @@ Yes — via the `exec` attempt kind plus the named-augment interface. Callers sh
 
 ## How does PolicyWitness handle uncertainty in its verdicts?
 
-Each step in a run carries two verdicts the consumer reads: the validator's prediction at `sandbox_check.outcome` and the cross-channel comparison at `drift`. The prediction reports `prediction_unavailable` when the validator wasn't asked (an op+filter pair empirically known to drift, an unknown filter kind, or a path that doesn't resolve on the host) and `unsupported_operation` when libsandbox returned EINVAL on the operation name — both with `error` populated naming the trigger. The drift comparison reports `null` when no comparison is possible: when the prediction is unavailable; when the attempt didn't produce a verdict; or when the attempt's failure is ambiguous between sandbox and DAC (file EPERM/EACCES, where the same errno could be a `chmod 000` rather than a sandbox deny).
+Each step in a run carries two verdicts the consumer reads: the validator's prediction at `sandbox_check.outcome` and the cross-channel comparison at `drift`. The prediction reports `prediction_unavailable` when the validator wasn't asked (an op+filter pair empirically known to drift, an unknown filter kind, or a path that doesn't resolve on the host) and `unsupported_operation` when libsandbox returned EINVAL on the operation name — both with `error` populated naming the trigger. The drift comparison reports `null` when no comparison is possible: when the prediction is unavailable; when the attempt didn't produce a verdict; or when the attempt's failure cause is ambiguous.
 
 ## What versions of SBPL are supported?
 

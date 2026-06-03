@@ -4,6 +4,8 @@
 
 PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy applied to a sandboxed worker plus a probe plan, exercising both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
 
+Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the prediction and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
+
 ## Flow
 
 >Specimens -> Runs -> Steps -> Evidence
