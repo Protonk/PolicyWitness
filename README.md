@@ -8,7 +8,7 @@ PolicyWitness is a macOS harness for observing differences between `sandbox_chec
 
 >Specimens -> Runs -> Steps -> Evidence
 
-PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner` (sandboxed C worker that applies the specimen policy to itself and runs the probe plan) and `sb_api_validator --batch` (queries `sandbox_check` for each probe against the worker's sandboxed PID). The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
+PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner`, a sandboxed C worker that applies the specimen policy to itself and runs the probe plan and `sb_api_validator --batch` which queries `sandbox_check` for each probe against the worker's sandboxed PID. The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
 
 Each step records two parallel verdicts plus the cross-channel comparison:
 
@@ -41,7 +41,7 @@ This repo builds a single distributable app bundle:
 
 Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.md](SIGNING.md)).
 
-## Where to learn
+## Documentation
 
 - Using the app:
   - User guide: [PolicyWitness.md](PolicyWitness.md)
