@@ -1,16 +1,18 @@
 # PolicyWitness — FAQ
 
+The following questions are answered briefly with exhaustive detail remanded to the [user guide](PolicyWitness.md).
+
 ## When should I use PolicyWitness?
 
 PolicyWitness is designed to observe differences between a system's userland sandbox-prediction API (`sandbox_check`) and that same kernel's sandbox enforcement. Use it when you're developing a sandbox policy and need to know whether `sandbox_check`'s prediction agrees with the kernel's enforcement for the operations and filters your policy uses. Alternatively, you could use it as a regression harness across macOS revisions to detect newly drifting `(operation, filter)` pairs, since Apple doesn't document drift surfaces and they shift between releases.
 
 ## When would I need PolicyWitness?
 
-Almost never. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces. PolicyWitness exists because the judgment calls those scripts have to make — distinguishing DAC failures from sandbox failures, knowing which `sandbox_check` predictions are unreliable on the current macOS revision, handling unresolvable paths — are easier to maintain in one shared codebase than to rediscover per project.
+Almost never. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` will get you most of what PolicyWitness produces. PolicyWitness exists because the judgment calls those scripts have to make are easier to maintain in one shared codebase than to rediscover per project.
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
-PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope — the kernel's `F_GETPATH`-canonical `observed_path` for file ops; the bootstrap return code that distinguishes sandbox-deny (`kr=1100`) from service-missing (`kr=1102`) for mach lookups; errno bucketing for sysctl; and the full spawn-and-reap shape (child_pid, exit code, termination signal, captured stdout/stderr) for exec.
+PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
@@ -18,7 +20,7 @@ Yes — via the `exec` attempt kind plus the named-augment interface. Callers sh
 
 ## How does PolicyWitness handle uncertainty in its verdicts?
 
-PolicyWitness reports uncertainty as a distinct outcome with the reason populated, so a consumer can branch on it explicitly. Each step in a run carries two verdicts the consumer reads: the validator's prediction at `sandbox_check.outcome` and the cross-channel comparison at `drift`. The prediction reports `prediction_unavailable` when the validator wasn't asked (an op+filter pair empirically known to drift, an unknown filter kind, or a path that doesn't resolve on the host) and `unsupported_operation` when libsandbox returned EINVAL on the operation name — both with `error` populated naming the trigger. The drift comparison reports `null` when no comparison is possible — when the prediction is unavailable, when the attempt didn't produce a verdict, or when the attempt's failure is ambiguous between sandbox and DAC (file EPERM/EACCES, where the same errno could be a `chmod 000` rather than a sandbox deny).
+Each step in a run carries two verdicts the consumer reads: the validator's prediction at `sandbox_check.outcome` and the cross-channel comparison at `drift`. The prediction reports `prediction_unavailable` when the validator wasn't asked (an op+filter pair empirically known to drift, an unknown filter kind, or a path that doesn't resolve on the host) and `unsupported_operation` when libsandbox returned EINVAL on the operation name — both with `error` populated naming the trigger. The drift comparison reports `null` when no comparison is possible: when the prediction is unavailable; when the attempt didn't produce a verdict; or when the attempt's failure is ambiguous between sandbox and DAC (file EPERM/EACCES, where the same errno could be a `chmod 000` rather than a sandbox deny).
 
 ## What versions of SBPL are supported?
 
