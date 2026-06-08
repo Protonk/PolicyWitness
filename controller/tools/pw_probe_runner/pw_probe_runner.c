@@ -106,6 +106,15 @@ typedef struct {
      * runner_timeout outcome is reachable from a real test specimen.
      * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
+    /* Pre-ready hang gate (_test_overrides.worker_pre_ready_hang_ms).
+     * When > 0, the worker calls nanosleep(N ms) BEFORE writing the
+     * pre-apply ready byte. Models a slow sandbox_compile_string that
+     * overruns the host's readyByteTimeout: the host closes the ready
+     * pipe first, so the subsequent ready-byte write hits a closed read
+     * end. With SIGPIPE ignored (see main) the worker survives that and
+     * still reaches sandbox_apply; this seam lets a test pin that
+     * survival. Defaults to 0 (no hang). Safe to leave 0 in production. */
+    long pre_ready_hang_ms;
     /* Per-exec wall-clock budget. Test seam — production callers
      * leave this at 0 to use PW_EXEC_CHILD_DEADLINE_MS_DEFAULT. */
     long exec_child_deadline_ms;
@@ -129,6 +138,11 @@ static void print_usage(FILE *to) {
         "                         flipping the `done` sentinel. Drives the\n"
         "                         host's runner_timeout outcome from a\n"
         "                         real specimen.\n"
+        "  --pre-ready-hang-ms N  Optional test-seam. Sleep N ms BEFORE\n"
+        "                         the ready byte, modelling a slow compile\n"
+        "                         that overruns the host's readyByteTimeout\n"
+        "                         (the ready write then lands on a closed\n"
+        "                         pipe; SIGPIPE is ignored).\n"
         "  --exec-child-deadline-ms N  Optional test-seam. Per-exec\n"
         "                         attempt wall-clock cap; default %ld ms.\n"
         "                         Helpers exceeding the deadline are\n"
@@ -155,6 +169,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->policy_fd              = STDIN_FILENO;
     args->step_count             = 0;
     args->post_apply_hang_ms     = 0;
+    args->pre_ready_hang_ms      = 0;
     args->exec_child_deadline_ms = 0;
 
     int i = 1;
@@ -163,6 +178,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
         if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
+            strcmp(flag, "--pre-ready-hang-ms") == 0 ||
             strcmp(flag, "--exec-child-deadline-ms") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
@@ -200,6 +216,14 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->post_apply_hang_ms = v;
+            } else if (strcmp(flag, "--pre-ready-hang-ms") == 0) {
+                /* Same one-minute cap as the post-apply hang: the seam
+                 * only has to exceed the host's readyByteTimeout. */
+                if (v < 0 || v > 60 * 1000) {
+                    fprintf(stderr, "pw-probe-runner: --pre-ready-hang-ms %ld out of range (0..60000)\n", v);
+                    return -1;
+                }
+                args->pre_ready_hang_ms = v;
             } else if (strcmp(flag, "--exec-child-deadline-ms") == 0) {
                 if (v <= 0 || v > PW_EXEC_CHILD_DEADLINE_MS_MAX) {
                     fprintf(stderr,
@@ -981,6 +1005,19 @@ static void spin_for_exit(pw_shm_header_t *hdr) {
 /* ---- main ---------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
+    /* Ignore SIGPIPE process-wide. The witness worker must never be
+     * killed by a write to a pipe the host has closed — its fate is the
+     * policy-under-test's to decide, and a host-side pipe teardown must
+     * not forge a fatal-signal exit (which the host reads as the source
+     * of truth for sandbox denial). In particular the pre-apply
+     * `write_ready_byte` is best-effort: if the host has already closed
+     * --ready-fd (e.g. a slow `sandbox_compile_string` overran the
+     * host's ready-byte deadline), the write must return EPIPE and let
+     * the worker proceed to sandbox_apply + the shm sentinel path,
+     * rather than dying of SIGPIPE before apply ever runs. Every write()
+     * in this worker already checks its return value. */
+    signal(SIGPIPE, SIG_IGN);
+
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
         printf("pw-probe-runner abi=%u region_bytes=%zu max_steps=%u slot_bytes=%u\n",
                PW_PROBE_RUNNER_ABI_VERSION,
@@ -1133,8 +1170,24 @@ int main(int argc, char **argv) {
         spin_for_exit(hdr);
     }
 
+    /* Pre-ready hang test seam: model a slow compile that overruns the
+     * host's readyByteTimeout (so the ready byte below lands on a
+     * host-closed pipe). nanosleep is a pre-apply syscall — safe here,
+     * before any policy is applied. */
+    if (args.pre_ready_hang_ms > 0) {
+        long ns = args.pre_ready_hang_ms * 1000000L;
+        struct timespec ts = {
+            .tv_sec  = ns / 1000000000L,
+            .tv_nsec = ns % 1000000000L,
+        };
+        nanosleep(&ts, NULL);
+    }
+
     /* Pre-apply ready byte. Tells the host the worker has parsed,
-     * mmap'd, and is about to apply. */
+     * mmap'd, and is about to apply. Best-effort: if the host already
+     * closed --ready-fd (e.g. a slow compile overran its readyByteTimeout)
+     * the write returns EPIPE rather than killing us (SIGPIPE is ignored
+     * in main), and we continue to apply + the shm sentinel path. */
     if (write_ready_byte(args.ready_fd) != 0) {
         fprintf(stderr,
                 "pw-probe-runner: write(ready_fd=%d): %s\n",
@@ -1146,8 +1199,13 @@ int main(int argc, char **argv) {
     /* Apply. After this point: no allocations, no stdout writes
      * that the policy hasn't been authored to permit. */
     int apply_rc = sandbox_apply(profile);
+    int apply_errno = errno;   /* capture immediately; only meaningful on failure */
     hdr->apply_rc = apply_rc;
     if (apply_rc != 0) {
+        /* Surface WHY apply failed (e.g. EPERM: the witness worker lacks
+         * the entitlements this profile requires) so the host can report
+         * it instead of a bare -1. */
+        hdr->apply_errno = apply_errno;
         /* apply failed — write done so the host stops polling, then
          * spin until exit. apply_rc carries the cause. */
         atomic_store_explicit(&hdr->done, 1u, memory_order_release);

@@ -57,6 +57,7 @@ int main(void) {
     printf("offsetof.pw_shm_header_t.exit_requested=%zu\n", offsetof(pw_shm_header_t, exit_requested));
     printf("offsetof.pw_shm_header_t.apply_rc=%zu\n",       offsetof(pw_shm_header_t, apply_rc));
     printf("offsetof.pw_shm_header_t.param_count=%zu\n",    offsetof(pw_shm_header_t, param_count));
+    printf("offsetof.pw_shm_header_t.apply_errno=%zu\n",    offsetof(pw_shm_header_t, apply_errno));
 
     /* Slot field offsets. */
     printf("offsetof.pw_shm_slot_t.step_id=%zu\n",            offsetof(pw_shm_slot_t, step_id));

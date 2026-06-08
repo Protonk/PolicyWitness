@@ -64,7 +64,8 @@ public enum CWorkerOrchestrator {
             sentinelTimeoutMs: timeoutMsForCWorker(
                 override: parsed._test_overrides?.worker_timeout_ms
             ),
-            postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms
+            postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms,
+            preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms
         )
 
         // ---- run worker + validator together via postApplied hook --------
@@ -863,11 +864,16 @@ func classify(
             // sandbox_apply failed inside the worker. apply_rc carries
             // the cause (the worker writes it to shm before flipping
             // done and entering the spin loop). Compile failure follows
-            // the same path.
+            // the same path. apply_errno (when non-zero) names WHY apply
+            // failed — e.g. EPERM, the unentitled witness worker not
+            // being permitted to apply the profile.
+            let errnoSuffix = out.applyErrno != 0
+                ? " (errno \(out.applyErrno): \(String(cString: strerror(out.applyErrno))))"
+                : ""
             return ClassifiedRun(
                 outcome: NormalizedOutcome.sandboxApplyFailed,
                 rc: 1,
-                error: "sandbox_apply returned \(out.applyRC) inside pw-probe-runner"
+                error: "sandbox_apply returned \(out.applyRC)\(errnoSuffix) inside pw-probe-runner"
             )
         }
         // sentSigkill means the HOST sent SIGKILL after its grace

@@ -74,6 +74,7 @@ public enum PWShmLayout {
     public static let exitRequestedOffset: Int = 20
     public static let applyRcOffset: Int       = 24
     public static let paramCountOffset: Int    = 28
+    public static let applyErrnoOffset: Int    = 32
 
     public static let slotsOffset: Int    = headerBytes
     public static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
@@ -187,6 +188,14 @@ public struct CWorkerInput {
     /// specimen. Production callers pass nil.
     public var postApplyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
+    /// `--pre-ready-hang-ms <N>`. When > 0, the worker sleeps N ms
+    /// before writing the pre-apply ready byte, modelling a slow
+    /// compile that overruns `readyByteTimeoutMs` so the ready write
+    /// lands on a host-closed pipe. Pins that the worker survives that
+    /// (SIGPIPE ignored) and still reaches apply. Production callers
+    /// pass nil.
+    public var preReadyHangMs: Int?
+    /// Optional test-seam routed to pw-probe-runner as
     /// `--exec-child-deadline-ms <N>`. Overrides the worker's
     /// default per-exec wall-clock cap (10s). Test cases that pin
     /// the deadline-fired behavior pass a short value (e.g. 500)
@@ -203,6 +212,7 @@ public struct CWorkerInput {
                 sentinelTimeoutMs: Int = 60_000,
                 exitGraceMs: Int = 1_000,
                 postApplyHangMs: Int? = nil,
+                preReadyHangMs: Int? = nil,
                 execChildDeadlineMs: Int? = nil) {
         self.workerExecutablePath = workerExecutablePath
         self.policy = policy
@@ -212,6 +222,7 @@ public struct CWorkerInput {
         self.sentinelTimeoutMs = sentinelTimeoutMs
         self.exitGraceMs = exitGraceMs
         self.postApplyHangMs = postApplyHangMs
+        self.preReadyHangMs = preReadyHangMs
         self.execChildDeadlineMs = execChildDeadlineMs
     }
 }
@@ -239,6 +250,10 @@ public struct CWorkerOutput {
     public var readyByteReceived: Bool
     public var applied: Bool
     public var applyRC: Int32
+    /// errno the worker captured after a failed `sandbox_apply` (0 when
+    /// apply succeeded or the worker never reached apply). Lets the
+    /// classifier report WHY apply failed (e.g. EPERM).
+    public var applyErrno: Int32
     public var done: Bool
     public var sentSigkill: Bool
     public var exitCode: Int32?     // nil if signaled
@@ -505,6 +520,10 @@ public func runCWorker(_ input: CWorkerInput,
         argv.append("--post-apply-hang-ms")
         argv.append(String(hangMs))
     }
+    if let preReadyMs = input.preReadyHangMs, preReadyMs > 0 {
+        argv.append("--pre-ready-hang-ms")
+        argv.append(String(preReadyMs))
+    }
     if let deadlineMs = input.execChildDeadlineMs, deadlineMs > 0 {
         argv.append("--exec-child-deadline-ms")
         argv.append(String(deadlineMs))
@@ -567,14 +586,27 @@ public func runCWorker(_ input: CWorkerInput,
     }
     close(readyPipe[0])
 
-    // ---- Poll applied, fire postApplied hook, then poll done.
+    // ---- Poll applied, fire postApplied hook, then poll done. Also
+    // watch for the worker exiting WITHOUT flipping `done` (a sandbox
+    // kill mid-probe, a crash, or a pre-apply death): there is nothing
+    // left to wait for, so reap and stop immediately instead of spinning
+    // the full sentinel deadline over a corpse.
     var sawApplied = false
     var sawDone = false
+    var workerExited = false
+    var workerExitStatus: Int32 = 0
     do {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
         let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
+        // Probe for a dead worker only every ~50ms, not every 2ms: a
+        // waitpid syscall in the hot loop measurably inflates the
+        // effective sentinel deadline (syscall cost + short-sleep timer
+        // coalescing), so throttle it. 50ms detection latency is
+        // negligible against the seconds-scale sentinel and is far better
+        // than spinning the whole deadline over a corpse.
+        let exitCheckEvery = max(1, 50_000_000 / Int(pollIntervalNs))   // 25 iters
         var hookFired = false
-        for _ in 0..<deadlineIters {
+        for iter in 0..<deadlineIters {
             if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) != 0 {
                 sawApplied = true
             }
@@ -591,12 +623,28 @@ public func runCWorker(_ input: CWorkerInput,
                 sawDone = true
                 break
             }
+            // Normal completion flips `done` (checked above) and then the
+            // worker spins until exit_requested, so it is still alive at
+            // this point. If waitpid reaps it here, it died without
+            // flipping done — there is nothing more to poll for; capture
+            // its status and let the classifier read the signal/exit as
+            // the source of truth.
+            if iter % exitCheckEvery == 0 {
+                var st: Int32 = 0
+                if waitpid(pid, &st, WNOHANG) == pid {
+                    workerExited = true
+                    workerExitStatus = st
+                    break
+                }
+            }
             sleepNs(pollIntervalNs)
         }
     }
 
-    // ---- Read apply_rc (regular load — worker writes once, before done sentinel).
+    // ---- Read apply_rc + apply_errno (regular loads — the worker writes
+    // each once, before the done sentinel).
     let applyRC = readI32(rawBase, offset: PWShmLayout.applyRcOffset)
+    let applyErrno = readI32(rawBase, offset: PWShmLayout.applyErrnoOffset)
 
     // ---- Read slot outputs (must be done before exit_requested so the
     // shm reads are paired with the worker's release-store of completed).
@@ -644,24 +692,29 @@ public func runCWorker(_ input: CWorkerInput,
         ))
     }
 
-    // ---- Request worker exit.
+    // ---- Request worker exit (a no-op if it already died on its own).
     storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
 
-    // ---- Reap (grace + SIGKILL fallback).
+    // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
+    // reaped a worker that exited without flipping `done`.
     var status: Int32 = 0
-    var reaped: pid_t = 0
     var sentSigkill = false
-    let pollIntervalNs: UInt64 = 10_000_000
-    let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
-    for _ in 0..<graceIters {
-        let r = waitpid(pid, &status, WNOHANG)
-        if r == pid { reaped = r; break }
-        sleepNs(pollIntervalNs)
-    }
-    if reaped != pid {
-        _ = kill(pid, SIGKILL)
-        sentSigkill = true
-        _ = waitpid(pid, &status, 0)
+    if workerExited {
+        status = workerExitStatus
+    } else {
+        var reaped: pid_t = 0
+        let pollIntervalNs: UInt64 = 10_000_000
+        let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
+        for _ in 0..<graceIters {
+            let r = waitpid(pid, &status, WNOHANG)
+            if r == pid { reaped = r; break }
+            sleepNs(pollIntervalNs)
+        }
+        if reaped != pid {
+            _ = kill(pid, SIGKILL)
+            sentSigkill = true
+            _ = waitpid(pid, &status, 0)
+        }
     }
 
     let exitCode: Int32?
@@ -684,6 +737,7 @@ public func runCWorker(_ input: CWorkerInput,
         readyByteReceived: readyByteReceived,
         applied: sawApplied,
         applyRC: applyRC,
+        applyErrno: applyErrno,
         done: sawDone,
         sentSigkill: sentSigkill,
         exitCode: exitCode,

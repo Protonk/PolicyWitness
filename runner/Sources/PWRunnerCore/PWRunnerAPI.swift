@@ -204,6 +204,11 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | are durable but BEFORE writing the `done` sentinel, pushing   |                             |
 // |                             | host past its sentinel_timeout. Drives the runner_timeout     |                             |
 // |                             | suite.                                                        |                             |
+// | `worker_pre_ready_hang_ms`  | passed to pw-probe-runner as `--pre-ready-hang-ms <N>`; the   | `ok` (resilience: worker    |
+// |                             | C worker nanosleeps N ms BEFORE the pre-apply ready byte,     | survives a closed ready     |
+// |                             | modelling a slow compile that overruns readyByteTimeout so    | pipe and still applies)     |
+// |                             | the ready write lands on a host-closed pipe. Pins that the    |                             |
+// |                             | worker survives (SIGPIPE ignored) and still reaches apply.    |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -214,19 +219,22 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
     public var worker_post_apply_hang_ms: Int?
+    public var worker_pre_ready_hang_ms: Int?
 
     public init(
         libsandbox_path: String? = nil,
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
-        worker_post_apply_hang_ms: Int? = nil
+        worker_post_apply_hang_ms: Int? = nil,
+        worker_pre_ready_hang_ms: Int? = nil
     ) {
         self.libsandbox_path = libsandbox_path
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
+        self.worker_pre_ready_hang_ms = worker_pre_ready_hang_ms
     }
 }
 

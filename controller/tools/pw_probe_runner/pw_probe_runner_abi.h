@@ -145,6 +145,14 @@ typedef enum {
  *   apply_rc       — worker writes the sandbox_apply return code so
  *                    the host can classify "applied=0 because apply
  *                    failed" without inferring from worker exit.
+ *   apply_errno    — worker writes the errno captured immediately after
+ *                    a FAILED sandbox_apply (left 0 when apply
+ *                    succeeded). Lets the host report WHY apply failed —
+ *                    e.g. EPERM (1) when the unentitled witness worker
+ *                    is not permitted to apply the profile — instead of
+ *                    a bare -1. Occupies former reserved space; offsets
+ *                    of all prior fields are unchanged, so an old worker
+ *                    (which never writes here) leaves it zero.
  */
 typedef struct {
     uint32_t abi_version;
@@ -155,7 +163,8 @@ typedef struct {
     _Atomic uint32_t exit_requested;
     int32_t apply_rc;
     uint32_t param_count;            /* 0..PW_SHM_MAX_PARAMS */
-    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 8u];
+    int32_t apply_errno;             /* errno after a failed sandbox_apply; 0 on success */
+    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 9u];
 } pw_shm_header_t;
 
 /*

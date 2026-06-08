@@ -29,6 +29,7 @@ import Foundation
 private func workerOut(
     applied: Bool = true,
     applyRC: Int32 = 0,
+    applyErrno: Int32 = 0,
     done: Bool = true,
     sentSigkill: Bool = false,
     termSignal: Int32? = nil,
@@ -39,6 +40,7 @@ private func workerOut(
         readyByteReceived: true,
         applied: applied,
         applyRC: applyRC,
+        applyErrno: applyErrno,
         done: done,
         sentSigkill: sentSigkill,
         exitCode: exitCode,
@@ -147,6 +149,35 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                         "outcome contract for [\(row.label)]: expected "
                         + "\(row.expected), got \(got.outcome) (error: \(got.error ?? "nil"))")
                 }
+            }
+        }
+    }
+
+    // The apply-failed error string must surface the worker's apply_errno
+    // so a reader can tell WHY apply failed (e.g. EPERM = the unentitled
+    // witness worker isn't permitted to apply the profile) rather than
+    // seeing a bare rc.
+    tk.group("classify: sandbox_apply_failed surfaces apply errno") {
+        tk.run("non-zero errno appears in the error string") {
+            let got = classify(
+                workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: 1)),
+                validatorResult: nil,
+                expectedVerdictCount: 0
+            )
+            try expectEqual(got.outcome, NormalizedOutcome.sandboxApplyFailed)
+            try expectContains(got.error ?? "", "returned -1")
+            try expectContains(got.error ?? "", "errno 1")
+        }
+        tk.run("zero errno omits the errno clause") {
+            let got = classify(
+                workerResult: .success(workerOut(applied: false, applyRC: 2, applyErrno: 0)),
+                validatorResult: nil,
+                expectedVerdictCount: 0
+            )
+            try expectEqual(got.outcome, NormalizedOutcome.sandboxApplyFailed)
+            try expectContains(got.error ?? "", "returned 2")
+            if (got.error ?? "").contains("errno") {
+                throw TestFailure(message: "expected no errno clause when applyErrno==0, got: \(got.error ?? "")")
             }
         }
     }

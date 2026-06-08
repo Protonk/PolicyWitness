@@ -57,6 +57,7 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 | `worker_timeout_ms` | integer (ms, floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |
+| `worker_pre_ready_hang_ms` | integer (ms, 0..60000) | Passed as `--pre-ready-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms *before* the pre-apply ready byte, modelling a slow `sandbox_compile_string` that overruns the host's `readyByteTimeout` so the ready write lands on a host-closed pipe. Pins that the worker survives that (SIGPIPE is ignored) and still reaches `sandbox_apply` | `ok` (resilience, not a failure outcome — see `runner_ready_byte_resilience`) |
 
 A hostile value drives a real failure: a `/nonexistent/...` path makes `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `worker_post_apply_hang_ms` makes the host's deadline fire before the C worker flips its `done` sentinel. The classifier in `CWorkerOrchestrator` is the same code that runs in production — only its *input* is steered.
 
