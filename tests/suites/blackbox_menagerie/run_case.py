@@ -147,8 +147,16 @@ def validate_run(expected_steps, run_data):
             return (1, f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
         if not isinstance(sb.get("operation"), str) or not sb.get("operation"):
             return (1, f"{step_id}: invalid sandbox_check.operation={sb.get('operation')!r}")
-        if not isinstance(sb.get("filter_type_id"), int):
-            return (1, f"{step_id}: invalid sandbox_check.filter_type_id={sb.get('filter_type_id')!r}")
+        # filter_type_id is the resolved libsandbox filter type. It is only
+        # populated for a real allow/deny verdict; the rc=-1 sentinels
+        # (prediction_unavailable, unsupported_operation) carry filter_type_id
+        # null by design, so only require an int when the validator actually
+        # produced a verdict. (Without this gate read_missing — a legitimately
+        # prediction_unavailable step — fails flakily whenever its path can't
+        # be canonicalized.)
+        if sb.get("outcome") in ("allow", "deny"):
+            if not isinstance(sb.get("filter_type_id"), int):
+                return (1, f"{step_id}: invalid sandbox_check.filter_type_id={sb.get('filter_type_id')!r}")
         if sb.get("errno") is not None and not isinstance(sb.get("errno"), int):
             return (1, f"{step_id}: invalid sandbox_check.errno={sb.get('errno')!r}")
         if sb.get("error") is not None and not isinstance(sb.get("error"), str):
@@ -166,6 +174,22 @@ def validate_run(expected_steps, run_data):
         if "attempt_ok" in exp_meta:
             if attempt_ok != exp_meta.get("attempt_ok"):
                 return (1, f"{step_id}: expected attempt_ok={exp_meta.get('attempt_ok')!r} (got {attempt_ok!r})")
+
+        # Assert the HARNESS's own determination, not just the observation.
+        # `predict` pins libsandbox's userland verdict (sandbox_check.outcome);
+        # `drift` pins how the harness reconciled that prediction with the
+        # kernel observation. Before this, the menagerie checked attempt_ok vs
+        # the author's `policy` model but never the harness's drift field — so a
+        # broken drift computation (e.g. hard-wired False, or a false-positive
+        # True on an ambiguous EPERM) would have passed green. `drift` is
+        # tri-state, so we test key-presence (None is a real expected value,
+        # distinct from "unspecified").
+        if "predict" in exp_meta:
+            if sb.get("outcome") != exp_meta["predict"]:
+                return (1, f"{step_id}: expected sandbox_check.outcome={exp_meta['predict']!r} (got {sb.get('outcome')!r})")
+        if "drift" in exp_meta:
+            if step.get("drift") != exp_meta["drift"]:
+                return (1, f"{step_id}: expected drift={exp_meta['drift']!r} (got {step.get('drift')!r})")
 
         if exp_attempt.get("kind") == "file":
             expected_target = exp_attempt.get("target")

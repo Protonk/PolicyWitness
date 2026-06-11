@@ -41,7 +41,9 @@
           },
           "expect": {
             "policy": "allow",
-            "attempt_ok": true
+            "attempt_ok": true,
+            "predict": "allow",
+            "drift": false
           }
         },
         {
@@ -60,7 +62,9 @@
           },
           "expect": {
             "policy": "allow",
-            "attempt_ok": true
+            "attempt_ok": true,
+            "predict": "allow",
+            "drift": false
           }
         },
         {
@@ -79,7 +83,9 @@
           },
           "expect": {
             "policy": "deny",
-            "attempt_ok": false
+            "attempt_ok": false,
+            "predict": "allow",
+            "drift": null
           }
         },
         {
@@ -98,7 +104,9 @@
           },
           "expect": {
             "policy": "deny",
-            "attempt_ok": false
+            "attempt_ok": false,
+            "predict": "deny",
+            "drift": false
           }
         },
         {
@@ -117,7 +125,9 @@
           },
           "expect": {
             "policy": "deny",
-            "attempt_ok": false
+            "attempt_ok": false,
+            "predict": "deny",
+            "drift": false
           }
         }
       ]
@@ -156,7 +166,9 @@
           },
           "expect": {
             "policy": "allow",
-            "attempt_ok": true
+            "attempt_ok": true,
+            "predict": "allow",
+            "drift": false
           }
         },
         {
@@ -175,7 +187,9 @@
           },
           "expect": {
             "policy": "deny",
-            "attempt_ok": false
+            "attempt_ok": false,
+            "predict": "deny",
+            "drift": false
           }
         },
         {
@@ -196,7 +210,9 @@
             "policy": "allow",
             "attempt_ok": false,
             "errno": 2,
-            "mismatch_reason": "nonexistent_target"
+            "mismatch_reason": "nonexistent_target",
+            "predict": "prediction_unavailable",
+            "drift": null
           }
         }
       ]
@@ -225,7 +241,9 @@
           },
           "expect": {
             "policy": "allow",
-            "attempt_ok": true
+            "attempt_ok": true,
+            "predict": "allow",
+            "drift": false
           }
         },
         {
@@ -244,7 +262,9 @@
           },
           "expect": {
             "policy": "deny",
-            "attempt_ok": false
+            "attempt_ok": false,
+            "predict": "deny",
+            "drift": false
           }
         },
         {
@@ -264,7 +284,9 @@
           "expect": {
             "policy": "allow",
             "attempt_ok": false,
-            "mismatch_reason": "service_missing"
+            "mismatch_reason": "service_missing",
+            "predict": "allow",
+            "drift": null
           }
         }
       ]
@@ -302,7 +324,9 @@
           "expect": {
             "attempt_ok": false,
             "mismatch_reason": "canonicalization_boundary",
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "deny",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -321,7 +345,9 @@
           },
           "expect": {
             "attempt_ok": false,
-            "policy": "deny"
+            "policy": "deny",
+            "predict": "deny",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -341,7 +367,9 @@
           "expect": {
             "attempt_ok": false,
             "mismatch_reason": "canonicalization_boundary",
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "deny",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -388,7 +416,9 @@
           },
           "expect": {
             "attempt_ok": true,
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "allow",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -407,7 +437,9 @@
           },
           "expect": {
             "attempt_ok": false,
-            "policy": "deny"
+            "policy": "deny",
+            "predict": "allow",
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -455,7 +487,9 @@
           "expect": {
             "attempt_ok": false,
             "mismatch_reason": "canonicalization_boundary",
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "allow",
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -474,7 +508,9 @@
           },
           "expect": {
             "attempt_ok": true,
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "allow",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -528,7 +564,9 @@
           },
           "expect": {
             "attempt_ok": true,
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "allow",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -547,7 +585,9 @@
           },
           "expect": {
             "attempt_ok": true,
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "allow",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -567,7 +607,9 @@
           "expect": {
             "attempt_ok": true,
             "mismatch_reason": "canonicalization_boundary",
-            "policy": "deny"
+            "policy": "deny",
+            "predict": "allow",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -615,7 +657,9 @@
           "expect": {
             "attempt_ok": false,
             "mismatch_reason": "canonicalization_boundary",
-            "policy": "allow"
+            "policy": "allow",
+            "predict": "deny",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
@@ -634,7 +678,9 @@
           },
           "expect": {
             "attempt_ok": false,
-            "policy": "deny"
+            "policy": "deny",
+            "predict": "deny",
+            "drift": false
           },
           "sandbox_check": {
             "filter": {
