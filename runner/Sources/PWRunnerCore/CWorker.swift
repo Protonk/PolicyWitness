@@ -188,6 +188,13 @@ public struct CWorkerInput {
     /// specimen. Production callers pass nil.
     public var postApplyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
+    /// `--post-apply-kill-signal <N>`. When > 0, the worker raises signal N
+    /// on itself after `applied` but before `done`, so the host observes a
+    /// foreign termination signal with done unset — the `runner_sandbox_denied`
+    /// outcome, reachable from a deterministic specimen. Production callers
+    /// pass nil.
+    public var postApplyKillSignal: Int?
+    /// Optional test-seam routed to pw-probe-runner as
     /// `--pre-ready-hang-ms <N>`. When > 0, the worker sleeps N ms
     /// before writing the pre-apply ready byte, modelling a slow
     /// compile that overruns `readyByteTimeoutMs` so the ready write
@@ -212,6 +219,7 @@ public struct CWorkerInput {
                 sentinelTimeoutMs: Int = 60_000,
                 exitGraceMs: Int = 1_000,
                 postApplyHangMs: Int? = nil,
+                postApplyKillSignal: Int? = nil,
                 preReadyHangMs: Int? = nil,
                 execChildDeadlineMs: Int? = nil) {
         self.workerExecutablePath = workerExecutablePath
@@ -222,6 +230,7 @@ public struct CWorkerInput {
         self.sentinelTimeoutMs = sentinelTimeoutMs
         self.exitGraceMs = exitGraceMs
         self.postApplyHangMs = postApplyHangMs
+        self.postApplyKillSignal = postApplyKillSignal
         self.preReadyHangMs = preReadyHangMs
         self.execChildDeadlineMs = execChildDeadlineMs
     }
@@ -519,6 +528,10 @@ public func runCWorker(_ input: CWorkerInput,
     if let hangMs = input.postApplyHangMs, hangMs > 0 {
         argv.append("--post-apply-hang-ms")
         argv.append(String(hangMs))
+    }
+    if let killSig = input.postApplyKillSignal, killSig > 0 {
+        argv.append("--post-apply-kill-signal")
+        argv.append(String(killSig))
     }
     if let preReadyMs = input.preReadyHangMs, preReadyMs > 0 {
         argv.append("--pre-ready-hang-ms")

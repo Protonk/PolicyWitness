@@ -65,6 +65,7 @@ public enum CWorkerOrchestrator {
                 override: parsed._test_overrides?.worker_timeout_ms
             ),
             postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms,
+            postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
             preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms
         )
 

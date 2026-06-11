@@ -13,8 +13,8 @@ name = "sandbox-log-observer"
 path = "src/bin/sandbox-log-observer.rs"
 
 [[bin]]
-name = "sbpl-preflight"
-path = "src/bin/sbpl-preflight.rs"
+name = "sbpl-check"
+path = "src/bin/sbpl-check.rs"
 
 [[test]]
 name = "cli_contract"

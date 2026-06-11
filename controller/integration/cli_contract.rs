@@ -44,20 +44,20 @@ fn require_pw_bin() -> PathBuf {
     path
 }
 
-fn sbpl_preflight_bin_path() -> PathBuf {
+fn sbpl_check_bin_path() -> PathBuf {
     repo_root()
         .join("dist")
         .join("PolicyWitness.app")
         .join("Contents")
         .join("MacOS")
-        .join("sbpl-preflight")
+        .join("sbpl-check")
 }
 
-fn require_sbpl_preflight_bin() -> PathBuf {
-    let path = sbpl_preflight_bin_path();
+fn require_sbpl_check_bin() -> PathBuf {
+    let path = sbpl_check_bin_path();
     if !path.exists() {
         panic!(
-            "dist/PolicyWitness.app sbpl-preflight not found at {} (run `make build`)",
+            "dist/PolicyWitness.app sbpl-check not found at {} (run `make build`)",
             path.display()
         );
     }
@@ -126,14 +126,14 @@ fn specimen_smoke_file_read_deny() {
 }
 
 #[test]
-fn preflight_missing_params_returns_clean_outcome() {
+fn sbpl_check_missing_params_returns_clean_outcome() {
     if !integration_enabled() {
         return;
     }
-    let bin = require_sbpl_preflight_bin();
+    let bin = require_sbpl_check_bin();
 
     let tmp = std::env::temp_dir().join(format!(
-        "pw-preflight-missing-{}.json",
+        "pw-sbpl-check-missing-{}.json",
         std::process::id()
     ));
     let request = r#"{
@@ -143,7 +143,7 @@ fn preflight_missing_params_returns_clean_outcome() {
         },
         "probe_plan": []
     }"#;
-    std::fs::write(&tmp, request).expect("write preflight request");
+    std::fs::write(&tmp, request).expect("write sbpl-check request");
 
     let out = run_pw(&bin, &["--request", tmp.to_str().expect("tmp path utf8")]);
     let _ = std::fs::remove_file(&tmp);
@@ -158,10 +158,10 @@ fn preflight_missing_params_returns_clean_outcome() {
 
     let stdout = String::from_utf8_lossy(&out.stdout);
     let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse preflight envelope");
+        serde_json::from_str(&stdout).expect("parse sbpl-check envelope");
     assert_eq!(
         envelope.get("kind").and_then(|v| v.as_str()),
-        Some("sbpl_preflight")
+        Some("sbpl_check")
     );
     assert_eq!(
         envelope
@@ -443,7 +443,7 @@ fn augment_applied_emits_policy_augmentation_block() {
 
     // The augmented run must succeed end-to-end. Asserting on exit
     // status + normalized_outcome catches regressions that preserve
-    // the policy_augmentation block but break preflight or the
+    // the policy_augmentation block but break the sbpl-check compile or the
     // runner — e.g. a future bug that forwards the augments key past
     // controller resolution would cause the runner to reject the
     // spec, and we'd still see policy_augmentation in the envelope.
@@ -495,22 +495,14 @@ fn augment_applied_emits_policy_augmentation_block() {
     assert_eq!(original.len(), 64);
     assert_eq!(applied_hash.len(), 64);
 
-    // Preflight must have run against the spliced source. Hard
-    // assertion (not if-let) — a regression that runs preflight on
-    // the pre-splice request would silently produce the wrong
-    // compile report.
-    let preflight_sha = envelope
-        .pointer("/data/policy_preflight/policy_sha256")
-        .and_then(|v| v.as_str())
-        .expect("data.policy_preflight.policy_sha256 missing");
-    assert_eq!(
-        preflight_sha, applied_hash,
-        "policy_preflight.policy_sha256 must equal applied_sha256 — preflight ran on the pre-splice source"
-    );
-
     // The runner must have run against the spliced source. Hard
     // assertion catches a regression that forwards the original
     // request to the runner while still emitting policy_augmentation.
+    // This is the load-bearing splice invariant now that the sbpl-check compile no
+    // longer runs on the happy path (the worker is the sole compiler):
+    // `policy_check` is null on a successful run, so the runner's
+    // own `policy_sha256` is what proves the spliced bytes reached the
+    // compiler.
     let runner_sha = envelope
         .pointer("/data/runner_result/policy_sha256")
         .and_then(|v| v.as_str())
@@ -518,6 +510,13 @@ fn augment_applied_emits_policy_augmentation_block() {
     assert_eq!(
         runner_sha, applied_hash,
         "runner_result.policy_sha256 must equal applied_sha256 when augments are spliced"
+    );
+
+    // The sbpl-check compile does not run on a healthy run — it is reserved for the
+    // xpc_error disambiguation path — so the field is null here.
+    assert!(
+        envelope.pointer("/data/policy_check").map_or(true, |v| v.is_null()),
+        "policy_check must be null on a successful run (sbpl-check is xpc_error-only): {envelope}"
     );
 }
 
@@ -671,14 +670,14 @@ fn absent_augments_omits_policy_augmentation_block() {
 }
 
 #[test]
-fn preflight_records_import_provenance_for_system_sb() {
+fn sbpl_check_records_import_provenance_for_system_sb() {
     if !integration_enabled() {
         return;
     }
-    let bin = require_sbpl_preflight_bin();
+    let bin = require_sbpl_check_bin();
 
     let tmp = std::env::temp_dir().join(format!(
-        "pw-preflight-imports-{}.json",
+        "pw-sbpl-check-imports-{}.json",
         std::process::id()
     ));
     let request = r#"{
@@ -688,7 +687,7 @@ fn preflight_records_import_provenance_for_system_sb() {
         },
         "probe_plan": []
     }"#;
-    std::fs::write(&tmp, request).expect("write preflight request");
+    std::fs::write(&tmp, request).expect("write sbpl-check request");
 
     let out = run_pw(&bin, &["--request", tmp.to_str().expect("tmp path utf8")]);
     let _ = std::fs::remove_file(&tmp);
@@ -703,7 +702,7 @@ fn preflight_records_import_provenance_for_system_sb() {
 
     let stdout = String::from_utf8_lossy(&out.stdout);
     let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse preflight envelope");
+        serde_json::from_str(&stdout).expect("parse sbpl-check envelope");
 
     let data = envelope.get("data").expect("missing data block");
     let policy_sha = data

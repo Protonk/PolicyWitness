@@ -101,22 +101,29 @@ resolves them against the system profile search path. `(param "NAME")`
 substitution uses values from `policy.params`. `string-append` of param
 references is supported by the compiler.
 
-### Policy preflight
+### SBPL check (`sbpl-check`)
 
-Before the runner is invoked, the host compiles the policy with
-`sbpl-preflight`. The preflight envelope exposes:
+`sbpl-check` is a host-side SBPL compiler. The C worker exercises the
+policy itself (a non-compiling policy surfaces as `sandbox_apply_failed` — the
+worker does not distinguish compile failure from apply failure), so the run
+flow does **not** run `sbpl-check` on the happy path — it invokes `sbpl-check`
+only to disambiguate an `xpc_error` (a policy that compiled but then blocked
+the XPC reply vs. one that never compiled), surfacing the result under
+`data.policy_check` and `data.runner_startup_diagnostics`. You can also run
+the tool directly for any of the diagnostics below. The sbpl-check envelope
+exposes:
 
 - `params_referenced`: names found in `(param "...")` forms in the source
   (string literals and `;` line comments are skipped).
 - `params_supplied`: keys from `policy.params`.
-- `params_missing`: referenced but not supplied. If non-empty, preflight
+- `params_missing`: referenced but not supplied. If non-empty, sbpl-check
   returns `result.normalized_outcome = "missing_params"` and exits 1 with a
   clean `result.error` listing the names — instead of the cryptic libsandbox
   message ("expected pattern, got boolean") that surfaces when an unbound
   `(param ...)` is folded into a path filter. The libsandbox message is
   still preserved under `data.compile_error` for auditability.
 - `params_unused`: supplied but never referenced. Recorded as info only;
-  does not fail the preflight.
+  does not fail the check.
 - `params_scan_complete`: false when the source contains at least one
   `(param X)` form where `X` is not a quoted string. That's typically
   macro-indirected, e.g.
@@ -126,25 +133,31 @@ Before the runner is invoked, the host compiles the policy with
   []` as "we couldn't tell" rather than "nothing required". The cryptic
   libsandbox error ("expected pattern, got boolean") then surfaces under
   `compile_error` as before. Resolving these would require real macro
-  expansion and is out of scope for the preflight scanner.
+  expansion and is out of scope for the sbpl-check scanner.
 
 `policy.sbpl_source` is capped at 4 MiB. Oversized inputs are rejected with
 `result.normalized_outcome = "policy_too_large"` and exit code 1; nothing is
 sent to libsandbox and no imports are resolved. The cap is in place to bound
-preflight work — far above any real-world hand-written profile.
+sbpl-check work — far above any real-world hand-written profile.
 
 When the source passes the size cap and the params check but
 libsandbox itself rejects the policy at compile time (syntax error,
-unknown operation, malformed filter, etc.), preflight returns
-`result.normalized_outcome = "bad_policy"` and exit code 1. The
-runner is not invoked. `data.compile_error` carries the
-libsandbox-side diagnostic (often cryptic — "expected pattern, got
-boolean" is the canonical example for a malformed filter
-argument). `bad_policy` is distinct from `missing_params` and
-`policy_too_large` above, both of which gate before the policy
-reaches libsandbox.
+unknown operation, malformed filter, etc.), `sbpl-check` returns
+`result.normalized_outcome = "bad_policy"` and exit code 1, with
+`data.compile_error` carrying the libsandbox-side diagnostic (often
+cryptic — "expected pattern, got boolean" is the canonical example
+for a malformed filter argument). `bad_policy` is distinct from
+`missing_params` and `policy_too_large` above, both of which gate
+before the policy reaches libsandbox. In the run flow a policy that
+fails to compile is **not** reported as `bad_policy`: it reaches the C
+worker and surfaces as `sandbox_apply_failed` (the worker writes the
+same `apply_rc = -1` for a compile failure as for an apply failure).
+`bad_policy` in a run is now emitted only by the runner host for a
+structurally invalid policy (missing `sbpl_source`, or a non-`sbpl`
+`format`); the host runs `sbpl-check` itself only on the
+`xpc_error` path.
 
-The preflight envelope also records the imports closure:
+The sbpl-check envelope also records the imports closure:
 
 - `imports`: each entry is `{name, resolved_path, sha256, size_bytes,
   mtime_unix, error}`. The resolver walks `(import "...")` statements
@@ -168,8 +181,7 @@ The preflight envelope also records the imports closure:
   This hash is reproducible iff every resolved file is content-identical
   on the verifying host. Unresolved imports are excluded — check
   `imports[].error` to see which ones failed.
-- `macos_build_version`: `sw_vers -buildVersion` for the host that ran the
-  preflight. Import contents change between OS builds; this lets a
+- `macos_build_version`: `sw_vers -buildVersion` for the host that ran `sbpl-check`. Import contents change between OS builds; this lets a
   downstream auditor decide whether a closure hash is verifiable on their
   machine.
 
@@ -178,12 +190,12 @@ The preflight envelope also records the imports closure:
 `policy.augments` is an optional array of named SBPL fragments shipped
 inside the signed app bundle under
 `Contents/Resources/Augments/<name>.sb`. The controller resolves each
-name **before** invoking `sbpl-preflight`, appends the augment's
-contents to `policy.sbpl_source`, computes both the
-original-source and applied-source sha256, and strips the `augments`
-field from the request forwarded to the runner. Both preflight and
-the runner therefore see the same bytes, and the runner has no
-augment-aware code path.
+name **before the runner runs**, appends the augment's contents to
+`policy.sbpl_source`, computes both the original-source and
+applied-source sha256, and strips the `augments` field from the
+request forwarded to the runner. The runner therefore compiles the
+spliced bytes (as does `sbpl-check` if the `xpc_error` path runs
+it), and the runner has no augment-aware code path.
 
 ```json
 "policy": {
@@ -522,8 +534,9 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_
 ### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
-(controller-level outcomes like `bad_policy`, `missing_params`, and
-`policy_too_large` are documented elsewhere on this page):
+(`bad_policy` for a structurally invalid policy, plus the standalone
+`sbpl-check` tool outcomes `missing_params` and `policy_too_large`,
+are documented under SBPL check above):
 
 - `ok` — worker completed the probe plan and the validator returned
   verdicts for every non-skipped probe; both children clean-exited.
@@ -565,11 +578,14 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_
   respectively (see the per-step sections above).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
-- `sandbox_apply_failed` — the C worker reached `sandbox_apply` but
-  libsandbox rejected the policy (non-zero `apply_rc` written to
-  shared memory before the worker exits). E2e-unreachable in
-  practice because the controller's preflight catches the same
-  inputs upstream as `bad_policy`.
+- `sandbox_apply_failed` — the C worker wrote a non-zero `apply_rc` to
+  shared memory before exiting. This covers **both** a failed
+  `sandbox_compile_string` and a failed `sandbox_apply`: the worker
+  writes `apply_rc = -1` either way and does not distinguish them, so a
+  policy that won't compile lands here too (the controller no longer
+  turns compile errors into `bad_policy`). `error` reads
+  "sandbox_apply returned -1 inside pw-probe-runner"; run `sbpl-check`
+  directly for the specific libsandbox compile diagnostic.
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -706,6 +722,11 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 
 - `--timeout-ms <n>`: runner RPC timeout (default 240000)
 - `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
+- `--no-log-capture`: skip the unified-log (`log show`) deny scan. The scan is
+  archive-bound and costs seconds per run independent of `--log-last`, so pass
+  this when you don't consume `data.sandbox_log_capture` (or the
+  `first_deny` diagnostic it backs) and want the per-run cost back.
+  `data.sandbox_log_capture` is then `null`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 
 ### Debug-attach to the worker

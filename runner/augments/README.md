@@ -3,10 +3,11 @@
 Named SBPL fragments callers opt into via `policy.augments: [...]`.
 The controller (`controller/src/augments.rs`) resolves each name to
 `<app>/Contents/Resources/Augments/<name>.sb` before invoking
-`sbpl-preflight`, appends the contents to `policy.sbpl_source`, and
+`sbpl-check`, appends the contents to `policy.sbpl_source`, and
 strips the `augments` field from the request forwarded to the runner.
-Both preflight and the worker therefore compile the same bytes; the
-runner has no augment-aware code path.
+The worker therefore compiles exactly the spliced bytes (as does
+`sbpl-check` on the xpc_error path); the runner has no augment-aware
+code path.
 
 See PolicyWitness.md → Augments for the wire-side contract,
 sha256 reporting, override semantics, and consumer-visible

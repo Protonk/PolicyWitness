@@ -396,6 +396,49 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectEqual(out.exitCode, Int32(0))
         }
 
+        // ---- postApplyKillSignal test seam -------------------
+        // Drives the runner_sandbox_denied condition from a real specimen.
+        // The worker raises SIGKILL on itself AFTER `applied` but BEFORE
+        // flipping `done`, so the host observes applied=1, done=0, and a
+        // foreign termination signal — the exact shape a kernel sandbox kill
+        // produces. The HOST did not send the signal (sentSigkill=false), which
+        // is the distinction classify() uses to keep this apart from a
+        // host-grace SIGKILL (which is runner_timeout).
+        tk.run("postApplyKillSignal terminates worker before done -> runner_sandbox_denied") {
+            guard workerExists() else {
+                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
+                return
+            }
+            let input = CWorkerInput(
+                workerExecutablePath: workerPath(),
+                policy: "(version 1)(allow default)",
+                slots: [
+                    CWorkerSlotInput(stepId: "kill_seam",
+                                     attemptKind: .fileOpenRead,
+                                     target: "/etc/hosts")
+                ],
+                sentinelTimeoutMs: 2_000,
+                exitGraceMs: 1_000,
+                postApplyKillSignal: Int(SIGKILL)
+            )
+            let result = runCWorker(input)
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "runCWorker reported setup failure: \(result)")
+            }
+            try expectTrue(out.applied, "applied should flip — the kill is post-apply")
+            try expectFalse(out.done, "done must not flip — the worker is killed before writing it")
+            try expectFalse(out.sentSigkill,
+                            "worker self-signals; the HOST did not SIGKILL (the distinction that separates runner_sandbox_denied from runner_timeout)")
+            try expectEqual(out.termSignal, Int32(SIGKILL),
+                            "worker reaped with the foreign termination signal")
+
+            // The whole point of the seam: this real worker shape must
+            // classify as runner_sandbox_denied.
+            let classified = classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0)
+            try expectEqual(classified.outcome, NormalizedOutcome.runnerSandboxDenied,
+                            "a foreign signal before done is the sandbox-denial-shaped outcome")
+        }
+
         // ---- exec attempt: happy path (/usr/bin/true) ---------------------------
         // Spawn succeeds, child clean-exits 0, sentinels look exactly
         // like the "no child output" success state.

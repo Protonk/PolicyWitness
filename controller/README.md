@@ -26,7 +26,7 @@ Support modules:
 - `controller/src/plist.rs` — PlistBuddy helpers for Info.plist lookups
 - `controller/src/bundle.rs` — bundle metadata reader for external runners
 - `controller/src/request_patch.rs` — request JSON injection helpers
-- `controller/src/policy_preflight.rs` — SBPL preflight runner wiring
+- `controller/src/policy_check.rs` — host-side `sbpl-check` wiring
 - `controller/src/utils.rs` — shared time + output helpers
 - `controller/src/evidence.rs` — evidence manifest parsing + verification
 - `controller/src/json_contract.rs` — JSON envelope rendering with sorted keys
@@ -36,7 +36,7 @@ Standalone helper tools (embedded into the `.app`):
 
 - `controller/src/bin/sandbox-log-observer.rs` → `dist/PolicyWitness.app/Contents/MacOS/sandbox-log-observer`
   - Captures unified-log sandbox deny lines by PID + process name
-- `controller/src/bin/sbpl-preflight.rs` → `dist/PolicyWitness.app/Contents/MacOS/sbpl-preflight`
+- `controller/src/bin/sbpl-check.rs` → `dist/PolicyWitness.app/Contents/MacOS/sbpl-check`
   - Compiles SBPL policies and reports compiler errors before the runner launches
 - `controller/tools/sb_api_validator/sb_api_validator` — embedded inside
   each XPC service bundle as `…/Contents/MacOS/sb_api_validator`. The
@@ -55,7 +55,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|byoxpc>]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
 ```
 
@@ -67,7 +67,7 @@ Runs a **single runner evaluation** against the selected runner service:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance (one XPC host + two short-lived children), applies the policy exactly once inside the C worker, executes the probe plan and validator batch in parallel, and returns the runner's structured JSON result.
-- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output.
+- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. Pass `--no-log-capture` to skip this scan entirely: the `log show` deny scan is archive-bound and costs seconds per run (independent of `--log-last`), so callers that don't consume the deny evidence can opt out to reclaim it.
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
   process per run), spawned by the runner host alongside the C
   worker. It reads NDJSON probes from stdin and writes NDJSON
@@ -110,7 +110,13 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
-- `data.policy_preflight`: SBPL compile report from `sbpl-preflight` (best-effort)
+- `data.policy_check`: SBPL compile report from `sbpl-check`. Present
+  only when the runner returns `xpc_error` — the host runs `sbpl-check` there to tell
+  a non-compiling policy from one that compiled but blocked the XPC reply.
+  `null` on every run the runner can answer: the C worker exercises the policy
+  itself (a compile failure surfaces as `sandbox_apply_failed`, since the
+  worker does not distinguish compile from apply failure), so a second
+  host-side compile would be pure overhead.
 - `data.policy_augmentation`: present only when `policy.augments` (see
   PolicyWitness.md → Augments) was non-empty. Records
   `{ applied: [name, ...], original_sha256, applied_sha256 }` so
@@ -119,7 +125,9 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   every run that did not opt into augments.
 - `data.runner_startup_diagnostics`: extra context when XPC startup fails
   (rare in practice — the unsandboxed host always replies unless launchd
-  or codesign reject the bundle outright)
+  or codesign reject the bundle outright). This `xpc_error` path is the only
+  one that triggers a host-side `sbpl-check` compile (to populate
+  `policy_check_status` and disambiguate the failure).
 - `data.runner_sandbox_diagnostics`: present when
   `normalized_outcome == "runner_sandbox_denied"`. Carries
   `first_deny: { operation, path, raw_line }` — the first unified-log
@@ -127,7 +135,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   log capture was blocked/unavailable or no event matched. PID-filtered;
   no process-name fallback (avoids over-attribution to concurrent
   runners). Consumers can branch on `first_deny != null` directly.
-- `data.sandbox_log_capture`: optional unified-log evidence (best-effort)
+- `data.sandbox_log_capture`: optional unified-log evidence (best-effort);
+  `null` when `--no-log-capture` was passed or the runner returned no PID
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 

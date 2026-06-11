@@ -18,7 +18,7 @@ Two cases, each `result.ok == false` and `runner_subprocess == null`:
 
 - **`swift_decode_failure`** — request JSON is missing required Swift
   fields (`schema_version`, `specimen_id`) but has enough policy
-  structure to pass the Rust preflight. Asserts
+  structure that the controller forwards it to the runner. Asserts
   `normalized_outcome == "bad_request"` and the error mentions
   "request decode failed".
 - **`missing_required_filter_value`** — Swift-decodable spec whose probe

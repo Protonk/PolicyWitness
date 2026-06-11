@@ -1,7 +1,9 @@
-//! Host-side SBPL preflight helper wiring.
+//! Host-side `sbpl-check` helper wiring.
 //!
-//! The controller runs a lightweight compile check before invoking a runner so
-//! SBPL syntax errors are surfaced even if the runner cannot reply over XPC.
+//! On an `xpc_error` the controller runs a lightweight `sbpl-check` compile to
+//! disambiguate the failure — telling a policy that never compiled from one
+//! that compiled but then blocked the XPC reply — since the runner could not
+//! report for itself.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -13,7 +15,7 @@ use crate::app_layout::resolve_contents_macos_tool;
 use crate::utils::truncate_output;
 
 #[derive(Serialize)]
-pub struct PolicyPreflightCapture {
+pub struct PolicyCheckCapture {
     pub status: String,
     pub tool_exit_code: i32,
     pub stdout_parse_error: Option<String>,
@@ -29,9 +31,9 @@ pub struct PolicyPreflightCapture {
     pub normalized_outcome: Option<String>,
 }
 
-impl PolicyPreflightCapture {
+impl PolicyCheckCapture {
     pub fn unavailable(error: String) -> Self {
-        PolicyPreflightCapture {
+        PolicyCheckCapture {
             status: "unavailable".to_string(),
             tool_exit_code: 1,
             stdout_parse_error: None,
@@ -69,8 +71,8 @@ fn envelope_normalized_outcome(env: &Value) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-pub fn run_policy_preflight(request_path: &Path) -> Result<PolicyPreflightCapture, String> {
-    let tool = resolve_contents_macos_tool("sbpl-preflight")?;
+pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, String> {
+    let tool = resolve_contents_macos_tool("sbpl-check")?;
     let argv = vec![
         tool.into_os_string(),
         OsString::from("--request"),
@@ -82,7 +84,7 @@ pub fn run_policy_preflight(request_path: &Path) -> Result<PolicyPreflightCaptur
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .map_err(|e| format!("failed to run sbpl-preflight: {e}"))?;
+        .map_err(|e| format!("failed to run sbpl-check: {e}"))?;
 
     let exit_code = out.status.code().unwrap_or(1);
     let (stdout, stdout_truncated) = truncate_output(&out.stdout);
@@ -127,7 +129,7 @@ pub fn run_policy_preflight(request_path: &Path) -> Result<PolicyPreflightCaptur
         "tool_error".to_string()
     };
 
-    Ok(PolicyPreflightCapture {
+    Ok(PolicyCheckCapture {
         status,
         tool_exit_code: exit_code,
         stdout_parse_error: parse_error.clone(),

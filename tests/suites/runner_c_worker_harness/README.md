@@ -76,9 +76,12 @@ runs the unlink/create under the scenario policy, and the harness reports
 ### Pre-apply self-defense
 
 The worker refuses or survives bad input before `sandbox_apply`. The
-controller preflight makes these e2e-unreachable, so the harness — which
-pipes policy straight to the worker — is the only vehicle that reaches
-them. Each asserts the exact worker exit code with no `applied`/`done`
+shm-corruption branches are e2e-unreachable because the host always
+populates the shm header correctly; `compile_failure` is the same branch
+a real `sandbox_apply_failed` run takes (malformed SBPL now reaches the
+worker, where compile and apply failure are indistinguishable), exercised
+here in isolation without the host/XPC path. The harness — which pipes
+policy straight to the worker — is the vehicle for all of them. Each asserts the exact worker exit code with no `applied`/`done`
 sentinel and no ready byte (except compile_failure, which flips `done`).
 
 10. **compile_failure** — malformed SBPL (missing close paren).

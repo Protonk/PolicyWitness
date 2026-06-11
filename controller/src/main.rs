@@ -9,7 +9,7 @@ mod bundle;
 mod cli;
 mod evidence;
 mod json_contract;
-mod policy_preflight;
+mod policy_check;
 mod plist;
 mod request_patch;
 mod run_flow;

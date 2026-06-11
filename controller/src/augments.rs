@@ -1,10 +1,10 @@
 //! Resolves `policy.augments` by splicing named SBPL fragments into the
-//! caller's `sbpl_source` before preflight.
+//! caller's `sbpl_source` before the request reaches the runner.
 //!
 //! Augments live under `Contents/Resources/Augments/<name>.sb` inside the
 //! signed app bundle. The controller appends each named augment's contents
-//! to the caller's source and forwards the spliced policy to both
-//! `sbpl-preflight` and the runner so both see the same compiled bytes.
+//! to the caller's source and forwards the spliced policy to the runner (and
+//! to `sbpl-check`, if the xpc_error path runs it) so both see the same bytes.
 //!
 //! The `augments` field is stripped from the forwarded request — the
 //! runner is augment-agnostic by design.
@@ -49,7 +49,7 @@ pub enum AugmentResolution {
 impl AugmentResolution {
     /// True when `resolve_augments` mutated the request and the caller
     /// must persist the result to a temp file before forwarding to
-    /// preflight / the runner. False only when the request was left
+    /// the runner. False only when the request was left
     /// untouched (`NotPresent`) or when resolution failed (`BadRequest`,
     /// in which case the caller short-circuits and doesn't forward
     /// anything).
@@ -79,7 +79,7 @@ fn sha256_hex_of(s: &str) -> String {
 /// On `Applied`, the request value is mutated in place: `policy.sbpl_source`
 /// becomes the spliced source and `policy.augments` is removed. The caller
 /// must persist this mutation (typically by writing a temp request) so
-/// preflight and the runner see the spliced policy.
+/// the runner (and `sbpl-check`, on the xpc_error path) see the spliced policy.
 pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentResolution {
     let policy = match request_value
         .get_mut("policy")

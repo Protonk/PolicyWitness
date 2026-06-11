@@ -34,17 +34,19 @@ Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", 
 PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
-START_MS="$(/usr/bin/python3 -c 'import time; print(int(time.time()*1000))')"
+# --no-log-capture: a hung worker produces no deny evidence to capture, so the
+# post-run `log show` scan would be pure overhead. Skipping it keeps the test
+# fast and independent of the host's unified-log archive size. It is no longer
+# load-bearing for correctness — the assertion below reads the envelope, not
+# wall-clock — but there's no reason to pay for the scan.
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run --no-log-capture "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
 set -e
-END_MS="$(/usr/bin/python3 -c 'import time; print(int(time.time()*1000))')"
-ELAPSED_MS=$((END_MS - START_MS))
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-PW_ELAPSED_MS="${ELAPSED_MS}" /usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
-import json, os, sys
+/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
+import json, sys
 from pathlib import Path
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 runner = env.get("data", {}).get("runner_result") or {}
@@ -67,11 +69,23 @@ if outcome != "runner_timeout":
 if overrides.get("worker_post_apply_hang_ms") != 5000:
     raise SystemExit(f"expected test_overrides.worker_post_apply_hang_ms=5000 (got {overrides!r})")
 
-elapsed = int(os.environ["PW_ELAPSED_MS"])
-if elapsed < 1200 or elapsed > 4500:
+# Tight, deterministic proof that the host deadline DROVE the result: the host
+# fires its sentinel deadline (worker_timeout_ms=1500), then its reap grace
+# timer (exitGraceMs=1000) expires while the worker is still mid-hang (5000ms),
+# so the host SIGKILLs it — `runner_subprocess.term_signal == 9`. This replaces
+# the old wall-clock bound, which measured controller launch + XPC cold-start +
+# the unified-log scan and so was both fragile (host-dependent) and indirect.
+# The failure modes it pins down:
+#   - override ignored / worker not hanging -> worker exits cleanly,
+#     term_signal is null (and outcome would not even be runner_timeout);
+#   - host stops SIGKILLing on the grace path -> term_signal != 9.
+sub = runner.get("runner_subprocess") or {}
+term_signal = sub.get("term_signal")
+if term_signal != 9:
     raise SystemExit(
-        f"expected elapsed time ~1.5s (host deadline), got {elapsed}ms. "
-        "Out of band suggests the timeout didn't drive the result."
+        f"expected runner_subprocess.term_signal=9 (SIGKILL from the host grace "
+        f"timer), got {term_signal!r} with runner_subprocess={sub!r}. The host "
+        "deadline did not drive a kill of the hung worker."
     )
 PY
 ASSERT_RC=$?
@@ -81,4 +95,4 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
-test_pass "worker_post_apply_hang_ms drives runner_timeout via host deadline (~${ELAPSED_MS}ms)" "{}"
+test_pass "worker_post_apply_hang_ms drives runner_timeout; host grace timer SIGKILLed the hung worker (term_signal=9)" "{}"

@@ -59,27 +59,27 @@ RUN_STDERR="${PW_TEST_ARTIFACTS}/policy_witness.run.stderr.txt"
 
 # Give the client a generous timeout — we want the *host* to time out
 # first, not the client. Default is 240000ms; keep it.
-START_MS="$(/usr/bin/python3 -c 'import time; print(int(time.time()*1000))')"
+# --no-log-capture: this test reads only runner_result fields; the post-run
+# `log show` scan is pure overhead (and on a host with a large unified-log
+# archive it dominates the wall-clock). The host-kill is proven deterministically
+# by the envelope below (runner_timeout + term_signal=9 + exit_code=null), not
+# by timing.
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>"${RUN_STDERR}"
+"${PW_BIN}" run --no-log-capture "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>"${RUN_STDERR}"
 RC=$?
 set -e
-END_MS="$(/usr/bin/python3 -c 'import time; print(int(time.time()*1000))')"
-ELAPSED_MS=$((END_MS - START_MS))
 
 if [[ "${RC}" -eq 0 ]]; then
   test_fail "expected non-zero exit when worker times out (rc=${RC})" \
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-PW_ELAPSED_MS="${ELAPSED_MS}" /usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
 import json
-import os
 import sys
 from pathlib import Path
 
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-elapsed = int(os.environ["PW_ELAPSED_MS"])
 
 if env.get("kind") != "run":
     raise SystemExit(f"expected kind=run (got {env.get('kind')!r})")
@@ -122,18 +122,15 @@ if overrides.get("worker_timeout_ms") != 2000:
         f"(got {overrides.get('worker_timeout_ms')!r})"
     )
 
-# Sanity: the run should finish near the 2s host deadline, not the 8s
-# post-apply hang. Generous bound — anything under 6s proves the host
-# shortened the worker's life rather than waiting for the sleep.
-if elapsed >= 6000:
-    raise SystemExit(
-        f"run took {elapsed}ms — expected close to the 2000ms host deadline. "
-        f"Suggests the timeout didn't fire and we waited for the worker's "
-        f"natural exit instead."
-    )
+# The host shortened the worker's life rather than waiting for the 8s hang:
+# proven deterministically above by runner_timeout + term_signal=9 (host
+# SIGKILL) + exit_code=null. A worker that completed its hang would have
+# flipped `done` and clean-exited (outcome=ok, exit_code=0) — so no separate
+# wall-clock bound is needed (and timing it would only re-introduce the
+# log-scan flakiness this test was migrated away from).
 
 if runner.get("steps"):
     raise SystemExit(f"expected empty steps (got {runner.get('steps')!r})")
 PY
 
-test_pass "runner_timeout fired at host deadline (~${ELAPSED_MS}ms)" "{}"
+test_pass "runner_timeout fired: host SIGKILLed the hung worker (term_signal=9, exit_code=null)" "{}"

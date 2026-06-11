@@ -12,9 +12,9 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 # Case 1: swift_decode_failure
 # ----------------------------------------------------------------------
 # Well-formed JSON that the Rust controller passes through unchanged
-# (policy fields are present so policy_preflight succeeds) but
-# PWRunnerRunSpec cannot decode (missing required schema_version and
-# specimen_id). Hits the JSON decode branch of PWRunnerService.runSpecimen.
+# (valid JSON object, so it reaches the runner) but PWRunnerRunSpec
+# cannot decode (missing required schema_version and specimen_id).
+# Hits the JSON decode branch of PWRunnerService.runSpecimen.
 #
 # Do not use "not json at all" here: the Rust controller rejects
 # malformed JSON before invoking the runner, so that input would never
@@ -34,9 +34,9 @@ import json
 import sys
 from pathlib import Path
 
-# Has policy.format + sbpl_source so the Rust preflight passes.
-# Missing the required schema_version and specimen_id fields so the
-# Swift PWRunnerRunSpec decoder rejects it.
+# Has policy.format + sbpl_source so it is a plausible request the
+# controller forwards untouched. Missing the required schema_version
+# and specimen_id fields so the Swift PWRunnerRunSpec decoder rejects it.
 spec = {
     "policy": {
         "format": "sbpl",

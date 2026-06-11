@@ -106,6 +106,15 @@ typedef struct {
      * runner_timeout outcome is reachable from a real test specimen.
      * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
+    /* Post-apply fatal-signal gate (_test_overrides.worker_post_apply_kill_signal).
+     * When > 0, the worker raises signal N on itself AFTER the `applied`
+     * sentinel + slot results are durable but BEFORE the `done` sentinel
+     * flips. The host then observes applied=1, done=0, and a worker that died
+     * from a signal it did NOT send — exactly the runner_sandbox_denied shape
+     * (a real kernel sandbox kill produces the same observable state). Makes
+     * runner_sandbox_denied reachable from a deterministic specimen.
+     * Defaults to 0 (no kill). Safe to leave 0 in production. */
+    int post_apply_kill_signal;
     /* Pre-ready hang gate (_test_overrides.worker_pre_ready_hang_ms).
      * When > 0, the worker calls nanosleep(N ms) BEFORE writing the
      * pre-apply ready byte. Models a slow sandbox_compile_string that
@@ -138,6 +147,11 @@ static void print_usage(FILE *to) {
         "                         flipping the `done` sentinel. Drives the\n"
         "                         host's runner_timeout outcome from a\n"
         "                         real specimen.\n"
+        "  --post-apply-kill-signal N  Optional test-seam. Raise signal N on\n"
+        "                         self AFTER slot results are durable but\n"
+        "                         BEFORE flipping `done`, so the host sees\n"
+        "                         applied=1/done=0 and a foreign signal —\n"
+        "                         the runner_sandbox_denied shape.\n"
         "  --pre-ready-hang-ms N  Optional test-seam. Sleep N ms BEFORE\n"
         "                         the ready byte, modelling a slow compile\n"
         "                         that overruns the host's readyByteTimeout\n"
@@ -169,6 +183,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->policy_fd              = STDIN_FILENO;
     args->step_count             = 0;
     args->post_apply_hang_ms     = 0;
+    args->post_apply_kill_signal = 0;
     args->pre_ready_hang_ms      = 0;
     args->exec_child_deadline_ms = 0;
 
@@ -178,6 +193,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
         if (strcmp(flag, "--shm-fd") == 0 || strcmp(flag, "--ready-fd") == 0 ||
             strcmp(flag, "--step-count") == 0 || strcmp(flag, "--policy-fd") == 0 ||
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
+            strcmp(flag, "--post-apply-kill-signal") == 0 ||
             strcmp(flag, "--pre-ready-hang-ms") == 0 ||
             strcmp(flag, "--exec-child-deadline-ms") == 0) {
             if (i + 1 >= argc) {
@@ -216,6 +232,15 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->post_apply_hang_ms = v;
+            } else if (strcmp(flag, "--post-apply-kill-signal") == 0) {
+                /* 0 disables; otherwise a signal number (1..31) the worker
+                 * raises on itself post-apply / pre-done to reach the
+                 * runner_sandbox_denied classifier path deterministically. */
+                if (v < 0 || v > 31) {
+                    fprintf(stderr, "pw-probe-runner: --post-apply-kill-signal %ld out of range (0..31)\n", v);
+                    return -1;
+                }
+                args->post_apply_kill_signal = (int)v;
             } else if (strcmp(flag, "--pre-ready-hang-ms") == 0) {
                 /* Same one-minute cap as the post-apply hang: the seam
                  * only has to exceed the host's readyByteTimeout. */
@@ -1234,6 +1259,19 @@ int main(int argc, char **argv) {
             .tv_nsec = ns % 1000000000L,
         };
         nanosleep(&ts, NULL);
+    }
+
+    /* Test-seam fatal signal. Fires AFTER the `applied` sentinel + slot
+     * results are durable but BEFORE `done` flips, so the host observes
+     * applied=1, done=0, and a worker that died from a signal it did NOT send
+     * — exactly the runner_sandbox_denied shape (a real kernel sandbox kill
+     * produces the same observable state). This re-routes a *condition* (the
+     * worker takes a fatal signal mid-run); the host classifier runs for real
+     * on it. */
+    if (args.post_apply_kill_signal > 0) {
+        kill(getpid(), args.post_apply_kill_signal);
+        /* SIGKILL never returns. A catchable/ignored signal falls through;
+         * the host still sees done=0 and times out — never a false "ok". */
     }
 
     atomic_store_explicit(&hdr->done, 1u, memory_order_release);

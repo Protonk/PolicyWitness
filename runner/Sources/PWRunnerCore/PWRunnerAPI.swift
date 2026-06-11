@@ -51,15 +51,22 @@ enum PWRunnerWire {
 // against it. PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 public enum NormalizedOutcome {
-    // ----- emitted by the C worker (pw-probe-runner), forwarded by host
+    // ----- emitted by the C worker (pw-probe-runner), forwarded by host.
+    // `sandbox_apply_failed` covers a failed sandbox_compile_string AND a
+    // failed sandbox_apply: the worker writes apply_rc=-1 for either and the
+    // host classifier does not distinguish them.
     public static let ok = "ok"
-    public static let badPolicy = "bad_policy"
     public static let sandboxApplyFailed = "sandbox_apply_failed"
 
     // ----- emitted by the host short-circuit (pre-spawn libsandbox check)
     public static let libsandboxUnavailable = "libsandbox_unavailable"
 
-    // ----- emitted by the host short-circuit (PWRunnerService.swift)
+    // ----- emitted by the host short-circuit (PWRunnerService.swift).
+    // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
+    // missing sbpl_source / non-sbpl format), NOT a compile-error signal — SBPL
+    // that fails to compile reaches the worker and surfaces as
+    // sandbox_apply_failed.
+    public static let badPolicy = "bad_policy"
     public static let badRequest = "bad_request"
     public static let alreadyRan = "already_ran"
     public static let workerSpawnFailed = "worker_spawn_failed"
@@ -209,6 +216,12 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | modelling a slow compile that overruns readyByteTimeout so    | pipe and still applies)     |
 // |                             | the ready write lands on a host-closed pipe. Pins that the    |                             |
 // |                             | worker survives (SIGPIPE ignored) and still reaches apply.    |                             |
+// | `worker_post_apply_kill_signal` | passed to pw-probe-runner as                             | `runner_sandbox_denied`     |
+// |                             | `--post-apply-kill-signal <N>`; the C worker raises signal N  |                             |
+// |                             | on itself AFTER `applied` but BEFORE `done`, so the host sees |                             |
+// |                             | applied=1/done=0 + a foreign term signal — the same shape a   |                             |
+// |                             | real kernel sandbox kill produces. Makes runner_sandbox_denied|                             |
+// |                             | reachable from a deterministic specimen.                      |                             |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -219,6 +232,7 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
     public var worker_post_apply_hang_ms: Int?
+    public var worker_post_apply_kill_signal: Int?
     public var worker_pre_ready_hang_ms: Int?
 
     public init(
@@ -227,6 +241,7 @@ public struct PWRunnerTestOverrides: Codable {
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
         worker_post_apply_hang_ms: Int? = nil,
+        worker_post_apply_kill_signal: Int? = nil,
         worker_pre_ready_hang_ms: Int? = nil
     ) {
         self.libsandbox_path = libsandbox_path
@@ -234,6 +249,7 @@ public struct PWRunnerTestOverrides: Codable {
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
+        self.worker_post_apply_kill_signal = worker_post_apply_kill_signal
         self.worker_pre_ready_hang_ms = worker_pre_ready_hang_ms
     }
 }
@@ -246,7 +262,7 @@ public struct PWRunnerPolicySpec: Codable {
     // Named augments the caller opts into (e.g. "exec_baseline"). The
     // controller resolves each name to a file under
     // Contents/Resources/Augments/<name>.sb, appends the contents to
-    // sbpl_source before preflight, and strips this field from the
+    // sbpl_source before the runner compiles, and strips this field from the
     // request forwarded to the runner. The runner is augment-agnostic;
     // this field exists on the wire so callers can author their request
     // without controller-private knowledge.

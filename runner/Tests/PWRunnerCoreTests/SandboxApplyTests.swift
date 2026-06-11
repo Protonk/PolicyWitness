@@ -3,11 +3,12 @@ import Darwin
 @testable import PWRunnerCore
 
 // Covers the runner's "the libsandbox call failed" branches that surface as
-// normalized_outcome = "sandbox_apply_failed". The e2e suites cannot reach
-// this outcome because the controller's preflight rejects the same input
-// upstream as "bad_policy"; here we feed applySandboxPolicy a stub SandboxLib
-// whose compile/apply hooks return failure, then check the error message
-// the host would forward.
+// normalized_outcome = "sandbox_apply_failed". The C worker writes the same
+// apply_rc = -1 for a failed sandbox_compile_string as for a failed
+// sandbox_apply, so this outcome covers both compile and apply failure (the
+// run flow no longer turns compile errors into "bad_policy"). Here we
+// feed applySandboxPolicy a stub SandboxLib whose compile/apply hooks return
+// failure, then check the error message the host would forward.
 //
 // C function pointer types (`@convention(c)`) cannot capture closure context,
 // so the few tests that need to observe side effects route through

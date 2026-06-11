@@ -204,3 +204,61 @@ pub fn capture_sandbox_logs_last(
         step_denies: None,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    // Deterministic coverage of step↔deny correlation. Pairs with the
+    // first_deny synthesis tests in run_flow.rs; both pin the populated-deny
+    // path that the e2e (runner_sandbox_diagnostics_on_denied) can't produce —
+    // its seam-killed worker logs no kernel deny (COVERAGE.md).
+    use super::*;
+    use serde_json::json;
+
+    fn deny(pid: i32, op: &str, path: &str) -> SandboxDenyEvent {
+        SandboxDenyEvent {
+            pid: Some(pid),
+            process: Some("PWRunner".to_string()),
+            operation: Some(op.to_string()),
+            path: Some(path.to_string()),
+            raw_line: Some(format!("Sandbox: PWRunner({pid}) deny(1) {op} {path}")),
+        }
+    }
+
+    #[test]
+    fn matches_deny_to_step_by_path_and_pid() {
+        let steps = vec![json!({
+            "step_id": "p1",
+            "attempt": { "requested_path": "/tmp/x", "observed_path": "/tmp/x" }
+        })];
+        let events = vec![deny(1234, "file-read-data", "/tmp/x")];
+        let out = match_step_denies(&steps, &events, Some(1234));
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].step_id, "p1");
+        assert_eq!(out[0].deny_events.len(), 1);
+        assert_eq!(out[0].deny_events[0].path.as_deref(), Some("/tmp/x"));
+    }
+
+    #[test]
+    fn rejects_deny_with_mismatched_pid() {
+        // When both PIDs are known and differ, the deny is not the worker's.
+        let steps = vec![json!({"step_id": "p1", "attempt": {"requested_path": "/tmp/x"}})];
+        let events = vec![deny(9999, "file-read-data", "/tmp/x")];
+        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    }
+
+    #[test]
+    fn rejects_deny_with_unrelated_path() {
+        // A deny whose path matches no attempt path of the step is not pinned
+        // to it (avoids over-attribution).
+        let steps = vec![json!({"step_id": "p1", "attempt": {"requested_path": "/tmp/x"}})];
+        let events = vec![deny(1234, "file-read-data", "/etc/passwd")];
+        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    }
+
+    #[test]
+    fn step_without_attempt_paths_is_skipped() {
+        let steps = vec![json!({"step_id": "p1", "attempt": {}})];
+        let events = vec![deny(1234, "file-read-data", "/tmp/x")];
+        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    }
+}

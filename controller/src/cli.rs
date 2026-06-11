@@ -14,12 +14,13 @@ pub fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--runner-mode <standard|byoxpc>]
+  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is passed through to the runner client (or copied with runner mode injected)"
+  - request.json is passed through to the runner client (or copied with runner mode injected)
+  - --no-log-capture skips the unified-log (`log show`) deny scan; use it when you don't consume the deny evidence and want the per-run cost back"
     );
 }
 

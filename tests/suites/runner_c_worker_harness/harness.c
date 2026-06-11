@@ -73,10 +73,10 @@ typedef struct {
     uint32_t (*populate_params)(pw_shm_param_t *params);
 
     /* ---- negative / corruption knobs (all default 0 = off) ----
-     * These drive the worker's pre-apply self-defense branches, which
-     * the controller's preflight makes e2e-unreachable. The harness
-     * pipes policy straight to the worker, so it is the only vehicle
-     * that can reach them. */
+     * These drive the worker's pre-apply self-defense branches over a
+     * corrupted shm header. E2e the host always populates that header
+     * correctly, so the harness — which pipes policy straight to the
+     * worker — is the only vehicle that can reach them. */
     int corrupt_abi;               /* set hdr->abi_version = ABI+1 → worker exits 4 */
     int skip_prepared;             /* leave hdr->prepared = 0     → worker exits 5 */
     uint32_t override_step_count;  /* if !=0, force hdr->step_count after populate (overflow → exit 6) */
@@ -181,9 +181,11 @@ static const char SCEN_PARAMS_ROUND_TRIP_POLICY[] =
 /* Deliberately malformed: a missing close paren makes
  * sandbox_compile_string fail. Exercises the worker's compile-failure
  * branch — apply_rc=-1, done flips, applied stays 0, and the worker
- * still clean-exits on the exit byte rather than dying. The controller
- * preflight catches malformed SBPL upstream as bad_policy, so this path
- * is only reachable by piping bad policy straight to the worker. */
+ * still clean-exits on the exit byte rather than dying. This is the same
+ * worker branch a real `sandbox_apply_failed` run takes (the controller no
+ * longer runs sbpl-check on the happy path, so malformed SBPL reaches the worker,
+ * where compile failure and apply failure are indistinguishable); the harness
+ * exercises it in isolation without the host/XPC path. */
 static const char SCEN_COMPILE_FAILURE_POLICY[] =
     "(version 1)\n"
     "(allow default";

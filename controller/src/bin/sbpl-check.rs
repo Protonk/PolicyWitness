@@ -1,4 +1,4 @@
-//! SBPL preflight compiler for host-side diagnostics.
+//! `sbpl-check`: host-side SBPL compile-check for diagnostics.
 //!
 //! This tool parses a PolicyWitness request JSON, extracts the SBPL policy,
 //! and runs sandbox_compile_string to catch syntax and parameter errors.
@@ -75,19 +75,19 @@ unsafe extern "C" {
 }
 
 #[derive(Deserialize)]
-struct PreflightRequest {
-    policy: PreflightPolicy,
+struct CheckRequest {
+    policy: CheckPolicy,
 }
 
 #[derive(Deserialize)]
-struct PreflightPolicy {
+struct CheckPolicy {
     format: String,
     sbpl_source: Option<String>,
     params: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Serialize)]
-struct PreflightData {
+struct CheckData {
     policy_format: String,
     policy_sha256: Option<String>,
     policy_closure_sha256: Option<String>,
@@ -429,7 +429,7 @@ fn macos_build_version() -> Option<String> {
 fn usage() -> String {
     "\
 usage:
-  sbpl-preflight --request <request.json>
+  sbpl-check --request <request.json>
 
 notes:
   - reads request.json and compiles policy.sbpl_source
@@ -556,7 +556,7 @@ fn main() {
         }
     };
 
-    let parsed: PreflightRequest = match serde_json::from_str(&text) {
+    let parsed: CheckRequest = match serde_json::from_str(&text) {
         Ok(req) => req,
         Err(err) => {
             eprintln!("failed to parse request.json: {err}");
@@ -569,7 +569,7 @@ fn main() {
 
     if format != "sbpl" {
         let diff = empty_param_diff();
-        let data = PreflightData {
+        let data = CheckData {
             policy_format: format,
             policy_sha256: None,
             policy_closure_sha256: None,
@@ -597,7 +597,7 @@ fn main() {
             stderr: None,
             stdout: None,
         };
-        let _ = json_contract::print_envelope("sbpl_preflight", result, &data);
+        let _ = json_contract::print_envelope("sbpl_check", result, &data);
         std::process::exit(1);
     }
 
@@ -605,7 +605,7 @@ fn main() {
         Some(src) => src,
         None => {
             let diff = empty_param_diff();
-            let data = PreflightData {
+            let data = CheckData {
                 policy_format: format,
                 policy_sha256: None,
                 policy_closure_sha256: None,
@@ -633,7 +633,7 @@ fn main() {
                 stderr: None,
                 stdout: None,
             };
-            let _ = json_contract::print_envelope("sbpl_preflight", result, &data);
+            let _ = json_contract::print_envelope("sbpl_check", result, &data);
             std::process::exit(1);
         }
     };
@@ -645,7 +645,7 @@ fn main() {
             source.len(),
             MAX_SBPL_SOURCE_BYTES
         );
-        let data = PreflightData {
+        let data = CheckData {
             policy_format: format,
             policy_sha256: None,
             policy_closure_sha256: None,
@@ -673,7 +673,7 @@ fn main() {
             stderr: None,
             stdout: None,
         };
-        let _ = json_contract::print_envelope("sbpl_preflight", result, &data);
+        let _ = json_contract::print_envelope("sbpl_check", result, &data);
         std::process::exit(1);
     }
 
@@ -706,7 +706,7 @@ fn main() {
         )
     };
 
-    let data = PreflightData {
+    let data = CheckData {
         policy_format: format,
         policy_sha256: Some(policy_sha),
         policy_closure_sha256: Some(policy_closure_sha),
@@ -734,7 +734,7 @@ fn main() {
         stderr: None,
         stdout: None,
     };
-    let _ = json_contract::print_envelope("sbpl_preflight", result, &data);
+    let _ = json_contract::print_envelope("sbpl_check", result, &data);
     std::process::exit(exit_code);
 }
 
@@ -856,7 +856,7 @@ mod tests {
 
     fn tmp_dir(label: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "pw-preflight-test-{label}-{}-{}",
+            "pw-sbpl-check-test-{label}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

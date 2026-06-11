@@ -8,9 +8,11 @@ seam; the host's deadline fires first and SIGKILLs it.
 
 ## Invariants
 
-- Wall-clock elapsed time matches the host deadline (~2s), not the
-  worker's natural sleep (~8s). This distinguishes a real timeout from
-  a worker that exited on its own.
+- The host shortened the worker's life (SIGKILL at its deadline) rather
+  than waiting for the worker's ~8s natural sleep. This is proven
+  deterministically by the envelope — `runner_timeout` + `term_signal == 9`
+  + `exit_code == null` — not by wall-clock: a worker that completed its
+  hang would have flipped `done` and clean-exited (`ok`, `exit_code == 0`).
 - `term_signal == 9` (SIGKILL, host-issued). The `timedOut` flag in
   `classifyWorkerResult` takes precedence over the term_signal=9 path
   that would otherwise produce `runner_sandbox_denied`.
@@ -21,8 +23,11 @@ seam; the host's deadline fires first and SIGKILLs it.
 - `runner_result.normalized_outcome == "runner_timeout"`.
 - `runner_subprocess.term_signal == 9` and `exit_code == null`.
 - `runner_result.test_overrides.worker_timeout_ms == 2000`.
-- Elapsed time under 6000ms (proves the host shortened the worker's
-  life rather than waiting for the natural exit).
+- `runner_result.steps == []`.
+
+The run uses `--no-log-capture`: the test reads only `runner_result`
+fields, and skipping the post-run `log show` scan keeps it fast and
+independent of the host's unified-log archive size.
 
 ## Fixtures
 
@@ -38,4 +43,4 @@ seam; the host's deadline fires first and SIGKILLs it.
 ./tests/run.sh --suite runner_outcome_runner_timeout
 ```
 
-Suite runs in ~2s wall-clock.
+Suite runs in a few seconds (the 2s host deadline + reap grace; no log scan).

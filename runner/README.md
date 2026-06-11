@@ -117,6 +117,7 @@ unset.
 | `worker_timeout_ms` | 60000 (floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | bundle-local `sb_api_validator` | `posix_spawn` path in `ValidatorClient.runValidator` | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | 0 (disabled) | `--post-apply-hang-ms` argv to `pw-probe-runner` | `runner_timeout` |
+| `worker_post_apply_kill_signal` | 0 (disabled) | `--post-apply-kill-signal` argv to `pw-probe-runner` (worker self-signals after `applied`, before `done`) | `runner_sandbox_denied` |
 
 See `runner/AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test

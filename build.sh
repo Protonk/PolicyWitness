@@ -45,7 +45,7 @@ XPC_SERVICE_NAMES=("PWRunner")
 
 # Named SBPL augments callers opt into via policy.augments. Copied into
 # Contents/Resources/Augments/ at bundle assembly time; the controller
-# resolves them before sbpl-preflight. Non-executable resources — sealed
+# resolves them before sbpl-check. Non-executable resources — sealed
 # by the outer app codesign at the end of the build.
 XPC_AUGMENTS_DIR="${XPC_ROOT}/augments"
 
@@ -159,11 +159,11 @@ echo "==> Building Rust controller + tools"
 cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin policy-witness \
   --bin sandbox-log-observer \
-  --bin sbpl-preflight
+  --bin sbpl-check
 
 RUNNER_BIN="${ROOT_DIR}/controller/target/release/policy-witness"
 SANDBOX_LOG_OBSERVER_BIN="${ROOT_DIR}/controller/target/release/sandbox-log-observer"
-SBPL_PREFLIGHT_BIN="${ROOT_DIR}/controller/target/release/sbpl-preflight"
+SBPL_CHECK_BIN="${ROOT_DIR}/controller/target/release/sbpl-check"
 if [[ ! -x "${RUNNER_BIN}" ]]; then
   echo "ERROR: expected policy-witness binary at ${RUNNER_BIN}" 1>&2
   exit 2
@@ -172,8 +172,8 @@ if [[ ! -x "${SANDBOX_LOG_OBSERVER_BIN}" ]]; then
   echo "ERROR: expected sandbox-log-observer binary at ${SANDBOX_LOG_OBSERVER_BIN}" 1>&2
   exit 2
 fi
-if [[ ! -x "${SBPL_PREFLIGHT_BIN}" ]]; then
-  echo "ERROR: expected sbpl-preflight binary at ${SBPL_PREFLIGHT_BIN}" 1>&2
+if [[ ! -x "${SBPL_CHECK_BIN}" ]]; then
+  echo "ERROR: expected sbpl-check binary at ${SBPL_CHECK_BIN}" 1>&2
   exit 2
 fi
 if [[ ! -f "${SB_API_VALIDATOR_SRC}" ]]; then
@@ -230,8 +230,8 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 cp "${SANDBOX_LOG_OBSERVER_BIN}" "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 
-cp "${SBPL_PREFLIGHT_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
-chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
+cp "${SBPL_CHECK_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
+chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 
 # sb_api_validator is embedded INSIDE each XPC service bundle (see
 # the XPC build loop below) and resolved relative to that bundle by
@@ -245,7 +245,7 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 # Copy named augments under Contents/Resources/Augments/. The
 # controller reads from this directory when resolving
-# request.policy.augments before sbpl-preflight. Augments are
+# request.policy.augments before sbpl-check. Augments are
 # resources, not executables; the outer codesign at the end of the
 # build seals them as part of the app bundle.
 if [[ -d "${XPC_AUGMENTS_DIR}" ]]; then
@@ -413,7 +413,7 @@ sign_macho() {
 echo "==> Codesigning embedded MacOS tools"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
-sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-preflight"
+sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then

@@ -46,7 +46,7 @@ If you rename/move anything here, expect downstream breakage (build script, evid
 
 The shipped CLI is intentionally small:
 
-- `policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>]`
+- `policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture]`
 
 ## Documentation
 
