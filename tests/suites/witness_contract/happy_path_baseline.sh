@@ -59,8 +59,14 @@ sb = steps[0].get("sandbox_check") or {}
 if sb.get("outcome") != "allow":
     raise SystemExit(f"expected sandbox_check.outcome=allow, got {sb.get('outcome')!r}")
 at = steps[0].get("attempt") or {}
-if not isinstance(at.get("rc"), int):
-    raise SystemExit(f"expected attempt.rc to be int, got {at.get('rc')!r}")
+# Witness that the ALLOWED read actually succeeded, not merely that the attempt
+# channel is present. `(allow default)` + open_read of /etc/hosts must return
+# rc==0 and capture the opened path; a failed read (rc!=0) would mean the allow
+# did not take effect and must not pass as the "happy path" baseline.
+if at.get("rc") != 0:
+    raise SystemExit(f"expected attempt.rc==0 (allowed read should succeed), got {at.get('rc')!r}")
+if not at.get("observed_path"):
+    raise SystemExit(f"expected attempt.observed_path on a successful open_read, got {at.get('observed_path')!r}")
 sub = runner.get("runner_subprocess") or {}
 if not isinstance(sub.get("pid"), int):
     raise SystemExit(f"expected runner_subprocess.pid to be int, got {sub!r}")

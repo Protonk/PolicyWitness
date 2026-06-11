@@ -57,6 +57,15 @@ step = steps[0]
 sb = step.get("sandbox_check") or {}
 if sb.get("outcome") != "deny":
     raise SystemExit(f"expected sandbox_check.outcome=deny (got {sb.get('outcome')!r})")
+# Witness the OBSERVED denial, not just the validator's predicted verdict — the
+# prediction channel is exactly the one PolicyWitness exists to flag when it
+# drifts from kernel reality. Under (deny file-read-data) the open_read of
+# /etc/hosts must actually fail with an errno.
+at = step.get("attempt") or {}
+if at.get("rc") == 0:
+    raise SystemExit(f"expected the open_read to be DENIED (rc!=0) under (deny file-read-data), got rc={at.get('rc')!r}")
+if at.get("syscall_errno") is None:
+    raise SystemExit(f"expected a syscall_errno on the denied read, got {at.get('syscall_errno')!r}")
 PY
 
 KIND_ERR="$(assert_runner_kind "${RUN_STDOUT}")" || test_fail "${KIND_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"

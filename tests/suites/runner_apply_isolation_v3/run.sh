@@ -66,6 +66,15 @@ if runner.get("schema_version", 0) < 3:
     raise SystemExit(f"expected runner schema_version >= 3 (got {runner.get('schema_version')!r})")
 if runner.get("normalized_outcome") != "ok":
     raise SystemExit(f"expected runner normalized_outcome=ok (got {runner.get('normalized_outcome')!r})")
+# The point of this suite is the apply/isolation, so witness it: the worker
+# must report it actually self-applied the (deny default) policy, not merely
+# reply cleanly. Without this, a no-op / short-circuited sandbox_apply would
+# pass green.
+if runner.get("sandboxed_after_apply") is not True:
+    raise SystemExit(
+        "expected sandboxed_after_apply=true — worker must witness it applied the "
+        f"policy, not just reply (got {runner.get('sandboxed_after_apply')!r})"
+    )
 sub = runner.get("runner_subprocess") or {}
 if not sub:
     raise SystemExit("missing runner_subprocess")
