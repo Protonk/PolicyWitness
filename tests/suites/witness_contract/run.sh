@@ -41,6 +41,7 @@ run_test "${SUITE_DIR}/validator_spawn_failed_reports_degraded.sh"
 run_test "${SUITE_DIR}/validator_subprocess_populated.sh"
 run_test "${SUITE_DIR}/validator_unavailable_reports_degraded.sh"
 run_test "${SUITE_DIR}/worker_post_apply_hang_seam.sh"
+run_test "${SUITE_DIR}/drift_determination_via_validator_seam.sh"
 
 if [[ ${failures} -ne 0 ]]; then
   exit 1
