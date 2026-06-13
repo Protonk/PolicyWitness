@@ -14,6 +14,10 @@ Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandb
 
 Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call.
 
+## If a wrapper around `sandbox_check` and `sandbox-exec` gets most of what PolicyWitness produces, why does it have a controller, a runner, and a worker?
+
+A wrapper gets you the common case, but only by taking positions to do it — rewriting the profile so its own reply survives, or encoding a table that decides what a given outcome means. The controller, runner, and worker buy the alternative: an unsandboxed host that applies nothing and can always reply, and a throwaway worker that self-applies the profile exactly as written. PolicyWitness can run an arbitrary policy and probe plan and report what the prediction and the kernel each did without taking a position on either the profile or the outcome.
+
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
 PolicyWitness runs real syscalls inside the sandboxed worker for each probe step via four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Each kind captures forensic detail in a uniform per-step envelope.
