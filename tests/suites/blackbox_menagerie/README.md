@@ -1,8 +1,7 @@
 # blackbox_menagerie
 
 End-to-end black-box suite that exercises specimen ingestion and evidence
-correlation using real SBPL inputs. Fixtures are copied locally from PAWL
-evidence; the suite never reads external evidence at runtime. These scripts are
+correlation using real SBPL inputs. These scripts are
 shared and invoked by the BYOXPC runner suite.
 
 ## Invariants
