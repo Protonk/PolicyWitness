@@ -45,7 +45,7 @@ Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.m
 
 ## How this is built
 
-All of the code here was written by AI coding agents (Claude and GPT 5.x), including the tests. This project is a bet that a focus on testing and iteration on top of some reasonable architectural choices **will suffice** for narrow, well-defined problem spaces like this one. 
+All of the code here was written by AI coding agents (Claude and GPT 5.x), including the tests. This project is a bet that a focus on testing and iteration over real use on top of some reasonable architectural choices **will suffice** for narrow, well-defined problem spaces. 
 
 ## Documentation
 

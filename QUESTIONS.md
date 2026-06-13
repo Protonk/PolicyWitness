@@ -16,7 +16,7 @@ Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft p
 
 ## If a wrapper around `sandbox_check` and `sandbox-exec` gets most of what PolicyWitness produces, why does it have a controller, a runner, and a worker?
 
-A wrapper gets you the common case, but only by taking positions to do it — rewriting the profile so its own reply survives, or encoding a table that decides what a given outcome means. The controller, runner, and worker buy the alternative: an unsandboxed host that applies nothing and can always reply, and a throwaway worker that self-applies the profile exactly as written. PolicyWitness can run an arbitrary policy and probe plan and report what the prediction and the kernel each did without taking a position on either the profile or the outcome.
+A wrapper obtains the common case by staking a position, e.g. rewriting the profile so its own reply survives or encoding a table that decides what a given outcome means. The controller, runner, and worker comprise an unsandboxed host that applies nothing and can always reply plus a throwaway worker that self-applies the profile exactly as written, meaning PolicyWitness can report on an arbitrary policy and probe plan without taking a position on either the profile or the outcome.
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
