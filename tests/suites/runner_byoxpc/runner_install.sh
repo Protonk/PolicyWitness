@@ -32,6 +32,19 @@ if [[ -z "${BUNDLE_ID}" ]]; then
 fi
 cleanup_runner_service "${PW_BIN}" "${BUNDLE_ID}" "user"
 
+# The runner bundle here is a copy of the shipped PWRunner.xpc, which carries
+# the built-in caller-auth keys (PWRunnerRequireSignedCaller). Authenticating
+# the pw-runner-client caller requires the runner be signed with a Developer ID
+# whose team matches the caller's — an ad-hoc runner has no team and is rejected
+# (NSXPCConnectionInvalid). So this e2e signs with a real, team-matched identity
+# rather than --allow-adhoc. (The ad-hoc, auth-off path is covered separately by
+# opt_in/runner_auth_external.sh.)
+BYOXPC_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
+if [[ -z "${BYOXPC_IDENTITY}" ]]; then
+  skip_no_signing_identity
+  exit 0
+fi
+
 INSTALL_STDOUT="${PW_TEST_ARTIFACTS}/runner_install.user.stdout.json"
 INSTALL_STDERR="${PW_TEST_ARTIFACTS}/runner_install.user.stderr.txt"
 
@@ -40,7 +53,7 @@ set +e
   --bundle "${RUNNER_BUNDLE}" \
   --kind byoxpc \
   --scope user \
-  --allow-adhoc >"${INSTALL_STDOUT}" 2>"${INSTALL_STDERR}"
+  --identity "${BYOXPC_IDENTITY}" >"${INSTALL_STDOUT}" 2>"${INSTALL_STDERR}"
 INSTALL_RC=$?
 set -e
 
@@ -81,20 +94,34 @@ set +e
 VERIFY_RC=$?
 set -e
 
-/usr/bin/python3 - "${VERIFY_STDOUT}" <<'PY'
+/usr/bin/python3 - "${VERIFY_STDOUT}" "${VERIFY_STDERR}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+stderr = ""
+if len(sys.argv) > 2:
+    try:
+        stderr = Path(sys.argv[2]).read_text(encoding="utf-8")
+    except Exception:
+        stderr = ""
 result = env.get("result", {})
 if result.get("ok") is True:
     raise SystemExit(0)
 outcome = result.get("normalized_outcome") or ""
-err = result.get("error") or ""
-if outcome == "xpc_error" and ("Sandbox restriction" in err or "NSCocoaErrorDomain" in err):
+# Only a genuine sandboxed-harness constraint is a skip. With a team-matched
+# Developer ID runner, verify must otherwise succeed: xpc_error (e.g. a caller
+# auth rejection) and xpc_timeout (a crash-on-launch regression) are hard fails.
+blob = (result.get("error") or "") + "\n" + stderr
+sandboxed = (
+    "Sandbox restriction" in blob
+    or "Cannot run while sandboxed" in blob
+    or "NSCocoaErrorDomain=4099" in blob
+)
+if sandboxed:
     raise SystemExit(3)
-raise SystemExit(f"expected result.ok=true (got {result.get('ok')!r})")
+raise SystemExit(f"expected result.ok=true (got {result.get('ok')!r}, outcome={outcome!r})")
 PY
 PY_STATUS=$?
 
@@ -117,4 +144,4 @@ Path(out_path).parent.mkdir(parents=True, exist_ok=True)
 Path(out_path).write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 PY
 
-test_pass "byoxpc runner installed" "{\"runner_env\":\"${RUNNER_ENV_PATH}\"}"
+test_pass "byoxpc runner installed + verified (team-matched Developer ID)" "{\"runner_env\":\"${RUNNER_ENV_PATH}\"}"

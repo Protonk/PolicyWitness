@@ -292,6 +292,28 @@ require_runner_bundle() {
   return 0
 }
 
+# Resolve a codesign identity whose Team Identifier matches the app bundle's, so
+# a BYOXPC runner signed with it is team-matched to the embedded pw-runner-client
+# caller. A BYOXPC runner that keeps the built-in caller-auth keys
+# (PWRunnerRequireSignedCaller) requires a non-nil, matching team; ad-hoc
+# signatures have no team and are rejected. Honors PW_BYOXPC_IDENTITY / IDENTITY
+# overrides. Echoes the identity string, or nothing if none is available.
+resolve_app_signing_identity() {
+  local app_dir="$1"
+  if [[ -n "${PW_BYOXPC_IDENTITY:-}" ]]; then printf '%s' "${PW_BYOXPC_IDENTITY}"; return 0; fi
+  if [[ -n "${IDENTITY:-}" ]]; then printf '%s' "${IDENTITY}"; return 0; fi
+  local team
+  team="$(/usr/bin/codesign -dv --verbose=4 "${app_dir}" 2>&1 | /usr/bin/awk -F= '/^TeamIdentifier=/{print $2; exit}')"
+  if [[ -z "${team}" || "${team}" == "not set" ]]; then return 0; fi
+  /usr/bin/security find-identity -v -p codesigning 2>/dev/null \
+    | /usr/bin/awk -v needle="(${team})" '/Developer ID Application:/ && index($0, needle) { if (match($0, /"[^"]+"/)) { print substr($0, RSTART+1, RLENGTH-2); exit } }'
+}
+
+skip_no_signing_identity() {
+  local data_json="${1:-}"
+  test_skip "no Developer ID Application identity matching the app team; set PW_BYOXPC_IDENTITY (or install a matching identity) to run the signed BYOXPC verify" "${data_json}"
+}
+
 skip_missing_clang() {
   test_skip "clang not available (install Xcode Command Line Tools)"
 }

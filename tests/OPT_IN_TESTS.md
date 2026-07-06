@@ -68,8 +68,10 @@ Optional standard overrides:
 ### runner_auth_external
 
 - **Location:** `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
-- **Purpose:** Validate that an external BYOXPC runner without auth keys accepts
-  an ad-hoc caller (auth gating is built-in only).
+- **Purpose:** Validate that a BYOXPC runner with its caller-auth keys removed
+  (`PWRunnerRequireSignedCaller`) accepts an ad-hoc caller. (A BYOXPC runner that
+  keeps those keys instead requires a team-matched Developer ID caller — that
+  path is covered by `runner_install.sh`.)
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.

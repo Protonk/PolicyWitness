@@ -180,17 +180,28 @@ The standard built-in runner ships with minimal entitlements. External
 inspection and controlled extensibility (debug attach / dynamic loading /
 dyld env / executable memory). These do **not** make sandbox policy “dynamic”.
 
-## Caller authorization (built-in only)
+## Caller authorization
 
-Built-in runners can require a signed caller before accepting XPC connections.
-The check is controlled via Info.plist keys:
+A runner can require a signed caller before accepting XPC connections. The check
+is controlled via Info.plist keys:
 
 - `PWRunnerRequireSignedCaller` (bool)
 - `PWRunnerAllowedIdentifiers` (optional array of code signing identifiers)
 
 When enabled, the runner compares the caller’s Team ID to its own Team ID and
-optionally enforces the allowlist. External runners are unaffected unless they
-opt in by adding the same keys.
+optionally enforces the allowlist. The shipped `PWRunner.xpc` sets
+`PWRunnerRequireSignedCaller`, so a BYOXPC runner made by copying that template
+(the documented recipe) **inherits the check** — it is not built-in-only in
+practice. That carries a signing consequence:
+
+- Sign the runner with a **Developer ID whose Team ID matches the caller**
+  (`pw-runner-client`). An **ad-hoc** runner has no Team ID, so the Team-ID
+  comparison fails and every connection is rejected with `NSXPCConnectionInvalid`
+  (surfaced as `xpc_error`).
+- For an **ad-hoc / local** runner, remove `PWRunnerRequireSignedCaller` and
+  `PWRunnerAllowedIdentifiers` from the copied bundle's Info.plist before signing;
+  the runner then accepts any caller (covered by
+  `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`).
 
 Sandbox policy variation is driven by the specimen itself:
 

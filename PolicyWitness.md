@@ -801,7 +801,12 @@ BYOXPC is the only external runner kind.
 ### What you need
 
 - A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc`).
-- A signing identity (Developer ID Application) or ad-hoc signing for local use.
+- A signing identity: a **Developer ID Application whose Team ID matches the app**.
+  The copied `PWRunner.xpc` carries the built-in signed-caller check
+  (`PWRunnerRequireSignedCaller`), which compares the caller's Team ID to the
+  runner's — so an ad-hoc runner (no Team ID) is rejected at connect time. Ad-hoc
+  signing works only for a local runner with those caller-auth keys removed (see
+  [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing)).
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
 
@@ -824,11 +829,16 @@ $PW runner install --kind byoxpc \
   --bundle "$BYO" \
   --identity "$IDENTITY" \
   --entitlements "$ENT" \
-  --allow-adhoc \
   --scope user
 
 $PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
 ```
+
+`$IDENTITY` must be a Developer ID whose Team ID matches the app bundle (the
+copied runner enforces a team-matched signed caller). Do not add `--allow-adhoc`
+here: an ad-hoc runner that keeps the caller-auth keys is rejected at connect
+time with `xpc_error`. For an ad-hoc/local runner, see
+[Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
 
 ### Install a BYOXPC runner
 
@@ -842,7 +852,10 @@ $PW runner install \
 ```
 
 Notes:
-- Use `--allow-adhoc` for local ad-hoc signing.
+- Use `--allow-adhoc` only for a local runner whose caller-auth keys
+  (`PWRunnerRequireSignedCaller`, `PWRunnerAllowedIdentifiers`) have been removed
+  from the copied bundle's Info.plist; otherwise sign with a team-matched
+  `--identity`. See [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
 - Use `--scope system` if you want a system-wide service (requires admin).
 - Use `--skip-bootstrap` if you will run `launchctl` manually.
 - Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
@@ -859,6 +872,30 @@ The install command writes a launchd plist, bootstraps the service, and records
 the runner in the local registry. The registry's `entitlements` field always
 reflects what's embedded in the binary (read back via `codesign -d --entitlements`),
 not what was supplied on the command line.
+
+### Caller authentication and ad-hoc signing
+
+The shipped `PWRunner.xpc` has caller authentication enabled in its Info.plist
+(`PWRunnerRequireSignedCaller`), and the runner authenticates the caller by
+comparing the caller's **Team ID** to its own. A BYOXPC runner made by copying
+that template inherits the check, which constrains how you may sign it:
+
+- **Signed runner (default, recommended):** sign the copy with a **Developer ID
+  whose Team ID matches the app** (so the runner's team equals `pw-runner-client`'s).
+  `runner verify` returns `ok`. This is the path exercised by
+  `tests/suites/runner_byoxpc/runner_install.sh`.
+- **Ad-hoc / local runner:** ad-hoc signatures have **no Team ID**, so a runner
+  that keeps the caller-auth keys rejects every connection with
+  `NSXPCConnectionInvalid` (reported as `normalized_outcome: xpc_error`). To run
+  ad-hoc, first remove `PWRunnerRequireSignedCaller` and
+  `PWRunnerAllowedIdentifiers` from the copied bundle's Info.plist, then
+  `--allow-adhoc`. Such a runner accepts any local caller — appropriate for local
+  testing, not for a trust boundary. This path is exercised by
+  `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`.
+
+Symptom cheat-sheet: `xpc_error` right after install usually means an ad-hoc (or
+wrong-team) runner failing the signed-caller check; `xpc_timeout` means the host
+never answered (e.g. it crashed on launch).
 
 ### Verify the runner
 

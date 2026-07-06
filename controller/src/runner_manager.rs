@@ -545,4 +545,50 @@ mod tests {
         assert_eq!(RunnerKind::parse("byoxpc"), Some(RunnerKind::Byoxpc));
         assert_eq!(RunnerKind::parse("standard"), Some(RunnerKind::Standard));
     }
+
+    #[test]
+    fn byoxpc_plist_wires_mach_service_and_machservices() {
+        // The BYOXPC LaunchAgent launches the executable directly as a
+        // mach-service, so the plist must pass `--mach-service <service>`
+        // and register a MachServices entry. The runner host binds
+        // NSXPCListener(machServiceName:) off that argument (see
+        // PWRunnerListener.pwListenerConfig); this pins the install half so
+        // the two can't silently drift apart again.
+        let plist = build_launchd_plist(
+            "com.x.PWRunner",
+            Path::new("/tmp/PWRunner.xpc/Contents/MacOS/PWRunner"),
+            None,
+            RunnerKind::Byoxpc,
+        );
+        assert!(
+            plist.contains("<string>--mach-service</string>"),
+            "byoxpc plist must pass --mach-service; got:\n{plist}"
+        );
+        assert!(
+            plist.contains("<string>com.x.PWRunner</string>"),
+            "byoxpc plist must pass the service name as the --mach-service value"
+        );
+        assert!(
+            plist.contains("<key>MachServices</key>"),
+            "byoxpc plist must register a MachServices entry"
+        );
+    }
+
+    #[test]
+    fn standard_plist_has_no_mach_service_arg() {
+        // The built-in Standard runner is launched as the embedded `.xpc`
+        // bundle (NSXPCListener.service()), so it must NOT receive
+        // `--mach-service` — that argument is what routes the host onto the
+        // mach-service listener.
+        let plist = build_launchd_plist(
+            "com.x.PWRunner",
+            Path::new("/tmp/PWRunner"),
+            None,
+            RunnerKind::Standard,
+        );
+        assert!(
+            !plist.contains("--mach-service"),
+            "standard plist must not pass --mach-service; got:\n{plist}"
+        );
+    }
 }

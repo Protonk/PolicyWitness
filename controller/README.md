@@ -194,6 +194,7 @@ Notes:
   bundle's `CFBundleIdentifier`. The executable is derived from
   `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
+- A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See PolicyWitness.md → "Caller authentication and ad-hoc signing".
 - `runner verify` defaults to a 5-second timeout (override with `--timeout-ms`).
 - `runner remove` always persists the registry change. `launchctl bootout` or plist-removal failures are surfaced in the envelope's `data.warnings` rather than aborting the call, so dirty launchd state cannot strand a registry entry.
 - `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.

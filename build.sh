@@ -37,6 +37,7 @@ XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorker.swift"
 XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ValidatorClient.swift"
 XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
 XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerService.swift"
+XPC_RUNNER_LISTENER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerListener.swift"
 XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/Sources/PWSandboxCheckShim/PWSandboxCheckShim.c"
 XPC_RUNNER_CWORKER_SHIM="${XPC_ROOT}/Sources/PWCWorkerShim/PWCWorkerShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/Clients/PWRunnerClient/main.swift"
@@ -372,6 +373,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
       "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
       "${XPC_RUNNER_SERVICE_FILE}" \
+      "${XPC_RUNNER_LISTENER_FILE}" \
       "${svc_main}" "${shim_obj}" "${cworker_shim_obj}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
 
