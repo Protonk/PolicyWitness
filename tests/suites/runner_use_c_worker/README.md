@@ -13,7 +13,7 @@ service, joined into a single `PWRunnerRunResult` envelope by
 
 ## What's pinned
 
-Ten test_ids, each driving a real specimen through the
+Each test_id drives a real specimen through the
 controller → XPC service → orchestrator → both children. The first
 three pin the basic v4 envelope shape; the rest are regression
 guards for the request-validation and drift-classification rules:
@@ -72,6 +72,14 @@ guards for the request-validation and drift-classification rules:
 10. **access_failure_classified** — `access(R_OK)` on a denied path
     surfaces as `attempt.outcome == "access_failed"` with errno
     preserved.
+
+The exec cases share `tests/fixtures/exec/helper.c` and its build script.
+They check baseline execution, argument and stdout/stderr capture, and
+output truncation. `exec_attempt_args_and_stderr_round_trip` executes a
+nonzero exit (37) followed by a successful exit (0); both must retain their
+output and status, and the first must have `drift=null` without aborting the
+plan. The fixture's bytes and statuses are checked directly by `exec_fixture`.
+Deadline cleanup and output retention are covered by `runner_exec_lifecycle`.
 
 ## What this suite does NOT cover
 

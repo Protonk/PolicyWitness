@@ -1,5 +1,11 @@
 # runner_c_worker_harness
 
+The harness also exposes `exec_inheritance <helper> <nonce> <canary-fd>` for
+the `runner_exec_inheritance` suite. That case records the actual worker launch
+state through the shared fixture, execs the worker in the same PID, and returns
+three exec-child reports. Its assertions live with that suite; the harness
+provides only the adapter to the worker ABI.
+
 Proves the C probe-runner (`pw-probe-runner`) in isolation. The
 harness drives the same shared-memory ABI the production runner
 host uses, so a failure here is a clean signal that the worker ABI

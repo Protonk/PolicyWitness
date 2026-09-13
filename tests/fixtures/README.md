@@ -1,10 +1,13 @@
 # Fixtures
 
-Fixtures are static inputs for test suites. Keep them small, deterministic, and
-checked into the repo so tests are hermetic.
+Fixtures are inputs and helper programs for test suites. Keep them small,
+deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `exec/`: shared C helper for controlled output, exit status, and process
+  trees, plus OS lifecycle and environment/descriptor inspection. Direct
+  controls live in the `exec_fixture` suite.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and
   opt-in paths (single-step SBPL cases).
 - `runner_smoke/`: template-based fixtures used by smoke and runner verification.

@@ -11,6 +11,12 @@ classifier branches that no real specimen can exercise.
   Command Line Tools without full Xcode.
 - `PWRunnerCore` is built with `-enable-testing` so tests can
   `@testable import` it; production builds via `build.sh` are unaffected.
+- The fast CWorker per-exec deadline diagnostic remains here; process-group
+  cleanup, output retention, and plan continuation are covered through the
+  public CLI by `runner_exec_lifecycle`.
+- Exec-child environment and descriptor isolation are covered by
+  `runner_exec_inheritance`, with explicit child observations and controlled
+  worker launch resources.
 
 ## Success criteria
 

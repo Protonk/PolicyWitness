@@ -78,6 +78,24 @@ Optional standard overrides:
 - **When to run:** After changing runner caller-authorization logic.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/runner_auth_external/artifacts/*`
 
+### exec inheritance mutation controls
+
+- **Suite name:** `runner_exec_inheritance`
+- **Location:** `tests/suites/runner_exec_inheritance/opt_in/mutations.sh`
+- **Purpose:** Confirm that the unchanged worker passes and disposable workers
+  with environment or descriptor isolation disabled fail the ordinary contract
+  assertions with specific leak evidence.
+- **Opt-in reason:** Development diagnostic that deliberately transforms and
+  rebuilds the current C implementation. Its mutation anchors need review when
+  spawn implementation changes; the baseline contract tests remain independent
+  of those transformations.
+- **Resource dependency:** macOS C toolchain, Python 3, unsandboxed execution.
+  No built app or signing identity required.
+- **When to run:** After changing exec spawning, process-state inspection, or
+  the inheritance assertions; before retiring overlapping coverage.
+- **Artifacts:** `tests/out/suites/runner_exec_inheritance/mutation_controls/artifacts/`
+- **Gating:** Explicit invocation; missing prerequisites fail rather than skip.
+
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:

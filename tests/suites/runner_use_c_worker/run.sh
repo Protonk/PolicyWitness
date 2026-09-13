@@ -10,11 +10,11 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 # ---- exec_fixture helper (built on demand by exec_* test cases) ----------
 #
-# Source lives under tests/suites/runner_use_c_worker/exec_fixture/helper.c;
-# the compiled binary lands in tests/out/<run>/exec_fixture/helper. Not
+# Source lives under tests/fixtures/exec/helper.c;
+# the compiled binary lands in tests/out/exec_fixture/helper. Not
 # in the app bundle, not signed, not notarized — purely a test fixture
 # the exec attempt cases drive through PW.
-EXEC_FIXTURE_SRC="${ROOT_DIR}/tests/suites/runner_use_c_worker/exec_fixture/helper.c"
+EXEC_FIXTURE_SRC="${ROOT_DIR}/tests/fixtures/exec/helper.c"
 EXEC_FIXTURE_BIN="${PW_TEST_OUT_DIR}/exec_fixture/helper"
 exec_fixture_built=0
 
@@ -24,8 +24,8 @@ ensure_exec_fixture() {
     return 1
   fi
   mkdir -p "$(dirname "${EXEC_FIXTURE_BIN}")"
-  if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
-       -o "${EXEC_FIXTURE_BIN}" "${EXEC_FIXTURE_SRC}" 2>"${PW_TEST_OUT_DIR}/exec_fixture/build.err"; then
+  if ! bash "${ROOT_DIR}/tests/fixtures/exec/build.sh" "${EXEC_FIXTURE_BIN}" \
+       2>"${PW_TEST_OUT_DIR}/exec_fixture/build.err"; then
     return 1
   fi
   exec_fixture_built=1
@@ -942,12 +942,9 @@ PY
 
 # ---- test_id: exec_attempt_args_and_stderr_round_trip --------------------
 #
-# Drives the exec attempt with caller-supplied args + stderr output.
-# Pins:
-#   - args ["--stderr", "hello-stderr"] reach the helper as argv[1..]
-#   - attempt.stderr round-trips the helper's stderr write
-#   - attempt.stdout still carries the default marker
-#   - exit code propagates (0 in this case)
+# Drives the shared fixture with a nonzero exit followed by a successful exec.
+# Both retain output and their requested exit status; the nonzero exit does
+# not abort the plan or become evidence of sandbox denial.
 
 run_exec_attempt_args_and_stderr_round_trip() {
   local test_id="exec_attempt_args_and_stderr_round_trip"
@@ -958,11 +955,11 @@ run_exec_attempt_args_and_stderr_round_trip() {
       "{\"src\":\"${EXEC_FIXTURE_SRC}\"}"
     return 0
   fi
-  test_step "run" "exec helper --stderr 'hello-stderr' → stderr round-trips, stdout still default"
+  test_step "run" "exec helper exits 37 then 0; both retain output and the plan continues"
 
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
-import json, sys
+import json, secrets, sys
 spec = {
   "schema_version": 1,
   "specimen_id": "use_c_worker_exec_args_stderr",
@@ -972,12 +969,12 @@ spec = {
     "augments": ["exec_baseline"],
   },
   "probe_plan": [{
-    "step_id": "s_exec_args",
+    "step_id": "s_exec_exit_" + str(status),
     "sandbox_check": {"operation": "process-exec*",
                       "filter": {"kind": "path", "value": sys.argv[2]}},
     "attempt": {"kind": "exec", "action": "spawn", "target": sys.argv[2],
-                "args": ["--stderr", "hello-stderr"]},
-  }],
+                "args": ["--stderr", secrets.token_hex(16), "--exit", str(status)]},
+  } for status in (37, 0)],
 }
 open(sys.argv[1], "w").write(json.dumps(spec))
 PY
@@ -985,27 +982,35 @@ PY
   local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
   set +e
   "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
+  local rc=$?
   set -e
+  if [[ "${rc}" -ne 0 ]]; then
+    test_fail "nonzero exec exit aborted the specimen (CLI rc=${rc})"
+  fi
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  /usr/bin/python3 - "${run_stdout}" "${specimen}" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
 env = json.loads(open(sys.argv[1]).read())
-s = env["data"]["runner_result"]["steps"][0]
-assert s["sandbox_check"]["outcome"] == "allow", \
-    "sandbox_check should predict allow under augment; got {0!r}".format(
-        s["sandbox_check"]["outcome"])
-assert s.get("drift") is False, \
-    "drift should be False (validator+attempt agree); got {0!r}".format(s.get("drift"))
-a = s["attempt"]
-assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
-assert a["rc"] == 0
-assert a.get("stdout") == "exec_fixture: hello from helper\n", \
-    "stdout={0!r}".format(a.get("stdout"))
-assert a.get("stderr") == "hello-stderr\n", \
-    "stderr={0!r} (args may not have reached the helper)".format(a.get("stderr"))
-print("ok: args reached helper, stdout/stderr round-tripped, prediction agrees")
+plan = json.loads(open(sys.argv[2]).read())["probe_plan"]
+runner = env["data"]["runner_result"]
+assert env["result"]["ok"] is True and runner["normalized_outcome"] == "ok"
+assert runner.get("test_overrides") is None
+assert [s["step_id"] for s in runner["steps"]] == [p["step_id"] for p in plan]
+for s, request in zip(runner["steps"], plan):
+    args = request["attempt"]["args"]
+    status = int(args[3])
+    assert s["sandbox_check"]["outcome"] == "allow", s
+    assert s["drift"] is (None if status else False), s
+    a = s["attempt"]
+    assert a["outcome"] == ("exec_failed" if status else "ok"), a
+    assert a["rc"] == status, a
+    assert a["child_pid"] > 0 and a["child_term_signal"] == 0, a
+    assert a["child_exit_code"] == status, a
+    assert a["stdout"] == "exec_fixture: hello from helper\n", a
+    assert a["stderr"] == args[1] + "\n", a
+print("ok: nonzero and successful exits retain both streams and status; plan continues")
 PY
   local arc=$?
   set -e
@@ -1015,7 +1020,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "exec args + stdout/stderr round-trip through the worker" \
+  test_pass "exec args, output, and nonzero status survive; the following exec completes" \
     "{\"stdout\":\"${run_stdout}\"}"
 }
 

@@ -708,132 +708,13 @@ func runCWorkerTests(_ tk: TestKit) {
                 "error should mention the deadline; got \(s.error ?? "nil")")
         }
 
-        // ---- exec deadline kills the whole process group --------------------
-        // The worker spawns each exec child as its own process-group leader
-        // (POSIX_SPAWN_SETPGROUP) so the deadline path can kill(-pgid) the
-        // ENTIRE tree, not just the leader. The sibling test above uses a
-        // childless /bin/sleep, so "the grandchild dies too" is asserted
-        // nowhere else.
-        //
-        // Mechanism: the child is a /bin/sh that forks a backgrounded
-        // grandchild and then sleeps past the deadline. The grandchild
-        // touches a `.gc_started` marker immediately (proving it launched),
-        // sleeps past the deadline, then would touch `.survived`. When the
-        // worker's deadline fires it kill(-pgid)s the group; a correctly
-        // reaped grandchild dies mid-sleep and never writes `.survived`. A
-        // leaked grandchild (pgroup kill that only hit the leader) writes
-        // `.survived` after its sleep — which this test waits long enough to
-        // observe.
-        tk.run("exec deadline SIGKILLs the child's whole process group (grandchild reaped)") {
-            guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
-            }
-            for bin in ["/bin/sh", "/bin/sleep", "/usr/bin/touch"] {
-                guard FileManager.default.isExecutableFile(atPath: bin) else {
-                    FileHandle.standardOutput.write(Data("  SKIP  \(bin) missing\n".utf8))
-                    return
-                }
-            }
+        // Process-group cleanup, captured output after a deadline, and plan
+        // continuation are exercised through the public CLI by
+        // tests/suites/runner_exec_lifecycle with the shared exec fixture.
 
-            // Short /tmp paths on purpose: the whole script is one argv
-            // entry, capped at PW_SHM_ARGV_BYTES (128 incl. NUL), so a
-            // /var/folders temp path would overflow it.
-            let pid = ProcessInfo.processInfo.processIdentifier
-            let base = "/tmp/pwgc\(pid)"
-            let gcStarted = base + "s"   // grandchild launched
-            let survived  = base + "v"   // grandchild outlived the deadline (a leak)
-            // Empty envp under our spawn means PATH is unset, so every
-            // command in the script is an absolute path (paths are clean, so
-            // no quoting is needed). The grandchild is the backgrounded
-            // subshell; non-interactive sh keeps it in the leader's process
-            // group (no job control), which is what makes it a target of
-            // kill(-pgid).
-            let gcSleepSec = 2
-            let leaderSleepSec = 6
-            let script =
-                "( /usr/bin/touch \(gcStarted); /bin/sleep \(gcSleepSec); /usr/bin/touch \(survived) ) &"
-                + " /bin/sleep \(leaderSleepSec)"
-            defer {
-                try? FileManager.default.removeItem(atPath: gcStarted)
-                try? FileManager.default.removeItem(atPath: survived)
-            }
-
-            let input = CWorkerInput(
-                workerExecutablePath: workerPath(),
-                policy: "(version 1)(allow default)",
-                slots: [
-                    CWorkerSlotInput(stepId: "exec_pgroup",
-                                     attemptKind: .execSpawn,
-                                     target: "/bin/sh",
-                                     args: ["-c", script])
-                ],
-                sentinelTimeoutMs: 30_000,
-                exitGraceMs: 5_000,
-                execChildDeadlineMs: 700
-            )
-            let start = Date()
-            let result = runCWorker(input)
-            // Wait until a *leaked* grandchild would have had time to write
-            // `.survived` (its sleep + a margin), so an absent marker is a
-            // real reap rather than us checking too early.
-            let safetyWaitSec = Double(gcSleepSec) + 2.5
-            let elapsed = Date().timeIntervalSince(start)
-            if elapsed < safetyWaitSec {
-                Thread.sleep(forTimeInterval: safetyWaitSec - elapsed)
-            }
-
-            guard case .success(let out) = result else {
-                throw TestFailure(message: "runCWorker failed: \(result)")
-            }
-            let s = out.slots[0]
-            try expectEqual(s.childTermSignal, Int32(SIGKILL),
-                "the leader should be SIGKILL'd at the deadline")
-            try expectTrue((s.error ?? "").contains("deadline"),
-                "error should mention the deadline; got \(s.error ?? "nil")")
-            // Guard against a vacuous pass: the grandchild must actually have
-            // launched, or `.survived` being absent proves nothing.
-            try expectTrue(FileManager.default.fileExists(atPath: gcStarted),
-                "grandchild never launched (.gc_started absent) — test is vacuous, not a real reap")
-            // The load-bearing assertion: the grandchild was killed mid-sleep
-            // by the process-group SIGKILL, so it never wrote `.survived`.
-            try expectTrue(!FileManager.default.fileExists(atPath: survived),
-                "grandchild survived the deadline kill — kill(-pgid) leaked a grandchild")
-        }
-
-        // ---- exec hermetic environment --------------------------------------
-        // The worker passes an empty envp. /usr/bin/env prints the
-        // environment one variable per line. Under our spawn the
-        // helper sees an empty environment, so stdout is empty.
-        tk.run("exec child receives empty environment (envp = {NULL})") {
-            guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
-            }
-            guard FileManager.default.isExecutableFile(atPath: "/usr/bin/env") else {
-                FileHandle.standardOutput.write(Data("  SKIP  /usr/bin/env missing\n".utf8))
-                return
-            }
-            let input = CWorkerInput(
-                workerExecutablePath: workerPath(),
-                policy: "(version 1)(allow default)",
-                slots: [
-                    CWorkerSlotInput(stepId: "exec_env",
-                                     attemptKind: .execSpawn,
-                                     target: "/usr/bin/env")
-                ]
-            )
-            let result = runCWorker(input)
-            guard case .success(let out) = result else {
-                throw TestFailure(message: "runCWorker failed: \(result)")
-            }
-            let s = out.slots[0]
-            try expectEqual(s.rc, Int32(0))
-            // /usr/bin/env with no inherited env should produce no
-            // stdout. childStdout reader normalizes empty → nil.
-            try expectNil(s.childStdout,
-                "exec child should receive empty env; got stdout=\(s.childStdout ?? "nil")")
-        }
+        // Environment/descriptor isolation is observed inside exec children by
+        // tests/suites/runner_exec_inheritance. Its controlled worker launch
+        // proves that resources existed to leak; empty output cannot pass it.
 
         // ---- exec stdout/stderr round-trip via /bin/echo --------------------
         // Use /bin/echo as a portable fixture that doesn't require

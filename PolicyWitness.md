@@ -253,7 +253,7 @@ Shipped augments:
   libSystem-dynamic helper `posix_spawn` under `(deny default)`:
   `(allow process-exec*)`, `(allow process-fork)`, and an
   **unconditional** `(allow file-read*)`. Empirically derived
-  against `tests/suites/runner_use_c_worker/exec_fixture/helper.c`
+  against `tests/fixtures/exec/helper.c`
   on macOS 14.8.3 (build 23J220, Darwin 23.6.0).
 
   **This is a pragmatic baseline, not a narrow minimum.**

@@ -50,6 +50,27 @@
 
 extern char **environ;
 
+/* exec_inheritance is driven by runner_exec_inheritance/check.py. Only this
+ * adapter knows the worker ABI; the inspection helper and assertions do not. */
+static const char *exec_helper;
+static const char *exec_nonce;
+static const char *exec_canary_fd;
+
+static void populate_exec_inheritance(pw_shm_slot_t *slots) {
+    for (unsigned i = 0; i < 3; i++) {
+        pw_shm_slot_t *s = &slots[i];
+        snprintf(s->step_id, sizeof(s->step_id), "inspect_%u", i);
+        s->attempt_kind = PW_ATTEMPT_EXEC_SPAWN;
+        snprintf(s->target, sizeof(s->target), "%s", exec_helper);
+        s->argv_count = 5;
+        snprintf(s->argv[0], sizeof(s->argv[0]), "%s", exec_helper);
+        snprintf(s->argv[1], sizeof(s->argv[1]), "--inspect");
+        snprintf(s->argv[2], sizeof(s->argv[2]), "%s-%u", exec_nonce, i);
+        snprintf(s->argv[3], sizeof(s->argv[3]), "--read-fd");
+        snprintf(s->argv[4], sizeof(s->argv[4]), "%s", exec_canary_fd);
+    }
+}
+
 /* ---- scenarios ----------------------------------------------------------- */
 
 /* Temp-target lifecycle for the file attempt scenarios. The harness
@@ -200,6 +221,7 @@ static scenario_t SCENARIOS[] = {
      * corrupt_abi, skip_prepared, override_step_count, override_param_count,
      * oversize_policy, temp_target */
     { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
+    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE },
     { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
     { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
     { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
@@ -282,8 +304,12 @@ int main(int argc, char **argv) {
      * SIGPIPE and kill the harness. Tolerate it as EPIPE instead. */
     signal(SIGPIPE, SIG_IGN);
 
-    if (argc != 3) {
+    if (argc == 6 && strcmp(argv[2], "exec_inheritance") == 0) {
+        exec_helper = argv[3]; exec_nonce = argv[4]; exec_canary_fd = argv[5];
+        if (strlen(exec_helper) >= PW_SHM_ARGV_BYTES || strlen(exec_nonce) > 64) return 2;
+    } else if (argc != 3 || strcmp(argv[2], "exec_inheritance") == 0) {
         fprintf(stderr, "usage: %s <worker_path> <scenario>\n", argv[0]);
+        fprintf(stderr, "       %s <worker_path> exec_inheritance <helper> <nonce> <canary-fd>\n", argv[0]);
         fprintf(stderr, "scenarios:");
         for (size_t i = 0; i < SCENARIO_COUNT; i++) {
             fprintf(stderr, " %s", SCENARIOS[i].name);
@@ -425,7 +451,16 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         NULL,
     };
     pid_t pid;
-    int spawn_rc = posix_spawn(&pid, worker_path, &fa, NULL, worker_argv, environ);
+    /* Record the actual launch state, then exec the worker without changing
+     * environment/FDs/PID. The fixture preserves the unread policy stdin.
+     * Its report precedes the harness envelope on stdout. */
+    char *inspected_argv[] = {
+        (char *)exec_helper, "--inspect", (char *)exec_nonce,
+        "--read-fd", (char *)exec_canary_fd, "--then-exec", (char *)worker_path,
+        "--shm-fd", "3", "--ready-fd", "4", "--step-count", step_count_str, NULL,
+    };
+    int spawn_rc = posix_spawn(&pid, exec_helper ? exec_helper : worker_path, &fa, NULL,
+                               exec_helper ? inspected_argv : worker_argv, environ);
     posix_spawn_file_actions_destroy(&fa);
     if (spawn_rc != 0) {
         fprintf(stderr, "harness: posix_spawn: %s\n", strerror(spawn_rc));
@@ -529,6 +564,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     /* Emit result envelope. */
     printf("{");
     printf("\"scenario\":"); emit_json_string(stdout, scen->name);
+    printf(",\"worker_pid\":%d", pid);
     printf(",\"ready_byte_received\":%s", ready_received ? "true" : "false");
     printf(",\"applied\":%s", saw_applied ? "true" : "false");
     printf(",\"apply_rc\":%d", hdr->apply_rc);
@@ -552,6 +588,12 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         printf(",\"errno\":%d", slots[i].errno_val);
         printf(",\"observed_path\":"); emit_json_string(stdout, slots[i].observed_path);
         printf(",\"error\":"); emit_json_string(stdout, slots[i].error);
+        if (slots[i].attempt_kind == PW_ATTEMPT_EXEC_SPAWN) {
+            printf(",\"child_pid\":%d,\"child_exit_code\":%d,\"child_term_signal\":%d",
+                   slots[i].child_pid, slots[i].child_exit_code, slots[i].child_term_signal);
+            printf(",\"stdout\":"); emit_json_string(stdout, slots[i].child_stdout);
+            printf(",\"stderr\":"); emit_json_string(stdout, slots[i].child_stderr);
+        }
         printf("}");
     }
     printf("]");
