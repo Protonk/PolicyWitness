@@ -1,0 +1,62 @@
+{
+  "kind": "run",
+  "result": {"ok": true},
+  "data": {
+    "runner_result": {
+      "normalized_outcome": "ok",
+      "policy_format": "sbpl",
+      "sandboxed_after_apply": true,
+      "steps": [
+        {
+          "step_id": "fs_read_missing",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "file-read-data",
+            "effective_filter_value": "/private/tmp/pw-bbx-checker/missing.txt",
+            "filter_type_id": null, "outcome": "prediction_unavailable", "rc": -1,
+            "errno": null,
+            "error": "target path /private/tmp/pw-bbx-checker/missing.txt did not resolve on the host"
+          },
+          "attempt": {
+            "outcome": "open_failed", "rc": 1, "exit_code": 1, "syscall_errno": 2,
+            "requested_path": "/private/tmp/pw-bbx-checker/missing.txt",
+            "normalized_path": null, "observed_path": null
+          },
+          "drift": null,
+          "deny_signal": {"delta": 0}
+        },
+        {
+          "step_id": "mach_lookup_invalid",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "mach-lookup",
+            "effective_filter_value": "com.example.policywitness.invalid",
+            "filter_type_id": 2, "outcome": "allow", "rc": 0,
+            "errno": null, "error": null
+          },
+          "attempt": {
+            "outcome": "lookup_failed", "rc": 1, "exit_code": 1, "syscall_errno": null,
+            "requested_path": null, "normalized_path": null, "observed_path": null
+          },
+          "drift": null,
+          "deny_signal": {"delta": 0}
+        },
+        {
+          "step_id": "fs_read_allowed",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "file-read-data",
+            "effective_filter_value": "/private/tmp/pw-bbx-checker/allow.txt",
+            "filter_type_id": 1, "outcome": "allow", "rc": 0,
+            "errno": null, "error": null
+          },
+          "attempt": {
+            "outcome": "ok", "rc": 0, "exit_code": 0, "syscall_errno": null,
+            "requested_path": "/private/tmp/pw-bbx-checker/allow.txt",
+            "normalized_path": "/private/tmp/pw-bbx-checker/allow.txt",
+            "observed_path": "/private/tmp/pw-bbx-checker/allow.txt"
+          },
+          "drift": false,
+          "deny_signal": {"delta": 0}
+        }
+      ]
+    }
+  }
+}

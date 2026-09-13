@@ -16,6 +16,7 @@ run_test() {
   fi
 }
 
+run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/checker_controls.sh"
 run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/bbx_001.sh"
 run_test "${ROOT_DIR}/tests/suites/blackbox_e2e/bbx_002.sh"
 

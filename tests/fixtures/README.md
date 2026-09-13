@@ -17,7 +17,8 @@ deterministic, and checked into the repo so tests are hermetic.
 - `blackbox_menagerie/`: SBPL sources and a case manifest (`cases/core.json`)
   sourced from PAWL evidence.
 - `blackbox_e2e/`: per-case directories (`BBX-*`) with specimen templates and
-  expected outcomes for strict evidence validation.
+  expected outcomes for strict evidence validation, plus synthetic envelopes
+  under `checker/` for independent controls of the evidence checker.
 
 ## Adding fixtures
 

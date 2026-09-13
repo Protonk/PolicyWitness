@@ -1,0 +1,59 @@
+{
+  "kind": "run",
+  "result": {"ok": true},
+  "data": {
+    "runner_result": {
+      "normalized_outcome": "ok",
+      "policy_format": "sbpl",
+      "sandboxed_after_apply": true,
+      "steps": [
+        {
+          "step_id": "fs_write_allowed",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "file-write-data",
+            "effective_filter_value": "/private/tmp/pw-bbx-checker/allow.txt",
+            "filter_type_id": 1, "outcome": "allow", "rc": 0,
+            "errno": null, "error": null
+          },
+          "attempt": {
+            "outcome": "ok", "rc": 0, "exit_code": 0, "syscall_errno": null,
+            "requested_path": "/private/tmp/pw-bbx-checker/allow.txt",
+            "normalized_path": "/private/tmp/pw-bbx-checker/allow.txt",
+            "observed_path": "/private/tmp/pw-bbx-checker/allow.txt"
+          },
+          "deny_signal": {"delta": 0}
+        },
+        {
+          "step_id": "fs_write_denied",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "file-write-data",
+            "effective_filter_value": "/private/tmp/pw-bbx-checker/deny.txt",
+            "filter_type_id": 1, "outcome": "deny", "rc": 1,
+            "errno": null, "error": null
+          },
+          "attempt": {
+            "outcome": "open_failed", "rc": -1, "exit_code": -1, "syscall_errno": 1,
+            "requested_path": "/private/tmp/pw-bbx-checker/deny.txt",
+            "normalized_path": "/private/tmp/pw-bbx-checker/deny.txt",
+            "observed_path": null
+          },
+          "deny_signal": {"delta": 0}
+        },
+        {
+          "step_id": "mach_lookup_denied",
+          "sandbox_check": {
+            "scope": "post_sandbox", "pid": 1234, "operation": "mach-lookup",
+            "effective_filter_value": "com.apple.cfprefsd.xpc.daemon",
+            "filter_type_id": 2, "outcome": "deny", "rc": 1,
+            "errno": null, "error": null
+          },
+          "attempt": {
+            "outcome": "lookup_failed", "rc": 1102, "exit_code": 1102, "syscall_errno": null,
+            "requested_path": null, "normalized_path": null, "observed_path": null
+          },
+          "deny_signal": {"delta": 0}
+        }
+      ]
+    }
+  }
+}

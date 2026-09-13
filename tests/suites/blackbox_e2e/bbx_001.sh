@@ -101,11 +101,6 @@ STATUS=$?
 set -e
 
 if [[ ${STATUS} -ne 0 ]]; then
-  if [[ ${STATUS} -eq 3 ]]; then
-    VALIDATE_OUT="${VALIDATE_OUT//$'\n'/ }"
-    test_skip "${VALIDATE_OUT}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
-    exit 0
-  fi
   VALIDATE_OUT="${VALIDATE_OUT//$'\n'/ }"
   test_fail "${VALIDATE_OUT}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi

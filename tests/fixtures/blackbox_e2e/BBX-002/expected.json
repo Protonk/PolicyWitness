@@ -5,6 +5,7 @@
   "steps": [
     {
       "step_id": "fs_read_missing",
+      "sandbox_outcome": "prediction_unavailable",
       "attempt_ok": false,
       "errno": 2,
       "deny_signal_delta": 0
