@@ -1,43 +1,27 @@
 # sbpl_allowdeny_consistency
 
-End-to-end check that SBPL `(allow ...)` / `(deny ...)` rules produce
-verdicts and attempt outcomes that agree with kernel-observed behavior.
-
-A single specimen (`fixtures/runner_smoke/v1`) drives four steps — file
-write and `mach-lookup`, each in an allowed and a denied variant — through
-a real `dist/PolicyWitness.app` run.
+Runs the v1 smoke fixture twice through the built CLI. Each run has four
+steps: two file writes and the fixture's two Mach lookups. File targets and
+step IDs are random, and seed bytes are generated separately for each run.
+The second run keeps the probe plan fixed and reverses only the allow/deny
+policy parameter bindings, after restoring both files.
 
 ## Invariants
 
-- `result.ok == true`, `normalized_outcome == "ok"`, `sandboxed_after_apply == true`.
-- Exactly four steps; each carries `attempt.requested_path` / `normalized_path` / `observed_path`.
-- Allowed step: `sandbox_check.outcome == "allow"`, attempt `exit_code == 0`,
-  `syscall_errno == null`, `deny_signal.delta == 0`.
-- Denied step: `sandbox_check.outcome == "deny"`, attempt `exit_code != 0`,
-  `syscall_errno` populated.
+- The test reads the files itself before consulting PW's JSON. The allowed
+  write leaves changed, nonempty data; the denied file retains every seed byte.
+  An open that only truncates the file does not pass the write-effect check.
+- These effects reverse when the parameter bindings reverse.
+- Both runs complete successfully without `_test_overrides`; the file verdicts,
+  exit codes, errno fields, and path fields agree with the external evidence.
+- All four step IDs survive. The Mach steps are checked for presence only;
+  this test does not establish Mach service liveness or lookup correctness.
 
-This is a **positive** correctness check: it passes when verdicts and
-attempts line up and fails when they diverge. (It was formerly framed as an
-inverted "anomaly reproduction" suite; the test has asserted consistency,
-not reproduced a bug, since the evidence contract was tightened.)
+## Running and artifacts
 
-## Host dependency
+Run `tests/run.sh --suite sbpl_allowdeny_consistency` outside an automation
+sandbox (request escalation there). Missing builds and run failures fail the
+test. Unified log capture is disabled; it is not this test's oracle.
 
-Sandboxed automation harnesses can block XPC lookup or unified-log access,
-which can perturb `deny_signal` capture. If the test fails with those
-symptoms, rerun from a normal Terminal.
-
-## Fixtures
-
-- `tests/fixtures/runner_smoke/v1/profile.sbpl`
-- `tests/fixtures/runner_smoke/v1/specimen.template.json`
-
-## Artifacts
-
-- `tests/out/suites/sbpl_allowdeny_consistency/<test_id>/artifacts/*`
-
-Run:
-
-```
-./tests/run.sh --suite sbpl_allowdeny_consistency
-```
+Artifacts include both specimens and envelopes, stderr, `assert.log`, and
+separate `.before` / `.after` byte snapshots for each file in each round.

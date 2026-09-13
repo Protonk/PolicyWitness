@@ -351,10 +351,11 @@ Top-level fields beyond `pid` / `runner_subprocess`:
        errored before reaching the kernel, or the attempt outcome is
        `not_run_worker_died`).
     3. The attempt observed a *DAC*-ambiguous failure — EPERM or
-       EACCES on a file/access path — while the validator predicted
-       `allow`. Filesystem permissions and the sandbox both surface
-       as EPERM/EACCES from a file open; the runner can't tell them
-       apart from rc/errno alone, so `(validator=allow,
+       EACCES on a file/access path or failed spawn — while the
+       validator predicted `allow`. Filesystem permissions and the
+       sandbox both surface as EPERM/EACCES from a file open or
+       `posix_spawn`; the runner can't tell them apart from rc/errno
+       alone, so `(validator=allow,
        attempt=ambiguous-deny)` is reported as `null` instead of
        `true` to avoid false libsandbox-drift attribution. Strong
        deny evidence (mach `kr=1100`, etc.) is unambiguous and does
@@ -676,7 +677,7 @@ combinations:
 
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
-  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | The drift classifier keys on `child_pid==0` + `errno∈{EPERM,EACCES}` to attribute a sandbox-denied spawn vs `child_pid>0` for a helper non-zero exit (treated as non-policy failure). |
+  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are ambiguous permission failures: prediction allow yields `drift=null`, prediction deny yields directional agreement (`false`). A helper non-zero exit with `child_pid>0` is a non-policy failure (`drift=null`). |
   | `child_exit_code` | child clean-exited | `-1` — child was signaled or no child ran | |
   | `child_term_signal` | child killed by a signal | `0` — clean-exited or no child ran | |
   | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | Captured up to 1023 bytes per stream; output past the buffer is truncated and tagged with a trailing `\n... [truncated]` marker. |

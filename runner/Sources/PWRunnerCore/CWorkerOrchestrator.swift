@@ -697,7 +697,7 @@ func computeDrift(
     // the validator predicted allow would flood the envelope with
     // false libsandbox-drift signals.
     //
-    // Asymmetric: EPERM/EACCES on a file op is AMBIGUOUS — the kernel
+    // Asymmetric: EPERM/EACCES on a file op or spawn is AMBIGUOUS — the kernel
     // sandbox produces those errnos, but so does ordinary Unix DAC
     // (chmod 000, owner mismatch, etc). Without a deny-event-log
     // cross-reference we can't tell the two apart from rc/errno alone.
@@ -725,7 +725,7 @@ private enum AttemptObservation {
     case allowed                 // attempt.outcome == ok
     case deniedStrongEvidence    // mach kr=1100 or sysctl errno that has no
                                  //   known non-policy analogue here
-    case deniedAmbiguous         // file EPERM/EACCES (sandbox OR DAC; can't
+    case deniedAmbiguous         // permission failures (sandbox OR DAC; can't
                                  //   tell from rc/errno alone)
     case undefined               // ENOENT, missing service, unsupported,
                                  //   worker died — failures that aren't
@@ -778,20 +778,20 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
         //                    own exit code, which is not a sandbox
         //                    verdict. Treat as non-policy failure.
         //   child_pid == 0 → spawn never produced a child. errno carries
-        //                    the posix_spawn errno. EPERM / EACCES are
-        //                    the kernel sandbox's spawn deny signals
-        //                    (no DAC analogue for spawn itself —
-        //                    unlike file ops, posix_spawn's deny is a
-        //                    clean sandbox tell). ENOENT means the
-        //                    target binary doesn't exist; other errnos
-        //                    are non-policy reasons (out of fds, etc).
+        //                    the posix_spawn errno. EPERM / EACCES do
+        //                    not identify the cause: ordinary execute
+        //                    permissions can also block spawning. Without
+        //                    independent deny evidence, classify these as
+        //                    ambiguous just like file permission failures.
+        //                    Other errnos (ENOENT, etc.) are non-policy
+        //                    failures, not sandbox verdicts.
         let childPid = attempt.child_pid ?? 0
         if childPid > 0 {
             return .undefined
         }
         switch attempt.errno {
         case Int(EPERM), Int(EACCES):
-            return .deniedStrongEvidence
+            return .deniedAmbiguous
         default:
             return .undefined
         }

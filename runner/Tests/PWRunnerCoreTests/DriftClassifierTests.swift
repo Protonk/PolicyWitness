@@ -141,14 +141,24 @@ func runDriftClassifierTests(_ tk: TestKit) {
                  expected: nil),
 
         // ---- exec drift keys on child_pid, not just errno ----
-        // child_pid == 0 + EPERM → spawn denied (strong, no DAC analogue).
-        DriftRow(label: "allow predicted + exec spawn-denied (child_pid=0, EPERM)",
+        // No child establishes spawn failure, not sandbox causation. The
+        // runner_exec_dac e2e control reproduces ordinary execute-permission
+        // EACCES; both permission errnos require conservative attribution.
+        DriftRow(label: "allow predicted + exec permission failure (child_pid=0, EPERM)",
                  predicted: SandboxCheckOutcome.allow,
                  attempt: attempt(AttemptOutcome.execFailed, errno: eperm, child_pid: 0),
-                 expected: true),
-        DriftRow(label: "deny predicted + exec spawn-denied (child_pid=0, EPERM)",
+                 expected: nil),
+        DriftRow(label: "deny predicted + exec permission failure (child_pid=0, EPERM)",
                  predicted: SandboxCheckOutcome.deny,
                  attempt: attempt(AttemptOutcome.execFailed, errno: eperm, child_pid: 0),
+                 expected: false),
+        DriftRow(label: "allow predicted + exec permission failure (child_pid=0, EACCES)",
+                 predicted: SandboxCheckOutcome.allow,
+                 attempt: attempt(AttemptOutcome.execFailed, errno: eacces, child_pid: 0),
+                 expected: nil),
+        DriftRow(label: "deny predicted + exec permission failure (child_pid=0, EACCES)",
+                 predicted: SandboxCheckOutcome.deny,
+                 attempt: attempt(AttemptOutcome.execFailed, errno: eacces, child_pid: 0),
                  expected: false),
         // child_pid > 0 → spawn SUCCEEDED; the helper merely exited
         // nonzero. Not a sandbox verdict no matter the errno.

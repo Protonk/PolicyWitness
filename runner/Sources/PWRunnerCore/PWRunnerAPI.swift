@@ -548,9 +548,9 @@ public struct PWRunnerAttemptResult: Codable {
     /// spawn failed before producing a child (sandbox blocked spawn,
     /// target missing, etc.) — `errno` carries the spawn errno in
     /// that case. The orchestrator's drift classifier reads
-    /// `child_pid` to distinguish a sandbox-blocked spawn (strong
-    /// deny evidence) from a child non-zero exit (non-policy
-    /// failure).
+    /// `child_pid` to distinguish spawn failure from a child non-zero
+    /// exit (non-policy failure). EPERM/EACCES without a child remain
+    /// ambiguous: execute permissions can also prevent spawning.
     public var child_pid: Int?
     public var child_exit_code: Int?
     public var child_term_signal: Int?

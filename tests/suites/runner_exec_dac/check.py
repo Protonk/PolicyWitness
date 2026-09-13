@@ -1,0 +1,82 @@
+"""The OS permission control supplies the oracle; PW's classifier does not."""
+import errno
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+def main():
+    pw, out_arg = sys.argv[1:]
+    out = Path(out_arg).resolve()
+    records = {}
+    with tempfile.TemporaryDirectory(prefix="pw-exec-dac-", dir="/private/tmp") as work:
+        helper = Path(work) / "helper"
+        shutil.copyfile("/usr/bin/true", helper)
+        spec = {
+            "schema_version": 1,
+            "specimen_id": "execute_permission_control",
+            "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+            "probe_plan": [{
+                "step_id": "exec",
+                "sandbox_check": {"operation": "process-exec*",
+                                  "filter": {"kind": "path", "value": str(helper)}},
+                "attempt": {"kind": "exec", "action": "spawn", "target": str(helper)},
+            }],
+        }
+        request = out / "specimen.json"
+        request.write_text(json.dumps(spec, indent=2) + "\n")
+        # Complete BOTH controls before asserting drift, so the known defect
+        # cannot prevent the restored-permission case from being exercised.
+        for name, mode in (("nonexecutable", 0o644), ("executable", 0o755)):
+            helper.chmod(mode)
+            try:
+                direct_run = subprocess.run([str(helper)], capture_output=True, timeout=5)
+                direct = {"spawned": True, "exit_code": direct_run.returncode}
+            except OSError as exc:
+                direct = {"spawned": False, "errno": exc.errno}
+            (out / f"{name}.direct.json").write_text(json.dumps(direct, indent=2) + "\n")
+            with (out / f"{name}.run.json").open("w") as stdout, \
+                    (out / f"{name}.stderr").open("w") as stderr:
+                run = subprocess.run([pw, "run", str(request), "--no-log-capture"],
+                                     stdout=stdout, stderr=stderr, timeout=20)
+            records[name] = (direct, run.returncode,
+                             json.loads((out / f"{name}.run.json").read_text()))
+
+    steps = {}
+    for name, (direct, rc, envelope) in records.items():
+        assert rc == 0 and envelope["result"]["ok"] is True, (name, rc, envelope)
+        runner = envelope["data"]["runner_result"]
+        assert runner["normalized_outcome"] == "ok"
+        assert runner.get("test_overrides") is None
+        assert len(runner["steps"]) == 1
+        step = runner["steps"][0]
+        assert step["step_id"] == "exec"
+        assert step["sandbox_check"]["outcome"] == "allow", (name, step)
+        steps[name] = step
+
+    assert records["nonexecutable"][0] == {"spawned": False, "errno": errno.EACCES}
+    assert records["executable"][0] == {"spawned": True, "exit_code": 0}
+    failure = steps["nonexecutable"]["attempt"]
+    assert failure["outcome"] == "exec_failed" and failure["rc"] == -1
+    assert failure["child_pid"] == 0 and failure["child_exit_code"] == -1
+    assert failure["child_term_signal"] == 0
+    assert failure["errno"] == failure["syscall_errno"] == errno.EACCES
+    assert "posix_spawn" in failure["error"]
+    success = steps["executable"]["attempt"]
+    assert success["outcome"] == "ok" and success["rc"] == 0
+    assert success["child_pid"] > 0 and success["child_exit_code"] == 0
+    assert success["child_term_signal"] == 0
+    assert steps["executable"]["drift"] is False
+    print("direct OS and PW controls agree: removing execute bits blocks spawn; restoring them succeeds",
+          flush=True)
+    assert steps["nonexecutable"]["drift"] is None, \
+        ("ordinary execute-permission EACCES must yield drift=null, got "
+         f"{steps['nonexecutable']['drift']!r}; allow-all policy and direct OS control rule out "
+         "using this errno alone as evidence of sandbox drift")
+
+
+if __name__ == "__main__":
+    main()
