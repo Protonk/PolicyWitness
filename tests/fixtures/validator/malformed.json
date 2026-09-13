@@ -1,0 +1,8 @@
+{
+  "probe_count": 3,
+  "responses": [
+    {"probe_index": 1, "outcome": "deny", "rc": 1, "errno": 1},
+    {"probe_index": 0, "outcome": "allow", "rc": 0, "errno": 0}
+  ],
+  "tail": "malformed"
+}

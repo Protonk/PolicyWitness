@@ -30,6 +30,12 @@ the architecture behind it.
 - Specimens are generated inline per test.
 - `happy_path_baseline` uses a stable `(version 1) (allow default)`
   policy with one file read step.
+- The validator shortfall and decode-failure cases share the checked-in
+  `tests/fixtures/validator` transcripts and `runner_validator_failure`
+  contract checks. Both require reversed partial verdicts to retain step
+  association, all three completed attempts to retain their actual outcomes,
+  and the unanswered prediction to have an explicit error and `drift:null`.
+  These two cases also run in the baseline `runner_validator_failure` suite.
 
 ## Artifacts
 

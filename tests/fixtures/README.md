@@ -5,6 +5,9 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `validator/`: checked-in NDJSON validator program and partial-reply
+  transcripts (EOF and malformed JSON), used by `runner_validator_failure`
+  and the corresponding `witness_contract` entry points.
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.
