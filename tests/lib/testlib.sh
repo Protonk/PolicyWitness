@@ -199,68 +199,50 @@ with open(path, "w", encoding="utf-8") as fh:
 PY
 }
 
-test_pass() {
-  local message="${1:-ok}"
-  local data_json="${2:-}"
+# Public finalizers own defaults, console output, and return/exit behavior.
+# Compute one duration and use the same terminal evidence in both event streams
+# and the report. Failure reporting tolerates absent event paths.
+_test_finish() {
+  local status="$1"
+  local message="$2"
+  local data_json="$3"
   local end_ms
   end_ms="$(now_ms)"
   local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))
 
   local event_line
-  event_line="$(emit_event "pass" "test_end" "${message}" "${data_json}" "${duration_ms}")"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS}"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
-  write_report "pass" "${message}" "${duration_ms}"
+  event_line="$(emit_event "${status}" "test_end" "${message}" "${data_json}" "${duration_ms}")"
+  if [[ "${status}" != fail || -n "${PW_TEST_EVENTS:-}" ]]; then
+    write_json_line "${event_line}" "${PW_TEST_EVENTS}"
+  fi
+  if [[ "${status}" != fail || -n "${PW_TEST_EVENTS_LOCAL:-}" ]]; then
+    write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
+  fi
+  write_report "${status}" "${message}" "${duration_ms}"
+}
+
+test_pass() {
+  local message="${1:-ok}"
+  _test_finish "pass" "${message}" "${2:-}"
   test_log "pass: ${message}"
 }
 
 test_pass_note() {
   local message="${1:-ok}"
-  local data_json="${2:-}"
-  local end_ms
-  end_ms="$(now_ms)"
-  local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))
-
-  local event_line
-  event_line="$(emit_event "pass" "test_end" "${message}" "${data_json}" "${duration_ms}")"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS}"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
-  write_report "pass" "${message}" "${duration_ms}"
+  _test_finish "pass" "${message}" "${2:-}"
   test_log_force "${message}"
 }
 
 test_fail() {
   local message="${1:-failed}"
-  local data_json="${2:-}"
-  local end_ms
-  end_ms="$(now_ms)"
-  local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))
-
-  local event_line
-  event_line="$(emit_event "fail" "test_end" "${message}" "${data_json}" "${duration_ms}")"
-  if [[ -n "${PW_TEST_EVENTS:-}" ]]; then
-    write_json_line "${event_line}" "${PW_TEST_EVENTS}"
-  fi
-  if [[ -n "${PW_TEST_EVENTS_LOCAL:-}" ]]; then
-    write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
-  fi
-  write_report "fail" "${message}" "${duration_ms}"
+  _test_finish "fail" "${message}" "${2:-}"
   echo "FAIL: [${PW_TEST_SUITE:-unknown}/${PW_TEST_ID:-unknown}] ${message}" 1>&2
   exit 1
 }
 
 test_skip() {
   local message="${1:-skipped}"
-  local data_json="${2:-}"
-  local end_ms
-  end_ms="$(now_ms)"
-  local duration_ms=$((end_ms - ${PW_TEST_START_MS:-end_ms}))
-
-  local event_line
-  event_line="$(emit_event "skip" "test_end" "${message}" "${data_json}" "${duration_ms}")"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS}"
-  write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
-  write_report "skip" "${message}" "${duration_ms}"
+  _test_finish "skip" "${message}" "${2:-}"
   test_log "skip: ${message}"
 }
 

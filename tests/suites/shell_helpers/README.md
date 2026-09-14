@@ -1,7 +1,8 @@
 # shell_helpers
 
-Direct controls for `tests/lib/case.sh` and `tests/lib/scripts.sh`. Requires Bash
-and Python 3, with no PolicyWitness app, compiler, socket, or XPC dependency.
+Direct controls for `tests/lib/case.sh`, `tests/lib/scripts.sh`, and the public
+result helpers in `tests/lib/testlib.sh`. Requires Bash and Python 3, with no
+PolicyWitness app, compiler, socket, or XPC dependency.
 This suite runs in the default battery:
 
 ```sh
@@ -85,3 +86,29 @@ The witness wrapper must retain its baseline-first ordering and selected cases.
 
 Artifacts retain fixture repositories, child receipts, wrapper streams, exit
 statuses, configurations, and the control inventory.
+
+## Result finalization
+
+`test_pass`, `test_pass_note`, `test_fail`, and `test_skip` share a private
+writer for duration calculation, the terminal event in both event streams,
+and the case report. Each public function owns its default message, console
+output, and return/exit behavior. Ordinary pass/skip logging respects quiet
+mode; `test_pass_note` always prints. `test_fail` writes its diagnostic to
+stderr and exits 1 even when the caller has disabled errexit. Pass and skip
+return success so callers can continue with another case.
+
+The `finalizers` case exercises all four public functions with quiet mode on
+and off, omitted arguments, empty arguments, and literal messages/JSON data.
+The fixture calls `test_begin` and the selected public function, then writes
+an independent receipt if execution continues. The Python observer imports
+no test-library code. It checks process status, exact stdout/stderr, the
+receipt, one start/terminal event pair in each stream, and the matching report.
+Suite alias, case identity, message, duration, and artifact path must agree;
+nested JSON, quotes, newlines, backslashes, and Unicode must survive. A shell
+expression in the message must never create its canary file.
+
+These controls inspect public behavior without replacing the clock or calling
+the private writer. Elapsed time is bounded by the enclosing process duration;
+the event and report must contain the same nonnegative integer duration.
+Artifacts retain inputs, raw streams, exit status, receipts, event/report files,
+and the control inventory. Intentional failures remain in isolated outputs.

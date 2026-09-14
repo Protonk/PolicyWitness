@@ -21,3 +21,12 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_scripts.py" 
   test_fail "script-group controls failed; see artifacts/assertions.log"
 fi
 test_pass "wrappers preserve child order, streams, phase boundaries, and failing status"
+
+test_begin shell_helpers finalizers
+test_step controls "observe result-helper returns, quiet output, and matching terminal evidence"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_finalizers.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "finalizer controls failed; see artifacts/assertions.log"
+fi
+test_pass "result helpers preserve terminal evidence, literal data, logging, and exit behavior"
