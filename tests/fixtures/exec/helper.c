@@ -18,6 +18,7 @@
  *   --tree SOCKET connect a leader and forked child to a test-owned Unix
  *                 socket, then wait for commands. Both keep the inherited
  *                 process group; the fixture does not set up isolation.
+ *   --process PID report libproc identity/ancestry for a live process.
  *   --inspect NONCE [--env-key NAME] [--read-fd N]
  *                 emit a complete JSON process-state observation instead
  *                 of the default marker. See README.md for the protocol.
@@ -37,6 +38,7 @@
 #include <string.h>
 #include <errno.h>
 #include <libproc.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -166,7 +168,30 @@ static void write_stdout_fill(long count) {
     fflush(stdout);
 }
 
+/* Run by the unsandboxed observer, not by the process being identified. */
+static int describe_process(const char *text) {
+    char *end = NULL;
+    errno = 0;
+    long pid = strtol(text, &end, 10);
+    if (errno || end == text || *end || pid <= 0 || pid > INT_MAX) return 2;
+    struct proc_bsdinfo info = {0};
+    char path[PROC_PIDPATHINFO_MAXSIZE];
+    if (proc_pidinfo((pid_t)pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info)) != sizeof(info)
+        || info.pbi_pid != (unsigned)pid
+        || proc_pidpath((pid_t)pid, path, sizeof(path)) <= 0) {
+        fprintf(stderr, "exec_fixture: process %ld unavailable (errno=%d)\n", pid, errno);
+        return 2;
+    }
+    printf("{\"version\":1,\"pid\":%u,\"ppid\":%u,\"start_sec\":%llu,\"start_usec\":%llu,\"path\":",
+           info.pbi_pid, info.pbi_ppid, (unsigned long long)info.pbi_start_tvsec,
+           (unsigned long long)info.pbi_start_tvusec);
+    json_string(stdout, path);
+    puts(",\"complete\":true}");
+    return fflush(stdout) == 0 ? 0 : 2;
+}
+
 int main(int argc, char **argv) {
+    if (argc == 3 && strcmp(argv[1], "--process") == 0) return describe_process(argv[2]);
     int    exit_code      = 0;
     long   stdout_bytes   = -1;          /* -1 → emit the default marker */
     const char *stderr_msg = NULL;

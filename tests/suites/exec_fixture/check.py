@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fixtures" / "exec"))
-from control import TreeControl
+from control import TreeControl, process_snapshot
 from inspection import (ENV_KEY, parse_report, assert_clean, assert_empty_environment,
                         assert_isolated_descriptors, assert_stdin_eof)
 
@@ -167,6 +167,55 @@ def exercise_tree(helper, out, mode):
                 child.communicate(timeout=2)
 
 
+def exercise_independent_trees(helper, out):
+    with tempfile.TemporaryDirectory(prefix='pw-two-trees-', dir='/private/tmp') as work:
+        controls = [TreeControl(Path(work) / name) for name in ('a', 'b')]
+        children = []
+        observations = []
+        try:
+            for control in controls:
+                child = subprocess.Popen([helper, '--tree', control.path], start_new_session=True,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={})
+                children.append(child)
+                pids = control.accept()
+                assert pids['P'] == child.pid
+                leader = process_snapshot(helper, pids['P'])
+                descendant = process_snapshot(helper, pids['C'])
+                assert leader['ppid'] == os.getpid(), leader
+                assert descendant['ppid'] == child.pid, descendant
+                assert leader['path'] == descendant['path'] == str(Path(helper).resolve())
+                observations.append({'leader': leader, 'child': descendant})
+                control.assert_running()
+            assert len({pid for control in controls for pid in control.pids.values()}) == 4
+            a, b = controls
+            b.release()
+            b.assert_stopped()
+            assert children[1].wait(timeout=2) == 0
+            a.assert_running()
+            assert process_snapshot(helper, a.pids['P']) == observations[0]['leader']
+            assert process_snapshot(helper, a.pids['C']) == observations[0]['child']
+            # The same liveness assertion must reject B after its normal exit.
+            expect_rejection(lambda control: control.assert_running(), b, 'tree already exited:')
+            a.release()
+            a.assert_stopped()
+            assert children[0].wait(timeout=2) == 0
+            for child in children:
+                stdout, stderr = child.communicate(timeout=2)
+                assert stdout == b'exec_fixture: hello from helper\n' and stderr == b''
+            absent = subprocess.run([helper, '--process', str(children[1].pid)],
+                                    capture_output=True, timeout=2)
+            assert absent.returncode == 2 and absent.stdout == b'', absent
+            (out / 'independent_trees.json').write_text(json.dumps(observations, indent=2) + '\n')
+            print('independent release: B exited, A still responded with unchanged OS identities', flush=True)
+        finally:
+            for control in controls:
+                control.close()
+            for child in children:
+                if child.poll() is None:
+                    child.kill()
+                child.communicate(timeout=2)
+
+
 def main():
     helper, out_arg = sys.argv[1:]
     out = Path(out_arg)
@@ -185,6 +234,7 @@ def main():
         print(f"output bytes={len(expected)}, stderr nonce, exit={status}: correct", flush=True)
     for mode in ('release', 'group_kill', 'leader_kill'):
         exercise_tree(helper, out, mode)
+    exercise_independent_trees(helper, out)
     exercise_inspection(helper, out)
 
 

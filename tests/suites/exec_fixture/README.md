@@ -12,6 +12,10 @@ Python 3, without an app dependency. Runs in the default test battery.
 - Kill only the leader. Require the exit observer to reject this partial
   cleanup, confirm the child still answers, then release it and require
   both exits. This is a negative control for leaked descendants.
+- Hold two trees simultaneously, release B, and require A to remain responsive
+  with unchanged libproc identities. Verify PID/parent/path snapshots against
+  the direct launches, reject liveness for exited B, and reject a process
+  snapshot after B has been reaped.
 - Inspect direct launches with empty and populated environments, with a
   readable FD numbered at least 200 deliberately included or excluded, and
   with EOF or data on stdin. Verify exact canary values/bytes and require the

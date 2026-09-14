@@ -18,7 +18,7 @@ abandoned processes. The fixture does not create its own process group, so
 it cannot hide a failure by PW to isolate exec children.
 
 `control.py` owns the rendezvous and obtains PIDs from macOS `LOCAL_PEERPID`.
-It registers `EVFILT_PROC/NOTE_EXIT` before accepting startup as complete;
+Its shared `ExitObserver` registers `EVFILT_PROC/NOTE_EXIT` before accepting startup as complete;
 `assert_stopped()` requires exit events for both peers. A closed socket or a
 PW-reported PID/status alone is insufficient. `close()` releases and, if
 needed, kills surviving peers for cleanup; assertions must run before it.
@@ -28,6 +28,20 @@ bytes and exit statuses, normal release, group kill, and leader-only kill.
 The last case requires the same exit assertion used by the CLI test to fail
 while the surviving child still answers a ping. These controls distinguish
 fixture or observer faults from PW lifecycle regressions.
+
+`assert_running()` requires both registered peers to remain alive and respond
+to pings. A direct two-tree control releases B, observes both B exits, and
+requires A to remain responsive with unchanged OS process identities. The
+same liveness assertion must reject B after exit. `runner_specimen_isolation`
+uses this contract while completing one specimen before releasing another.
+It also uses `ExitObserver` for B's worker and XPC host, registering both while
+they are held and requiring their real exits before checking A's survival.
+
+`--process PID` is an observer mode that queries libproc for the given live
+process, emitting PID, parent PID, start time, and executable path. It does not
+rely on output from that process. `control.py`'s `process_snapshot()` validates
+the complete report. Direct controls check known launched PIDs, parent/child
+relationships, stable identities, and failure for an exited, reaped process.
 
 ## Process-state inspection
 

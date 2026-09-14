@@ -9,7 +9,7 @@ deterministic, and checked into the repo so tests are hermetic.
   transcripts (EOF and malformed JSON), used by `runner_validator_failure`
   and the corresponding `witness_contract` entry points.
 - `exec/`: shared C helper for controlled output, exit status, and process
-  trees, plus OS lifecycle and environment/descriptor inspection. Direct
+  trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and
   opt-in paths (single-step SBPL cases).
