@@ -66,6 +66,7 @@ prerequisites should fail, not skip.
 | `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `dist/PolicyWitness.app` | — (missing app or codesign issues should fail) | `tests/out/suites/preflight/.../preflight.json` |
 | `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. | Python 3 | — (manifest disagreement is always a fail) | `tests/out/suites/source_drift/.../check.log` |
 | `shell_helpers` | Baseline | Shell case helpers retain literal arguments, logs and case identity; missing prerequisites and failed builds/checkers produce failed reports and stop later stages | Bash + Python 3 | — | Independent command receipts and subprocess observations; no app or toolchain. Covers absent commands/build products and preserves the separate optional-app skip behavior. |
+| `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3 | — | Real dispatcher in fixture repositories; covers crashes, missing/invalid/contradictory evidence, explicit skips and wrapper aliases. No app or toolchain. |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | — (missing toolchain should fail) | `tests/out/suites/unit/.../cargo-test-bins.log` |
 | `runner_unit` | Baseline | Swift runner internals (`applySandboxPolicy`, the `CWorkerOrchestrator` envelope invariants, the `computeDrift` validator-vs-kernel truth table, the `classify` worker/validator→normalized-outcome table, the `buildAttemptResult` (kind, action, slot)→attempt-outcome table, prediction_unavailable host-mirror, CWorker + ValidatorClient drivers) are correct at the unit level. Covers paths that no real specimen can reach — including the `runner_failed`, `validator_no_reply`, and `runner_sandbox_denied` outcomes that have no e2e seam — and pins the attempt-outcome mapping as a table (so its two stacked layers can't silently disagree) rather than relying on the scattered per-outcome e2e suites. | `swift` on PATH | `swift` toolchain or `runner/Package.swift` missing | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Built via `runner/Package.swift`. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | — (missing app should fail) | Uses fixtures under `tests/fixtures/pw_runner/` |
@@ -151,9 +152,23 @@ Every invocation of `tests/run.sh` overwrites the prior run output so tooling ca
 ```text
 tests/out/
   run.json
+  dispatch.json
   events.jsonl
   suites/<suite>/<test_id>/
     report.json
     events.jsonl
     artifacts/...
 ```
+
+`dispatch.json` records each requested suite invocation and its execution status,
+report snapshots, and harness errors. `run.json` retains case reports/counts and
+adds `requested_suites`, `invocations`, and `harness_errors`. Its `ok` field and
+the command's exit status use the same decision: no failed case reports and no
+harness errors. A crash or absent report cannot disappear from the summary.
+Case counts describe readable reports; harness failures are reported separately.
+
+The dispatcher associates reports by invocation, including wrapper aliases.
+Started cases must have one terminal event and a matching report. Reused case
+paths, malformed or contradictory evidence, and silent suites fail. Explicit
+reported skips remain valid. See `tests/suites/dispatcher/README.md` for the
+contract and controls.

@@ -5,6 +5,8 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `dispatcher/`: controlled suite runners and evidence alterations exercised
+  through the real `tests/run.sh` in isolated fixture repositories.
 - `shell_case/`: independently controlled builder/checker commands and a shell
   case for prerequisite, failure propagation, log, and report controls in
   `shell_helpers`.
