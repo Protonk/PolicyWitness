@@ -254,11 +254,34 @@ public struct PWRunnerTestOverrides: Codable {
     }
 }
 
+/// Versioned optional receipt for the exact compiler result supplied to apply.
+/// `captured` requires a complete, checksum-verified worker capture and successful
+/// application/process completion. This is not a readback of kernel state.
+public struct AppliedProfileCapture: Codable {
+    public var schema_version: Int = 1
+    public var status: String
+    public var reason: String?
+    public var worker_pid: Int
+    public var request_nonce: String?
+    public var profile_type: Int?
+    public var bytecode_length: Int?
+    public var bytecode_sha256: String?
+    public var bytecode_b64: String?
+    public var source_sha256: String?
+    public var source_length: Int?
+    public var params_sha256: String?
+    public var parameter_count: Int?
+}
+
 public struct PWRunnerPolicySpec: Codable {
     // Policy format, e.g. PWRunnerWire.policyFormatSbpl.
     public var format: String
     public var sbpl_source: String?
     public var params: [String: String]?
+    /// Opt into sensitive worker-side bytecode/input identity capture.
+    public var capture_applied_profile: Bool?
+    /// Fresh 128-bit lowercase hex identity, echoed by the worker capture.
+    public var capture_nonce: String?
     // Named augments the caller opts into (e.g. "exec_baseline"). The
     // controller resolves each name to a file under
     // Contents/Resources/Augments/<name>.sb, appends the contents to
@@ -272,12 +295,16 @@ public struct PWRunnerPolicySpec: Codable {
         format: String,
         sbpl_source: String? = nil,
         params: [String: String]? = nil,
-        augments: [String]? = nil
+        augments: [String]? = nil,
+        capture_applied_profile: Bool? = nil,
+        capture_nonce: String? = nil
     ) {
         self.format = format
         self.sbpl_source = sbpl_source
         self.params = params
         self.augments = augments
+        self.capture_applied_profile = capture_applied_profile
+        self.capture_nonce = capture_nonce
     }
 }
 
@@ -841,6 +868,7 @@ public struct PWRunnerRunResult: Codable {
     public var bundle_id: String?
     public var policy_format: String
     public var policy_sha256: String?
+    public var applied_profile: AppliedProfileCapture?
     public var sandboxed_after_apply: Bool?
     public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
@@ -864,7 +892,8 @@ public struct PWRunnerRunResult: Codable {
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,
         validator_subprocess: PWRunnerValidatorSubprocess? = nil,
-        test_overrides: PWRunnerTestOverrides? = nil
+        test_overrides: PWRunnerTestOverrides? = nil,
+        applied_profile: AppliedProfileCapture? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -876,6 +905,7 @@ public struct PWRunnerRunResult: Codable {
         self.bundle_id = bundle_id
         self.policy_format = policy_format
         self.policy_sha256 = policy_sha256
+        self.applied_profile = applied_profile
         self.sandboxed_after_apply = sandboxed_after_apply
         self.deny_signal_total = deny_signal_total
         self.steps = steps

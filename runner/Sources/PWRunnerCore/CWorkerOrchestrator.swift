@@ -66,7 +66,9 @@ public enum CWorkerOrchestrator {
             ),
             postApplyHangMs: parsed._test_overrides?.worker_post_apply_hang_ms,
             postApplyKillSignal: parsed._test_overrides?.worker_post_apply_kill_signal,
-            preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms
+            preReadyHangMs: parsed._test_overrides?.worker_pre_ready_hang_ms,
+            captureAppliedProfile: parsed.policy.capture_applied_profile == true,
+            captureNonce: parsed.policy.capture_nonce
         )
 
         // ---- run worker + validator together via postApplied hook --------
@@ -135,7 +137,8 @@ public enum CWorkerOrchestrator {
             steps: stepResults,
             runner_subprocess: runnerSubprocess,
             validator_subprocess: validatorSubprocess,
-            test_overrides: parsed._test_overrides
+            test_overrides: parsed._test_overrides,
+            applied_profile: workerOutput?.profileCapture
         )
     }
 
@@ -847,7 +850,7 @@ func classify(
     switch workerResult {
     case .failure(let err):
         switch err {
-        case .slotCountExceeded, .paramCountExceeded,
+        case .captureNonceInvalid, .slotCountExceeded, .paramCountExceeded,
              .slotInputTooLong, .paramInputTooLong,
              .argvCountExceeded, .argvEntryTooLong,
              .execTargetNotAbsolute:

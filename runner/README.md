@@ -17,6 +17,21 @@ PolicyWitness is **specimen-first**:
 
 ## Key files
 
+SBPL policies can opt into a compiled-object receipt with
+`capture_applied_profile` and a fresh `capture_nonce`. The worker captures before
+apply into a bounded shared-memory region; the host joins successful application,
+completion, PID, nonce and checksums before exposing `applied_profile`. The API
+type lives in `PWRunnerAPI.swift` so the service and client share its wire shape.
+See [Opt-in compiled-object receipt](../PolicyWitness.md#opt-in-compiled-object-receipt)
+for the sensitive-output contract and unavailable cases. The ABI layout suite
+also constructs independent bounded objects for the C capture helper; Swift unit
+controls pair selected-byte/input changes with ignored-padding/order changes.
+
+The Swift driver tests honor `PW_APP_DIR` for separately built candidates;
+without it they use the default distribution. Host and worker must implement the
+same shared-memory ABI. A successful Swift compilation alone does not establish
+that the selected worker binary matches that ABI.
+
 The runner follows SwiftPM-convention layout: the core library sources
 compiled into `PWRunner.xpc` live under `runner/Sources/PWRunnerCore/`,
 each C shim under its own `runner/Sources/<Shim>/` (with `include/`), the

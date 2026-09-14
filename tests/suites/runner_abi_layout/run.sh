@@ -95,6 +95,11 @@ def swift_name_for(printer_key: str) -> str:
         return "slotBytes"
     if printer_key == "sizeof.pw_shm_param_t":
         return "paramBytes"
+    if printer_key == "sizeof.pw_shm_capture_t":
+        return "captureHeaderBytes"
+    if printer_key.startswith("offsetof.pw_shm_capture_t."):
+        field = printer_key[len("offsetof.pw_shm_capture_t."):]
+        return "capture" + title_first(to_camel(field)) + "Offset"
     if printer_key.startswith("offsetof.pw_shm_header_t."):
         field = printer_key[len("offsetof.pw_shm_header_t."):]
         return to_camel(field) + "Offset"
@@ -108,6 +113,8 @@ def swift_name_for(printer_key: str) -> str:
         return "slotsOffset"
     if printer_key == "region.params_offset":
         return "paramsOffset"
+    if printer_key == "region.capture_offset":
+        return "captureOffset"
     raise SystemExit(
         f"no Swift mapping defined for printer key {printer_key!r}; "
         "update swift_name_for() in tests/suites/runner_abi_layout/run.sh"
@@ -225,5 +232,14 @@ then
   test_fail "C↔Swift layout values disagree" "{\"diff_report\":\"${DIFF_REPORT}\"}"
 fi
 
-test_pass "C and Swift PWShmLayout agree on every macro / sizeof / offsetof" \
+test_step "capture" "exercise bounded profile reads against independently constructed objects"
+if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Wno-deprecated-declarations -O2 -std=c11 \
+    -I "${ABI_HEADER_DIR}" "${SUITE_DIR}/capture.c" -o "${PW_TEST_ARTIFACTS}/capture" \
+    2>"${PW_TEST_ARTIFACTS}/capture.err"; then
+  test_fail "capture.c failed to compile" "{}"
+fi
+if ! "${PW_TEST_ARTIFACTS}/capture"; then
+  test_fail "bounded compiled-object capture controls failed" "{}"
+fi
+test_pass "C and Swift layout agree; bounded compiled-object capture controls pass" \
   "{\"diff_report\":\"${DIFF_REPORT}\"}"

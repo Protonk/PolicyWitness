@@ -35,20 +35,18 @@
 #include <stdint.h>
 
 /*
- * ABI version 4 grows the slot from 2 KiB to 8 KiB to carry exec-attempt
- * payload: a bounded argv table plus child status + stdout/stderr capture.
- * Existing field offsets shift because the argv table is interposed
- * between the inputs and the v3 outputs; the version bump makes this
- * a hard host↔worker compatibility boundary, defended by the
+ * ABI version 5 includes a bounded, opt-in compiled-object capture region
+ * after the existing slots and params. The version is a hard host↔worker
+ * boundary, defended by the
  * abi_version check at worker entry. In practice host + worker ship
  * together (the worker binary is bundle-local inside each XPC service),
  * so the check is a defense-in-depth tripwire rather than a live
  * compatibility boundary.
  */
-#define PW_PROBE_RUNNER_ABI_VERSION 4u
+#define PW_PROBE_RUNNER_ABI_VERSION 5u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
- * 8 KiB + 1024 params × 512 B + 64 B header = ~2.56 MiB per run.
+ * 8 KiB + 1024 params × 512 B + bounded capture = about 3.5 MiB per run.
  * The slot cap is chosen to fit comfortably in one page-aligned
  * anonymous mapping while still being deep enough for any plausible
  * specimen plan. The param cap is sized for real-world SBPL profile
@@ -59,10 +57,17 @@
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
 #define PW_SHM_HEADER_BYTES 64u
+/* Optional compiled-object capture. The host pre-touches this bounded region;
+ * no capture pipe or post-apply allocation/file output is needed. ABI v5 is a
+ * hard boundary: old workers must not silently ignore a capture request. */
+#define PW_SHM_CAPTURE_HEADER_BYTES 144u
+#define PW_SHM_CAPTURE_BYTES 1048576u
+#define PW_SHM_CAPTURE_NONCE_BYTES 16u
 #define PW_SHM_REGION_BYTES                                                  \
     ((size_t)PW_SHM_HEADER_BYTES                                             \
      + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES)                        \
-     + ((size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES))
+     + ((size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES)                      \
+     + PW_SHM_CAPTURE_HEADER_BYTES + PW_SHM_CAPTURE_BYTES)
 
 /* Bounded string sizes inside a slot. They add up below the slot
  * budget; the remainder is reserved padding for future fields. */
@@ -164,7 +169,9 @@ typedef struct {
     int32_t apply_rc;
     uint32_t param_count;            /* 0..PW_SHM_MAX_PARAMS */
     int32_t apply_errno;             /* errno after a failed sandbox_apply; 0 on success */
-    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 9u];
+    uint32_t capture_requested;      /* host input; exactly 1 opts into sensitive capture */
+    uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
+    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 14u];
 } pw_shm_header_t;
 
 /*
@@ -252,6 +259,29 @@ typedef struct {
     char key[PW_SHM_PARAM_KEY_MAX];
     char value[PW_SHM_PARAM_VALUE_MAX];
 } pw_shm_param_t;
+
+/* Worker-only output, after params and before its bytecode payload. completed
+ * release-publishes every other field. The host acquire-loads it; fields never
+ * change afterward. Successful apply and PID must be checked separately.
+ * status: 1 captured, 2 unsupported layout/type/length, 3 unreadable object,
+ * 4 malformed consumed input. Zero means no complete capture. */
+typedef struct {
+    _Atomic uint32_t completed;
+    uint32_t status;
+    uint32_t profile_type;
+    uint32_t bytecode_length;
+    uint32_t worker_pid;
+    uint32_t source_length;
+    uint32_t param_count;
+    uint32_t reserved;
+    uint8_t source_sha256[32];
+    uint8_t params_sha256[32];
+    uint8_t bytecode_sha256[32];
+    uint8_t request_nonce[PW_SHM_CAPTURE_NONCE_BYTES];
+} pw_shm_capture_t;
+
+_Static_assert(sizeof(pw_shm_capture_t) == PW_SHM_CAPTURE_HEADER_BYTES,
+               "capture header must match its bounded ABI budget");
 
 _Static_assert(sizeof(pw_shm_header_t) == PW_SHM_HEADER_BYTES,
                "pw_shm_header_t must be exactly PW_SHM_HEADER_BYTES");

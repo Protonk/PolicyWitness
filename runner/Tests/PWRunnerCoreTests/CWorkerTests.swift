@@ -24,6 +24,9 @@ private func repoRoot() -> URL {
 }
 
 private func workerPath() -> String {
+    if let app = ProcessInfo.processInfo.environment["PW_APP_DIR"] {
+        return app + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+    }
     return repoRoot()
         .appendingPathComponent("dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner")
         .path

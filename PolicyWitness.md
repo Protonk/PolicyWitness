@@ -1,5 +1,36 @@
 # PolicyWitness User Guide
 
+## Opt-in compiled-object receipt
+
+An SBPL policy may set `capture_applied_profile: true` and a fresh per-application
+`capture_nonce` (32 lowercase hexadecimal characters). The runner adds
+`data.runner_result.applied_profile`, with its own `schema_version: 1`. A
+`status: "captured"` receipt contains `worker_pid`, `request_nonce`, `profile_type`,
+`bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
+`source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
+the caller must arrange restricted receipt storage before opting in.
+
+The C worker copies the bytecode from the same compiler-result pointer it passes
+to `sandbox_apply`, before applying. Only a bounded single-profile result (type 0,
+nonempty bytecode up to 1 MiB) is supported. The host requires successful apply,
+complete worker exit, matching PID/nonce, lengths, input identities and payload
+checksum before publication. Missing capture, failed apply, worker death or
+capture corruption is unavailable; no expected digest is accepted as an output.
+An unavailable nested receipt has a reason and no bytecode, or is absent if no
+worker result was obtained. Capture failure does not alter ordinary application
+behavior. Capture identifies the supplied compiled object, not kernel readback.
+
+Source identity hashes the UTF-8 C string consumed by compilation. Parameter
+identity is SHA-256 of the little-endian 32-bit pair count followed by sorted
+32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,
+LE32 value-byte count, then value UTF-8 bytes. The worker hashes its private copy
+of the strings passed to `sandbox_set_param`; the host independently recomputes
+the identity. Pair ordering is irrelevant, consumed values are not. Embedded NUL
+inputs cannot qualify as matching complete requested inputs. Consumers must join
+the nonce and worker identity to their own request and compare actual decoded
+bytecode with any independently retained expected object. A source hash alone
+does not establish that equality.
+
 PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md); for the project-level pitch see [README.md](README.md).
 
 Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).

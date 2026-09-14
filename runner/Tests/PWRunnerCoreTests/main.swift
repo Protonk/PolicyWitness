@@ -15,6 +15,7 @@ runCWorkerTests(tk)
 runCWorkerValidatorTests(tk)
 runAugmentTests(tk)
 runListenerConfigTests(tk)
+runAppliedProfileCaptureTests(tk)
 
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))
 exit(tk.exitCode())

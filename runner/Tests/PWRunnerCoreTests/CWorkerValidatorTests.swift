@@ -27,12 +27,18 @@ private func repoRootForCV() -> URL {
 }
 
 private func workerPathForCV() -> String {
+    if let app = ProcessInfo.processInfo.environment["PW_APP_DIR"] {
+        return app + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+    }
     return repoRootForCV()
         .appendingPathComponent("dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner")
         .path
 }
 
 private func validatorPathForCV() -> String {
+    if let app = ProcessInfo.processInfo.environment["PW_APP_DIR"] {
+        return app + "/Contents/MacOS/sb_api_validator"
+    }
     return repoRootForCV()
         .appendingPathComponent("dist/PolicyWitness.app/Contents/MacOS/sb_api_validator")
         .path

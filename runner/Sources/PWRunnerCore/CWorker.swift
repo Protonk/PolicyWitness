@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import CryptoKit
 
 /*
  * CWorker — Swift driver for pw-probe-runner. Owns the host side of
@@ -44,13 +45,16 @@ import Foundation
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
-    public static let abiVersion: UInt32   = 4
+    public static let abiVersion: UInt32   = 5
 
     public static let headerBytes: Int     = 64
     public static let slotBytes: Int       = 8192
     public static let maxSteps: Int        = 256
     public static let paramBytes: Int      = 512
     public static let maxParams: Int       = 1024
+    public static let captureHeaderBytes: Int = 144
+    public static let captureBytes: Int = 1048576
+    public static let captureNonceBytes: Int = 16
 
     // Exec-attempt input bounds (ABI v4). argvBytes is the per-entry
     // byte cap (including the trailing NUL); maxArgv is the number of
@@ -63,7 +67,7 @@ public enum PWShmLayout {
     public static let childOutputBytes: Int = 1024
 
     public static let regionBytes: Int =
-        headerBytes + maxSteps * slotBytes + maxParams * paramBytes
+        headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes
 
     // Header field offsets (in bytes from region base).
     public static let abiVersionOffset: Int    = 0
@@ -75,9 +79,23 @@ public enum PWShmLayout {
     public static let applyRcOffset: Int       = 24
     public static let paramCountOffset: Int    = 28
     public static let applyErrnoOffset: Int    = 32
+    public static let captureRequestedOffset: Int = 36
+    public static let captureNonceOffset: Int = 40
 
     public static let slotsOffset: Int    = headerBytes
     public static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
+    public static let captureOffset: Int = headerBytes + maxSteps * slotBytes + maxParams * paramBytes
+    public static let captureCompletedOffset: Int = 0
+    public static let captureStatusOffset: Int = 4
+    public static let captureProfileTypeOffset: Int = 8
+    public static let captureBytecodeLengthOffset: Int = 12
+    public static let captureWorkerPidOffset: Int = 16
+    public static let captureSourceLengthOffset: Int = 20
+    public static let captureParamCountOffset: Int = 24
+    public static let captureSourceSha256Offset: Int = 32
+    public static let captureParamsSha256Offset: Int = 64
+    public static let captureBytecodeSha256Offset: Int = 96
+    public static let captureRequestNonceOffset: Int = 128
 
     // Slot field offsets (from the slot's base). ABI v4 interposes
     // argv_count + argv between the v3 inputs and the v3 outputs, so
@@ -177,6 +195,9 @@ public struct CWorkerInput {
     public var workerExecutablePath: String
     public var policy: String
     public var params: [CWorkerParam]
+    /// Explicit opt-in: captured bytecode and input hashes are sensitive output.
+    public var captureAppliedProfile: Bool
+    public var captureNonce: String?
     public var slots: [CWorkerSlotInput]
     public var readyByteTimeoutMs: Int
     public var sentinelTimeoutMs: Int
@@ -221,7 +242,9 @@ public struct CWorkerInput {
                 postApplyHangMs: Int? = nil,
                 postApplyKillSignal: Int? = nil,
                 preReadyHangMs: Int? = nil,
-                execChildDeadlineMs: Int? = nil) {
+                execChildDeadlineMs: Int? = nil,
+                captureAppliedProfile: Bool = false,
+                captureNonce: String? = nil) {
         self.workerExecutablePath = workerExecutablePath
         self.policy = policy
         self.params = params
@@ -233,6 +256,8 @@ public struct CWorkerInput {
         self.postApplyKillSignal = postApplyKillSignal
         self.preReadyHangMs = preReadyHangMs
         self.execChildDeadlineMs = execChildDeadlineMs
+        self.captureAppliedProfile = captureAppliedProfile
+        self.captureNonce = captureNonce
     }
 }
 
@@ -268,9 +293,80 @@ public struct CWorkerOutput {
     public var exitCode: Int32?     // nil if signaled
     public var termSignal: Int32?   // nil if clean exit
     public var slots: [CWorkerSlotResult]
+    public var profileCapture: AppliedProfileCapture? = nil
+}
+
+
+func profileSHA256(_ data: Data) -> String {
+    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+}
+
+/// Same specified framing as the C worker, independently implemented. Sorting
+/// fixed-size pair digests avoids depending on Swift/Python Unicode sort order.
+func consumedParamsDigest(_ params: [CWorkerParam]) -> String {
+    func le(_ n: Int) -> Data {
+        var word = UInt32(n).littleEndian
+        return withUnsafeBytes(of: &word) { Data($0) }
+    }
+    let pairs = params.map { p -> Data in
+        let k = Data(p.key.utf8), v = Data(p.value.utf8)
+        return Data(SHA256.hash(data: le(k.count) + k + le(v.count) + v))
+    }.sorted { $0.lexicographicallyPrecedes($1) }
+    return profileSHA256(pairs.reduce(le(params.count), +))
+}
+
+/// Called only for an opted-in run. A checksum, PID or actual-consumed-input
+/// mismatch refuses publication instead of falling back to source-only identity.
+func captureNonceBytes(_ nonce: String?) -> Data? {
+    guard let nonce, nonce.utf8.count == 32,
+        nonce.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { return nil }
+    let chars = Array(nonce)
+    return Data(stride(from: 0, to: chars.count, by: 2).map { UInt8(String(chars[$0...($0 + 1)]), radix: 16)! })
+}
+
+func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
+    applied: Bool, applyRC: Int32, done: Bool, exitCode: Int32?, termSignal: Int32?,
+    source: String, params: [CWorkerParam], nonce: String?) -> AppliedProfileCapture {
+    func unavailable(_ reason: String) -> AppliedProfileCapture {
+        AppliedProfileCapture(status: "unavailable", reason: reason, worker_pid: Int(workerPid))
+    }
+    guard applied && applyRC == 0 else { return unavailable("application_not_successful") }
+    guard done && exitCode == 0 && termSignal == nil else { return unavailable("worker_not_complete") }
+    guard loadAcquire(base, offset: PWShmLayout.captureCompletedOffset) == 1 else {
+        return unavailable("capture_not_complete")
+    }
+    func word(_ offset: Int) -> Int { Int(UInt32(bitPattern: readI32(base, offset: offset))) }
+    func digest(_ offset: Int) -> String {
+        Data(bytes: base.advanced(by: offset), count: 32).map { String(format: "%02x", $0) }.joined()
+    }
+    guard word(PWShmLayout.captureStatusOffset) == 1 else { return unavailable("worker_capture_refused") }
+    guard word(PWShmLayout.captureWorkerPidOffset) == Int(workerPid) else { return unavailable("capture_worker_mismatch") }
+    guard let nonceBytes = captureNonceBytes(nonce),
+        Data(bytes: base.advanced(by: PWShmLayout.captureRequestNonceOffset), count: PWShmLayout.captureNonceBytes) == nonceBytes else {
+        return unavailable("capture_nonce_mismatch")
+    }
+    let length = word(PWShmLayout.captureBytecodeLengthOffset)
+    guard word(PWShmLayout.captureProfileTypeOffset) == 0 && length > 0 && length <= PWShmLayout.captureBytes else {
+        return unavailable("capture_extent_or_type_invalid")
+    }
+    let bytes = Data(bytes: base.advanced(by: PWShmLayout.captureHeaderBytes), count: length)
+    guard profileSHA256(bytes) == digest(PWShmLayout.captureBytecodeSha256Offset) else {
+        return unavailable("capture_bytecode_digest_mismatch")
+    }
+    guard word(PWShmLayout.captureSourceLengthOffset) == source.utf8.count
+        && digest(PWShmLayout.captureSourceSha256Offset) == profileSHA256(Data(source.utf8))
+        && word(PWShmLayout.captureParamCountOffset) == params.count
+        && digest(PWShmLayout.captureParamsSha256Offset) == consumedParamsDigest(params) else {
+        return unavailable("capture_consumed_input_mismatch")
+    }
+    return AppliedProfileCapture(status: "captured", worker_pid: Int(workerPid), request_nonce: nonce, profile_type: 0,
+        bytecode_length: length, bytecode_sha256: profileSHA256(bytes), bytecode_b64: bytes.base64EncodedString(),
+        source_sha256: digest(PWShmLayout.captureSourceSha256Offset), source_length: source.utf8.count,
+        params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
 }
 
 public enum CWorkerRunError: Error, CustomStringConvertible {
+    case captureNonceInvalid
     case slotCountExceeded(Int)
     case paramCountExceeded(Int)
     case slotInputTooLong(field: String, stepId: String, max: Int)
@@ -285,6 +381,8 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
 
     public var description: String {
         switch self {
+        case .captureNonceInvalid:
+            return "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce"
         case .slotCountExceeded(let n):
             return "request has \(n) probe steps; pw-probe-runner ABI caps at \(PWShmLayout.maxSteps)"
         case .paramCountExceeded(let n):
@@ -329,6 +427,9 @@ public typealias CWorkerPostAppliedHook = (pid_t) -> Void
 
 public func runCWorker(_ input: CWorkerInput,
                        postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
+    if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
+        return .failure(.captureNonceInvalid)
+    }
     // ---- Validation: bound the inputs to ABI caps before we touch shm.
     if input.slots.count > PWShmLayout.maxSteps {
         return .failure(.slotCountExceeded(input.slots.count))
@@ -438,6 +539,10 @@ public func runCWorker(_ input: CWorkerInput,
     writeU32(rawBase, offset: PWShmLayout.abiVersionOffset, PWShmLayout.abiVersion)
     writeU32(rawBase, offset: PWShmLayout.stepCountOffset, UInt32(input.slots.count))
     writeU32(rawBase, offset: PWShmLayout.paramCountOffset, UInt32(input.params.count))
+    writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
+    if input.captureAppliedProfile, let nonce = captureNonceBytes(input.captureNonce) {
+        nonce.copyBytes(to: rawBase.advanced(by: PWShmLayout.captureNonceOffset), count: nonce.count)
+    }
 
     // ---- Populate slots.
     for (i, slot) in input.slots.enumerated() {
@@ -755,7 +860,12 @@ public func runCWorker(_ input: CWorkerInput,
         sentSigkill: sentSigkill,
         exitCode: exitCode,
         termSignal: termSignal,
-        slots: slotResults
+        slots: slotResults,
+        profileCapture: input.captureAppliedProfile ? decodeProfileCapture(
+            rawBase.advanced(by: PWShmLayout.captureOffset), workerPid: pid,
+            applied: sawApplied, applyRC: applyRC, done: sawDone,
+            exitCode: exitCode, termSignal: termSignal, source: input.policy, params: input.params,
+            nonce: input.captureNonce) : nil
     ))
 }
 

@@ -39,6 +39,9 @@ int main(void) {
     printf("PW_SHM_CHILD_OUTPUT_BYTES=%u\n",   PW_SHM_CHILD_OUTPUT_BYTES);
     printf("PW_SHM_PARAM_KEY_MAX=%u\n",        PW_SHM_PARAM_KEY_MAX);
     printf("PW_SHM_PARAM_VALUE_MAX=%u\n",      PW_SHM_PARAM_VALUE_MAX);
+    printf("PW_SHM_CAPTURE_HEADER_BYTES=%u\n", PW_SHM_CAPTURE_HEADER_BYTES);
+    printf("PW_SHM_CAPTURE_BYTES=%u\n", PW_SHM_CAPTURE_BYTES);
+    printf("PW_SHM_CAPTURE_NONCE_BYTES=%u\n", PW_SHM_CAPTURE_NONCE_BYTES);
 
     /* sizeof cross-check: each per-struct budget macro must equal
      * the actual sizeof of the struct it bounds. The header carries
@@ -47,6 +50,7 @@ int main(void) {
     printf("sizeof.pw_shm_header_t=%zu\n",     sizeof(pw_shm_header_t));
     printf("sizeof.pw_shm_slot_t=%zu\n",       sizeof(pw_shm_slot_t));
     printf("sizeof.pw_shm_param_t=%zu\n",      sizeof(pw_shm_param_t));
+    printf("sizeof.pw_shm_capture_t=%zu\n", sizeof(pw_shm_capture_t));
 
     /* Header field offsets. */
     printf("offsetof.pw_shm_header_t.abi_version=%zu\n",    offsetof(pw_shm_header_t, abi_version));
@@ -58,6 +62,20 @@ int main(void) {
     printf("offsetof.pw_shm_header_t.apply_rc=%zu\n",       offsetof(pw_shm_header_t, apply_rc));
     printf("offsetof.pw_shm_header_t.param_count=%zu\n",    offsetof(pw_shm_header_t, param_count));
     printf("offsetof.pw_shm_header_t.apply_errno=%zu\n",    offsetof(pw_shm_header_t, apply_errno));
+    printf("offsetof.pw_shm_header_t.capture_requested=%zu\n", offsetof(pw_shm_header_t, capture_requested));
+    printf("offsetof.pw_shm_header_t.capture_nonce=%zu\n", offsetof(pw_shm_header_t, capture_nonce));
+
+    printf("offsetof.pw_shm_capture_t.completed=%zu\n", offsetof(pw_shm_capture_t, completed));
+    printf("offsetof.pw_shm_capture_t.status=%zu\n", offsetof(pw_shm_capture_t, status));
+    printf("offsetof.pw_shm_capture_t.profile_type=%zu\n", offsetof(pw_shm_capture_t, profile_type));
+    printf("offsetof.pw_shm_capture_t.bytecode_length=%zu\n", offsetof(pw_shm_capture_t, bytecode_length));
+    printf("offsetof.pw_shm_capture_t.worker_pid=%zu\n", offsetof(pw_shm_capture_t, worker_pid));
+    printf("offsetof.pw_shm_capture_t.source_length=%zu\n", offsetof(pw_shm_capture_t, source_length));
+    printf("offsetof.pw_shm_capture_t.param_count=%zu\n", offsetof(pw_shm_capture_t, param_count));
+    printf("offsetof.pw_shm_capture_t.source_sha256=%zu\n", offsetof(pw_shm_capture_t, source_sha256));
+    printf("offsetof.pw_shm_capture_t.params_sha256=%zu\n", offsetof(pw_shm_capture_t, params_sha256));
+    printf("offsetof.pw_shm_capture_t.bytecode_sha256=%zu\n", offsetof(pw_shm_capture_t, bytecode_sha256));
+    printf("offsetof.pw_shm_capture_t.request_nonce=%zu\n", offsetof(pw_shm_capture_t, request_nonce));
 
     /* Slot field offsets. */
     printf("offsetof.pw_shm_slot_t.step_id=%zu\n",            offsetof(pw_shm_slot_t, step_id));
@@ -87,6 +105,8 @@ int main(void) {
         (size_t)PW_SHM_HEADER_BYTES);
     printf("region.params_offset=%zu\n",
         (size_t)PW_SHM_HEADER_BYTES + (size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES);
+    printf("region.capture_offset=%zu\n", (size_t)PW_SHM_HEADER_BYTES
+        + (size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES + (size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES);
 
     return 0;
 }

@@ -53,6 +53,7 @@
 #include <unistd.h>
 
 #include "pw_probe_runner_abi.h"
+#include "pw_profile_capture.h"
 
 /*
  * Bounded child deadline for exec attempts. The worker enforces a
@@ -1154,6 +1155,13 @@ int main(int argc, char **argv) {
      * which sandbox_compile_string accepts. Any sandbox_set_param
      * failure is fatal — silently dropping a param could change
      * which subpath/value the policy denies. */
+    /* Snapshot once: these exact C strings feed both sandbox_set_param and the
+     * capture identity, even if a buggy host subsequently changes shared input. */
+    static pw_shm_param_t consumed_params[PW_SHM_MAX_PARAMS];
+    unsigned char capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES];
+    memcpy(capture_nonce, hdr->capture_nonce, sizeof(capture_nonce));
+    memcpy(consumed_params, params, param_count * sizeof(*params));
+    params = consumed_params;
     void *params_obj = NULL;
     if (param_count > 0) {
         params_obj = sandbox_create_params();
@@ -1165,6 +1173,13 @@ int main(int argc, char **argv) {
             spin_for_exit(hdr);
         }
         for (uint32_t i = 0; i < param_count; i++) {
+            if (!memchr(params[i].key, 0, sizeof(params[i].key))
+                    || !memchr(params[i].value, 0, sizeof(params[i].value))) {
+                sandbox_free_params(params_obj);
+                hdr->apply_rc = -1;
+                atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+                spin_for_exit(hdr);
+            }
             int srv = sandbox_set_param(params_obj, params[i].key, params[i].value);
             if (srv != 0) {
                 fprintf(stderr,
@@ -1193,6 +1208,17 @@ int main(int argc, char **argv) {
         hdr->apply_rc = -1;
         atomic_store_explicit(&hdr->done, 1u, memory_order_release);
         spin_for_exit(hdr);
+    }
+
+    /* Capture the same object we are about to apply, before policy restrictions.
+     * Output has no pipe backpressure and is published independently of apply.
+     * A failed capture leaves policy execution unchanged and reports unavailable. */
+    if (hdr->capture_requested == 1u) {
+        unsigned char *capture_base = (unsigned char *)hdr + PW_SHM_HEADER_BYTES
+            + PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES + PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES;
+        pw_capture_profile((pw_shm_capture_t *)capture_base,
+            capture_base + PW_SHM_CAPTURE_HEADER_BYTES, profile,
+            policy_buf, strlen(policy_buf), params, param_count, capture_nonce);
     }
 
     /* Pre-ready hang test seam: model a slow compile that overruns the
