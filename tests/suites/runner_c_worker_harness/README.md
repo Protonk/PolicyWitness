@@ -125,7 +125,16 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
 
 `harness.c` is compiled once per suite run into
 `tests/out/.../harness.runner_c_worker`. It uses the `PWRunner.xpc`
-bundle's copy of `pw-probe-runner`.
+bundle's copy of `pw-probe-runner`. The compiler recipe lives in
+`tests/fixtures/worker_harness/build.sh`, shared with the inheritance suite
+and its mutation controls. Builds use the current ABI header, so the app
+must also be rebuilt after an ABI change.
+
+Every case uses `run_harness_case` for prerequisites, compilation, and capture,
+then retains its own Python assertions. `finish_from_assert_log` records their
+result. The build helper fails explicitly even inside conditional callers;
+a failed build cannot fall through to an older harness executable. Independent
+equipment-failure controls live in `shell_helpers/worker_setup`.
 
 ## Artifacts
 
@@ -138,3 +147,5 @@ Each test_id writes:
 - `harness.stderr`: stderr from the harness (and the worker, since
   stderr is inherited).
 - `assert.log`: stdout/stderr of the Python assertion block.
+
+The first case that compiles the harness also retains `build.log`.

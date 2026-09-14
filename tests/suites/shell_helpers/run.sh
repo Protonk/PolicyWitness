@@ -30,3 +30,12 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_finalizers.p
   test_fail "finalizer controls failed; see artifacts/assertions.log"
 fi
 test_pass "result helpers preserve terminal evidence, literal data, logging, and exit behavior"
+
+test_begin shell_helpers worker_setup
+test_step controls "exercise the worker suite with failed builds, failed harnesses, and independent transcripts"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_worker_setup.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "worker setup controls failed; see artifacts/assertions.log"
+fi
+test_pass "worker cases share setup; equipment failures stop before assertions and preserve evidence"

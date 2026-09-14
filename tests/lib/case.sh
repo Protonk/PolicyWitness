@@ -36,7 +36,7 @@ test_run_logged() {
 test_build_fixture() {
   local build_script="$1"
   local output="$2"
-  local log_path="${PW_TEST_ARTIFACTS}/build.log"
+  local log_path="${3:-${PW_TEST_ARTIFACTS}/build.log}"
   test_run_logged "${log_path}" "fixture build failed" bash "${build_script}" "${output}"
   if [[ ! -f "${output}" || ! -x "${output}" ]]; then
     test_fail "fixture build produced no executable file: ${output} (log: ${log_path})"

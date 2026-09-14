@@ -18,6 +18,8 @@ deterministic, and checked into the repo so tests are hermetic.
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.
+- `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
+  independent builder/harness stand-ins for shell setup controls.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and
   opt-in paths (single-step SBPL cases).
 - `runner_smoke/`: template-based fixtures used by smoke and runner verification.

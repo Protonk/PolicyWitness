@@ -35,6 +35,10 @@ fails explicitly if the checkout/output path is too long.
 Artifacts include specimens/envelopes, raw inspection output, the worker's
 launch-state report, parsed observations, and build/assertion logs. Snapshots
 are saved before evaluating clean-state assertions, so leaks remain reviewable.
+Both entry points build the exec observer and worker harness through their
+shared fixture scripts. `build.log` retains observer compilation and
+`harness-build.log` retains harness compilation; their short output paths are
+kept below the worker's argv bound. Failed builds stop before execution.
 
 ## Development mutation controls
 

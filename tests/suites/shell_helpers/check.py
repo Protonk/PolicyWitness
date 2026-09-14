@@ -16,6 +16,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     cases = [
         ('success', {}, ['build', 'check', 'later'], 'pass', ()),
+        ('custom_build_log', {}, ['build', 'check', 'later'], 'pass', ()),
+        ('custom_build_log_failure', {'build_exit': 17}, ['build'], 'fail', ('exit 17', 'another build.log')),
         ('binary_override', {}, ['build', 'check', 'later'], 'pass', ()),
         ('missing_app', {}, [], 'fail', ('built policy-witness',)),
         ('nonexecutable_app', {}, [], 'fail', ('not executable',)),
@@ -96,6 +98,9 @@ def main():
             ('start', 'test_start'), (status, 'test_end')], (name, events)
 
         logs = {'build': 'build.log', 'check': 'assert custom.log', 'later': 'later.log'}
+        if name.startswith('custom_build_log'):
+            logs['build'] = 'another build.log'
+            assert (artifacts / 'build.log').read_bytes() == b'prior build log\n', name
         for phase in phases:
             log = artifacts / logs[phase]
             expected_bytes = f"{phase}: ok {config['marker']}\n{phase}: stderr {config['marker']}\n".encode()

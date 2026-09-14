@@ -11,7 +11,13 @@ if [[ "${CONTROL_MODE}" == optional_skip ]]; then
 fi
 test_require_pw
 test_step build "controlled fixture build"
-test_build_fixture "${FIXTURE_DIR}/build.sh" "${PW_TEST_ARTIFACTS}/helper"
+if [[ "${CONTROL_MODE}" == custom_build_log* ]]; then
+  printf 'prior build log\n' >"${PW_TEST_ARTIFACTS}/build.log"
+  test_build_fixture "${FIXTURE_DIR}/build.sh" "${PW_TEST_ARTIFACTS}/helper" \
+    "${PW_TEST_ARTIFACTS}/another build.log"
+else
+  test_build_fixture "${FIXTURE_DIR}/build.sh" "${PW_TEST_ARTIFACTS}/helper"
+fi
 test_step check "controlled Python checker"
 CHECK_LOG="${PW_TEST_ARTIFACTS}/assert custom.log"
 if [[ "${CONTROL_MODE}" == log_open_failure ]]; then

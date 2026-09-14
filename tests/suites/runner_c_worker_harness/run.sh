@@ -3,10 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_c_worker_harness"
-SUITE_DIR="${ROOT_DIR}/tests/suites/runner_c_worker_harness"
 ABI_DIR="${ROOT_DIR}/controller/tools/pw_probe_runner"
 
 # pw-probe-runner lives bundle-locally inside each XPC service.
@@ -29,23 +28,14 @@ check_prereqs() {
   return 0
 }
 
-build_harness() {
-  /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -O2 -std=c11 \
-    -I "${ABI_DIR}" \
-    -o "${HARNESS_BIN}" \
-    "${SUITE_DIR}/harness.c"
-}
-
 ensure_harness() {
   if [[ "${harness_built}" -eq 0 ]]; then
-    build_harness
+    test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_harness/build.sh" "${HARNESS_BIN}"
     harness_built=1
   fi
 }
 
-# Shared spawn boilerplate for the scenarios added later in this file
-# (the original six cases predate it and keep their inline form). Begins
-# the test, runs one harness scenario, and leaves the JSON at RESULT_FILE.
+# Begin the case, run one harness scenario, and leave its JSON at RESULT_FILE.
 # Returns non-zero (after test_skip) when prereqs are missing so the
 # caller can `|| return 0`; calls test_fail (which exits) if the harness
 # itself errors.
@@ -59,15 +49,12 @@ run_harness_case() {
   fi
   ensure_harness
   RESULT_FILE="${PW_TEST_ARTIFACTS}/result.json"
-  set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${scenario}" >"${RESULT_FILE}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
+  if "${HARNESS_BIN}" "${WORKER_PATH}" "${scenario}" >"${RESULT_FILE}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"; then
+    return 0
+  else
+    local rc=$?
     test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 1
   fi
-  return 0
 }
 
 # Turn a python assertion exit code into a pass/fail. The python block is
@@ -111,28 +98,10 @@ PY
 # ---- test_id: happy_default_allow ----------------------------------------
 
 run_happy_default_allow() {
-  local test_id="happy_default_allow"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "pw-probe-runner under (allow default): read /etc/hosts succeeds, sentinels fire, clean exit"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "happy_default_allow" "happy_default_allow" \
+    "pw-probe-runner under (allow default): read /etc/hosts succeeds, sentinels fire, clean exit" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -157,40 +126,16 @@ print(f"ok: ready+applied+done+clean_exit; /etc/hosts opened (observed={s['obser
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: bare_deny_default ------------------------------------------
 
 run_bare_deny_default() {
-  local test_id="bare_deny_default"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "pw-probe-runner under bare (deny default): worker still completes; slot reports kernel deny"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "bare_deny_default" "bare_deny_default" \
+    "pw-probe-runner under bare (deny default): worker still completes; slot reports kernel deny" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -220,40 +165,16 @@ print(f"ok: worker survived (deny default); slot reports kernel deny errno={s['e
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: exit_byte_clean --------------------------------------------
 
 run_exit_byte_clean() {
-  local test_id="exit_byte_clean"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "worker observes exit_requested in shm and _exit(0)s before harness SIGKILL"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "exit_byte_clean" "exit_byte_clean" \
+    "worker observes exit_requested in shm and _exit(0)s before harness SIGKILL" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -267,40 +188,16 @@ print("ok: worker _exit(0) in response to exit_requested, no SIGKILL needed")
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: max_slots_deny_default ---------------------------------------
 
 run_max_slots_deny_default() {
-  local test_id="max_slots_deny_default"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "worker completes all 256 shared-memory slots under bare (deny default)"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "max_slots_deny_default" "max_slots_deny_default" \
+    "worker completes all 256 shared-memory slots under bare (deny default)" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -327,40 +224,16 @@ print("ok: 256 slots completed across the full shared-memory region under deny-d
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: sigkill_fallback ---------------------------------------------
 
 run_sigkill_fallback() {
-  local test_id="sigkill_fallback"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "host SIGKILL fallback reaps worker when clean exit byte is withheld"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "sigkill_fallback" "sigkill_fallback" \
+    "host SIGKILL fallback reaps worker when clean exit byte is withheld" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -379,40 +252,16 @@ print("ok: host SIGKILL fallback reaped worker after withheld exit byte")
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: params_round_trip --------------------------------------------
 
 run_params_round_trip() {
-  local test_id="params_round_trip"
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "harness" "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc/hosts when TARGET=/private/etc"
-
-  if ! check_prereqs; then
-    test_skip "missing dist/PolicyWitness.app or pw_probe_runner_abi.h — run ./build.sh first" "{}"
-    return 0
-  fi
-  ensure_harness
-
-  local result_file="${PW_TEST_ARTIFACTS}/result.json"
+  run_harness_case "params_round_trip" "params_round_trip" \
+    "policy.params reach the kernel: (subpath (param \"TARGET\")) denies /etc/hosts when TARGET=/private/etc" || return 0
   set +e
-  "${HARNESS_BIN}" "${WORKER_PATH}" "${test_id}" >"${result_file}" 2>"${PW_TEST_ARTIFACTS}/harness.stderr"
-  local rc=$?
-  set -e
-  if [[ "${rc}" -ne 0 ]]; then
-    test_fail "harness exited rc=${rc}" "{\"stderr\":\"${PW_TEST_ARTIFACTS}/harness.stderr\"}"
-    return 0
-  fi
-
-  set +e
-  /usr/bin/python3 - "${result_file}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+  /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -459,13 +308,7 @@ print(f"ok: TARGET=/private/etc round-tripped; kernel denied /etc/hosts with err
 PY
   local arc=$?
   set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${PW_TEST_ARTIFACTS}/assert.log" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${PW_TEST_ARTIFACTS}/assert.log\",\"result\":\"${result_file}\"}"
-    return 0
-  fi
-  test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/assert.log")" "{\"result\":\"${result_file}\"}"
+  finish_from_assert_log "${arc}"
 }
 
 # ---- test_id: unlink_allow / unlink_deny (PW_ATTEMPT_FILE_UNLINK) ----------

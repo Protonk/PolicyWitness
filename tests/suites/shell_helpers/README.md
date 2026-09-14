@@ -23,8 +23,10 @@ The case owns its suite/test identity, steps, checker arguments, and final
   argv and retains combined stdout/stderr at the supplied path. A nonzero exit
   prints the log, records failure with the command status and log path, and exits
   the case. Failure to open the log also fails before the command runs.
-- `test_build_fixture <build script> <output>` invokes `bash <script> <output>`,
-  retains `build.log`, and requires an executable file at the output path.
+- `test_build_fixture <build script> <output> [log]` invokes `bash <script> <output>`,
+  retains the supplied log (default `build.log`), and requires an executable
+  file at the output path. Separate logs preserve evidence for multiple builds
+  in one case, including when a later build fails.
   Compiler flags and the build recipe stay in the existing fixture build script.
 - `test_check_python <log> <failure message> <script> [args...]` runs the checker
   with `/usr/bin/python3` through `test_run_logged`. Missing commands or checker
@@ -32,7 +34,8 @@ The case owns its suite/test identity, steps, checker arguments, and final
 
 Callers include `runner_validator_failure`, `runner_exec_lifecycle`,
 `runner_specimen_isolation`, `runner_exec_dac`, `runner_live_worker_identity`,
-`sbpl_allowdeny_consistency`, `exec_fixture`, and `run_capture`. Each supplies
+`sbpl_allowdeny_consistency`, `runner_c_worker_harness`, `runner_exec_inheritance`,
+`exec_fixture`, and `run_capture`. Each supplies
 its own `build.log`, `assert.log`, or `assertions.log` artifact paths.
 
 ## Controls
@@ -112,3 +115,17 @@ the private writer. Elapsed time is bounded by the enclosing process duration;
 the event and report must contain the same nonnegative integer duration.
 Artifacts retain inputs, raw streams, exit status, receipts, event/report files,
 and the control inventory. Intentional failures remain in isolated outputs.
+
+## Worker-suite setup
+
+The `worker_setup` case runs disposable copies of the actual C-worker suite
+with independent builder/harness programs from `fixtures/worker_harness/`.
+Controls cover a failed rebuild with an old executable still present, a
+successful builder producing no executable, a harness printing valid JSON then
+exiting nonzero, malformed output, a failed observation, and failure after an
+earlier case passes. Equipment failures must stop before the assertion stage.
+
+Independent receipts check the exact output path, worker/scenario arguments,
+and compilation only once across two cases. Case identities, reports, raw
+stdout/stderr, and build logs remain distinct. These controls exercise the
+real conditional calls where errexit alone cannot enforce build failures.
