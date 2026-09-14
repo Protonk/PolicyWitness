@@ -27,3 +27,7 @@ Python 3, without an app dependency. Runs in the default test battery.
 Run `tests/run.sh --suite exec_fixture` outside an automation sandbox.
 Artifacts include the build/assertion logs and PID/group/exit observations
 for each lifecycle control. Missing prerequisites fail.
+
+The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
+Case IDs, checker arguments, and artifact paths remain defined by this suite.
+The `shell_helpers` controls verify failure propagation and report/log behavior.

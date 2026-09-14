@@ -65,6 +65,7 @@ prerequisites should fail, not skip.
 | --- | --- | --- | --- | --- | --- |
 | `preflight` | Baseline | Codesign + entitlements metadata matches the built app bundle | `dist/PolicyWitness.app` | — (missing app or codesign issues should fail) | `tests/out/suites/preflight/.../preflight.json` |
 | `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. | Python 3 | — (manifest disagreement is always a fail) | `tests/out/suites/source_drift/.../check.log` |
+| `shell_helpers` | Baseline | Shell case helpers retain literal arguments, logs and case identity; missing prerequisites and failed builds/checkers produce failed reports and stop later stages | Bash + Python 3 | — | Independent command receipts and subprocess observations; no app or toolchain. Covers absent commands/build products and preserves the separate optional-app skip behavior. |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | — (missing toolchain should fail) | `tests/out/suites/unit/.../cargo-test-bins.log` |
 | `runner_unit` | Baseline | Swift runner internals (`applySandboxPolicy`, the `CWorkerOrchestrator` envelope invariants, the `computeDrift` validator-vs-kernel truth table, the `classify` worker/validator→normalized-outcome table, the `buildAttemptResult` (kind, action, slot)→attempt-outcome table, prediction_unavailable host-mirror, CWorker + ValidatorClient drivers) are correct at the unit level. Covers paths that no real specimen can reach — including the `runner_failed`, `validator_no_reply`, and `runner_sandbox_denied` outcomes that have no e2e seam — and pins the attempt-outcome mapping as a table (so its two stacked layers can't silently disagree) rather than relying on the scattered per-outcome e2e suites. | `swift` on PATH | `swift` toolchain or `runner/Package.swift` missing | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Built via `runner/Package.swift`. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | — (missing app should fail) | Uses fixtures under `tests/fixtures/pw_runner/` |
@@ -100,6 +101,16 @@ prerequisites should fail, not skip.
 | `witness_contract` | Contract | Pins the load-bearing behaviors PolicyWitness contracts to provide: verdicts + attempts + validator failures attributed + removed fields rejected + test seam functioning + audit-rule enforcement. | Built app + XPC | off the default battery (suite is intentionally permissive about environment shape); run on demand | Most cases now pass post-reshape; `happy_path_baseline` is the regression sentinel and should always pass. End-to-end drift *surfacing* is still uncovered here — no current op+filter combination produces clean userland-vs-kernel disagreement through a real specimen (all known cases route to `prediction_unavailable`). The drift *classifier logic* itself (the asymmetric truth table) is unit-tested directly in `runner_unit`'s `computeDrift` table, which drives synthetic verdict/attempt pairs no specimen can currently produce. |
 
 ## Conventions
+
+### Shell case setup and checking
+
+`tests/lib/case.sh` provides baseline prerequisite checks, logged command
+execution, fixture builds through their existing scripts, and Python checker
+invocation. Cases retain their steps, argument lists, artifact paths, and final
+pass statements. A failed stage writes a failed report and exits immediately;
+it does not depend on the wrapper's `set -e`. Optional-app skips remain an
+explicit choice through the existing `testlib.sh` helpers. Direct controls live
+in `shell_helpers`; see `tests/suites/shell_helpers/README.md` for the API.
 
 ### CLI capture
 

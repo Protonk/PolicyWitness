@@ -31,3 +31,7 @@ CLI execution uses `tests/lib/run_capture.py`. The shared capture retains
 OS exit events and the later file write before reading JSON or running cleanup;
 the public exec-deadline assertion remains here. Direct capture controls live in
 `run_capture`.
+
+The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
+Case IDs, checker arguments, and artifact paths remain defined by this suite.
+The `shell_helpers` controls verify failure propagation and report/log behavior.

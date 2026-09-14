@@ -45,3 +45,7 @@ Direct capture controls live in the `run_capture` suite.
 
 The matching `witness_contract` scripts call `case.sh` with their original suite
 name. This keeps their existing entry points while sharing the same assertions.
+
+The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
+Case IDs, checker arguments, and artifact paths remain defined by this suite.
+The `shell_helpers` controls verify failure propagation and report/log behavior.

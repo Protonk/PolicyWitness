@@ -52,3 +52,7 @@ harness intervention in each run's `capture.json`. The test owns the gates,
 independent observations, and expected results. Capture cleanup runs after those
 assertions, and JSON is decoded only after the independent file observations.
 Direct capture controls live in the `run_capture` suite.
+
+The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
+Case IDs, checker arguments, and artifact paths remain defined by this suite.
+The `shell_helpers` controls verify failure propagation and report/log behavior.

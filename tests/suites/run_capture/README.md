@@ -54,3 +54,7 @@ its child. B must complete while A still answers, without changing A's artifacts
 
 Artifacts retain every specimen, raw output, capture metadata, the fixture's
 argument receipt, `controls.json`, and `assertions.log`.
+
+The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
+Case IDs, checker arguments, and artifact paths remain defined by this suite.
+The `shell_helpers` controls verify failure propagation and report/log behavior.

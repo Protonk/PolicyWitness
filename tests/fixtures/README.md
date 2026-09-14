@@ -5,6 +5,9 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `shell_case/`: independently controlled builder/checker commands and a shell
+  case for prerequisite, failure propagation, log, and report controls in
+  `shell_helpers`.
 - `capture/`: independent CLI-shaped byte emitter with a socket gate for
   capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
 - `validator/`: checked-in NDJSON validator program and partial-reply
