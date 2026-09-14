@@ -3,14 +3,20 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_filter_sysctl_name"
-PW_TEST_ID="prediction_unavailable_attempt_observed"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
-test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "sysctl-name probe — sandbox_check skipped, attempt observed"
+# Exercise all three caller contracts without needing the app.
+test_begin "${PW_TEST_SUITE}" checker_controls
+test_step checker "unavailable predictions must retain step identity and attempt checks"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter checker controls failed" \
+  "${ROOT_DIR}/tests/suites/runner_filter_sysctl_name/checker_controls.py" "${PW_TEST_ARTIFACTS}"
+test_pass "all three filter adapters accept valid evidence and reject broken channels"
+
+test_begin "${PW_TEST_SUITE}" prediction_unavailable_attempt_observed
+test_step "run" "sysctl-name probe — prediction unavailable, attempt observed"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -45,7 +51,7 @@ PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>"${PW_TEST_ARTIFACTS}/pw.stderr"
 RC=$?
 set -e
 
@@ -53,54 +59,8 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "specimen should succeed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\"}"
 fi
 
-ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
-set +e
-/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
-import json, sys
-from pathlib import Path
-env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-runner = env.get("data", {}).get("runner_result") or {}
-steps = runner.get("steps") or []
-if not steps:
-    raise SystemExit(f"expected 1 step, got 0 (outcome={runner.get('normalized_outcome')!r})")
-sb = steps[0].get("sandbox_check") or {}
-outcome = sb.get("outcome")
-if outcome != "prediction_unavailable":
-    raise SystemExit(
-        f"expected step.sandbox_check.outcome=prediction_unavailable for "
-        f"sysctl_name (got {outcome!r}). The runner did not recognize the "
-        f"filter kind or the short-circuit was bypassed."
-    )
-if sb.get("rc") != -1:
-    raise SystemExit(
-        f"expected step.sandbox_check.rc=-1 sentinel for prediction_unavailable "
-        f"(got {sb.get('rc')!r}); rc==0 would falsely look like allow"
-    )
-if sb.get("filter_type_id") is not None:
-    raise SystemExit(f"expected filter_type_id null, got {sb.get('filter_type_id')!r}")
-if sb.get("errno") is not None:
-    raise SystemExit(f"expected errno null, got {sb.get('errno')!r}")
-
-attempt = steps[0].get("attempt") or {}
-if attempt.get("outcome") == "unsupported":
-    raise SystemExit(
-        f"sysctl attempt is using an unsupported action; the runner "
-        f"returned outcome=unsupported. Got: {attempt!r}"
-    )
-if attempt.get("outcome") != "sysctl_failed":
-    raise SystemExit(f"expected attempt.outcome=sysctl_failed, got {attempt!r}")
-if attempt.get("rc") is None:
-    raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
-if attempt.get("errno") not in (1, 13):
-    raise SystemExit(f"expected EPERM/EACCES from denied sysctl read, got {attempt!r}")
-if steps[0].get("drift") is not None:
-    raise SystemExit(f"expected drift=null for prediction_unavailable sysctl check, got {steps[0].get('drift')!r}")
-PY
-ASSERT_RC=$?
-set -e
-if [[ "${ASSERT_RC}" -ne 0 ]]; then
-  MSG="$(head -5 "${ASSERT_LOG}" | tr '\n' ' ' | sed 's/"/\\"/g')"
-  test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
-fi
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter prediction/attempt contract failed" \
+  "${ROOT_DIR}/tests/lib/unavailable_prediction.py" "${RUN_STDOUT}" \
+  --step-id kern_osrelease --operation sysctl-read --attempt sysctl_denied
 
 test_pass "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed" "{}"

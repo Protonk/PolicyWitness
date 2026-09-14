@@ -1,55 +1,29 @@
 # runner_filter_iokit_registry_entry_class
 
-Pins the contract for the `(iokit-open-service,
-iokit_registry_entry_class)` pair: the runner accepts the filter in
-specimens, deliberately skips the `sandbox_check` userland predicate
-(which is empirically known to drift from kernel enforcement for this
-op+filter, see
-`tests/suites/witness_contract/harness/verify_filter_id.sh`), and
-emits `outcome="prediction_unavailable"` with `rc=-1` (sentinel)
-instead.
+Exercises `(iokit-open-service, iokit_registry_entry_class)` with a policy denying
+`IOSurfaceRoot`. The response must contain exactly the requested `iosurface_open`
+step and report `prediction_unavailable` for that operation.
 
-## What this suite does NOT cover
+The suite uses the [shared filter contract](../runner_filter_sysctl_name/README.md#shared-filter-contract):
+a successful run envelope, explicit nullable evidence, integer prediction
+`rc=-1`, null `filter_type_id`, null prediction `errno`, and null `drift`.
+The paired file `open_read` of `/etc/hosts` must report a supported outcome
+(`ok` or `open_failed`) and an integer `attempt.rc` agreeing with `exit_code`.
+The checker continues attempt validation even when prediction evidence is broken.
 
-The attempt slot in this specimen is a benign file `open_read`
-placeholder — there is no Channel A coverage of the
-`iokit-open-service` operation today (the C probe-runner doesn't
-implement iokit attempts yet). The suite asserts
-`attempt.outcome != "unsupported"` so a regression to an
-unsupported action would fail the suite loudly rather than silently
-passing.
+The file attempt is a placeholder. It exercises supported attempt reporting and
+does not establish IOKit enforcement. The suite does not require the file open
+to succeed or assert internal prediction dispatch behavior.
 
-## Invariants
+## Fixtures and artifacts
 
-- `validateSandboxChecks` accepts `iokit_registry_entry_class` as a
-  filter kind alongside `none`, `path`, `global_name`, `local_name`.
-- `runSandboxCheck` short-circuits before calling `sandbox_check` for
-  this (op, filter) pair. The result has
-  `outcome == "prediction_unavailable"`, `rc == -1` (sentinel),
-  `filter_type_id == null`, `errno == null`, `error == null`.
-- The attempt portion of the step runs to completion with a supported
-  action so the envelope shape is exercised.
+`run.sh` generates the specimen inline. Artifacts under
+`tests/out/suites/runner_filter_iokit_registry_entry_class/<test_id>/artifacts/`
+retain the specimen, raw `run.json`, `pw.stderr`, and assertion log.
+Independent checker controls for all three filter callers run in
+`runner_filter_sysctl_name`, including valid file failures and rejection of
+unsupported or missing attempt evidence alongside unavailable predictions.
 
-## Success criteria
-
-- `result.ok == true`.
-- `runner_result.steps[0].sandbox_check.outcome == "prediction_unavailable"`.
-- `runner_result.steps[0].sandbox_check.rc == -1`.
-- `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
-  `attempt.rc` is populated.
-
-## Fixtures
-
-- Specimen generated inline by `run.sh` using IOSurfaceRoot as the
-  iokit class (the discriminator confirmed openable on Apple Silicon
-  during verify_filter_id discovery).
-
-## Artifacts
-
-- `tests/out/suites/runner_filter_iokit_registry_entry_class/<test_id>/artifacts/*`
-
-## Run
-
-```
+```sh
 ./tests/run.sh --suite runner_filter_iokit_registry_entry_class
 ```

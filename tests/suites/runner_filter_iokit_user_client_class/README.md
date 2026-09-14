@@ -1,57 +1,29 @@
 # runner_filter_iokit_user_client_class
 
-Same contract as `runner_filter_iokit_registry_entry_class` and
-`runner_filter_sysctl_name`, applied to the `iokit_user_client_class`
-filter on `iokit-open-user-client`. Empirically verified
-2026-05-29 with `verify_filter_id.sh iokit_open_user_client
-iokit-user-client-class IOSurfaceRootUserClient --probe-target
-IOSurfaceRoot`: kernel enforces the deny but no `sandbox_check`
-filter ID in 1..200 produces a verdict matching the kernel. The
-runner accepts the filter, short-circuits `sandbox_check`, and emits
-`step.sandbox_check.outcome="prediction_unavailable"` with
-`step.sandbox_check.rc==-1` (sentinel — see PolicyWitness.md).
+Exercises `(iokit-open-user-client, iokit_user_client_class)` with a policy denying
+`IOSurfaceRootUserClient`. The response must contain exactly the requested `iosurfaceroot_uc`
+step and report `prediction_unavailable` for that operation.
 
-Operation note: IOServiceOpen triggers two SBPL operations,
-`iokit-open-service` (matched by `iokit-registry-entry-class`) and
-`iokit-open-user-client` (matched by `iokit-user-client-class`). The
-prediction_unavailable contract is keyed on the (op, filter) pair, so
-this suite uses the correct second operation.
+The suite uses the [shared filter contract](../runner_filter_sysctl_name/README.md#shared-filter-contract):
+a successful run envelope, explicit nullable evidence, integer prediction
+`rc=-1`, null `filter_type_id`, null prediction `errno`, and null `drift`.
+The paired file `open_read` of `/etc/hosts` must report a supported outcome
+(`ok` or `open_failed`) and an integer `attempt.rc` agreeing with `exit_code`.
+The checker continues attempt validation even when prediction evidence is broken.
 
-The two IOKit-filter suites together document that the
-prediction_unavailable contract covers both registry-entry-class
-matching (filtering on the IOService class hierarchy) and
-user-client-class matching (filtering on which user-client subclass
-the open creates).
+The file attempt is a placeholder. It exercises supported attempt reporting and
+does not establish IOKit enforcement. The suite does not require the file open
+to succeed or assert internal prediction dispatch behavior.
 
-## What this suite does NOT cover
+## Fixtures and artifacts
 
-The attempt slot is a benign file `open_read` placeholder — there is
-no Channel A coverage of the `iokit-open-user-client` operation
-today (the C probe-runner doesn't implement iokit attempts yet).
-The suite asserts `attempt.outcome != "unsupported"` so a
-regression to an unsupported action would fail loudly.
+`run.sh` generates the specimen inline. Artifacts under
+`tests/out/suites/runner_filter_iokit_user_client_class/<test_id>/artifacts/`
+retain the specimen, raw `run.json`, `pw.stderr`, and assertion log.
+Independent checker controls for all three filter callers run in
+`runner_filter_sysctl_name`, including valid file failures and rejection of
+unsupported or missing attempt evidence alongside unavailable predictions.
 
-## Success criteria
-
-- `result.ok == true`.
-- `runner_result.steps[0].sandbox_check.outcome == "prediction_unavailable"`.
-- `runner_result.steps[0].sandbox_check.rc == -1` (sentinel that
-  disambiguates "no prediction" from rc=0 "allow").
-- `runner_result.steps[0].attempt.outcome` is not `"unsupported"` and
-  `attempt.rc` is populated.
-
-## Fixtures
-
-- Specimen generated inline using `IOSurfaceRootUserClient` as the
-  user-client class (the conventional user-client name IOSurfaceRoot
-  exposes for connect-type=0).
-
-## Artifacts
-
-- `tests/out/suites/runner_filter_iokit_user_client_class/<test_id>/artifacts/*`
-
-## Run
-
-```
+```sh
 ./tests/run.sh --suite runner_filter_iokit_user_client_class
 ```

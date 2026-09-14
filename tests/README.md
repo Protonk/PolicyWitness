@@ -77,8 +77,8 @@ prerequisites should fail, not skip.
 | `runner_outcome_runner_timeout` | Baseline | `_test_overrides.worker_timeout_ms=2000` plus `_test_overrides.worker_post_apply_hang_ms=8000` makes the C worker hang past the host deadline; the host SIGKILLs it and reports `normalized_outcome="runner_timeout"` | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Runs ~2s wall-clock. Asserts `term_signal=9` (host-issued) and that wall-clock elapsed time matches the host deadline, not the worker's natural sleep |
 | `runner_outcome_bad_request` | Baseline | Two e2e cases that drive `normalized_outcome="bad_request"` through both emit sites in `PWRunnerService.runSpecimen` — Swift decode failure and `validateSandboxChecks` rejection. No `_test_overrides` needed. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Asserts `runner_subprocess` is null and that the error message identifies the rejected field |
 | `runner_ready_byte_resilience` | Baseline | `_test_overrides.worker_pre_ready_hang_ms=2000` makes the C worker write its pre-apply ready byte after the host's 1000ms `readyByteTimeout` has closed `--ready-fd`. The worker must survive that SIGPIPE-prone write (SIGPIPE is ignored), still `sandbox_apply`, and score the probe — `normalized_outcome="ok"`. Regression guard for the `com.apple.WebProcess` slow-compile SIGPIPE bug. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Runs ~2-3s. Asserts `term_signal=null`, `exit_code=0`, validator ran, and the override is mirrored back. Pre-fix worker fails here with `sandbox_apply_failed`/`term_signal=13` |
-| `runner_filter_iokit_registry_entry_class` | Baseline | Pins the `(iokit-open-service, iokit_registry_entry_class)` pair: the runner accepts the filter, deliberately skips `sandbox_check` (empirically unreliable for this op+filter), and emits `step.sandbox_check.outcome="prediction_unavailable"` with `rc=-1` (sentinel). Attempt slot is a benign file `open_read` placeholder — the C worker doesn't implement iokit attempts. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Documents the "prediction-unavailable for known-drift op+filter pairs" contract |
-| `runner_filter_sysctl_name` | Baseline | Same prediction-unavailable shape but for `(sysctl-read, sysctl_name)`, with real Channel A coverage via a `sysctl` / `read` attempt against `kern.osrelease`. Documents that the prediction-unavailable contract is not iokit-specific. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | |
+| `runner_filter_iokit_registry_entry_class` | Baseline | The `(iokit-open-service, iokit_registry_entry_class)` pair returns `prediction_unavailable` with explicit sentinel/null evidence and the exact requested step. A supported file `open_read` placeholder retains attempt evidence; it does not establish IOKit enforcement. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Documents the "prediction-unavailable for known-drift op+filter pairs" contract |
+| `runner_filter_sysctl_name` | Baseline | The `(sysctl-read, sysctl_name)` pair retains unavailable-prediction evidence and a real denied `sysctl` / `read` attempt against `kern.osrelease`. Independent checker controls exercise all three filter callers. | Built app + XPC; controls need only Python 3 | Live case: app missing or unbuilt; controls never skip | Shared envelope/step checks plus supported-file and sysctl-denial contracts |
 | `runner_filter_iokit_user_client_class` | Baseline | `(iokit-open-user-client, iokit_user_client_class)` pair. Same `prediction_unavailable` contract; complements `runner_filter_iokit_registry_entry_class` to cover both registry-entry and user-client class matching modes. Same attempt placeholder caveat. | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | |
 | `validator_batch_mode` | Baseline | Pins the `sb_api_validator --batch <pid>` NDJSON-over-stdin/stdout contract: 10 mixed-filter probes against a `sandbox-exec` child cover all four verdict outcomes (3 allow + 1 deny + 1 error + 1 bad_filter + 4 parse_error including trailing-garbage + overlong-line regressions). Per-probe failures don't abort the run; step_id is preserved when known. The production runner uses this shape per run. Per-probe CLI mode preserved unchanged for diagnostic tooling. | Built app | `dist/PolicyWitness.app` missing or unbuilt | |
 | `runner_validator_failure` | Baseline | Reversed partial validator replies survive clean shortfall or malformed JSON, attach to the correct step IDs, and preserve all completed attempts. The unanswered prediction has an explicit error and `drift:null`. | Built app + XPC + Python 3 | — | Checked-in validator transcripts have direct controls; CLI cases independently check file effects, degradation, honored overrides, and subprocess completion. Shared with the corresponding `witness_contract` entry points. |
@@ -127,12 +127,17 @@ artifact contract.
 
 ### Black-box validation
 
-`blackbox_e2e` and `blackbox_menagerie` share `tests/lib/blackbox.py` for envelope
-checks, step identity/order, evidence fields and types, and explicit per-step
-expectations. Each suite owns its policy, file-observation, denial, and skip
-rules. The helper only collects errors; it neither runs PolicyWitness nor
+`blackbox_e2e`, `blackbox_menagerie`, and the three `runner_filter_*` suites
+share `tests/lib/blackbox.py` for envelope checks, step identity/order, evidence
+fields and types, and explicit per-step expectations. Each suite owns its
+policy, file-observation, denial, and skip rules. The helper only collects
+errors; it neither runs PolicyWitness nor
 chooses expectations. Checker controls exercise the suite CLIs without importing
 the helper or production code and require combined faults to remain visible.
+The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
+step identity, operation, and either a supported file-open or denied-sysctl
+attempt contract. Their independent controls run through
+`runner_filter_sysctl_name` before its optional app check; see its README.
 
 The menagerie's end-to-end specimens come from local copies of PAWL evidence.
 It covers SBPL ingestion, probe execution, and evidence correlation, including

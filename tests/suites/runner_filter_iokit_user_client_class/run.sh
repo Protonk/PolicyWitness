@@ -3,14 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_filter_iokit_user_client_class"
 PW_TEST_ID="prediction_unavailable_attempt_observed"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "iokit-user-client-class probe — sandbox_check skipped, attempt observed"
+test_step "run" "iokit-user-client-class probe — prediction unavailable, attempt observed"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -25,16 +25,6 @@ spec = {
     "specimen_id": "runner_filter_iokit_user_client_class",
     "policy": {
         "format": "sbpl",
-        # User-client-class filtering — a common pattern in security
-        # research for restricting which IOKit user clients a sandboxed
-        # process can open. The kernel observes IOServiceOpen as two
-        # distinct operations: iokit-open-service (matched by
-        # iokit-registry-entry-class) and iokit-open-user-client
-        # (matched by iokit-user-client-class). The latter is the right
-        # operation for this filter; see Apple's
-        # /System/Library/Sandbox/Profiles/application.sb for canonical
-        # usage. IOSurfaceRootUserClient is the user-client class
-        # IOSurfaceRoot exposes for connect-type=0.
         "sbpl_source": (
             "(version 1)\n"
             "(allow default)\n"
@@ -47,11 +37,7 @@ spec = {
             "operation": "iokit-open-user-client",
             "filter": {"kind": "iokit_user_client_class", "value": "IOSurfaceRootUserClient"},
         },
-        # See sibling runner_filter_iokit_registry_entry_class/run.sh
-        # for the rationale: the attempt is a benign file open_read so
-        # the envelope slot is populated by a supported action. It does
-        # NOT observe iokit-open-user-client; Channel A coverage for
-        # that operation lands with the C probe-runner.
+        # Supported file work populates the attempt slot; it does not witness IOKit enforcement.
         "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }
@@ -60,7 +46,7 @@ PY
 
 RUN_STDOUT="${PW_TEST_ARTIFACTS}/run.json"
 set +e
-"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>/dev/null
+"${PW_BIN}" run "${SPECIMEN_PATH}" >"${RUN_STDOUT}" 2>"${PW_TEST_ARTIFACTS}/pw.stderr"
 RC=$?
 set -e
 
@@ -68,47 +54,8 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "specimen should succeed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\"}"
 fi
 
-ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
-set +e
-/usr/bin/python3 - "${RUN_STDOUT}" >"${ASSERT_LOG}" 2>&1 <<'PY'
-import json, sys
-from pathlib import Path
-env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-runner = env.get("data", {}).get("runner_result") or {}
-steps = runner.get("steps") or []
-if not steps:
-    raise SystemExit(f"expected 1 step, got 0 (outcome={runner.get('normalized_outcome')!r})")
-sb = steps[0].get("sandbox_check") or {}
-outcome = sb.get("outcome")
-if outcome != "prediction_unavailable":
-    raise SystemExit(
-        f"expected step.sandbox_check.outcome=prediction_unavailable for "
-        f"iokit_user_client_class (got {outcome!r})"
-    )
-if sb.get("rc") != -1:
-    raise SystemExit(
-        f"expected step.sandbox_check.rc=-1 sentinel for prediction_unavailable "
-        f"(got {sb.get('rc')!r}); rc==0 would falsely look like allow"
-    )
-if sb.get("filter_type_id") is not None:
-    raise SystemExit(f"expected filter_type_id null, got {sb.get('filter_type_id')!r}")
-if sb.get("errno") is not None:
-    raise SystemExit(f"expected errno null, got {sb.get('errno')!r}")
-
-attempt = steps[0].get("attempt") or {}
-if attempt.get("outcome") == "unsupported":
-    raise SystemExit(
-        f"attempt placeholder is using an unsupported action; the runner "
-        f"returned outcome=unsupported. Got: {attempt!r}"
-    )
-if attempt.get("rc") is None:
-    raise SystemExit(f"expected attempt.rc populated, got {attempt!r}")
-PY
-ASSERT_RC=$?
-set -e
-if [[ "${ASSERT_RC}" -ne 0 ]]; then
-  MSG="$(head -5 "${ASSERT_LOG}" | tr '\n' ' ' | sed 's/"/\\"/g')"
-  test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
-fi
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter prediction/attempt contract failed" \
+  "${ROOT_DIR}/tests/lib/unavailable_prediction.py" "${RUN_STDOUT}" \
+  --step-id iosurfaceroot_uc --operation iokit-open-user-client --attempt file_open
 
 test_pass "iokit_user_client_class: prediction_unavailable surfaced; attempt observed" "{}"
