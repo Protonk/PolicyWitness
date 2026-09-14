@@ -31,6 +31,12 @@ steps. An unexpected prediction is a failure and cannot suppress validation
 of an attempt or a later step. The shell wrappers treat every nonzero checker
 exit as a failure.
 
+`validate_run.py` uses `tests/lib/blackbox.py` for envelope, step identity/order,
+required evidence fields, scalar types, and explicit prediction/attempt/errno/
+drift expectations. The case files choose the expectations; denial and signal
+checks stay in this suite. The helper performs no setup and makes no skip
+decisions. The menagerie uses the same checks with its own policy requirements.
+
 Missing builds may skip the live cases. Prediction disagreements are never
 inferred to be host limitations. Any supported host variation must be
 expressed as a specific per-step expectation with supporting evidence, and
@@ -59,6 +65,10 @@ without importing its implementation or any production code.
 The missing-file control also verifies the unavailable-result contract,
 rejects an invented prediction, and proves that an expected unavailable
 prediction cannot hide a later attempt failure.
+
+The menagerie's `validation_controls` also drives this checker CLI. It covers
+shared nullable fields, integer/boolean distinctions, malformed envelopes,
+step correlation, and combined failures, alongside each suite's own rules.
 
 ## Artifacts
 

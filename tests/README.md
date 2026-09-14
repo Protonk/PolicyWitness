@@ -87,7 +87,7 @@ prerequisites should fail, not skip.
 | `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | launchd bootstrap unavailable or sandboxed | Uses the shared smoke and blackbox assertions, including checker controls. BBX prediction disagreements fail and do not suppress attempt validation. |
 | `smoke` | Shared | Quick end-to-end checks against a built app bundle | Built app + XPC | `dist/PolicyWitness.app` missing or unbuilt | Invoked by `runner_byoxpc`; runs standalone via `tests/run.sh --suite smoke` |
 | `blackbox_e2e` | Shared | End-to-end black-box cases (BBX-*) validate the returned JSON envelope, attempts, and step identity/order. Prediction disagreements fail; independent checker controls ensure one failure cannot hide another. | Built app + XPC; checker controls need only Python 3 | Live cases: `dist/PolicyWitness.app` missing or unbuilt; checker controls never skip | Invoked by `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` |
-| `blackbox_menagerie` | Shared | Real SBPL fixtures exercising specimen ingestion and evidence correlation | Built app + XPC | `dist/PolicyWitness.app` missing; compiled-blob cases skip when profile registration is not permitted on the host | Invoked by `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
+| `blackbox_menagerie` | Shared | Real SBPL fixtures exercising specimen ingestion and evidence correlation; controls drive both black-box checkers against independent envelopes and faults | Built app + XPC; validation controls need only Python 3 | Live cases: app missing, or an annotated mismatch is absent and all evidence checks pass; validation controls never skip | Invoked by `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
 | `sbpl_allowdeny_consistency` | Baseline | Independently reads randomized file targets after writes, checks changed/nonempty bytes vs byte-for-byte preservation, restores seeds and reverses policy parameter bindings with the same probe plan, then cross-checks JSON verdicts. The fixture retains two Mach steps, checked for presence only. | Built app + XPC | — | Two specimens/envelopes plus external before/after byte snapshots; no log dependency or test overrides. |
 | `runner_live_worker_identity` | Baseline | Test-owned observer obtains the exec helper PID from the kernel socket peer, follows OS ancestry to the worker and host, independently queries libsandbox while they live, and checks PW reports that worker and those verdicts. | Built app + XPC + macOS C toolchain | — | Bounded handshake; no PW source dependencies or test overrides. `observer.json` records independent PIDs, start times, and raw queries. |
 | `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt must retain its raw evidence and have `drift=null`. | Built app + XPC | — | Strict regression check against treating spawn EACCES as strong sandbox evidence. Both permission controls run before the drift assertion. |
@@ -100,13 +100,20 @@ prerequisites should fail, not skip.
 
 ## Conventions
 
-### Blackbox menagerie
+### Black-box validation
 
-End-to-end specimen runs sourced from local copies of PAWL evidence. The suite
-covers SBPL ingestion, probe execution, and evidence correlation; it includes
+`blackbox_e2e` and `blackbox_menagerie` share `tests/lib/blackbox.py` for envelope
+checks, step identity/order, evidence fields and types, and explicit per-step
+expectations. Each suite owns its policy, file-observation, denial, and skip
+rules. The helper only collects errors; it neither runs PolicyWitness nor
+chooses expectations. Checker controls exercise the suite CLIs without importing
+the helper or production code and require combined faults to remain visible.
+
+The menagerie's end-to-end specimens come from local copies of PAWL evidence.
+It covers SBPL ingestion, probe execution, and evidence correlation, including
 negative controls and canonicalization-boundary cases where mismatches are
-recorded as evidence. Compiled-blob cases may skip when profile registration is
-not permitted on the host. See `tests/suites/blackbox_menagerie/README.md` for
+recorded as evidence. An absent annotated mismatch can skip only after all
+evidence checks pass. See `tests/suites/blackbox_menagerie/README.md` for
 suite invariants and fixtures.
 
 ### Harness note: sandboxed automation environments

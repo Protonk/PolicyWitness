@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from validate_run import validate_run
+
 
 def load_manifest(path: Path):
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -92,146 +94,6 @@ def load_run_json(path: Path):
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
         raise SystemExit(f"failed to parse run JSON: {exc}")
-
-
-def validate_run(expected_steps, run_data):
-    if run_data.get("kind") != "run":
-        return (1, f"expected kind=run (got {run_data.get('kind')!r})")
-    if run_data.get("result", {}).get("ok") is not True:
-        return (1, f"expected result.ok=true (got {run_data.get('result', {}).get('ok')!r})")
-
-    runner = (run_data.get("data") or {}).get("runner_result")
-    if not isinstance(runner, dict):
-        return (1, "missing data.runner_result")
-    if runner.get("normalized_outcome") != "ok":
-        return (1, f"expected runner normalized_outcome=ok (got {runner.get('normalized_outcome')!r})")
-    if runner.get("sandboxed_after_apply") is not True:
-        return (1, f"expected sandboxed_after_apply=true (got {runner.get('sandboxed_after_apply')!r})")
-    if not runner.get("policy_sha256"):
-        return (1, "expected policy_sha256 to be present")
-
-    steps = runner.get("steps") or []
-    expected_steps = expected_steps or []
-    if len(steps) != len(expected_steps):
-        return (1, f"expected {len(expected_steps)} steps (got {len(steps)})")
-
-    by_id = {step.get("step_id"): step for step in steps}
-    mismatch_notes = []
-
-    for exp in expected_steps:
-        step_id = exp.get("step_id")
-        step = by_id.get(step_id)
-        if not step:
-            return (1, f"missing step_id {step_id!r}")
-
-        attempt = step.get("attempt")
-        sb = step.get("sandbox_check")
-        if not isinstance(attempt, dict) or not isinstance(sb, dict):
-            return (1, f"missing attempt/sandbox_check for {step_id}")
-
-        if "exit_code" not in attempt:
-            return (1, f"{step_id}: missing attempt.exit_code")
-        if "syscall_errno" not in attempt:
-            return (1, f"{step_id}: missing attempt.syscall_errno")
-        for key in ("requested_path", "normalized_path", "observed_path"):
-            if key not in attempt:
-                return (1, f"{step_id}: missing attempt.{key}")
-        if "scope" not in sb:
-            return (1, f"{step_id}: missing sandbox_check.scope")
-        if "effective_filter_value" not in sb:
-            return (1, f"{step_id}: missing sandbox_check.effective_filter_value")
-        for key in ("pid", "operation", "filter_type_id", "errno", "error"):
-            if key not in sb:
-                return (1, f"{step_id}: missing sandbox_check.{key}")
-        if not isinstance(sb.get("pid"), int):
-            return (1, f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
-        if not isinstance(sb.get("operation"), str) or not sb.get("operation"):
-            return (1, f"{step_id}: invalid sandbox_check.operation={sb.get('operation')!r}")
-        # filter_type_id is the resolved libsandbox filter type. It is only
-        # populated for a real allow/deny verdict; the rc=-1 sentinels
-        # (prediction_unavailable, unsupported_operation) carry filter_type_id
-        # null by design, so only require an int when the validator actually
-        # produced a verdict. (Without this gate read_missing — a legitimately
-        # prediction_unavailable step — fails flakily whenever its path can't
-        # be canonicalized.)
-        if sb.get("outcome") in ("allow", "deny"):
-            if not isinstance(sb.get("filter_type_id"), int):
-                return (1, f"{step_id}: invalid sandbox_check.filter_type_id={sb.get('filter_type_id')!r}")
-        if sb.get("errno") is not None and not isinstance(sb.get("errno"), int):
-            return (1, f"{step_id}: invalid sandbox_check.errno={sb.get('errno')!r}")
-        if sb.get("error") is not None and not isinstance(sb.get("error"), str):
-            return (1, f"{step_id}: invalid sandbox_check.error={sb.get('error')!r}")
-
-        exit_code = attempt.get("exit_code")
-        if not isinstance(exit_code, int):
-            return (1, f"{step_id}: invalid attempt.exit_code={exit_code!r}")
-        if isinstance(attempt.get("rc"), int) and attempt.get("rc") != exit_code:
-            return (1, f"{step_id}: attempt.rc mismatch (rc={attempt.get('rc')!r} exit_code={exit_code!r})")
-        attempt_ok = exit_code == 0
-        exp_meta = exp.get("expect") or {}
-        exp_attempt = exp.get("attempt") or {}
-
-        if "attempt_ok" in exp_meta:
-            if attempt_ok != exp_meta.get("attempt_ok"):
-                return (1, f"{step_id}: expected attempt_ok={exp_meta.get('attempt_ok')!r} (got {attempt_ok!r})")
-
-        # Assert the HARNESS's own determination, not just the observation.
-        # `predict` pins libsandbox's userland verdict (sandbox_check.outcome);
-        # `drift` pins how the harness reconciled that prediction with the
-        # kernel observation. Before this, the menagerie checked attempt_ok vs
-        # the author's `policy` model but never the harness's drift field — so a
-        # broken drift computation (e.g. hard-wired False, or a false-positive
-        # True on an ambiguous EPERM) would have passed green. `drift` is
-        # tri-state, so we test key-presence (None is a real expected value,
-        # distinct from "unspecified").
-        if "predict" in exp_meta:
-            if sb.get("outcome") != exp_meta["predict"]:
-                return (1, f"{step_id}: expected sandbox_check.outcome={exp_meta['predict']!r} (got {sb.get('outcome')!r})")
-        if "drift" in exp_meta:
-            if step.get("drift") != exp_meta["drift"]:
-                return (1, f"{step_id}: expected drift={exp_meta['drift']!r} (got {step.get('drift')!r})")
-
-        if exp_attempt.get("kind") == "file":
-            expected_target = exp_attempt.get("target")
-            if expected_target and attempt.get("requested_path") != expected_target:
-                return (
-                    1,
-                    f"{step_id}: expected requested_path={expected_target!r} (got {attempt.get('requested_path')!r})",
-                )
-            if not attempt_ok and attempt.get("syscall_errno") is None:
-                return (1, f"{step_id}: expected syscall_errno on failed file attempt")
-            if attempt_ok and attempt.get("syscall_errno") is not None:
-                return (1, f"{step_id}: unexpected syscall_errno on successful file attempt")
-            if attempt_ok and exp_attempt.get("action") in ("open_read", "open_write", "create"):
-                if attempt.get("observed_path") is None:
-                    return (1, f"{step_id}: expected observed_path for successful open/create")
-
-        if "errno" in exp_meta and exp_meta.get("errno") is not None:
-            got_errno = attempt.get("syscall_errno", attempt.get("errno"))
-            if got_errno != exp_meta.get("errno"):
-                return (
-                    1,
-                    f"{step_id}: expected errno={exp_meta.get('errno')!r} (got {got_errno!r})",
-                )
-
-        policy = exp_meta.get("policy")
-        mismatch_reason = exp_meta.get("mismatch_reason")
-        if policy in ("allow", "deny"):
-            policy_allows = policy == "allow"
-            policy_match = (policy_allows == attempt_ok)
-            if mismatch_reason:
-                if policy_match:
-                    return (3, f"{step_id}: expected mismatch ({mismatch_reason}) not observed")
-                mismatch_notes.append(f"{step_id}:{mismatch_reason}")
-            else:
-                if not policy_match:
-                    return (1, f"{step_id}: policy={policy} but attempt_ok={attempt_ok}")
-
-    if mismatch_notes:
-        note = ", ".join(mismatch_notes)
-        return (0, f"ok (mismatch evidence: {note})")
-
-    return (0, "ok")
 
 
 def apply_runner_selector(specimen):
