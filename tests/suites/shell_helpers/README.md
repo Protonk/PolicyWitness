@@ -1,7 +1,7 @@
 # shell_helpers
 
-Direct controls for the baseline shell helpers in `tests/lib/case.sh`. Requires
-Bash and Python 3, with no PolicyWitness app, compiler, socket, or XPC dependency.
+Direct controls for `tests/lib/case.sh` and `tests/lib/scripts.sh`. Requires Bash
+and Python 3, with no PolicyWitness app, compiler, socket, or XPC dependency.
 This suite runs in the default battery:
 
 ```sh
@@ -58,3 +58,30 @@ directly, independently of the new helpers.
 
 Artifacts retain each fixture configuration, execution journal, raw wrapper
 output, exit status, logs, events, report, and the passing control inventory.
+
+## Child-script groups
+
+`test_run_scripts <script> [script...]` sources no case state. It invokes each
+literal path with Bash, in order, retaining the child's stdout/stderr and
+continuing after any nonzero exit or missing script. It returns 1 if any child
+failed, otherwise 0; an empty list fails. It does not change the caller's shell
+options, synthesize case reports, or interpret a child's explicit skip.
+The top-level dispatcher reconciles the reports that the children emit.
+
+`blackbox_e2e`, `witness_contract`, and `opt_in` supply their selected script
+lists. `runner_byoxpc` retains its setup gates, environment transitions, and
+cleanup trap while using the helper for child execution. The single-child
+`smoke` and `sbpl_allowdeny_consistency` wrappers use `exec bash` and forward
+the child's exact exit status.
+
+The `script_groups` case runs both direct helper controls and copies of all six
+real wrappers in isolated repositories. Independent children record execution,
+arguments, and environment; print distinct stream markers; and exit or skip as
+configured. Controls cover literal paths, order, failure continuation, missing
+and empty inputs, caller/child errexit, single-child status forwarding, and
+BYOXPC setup gates, runner-mode propagation, and cleanup after downstream
+success or failure. BYOXPC installation and removal use harmless stand-ins.
+The witness wrapper must retain its baseline-first ordering and selected cases.
+
+Artifacts retain fixture repositories, child receipts, wrapper streams, exit
+statuses, configurations, and the control inventory.

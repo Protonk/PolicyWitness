@@ -7,9 +7,9 @@ deterministic, and checked into the repo so tests are hermetic.
 
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
-- `shell_case/`: independently controlled builder/checker commands and a shell
-  case for prerequisite, failure propagation, log, and report controls in
-  `shell_helpers`.
+- `shell_case/`: independent builder/checker commands, a shell case, and
+  controlled child scripts for prerequisite, log/report, and wrapper execution
+  controls in `shell_helpers`.
 - `capture/`: independent CLI-shaped byte emitter with a socket gate for
   capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
 - `validator/`: checked-in NDJSON validator program and partial-reply

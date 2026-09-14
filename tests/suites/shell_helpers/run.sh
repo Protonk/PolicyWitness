@@ -12,3 +12,12 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check.py" \
   test_fail "shell helper controls failed; see artifacts/assertions.log"
 fi
 test_pass "shell helpers retain diagnostics and case identity; failures prevent later stages"
+
+test_begin shell_helpers script_groups
+test_step controls "observe child execution, wrapper phases, skips, and failure continuation"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_scripts.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "script-group controls failed; see artifacts/assertions.log"
+fi
+test_pass "wrappers preserve child order, streams, phase boundaries, and failing status"

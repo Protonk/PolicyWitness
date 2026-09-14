@@ -3,26 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-failures=0
+source "${ROOT_DIR}/tests/lib/scripts.sh"
 
-run_test() {
-  local script="$1"
-  set +e
-  bash "${script}"
-  local status=$?
-  set -e
-  if [[ ${status} -ne 0 ]]; then
-    failures=1
-  fi
-}
-
+scripts=()
 for script in "${ROOT_DIR}/tests/suites/opt_in/"*.sh; do
   if [[ "$(basename "${script}")" == "run.sh" ]]; then
     continue
   fi
-  run_test "${script}"
+  scripts+=("${script}")
 done
 
-if [[ ${failures} -ne 0 ]]; then
-  exit 1
-fi
+test_run_scripts "${scripts[@]}"
