@@ -45,3 +45,10 @@ the observations and assertions, so cleanup cannot supply the claimed evidence.
 
 Artifacts retain both specimens/envelopes, process snapshots, an event timeline,
 before/held/after file bytes, and every corrupted envelope with its diagnostics.
+
+`tests/lib/run_capture.py` prepares both specimens before either CLI starts,
+captures each run's raw output separately, and records command/exit/timing and
+harness intervention in each run's `capture.json`. The test owns the gates,
+independent observations, and expected results. Capture cleanup runs after those
+assertions, and JSON is decoded only after the independent file observations.
+Direct capture controls live in the `run_capture` suite.

@@ -92,6 +92,7 @@ prerequisites should fail, not skip.
 | `runner_live_worker_identity` | Baseline | Test-owned observer obtains the exec helper PID from the kernel socket peer, follows OS ancestry to the worker and host, independently queries libsandbox while they live, and checks PW reports that worker and those verdicts. | Built app + XPC + macOS C toolchain | — | Bounded handshake; no PW source dependencies or test overrides. `observer.json` records independent PIDs, start times, and raw queries. |
 | `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt must retain its raw evidence and have `drift=null`. | Built app + XPC | — | Strict regression check against treating spawn EACCES as strong sandbox evidence. Both permission controls run before the drift assertion. |
 | `exec_fixture` | Baseline | Independently verifies the shared helper's output/status, socket rendezvous, OS process identity/exit observation, environment/descriptor inspection, and state-preserving exec forwarding. A leader-only kill must be rejected while its child still answers; releasing one tree must leave another alive. | macOS C toolchain + Python 3 | — | Direct controls; no app dependency. Normal release and group kill must pass the same exit assertion. |
+| `run_capture` | Baseline | Shared CLI capture preserves exact bytes, arguments and exit/signal status; distinguishes harness deadlines from PW results; keeps overlapping runs separate; and reaps the CLI after assertion failure | macOS + Python 3, Unix sockets and OS exit observation | — | No app or C compilation. Independent fixture, socket acknowledgements and exec fixture exit observer. Retains raw output and `capture.json`, including launch/JSON/cleanup errors. |
 | `runner_specimen_isolation` | Baseline | Two bundled-runner specimens with identical step IDs overlap; B completes while A remains held. OS identities, independent file effects, and each run's output/attempt/prediction evidence stay separate. | Built app + XPC + macOS C toolchain + Python 3 | — | Socket barriers establish overlap. Twelve cross-run envelope/step/channel swaps must fail with attribution diagnostics; direct release controls live in `exec_fixture`. |
 | `runner_exec_lifecycle` | Baseline | A public CLI exec deadline stops both observed helper processes, preserves output, and permits a subsequent file write with independently checked effects. | Built app + XPC + macOS C toolchain + Python 3 | — | No test overrides or worker ABI dependency. Roughly 10 seconds; artifacts retain PID/group/exit observations and before/after bytes. |
 | `runner_exec_inheritance` | Baseline | Exec children report empty environments, only standard descriptors, stdin EOF, and usable output. The CLI case uses ordinary specimens; a controlled worker launch proves random environment/descriptor resources existed to leak. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared observer and assertions have direct contamination controls. The worker adapter owns the ABI dependency; opt-in mutation checks verify real leak detection. |
@@ -99,6 +100,18 @@ prerequisites should fail, not skip.
 | `witness_contract` | Contract | Pins the load-bearing behaviors PolicyWitness contracts to provide: verdicts + attempts + validator failures attributed + removed fields rejected + test seam functioning + audit-rule enforcement. | Built app + XPC | off the default battery (suite is intentionally permissive about environment shape); run on demand | Most cases now pass post-reshape; `happy_path_baseline` is the regression sentinel and should always pass. End-to-end drift *surfacing* is still uncovered here — no current op+filter combination produces clean userland-vs-kernel disagreement through a real specimen (all known cases route to `prediction_unavailable`). The drift *classifier logic* itself (the asymmetric truth table) is unit-tested directly in `runner_unit`'s `computeDrift` table, which drives synthetic verdict/attempt pairs no specimen can currently produce. |
 
 ## Conventions
+
+### CLI capture
+
+`tests/lib/run_capture.py` prepares the supplied specimen and captures the public
+CLI command, raw stdout/stderr, exit status, timing, and harness intervention.
+Separate start/wait operations support overlapping runs. The caller supplies CLI
+arguments and a test-side wait deadline, decides when to decode JSON, and owns
+all outcome assertions and independent observations. Cleanup runs after those
+observations. The initial users are `runner_validator_failure`,
+`runner_exec_lifecycle`, and `runner_specimen_isolation`; independent controls
+live in `run_capture`. See `tests/suites/run_capture/README.md` for the API and
+artifact contract.
 
 ### Black-box validation
 

@@ -37,5 +37,11 @@ Artifacts retain the specimen, full envelope, copied fixture/transcript, input
 receipt, emitted bytes, file snapshots, and assertion logs. No worker ABI or
 Swift types are used by the fixture or contract assertions.
 
+CLI execution uses `tests/lib/run_capture.py`. Its `capture.json` retains command,
+exit status, timing, and any harness intervention alongside raw `run.json` and
+`pw.stderr`. The test checks independent file effects before decoding the
+envelope and retains ownership of the expected nonzero exit and degradation.
+Direct capture controls live in the `run_capture` suite.
+
 The matching `witness_contract` scripts call `case.sh` with their original suite
 name. This keeps their existing entry points while sharing the same assertions.

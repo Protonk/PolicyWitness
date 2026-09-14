@@ -24,3 +24,10 @@ sandbox. Missing app or toolchain fails. Artifacts include the specimen,
 envelope, PID/group and exit observations, before/after file bytes, and logs.
 The `exec_fixture` suite independently tests the helper and observer,
 including the negative control where only the leader is killed.
+
+CLI execution uses `tests/lib/run_capture.py`. The shared capture retains
+`specimen.json`, raw `run.json`/`pw.stderr`, and command/exit/timing metadata in
+`capture.json`. Its wait observes the CLI without signalling it. The test checks
+OS exit events and the later file write before reading JSON or running cleanup;
+the public exec-deadline assertion remains here. Direct capture controls live in
+`run_capture`.

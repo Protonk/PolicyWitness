@@ -5,13 +5,15 @@ import json
 import os
 from pathlib import Path
 import secrets
-import subprocess
 import sys
 import tempfile
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures' / 'exec'))
 from control import ExitObserver, TreeControl, process_snapshot
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from run_capture import RunCapture
 
 
 def save(path, data):
@@ -140,9 +142,9 @@ def main():
     pw, out_arg, helper_arg = sys.argv[1:]
     out, helper = Path(out_arg).resolve(), str(Path(helper_arg).resolve())
     step_ids = [secrets.token_hex(8) for _ in range(3)]
-    with tempfile.TemporaryDirectory(prefix='pw-overlap-', dir='/private/tmp') as work, ExitStack() as files:
+    with tempfile.TemporaryDirectory(prefix='pw-overlap-', dir='/private/tmp') as work, ExitStack() as resources:
         b_exits = ExitObserver()
-        files.callback(b_exits.close)
+        resources.callback(b_exits.close)
         controls, runs, witnesses, envelopes = [], [], [], []
         events = []
         started = time.monotonic()
@@ -184,17 +186,15 @@ def main():
                 witness = {'label': label, 'specimen': spec, 'marker': marker, 'allowed_index': index,
                            'paths': paths, 'seeds': seeds, 'out': artifacts}
                 witnesses.append(witness)
-                save(artifacts / 'specimen.json', spec)
+                run = RunCapture(pw, artifacts, spec,
+                                 cli_args=['--no-log-capture', '--timeout-ms', '30000'])
+                runs.append(run)
+                resources.callback(run.close)
                 file_bytes(witness, 'before')
             # Prepare everything before either exec deadline starts. The two
             # launches overlap by socket rendezvous, never by guessed sleeps.
-            for witness in witnesses:
-                artifacts = witness['out']
-                stdout = files.enter_context((artifacts / 'run.json').open('w'))
-                stderr = files.enter_context((artifacts / 'pw.stderr').open('w'))
-                runs.append(subprocess.Popen([pw, 'run', str(artifacts / 'specimen.json'),
-                                              '--no-log-capture', '--timeout-ms', '30000'],
-                                             stdout=stdout, stderr=stderr))
+            for run in runs:
+                run.start()
             for witness, control in zip(witnesses, controls):
                 control.accept(timeout=5)
                 control.assert_running()
@@ -241,8 +241,8 @@ def main():
             assert file_bytes(witnesses[1], 'after_A', allowed_effect=True) == b_after, 'A changed B files'
             event('A_completed')
             # Consult PW's reports only after recording the independent effects.
-            for witness in witnesses:
-                envelope = json.loads((witness['out'] / 'run.json').read_text())
+            for witness, run in zip(witnesses, runs):
+                envelope = run.load_json()
                 errors = envelope_errors(envelope, witness)
                 (witness['out'] / 'envelope_checks.log').write_text('\n'.join(errors) + '\n')
                 assert not errors, '\n'.join(errors)
@@ -252,10 +252,6 @@ def main():
         finally:
             for control in controls:
                 control.close()
-            for run in runs:
-                if run.poll() is None:
-                    run.kill()
-                    run.wait(timeout=5)
 
 
 if __name__ == '__main__':

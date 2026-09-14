@@ -3,13 +3,14 @@ import json
 import os
 from pathlib import Path
 import secrets
-import subprocess
 import sys
 import tempfile
-import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fixtures" / "exec"))
 from control import TreeControl
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lib"))
+from run_capture import RunCapture
 
 
 def main():
@@ -39,22 +40,17 @@ def main():
                 "attempt": {"kind": "file", "action": "open_write", "target": str(target)},
             }],
         }
-        request = out / "specimen.json"
-        request.write_text(json.dumps(spec, indent=2) + "\n")
-        run = None
+        run = RunCapture(pw, out, spec, cli_args=['--no-log-capture', '--timeout-ms', '30000'])
         try:
-            with (out / "run.json").open("w") as stdout, (out / "pw.stderr").open("w") as stderr:
-                start = time.monotonic()
-                run = subprocess.Popen([pw, "run", str(request), "--no-log-capture", "--timeout-ms", "30000"],
-                                       stdout=stdout, stderr=stderr)
-                pids = control.accept()
-                # The fixture does not establish its own process group. Observe
-                # PW's isolation before either process can exit.
-                groups = {role: os.getpgid(pid) for role, pid in pids.items()}
-                assert groups['P'] == groups['C'] == pids['P'], (pids, groups)
-                (out / "started.json").write_text(json.dumps({'pids': pids, 'groups': groups}, indent=2))
-                rc = run.wait(timeout=25)
-                elapsed = time.monotonic() - start
+            run.start()
+            pids = control.accept()
+            # The fixture does not establish its own process group. Observe
+            # PW's isolation before either process can exit.
+            groups = {role: os.getpgid(pid) for role, pid in pids.items()}
+            assert groups['P'] == groups['C'] == pids['P'], (pids, groups)
+            (out / "started.json").write_text(json.dumps({'pids': pids, 'groups': groups}, indent=2))
+            rc = run.wait(timeout=25)
+            elapsed = run.elapsed_seconds
             # Observe cleanup before closing control sockets or sending quit.
             control.assert_stopped()
             (out / "exited.json").write_text(json.dumps({'pids': sorted(control.exited),
@@ -64,7 +60,7 @@ def main():
             assert after and after != seed, "the step after the timed-out exec did not write data"
             assert 8 <= elapsed < 25, f"expected the public 10-second exec deadline, elapsed={elapsed:.2f}s"
             assert rc == 0, f"specimen failed instead of continuing: CLI exit {rc}"
-            envelope = json.loads((out / "run.json").read_text())
+            envelope = run.load_json()
             runner = envelope['data']['runner_result']
             assert envelope['result']['ok'] is True and runner['normalized_outcome'] == 'ok'
             assert runner.get('test_overrides') is None
@@ -85,10 +81,10 @@ def main():
             assert following['sandbox_check']['outcome'] == 'allow' and following['drift'] is False
             print(f"both processes stopped, output retained, later write observed; elapsed={elapsed:.2f}s")
         finally:
-            control.close()
-            if run is not None and run.poll() is None:
-                run.kill()
-                run.wait()
+            try:
+                control.close()
+            finally:
+                run.close()
 
 
 if __name__ == '__main__':

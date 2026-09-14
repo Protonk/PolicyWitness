@@ -9,6 +9,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from run_capture import RunCapture
+
 FIXTURE = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
 
 
@@ -82,64 +85,62 @@ def check_cli(case, out, pw):
             'probe_plan': plan,
             '_test_overrides': {'validator_executable_path': str(validator)},
         }
-        request = out / 'specimen.json'
-        request.write_text(json.dumps(specimen, indent=2) + '\n')
-        with (out / 'run.json').open('wb') as stdout, (out / 'pw.stderr').open('wb') as stderr:
-            result = subprocess.run([pw, 'run', str(request), '--no-log-capture', '--timeout-ms', '15000'],
-                                    stdout=stdout, stderr=stderr, timeout=20)
-        # Check real effects before relying on the envelope's attempt claims.
-        after = [path.read_bytes() for path in paths]
-        for i, data in enumerate(after):
-            (out / f'after_{i}.bin').write_bytes(data)
-        assert after[0] and after[0] != seeds[0], 'allowed write did not change the target'
-        assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
-        envelope = json.loads((out / 'run.json').read_text())
-        runner = envelope['data']['runner_result']
-        assert result.returncode == 1 and envelope['result']['ok'] is False, envelope
-        expected = 'validator_unavailable' if case == 'eof' else 'validator_decode_failure'
-        assert runner['normalized_outcome'] == expected and runner['rc'] == 1, runner
-        assert runner['test_overrides'] == specimen['_test_overrides'], runner
-        worker = runner['runner_subprocess']
-        assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
-        assert worker['partial_steps'] is False and worker['pid'] == runner['pid'], worker
-        validator_status = runner['validator_subprocess']
-        assert validator_status['pid'] > 0 and validator_status['exit_code'] == 0, validator_status
-        assert validator_status.get('term_signal') is None, validator_status
-        received = json.loads(validator.with_suffix('.received.json').read_text())
-        probes = [{'step_id': step['step_id'], 'operation': step['sandbox_check']['operation'],
-                   'filter_type': 'PATH', 'filter_value': step['attempt']['target']} for step in plan]
-        assert received == {'target_pid': worker['pid'], 'probes': probes}, received
-        assert_transcript(validator.with_suffix('.emitted.ndjson').read_text(), probes, case)
-        if case == 'eof':
-            assert 'returned 2' in runner['error'] and 'expected 3' in runner['error'], runner['error']
-        else:
-            assert 'parse failed' in runner['error'], runner['error']
-            assert 'invalid-verdict:' + plan[-1]['step_id'] in runner['error'], runner['error']
-        steps = runner['steps']
-        assert [s['step_id'] for s in steps] == [s['step_id'] for s in plan], steps
-        for i, (step, outcome) in enumerate(zip(steps, ('ok', 'open_failed', 'access_failed'))):
-            attempt = step['attempt']
-            assert attempt['outcome'] == outcome, (step['step_id'], attempt)
-            assert attempt['requested_path'] == str(paths[i]), attempt
-            assert type(attempt['rc']) is int and (attempt['rc'] == 0) == (i == 0), attempt
-            if i == 0:
-                assert attempt['errno'] is None and attempt['observed_path'] == str(paths[i]), attempt
+        with RunCapture(pw, out, specimen,
+                        cli_args=['--no-log-capture', '--timeout-ms', '15000']) as run:
+            rc = run.wait(timeout=20)
+            # Check real effects before relying on the envelope's attempt claims.
+            after = [path.read_bytes() for path in paths]
+            for i, data in enumerate(after):
+                (out / f'after_{i}.bin').write_bytes(data)
+            assert after[0] and after[0] != seeds[0], 'allowed write did not change the target'
+            assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
+            envelope = run.load_json()
+            runner = envelope['data']['runner_result']
+            assert rc == 1 and envelope['result']['ok'] is False, envelope
+            expected = 'validator_unavailable' if case == 'eof' else 'validator_decode_failure'
+            assert runner['normalized_outcome'] == expected and runner['rc'] == 1, runner
+            assert runner['test_overrides'] == specimen['_test_overrides'], runner
+            worker = runner['runner_subprocess']
+            assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
+            assert worker['partial_steps'] is False and worker['pid'] == runner['pid'], worker
+            validator_status = runner['validator_subprocess']
+            assert validator_status['pid'] > 0 and validator_status['exit_code'] == 0, validator_status
+            assert validator_status.get('term_signal') is None, validator_status
+            received = json.loads(validator.with_suffix('.received.json').read_text())
+            probes = [{'step_id': step['step_id'], 'operation': step['sandbox_check']['operation'],
+                       'filter_type': 'PATH', 'filter_value': step['attempt']['target']} for step in plan]
+            assert received == {'target_pid': worker['pid'], 'probes': probes}, received
+            assert_transcript(validator.with_suffix('.emitted.ndjson').read_text(), probes, case)
+            if case == 'eof':
+                assert 'returned 2' in runner['error'] and 'expected 3' in runner['error'], runner['error']
             else:
-                assert attempt['errno'] in (errno.EPERM, errno.EACCES), attempt
-                assert attempt['error'], attempt
-            prediction = step['sandbox_check']
-            assert prediction['pid'] == worker['pid'], prediction
-            assert prediction['operation'] == probes[i]['operation'], prediction
-            assert prediction['filter_value'] == str(paths[i]), prediction
-        for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 1))):
-            prediction = step['sandbox_check']
-            assert (prediction['outcome'], prediction['rc'], prediction['errno']) == expected, step
-            assert step['drift'] is False, step
-        gap = steps[2]
-        assert gap['sandbox_check']['outcome'] == 'error', gap
-        assert 'no validator verdict' in gap['sandbox_check']['error'], gap
-        assert gap['drift'] is None, 'missing prediction must have explicit drift:null'
-        print(f'{case}: partial verdicts joined by ID, all three attempt outcomes/effects preserved, gap explicit')
+                assert 'parse failed' in runner['error'], runner['error']
+                assert 'invalid-verdict:' + plan[-1]['step_id'] in runner['error'], runner['error']
+            steps = runner['steps']
+            assert [s['step_id'] for s in steps] == [s['step_id'] for s in plan], steps
+            for i, (step, outcome) in enumerate(zip(steps, ('ok', 'open_failed', 'access_failed'))):
+                attempt = step['attempt']
+                assert attempt['outcome'] == outcome, (step['step_id'], attempt)
+                assert attempt['requested_path'] == str(paths[i]), attempt
+                assert type(attempt['rc']) is int and (attempt['rc'] == 0) == (i == 0), attempt
+                if i == 0:
+                    assert attempt['errno'] is None and attempt['observed_path'] == str(paths[i]), attempt
+                else:
+                    assert attempt['errno'] in (errno.EPERM, errno.EACCES), attempt
+                    assert attempt['error'], attempt
+                prediction = step['sandbox_check']
+                assert prediction['pid'] == worker['pid'], prediction
+                assert prediction['operation'] == probes[i]['operation'], prediction
+                assert prediction['filter_value'] == str(paths[i]), prediction
+            for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 1))):
+                prediction = step['sandbox_check']
+                assert (prediction['outcome'], prediction['rc'], prediction['errno']) == expected, step
+                assert step['drift'] is False, step
+            gap = steps[2]
+            assert gap['sandbox_check']['outcome'] == 'error', gap
+            assert 'no validator verdict' in gap['sandbox_check']['error'], gap
+            assert gap['drift'] is None, 'missing prediction must have explicit drift:null'
+            print(f'{case}: partial verdicts joined by ID, all three attempt outcomes/effects preserved, gap explicit')
 
 
 if __name__ == '__main__':

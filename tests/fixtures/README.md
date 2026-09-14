@@ -5,6 +5,8 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `capture/`: independent CLI-shaped byte emitter with a socket gate for
+  capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
 - `validator/`: checked-in NDJSON validator program and partial-reply
   transcripts (EOF and malformed JSON), used by `runner_validator_failure`
   and the corresponding `witness_contract` entry points.
