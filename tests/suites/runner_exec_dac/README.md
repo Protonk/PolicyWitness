@@ -22,5 +22,7 @@ Run `tests/run.sh --suite runner_exec_dac` outside an automation sandbox
 (request escalation there). No `_test_overrides` or log capture is used.
 Missing builds or failed controls fail the test.
 
-Artifacts include the specimen, both envelopes, direct-execution control
-results, stderr, and `assert.log`. The temporary helper is removed afterward.
+`RunCapture` retains `specimen.json`, `run.json`, `pw.stderr`, and `capture.json`
+under separate `nonexecutable/` and `executable/` artifact directories. Direct
+execution results and `assert.log` remain at the artifact root. The temporary
+helper is removed afterward. Shell setup and checker logging use `case.sh`.

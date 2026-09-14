@@ -7,6 +7,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from run_capture import RunCapture
+
 
 def main():
     pw, out_arg = sys.argv[1:]
@@ -26,8 +29,6 @@ def main():
                 "attempt": {"kind": "exec", "action": "spawn", "target": str(helper)},
             }],
         }
-        request = out / "specimen.json"
-        request.write_text(json.dumps(spec, indent=2) + "\n")
         # Complete BOTH controls before asserting drift, so the known defect
         # cannot prevent the restored-permission case from being exercised.
         for name, mode in (("nonexecutable", 0o644), ("executable", 0o755)):
@@ -38,12 +39,8 @@ def main():
             except OSError as exc:
                 direct = {"spawned": False, "errno": exc.errno}
             (out / f"{name}.direct.json").write_text(json.dumps(direct, indent=2) + "\n")
-            with (out / f"{name}.run.json").open("w") as stdout, \
-                    (out / f"{name}.stderr").open("w") as stderr:
-                run = subprocess.run([pw, "run", str(request), "--no-log-capture"],
-                                     stdout=stdout, stderr=stderr, timeout=20)
-            records[name] = (direct, run.returncode,
-                             json.loads((out / f"{name}.run.json").read_text()))
+            with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as run:
+                records[name] = (direct, run.wait(timeout=20), run.load_json())
 
     steps = {}
     for name, (direct, rc, envelope) in records.items():

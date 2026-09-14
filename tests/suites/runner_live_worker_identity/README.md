@@ -24,5 +24,8 @@ sandbox (request escalation there). Missing builds, toolchain failures,
 inaccessible process metadata, and failed rendezvous are failures, not skips.
 
 Artifacts: `specimen.json`, `run.json`, `observer.json` (kernel-derived process
-IDs, start times, raw query results), both stderr streams, `build.log`, and
-`assert.log`. Temporary targets and the socket are removed after the run.
+IDs, start times, raw query results), both stderr streams, `capture.json`,
+`build.log`, and `assert.log`. `RunCapture` owns CLI capture and cleanup; the
+test owns the observer and reads its independent evidence before decoding PW's
+envelope. Shell setup and logging use `case.sh`. Temporary targets and the
+socket are removed after the run.

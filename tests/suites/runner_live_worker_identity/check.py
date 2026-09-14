@@ -7,6 +7,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from run_capture import RunCapture
+
 
 def main():
     pw, out_arg, observer_arg = sys.argv[1:]
@@ -35,18 +38,14 @@ def main():
                             "args": ["--hold", socket_path]},
             }],
         }
-        request = out / "specimen.json"
-        request.write_text(json.dumps(spec, indent=2) + "\n")
-        with (out / "observer.stderr").open("w") as observer_err, \
-                (out / "run.json").open("w") as pw_out, (out / "pw.stderr").open("w") as pw_err:
+        run = RunCapture(pw, out, spec, cli_args=['--no-log-capture'])
+        with (out / "observer.stderr").open("w") as observer_err:
             observer = subprocess.Popen([observer_bin, "--observe", socket_path, str(allowed), str(denied)],
                                         stdout=subprocess.PIPE, stderr=observer_err, text=True)
-            run = None
             try:
                 ready, _, _ = select.select([observer.stdout], [], [], 5)
                 assert ready and observer.stdout.readline() == "ready\n", "observer did not become ready"
-                run = subprocess.Popen([pw, "run", str(request), "--no-log-capture"],
-                                       stdout=pw_out, stderr=pw_err)
+                run.start()
                 observed, _ = observer.communicate(timeout=10)
                 (out / "observer.json").write_text(observed)
                 assert observer.returncode == 0, "observer failed; see observer.stderr"
@@ -54,10 +53,12 @@ def main():
             finally:
                 # The helper has its own seven-second deadline, including when
                 # the client/observer fails. Never leave an unbounded hold alive.
-                for child in (observer, run):
-                    if child is not None and child.poll() is None:
-                        child.kill()
-                        child.wait()
+                try:
+                    if observer.poll() is None:
+                        observer.kill()
+                        observer.wait()
+                finally:
+                    run.close()
 
     actual = json.loads((out / "observer.json").read_text())
     worker_pid, host_pid = actual["worker"]["pid"], actual["host"]["pid"]
@@ -66,7 +67,7 @@ def main():
     assert actual["worker_checks"]["allowed_rc"] == 0
     assert actual["worker_checks"]["denied_rc"] > 0, actual
     assert actual["host_checks"]["allowed_rc"] == actual["host_checks"]["denied_rc"] == 0, actual
-    envelope = json.loads((out / "run.json").read_text())
+    envelope = run.load_json()
     assert envelope["result"]["ok"] is True
     runner = envelope["data"]["runner_result"]
     assert runner["normalized_outcome"] == "ok" and runner.get("test_overrides") is None

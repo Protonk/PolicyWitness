@@ -29,9 +29,10 @@ The case owns its suite/test identity, steps, checker arguments, and final
   with `/usr/bin/python3` through `test_run_logged`. Missing commands or checker
   arguments fail explicitly. Every nonzero checker status, including 3, fails.
 
-The initial callers are `runner_validator_failure`, `runner_exec_lifecycle`,
-`runner_specimen_isolation`, `exec_fixture`, and `run_capture`. Each supplies
-its existing `build.log`, `assert.log`, or `assertions.log` artifact paths.
+Callers include `runner_validator_failure`, `runner_exec_lifecycle`,
+`runner_specimen_isolation`, `runner_exec_dac`, `runner_live_worker_identity`,
+`sbpl_allowdeny_consistency`, `exec_fixture`, and `run_capture`. Each supplies
+its own `build.log`, `assert.log`, or `assertions.log` artifact paths.
 
 ## Controls
 

@@ -1,7 +1,8 @@
 # run_capture
 
 Direct controls for `tests/lib/run_capture.py`, used by the validator-failure,
-exec-lifecycle, and specimen-isolation suites. Requires macOS and Python 3; no
+exec-lifecycle, specimen-isolation, execute-permission, live-worker-identity,
+and allow/deny consistency suites. Requires macOS and Python 3; no
 built PolicyWitness app or C compilation. This suite is in the default battery.
 Run outside an automation sandbox so Unix sockets and OS exit observation work:
 

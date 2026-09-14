@@ -23,5 +23,7 @@ Run `tests/run.sh --suite sbpl_allowdeny_consistency` outside an automation
 sandbox (request escalation there). Missing builds and run failures fail the
 test. Unified log capture is disabled; it is not this test's oracle.
 
-Artifacts include both specimens and envelopes, stderr, `assert.log`, and
-separate `.before` / `.after` byte snapshots for each file in each round.
+`RunCapture` retains each specimen, envelope, stderr, and `capture.json` under
+`round0/` and `round1/`. `assert.log` and the separate `.before` / `.after` byte
+snapshots remain at the artifact root. The test checks those bytes before
+decoding each envelope. Shell setup and checker logging use `case.sh`.

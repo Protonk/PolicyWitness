@@ -3,8 +3,10 @@ import copy
 import json
 from pathlib import Path
 import secrets
-import subprocess
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from run_capture import RunCapture
 
 
 def main():
@@ -39,12 +41,9 @@ def main():
             "DENY_WRITE_DIR": str(paths[denied_index].parent),
         }
         assert spec["probe_plan"] == fixed_plan
-        request = out / f"round{round_number}.specimen.json"
-        request.write_text(json.dumps(spec, indent=2) + "\n")
-        with (out / f"round{round_number}.run.json").open("w") as stdout, \
-                (out / f"round{round_number}.stderr").open("w") as stderr:
-            run = subprocess.run([pw, "run", str(request), "--no-log-capture"],
-                                 stdout=stdout, stderr=stderr, timeout=20)
+        with RunCapture(pw, out / f"round{round_number}", spec,
+                        cli_args=['--no-log-capture']) as run:
+            rc = run.wait(timeout=20)
 
         # Read and preserve the external evidence before consulting PW's report.
         after = [path.read_bytes() for path in paths]
@@ -54,8 +53,8 @@ def main():
             f"round {round_number}: allowed write did not leave changed, nonempty data"
         assert after[denied_index] == seeds[denied_index], \
             f"round {round_number}: denied write changed the file"
-        assert run.returncode == 0, f"PW exit={run.returncode}; see round{round_number}.run.json"
-        envelope = json.loads((out / f"round{round_number}.run.json").read_text())
+        assert rc == 0, f"PW exit={rc}; see {run.stdout_path}"
+        envelope = run.load_json()
         assert envelope["kind"] == "run" and envelope["result"]["ok"] is True
         runner = envelope["data"]["runner_result"]
         assert runner["normalized_outcome"] == "ok"
