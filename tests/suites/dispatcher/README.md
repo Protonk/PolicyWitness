@@ -2,7 +2,7 @@
 
 Offline contracts for public selection, configuration, execution, and evidence
 reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls`,
-`accounting_controls`, or `selection_controls` by their full `dispatcher/<case>`
+`accounting_controls`, `cancellation_controls`, or `selection_controls` by their full `dispatcher/<case>`
 IDs. Each group runs once in its own invocation through the public command, so
 a failure in reconciliation does not suppress the accounting group.
 
@@ -24,6 +24,11 @@ ordinary case has a separate command invocation. BYOXPC specimen cases share a
 single installation/cleanup lifecycle; the wrapper runs selected specimens in
 separate child processes. Independent cases continue after a failing command.
 Unavailable requirements or failed dependencies leave explicit unrun selections.
+Ordinary commands run in their own process group. SIGINT while waiting for an
+ordinary command forwards the interrupt, allows up to one second for its leader
+to exit, then kills remaining group members and reaps the leader. Later cases
+are not started. The summary retains completed and partial evidence and names
+interruption as the reason for unfinished selections.
 
 `dispatch.json` journals invocations and evidence. Each observed case needs one
 start followed by one terminal event, a readable report with matching identity,
@@ -55,6 +60,18 @@ records must never produce success. These controls bypass catalog validation
 deliberately to check the executor's separate defense. A valid alias and reordered
 complete results remain accepted. Inputs, summaries, diagnostics, and return
 statuses are retained alongside the other controls.
+
+`cancellation_controls` runs the public command against three standard-context
+fixture cases: one completes, one waits with a helper that ignores SIGINT, and
+one remains queued. The helper must respond after a direct SIGINT before the
+dispatcher is interrupted. A normal release must complete all three. Cancellation must
+exit unsuccessfully within the wait deadline, preserve completed and partial
+evidence, and account for the active and queued cases as unrun. Independent
+execution receipts prove the queued case did not start. The existing exec
+fixture's `TreeControl` and `ExitObserver` obtain peer PIDs from Unix sockets and
+require kernel exit events for both active processes before test teardown can
+release or kill them. This case needs macOS local sockets and process observation;
+sandboxed automation may need escalation even though no PW app is launched.
 
 `check_selection.py` uses an independently authored tiny catalog and fixture
 commands that import no test machinery. Their execution receipts record actual

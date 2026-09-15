@@ -74,6 +74,10 @@
           "description": "Every selection retains its own accounting; incomplete or ambiguous results cannot report success"
         },
         {
+          "id": "cancellation_controls",
+          "description": "Interrupting ordinary cases stops their process tree, preserves evidence, and accounts for queued work"
+        },
+        {
           "id": "selection_controls",
           "description": "Public selectors, inspection, configuration, and completion agree with independent execution receipts"
         }

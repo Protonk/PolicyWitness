@@ -43,3 +43,6 @@ that records its own path, arguments, and bundle-local marker), and the
 reconciliation fault scripts. Two stub bundles distinguish an explicit app
 selection from a usable default. The setup fixture is also used by Python
 startup controls; it contains no expected selections or result-checking logic.
+`cancellation.sh`/`cancellation.py` supply standard cases and a helper that ignores
+SIGINT. They use the exec fixture's existing readiness/ping/release protocol;
+the cancellation checker reuses its kernel process-exit observer.

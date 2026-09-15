@@ -19,6 +19,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "accounting controls fai
 test_pass "accounting preserves every selection and refuses incomplete or ambiguous results"
 fi
 
+if test_selected cancellation_controls; then
+test_begin dispatcher cancellation_controls
+test_step cancellation "observe interruption, process exits, preserved evidence, and queued work"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "cancellation controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_cancellation.py" "${PW_TEST_ARTIFACTS}"
+test_pass "ordinary case cancellation stops descendants and retains complete run accounting"
+fi
+
 if test_selected selection_controls; then
 test_begin dispatcher selection_controls
 test_step command "observe selected work, configuration, and preserved evidence through the public command"

@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -216,6 +217,8 @@ def account(item):
         state = 'unrun'
         status = None
         reason = 'ambiguous report path' if key in ambiguous else item.get('blocked_reason')
+        if reason is None and item.get('state') == 'interrupted':
+            reason = 'interrupted'
         if report:
             status = report['status']
             state = 'skipped' if status == 'skip' else 'completed'
@@ -226,6 +229,31 @@ def account(item):
             problem(item, 'unrun_case', f'selected case has no readable terminal report: {case["id"]}')
         item['case_results'].append({'id': case['id'], 'context': case['context'],
                                      'state': state, 'status': status, 'reason': reason})
+
+
+def run_standard_command(command, root, env):
+    # Own the ordinary case's process group so cancellation can reach helpers
+    # even after the immediate child has exited. Stream output as before.
+    with subprocess.Popen(command, cwd=root, env=env, start_new_session=True) as process:
+        try:
+            return process.wait()
+        except KeyboardInterrupt:
+            previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            try:
+                # Allow the case to handle SIGINT, then stop remaining group
+                # members even when waiting for the leader already succeeded.
+                for sig, timeout in ((signal.SIGINT, 1), (signal.SIGKILL, None)):
+                    try:
+                        os.killpg(process.pid, sig)
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        process.wait(timeout=timeout)
+                    except subprocess.TimeoutExpired:
+                        pass
+            finally:
+                signal.signal(signal.SIGINT, previous)
+            raise
 
 
 def execute(root, out, run_id, started, plan, config):
@@ -276,7 +304,11 @@ def execute(root, out, run_id, started, plan, config):
             child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
             command = group[0]['command']
             try:
-                item.update(state='exited', returncode=subprocess.run(command, cwd=root, env=child_env).returncode)
+                if group[0]['context'] == 'standard':
+                    returncode = run_standard_command(command, root, child_env)
+                else:
+                    returncode = subprocess.run(command, cwd=root, env=child_env).returncode
+                item.update(state='exited', returncode=returncode)
                 if item['returncode'] != 0:
                     problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
             except OSError as exc:
