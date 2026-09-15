@@ -5,7 +5,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from check_accounting import check_accounting
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
@@ -125,7 +124,6 @@ def main():
             assert invocations[0]['returncode'] == 0 and summary['counts']['fail'] == 1
         inventory.append(name)
         print(f'{name}: ok', flush=True)
-    inventory.extend(check_accounting(out))
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} dispatcher controls passed')
 

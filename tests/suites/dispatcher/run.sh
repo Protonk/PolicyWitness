@@ -11,6 +11,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "dispatcher controls fai
 test_pass "requested suite exits, case reports, and lifecycle evidence determine one result"
 fi
 
+if test_selected accounting_controls; then
+test_begin dispatcher accounting_controls
+test_step accounting "check complete selection accounting independently of reconciliation"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "accounting controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_accounting.py" "${PW_TEST_ARTIFACTS}"
+test_pass "accounting preserves every selection and refuses incomplete or ambiguous results"
+fi
+
 if test_selected selection_controls; then
 test_begin dispatcher selection_controls
 test_step command "observe selected work, configuration, and preserved evidence through the public command"

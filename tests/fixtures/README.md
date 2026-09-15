@@ -38,6 +38,8 @@ deterministic, and checked into the repo so tests are hermetic.
 
 The `dispatcher` fixtures include `repository.py` (copies the public runner and
 writes a caller-supplied catalog), `selection.sh`/`selection.py` (independent
-execution receipts and controlled evidence), and the reconciliation fault
-scripts. The setup fixture is also used by Python startup controls; it contains
-no expected selections or result-checking logic.
+execution receipts and controlled evidence), `controller.py` (a runnable stub
+that records its own path, arguments, and bundle-local marker), and the
+reconciliation fault scripts. Two stub bundles distinguish an explicit app
+selection from a usable default. The setup fixture is also used by Python
+startup controls; it contains no expected selections or result-checking logic.

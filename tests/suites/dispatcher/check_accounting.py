@@ -79,3 +79,11 @@ def check_accounting(out):
                 raise AssertionError(f'{name}: incorrect accounting: {run["completion"]}')
         inventory.append('accounting_' + name)
     return inventory
+
+
+if __name__ == '__main__':
+    out = Path(sys.argv[1]).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    inventory = check_accounting(out)
+    (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
+    print(f'{len(inventory)} accounting controls passed')

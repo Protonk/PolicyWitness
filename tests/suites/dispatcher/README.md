@@ -1,8 +1,10 @@
 # dispatcher
 
 Offline contracts for public selection, configuration, execution, and evidence
-reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls` or
-`selection_controls` by their full `dispatcher/<case>` IDs.
+reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls`,
+`accounting_controls`, or `selection_controls` by their full `dispatcher/<case>`
+IDs. Each group runs once in its own invocation through the public command, so
+a failure in reconciliation does not suppress the accounting group.
 
 ## Contract
 
@@ -45,8 +47,9 @@ crashes, silent exits, malformed or missing evidence, contradictory statuses,
 rewritten events, reused paths, and removed reports. Failure scenarios generally
 include a subsequent passing case. Missing/nonexecutable entrypoints instead
 prove rejection happens before any execution or output replacement.
-`check_accounting.py` additionally supplies independent handoff records directly
-at the accounting/finalization boundary: ambiguous ownership must retain both
+
+`accounting_controls` runs `check_accounting.py`, which supplies independent
+handoff records directly at the accounting/finalization boundary: ambiguous ownership must retain both
 selections as unrun, and missing, duplicated, unexpected, or invalid result
 records must never produce success. These controls bypass catalog validation
 deliberately to check the executor's separate defense. A valid alias and reordered
@@ -65,6 +68,9 @@ also catch accidental bytecode writes during inspection.
 Split bundles and colliding catalog report paths must be rejected without
 execution or evidence replacement; whole-app and internal controller symlinks
 must preserve the selected bundle in execution receipts.
+Two runnable stub bundles also verify default and explicit app selection. The
+selected controller records its own path, arguments, and bundle-local marker;
+an ignored override must fail even when the fallback app is usable.
 
 `tests/fixtures/dispatcher/repository.py` only copies equipment and writes the
 caller-supplied catalog; it contains no expected selections or result oracle.

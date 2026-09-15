@@ -70,6 +70,10 @@
           "description": "requested suite exits, case reports, and lifecycle evidence determine one result"
         },
         {
+          "id": "accounting_controls",
+          "description": "Every selection retains its own accounting; incomplete or ambiguous results cannot report success"
+        },
+        {
           "id": "selection_controls",
           "description": "Public selectors, inspection, configuration, and completion agree with independent execution receipts"
         }

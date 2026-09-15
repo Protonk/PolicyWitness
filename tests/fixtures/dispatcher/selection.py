@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 suite = sys.argv[1]
@@ -20,6 +21,8 @@ for leaf in os.environ['PW_TEST_CASES'].splitlines():
         continue
     if mode == 'crash':
         raise SystemExit(19)
+    if mode == 'run_controller':
+        subprocess.run([os.environ['PW_BIN'], 'fixture-probe', *sys.argv[2:]], check=True)
     if mode == 'wrong':
         leaf = 'not_selected'
     path = out / 'suites' / suite / leaf

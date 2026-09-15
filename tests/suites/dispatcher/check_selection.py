@@ -30,7 +30,7 @@ def main():
 
     def exercise(name, args, expected=(), *, code=0, inspect=False, invalid=False, settings=None,
                  modes=None, codes=(), app=False, corrupt=None, skipped=0, unrun=0,
-                 expected_app=None, diagnostic=None, containing=None):
+                 expected_app=None, diagnostic=None, containing=None, controller=None):
         work = out / name
         repo = work / 'fixture repo'
         suites = {
@@ -63,10 +63,12 @@ def main():
             binary.write_text('#!/bin/sh\nexit 0\n')
             binary.chmod(0o755)
         receipt = work / 'receipts.jsonl'
+        controller_receipt = work / 'controller-receipts.jsonl'
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
         # Deliberately let inspection try to create bytecode if it is careless.
         env.pop('PYTHONDONTWRITEBYTECODE', None)
         env.update(PW_TEST_RUN_ID=name, CONTROL_SELECTION_RECEIPTS=str(receipt),
+                   CONTROL_CONTROLLER_RECEIPTS=str(controller_receipt),
                    CONTROL_SELECTION_MODES=json.dumps(modes or {}))
         if settings:
             env.update({k: v.replace('{repo}', str(repo)) for k, v in settings.items()})
@@ -96,6 +98,12 @@ def main():
             inventory.append(name)
             return
         require([r['id'] for r in records] == list(expected), f'{name}: wrong execution receipts: {records}')
+        if controller:
+            invoked = [json.loads(line) for line in controller_receipt.read_text().splitlines()] if controller_receipt.exists() else []
+            app_path, marker = controller
+            expected_invocation = {'binary': str(repo / app_path / 'Contents/MacOS/policy-witness'),
+                                   'argv': ['fixture-probe', LITERAL], 'marker': marker}
+            require(invoked == [expected_invocation], f'{name}: wrong controller executed: {invoked}')
         summary = json.loads((child_out / 'run.json').read_text())
         plan = json.loads((child_out / 'plan.json').read_text())
         require(summary['plan'] == plan and summary['configuration'] == plan['configuration'], f'{name}: configuration/plan changed')
@@ -116,6 +124,23 @@ def main():
             require(record['quiet'] == ('1' if config['quiet'] else ''), f'{name}: quiet not normalized')
         require(not (repo / 'CANARY').exists(), f'{name}: shell interpolation')
         inventory.append(name)
+
+    def usable_bundles(repo):
+        for app_path, marker in [('dist/PolicyWitness.app', 'default'), ('An app.app', 'alternate')]:
+            binary = repo / app_path / 'Contents/MacOS/policy-witness'
+            binary.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/controller.py', binary)
+            binary.chmod(0o755)
+            binary.with_name('controller-marker.txt').write_text(marker)
+
+    # Both choices can run. Assert the executable's own receipt, so a usable
+    # fallback cannot make an ignored override look like a successful selection.
+    exercise('default_app_executes', ['--suite', 'equipment'], ['equipment/app'],
+             modes={'equipment/app': 'run_controller'}, corrupt=usable_bundles,
+             controller=('dist/PolicyWitness.app', 'default'))
+    exercise('alternate_app_executes', ['--suite', 'equipment'], ['equipment/app'],
+             modes={'equipment/app': 'run_controller'}, corrupt=usable_bundles,
+             settings={'PW_APP_DIR': 'An app.app'}, controller=('An app.app', 'alternate'))
 
     exercise('default', [], ['probe/first', 'probe/second'])
     exercise('one_case', ['--case', 'probe/second'], ['probe/second'])
@@ -258,7 +283,8 @@ def main():
         return json.loads(result.stdout)
     default_ids = {c['id'] for c in real_list()['cases']}
     require({'blackbox_menagerie/validation_controls', 'blackbox_e2e/checker_controls',
-             'runner_filter_sysctl_name/checker_controls', 'witness_contract/happy_path_baseline'} <= default_ids,
+             'runner_filter_sysctl_name/checker_controls', 'witness_contract/happy_path_baseline',
+             'dispatcher/accounting_controls'} <= default_ids,
             'ordinary controls/contracts missing from the real default battery')
     full = real_list('--all')['cases']
     opt = real_list('--suite', 'opt_in')['cases']
