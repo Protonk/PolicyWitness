@@ -4,6 +4,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
 # Keep this entry point independent of the case helpers it is checking.
+test_begin shell_helpers python_startup
+test_step controls "reject disabled Python assertions before executing cases or replacing evidence"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_python_startup.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "Python startup controls failed; see artifacts/assertions.log"
+fi
+test_pass "optimized Python is rejected; normal assertion failures remain test failures"
+
 test_begin shell_helpers controls
 test_step controls "exercise case failures, logs, prerequisites, and stage ordering"
 if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check.py" \

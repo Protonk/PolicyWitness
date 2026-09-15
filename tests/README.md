@@ -105,6 +105,12 @@ prerequisites should fail, not skip.
 
 ### Shell case setup and checking
 
+Shared shell startup rejects Python with assertions disabled (for example,
+`PYTHONOPTIMIZE=1`) with exit 2 before changing output or running cases. Unset
+`PYTHONOPTIMIZE` to run tests. Direct Python helper invocations bypass shell
+startup; invoke those with assertions enabled. Independent startup controls live
+in `shell_helpers`.
+
 `tests/lib/case.sh` provides baseline prerequisite checks, logged command
 execution, fixture builds through their existing scripts, and Python checker
 invocation. Cases retain their steps, argument lists, artifact paths, and final

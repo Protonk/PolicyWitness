@@ -15,6 +15,13 @@ Source `tests/lib/case.sh`, which loads `testlib.sh`, then call `test_begin`.
 The case owns its suite/test identity, steps, checker arguments, and final
 `test_pass`. The helpers do not decide that a case has passed.
 
+Loading `testlib.sh` checks the actual `/usr/bin/python3` assertion mode and
+exits 2 with an actionable diagnostic if assertions are disabled. This protects
+the dispatcher and direct shell suite entry points before case work or output
+initialization. Unset `PYTHONOPTIMIZE` to run tests; empty and `0` values remain
+valid because they leave assertions enabled. The check uses an explicit branch
+and exits even when sourcing occurs in a conditional with errexit disabled.
+
 - `test_require_pw` resolves `PW_BIN` from `PW_APP_DIR` or the default bundle,
   honoring an explicit `PW_BIN`. A missing/nonexecutable file fails the case.
   The existing `require_pw_app` still provides its separate optional-app skip
@@ -62,6 +69,20 @@ directly, independently of the new helpers.
 
 Artifacts retain each fixture configuration, execution journal, raw wrapper
 output, exit status, logs, events, report, and the passing control inventory.
+
+## Python startup
+
+The `python_startup` case runs the real dispatcher and a direct suite in fixture
+repositories under six optimization settings: unset, empty, `0`, `1`, `2`, and
+non-numeric text. Each setting exercises both a passing and a deliberately
+failing assertion checker. Rejected startup must exit 2 before any fixture
+receipt or report is written and preserve all prior output bytes. Accepted
+startup must run the checker with assertions enabled and propagate its outcome.
+
+The control driver uses explicit conditions, with no Python assertions of its
+own. The assertion checker imports no test-library implementation. Independent
+receipts record its execution and assertion mode, and whether the case continued.
+Separate logs and exit metadata retain every subprocess observation.
 
 ## Child-script groups
 

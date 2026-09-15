@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+# Assertions are executable test checks. Refuse an optimized interpreter before
+# callers initialize or replace evidence, even when sourced inside a conditional.
+if ! /usr/bin/python3 - <<'PY'
+if not __debug__:
+    raise SystemExit("ERROR: Python assertions are disabled; unset PYTHONOPTIMIZE before running tests")
+PY
+then
+  exit 2
+fi
+
 testlib_root() {
   local lib_dir
   lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
