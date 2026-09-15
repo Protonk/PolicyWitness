@@ -67,6 +67,8 @@ def validate_step(step, expected):
 
     Nullable fields must still be present. JSON booleans are not integers, and
     an unavailable prediction has a defined sentinel shape, not skip semantics.
+    Attempt aliases rc/exit_code and errno/syscall_errno must be present and
+    agree in type and value. An explicit expected errno=None requires null.
     Suite-specific policy and observation assertions stay with their callers.
     """
     errors = []
@@ -108,7 +110,7 @@ def validate_step(step, expected):
     if not isinstance(attempt, dict):
         fail(f"missing attempt for {step_id}")
     else:
-        for key in ("exit_code", "syscall_errno", "requested_path", "normalized_path", "observed_path"):
+        for key in ("rc", "exit_code", "errno", "syscall_errno", "requested_path", "normalized_path", "observed_path"):
             if key not in attempt:
                 fail(f"{step_id}: missing attempt.{key}")
         exit_code = attempt.get("exit_code")
@@ -119,11 +121,19 @@ def validate_step(step, expected):
         if "rc" in attempt:
             if type(attempt["rc"]) is not int:
                 fail(f"{step_id}: invalid attempt.rc={attempt['rc']!r}")
-            elif attempt["rc"] != exit_code:
+            elif type(attempt["rc"]) is not type(exit_code) or attempt["rc"] != exit_code:
                 fail(f"{step_id}: attempt.rc mismatch (rc={attempt['rc']!r} exit_code={exit_code!r})")
+        if attempt.get("errno") is not None and type(attempt["errno"]) is not int:
+            fail(f"{step_id}: invalid attempt.errno={attempt['errno']!r}")
         if attempt.get("syscall_errno") is not None and type(attempt["syscall_errno"]) is not int:
             fail(f"{step_id}: invalid attempt.syscall_errno={attempt['syscall_errno']!r}")
-        if expected.get("errno") is not None and attempt.get("syscall_errno") != expected["errno"]:
+        if "errno" in attempt and "syscall_errno" in attempt:
+            if (type(attempt["errno"]) is not type(attempt["syscall_errno"])
+                    or attempt["errno"] != attempt["syscall_errno"]):
+                fail(f"{step_id}: attempt.errno mismatch "
+                     f"(errno={attempt['errno']!r} syscall_errno={attempt['syscall_errno']!r})")
+        if "errno" in expected and (type(attempt.get("syscall_errno")) is not type(expected["errno"])
+                                     or attempt.get("syscall_errno") != expected["errno"]):
             fail(f"{step_id}: expected errno={expected['errno']!r} (got {attempt.get('syscall_errno')!r})")
 
     if "drift" in step and step["drift"] is not None and type(step["drift"]) is not bool:

@@ -57,7 +57,7 @@ def main():
             run_path = Path(f"{stem}.run.json")
             run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
             argv = [sys.executable, str(CHECKER), str(run_path), "--step-id", step_id,
-                    "--operation", operation, "--attempt", attempt_contract]
+                    "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
             output = result.stdout + result.stderr
             Path(f"{stem}.log").write_text(f"argv={argv!r}\nrc={result.returncode}\n{output}")
@@ -86,7 +86,7 @@ def main():
         for channel, keys in (
             ("sandbox_check", ("scope", "pid", "operation", "effective_filter_value",
                                "filter_type_id", "errno", "error")),
-            ("attempt", ("exit_code", "syscall_errno", "requested_path", "normalized_path", "observed_path", "rc")),
+            ("attempt", ("exit_code", "errno", "syscall_errno", "requested_path", "normalized_path", "observed_path", "rc")),
         ):
             for key in keys:
                 broken, step = mutate()
@@ -124,6 +124,9 @@ def main():
         step["sandbox_check"]["operation"] = "unrequested-operation"
         check("wrong_operation", broken, ("expected sandbox_check.operation=",))
         broken, step = mutate()
+        step["sandbox_check"]["effective_filter_value"] = "unrequested-filter-value"
+        check("wrong_filter_value", broken, ("expected sandbox_check.effective_filter_value=",))
+        broken, step = mutate()
         step["sandbox_check"].update(outcome="allow", rc=0, filter_type_id=1)
         check("wrong_prediction", broken, ("expected sandbox_check prediction_unavailable",))
         broken, step = mutate()
@@ -155,6 +158,9 @@ def main():
         broken, _ = mutate()
         broken["data"]["runner_result"]["normalized_outcome"] = "runner_failed"
         check("failed_runner", broken, ("expected runner normalized_outcome=ok",))
+        broken, _ = mutate()
+        broken["data"]["runner_result"]["policy_format"] = "unrequested-format"
+        check("wrong_policy_format", broken, ("expected policy_format='sbpl'",))
         check("malformed_json", None, ("cannot read run JSON",), raw="{invalid")
         check("non_object_json", [], ("run is not an object",))
 
@@ -165,7 +171,7 @@ def main():
                 check(f"not_a_denial_{errno}", broken, ("expected attempt.errno=EPERM/EACCES",))
             broken, step = mutate()
             step["attempt"]["syscall_errno"] = 13
-            check("denial_errno_disagreement", broken, ("attempt.errno and syscall_errno disagree",))
+            check("denial_errno_disagreement", broken, ("attempt.errno mismatch",))
             broken, step = mutate()
             step["attempt"].update(rc=0, exit_code=0)
             check("denial_with_success_status", broken, ("expected attempt_ok=False",))

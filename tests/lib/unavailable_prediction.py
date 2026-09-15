@@ -2,9 +2,9 @@
 """CLI adapter for the three runner_filter_* suites.
 
 blackbox owns envelope/step/evidence validation. Callers supply step identity,
-operation and the attempt contract; an unavailable prediction never skips the
-attempt checks. This adapter neither launches PW nor derives expectations from
-the returned envelope or production filter tables.
+operation, filter value and the attempt contract; an unavailable prediction
+never skips the attempt checks. This adapter neither launches PW nor derives
+expectations from the returned envelope or production filter tables.
 """
 import argparse
 import json
@@ -14,7 +14,7 @@ from pathlib import Path
 from blackbox import validate_run_shape, validate_step
 
 
-def validate_run(run, step_id, operation, attempt_contract):
+def validate_run(run, step_id, operation, filter_value, attempt_contract):
     expected = {"step_id": step_id, "sandbox_outcome": "prediction_unavailable"}
     if attempt_contract == "sysctl_denied":
         expected["attempt_ok"] = False
@@ -25,11 +25,12 @@ def validate_run(run, step_id, operation, attempt_contract):
         if isinstance(sb, dict) and sb.get("operation") != operation:
             errors.append(f"{step_id}: expected sandbox_check.operation={operation!r} "
                           f"(got {sb.get('operation')!r})")
+        if isinstance(sb, dict) and sb.get("effective_filter_value") != filter_value:
+            errors.append(f"{step_id}: expected sandbox_check.effective_filter_value={filter_value!r} "
+                          f"(got {sb.get('effective_filter_value')!r})")
         attempt = step.get("attempt")
         if not isinstance(attempt, dict):
             continue  # validate_step has reported the missing channel.
-        if "rc" not in attempt:
-            errors.append(f"{step_id}: missing attempt.rc")
         if attempt_contract == "file_open":
             # These are supported file-open placeholders, not IOKit witnesses.
             if attempt.get("outcome") not in ("ok", "open_failed"):
@@ -42,8 +43,6 @@ def validate_run(run, step_id, operation, attempt_contract):
             errno = attempt.get("errno")
             if type(errno) is not int or errno not in (1, 13):
                 errors.append(f"{step_id}: expected attempt.errno=EPERM/EACCES (got {errno!r})")
-            if errno != attempt.get("syscall_errno"):
-                errors.append(f"{step_id}: attempt.errno and syscall_errno disagree")
     return errors
 
 
@@ -52,6 +51,7 @@ def main():
     parser.add_argument("run", type=Path)
     parser.add_argument("--step-id", required=True)
     parser.add_argument("--operation", required=True)
+    parser.add_argument("--filter-value", required=True)
     parser.add_argument("--attempt", choices=("file_open", "sysctl_denied"), required=True)
     args = parser.parse_args()
     try:
@@ -59,7 +59,7 @@ def main():
     except (OSError, ValueError) as exc:
         print(f"cannot read run JSON: {exc}", file=sys.stderr)
         return 1
-    errors = validate_run(run, args.step_id, args.operation, args.attempt)
+    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

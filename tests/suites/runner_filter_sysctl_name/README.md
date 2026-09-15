@@ -8,14 +8,15 @@ and EPERM or EACCES in both `errno` and `syscall_errno`.
 ## Shared filter contract
 
 The three `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
-with their expected step ID, operation and attempt contract. The adapter uses
-`tests/lib/blackbox.py` to require a successful run envelope, SBPL policy format,
-exact step identity/count, and evidence fields with their documented types.
+with their expected step ID, operation, filter value and attempt contract. The
+adapter uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
+policy format, exact step identity/count, and evidence fields with their documented types.
 An unavailable prediction has integer `rc=-1`, explicitly null `filter_type_id`
 and `errno`, and explicitly null step `drift`. Nullable evidence fields must
 remain present, including `sandbox_check.error` and the attempt path fields.
 
-The adapter checks the requested operation and requires a populated integer
+The adapter checks the requested operation and the literal IOKit class or sysctl
+name in `effective_filter_value`, and requires a populated integer
 `attempt.rc` agreeing with `exit_code`. Each caller selects its attempt check:
 this suite requires the sysctl denial described above; the IOKit suites require
 a supported file-open result. Prediction and attempt errors accumulate, so a
@@ -29,8 +30,9 @@ all three callers using hand-authored envelopes and fixed CLI arguments. It
 imports neither the checker nor production code. Valid nullable evidence,
 supported file failures, and both permitted denial errnos must pass. Missing
 fields, wrong sentinel values/types, missing or non-null drift, wrong/duplicate/
-missing step IDs, operation mismatches, malformed envelopes and broken attempts
-must fail with relevant diagnostics. Combined faults must report both channels.
+missing step IDs, operation/filter-value mismatches, incorrect policy format,
+malformed envelopes and broken attempts must fail with relevant diagnostics.
+Combined faults must report both channels.
 
 These controls need only Python 3 and run in the default battery through this
 suite. They can also be run directly:

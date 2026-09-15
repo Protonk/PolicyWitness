@@ -34,6 +34,8 @@ envelope, step identity/order, required fields, scalar types, and explicit
 prediction/attempt/errno/drift expectations. Missing fields are distinct from
 explicit nulls, and booleans cannot stand in for integers. This suite retains
 its policy-hash requirement, file observations, and policy/mismatch decisions.
+Required attempt aliases `rc`/`exit_code` and `errno`/`syscall_errno` must agree
+in type and value. Attempt `error` text remains optional.
 
 ## Fixtures and manifests
 
@@ -48,6 +50,8 @@ shapes, missing versus null fields, boolean/integer confusion, duplicate and
 reordered IDs, malformed channels, and combined failures. Menagerie controls
 also require a later failure to defeat an earlier pending mismatch skip, and
 protect the policy-hash, file-observation, and annotated-mismatch checks.
+They also reject missing, malformed or contradictory compatibility aliases and
+exercise optional diagnostic text and explicitly expected null errno values.
 The controls import neither the shared checker nor production code.
 
 ## Artifacts

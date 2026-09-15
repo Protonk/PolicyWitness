@@ -95,7 +95,7 @@ prerequisites should fail, not skip.
 | `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt must retain its raw evidence and have `drift=null`. | Built app + XPC | — | Strict regression check against treating spawn EACCES as strong sandbox evidence. Both permission controls run before the drift assertion. |
 | `exec_fixture` | Baseline | Independently verifies the shared helper's output/status, socket rendezvous, OS process identity/exit observation, environment/descriptor inspection, and state-preserving exec forwarding. A leader-only kill must be rejected while its child still answers; releasing one tree must leave another alive. | macOS C toolchain + Python 3 | — | Direct controls; no app dependency. Normal release and group kill must pass the same exit assertion. |
 | `run_capture` | Baseline | Shared CLI capture preserves exact bytes, arguments and exit/signal status; distinguishes harness deadlines from PW results; keeps overlapping runs separate; and reaps the CLI after assertion failure | macOS + Python 3, Unix sockets and OS exit observation | — | No app or C compilation. Independent fixture, socket acknowledgements and exec fixture exit observer. Retains raw output and `capture.json`, including launch/JSON/cleanup errors. |
-| `runner_specimen_isolation` | Baseline | Two bundled-runner specimens with identical step IDs overlap; B completes while A remains held. OS identities, independent file effects, and each run's output/attempt/prediction evidence stay separate. | Built app + XPC + macOS C toolchain + Python 3 | — | Socket barriers establish overlap. Twelve cross-run envelope/step/channel swaps must fail with attribution diagnostics; direct release controls live in `exec_fixture`. |
+| `runner_specimen_isolation` | Baseline | Two bundled-runner specimens with identical step IDs overlap; B completes while A remains held. OS identities, independent file effects, and each run's output/attempt/prediction evidence stay separate. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared envelope/step validation plus independent observations. Controls cover cross-run swaps, missing/invalid evidence, alias consistency, legitimate optional fields, and combined failures; direct release controls live in `exec_fixture`. |
 | `runner_exec_lifecycle` | Baseline | A public CLI exec deadline stops both observed helper processes, preserves output, and permits a subsequent file write with independently checked effects. | Built app + XPC + macOS C toolchain + Python 3 | — | No test overrides or worker ABI dependency. Roughly 10 seconds; artifacts retain PID/group/exit observations and before/after bytes. |
 | `runner_exec_inheritance` | Baseline | Exec children report empty environments, only standard descriptors, stdin EOF, and usable output. The CLI case uses ordinary specimens; a controlled worker launch proves random environment/descriptor resources existed to leak. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared observer and assertions have direct contamination controls. The worker adapter owns the ABI dependency; opt-in mutation checks verify real leak detection. |
 | `opt_in` | Opt-in | Runner-mode opt-ins (logs, DYLD, launchd) | See registry | required resources unavailable (toolchain, GUI session for launchd bootstrap, sandboxed harness for XPC/log capture) | `tests/OPT_IN_TESTS.md` |
@@ -127,16 +127,19 @@ artifact contract.
 
 ### Black-box validation
 
-`blackbox_e2e`, `blackbox_menagerie`, and the three `runner_filter_*` suites
-share `tests/lib/blackbox.py` for envelope checks, step identity/order, evidence
-fields and types, and explicit per-step expectations. Each suite owns its
+`blackbox_e2e`, `blackbox_menagerie`, `runner_specimen_isolation`, and the three
+`runner_filter_*` suites share `tests/lib/blackbox.py` for envelope checks, step
+identity/order, evidence fields and types, and explicit per-step expectations. Each suite owns its
 policy, file-observation, denial, and skip rules. The helper only collects
-errors; it neither runs PolicyWitness nor
-chooses expectations. Checker controls exercise the suite CLIs without importing
-the helper or production code and require combined faults to remain visible.
+errors; it neither runs PolicyWitness nor chooses expectations. Required attempt
+aliases `rc`/`exit_code` and `errno`/`syscall_errno` agree in type and value;
+nullable path fields remain present, while attempt `error` text is optional.
+Black-box and filter controls exercise checker CLIs without importing the helper
+or production code. Isolation controls call the suite adapter with separately
+recorded witnesses. Both approaches require combined faults to remain visible.
 The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
-step identity, operation, and either a supported file-open or denied-sysctl
-attempt contract. Their independent controls run through
+step identity, operation, filter value, and either a supported file-open or
+denied-sysctl attempt contract. Their independent controls run through
 `runner_filter_sysctl_name` before its optional app check; see its README.
 
 The menagerie's end-to-end specimens come from local copies of PAWL evidence.

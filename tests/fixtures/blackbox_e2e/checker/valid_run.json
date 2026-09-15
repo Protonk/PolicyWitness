@@ -16,7 +16,7 @@
             "errno": null, "error": null
           },
           "attempt": {
-            "outcome": "ok", "rc": 0, "exit_code": 0, "syscall_errno": null,
+            "outcome": "ok", "rc": 0, "exit_code": 0, "errno": null, "syscall_errno": null,
             "requested_path": "/private/tmp/pw-bbx-checker/allow.txt",
             "normalized_path": "/private/tmp/pw-bbx-checker/allow.txt",
             "observed_path": "/private/tmp/pw-bbx-checker/allow.txt"
@@ -32,7 +32,7 @@
             "errno": null, "error": null
           },
           "attempt": {
-            "outcome": "open_failed", "rc": -1, "exit_code": -1, "syscall_errno": 1,
+            "outcome": "open_failed", "rc": -1, "exit_code": -1, "errno": 1, "syscall_errno": 1,
             "requested_path": "/private/tmp/pw-bbx-checker/deny.txt",
             "normalized_path": "/private/tmp/pw-bbx-checker/deny.txt",
             "observed_path": null
@@ -48,7 +48,7 @@
             "errno": null, "error": null
           },
           "attempt": {
-            "outcome": "lookup_failed", "rc": 1102, "exit_code": 1102, "syscall_errno": null,
+            "outcome": "lookup_failed", "rc": 1102, "exit_code": 1102, "errno": null, "syscall_errno": null,
             "requested_path": null, "normalized_path": null, "observed_path": null
           },
           "deny_signal": {"delta": 0}

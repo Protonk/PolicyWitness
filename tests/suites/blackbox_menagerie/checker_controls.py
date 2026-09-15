@@ -29,7 +29,7 @@ def main():
                 {"step_id": "mach_lookup_invalid", "sandbox_outcome": "allow",
                  "attempt_ok": False, "drift": None},
                 {"step_id": "fs_read_allowed", "sandbox_outcome": "allow",
-                 "attempt_ok": True, "drift": False},
+                 "attempt_ok": True, "errno": None, "drift": False},
             ],
         },
         "blackbox_menagerie": {"steps": [
@@ -39,7 +39,7 @@ def main():
             {"step_id": "mach_lookup_invalid",
              "expect": {"predict": "allow", "attempt_ok": False, "drift": None}},
             {"step_id": "fs_read_allowed",
-             "expect": {"predict": "allow", "attempt_ok": True, "drift": False}},
+             "expect": {"predict": "allow", "attempt_ok": True, "errno": None, "drift": False}},
         ]},
     }
     failures = []
@@ -75,6 +75,10 @@ def main():
     for channel, key, diagnostic in (
         ("sandbox_check", "errno", "missing sandbox_check.errno"),
         ("sandbox_check", "filter_type_id", "missing sandbox_check.filter_type_id"),
+        ("attempt", "rc", "missing attempt.rc"),
+        ("attempt", "errno", "missing attempt.errno"),
+        ("attempt", "exit_code", "missing attempt.exit_code"),
+        ("attempt", "normalized_path", "missing attempt.normalized_path"),
         ("attempt", "observed_path", "missing attempt.observed_path"),
     ):
         broken, steps = mutate()
@@ -95,10 +99,31 @@ def main():
 
     for channel, key in (("sandbox_check", "pid"), ("sandbox_check", "filter_type_id"),
                          ("sandbox_check", "errno"), ("attempt", "exit_code"),
-                         ("attempt", "syscall_errno"), ("attempt", "rc")):
+                         ("attempt", "errno"), ("attempt", "syscall_errno"), ("attempt", "rc")):
         broken, steps = mutate()
         steps[2][channel][key] = False
         check(f"boolean_{channel}_{key}", broken, (f"invalid {channel}.{key}",), status=1)
+
+    for key, diagnostic in (("rc", "invalid attempt.rc"), ("exit_code", "invalid attempt.exit_code"),
+                            ("errno", "attempt.errno mismatch")):
+        broken, steps = mutate()
+        steps[0]["attempt"][key] = None
+        check(f"null_attempt_{key}", broken, (diagnostic,), status=1)
+    for key, value in (("rc", 3), ("errno", 13)):
+        broken, steps = mutate()
+        steps[0]["attempt"][key] = value
+        check(f"disagreeing_attempt_{key}", broken, (f"attempt.{key} mismatch",), status=1)
+    broken, steps = mutate()
+    steps[0]["attempt"]["errno"] = 2.0
+    check("float_alias_equals_integer", broken,
+          ("invalid attempt.errno", "attempt.errno mismatch"), status=1)
+    broken, steps = mutate()
+    steps[2]["attempt"].update(errno=1, syscall_errno=1)
+    check("expected_null_errno", broken, ("fs_read_allowed: expected errno=None",), status=1)
+    for value in (None, "optional diagnostic text"):
+        changed, steps = mutate()
+        steps[0]["attempt"]["error"] = value
+        check(f"optional_attempt_error_{value is None}", changed)
 
     broken, steps = mutate()
     steps[2]["drift"] = 0

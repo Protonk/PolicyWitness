@@ -36,6 +36,9 @@ required evidence fields, scalar types, and explicit prediction/attempt/errno/
 drift expectations. The case files choose the expectations; denial and signal
 checks stay in this suite. The helper performs no setup and makes no skip
 decisions. The menagerie uses the same checks with its own policy requirements.
+The required attempt aliases `rc`/`exit_code` and `errno`/`syscall_errno` must
+agree in type and value. Nullable evidence keys remain present; optional attempt
+`error` text can be omitted or null.
 
 Missing builds may skip the live cases. Prediction disagreements are never
 inferred to be host limitations. Any supported host variation must be
@@ -68,7 +71,9 @@ prediction cannot hide a later attempt failure.
 
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,
-step correlation, and combined failures, alongside each suite's own rules.
+step correlation, alias presence/agreement, and combined failures, alongside
+each suite's own rules. Valid fixtures contain explicit compatibility aliases;
+optional diagnostic text and expected null errno values have positive controls.
 
 ## Artifacts
 

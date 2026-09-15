@@ -18,6 +18,21 @@ After releasing A, its opposite file effects must occur without changing B's
 files. Each JSON envelope must match its own specimen, OS-observed worker and
 exec child, stdout/stderr, ordered steps, paths, predictions, and attempts.
 
+The suite uses `tests/lib/blackbox.py` for envelope shape, exact step identity
+and order, required evidence fields, scalar types, and expected prediction,
+attempt-success and drift values. Expectations come from the request and
+test-owned witness records. Compatibility fields remain required: `rc` agrees
+with `exit_code`, and `errno` agrees with `syscall_errno`, including their types.
+Successful attempts here require explicit null errno values; denied writes
+require integer EPERM/EACCES. Nullable path fields remain present. Optional
+attempt `error` text may be absent or null.
+
+The isolation adapter retains its independent process identities, specimen
+attribution, expected paths, attempt outcomes, exec output and file observations.
+Shared diagnostics are prefixed with the recipient's label. Steps are matched
+to expectations by ID even after an ordering error, so a reordered response
+cannot misattribute a later diagnostic or suppress the remaining checks.
+
 ## Controls
 
 The same envelope checker must reject twelve corruptions of the successful
@@ -26,6 +41,19 @@ copied from the other run, in both directions. Step IDs remain identical.
 The prediction-only control repairs the worker PID to the recipient's PID,
 requiring the path and decision assertions themselves to detect the swap.
 Failures must identify the recipient and the mismatched evidence fields.
+
+Both runs' denied attempts receive a fixed 24-case matrix of single-field
+deletions, nulls and booleans. Required fields must reject invalid evidence;
+optional `error` omissions must pass. Successful steps separately reject missing
+or boolean errno evidence. Alias disagreements with otherwise valid types must
+fail, while matching EPERM and EACCES aliases both pass. The unmodified captures
+are positive controls, including explicit null on successful attempts.
+
+Combined controls require both an ordering error and the correctly attributed
+attempt error, or both a malformed prediction and a missing alias on another
+step. Every rejected case requires the relevant diagnostic, not merely an
+exception or an unrelated assertion failure. All controls use the actual suite
+checker and retain their candidate envelopes and diagnostics.
 
 `exec_fixture` independently tests the observer: two direct process trees are
 live together, releasing B leaves A responsive with unchanged process identity,

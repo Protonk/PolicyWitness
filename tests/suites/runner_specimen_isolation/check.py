@@ -14,6 +14,7 @@ from control import ExitObserver, TreeControl, process_snapshot
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
+from blackbox import validate_run_shape, validate_step
 
 
 def save(path, data):
@@ -22,51 +23,62 @@ def save(path, data):
 
 def envelope_errors(envelope, witness):
     """Compare PW's claims to the request and independently observed identities."""
-    errors = []
+    spec = witness['specimen']
+    expected_steps = []
+    for index, planned in enumerate(spec['probe_plan']):
+        allowed = index == 0 or index - 1 == witness['allowed_index']
+        expected = {'step_id': planned['step_id'], 'index': index,
+                    'sandbox_outcome': 'allow' if allowed else 'deny',
+                    'attempt_ok': allowed, 'drift': False}
+        if allowed:
+            expected['errno'] = None
+        expected_steps.append(expected)
+    common_errors, matched = validate_run_shape(envelope, expected_steps)
+    errors = [f"{witness['label']}: {error}" for error in common_errors]
 
     def equal(field, actual, expected):
         if type(actual) is not type(expected) or actual != expected:
             errors.append(f"{witness['label']}: {field}: expected {expected!r}, got {actual!r}")
 
-    spec = witness['specimen']
+    # Shape errors are already recorded. Only enter the independent identity
+    # checks when their containing objects exist; matched steps still receive
+    # both shared and specimen-specific checks after an ordering error.
+    if not isinstance(envelope, dict) or not isinstance(envelope.get('data'), dict):
+        return errors
+    data = envelope['data']
+    runner = data.get('runner_result')
+    if not isinstance(runner, dict):
+        return errors
+    provenance = data.get('runner_provenance')
+    equal('runner_kind', provenance.get('runner_kind') if isinstance(provenance, dict) else None, 'standard')
     worker_pid = witness['processes']['worker']['pid']
-    equal('kind', envelope.get('kind'), 'run')
-    equal('result.ok', (envelope.get('result') or {}).get('ok'), True)
-    data = envelope.get('data') or {}
-    equal('runner_kind', (data.get('runner_provenance') or {}).get('runner_kind'), 'standard')
-    runner = data.get('runner_result') or {}
     equal('specimen_id', runner.get('specimen_id'), spec['specimen_id'])
-    equal('normalized_outcome', runner.get('normalized_outcome'), 'ok')
     equal('test_overrides', runner.get('test_overrides'), None)
     equal('worker pid', runner.get('pid'), worker_pid)
-    sub = runner.get('runner_subprocess') or {}
+    sub = runner.get('runner_subprocess')
+    if not isinstance(sub, dict):
+        sub = {}
     equal('runner_subprocess.pid', sub.get('pid'), worker_pid)
     equal('runner_subprocess.exit_code', sub.get('exit_code'), 0)
     equal('runner_subprocess.term_signal', sub.get('term_signal'), None)
     equal('runner_subprocess.partial_steps', sub.get('partial_steps'), False)
-    steps = runner.get('steps') or []
-    equal('step IDs', [step.get('step_id') for step in steps],
-          [step['step_id'] for step in spec['probe_plan']])
-    if len(steps) != len(spec['probe_plan']):
-        return errors
-    for index, (step, planned) in enumerate(zip(steps, spec['probe_plan'])):
+    for step, expected in matched:
+        errors.extend(f"{witness['label']}: {error}" for error in validate_step(step, expected))
+        index = expected['index']
+        planned = spec['probe_plan'][index]
+        allowed = expected['attempt_ok']
         field = f"step {planned['step_id']}"
-        sb, attempt = step.get('sandbox_check') or {}, step.get('attempt') or {}
-        allowed = index == 0 or index - 1 == witness['allowed_index']
-        equal(f'{field} prediction pid', sb.get('pid'), worker_pid)
-        equal(f'{field} operation', sb.get('operation'), planned['sandbox_check']['operation'])
-        equal(f'{field} filter value', sb.get('filter_value'), planned['sandbox_check']['filter']['value'])
-        equal(f'{field} prediction', sb.get('outcome'), 'allow' if allowed else 'deny')
+        sb, attempt = step.get('sandbox_check'), step.get('attempt')
+        if isinstance(sb, dict):
+            equal(f'{field} prediction pid', sb.get('pid'), worker_pid)
+            equal(f'{field} operation', sb.get('operation'), planned['sandbox_check']['operation'])
+            equal(f'{field} filter value', sb.get('filter_value'), planned['sandbox_check']['filter']['value'])
+        if not isinstance(attempt, dict):
+            continue  # The shared validator already reported the missing channel.
         equal(f'{field} requested_path', attempt.get('requested_path'), planned['attempt']['target'])
         equal(f'{field} attempt outcome', attempt.get('outcome'), 'ok' if allowed else 'open_failed')
-        if 'drift' not in step:
-            errors.append(f"{witness['label']}: {field}: missing drift")
-        equal(f'{field} drift', step.get('drift'), False)
-        if allowed:
-            equal(f'{field} attempt rc', attempt.get('rc'), 0)
-            equal(f'{field} syscall_errno', attempt.get('syscall_errno'), None)
-        elif type(attempt.get('rc')) is not int or attempt['rc'] == 0 or attempt.get('syscall_errno') not in (1, 13):
-            errors.append(f"{witness['label']}: {field}: denied attempt lacks failure/permission errno: {attempt!r}")
+        if not allowed and attempt.get('syscall_errno') not in (1, 13):
+            errors.append(f"{witness['label']}: {field}: expected permission syscall_errno (EPERM/EACCES)")
         if index == 0:
             equal(f'{field} child_pid', attempt.get('child_pid'), witness['processes']['helper']['pid'])
             equal(f'{field} child_exit_code', attempt.get('child_exit_code'), 0)
@@ -105,7 +117,22 @@ def file_bytes(witness, phase, allowed_effect=False):
 def exercise_checker(witnesses, envelopes, out):
     controls = out / 'checker_controls'
     controls.mkdir()
-    count = 0
+
+    counts = {'accepted': 0, 'rejected': 0}
+
+    def check(name, broken, witness, required=()):
+        save(controls / f'{name}.json', broken)
+        errors = envelope_errors(broken, witness)
+        diagnostic = '\n'.join(errors)
+        (controls / f'{name}.log').write_text(diagnostic + '\n')
+        if required:
+            assert errors and all(f"{witness['label']}:" in line for line in errors), (name, errors)
+            assert all(fragment in diagnostic for fragment in required), (name, required, errors)
+            counts['rejected'] += 1
+        else:
+            assert not errors, (name, errors)
+            counts['accepted'] += 1
+
     for owner, other in ((0, 1), (1, 0)):
         witness = witnesses[owner]
         for part in ('envelope', 'step0', 'step1', 'step2', 'prediction', 'attempt'):
@@ -126,16 +153,77 @@ def exercise_checker(witnesses, envelopes, out):
                 broken['data']['runner_result']['steps'][1][key] = foreign['data']['runner_result']['steps'][1][key]
                 if part == 'prediction':
                     broken['data']['runner_result']['steps'][1][key]['pid'] = witness['processes']['worker']['pid']
-                required = ['filter value:', 'prediction:'] if part == 'prediction' else ['requested_path:', 'attempt outcome:']
+                required = ['filter value:', 'expected sandbox_check'] if part == 'prediction' else ['requested_path:', 'attempt outcome:']
             name = f"{witness['label']}_{part}"
-            save(controls / f'{name}.json', broken)
-            errors = envelope_errors(broken, witness)
-            diagnostic = '\n'.join(errors)
-            (controls / f'{name}.log').write_text(diagnostic + '\n')
-            assert errors and all(f"{witness['label']}:" in line for line in errors), (name, errors)
-            assert all(fragment in diagnostic for fragment in required), (name, required, errors)
-            count += 1
-    print(f'{count} cross-run corruptions rejected with attribution diagnostics', flush=True)
+            check(name, broken, witness, required)
+
+    for witness, envelope in zip(witnesses, envelopes):
+        # Expectations are a fixed test-side table, never inferred from the
+        # checker's return value. Each case changes one field of one step.
+        for index, planned in enumerate(witness['specimen']['probe_plan']):
+            allowed = index in (0, witness['allowed_index'] + 1)
+            if allowed:
+                cases = [('syscall_errno', 'delete', 'missing attempt.syscall_errno'),
+                         ('syscall_errno', 'true', 'invalid attempt.syscall_errno'),
+                         ('syscall_errno', 'false', 'invalid attempt.syscall_errno')]
+            else:
+                # The bounded audit's complete 24-case measurement, including
+                # the two legitimate omissions of optional diagnostic text.
+                cases = [(key, 'delete', f'missing attempt.{key}') for key in
+                         ('rc', 'exit_code', 'errno', 'syscall_errno', 'requested_path',
+                          'normalized_path', 'observed_path')]
+                cases += [('outcome', 'delete', 'attempt outcome:'), ('error', 'delete', None),
+                          ('errno', 'null', 'attempt.errno mismatch'),
+                          ('exit_code', 'null', 'invalid attempt.exit_code'),
+                          ('rc', 'null', 'invalid attempt.rc'),
+                          ('syscall_errno', 'null', 'expected permission syscall_errno'),
+                          ('outcome', 'null', 'attempt outcome:'),
+                          ('requested_path', 'null', 'requested_path:'), ('error', 'null', None)]
+                cases += [(key, value, f'invalid attempt.{key}') for key in
+                          ('errno', 'exit_code', 'rc', 'syscall_errno') for value in ('true', 'false')]
+            for key, mutation, diagnostic in cases:
+                changed = copy.deepcopy(envelope)
+                attempt = changed['data']['runner_result']['steps'][index]['attempt']
+                if mutation == 'delete':
+                    attempt.pop(key, None)
+                else:
+                    attempt[key] = {'null': None, 'true': True, 'false': False}[mutation]
+                check(f"{witness['label']}_step{index}_{key}_{mutation}", changed, witness,
+                      [planned['step_id'], diagnostic] if diagnostic else ())
+
+            changed = copy.deepcopy(envelope)
+            # Both values have legal types; agreement is independently required.
+            changed['data']['runner_result']['steps'][index]['attempt']['errno'] = 1 if allowed else 2
+            check(f"{witness['label']}_step{index}_errno_mismatch", changed, witness,
+                  [planned['step_id'], 'attempt.errno mismatch'])
+            if not allowed:
+                changed = copy.deepcopy(envelope)
+                attempt = changed['data']['runner_result']['steps'][index]['attempt']
+                attempt['rc'] = attempt['exit_code'] + 1
+                check(f"{witness['label']}_step{index}_rc_mismatch", changed, witness,
+                      [planned['step_id'], 'attempt.rc mismatch'])
+                for error in (1, 13):
+                    changed = copy.deepcopy(envelope)
+                    changed['data']['runner_result']['steps'][index]['attempt'].update(
+                        errno=error, syscall_errno=error)
+                    check(f"{witness['label']}_step{index}_permission_{error}", changed, witness)
+
+        changed = copy.deepcopy(envelope)
+        steps = changed['data']['runner_result']['steps']
+        steps.reverse()
+        steps[0]['attempt']['rc'] = False
+        check(f"{witness['label']}_reordered_and_bad_attempt", changed, witness,
+              ['expected step IDs in order',
+               f"{witness['specimen']['probe_plan'][2]['step_id']}: invalid attempt.rc"])
+        changed = copy.deepcopy(envelope)
+        steps = changed['data']['runner_result']['steps']
+        steps[0]['sandbox_check'] = None
+        del steps[2]['attempt']['errno']
+        check(f"{witness['label']}_malformed_prediction_and_missing_alias", changed, witness,
+              [f"missing sandbox_check for {witness['specimen']['probe_plan'][0]['step_id']}",
+               f"{witness['specimen']['probe_plan'][2]['step_id']}: missing attempt.errno"])
+    print(f"{counts['rejected']} corruptions rejected with attribution diagnostics; "
+          f"{counts['accepted']} valid evidence variants accepted", flush=True)
 
 
 def main():
