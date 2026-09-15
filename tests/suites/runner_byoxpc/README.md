@@ -31,6 +31,13 @@ dependency. Shared offline checker controls run once in their standard suites,
 not again for each runner context. The external-auth case has its own invocation;
 its failure does not suppress an otherwise usable team-matched runner.
 
+The external-auth case stages its disposable ad-hoc runner in a unique directory
+under `/private/tmp`, so launching it does not depend on Desktop/Documents
+privacy consent when the checkout or artifacts live there. Its modified plist,
+signing output, and install/verify/remove results stay in the case artifacts.
+Exit cleanup removes the service before deleting the temporary bundle; a failed
+service removal retains the bundle and fails the case.
+
 The wrapper installs once for selected specimen cases, continues independent
 specimens after failures, and removes the runner on exit. Missing required GUI,
 app, or signing equipment fails with explicit unrun selections in the public

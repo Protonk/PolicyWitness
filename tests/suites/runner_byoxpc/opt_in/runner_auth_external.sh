@@ -32,8 +32,25 @@ if ! has_gui_launchd_domain; then
   exit 0
 fi
 
-BUNDLE_COPY="${PW_TEST_ARTIFACTS}/PWRunner.noauth.xpc"
-rm -rf "${BUNDLE_COPY}"
+# The ad-hoc runner must not launch from Desktop/Documents-protected artifacts.
+# Use an explicit unprotected root even when TMPDIR points into the checkout.
+STAGING_DIR="$(mktemp -d /private/tmp/pw-runner-noauth.XXXXXX)"
+RUNNER_ID=""
+cleanup() {
+  if [[ -n "${RUNNER_ID}" ]]; then
+    if ! "${PW_BIN}" runner remove --id "${RUNNER_ID}" \
+      >"${PW_TEST_ARTIFACTS}/runner_remove.user.stdout.json" \
+      2>"${PW_TEST_ARTIFACTS}/runner_remove.user.stderr.txt"; then
+      echo "runner removal failed; retaining bundle at ${STAGING_DIR}" >&2
+      return 1
+    fi
+    RUNNER_ID=""
+  fi
+  rm -rf "${STAGING_DIR}"
+}
+trap cleanup EXIT
+
+BUNDLE_COPY="${STAGING_DIR}/PWRunner.noauth.xpc"
 cp -R "${SRC_BUNDLE}" "${BUNDLE_COPY}"
 
 INFO_PLIST="${BUNDLE_COPY}/Contents/Info.plist"
@@ -60,7 +77,10 @@ if "PWRunnerRequireSignedCaller" in plist or "PWRunnerAllowedIdentifiers" in pli
     raise SystemExit("auth keys still present in external runner Info.plist")
 PY
 
-/usr/bin/codesign --force -s - "${BUNDLE_COPY}" >/dev/null 2>&1 || test_fail "ad-hoc codesign failed"
+cp "${INFO_PLIST}" "${PW_TEST_ARTIFACTS}/PWRunner.noauth.Info.plist"
+/usr/bin/codesign --force -s - "${BUNDLE_COPY}" \
+  >"${PW_TEST_ARTIFACTS}/codesign.stdout.txt" \
+  2>"${PW_TEST_ARTIFACTS}/codesign.stderr.txt" || test_fail "ad-hoc codesign failed"
 
 INSTALL_STDOUT="${PW_TEST_ARTIFACTS}/runner_install.user.stdout.json"
 INSTALL_STDERR="${PW_TEST_ARTIFACTS}/runner_install.user.stderr.txt"
@@ -103,11 +123,6 @@ if [[ -z "${RUNNER_ID}" || -z "${SERVICE_NAME}" ]]; then
   test_fail "missing runner id/service name"
 fi
 
-cleanup() {
-  "${PW_BIN}" runner remove --id "${RUNNER_ID}" >/dev/null 2>&1 || true
-}
-trap cleanup EXIT
-
 test_step "verify_runner" "verify external runner"
 VERIFY_STDOUT="${PW_TEST_ARTIFACTS}/runner_verify.user.stdout.json"
 VERIFY_STDERR="${PW_TEST_ARTIFACTS}/runner_verify.user.stderr.txt"
@@ -144,4 +159,6 @@ if [[ ${PY_STATUS} -ne 0 || ${VERIFY_RC} -ne 0 ]]; then
   test_fail "runner verify failed" "{\"stdout\":\"${VERIFY_STDOUT}\",\"stderr\":\"${VERIFY_STDERR}\"}"
 fi
 
+cleanup || test_fail "runner cleanup failed; see runner_remove artifacts"
+trap - EXIT
 test_pass "external runner installs without auth keys" "{}"
