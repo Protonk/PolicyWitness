@@ -15,7 +15,7 @@ from suite_run import execute, save
 
 def catalog(root):
     data = json.loads((root / 'tests/catalog.json').read_text())
-    cases, suites = {}, {}
+    cases, suites, report_paths = {}, {}, {}
     for suite, group in data['suites'].items():
         if not re.fullmatch(r'[a-z][a-z0-9_]*', suite):
             raise ValueError(f'invalid catalog suite: {suite}')
@@ -39,6 +39,12 @@ def catalog(root):
             case.setdefault('skip_reasons', [])
             case.setdefault('depends_on', [])
             case.setdefault('report_suite', suite)
+            if not isinstance(case['report_suite'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', case['report_suite']):
+                raise ValueError(f'invalid report_suite: {key}')
+            report_path = (case['report_suite'], leaf)
+            if report_path in report_paths:
+                raise ValueError(f'catalog report path {"/".join(report_path)} shared by {report_paths[report_path]} and {key}')
+            report_paths[report_path] = key
             if not case.get('command') or not all(isinstance(x, str) and x for x in case['command']):
                 raise ValueError(f'missing command: {key}')
             if not isinstance(case['default'], bool) or case['context'] not in ('standard', 'byoxpc'):
@@ -96,30 +102,39 @@ def select(cases, suites, args):
 
 
 def resolve_config(root, env):
-    def path(name, default=None):
+    def path(name, default=None, *, resolve=True):
         raw = env.get(name, default)
         if not raw:
             raise ValueError(f'{name} must not be empty')
         p = Path(raw)
-        return (p if p.is_absolute() else root / p).resolve()
+        p = p if p.is_absolute() else root / p
+        return p.resolve() if resolve else p
 
     internal = [key for key in env if key.startswith('PW_TEST_RUNNER_') or key in
                 ('PW_TEST_SUITE_OVERRIDE', 'PW_TEST_CASES', 'PW_TEST_EVENTS')]
     if internal:
         raise ValueError(f'internal test settings cannot be supplied to tests/run.sh: {sorted(internal)}; select runner_byoxpc cases instead')
-    bins = [path(name) for name in ('PW_BIN', 'PW_BIN_PATH') if name in env]
+    # Infer each named bundle before following the executable's symlink. Whole
+    # bundle aliases are fine; an executable must not redirect to another app.
+    named_bins = [path(name, resolve=False) for name in ('PW_BIN', 'PW_BIN_PATH') if name in env]
+    bin_apps = []
+    for binary in named_bins:
+        if binary.parts[-3:] != ('Contents', 'MacOS', 'policy-witness'):
+            raise ValueError('controller override must identify Contents/MacOS/policy-witness in an app bundle')
+        bin_apps.append(binary.parents[2].resolve())
+    bins = [binary.resolve() for binary in named_bins]
     if len(set(bins)) > 1:
         raise ValueError('PW_BIN and PW_BIN_PATH identify different controllers')
     if 'PW_APP_DIR' in env:
         app = path('PW_APP_DIR')
     elif bins:
-        if bins[0].parts[-3:] != ('Contents', 'MacOS', 'policy-witness'):
-            raise ValueError('controller override must identify Contents/MacOS/policy-witness in an app bundle')
-        app = bins[0].parents[2]
+        app = bin_apps[0]
     else:
         app = (root / 'dist/PolicyWitness.app').resolve()
     binary = (app / 'Contents/MacOS/policy-witness').resolve()
-    if bins and bins[0] != binary:
+    if app not in binary.parents:
+        raise ValueError('controller must resolve inside the selected app bundle')
+    if any(named_app != app for named_app in bin_apps) or (bins and bins[0] != binary):
         raise ValueError('PW_APP_DIR and controller override identify different artifacts')
     out = path('PW_TEST_OUT_DIR', 'tests/out')
     base = root / 'tests/out'
@@ -168,7 +183,7 @@ def main():
         plan = {'schema_version': 1, 'configuration': config, 'cases': selected,
                 'selection': {'mode': 'all' if args.all else 'explicit' if args.suite or args.case else 'default',
                               'suites': list(dict.fromkeys(args.suite)), 'cases': list(dict.fromkeys(args.case))},
-                'suites': {name: [key for key in keys if key in selected_ids]
+                'containing_suites': {name: [key for key in keys if key in selected_ids]
                            for name, keys in suites.items() if selected_ids.intersection(keys)}}
     except (ValueError, OSError, KeyError, TypeError) as exc:
         parser.error(str(exc))

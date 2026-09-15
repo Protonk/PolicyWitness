@@ -49,6 +49,9 @@ methods remain inside their respective batch cases.
 
 `--list` prints the selected plan as JSON, including descriptions, default
 membership, prerequisites, runner contexts, dependencies, and configuration.
+`selection.suites` records the caller's suite selectors; `containing_suites`
+maps selected cases to every suite containing them. Membership does not imply
+that the caller selected that entire suite.
 `--all --list` discovers the complete catalog. Help, inspection, invalid arguments,
 invalid configuration, and missing entrypoint scripts leave existing evidence
 untouched. `--describe` is not supported.
@@ -72,7 +75,9 @@ configuration validation, or completion guarantees.
   that bundle. Either can infer the app when `PW_APP_DIR` is absent. All supplied
   paths must agree after resolution; a standalone controller is rejected because
   tests also exercise its bundled helpers. Rust and shell tests receive the same
-  resolved controller and app paths.
+  resolved controller and app paths. Whole-app symlinks are supported; a
+  controller symlink must stay inside its named bundle, including when a
+  controller alias supplies the app path implicitly.
 - `PW_TEST_OUT_DIR`: output directory, default `tests/out`. It must resolve inside
   `tests/out`, including through symlinks, and cannot overlap the tested app.
   Execution replaces this directory; inspection does not.
@@ -137,7 +142,7 @@ prerequisites should fail, not skip.
 | `runner_use_c_worker` | Baseline | End-to-end coverage of the runner's C code path. Drives real specimens through `controller → XPC service → CWorkerOrchestrator → pw-probe-runner + sb_api_validator --batch` with NO `_test_overrides` (so each run also double-checks production-shape assembly). Covers: v4 envelope shape (validator_subprocess populated, drift computed, prediction_unavailable verdicts synthesized locally), bug-report `(deny default)` survival, and regression cases for duplicate step_ids (plan-killer), unsupported attempt combos (per-step skip), worker_timeout_ms wiring, ENOENT/BOOTSTRAP_UNKNOWN_SERVICE not counted as drift, sandbox_check.pid = worker PID, DAC EACCES not counted as drift, and the access_failed outcome. | Built app + XPC | — | |
 | `runner_mach_service_liveness` | Baseline | The built `PWRunner` executable, launched directly with `--mach-service <name>` (the BYOXPC LaunchAgent launch shape), binds `NSXPCListener(machServiceName:)` and stays alive instead of aborting under `xpc_main`. Regression guard for the BYOXPC `xpc_timeout` crash: a host that calls `NSXPCListener.service()` for this launch aborts immediately (`"An XPC Service cannot be run directly."`), which is what made `runner verify` time out. Complements `runner_unit`'s `pwListenerConfig` table (which pins the argv→listener selection) by asserting the shipped binary itself does not abort. | Built app | — | Launches the host binary without launchd, so it never services a connection here — it only asserts the process does not abort. `tests/out/suites/runner_mach_service_liveness/.../artifacts/pwrunner.stderr.log` |
 | `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Annotated mismatch condition in shared menagerie cases only | Uses the shared smoke and blackbox assertions, including checker controls. BBX prediction disagreements fail and do not suppress attempt validation. |
-| `smoke` | Baseline | Quick end-to-end checks against a built app bundle | Built app + XPC | — | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite smoke` |
+| `smoke` | Baseline + opt-in caller-auth case | Quick end-to-end checks against a built app bundle | Built app + XPC; selecting the whole suite also requires a matching Developer ID | — | `--suite smoke` includes `runner_caller_auth`. For ordinary smoke without signing equipment, select `--case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard`. Ordinary specimens also run under `runner_byoxpc`. |
 | `blackbox_e2e` | Baseline | End-to-end black-box cases (BBX-*) validate the returned JSON envelope, attempts, and step identity/order. Prediction disagreements fail; independent checker controls ensure one failure cannot hide another. | Built app + XPC; checker controls need only Python 3 | — | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` |
 | `blackbox_menagerie` | Baseline | Real SBPL fixtures exercising specimen ingestion and evidence correlation; controls drive both black-box checkers against independent envelopes and faults | Built app + XPC; validation controls need only Python 3 | Annotated mismatch is absent after all evidence checks pass | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
 | `sbpl_allowdeny_consistency` | Baseline | Independently reads randomized file targets after writes, checks changed/nonempty bytes vs byte-for-byte preservation, restores seeds and reverses policy parameter bindings with the same probe plan, then cross-checks JSON verdicts. The fixture retains two Mach steps, checked for presence only. | Built app + XPC | — | Two specimens/envelopes plus external before/after byte snapshots; no log dependency or test overrides. |
@@ -236,6 +241,9 @@ installation and cleanup. The installation case is also a selected dependency.
 
 `run.json` retains reports/counts and includes the plan, effective configuration,
 invocations, harness errors, and one `case_results` entry per selected case.
+Distinct catalog cases must use distinct report paths; collisions are rejected
+before output is replaced. The executor also refuses ambiguous report ownership
+and checks complete, unique selection accounting before reporting success.
 `completion` counts selected, completed (pass or fail reports), skipped, and
 unrun cases. These are separate from readable-report counts: a missing report
 cannot disappear merely because no report was available to count.

@@ -12,6 +12,10 @@ No selectors means default membership; explicit selectors form a deduplicated
 union in catalog order. Dependencies appear in the plan. `--all` includes opt-ins;
 `--list` is a read-only JSON description of exactly the selected plan. Relative
 configuration paths resolve from the repository, even when invoked elsewhere.
+`selection.suites` records requested suites; `containing_suites` lists membership
+of the selected cases. Whole-app symlinks are accepted, but the controller must
+resolve within the named bundle. Distinct catalog IDs cannot share a report path;
+valid reporting aliases and suite inclusions remain supported.
 
 Execution writes `plan.json` and delegates to `tests/lib/suite_run.py`. Each
 ordinary case has a separate command invocation. BYOXPC specimen cases share a
@@ -41,6 +45,13 @@ crashes, silent exits, malformed or missing evidence, contradictory statuses,
 rewritten events, reused paths, and removed reports. Failure scenarios generally
 include a subsequent passing case. Missing/nonexecutable entrypoints instead
 prove rejection happens before any execution or output replacement.
+`check_accounting.py` additionally supplies independent handoff records directly
+at the accounting/finalization boundary: ambiguous ownership must retain both
+selections as unrun, and missing, duplicated, unexpected, or invalid result
+records must never produce success. These controls bypass catalog validation
+deliberately to check the executor's separate defense. A valid alias and reordered
+complete results remain accepted. Inputs, summaries, diagnostics, and return
+statuses are retained alongside the other controls.
 
 `check_selection.py` uses an independently authored tiny catalog and fixture
 commands that import no test machinery. Their execution receipts record actual
@@ -51,6 +62,9 @@ read-only inspection, rejected flags/configuration, symlink output escapes,
 artifact aliases, quiet values, required equipment, unexpected evidence, skip
 contracts, and complete accounting after failures. Whole-tree byte snapshots
 also catch accidental bytecode writes during inspection.
+Split bundles and colliding catalog report paths must be rejected without
+execution or evidence replacement; whole-app and internal controller symlinks
+must preserve the selected bundle in execution receipts.
 
 `tests/fixtures/dispatcher/repository.py` only copies equipment and writes the
 caller-supplied catalog; it contains no expected selections or result oracle.

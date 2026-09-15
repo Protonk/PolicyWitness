@@ -29,7 +29,8 @@ def main():
     all_ids = ['probe/first', 'probe/second', 'optional/limited', 'equipment/app', 'remote/install', 'remote/first']
 
     def exercise(name, args, expected=(), *, code=0, inspect=False, invalid=False, settings=None,
-                 modes=None, codes=(), app=False, corrupt=None, skipped=0, unrun=0):
+                 modes=None, codes=(), app=False, corrupt=None, skipped=0, unrun=0,
+                 expected_app=None, diagnostic=None, containing=None):
         work = out / name
         repo = work / 'fixture repo'
         suites = {
@@ -80,6 +81,8 @@ def main():
         (work / 'stderr').write_bytes(result.stderr)
         (work / 'exit.json').write_text(json.dumps({'argv': args, 'returncode': result.returncode}) + '\n')
         require(result.returncode == code, f'{name}: exit {result.returncode}, expected {code}: {result.stderr!r}')
+        if diagnostic:
+            require(diagnostic.encode() in result.stderr, f'{name}: missing diagnostic: {result.stderr!r}')
         records = [json.loads(line) for line in receipt.read_text().splitlines()] if receipt.exists() else []
         if inspect or invalid:
             require(not records, f'{name}: inspection/invalid command executed work')
@@ -87,6 +90,9 @@ def main():
             if inspect and '--list' in args:
                 plan = json.loads(result.stdout)
                 require([c['id'] for c in plan['cases']] == list(expected), f'{name}: wrong listed selection')
+                if containing is not None:
+                    require(plan.get('containing_suites') == containing and 'suites' not in plan,
+                            f'{name}: membership confused with requested suites')
             inventory.append(name)
             return
         require([r['id'] for r in records] == list(expected), f'{name}: wrong execution receipts: {records}')
@@ -102,6 +108,8 @@ def main():
         require([r['id'] for r in summary['case_results']] == [c['id'] for c in plan['cases']], f'{name}: incomplete accounting')
         require(not (child_out / 'old.bin').exists(), f'{name}: stale evidence survived execution')
         config = summary['configuration']
+        if expected_app:
+            require(config['app_dir'] == str(repo / expected_app), f'{name}: wrong app: {config}')
         for record in records:
             require(record['argv'] == [LITERAL] and record['cwd'] == str(repo), f'{name}: argv/cwd drift')
             require(record['app'] == config['app_dir'] and record['bin'] == record['rust_bin'] == config['pw_bin'], f'{name}: artifact disagreement')
@@ -135,6 +143,52 @@ def main():
     exercise('agreeing_aliases', ['--suite', 'equipment'], ['equipment/app'], app=True,
              settings={'PW_APP_DIR': 'An app.app', 'PW_BIN': '{repo}/An app.app/Contents/MacOS/policy-witness',
                        'PW_BIN_PATH': 'An app.app/Contents/MacOS/policy-witness'})
+    def split_bundle(repo):
+        binary = repo / 'An app.app/Contents/MacOS/policy-witness'
+        other = repo / 'Other.app/Contents/MacOS/policy-witness'
+        other.parent.mkdir(parents=True)
+        binary.rename(other)
+        binary.symlink_to(other)
+
+    # Each spelling must retain the caller's bundle identity before following
+    # its executable symlink. Inspection and execution must both reject safely.
+    for label, settings in [
+        ('app', {'PW_APP_DIR': 'An app.app'}),
+        ('bin', {'PW_BIN': 'An app.app/Contents/MacOS/policy-witness'}),
+        ('bin_path', {'PW_BIN_PATH': 'An app.app/Contents/MacOS/policy-witness'}),
+        ('all_aliases', {'PW_APP_DIR': 'An app.app',
+                        'PW_BIN': 'An app.app/Contents/MacOS/policy-witness',
+                        'PW_BIN_PATH': 'An app.app/Contents/MacOS/policy-witness'}),
+        ('hidden_alias', {'PW_APP_DIR': 'Other.app',
+                          'PW_BIN': 'Other.app/Contents/MacOS/policy-witness',
+                          'PW_BIN_PATH': 'An app.app/Contents/MacOS/policy-witness'}),
+    ]:
+        for suffix in ([], ['--list']):
+            exercise('split_' + label + ('_list' if suffix else ''), ['--suite', 'equipment', *suffix],
+                     code=2, invalid=True, app=True, settings=settings, corrupt=split_bundle)
+
+    def app_symlink(repo):
+        (repo / 'Linked.app').symlink_to(repo / 'An app.app', target_is_directory=True)
+
+    for label, settings in [
+        ('app', {'PW_APP_DIR': 'Linked.app'}),
+        ('bin', {'PW_BIN': 'Linked.app/Contents/MacOS/policy-witness'}),
+        ('bin_path', {'PW_BIN_PATH': 'Linked.app/Contents/MacOS/policy-witness'}),
+        ('mixed', {'PW_APP_DIR': 'Linked.app', 'PW_BIN': 'An app.app/Contents/MacOS/policy-witness',
+                   'PW_BIN_PATH': 'Linked.app/Contents/MacOS/policy-witness'}),
+    ]:
+        exercise('whole_app_symlink_' + label, ['--suite', 'equipment'], ['equipment/app'],
+                 app=True, settings=settings, corrupt=app_symlink, expected_app='An app.app')
+
+    def internal_symlink(repo):
+        binary = repo / 'An app.app/Contents/MacOS/policy-witness'
+        target = binary.with_name('controller-real')
+        binary.rename(target)
+        binary.symlink_to(target.name)
+
+    exercise('internal_controller_symlink', ['--suite', 'equipment'], ['equipment/app'], app=True,
+             settings={'PW_BIN': 'An app.app/Contents/MacOS/policy-witness'},
+             corrupt=internal_symlink, expected_app='An app.app')
     for settings in [
         {'PW_BIN': '/a', 'PW_BIN_PATH': '/b'}, {'PW_BIN': '/standalone'},
         {'PW_APP_DIR': 'An app.app', 'PW_BIN': 'Other.app/Contents/MacOS/policy-witness'},
@@ -149,6 +203,27 @@ def main():
     exercise('symlink_escape', ['--suite', 'probe'], code=2, invalid=True,
              settings={'PW_TEST_OUT_DIR': 'tests/out/escape'},
              corrupt=lambda repo: (repo / 'tests/out/escape').symlink_to(repo.parent, target_is_directory=True))
+    def report_alias(repo, report_suite='probe', grouped=True):
+        path = repo / 'tests/catalog.json'
+        value = json.loads(path.read_text())
+        value['suites']['remote']['cases'] = [{'id': 'first', 'report_suite': report_suite}]
+        if grouped:
+            value['suites']['probe']['context'] = 'byoxpc'
+            value['suites']['remote']['command'] = value['suites']['probe']['command']
+        path.write_text(json.dumps(value))
+
+    for grouped in (False, True):
+        for suffix in ([], ['--list']):
+            exercise(f'colliding_reports_{grouped}_{bool(suffix)}',
+                     ['--suite', 'probe', '--suite', 'remote', *suffix], code=2, invalid=True,
+                     corrupt=lambda repo: report_alias(repo, grouped=grouped),
+                     diagnostic='catalog report path')
+    for report_suite in (None, [], '../escape', ''):
+        exercise('invalid_report_suite_' + str(len(inventory)), ['--suite', 'probe'], code=2,
+                 invalid=True, corrupt=lambda repo: report_alias(repo, report_suite),
+                 diagnostic='invalid report_suite')
+    exercise('containing_suites', ['--case', 'probe/first', '--list'], ['probe/first'], inspect=True,
+             containing={'probe': ['probe/first'], 'alias': ['probe/first']})
     for value in ('0', '1'):
         exercise('quiet_' + value, ['--case', 'probe/first'], ['probe/first'], settings={'PW_TEST_QUIET': value})
     exercise('missing_equipment', ['--suite', 'equipment', '--suite', 'probe'], ['probe/first', 'probe/second'],

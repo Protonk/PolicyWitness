@@ -119,7 +119,7 @@ test_log() {
   local message="$1"
   local suite="${PW_TEST_SUITE:-unknown}"
   local test_id="${PW_TEST_ID:-unknown}"
-  if [[ -n "${PW_TEST_QUIET:-}" ]]; then
+  if [[ "${PW_TEST_QUIET:-}" == "1" ]]; then
     return 0
   fi
   echo "==> [${suite}/${test_id}] ${message}"

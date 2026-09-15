@@ -120,9 +120,11 @@ output, and return/exit behavior. Ordinary pass/skip logging respects quiet
 mode; `test_pass_note` always prints. `test_fail` writes its diagnostic to
 stderr and exits 1 even when the caller has disabled errexit. Pass and skip
 return success so callers can continue with another case.
+Quiet mode means `PW_TEST_QUIET=1`; unset, empty, and `0` retain ordinary messages
+in direct scripts as well as through the public command.
 
-The `finalizers` case exercises all four public functions with quiet mode on
-and off, omitted arguments, empty arguments, and literal messages/JSON data.
+The `finalizers` case exercises all four public functions with quiet unset,
+empty, `0`, and `1`, omitted arguments, empty arguments, and literal messages/JSON data.
 The fixture calls `test_begin` and the selected public function, then writes
 an independent receipt if execution continues. The Python observer imports
 no test-library code. It checks process status, exact stdout/stderr, the

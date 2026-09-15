@@ -17,9 +17,11 @@ def main():
     functions = [('test_pass', 'pass', 'ok'), ('test_pass_note', 'pass', 'ok'),
                  ('test_fail', 'fail', 'failed'), ('test_skip', 'skip', 'skipped')]
     for function, status, default_message in functions:
-        for quiet in (False, True):
+        for quiet_value in (None, '', '0', '1'):
+            quiet = quiet_value == '1'
             for variant in ('default', 'empty', 'literal'):
-                name = f'{function}_{variant}_{"quiet" if quiet else "verbose"}'
+                label = 'unset' if quiet_value is None else 'empty' if quiet_value == '' else quiet_value
+                name = f'{function}_{variant}_quiet_{label}'
                 work = out / name
                 work.mkdir()
                 child_out = work / 'output with spaces'
@@ -36,10 +38,10 @@ def main():
                 env.update(PW_TEST_OUT_DIR=str(child_out), PW_TEST_EVENTS=str(child_out / 'events.jsonl'),
                            PW_TEST_RUN_ID=name, CONTROL_SUITE=suite, CONTROL_ID=case_id,
                            CONTROL_FINALIZER=function, CONTROL_RETURN_RECEIPT=str(receipt))
-                if quiet:
-                    env['PW_TEST_QUIET'] = '1'
+                if quiet_value is not None:
+                    env['PW_TEST_QUIET'] = quiet_value
                 (work / 'input.json').write_text(json.dumps({
-                    'function': function, 'arguments': arguments, 'quiet': quiet,
+                    'function': function, 'arguments': arguments, 'quiet': quiet_value,
                     'suite': suite, 'test_id': case_id,
                 }, indent=2) + '\n')
                 started = time.monotonic()

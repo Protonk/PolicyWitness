@@ -4,6 +4,7 @@ Case paths stay stable. Invocation records establish which requested suite
 produced each case, including wrapper aliases. Harness errors are separate
 from case counts; either kind of failure makes both run.json and the CLI fail.
 """
+from collections import Counter
 import json
 import os
 from pathlib import Path
@@ -132,6 +133,21 @@ def counts(reports):
 def finish(out, run_id, started, invocations, plan):
     reports = [report for item in invocations for report in item['reports']]
     errors = [error for item in invocations for error in item['harness_errors']]
+    case_results = [case for item in invocations for case in item['case_results']]
+    selected = Counter(case['id'] for case in plan['cases'])
+    accounted = Counter(case['id'] for case in case_results)
+    invalid_states = [case['id'] for case in case_results
+                      if case['state'] not in ('completed', 'skipped', 'unrun')]
+    unrun = [case['id'] for case in case_results if case['state'] == 'unrun']
+    if (selected != accounted or any(n != 1 for n in selected.values()) or invalid_states
+            or (unrun and not errors)):
+        errors.append({'invocation': None, 'requested_suite': 'dispatcher', 'code': 'incomplete_accounting',
+                       'message': 'expected exactly one valid result per selection and a diagnostic for unrun cases',
+                       'missing_cases': sorted(selected.keys() - accounted.keys()),
+                       'unexpected_cases': sorted(accounted.keys() - selected.keys()),
+                       'duplicate_cases': sorted(key for key in selected.keys() | accounted.keys()
+                                                 if selected[key] > 1 or accounted[key] > 1),
+                       'invalid_states': invalid_states, 'unrun_cases': unrun})
     totals = counts(reports)
     by_suite = {}
     for name in sorted({report['suite'] for report in reports}):
@@ -146,7 +162,7 @@ def finish(out, run_id, started, invocations, plan):
         'requested_cases': plan['selection']['cases'],
         'invocations': invocations, 'harness_errors': errors,
         'plan': plan, 'configuration': plan['configuration'],
-        'case_results': [case for item in invocations for case in item['case_results']],
+        'case_results': case_results,
     }
     run['completion'] = {state: sum(c['state'] == state for c in run['case_results'])
                          for state in ('completed', 'skipped', 'unrun')}
@@ -186,16 +202,20 @@ def requirements(case, config, env, root, cache):
 
 
 def account(item):
-    expected = {(c['report_suite'], c['test_id']): c for c in item['cases']}
+    expected = Counter((c['report_suite'], c['test_id']) for c in item['cases'])
     observed = {(r['suite'], r['test_id']): r for r in item['reports']}
+    ambiguous = {key for key, count in expected.items() if count > 1}
+    for key in sorted(ambiguous):
+        problem(item, 'ambiguous_case_path', f'distinct selections share a report path: {key}')
     for key in observed.keys() - expected.keys():
         problem(item, 'unselected_case', f'unselected case produced evidence: {key}')
     item['case_results'] = []
-    for key, case in expected.items():
-        report = observed.get(key)
+    for case in item['cases']:
+        key = (case['report_suite'], case['test_id'])
+        report = observed.get(key) if key not in ambiguous else None
         state = 'unrun'
         status = None
-        reason = item.get('blocked_reason')
+        reason = 'ambiguous report path' if key in ambiguous else item.get('blocked_reason')
         if report:
             status = report['status']
             state = 'skipped' if status == 'skip' else 'completed'
