@@ -7,6 +7,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
+from repository import install_runner
 
 
 def main():
@@ -36,7 +38,8 @@ def main():
         ('end_before_start', ['end_before_start', 'pass'], False, ('case_order',)),
         ('duplicate_end', ['duplicate_end', 'pass'], False, ('case_end',)),
         ('signal_exit', ['signal_exit', 'pass'], False, ('suite_exit', 'missing_report')),
-        ('repeated_suite', ['pass', 'pass'], False, ('reused_case',)),
+        ('repeated_suite', ['pass', 'pass'], True, ()),
+        ('reused_evidence', ['pass', 'reuse_previous'], False, ('reused_case', 'unselected_case')),
         ('rewritten_events', ['pass', 'no_events'], False, ('events_rewritten',)),
         ('unreadable_events', ['unreadable_events'], False, ('unreadable_events',)),
         ('removed_prior_report', ['pass', 'remove_prior'], False, ('report_removed',)),
@@ -45,8 +48,13 @@ def main():
     for name, requested, expected_ok, codes in cases:
         work = out / name
         repo = work / 'fixture repo'
-        for relative in ('tests/run.sh', 'tests/lib/testlib.sh', 'tests/lib/suite_run.py',
-                         'tests/fixtures/dispatcher/alter.py'):
+        fixture_suites = {suite: {'command': ['bash', f'tests/suites/{suite}/run.sh'],
+                                  'cases': [{'id': 'fixture_case',
+                                             'report_suite': 'reported_alias' if suite == 'wrapper' else suite,
+                                             'skip_reasons': ['fixture_limitation'] if suite == 'skip' else []}]}
+                          for suite in dict.fromkeys(requested)}
+        install_runner(ROOT, repo, fixture_suites)
+        for relative in ('tests/fixtures/dispatcher/alter.py',):
             destination = repo / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, destination)
@@ -61,7 +69,7 @@ def main():
         child_out.mkdir(parents=True)
         # Old output must never be counted as evidence of this invocation.
         (child_out / 'run.json').write_text('{"ok": true, "stale": true}')
-        env = {key: value for key, value in os.environ.items() if not key.startswith('PW_TEST_')}
+        env = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
         env.update(PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=f'control_{name}')
         argv = ['bash', str(repo / 'tests/run.sh')]
         for suite in requested:
@@ -70,6 +78,14 @@ def main():
         (work / 'stdout').write_bytes(result.stdout)
         (work / 'stderr').write_bytes(result.stderr)
         (work / 'exit.json').write_text(json.dumps({'returncode': result.returncode}) + '\n')
+        if name in ('missing', 'nonexecutable'):
+            assert result.returncode == 2 and b'missing or nonexecutable case runner' in result.stderr, (name, result.stderr)
+            assert (child_out / 'run.json').read_text() == '{"ok": true, "stale": true}', name
+            assert not (child_out / 'dispatch.json').exists(), name
+            inventory.append(name)
+            print(f'{name}: ok', flush=True)
+            continue
+        requested = list(dict.fromkeys(requested))
         summary = json.loads((child_out / 'run.json').read_text())
         journal = json.loads((child_out / 'dispatch.json').read_text())
         assert result.returncode == (0 if expected_ok else 1), (name, result.returncode, result.stderr)

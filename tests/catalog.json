@@ -1,0 +1,1023 @@
+{
+  "schema_version": 1,
+  "suites": {
+    "preflight": {
+      "command": [
+        "bash",
+        "tests/suites/preflight/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "codesign.preflight",
+          "description": "Collect signing, entitlements, and bundle metadata for inspection"
+        }
+      ]
+    },
+    "source_drift": {
+      "command": [
+        "bash",
+        "tests/suites/source_drift/run.sh"
+      ],
+      "requires": [],
+      "cases": [
+        {
+          "id": "runner_source_manifests_agree",
+          "description": "all drift checks pass: 11 swift, 2 c, 37 suites, 18 normalized outcomes, 10 attempt outcomes, 3 prediction_unavailable pairs."
+        }
+      ]
+    },
+    "shell_helpers": {
+      "command": [
+        "bash",
+        "tests/suites/shell_helpers/run.sh"
+      ],
+      "requires": [],
+      "cases": [
+        {
+          "id": "controls",
+          "description": "shell helpers retain diagnostics and case identity; failures prevent later stages"
+        },
+        {
+          "id": "finalizers",
+          "description": "result helpers preserve terminal evidence, literal data, logging, and exit behavior"
+        },
+        {
+          "id": "python_startup",
+          "description": "optimized Python is rejected; normal assertion failures remain test failures"
+        },
+        {
+          "id": "script_groups",
+          "description": "wrappers preserve child order, streams, phase boundaries, and failing status"
+        },
+        {
+          "id": "worker_setup",
+          "description": "worker cases share setup; equipment failures stop before assertions and preserve evidence"
+        }
+      ]
+    },
+    "dispatcher": {
+      "command": [
+        "bash",
+        "tests/suites/dispatcher/run.sh"
+      ],
+      "requires": [],
+      "cases": [
+        {
+          "id": "controls",
+          "description": "requested suite exits, case reports, and lifecycle evidence determine one result"
+        },
+        {
+          "id": "selection_controls",
+          "description": "Public selectors, inspection, configuration, and completion agree with independent execution receipts"
+        }
+      ]
+    },
+    "unit": {
+      "command": [
+        "bash",
+        "tests/suites/unit/run.sh"
+      ],
+      "requires": [
+        "cargo"
+      ],
+      "cases": [
+        {
+          "id": "rust.unit",
+          "description": "Rust controller and helper unit-test batch"
+        }
+      ]
+    },
+    "integration": {
+      "command": [
+        "bash",
+        "tests/suites/integration/run.sh"
+      ],
+      "requires": [
+        "app",
+        "cargo"
+      ],
+      "cases": [
+        {
+          "id": "cli.integration",
+          "description": "Rust CLI integration batch against the selected app"
+        }
+      ]
+    },
+    "runner_unit": {
+      "command": [
+        "bash",
+        "tests/suites/runner_unit/run.sh"
+      ],
+      "requires": [
+        "swift"
+      ],
+      "cases": [
+        {
+          "id": "pwrunner_core_unit_executable",
+          "description": "Swift runner unit-test batch"
+        }
+      ]
+    },
+    "runner_apply_isolation_v2": {
+      "command": [
+        "bash",
+        "tests/suites/runner_apply_isolation_v2/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "deny_default_v2_worker_reply",
+          "description": "v2 deny-default worker replied through unsandboxed host"
+        }
+      ]
+    },
+    "runner_apply_isolation_v3": {
+      "command": [
+        "bash",
+        "tests/suites/runner_apply_isolation_v3/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "deny_default_v3_worker_reply",
+          "description": "v3 deny-default worker replied through unsandboxed host"
+        }
+      ]
+    },
+    "runner_outcome_libsandbox_unavailable": {
+      "command": [
+        "bash",
+        "tests/suites/runner_outcome_libsandbox_unavailable/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "dlopen_failure_propagates_to_outcome",
+          "description": "libsandbox unavailable propagated end-to-end with override reflected"
+        }
+      ]
+    },
+    "runner_outcome_worker_spawn_failed": {
+      "command": [
+        "bash",
+        "tests/suites/runner_outcome_worker_spawn_failed/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "posix_spawn_enoent_propagates_to_outcome",
+          "description": "worker_spawn_failed propagated end-to-end with override reflected"
+        }
+      ]
+    },
+    "runner_outcome_runner_timeout": {
+      "command": [
+        "bash",
+        "tests/suites/runner_outcome_runner_timeout/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "host_kills_hung_worker",
+          "description": "runner_timeout fired: host SIGKILLed the hung worker (term_signal=9, exit_code=null)"
+        }
+      ]
+    },
+    "runner_outcome_bad_request": {
+      "command": [
+        "bash",
+        "tests/suites/runner_outcome_bad_request/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "missing_required_filter_value",
+          "description": "missing required filter.value surfaced as bad_request"
+        },
+        {
+          "id": "swift_decode_failure",
+          "description": "Swift decode failure surfaced as bad_request"
+        }
+      ]
+    },
+    "runner_ready_byte_resilience": {
+      "command": [
+        "bash",
+        "tests/suites/runner_ready_byte_resilience/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "slow_compile_ready_byte_survives_sigpipe",
+          "description": "worker survived closed ready pipe, applied, and scored the probe"
+        }
+      ]
+    },
+    "runner_filter_iokit_registry_entry_class": {
+      "command": [
+        "bash",
+        "tests/suites/runner_filter_iokit_registry_entry_class/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "prediction_unavailable_attempt_observed",
+          "description": "prediction_unavailable surfaced; attempt observed"
+        }
+      ]
+    },
+    "runner_filter_iokit_user_client_class": {
+      "command": [
+        "bash",
+        "tests/suites/runner_filter_iokit_user_client_class/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "prediction_unavailable_attempt_observed",
+          "description": "iokit_user_client_class: prediction_unavailable surfaced; attempt observed"
+        }
+      ]
+    },
+    "runner_filter_sysctl_name": {
+      "command": [
+        "bash",
+        "tests/suites/runner_filter_sysctl_name/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "checker_controls",
+          "description": "all three filter adapters accept valid evidence and reject broken channels",
+          "requires": []
+        },
+        {
+          "id": "prediction_unavailable_attempt_observed",
+          "description": "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed"
+        }
+      ]
+    },
+    "validator_batch_mode": {
+      "command": [
+        "bash",
+        "tests/suites/validator_batch_mode/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "batch_ndjson_roundtrip",
+          "description": "10 verdicts validated (3 allow + 1 deny + 1 unsupported_operation + 1 bad_filter + 4 parse_error)"
+        }
+      ]
+    },
+    "runner_validator_failure": {
+      "command": [
+        "bash",
+        "tests/suites/runner_validator_failure/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "transcript_controls",
+          "description": "validator fixture returns the specified partial transcript and drains all probes",
+          "requires": []
+        },
+        {
+          "id": "validator_decode_failure_reports_degraded",
+          "description": "partial verdicts retain step identity; three completed attempts survive validator degradation"
+        },
+        {
+          "id": "validator_unavailable_reports_degraded",
+          "description": "partial verdicts retain step identity; three completed attempts survive validator degradation"
+        }
+      ]
+    },
+    "runner_abi_layout": {
+      "command": [
+        "bash",
+        "tests/suites/runner_abi_layout/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "c_swift_layout_agreement",
+          "description": "C and Swift layout agree; bounded compiled-object capture controls pass"
+        }
+      ]
+    },
+    "runner_c_worker_harness": {
+      "command": [
+        "bash",
+        "tests/suites/runner_c_worker_harness/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang",
+        "worker"
+      ],
+      "cases": [
+        {
+          "id": "abi_mismatch_refused",
+          "description": "worker refused with exit_code=4; no ready/applied/done"
+        },
+        {
+          "id": "bare_deny_default",
+          "description": "worker survived (deny default); slot reports kernel deny errno=1"
+        },
+        {
+          "id": "compile_failure",
+          "description": "worker reported compile failure (apply_rc=-1, done) and clean-exited"
+        },
+        {
+          "id": "create_allow",
+          "description": "Allowed create produces the independently observed target file"
+        },
+        {
+          "id": "exit_byte_clean",
+          "description": "worker _exit(0) in response to exit_requested, no SIGKILL needed"
+        },
+        {
+          "id": "happy_default_allow",
+          "description": "ready+applied+done+clean_exit; /etc/hosts opened (observed=/private/etc/hosts)"
+        },
+        {
+          "id": "max_slots_deny_default",
+          "description": "256 slots completed across the full shared-memory region under deny-default"
+        },
+        {
+          "id": "param_count_overflow_refused",
+          "description": "worker refused with exit_code=8; no ready/applied/done"
+        },
+        {
+          "id": "params_round_trip",
+          "description": "TARGET=/private/etc round-tripped; kernel denied /etc/hosts with errno=1"
+        },
+        {
+          "id": "policy_overflow_refused",
+          "description": "worker refused with exit_code=7; no ready/applied/done"
+        },
+        {
+          "id": "prepared_unset_refused",
+          "description": "worker refused with exit_code=5; no ready/applied/done"
+        },
+        {
+          "id": "sigkill_fallback",
+          "description": "host SIGKILL fallback reaped worker after withheld exit byte"
+        },
+        {
+          "id": "step_count_overflow_refused",
+          "description": "worker refused with exit_code=6; no ready/applied/done"
+        },
+        {
+          "id": "unlink_allow",
+          "description": "unlink removed the target under (allow default)"
+        },
+        {
+          "id": "unlink_deny",
+          "description": "unlink denied (errno=1); target survived under (deny default)"
+        }
+      ]
+    },
+    "runner_use_c_worker": {
+      "command": [
+        "bash",
+        "tests/suites/runner_use_c_worker/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "access_failure_classified",
+          "description": "file/access failure surfaces as access_failed with errno preserved"
+        },
+        {
+          "id": "bare_deny_default",
+          "description": "bug-report (deny default) shape: worker survives, verdict+observation both deny, drift=false"
+        },
+        {
+          "id": "drift_null_for_dac_eacces",
+          "description": "drift=null for DAC EACCES (validator=allow, observation=ambiguous)"
+        },
+        {
+          "id": "drift_null_for_non_policy_failure",
+          "description": "drift=null for BOOTSTRAP_UNKNOWN_SERVICE (non-policy failure)"
+        },
+        {
+          "id": "duplicate_step_id_rejected",
+          "description": "duplicate step_id \u2192 bad_request before spawn (no XPC crash)"
+        },
+        {
+          "id": "exec_attempt_args_and_stderr_round_trip",
+          "description": "exec args, output, and nonzero status survive; the following exec completes"
+        },
+        {
+          "id": "exec_attempt_stdout_truncation_marker",
+          "description": "oversized stdout truncated with [truncated] marker"
+        },
+        {
+          "id": "exec_attempt_with_baseline_succeeds",
+          "description": "augmented exec under (deny default) reached ok via exec_baseline"
+        },
+        {
+          "id": "exec_attempt_without_baseline_fails_cleanly",
+          "description": "unaugmented exec under (deny default) \u2192 posix_spawn EPERM/EACCES with child_pid=0"
+        },
+        {
+          "id": "happy_default_allow",
+          "description": "C-worker path produces complete v4 envelope; drift=false for matching allow/ok"
+        },
+        {
+          "id": "prediction_unavailable_pair",
+          "description": "(op,filter) in prediction_unavailable set: verdict synthesized, drift=null"
+        },
+        {
+          "id": "sandbox_check_path_unresolved_prediction_unavailable",
+          "description": "path filter unresolved \u2192 prediction_unavailable with populated diagnostic"
+        },
+        {
+          "id": "sandbox_check_pid_matches_worker",
+          "description": "sandbox_check.pid is the worker PID on both validator-backed and synthesized verdicts"
+        },
+        {
+          "id": "sandbox_check_unsupported_operation_diagnostic",
+          "description": "bare check operation surfaces as unsupported_operation with populated diagnostic"
+        },
+        {
+          "id": "unsupported_attempt_per_step_skip",
+          "description": "unknown attempt \u2192 per-step skip; sibling step + sandbox_check verdict survive"
+        },
+        {
+          "id": "worker_timeout_ms_honored",
+          "description": "worker_timeout_ms honored on C-worker path (sentinel fires before hang completes)"
+        }
+      ]
+    },
+    "runner_mach_service_liveness": {
+      "command": [
+        "bash",
+        "tests/suites/runner_mach_service_liveness/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "pwrunner_survives_mach_service_launch",
+          "description": "PWRunner stayed alive under --mach-service (bound a mach-service listener)"
+        }
+      ]
+    },
+    "sbpl_allowdeny_consistency": {
+      "command": [
+        "bash",
+        "tests/suites/sbpl_allowdeny_consistency/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "sbpl_allowdeny_v1",
+          "description": "allowed writes changed real bytes; denied files survived both parameter bindings"
+        }
+      ]
+    },
+    "runner_live_worker_identity": {
+      "command": [
+        "bash",
+        "tests/suites/runner_live_worker_identity/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "independent_worker_and_host_queries",
+          "description": "OS-observed worker identity and independent predictions match PW; host remains unrestricted"
+        }
+      ]
+    },
+    "runner_exec_dac": {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_dac/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "execute_permission_is_not_sandbox_drift",
+          "description": "execute permission controls spawning; ordinary EACCES yields drift=null"
+        }
+      ]
+    },
+    "exec_fixture": {
+      "command": [
+        "bash",
+        "tests/suites/exec_fixture/run.sh"
+      ],
+      "requires": [
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "controls",
+          "description": "fixture controls distinguish independent process trees, output/status, inherited resources, and invalid reports"
+        }
+      ]
+    },
+    "run_capture": {
+      "command": [
+        "bash",
+        "tests/suites/run_capture/run.sh"
+      ],
+      "requires": [],
+      "cases": [
+        {
+          "id": "controls",
+          "description": "capture preserves raw evidence and distinguishes CLI results from harness intervention"
+        }
+      ]
+    },
+    "runner_exec_lifecycle": {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_lifecycle/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "timeout_preserves_output_and_continues",
+          "description": "timed-out process group stopped; output survived and the next write completed"
+        }
+      ]
+    },
+    "runner_exec_inheritance": {
+      "command": [
+        "bash",
+        "tests/suites/runner_exec_inheritance/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang",
+        "worker"
+      ],
+      "cases": [
+        {
+          "id": "cli",
+          "description": "three CLI exec children report a complete, clean process state"
+        },
+        {
+          "id": "contaminated_worker",
+          "description": "worker received canary environment and descriptor; its exec children inherited neither"
+        },
+        {
+          "id": "mutation_controls",
+          "description": "Disposable workers with environment and descriptor leaks fail the unchanged inheritance oracle",
+          "command": [
+            "bash",
+            "tests/suites/runner_exec_inheritance/opt_in/mutations.sh"
+          ],
+          "requires": [
+            "clang"
+          ],
+          "default": false
+        }
+      ]
+    },
+    "runner_specimen_isolation": {
+      "command": [
+        "bash",
+        "tests/suites/runner_specimen_isolation/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "overlapping_runs_keep_evidence_separate",
+          "description": "overlapping specimens retain their own processes, effects, and evidence; swap controls rejected"
+        }
+      ]
+    },
+    "smoke": {
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "specimen_file_read_deny",
+          "description": "Ordinary deny specimen returns the expected verdict and observed attempt",
+          "command": [
+            "bash",
+            "tests/suites/smoke/pw_specimen_smoke.sh"
+          ]
+        },
+        {
+          "id": "specimen_file_read_deny_standard",
+          "description": "Explicit standard runner returns the expected file denial",
+          "command": [
+            "bash",
+            "tests/suites/smoke/pw_specimen_smoke_standard.sh"
+          ]
+        },
+        {
+          "id": "runner_caller_auth",
+          "description": "Built-in runner accepts the authorized client and rejects ad-hoc and mismatched identifiers",
+          "command": [
+            "bash",
+            "tests/suites/smoke/pw_runner_caller_auth.sh"
+          ],
+          "default": false,
+          "requires": [
+            "app",
+            "identity"
+          ]
+        }
+      ]
+    },
+    "blackbox_e2e": {
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "checker_controls",
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/checker_controls.sh"
+          ],
+          "requires": []
+        },
+        {
+          "id": "BBX-001",
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/bbx_001.sh"
+          ]
+        },
+        {
+          "id": "BBX-002",
+          "command": [
+            "bash",
+            "tests/suites/blackbox_e2e/bbx_002.sh"
+          ]
+        }
+      ]
+    },
+    "blackbox_menagerie": {
+      "command": [
+        "bash",
+        "tests/suites/blackbox_menagerie/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "validation_controls",
+          "description": "Both checker CLIs retain evidence failures and correct step attribution",
+          "requires": []
+        },
+        {
+          "id": "core_strict_tmp",
+          "description": "strict subpath allow under /private/tmp/strict_ok with alias boundary",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "core_read_only",
+          "description": "deny-default profile that only allows file-read*",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "core_mach_simple",
+          "description": "mach-lookup allow/deny plus non-sandbox failure",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_tmp_only",
+          "description": "alias-only /tmp literals (canonicalization boundary)",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_private_tmp_only",
+          "description": "canonical-only /private/tmp literals",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_both_paths",
+          "description": "allow both alias and canonical spellings",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_metafilter_any",
+          "description": "require-any literals + explicit deny on alias",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_bucket5_subpath",
+          "description": "subpath allow on /tmp alias",
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        }
+      ]
+    },
+    "witness_contract": {
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "happy_path_baseline",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/happy_path_baseline.sh"
+          ]
+        },
+        {
+          "id": "attempt_outcome_matrix_enforced",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/attempt_outcome_matrix_enforced.sh"
+          ],
+          "requires": []
+        },
+        {
+          "id": "bug_report_returns_attempts",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/bug_report_returns_attempts.sh"
+          ]
+        },
+        {
+          "id": "bug_report_returns_verdicts",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/bug_report_returns_verdicts.sh"
+          ]
+        },
+        {
+          "id": "debuggable_mode_rejected",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/debuggable_mode_rejected.sh"
+          ]
+        },
+        {
+          "id": "runner_sandbox_diagnostics_on_denied",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/runner_sandbox_diagnostics_on_denied.sh"
+          ]
+        },
+        {
+          "id": "instrumentation_field_rejected",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/instrumentation_field_rejected.sh"
+          ]
+        },
+        {
+          "id": "shm_sentinel_under_deny_default",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/shm_sentinel_under_deny_default.sh"
+          ],
+          "requires": [
+            "clang"
+          ]
+        },
+        {
+          "id": "validator_spawn_failed_reports_degraded",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/validator_spawn_failed_reports_degraded.sh"
+          ]
+        },
+        {
+          "id": "validator_subprocess_populated",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/validator_subprocess_populated.sh"
+          ]
+        },
+        {
+          "id": "worker_post_apply_hang_seam",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_post_apply_hang_seam.sh"
+          ]
+        },
+        {
+          "id": "drift_determination_via_validator_seam",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/drift_determination_via_validator_seam.sh"
+          ]
+        }
+      ],
+      "include": [
+        "runner_validator_failure/validator_decode_failure_reports_degraded",
+        "runner_validator_failure/validator_unavailable_reports_degraded"
+      ]
+    },
+    "runner_byoxpc": {
+      "command": [
+        "bash",
+        "tests/suites/runner_byoxpc/run.sh"
+      ],
+      "context": "byoxpc",
+      "default": false,
+      "requires": [
+        "app",
+        "gui"
+      ],
+      "cases": [
+        {
+          "id": "runner_auth_external",
+          "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
+          "requires": [
+            "app",
+            "gui"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh"
+          ]
+        },
+        {
+          "id": "runner_install",
+          "description": "Install and verify a team-matched external runner",
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ]
+        },
+        {
+          "id": "specimen_file_read_deny",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ]
+        },
+        {
+          "id": "core_strict_tmp",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "core_read_only",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "core_mach_simple",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_tmp_only",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_private_tmp_only",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_vfs_both_paths",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_metafilter_any",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "opt_bucket5_subpath",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ],
+          "skip_reasons": [
+            "annotated_mismatch_absent"
+          ]
+        },
+        {
+          "id": "BBX-001",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ]
+        },
+        {
+          "id": "BBX-002",
+          "depends_on": [
+            "runner_byoxpc/runner_install"
+          ]
+        }
+      ]
+    },
+    "opt_in": {
+      "include": [
+        "runner_exec_inheritance/mutation_controls",
+        "smoke/runner_caller_auth",
+        "runner_byoxpc/runner_auth_external",
+        "runner_byoxpc/runner_install",
+        "runner_byoxpc/specimen_file_read_deny",
+        "runner_byoxpc/core_strict_tmp",
+        "runner_byoxpc/core_read_only",
+        "runner_byoxpc/core_mach_simple",
+        "runner_byoxpc/opt_vfs_tmp_only",
+        "runner_byoxpc/opt_vfs_private_tmp_only",
+        "runner_byoxpc/opt_vfs_both_paths",
+        "runner_byoxpc/opt_metafilter_any",
+        "runner_byoxpc/opt_bucket5_subpath",
+        "runner_byoxpc/BBX-001",
+        "runner_byoxpc/BBX-002"
+      ]
+    }
+  }
+}

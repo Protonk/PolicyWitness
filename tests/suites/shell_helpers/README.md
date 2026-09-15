@@ -93,8 +93,8 @@ failed, otherwise 0; an empty list fails. It does not change the caller's shell
 options, synthesize case reports, or interpret a child's explicit skip.
 The top-level dispatcher reconciles the reports that the children emit.
 
-`blackbox_e2e`, `witness_contract`, and `opt_in` supply their selected script
-lists. `runner_byoxpc` retains its setup gates, environment transitions, and
+`blackbox_e2e` and `witness_contract` supply their script lists for direct
+invocation. The `opt_in` wrapper forwards to the public catalog selector. `runner_byoxpc` retains its setup gates, environment transitions, and
 cleanup trap while using the helper for child execution. The single-child
 `smoke` and `sbpl_allowdeny_consistency` wrappers use `exec bash` and forward
 the child's exact exit status.

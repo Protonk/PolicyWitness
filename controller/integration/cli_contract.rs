@@ -24,12 +24,16 @@ fn pw_bin_path() -> PathBuf {
         // Allow CI or local runs to point at a non-standard build location.
         return PathBuf::from(val);
     }
-    repo_root()
-        .join("dist")
-        .join("PolicyWitness.app")
+    app_path()
         .join("Contents")
         .join("MacOS")
         .join("policy-witness")
+}
+
+fn app_path() -> PathBuf {
+    env::var_os("PW_APP_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| repo_root().join("dist/PolicyWitness.app"))
 }
 
 fn require_pw_bin() -> PathBuf {
@@ -45,9 +49,7 @@ fn require_pw_bin() -> PathBuf {
 }
 
 fn sbpl_check_bin_path() -> PathBuf {
-    repo_root()
-        .join("dist")
-        .join("PolicyWitness.app")
+    app_path()
         .join("Contents")
         .join("MacOS")
         .join("sbpl-check")

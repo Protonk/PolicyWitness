@@ -4,13 +4,14 @@ Rust integration tests that exercise the CLI contract against a built app.
 
 ## Invariants
 
-- Uses `dist/PolicyWitness.app/Contents/MacOS/policy-witness` to run specimens.
+- Uses the resolved app/controller configuration from `tests/run.sh` to run specimens.
+  Bundled `sbpl-check` comes from the same app.
 - Validates the controller envelope and runner result shape.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria
 
-- Integration test binary passes (`cargo test --tests`).
+- Integration test binary passes (`cargo test --test cli_contract`).
 
 ## Fixtures
 

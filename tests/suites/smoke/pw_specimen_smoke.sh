@@ -11,6 +11,7 @@ PW_TEST_ID="specimen_file_read_deny"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 SPECIMEN_FIXTURE="${ROOT_DIR}/tests/fixtures/pw_runner/specimen_file_read_deny.json"
 
+test_selected "${PW_TEST_ID}" || exit 0
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "run request via policy-witness"
 

@@ -1,18 +1,9 @@
 # Opt-in Tests (dev-only)
 
-This file is the registry for **opt-in** tests. Opt-in tests are excluded from
-the default `tests/run.sh --all` run because they depend on resources or OS
-behaviors that are not reliably available in CI or on every developer machine.
-
-Goals:
-
-- Give a single place to see **what** opt-in tests exist and **why**.
-- Make each test's **resource dependency** explicit (PTY, signing identity,
-  network, system logs, long runtime, etc).
-- Provide a clear **when to run** trigger so the test is not forgotten.
-
-Opt-in tests live under `tests/suites/runner_*/opt_in/` and are invoked directly.
-Compatibility wrappers remain under `tests/suites/opt_in/`.
+Opt-in cases are excluded from the default `tests/run.sh` battery. They remain
+part of `--all`; explicit `--suite` selectors include every member of that suite,
+including non-default cases. `tests/catalog.json` defines membership and required
+equipment, and `tests/run.sh --suite opt_in --list` shows the complete plan.
 
 ## What makes a test opt-in
 
@@ -29,31 +20,35 @@ If the test depends on one of these, make it opt-in and document the dependency.
 
 ## How to run opt-in tests
 
-Run the script directly:
+Inspect before choosing resource-sensitive work:
 
 ```sh
-tests/suites/runner_*/opt_in/<test>.sh
-# or a compatibility wrapper:
-tests/suites/opt_in/<test>.sh
+tests/run.sh --suite opt_in --list
+tests/run.sh --case runner_byoxpc/BBX-001 --list
 ```
 
-There is intentionally no `opt_in` suite runner; opt-in tests are meant to be
-invoked explicitly so resource-heavy or flaky tests are never run by accident.
+Execute with `--case`, an owning `--suite`, `--suite opt_in`, or `--all`.
+Selecting a BYOXPC specimen adds `runner_byoxpc/runner_install` as a dependency.
+Required app/toolchain/GUI/signing equipment missing causes a failed run with
+explicit unrun selections. Run launchd/XPC tests from an unsandboxed, logged-in
+GUI session. Signing tests accept `PW_BYOXPC_IDENTITY`, then `IDENTITY`, otherwise
+resolve a matching Developer ID from the app's team. Configuration and output
+rules are documented in `tests/README.md`.
 
-GUI session note: tests that install or bootstrap launchd services (for example
-`runner_auth_external`) require a logged-in desktop session. Run them from a
-local Terminal.app window; SSH/CI or sandboxed harnesses will skip with a
-non-GUI session message.
-
-If you see `permission denied`, either invoke with `bash` or make the script
-executable (these tests are regular shell scripts).
-
-Optional standard overrides:
-
-- `PW_TEST_OUT_DIR` (default `tests/out`)
-- `PW_TEST_RUN_ID` (for stable run ids)
+Direct scripts remain developer entrypoints; use the public dispatcher for
+selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
+
+### built-in caller authentication
+
+- **Case:** `smoke/runner_caller_auth`
+- **Location:** `tests/suites/smoke/pw_runner_caller_auth.sh`
+- **Purpose:** Authorized client acceptance and rejection of ad-hoc or differently
+  identified clients.
+- **Resource dependency:** Built app and matching Developer ID for signing a
+  disposable mismatched client.
+- **When to run:** After changing built-in caller authorization.
 
 ### runner_byoxpc
 
@@ -68,8 +63,9 @@ Optional standard overrides:
 ### runner_auth_external
 
 - **Location:** `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
-- **Purpose:** Validate that a BYOXPC runner with its caller-auth keys removed
-  (`PWRunnerRequireSignedCaller`) accepts an ad-hoc caller. (A BYOXPC runner that
+- **Purpose:** Validate installation and verification of an ad-hoc-signed BYOXPC runner
+  with its caller-auth keys removed (`PWRunnerRequireSignedCaller`), using the
+  normal controller/client. (A BYOXPC runner that
   keeps those keys instead requires a team-matched Developer ID caller — that
   path is covered by `runner_install.sh`.)
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
@@ -107,8 +103,8 @@ When you add an opt-in test, document it here with:
 - **Opt-in reason:** the resource or OS behavior that makes it non-default.
 - **When to run:** a trigger tied to code changes or regressions.
 - **Artifacts:** where the test writes output.
-- **Gating:** the explicit `test_skip` condition when the required resource is
-  not available (PTY missing, identity missing, etc).
+- **Gating:** required equipment and any legitimate case-specific skip code.
+  Missing required equipment fails; a skip code must also be declared in the catalog.
 
 If the opt-in reason is removed (for example, you can make it stable without a
 PTY), move the test into the smoke suite and remove it from this registry.

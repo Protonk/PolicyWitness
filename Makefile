@@ -17,8 +17,8 @@ clean:
 	rm -rf tests/out/*
 
 test:
-	@echo "==> [test] run all suites"
-	@./tests/run.sh --all
+	@echo "==> [test] run the default battery"
+	@./tests/run.sh
 
 notarize:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \

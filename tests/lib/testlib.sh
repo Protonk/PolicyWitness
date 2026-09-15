@@ -158,6 +158,17 @@ test_begin() {
   write_json_line "${event_line}" "${PW_TEST_EVENTS_LOCAL}"
 }
 
+# Selection belongs at the case boundary, before setup. Direct scripts with no
+# dispatcher selection retain their ordinary whole-script behavior.
+test_selected() {
+  if [[ -z "${PW_TEST_CASES+x}" ]]; then return 0; fi
+  local selected
+  while IFS= read -r selected; do
+    if [[ "$selected" == "$1" ]]; then return 0; fi
+  done <<< "${PW_TEST_CASES}"
+  return 1
+}
+
 test_step() {
   local step="$1"
   local message="${2:-$1}"
@@ -200,6 +211,8 @@ report = {
     "artifacts_dir": os.environ.get("PW_TEST_ARTIFACTS", ""),
     "notes": [],
 }
+if report['status'] == 'skip' and os.environ.get('PW_TEST_SKIP_REASON'):
+    report['skip_reason'] = os.environ['PW_TEST_SKIP_REASON']
 
 path = os.environ.get("PW_TEST_REPORT", "")
 if not path:
@@ -252,7 +265,7 @@ test_fail() {
 
 test_skip() {
   local message="${1:-skipped}"
-  _test_finish "skip" "${message}" "${2:-}"
+  PW_TEST_SKIP_REASON="${3:-}" _test_finish "skip" "${message}" "${2:-}"
   test_log "skip: ${message}"
 }
 

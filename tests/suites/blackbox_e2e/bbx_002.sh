@@ -16,6 +16,7 @@ VALIDATE_PY="${ROOT_DIR}/tests/suites/blackbox_e2e/validate_run.py"
 
 INVALID_MACH_SERVICE="com.example.policywitness.invalid"
 
+test_selected "${PW_TEST_ID}" || exit 0
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "plain SBPL + negative controls"
 

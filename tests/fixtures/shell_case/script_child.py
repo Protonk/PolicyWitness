@@ -14,6 +14,7 @@ record = {
     'service': os.environ.get('PW_TEST_RUNNER_SERVICE'),
     'kind': os.environ.get('PW_TEST_RUNNER_EXPECT_KIND'),
     'env_path': os.environ.get('PW_TEST_RUNNER_ENV_PATH'),
+    'selected_cases': os.environ.get('PW_TEST_CASES'),
 }
 with Path(config['journal']).open('a') as stream:
     stream.write(json.dumps(record) + '\n')

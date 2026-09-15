@@ -2,7 +2,7 @@
 
 End-to-end black-box suite that exercises specimen ingestion and evidence
 correlation using real SBPL inputs. These scripts are
-shared and invoked by the BYOXPC runner suite.
+included in the default battery and shared by the BYOXPC runner suite.
 
 ## Invariants
 
@@ -70,7 +70,9 @@ The controls import neither the shared checker nor production code.
 1. Drop SBPL under `tests/fixtures/blackbox_menagerie/`.
 2. Add a case entry to `tests/fixtures/blackbox_menagerie/cases/core.json` with
    steps and expectations.
-3. Use mismatch_reason when you want a mismatch to be recorded as evidence
+3. Register its case ID, description, and requirements in `tests/catalog.json`,
+   including a BYOXPC entry when that runner context is supported.
+4. Use mismatch_reason when you want a mismatch to be recorded as evidence
    rather than a failure.
 
 Run:

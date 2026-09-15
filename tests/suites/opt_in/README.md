@@ -1,32 +1,11 @@
 # opt_in
 
-Compatibility wrappers for opt-in tests grouped under runner suites. The real
-scripts live under `tests/suites/runner_*/opt_in/`.
+Catalog group containing every non-default case: signing and BYOXPC tests, plus
+exec inheritance mutation controls. See `tests/OPT_IN_TESTS.md` for requirements.
 
-## Invariants
+Inspect with `tests/run.sh --suite opt_in --list`; execute with
+`tests/run.sh --suite opt_in`. `--all` also includes these cases. Missing required
+resources fail with explicit unrun selections; skip policy belongs to each case.
 
-- Opt-in tests are not part of `tests/run.sh --all`.
-- Each test uses `test_skip` when required resources are unavailable.
-
-## Success criteria
-
-- Each script either passes or skips with a clear reason.
-
-## Fixtures
-
-- Varies by test; see `tests/OPT_IN_TESTS.md` for a registry.
-
-## Artifacts
-
-- `tests/out/suites/<runner_suite>/<test_id>/artifacts/*`
-
-Run:
-
-```
-tests/suites/opt_in/<test>.sh
-```
-
-GUI session note: tests that install or bootstrap launchd services (for example
-`runner_auth_external`) require a logged-in desktop session. Run them from a
-local Terminal.app window; SSH/CI or sandboxed harnesses will skip with a
-non-GUI session message.
+The local `run.sh` forwards to the public command. Artifacts use each case's
+canonical suite and ID, not an `opt_in` report alias.

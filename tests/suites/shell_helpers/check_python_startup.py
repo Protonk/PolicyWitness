@@ -7,6 +7,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
+from repository import install_runner
 
 
 def require(condition, message):
@@ -31,8 +33,9 @@ def main():
                 name = f'{entry}_{label}_{assertion}'
                 work = out / name
                 repo = work / 'fixture repo'
-                for relative in ('tests/run.sh', 'tests/lib/testlib.sh', 'tests/lib/case.sh',
-                                 'tests/lib/suite_run.py', 'tests/fixtures/shell_case/python_assertion.py'):
+                install_runner(ROOT, repo, {'probe': {'command': ['bash', 'tests/suites/probe/run.sh'],
+                                                     'cases': ['assertions']}})
+                for relative in ('tests/fixtures/shell_case/python_assertion.py',):
                     target = repo / relative
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(ROOT / relative, target)

@@ -17,7 +17,7 @@ The check has two halves:
 2. Test-registry drift across what should be self-consistent project
    discipline:
      a. Every tests/suites/<name>/ with run.sh has README.md.
-     b. Every Baseline-tier suite is in tests/run.sh's default list.
+     b. Every Baseline-tier suite is in tests/catalog.json's default membership.
      c. Every tests/suites/<name>/ has a row in the suite-coverage
         table in tests/README.md, and every table row maps to a real
         suite directory.
@@ -38,6 +38,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -62,7 +63,6 @@ CWORKER_SWIFT = CORE_DIR / "CWorker.swift"
 PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "pw_probe_runner_abi.h"
 POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
-TESTS_RUN_SH = REPO_ROOT / "tests" / "run.sh"
 # The suite-coverage table lives in tests/README.md; the per-outcome
 # coverage matrices live in tests/COVERAGE.md. (Both were formerly one
 # tests/INDEX.md.)
@@ -183,21 +183,11 @@ def suites_missing_readme() -> list[str]:
     return out
 
 
-def default_suites_from_run_sh() -> set[str]:
-    """Parse the default suite list from tests/run.sh.
-
-    The script declares `suites=()` empty up top and then conditionally
-    assigns the real defaults later — so a naive first-match grabs the
-    empty array. Pick the assignment with the most entries instead,
-    which is always the default-fill block.
-    """
-    text = TESTS_RUN_SH.read_text(encoding="utf-8")
-    matches = re.findall(r'\bsuites=\(([^)]*)\)', text)
-    if not matches:
-        fail("could not locate any suites=(...) assignment in tests/run.sh")
-        sys.exit(2)
-    best = max(matches, key=lambda body: len(body.split()))
-    return set(best.split())
+def default_suites_from_catalog() -> set[str]:
+    groups = json.loads((REPO_ROOT / 'tests/catalog.json').read_text())['suites']
+    return {name for name, group in groups.items()
+            if any((case if isinstance(case, dict) else {}).get('default', group.get('default', True))
+                   for case in group.get('cases', []))}
 
 
 def parse_index_rows() -> dict[str, str]:
@@ -283,6 +273,9 @@ def check_index_vs_disk() -> list[str]:
     problems: list[str] = []
     on_disk = suites_with_run_sh()
     in_index = set(parse_index_rows().keys())
+    in_catalog = set(json.loads((REPO_ROOT / 'tests/catalog.json').read_text())['suites'])
+    if in_catalog != on_disk:
+        problems.append(f'  catalog: suite directories and catalog disagree: {sorted(in_catalog ^ on_disk)}')
 
     for name in sorted(on_disk - in_index):
         problems.append(f"  README: tests/suites/{name}/ exists but has no row in tests/README.md's suite-coverage table")
@@ -291,16 +284,16 @@ def check_index_vs_disk() -> list[str]:
     return problems
 
 
-def check_baseline_in_run_sh_defaults() -> list[str]:
+def check_baseline_in_catalog_defaults() -> list[str]:
     problems: list[str] = []
     rows = parse_index_rows()
-    defaults = default_suites_from_run_sh()
+    defaults = default_suites_from_catalog()
     for name, tier in sorted(rows.items()):
         if tier.lower() != "baseline":
             continue
         if name not in defaults:
             problems.append(
-                f"  run.sh: Baseline-tier suite {name!r} is missing from tests/run.sh's default suites=(...) list"
+                f"  catalog: Baseline-tier suite {name!r} is missing from tests/catalog.json's default membership"
             )
     return problems
 
@@ -621,7 +614,7 @@ def main() -> int:
     problems.extend(diff_sets("c", c_manifests))
     problems.extend(check_readmes_present())
     problems.extend(check_index_vs_disk())
-    problems.extend(check_baseline_in_run_sh_defaults())
+    problems.extend(check_baseline_in_catalog_defaults())
     problems.extend(check_runner_outcome_suites_have_matrix_rows())
     problems.extend(check_normalized_outcomes_have_matrix_rows())
     problems.extend(check_attempt_outcomes_have_matrix_rows())

@@ -36,6 +36,7 @@ ensure_exec_fixture() {
 
 run_happy_default_allow() {
   local test_id="happy_default_allow"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full v4 envelope"
 
@@ -117,6 +118,7 @@ PY
 
 run_bare_deny_default() {
   local test_id="bare_deny_default"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "the downstream bug-report shape: (deny default) produces a coherent envelope on the C-worker path"
 
@@ -192,6 +194,7 @@ PY
 
 run_prediction_unavailable_pair() {
   local test_id="prediction_unavailable_pair"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "an op+filter pair in the prediction_unavailable set: orchestrator skips the validator probe, synthesizes the verdict directly"
 
@@ -263,6 +266,7 @@ PY
 
 run_duplicate_step_id_rejected() {
   local test_id="duplicate_step_id_rejected"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "two probe steps with the same step_id → bad_request (used to trap the Dictionary join and kill the XPC service)"
 
@@ -316,6 +320,7 @@ PY
 
 run_unsupported_attempt_per_step_skip() {
   local test_id="unsupported_attempt_per_step_skip"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "unknown (kind, action) combo → per-step attempt.outcome=unsupported (run still ok; sibling step + sandbox_check verdict survive)"
 
@@ -399,6 +404,7 @@ PY
 
 run_worker_timeout_ms_honored() {
   local test_id="worker_timeout_ms_honored"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "worker_timeout_ms=500 + worker_post_apply_hang_ms=1500 → runner_timeout (used to be ignored, returning ok after the full hang)"
 
@@ -465,6 +471,7 @@ PY
 
 run_drift_null_for_non_policy_failure() {
   local test_id="drift_null_for_non_policy_failure"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "(allow default) + mach_lookup of a missing service → drift=null (BOOTSTRAP_UNKNOWN_SERVICE isn't a sandbox verdict; used to surface as drift=true)"
 
@@ -526,6 +533,7 @@ PY
 
 run_sandbox_check_pid_matches_worker() {
   local test_id="sandbox_check_pid_matches_worker"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "sandbox_check.pid on every step matches the worker PID (pre-fix was 0 for validator-backed, host PID for synthesized)"
 
@@ -589,6 +597,7 @@ run_prediction_unavailable_pair
 
 run_drift_null_for_dac_eacces() {
   local test_id="drift_null_for_dac_eacces"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "(allow default) + file with mode 000 → drift=null (EACCES is ambiguous between sandbox and DAC; used to surface as drift=true)"
 
@@ -664,6 +673,7 @@ PY
 
 run_access_failure_classified() {
   local test_id="access_failure_classified"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "(deny file-read-data /private/etc) + file/access on /etc/hosts → outcome=access_failed (was 'unsupported')"
 
@@ -737,6 +747,7 @@ PY
 
 run_exec_attempt_without_baseline_fails_cleanly() {
   local test_id="exec_attempt_without_baseline_fails_cleanly"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "(deny default) + exec /usr/bin/true → exec_failed with child_pid=0, errno EPERM/EACCES from posix_spawn"
 
@@ -848,6 +859,7 @@ PY
 
 run_exec_attempt_with_baseline_succeeds() {
   local test_id="exec_attempt_with_baseline_succeeds"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "build" "compile exec_fixture/helper.c"
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
@@ -948,6 +960,7 @@ PY
 
 run_exec_attempt_args_and_stderr_round_trip() {
   local test_id="exec_attempt_args_and_stderr_round_trip"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
   if ! ensure_exec_fixture; then
@@ -1033,6 +1046,7 @@ PY
 
 run_exec_attempt_stdout_truncation_marker() {
   local test_id="exec_attempt_stdout_truncation_marker"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
   if ! ensure_exec_fixture; then
@@ -1119,6 +1133,7 @@ PY
 
 run_sandbox_check_unsupported_operation_diagnostic() {
   local test_id="sandbox_check_unsupported_operation_diagnostic"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "bare process-exec → outcome=unsupported_operation with diagnostic; star process-exec* → outcome=allow"
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
@@ -1229,6 +1244,7 @@ PY
 
 run_sandbox_check_path_unresolved_prediction_unavailable() {
   local test_id="sandbox_check_path_unresolved_prediction_unavailable"
+  test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "run" "resolvable path → unchanged; unresolvable path → prediction_unavailable with populated error"
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi

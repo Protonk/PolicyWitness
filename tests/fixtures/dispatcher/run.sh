@@ -16,9 +16,10 @@ esac
 
 SUITE="${NAME}"
 if [[ "${NAME}" == leaf ]]; then SUITE=reported_alias; fi
+if [[ "${NAME}" == reuse_previous ]]; then SUITE=pass; fi
 test_begin "${SUITE}" fixture_case
 if [[ "${NAME}" == signal_exit ]]; then kill -TERM "$$"; fi
-if [[ "${NAME}" == skip ]]; then test_skip "explicit fixture limitation"; exit 0; fi
+if [[ "${NAME}" == skip ]]; then test_skip "explicit fixture limitation" '{}' fixture_limitation; exit 0; fi
 if [[ "${NAME}" == fail_then_zero ]]; then
   (test_fail "deliberate failed report") || true
   exit 0
@@ -28,7 +29,7 @@ case "${NAME}" in
   pass_then_crash) exit 19 ;;
   unfinished) test_begin "${SUITE}" unfinished_case ;;
   duplicate_end) test_pass "second terminal event" ;;
-  pass|leaf) ;;
+  pass|leaf|reuse_previous) ;;
   *) /usr/bin/python3 "${ROOT_DIR}/tests/fixtures/dispatcher/alter.py" \
        "${NAME}" "${PW_TEST_REPORT}" "${PW_TEST_EVENTS}" ;;
 esac

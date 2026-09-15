@@ -104,7 +104,7 @@ cp "${CLIENT_BIN}" "${BAD_CLIENT}"
 /usr/bin/codesign --force -s - "${BAD_CLIENT}" >/dev/null 2>&1 || test_fail "ad-hoc codesign failed"
 run_client_expect_denied "${BAD_CLIENT}" "${STD_SERVICE}" "adhoc"
 
-IDENTITY="$(/usr/bin/security find-identity -v -p codesigning | /usr/bin/awk -F'"' '/Developer ID Application:/{print $2; exit}')"
+IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
 if [[ -z "${IDENTITY}" ]]; then
   test_log "skip allowlist mismatch check (no Developer ID identity found)"
   test_pass "caller auth checks ok" "{}"

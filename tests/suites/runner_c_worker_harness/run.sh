@@ -41,6 +41,7 @@ ensure_harness() {
 # itself errors.
 run_harness_case() {
   local test_id="$1" scenario="$2" desc="$3"
+  test_selected "${test_id}" || return 1
   test_begin "${PW_TEST_SUITE}" "${test_id}"
   test_step "harness" "${desc}"
   if ! check_prereqs; then

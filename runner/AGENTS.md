@@ -69,7 +69,7 @@ A hostile value drives a real failure: a `/nonexistent/...` path makes `posix_sp
 3. Make sure the boundary uses the override at the place where the real OS call happens (not a wrapper that returns early on the override). The point is to *trigger* a real condition, not fake a result.
 4. Mirror it back: every `PWRunnerRunResult` constructed on the affected code path should pass `test_overrides: parsed._test_overrides` so the audit signal survives.
 5. Add a `tests/suites/runner_outcome_<name>/run.sh` suite that follows the four assertions above.
-6. Register the suite in `tests/run.sh` (default list + usage line), the suite-coverage table in `tests/README.md`, and (for a new outcome) the matrix in `tests/COVERAGE.md`.
+6. Register its cases and default membership in `tests/catalog.json`, the suite-coverage table in `tests/README.md`, and (for a new outcome) the matrix in `tests/COVERAGE.md`.
 
 **What overrides should not do.** Don't add an override that fakes a *result* (e.g. `force_normalized_outcome: "x"`). That short-circuits the very code we're trying to verify. If a code path can't be reached by re-routing a boundary, cover it with a Swift unit test against the classifier directly instead.
 

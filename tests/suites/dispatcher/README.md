@@ -1,53 +1,58 @@
 # dispatcher
 
-Controls for top-level test execution and report reconciliation. Requires Bash
-and Python 3, with no app, compiler, XPC, or socket dependency. In the default
-battery; run separately with `tests/run.sh --suite dispatcher`.
+Offline contracts for public selection, configuration, execution, and evidence
+reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls` or
+`selection_controls` by their full `dispatcher/<case>` IDs.
 
 ## Contract
 
-`tests/run.sh` selects suites and prepares the output directory, then delegates
-execution and the final result to `tests/lib/suite_run.py`. The dispatcher writes
-`dispatch.json` before starting work and updates it after each requested suite.
-Each invocation records its requested name, index, execution state, timestamps,
-exit status, observed report paths, report snapshots, and harness errors.
+`tests/run.sh` invokes `tests/lib/test_cli.py`. The CLI expands `tests/catalog.json`,
+validates selectors and configuration, and produces a plan before writing output.
+No selectors means default membership; explicit selectors form a deduplicated
+union in catalog order. Dependencies appear in the plan. `--all` includes opt-ins;
+`--list` is a read-only JSON description of exactly the selected plan. Relative
+configuration paths resolve from the repository, even when invoked elsewhere.
 
-After each suite exits, the dispatcher reconciles newly appended events and
-new or changed case reports. Each case needs one start followed by one terminal
-event, a readable report with matching path/identity, and agreement between the
-terminal event and report status. Case names may differ from the requested suite:
-wrappers are associated with the reports emitted during their invocation.
+Execution writes `plan.json` and delegates to `tests/lib/suite_run.py`. Each
+ordinary case has a separate command invocation. BYOXPC specimen cases share a
+single installation/cleanup lifecycle; the wrapper runs selected specimens in
+separate child processes. Independent cases continue after a failing command.
+Unavailable requirements or failed dependencies leave explicit unrun selections.
 
-Missing/nonexecutable runners, nonzero suite exits, empty suites, unfinished
-cases, invalid events or reports, contradictory statuses, and removed or reused
-case evidence are harness failures. Repeating a suite that reuses case paths
-fails explicitly; use separate runs to retain independent artifacts. Later
-requested suites still execute after a failure. Explicit reported skips remain
-skips; a silent exit is not a skip.
+`dispatch.json` journals invocations and evidence. Each observed case needs one
+start followed by one terminal event, a readable report with matching identity,
+and agreement between terminal event and report status. Reports must belong to
+the selected plan. Suite inclusions reuse canonical IDs, while runner contexts
+have distinct IDs. Repeating a selector executes once; actual reused evidence
+still fails reconciliation.
 
-`run.json` retains its case `reports`, `counts`, and reported `suites` fields.
-It adds `requested_suites`, `invocations`, and `harness_errors`. Counts describe
-the structurally valid case reports that were read; they do not invent failed
-cases for a dispatcher failure. `ok` requires zero failed reports **and** zero
-harness errors. This same decision is the command's exit status (0 or 1).
-Reports and raw case artifacts retain their existing paths. Invalid raw files
-remain available for diagnosis; harness errors name their invocation and path.
+`run.json` includes the original selectors, plan/configuration, case reports/counts, invocations,
+harness errors, and one `case_results` entry per selection. `completion` counts
+selected, completed, skipped, and unrun cases. Readable report counts remain
+separate from missing-report failures. `ok` and process exit agree: no failed
+reports and no harness errors. A case may skip only with a `skip_reason` declared
+in its catalog contract. Required equipment missing is a run failure. Planning
+errors exit 2 without replacing evidence.
 
 ## Independent controls
 
-`check.py` creates small repositories containing copies of the actual entry
-point, dispatcher, and testlib, plus the controlled suites under
-`tests/fixtures/dispatcher/`. It invokes `tests/run.sh --suite ...` from outside
-each repository and inspects the process status, final summary, and dispatch
-journal. It neither imports the dispatcher nor supplies precomputed aggregates.
+`check.py` exercises reconciliation against controlled reports/events: aliases,
+crashes, silent exits, malformed or missing evidence, contradictory statuses,
+rewritten events, reused paths, and removed reports. Failure scenarios generally
+include a subsequent passing case. Missing/nonexecutable entrypoints instead
+prove rejection happens before any execution or output replacement.
 
-Controls cover passes and explicit skips; aliases; missing/nonexecutable runners;
-silent exits; crashes before and after reporting; failed reports with exit zero;
-malformed, missing, or wrongly attributed reports; missing and duplicate terminal
-events; status disagreement; stale, malformed, unreadable, or rewritten events;
-signal termination; repeated case paths; and removal of a prior suite's report.
-Failure cases generally request a subsequent passing suite to prove dispatch
-continues. Previous run output is seeded and must be replaced.
+`check_selection.py` uses an independently authored tiny catalog and fixture
+commands that import no test machinery. Their execution receipts record actual
+case IDs, literal argv, working directory, and effective artifact configuration.
+The observer uses explicit conditionals rather than Python assertions. It checks
+union/order/deduplication, distinct contexts, dependencies, default/all membership,
+read-only inspection, rejected flags/configuration, symlink output escapes,
+artifact aliases, quiet values, required equipment, unexpected evidence, skip
+contracts, and complete accounting after failures. Whole-tree byte snapshots
+also catch accidental bytecode writes during inspection.
 
-Artifacts retain the fixture repositories, raw dispatcher stdout/stderr, process
-exit status, dispatch journals, summaries, source evidence, and `controls.json`.
+`tests/fixtures/dispatcher/repository.py` only copies equipment and writes the
+caller-supplied catalog; it contains no expected selections or result oracle.
+Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
+and `controls.json` remain in artifacts for inspection.

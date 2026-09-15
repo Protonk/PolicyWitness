@@ -21,6 +21,7 @@ if [[ ! -x "${RUN_CASE}" ]]; then
   exit 1
 fi
 
+if test_selected validation_controls; then
 test_begin "${PW_TEST_SUITE}" validation_controls
 test_step checker "check both black-box validators and failure precedence without the app"
 if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/blackbox_menagerie/checker_controls.py" \
@@ -30,10 +31,13 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/blackbox_menagerie/checker_contr
 fi
 test_pass "both black-box checkers preserve evidence checks and suite-specific expectations"
 
-case_list=$( /usr/bin/python3 - <<'PY'
+fi
+
+case_list=$( /usr/bin/python3 - "${MANIFEST}" <<'PY'
 import json
+import sys
 from pathlib import Path
-manifest = Path("tests/fixtures/blackbox_menagerie/cases/core.json")
+manifest = Path(sys.argv[1])
 records = json.loads(manifest.read_text())
 for case in records.get("cases") or []:
     case_id = case.get("case_id")
@@ -44,6 +48,7 @@ PY
 
 if [[ ! -x "${PW_BIN}" ]]; then
   while IFS=$'\t' read -r case_id desc; do
+  test_selected "${case_id}" || continue
     PW_TEST_ID="${case_id}"
     test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
     test_step "run" "${desc}"
@@ -53,6 +58,7 @@ if [[ ! -x "${PW_BIN}" ]]; then
 fi
 
 while IFS=$'\t' read -r case_id desc; do
+  test_selected "${case_id}" || continue
   PW_TEST_ID="${case_id}"
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
   test_step "run" "${desc}"
@@ -71,7 +77,7 @@ while IFS=$'\t' read -r case_id desc; do
   if [[ ${STATUS} -eq 0 ]]; then
     test_pass "${OUTPUT}" "{}"
   elif [[ ${STATUS} -eq 3 ]]; then
-    test_skip "${OUTPUT}" "{}"
+    test_skip "${OUTPUT}" "{}" annotated_mismatch_absent
   else
     test_fail "${OUTPUT}" "{}"
   fi

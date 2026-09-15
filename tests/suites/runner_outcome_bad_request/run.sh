@@ -20,6 +20,7 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 # malformed JSON before invoking the runner, so that input would never
 # reach the Swift decode path we want to cover.
 
+if test_selected swift_decode_failure; then
 PW_TEST_ID="swift_decode_failure"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "request JSON missing schema_version / specimen_id — expect bad_request"
@@ -113,6 +114,9 @@ test_pass "Swift decode failure surfaced as bad_request" "{}"
 # (PWRunnerService.runSpecimen catching SpecValidationError from
 # validateSandboxChecks in runner/Sources/PWRunnerCore/ProbeRunner.swift).
 
+fi
+
+if test_selected missing_required_filter_value; then
 PW_TEST_ID="missing_required_filter_value"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "probe step with kind=path but empty value — expect bad_request"
@@ -194,3 +198,4 @@ if runner.get("steps"):
 PY
 
 test_pass "missing required filter.value surfaced as bad_request" "{}"
+fi

@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
+test_selected checker_controls || exit 0
 test_begin "${PW_TEST_SUITE_OVERRIDE:-blackbox_e2e}" checker_controls
 test_step checker "verify that prediction failures cannot hide attempt or correlation failures"
 if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/blackbox_e2e/checker_controls.py" \

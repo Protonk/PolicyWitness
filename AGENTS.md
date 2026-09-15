@@ -15,7 +15,7 @@ Pick what you’re changing:
 - **Runner client (NSXPCConnection wrapper)** → `runner/Clients/PWRunnerClient/`
 - **Build + signing** → `build.sh`, `SIGNING.md`
 - **Evidence generation / manifests** → `tests/build-evidence.py`
-- **Tests** → `tests/README.md`, `tests/run.sh --all`
+- **Tests** → `tests/README.md`, `tests/run.sh`
 - **Opt-in tests registry** → `tests/OPT_IN_TESTS.md`
 - **User guide** → `PolicyWitness.md`
 
@@ -85,7 +85,9 @@ The `runner` subcommands (install/list/status/verify/remove/validate) and the ma
 
 ## Testing
 
-- Default full run: `tests/run.sh --all`
+- Default battery: `tests/run.sh` (or `make test`)
+- Every registered case, including opt-ins: `tests/run.sh --all`
+- Inspect selection without execution: `tests/run.sh --all --list`
 - Smoke only: `tests/run.sh --suite smoke`
 - Opt-in tests (PTY/log-sensitive/expensive) live under `tests/suites/runner_*/opt_in/` (wrappers under `tests/suites/opt_in/`) and are documented in `tests/OPT_IN_TESTS.md`.
 

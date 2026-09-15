@@ -47,4 +47,5 @@ the architecture behind it.
 ./tests/run.sh --suite witness_contract
 ```
 
-Not invoked by `tests/run.sh --all` — run on demand.
+Included in the default battery. The catalog shares the two partial-validator
+failure cases with `runner_validator_failure`, executing each canonical case once.

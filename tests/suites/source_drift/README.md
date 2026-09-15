@@ -23,6 +23,10 @@ signal.
   `runner/augments/` are managed separately and are not part of the
   source-set check.
 
+The registry checks also compare catalog suite names with suite directories and
+the coverage table, and require Baseline suites to have default catalog cases.
+Public-command controls separately verify selection and actual execution.
+
 ## Success criteria
 
 - The check script exits 0 and prints a one-line summary of how many

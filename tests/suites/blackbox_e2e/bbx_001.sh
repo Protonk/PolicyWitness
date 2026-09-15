@@ -14,6 +14,7 @@ SPECIMEN_TEMPLATE="${ROOT_DIR}/tests/fixtures/blackbox_e2e/BBX-001/specimen.temp
 EXPECTED_JSON="${ROOT_DIR}/tests/fixtures/blackbox_e2e/BBX-001/expected.json"
 VALIDATE_PY="${ROOT_DIR}/tests/suites/blackbox_e2e/validate_run.py"
 
+test_selected "${PW_TEST_ID}" || exit 0
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "run" "SBPL params + deny-signal on file-write"
 

@@ -9,12 +9,16 @@ PW_TEST_SUITE="runner_filter_sysctl_name"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 # Exercise all three caller contracts without needing the app.
+if test_selected checker_controls; then
 test_begin "${PW_TEST_SUITE}" checker_controls
 test_step checker "unavailable predictions must retain step identity and attempt checks"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter checker controls failed" \
   "${ROOT_DIR}/tests/suites/runner_filter_sysctl_name/checker_controls.py" "${PW_TEST_ARTIFACTS}"
 test_pass "all three filter adapters accept valid evidence and reject broken channels"
 
+fi
+
+if test_selected prediction_unavailable_attempt_observed; then
 test_begin "${PW_TEST_SUITE}" prediction_unavailable_attempt_observed
 test_step "run" "sysctl-name probe — prediction unavailable, attempt observed"
 
@@ -64,3 +68,4 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter prediction/attem
   --step-id kern_osrelease --operation sysctl-read --filter-value kern.osrelease --attempt sysctl_denied
 
 test_pass "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed" "{}"
+fi

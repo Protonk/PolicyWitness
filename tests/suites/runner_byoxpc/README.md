@@ -24,3 +24,15 @@ Run:
 ```
 ./tests/run.sh --suite runner_byoxpc
 ```
+
+The public catalog excludes these cases from the default battery. `--all` includes
+them. `--case runner_byoxpc/BBX-001` selects just that specimen and its installation
+dependency. Shared offline checker controls run once in their standard suites,
+not again for each runner context. The external-auth case has its own invocation;
+its failure does not suppress an otherwise usable team-matched runner.
+
+The wrapper installs once for selected specimen cases, continues independent
+specimens after failures, and removes the runner on exit. Missing required GUI,
+app, or signing equipment fails with explicit unrun selections in the public
+summary. `PW_TEST_RUNNER_*` variables are private to this wrapper; select cases
+instead of exporting those variables to `tests/run.sh`.

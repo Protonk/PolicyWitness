@@ -15,12 +15,13 @@ def main():
     inventory = []
 
     def exercise(name, children, *, wrapper=None, modes=None, missing=(),
-                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True):
+                 expected=None, rc=0, errexit=1, early_failure=None, ordered=True, selected=None):
         work = out / name
         repo = work / 'fixture repo'
         library = repo / 'tests/lib/scripts.sh'
         library.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / 'tests/lib/scripts.sh', library)
+        shutil.copyfile(ROOT / 'tests/lib/testlib.sh', library.with_name('testlib.sh'))
         config = {'root': str(repo), 'journal': str(work / 'receipts.jsonl'), 'modes': modes or {}}
         config_path = work / 'config.json'
         config_path.write_text(json.dumps(config, indent=2) + '\n')
@@ -39,6 +40,8 @@ def main():
         env.update(CONTROL_SCRIPT_CONFIG=str(config_path), CONTROL_ERREXIT=str(errexit),
                    CONTROL_SCRIPT_DRIVER=str(FIXTURE / 'script_child.py'),
                    PW_TEST_OUT_DIR=str(repo / 'tests/out'), PW_BIN=str(repo / 'tools/pw'))
+        if selected is not None:
+            env['PW_TEST_CASES'] = '\n'.join(selected)
         if wrapper:
             path = repo / f'tests/suites/{wrapper}/run.sh'
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,7 +66,8 @@ def main():
         for record in records:
             assert record['mode'] == config['modes'].get(record['script'], 'pass'), (name, record)
             assert record['argv'] == (['runner', 'remove', '--id', 'fixture-id']
-                                      if record['script'] == 'tools/pw' else []), (name, record)
+                                      if record['script'] == 'tools/pw' else ['--suite', 'opt_in']
+                                      if record['script'] == 'tests/run.sh' else []), (name, record)
         visible = [record for record in records if record['script'] != 'tools/pw']
         stdout = ''.join(f"{record['script']}: {record['mode']}\n" for record in visible).encode()
         assert result.stdout == stdout, (name, result.stdout, stdout)
@@ -77,12 +81,16 @@ def main():
         if wrapper == 'runner_byoxpc':
             for record in records:
                 assert record['alias'] == 'runner_byoxpc', (name, record)
-                setup = record['script'] in children[:2]
+                setup = record['script'].endswith(('/runner_auth_external.sh', '/runner_install.sh'))
                 assert record['runner_mode'] == (None if setup else 'byoxpc'), (name, record)
                 assert record['service'] == (None if setup else 'fixture.service'), (name, record)
                 assert record['kind'] == (None if setup else 'byoxpc'), (name, record)
-            assert records[0]['env_path'] is None, name
-            assert records[1]['env_path'].endswith('/runner_install/artifacts/runner_env.json'), name
+                if record['script'].endswith('/runner_auth_external.sh'):
+                    assert record['env_path'] is None, name
+                if record['script'].endswith('/runner_install.sh'):
+                    assert record['env_path'].endswith('/runner_install/artifacts/runner_env.json'), name
+                if selected is not None and not setup and record['script'] != 'tools/pw':
+                    assert record['selected_cases'] in selected and '\n' not in record['selected_cases'], (name, record)
         inventory.append(name)
         print(f'{name}: ok', flush=True)
 
@@ -110,9 +118,7 @@ def main():
             exercise(f'{wrapper}_{mode}', [child], wrapper=wrapper, modes={child: mode},
                      rc=17 if mode == 'fail' else 0)
 
-    opt_in = [f'tests/suites/opt_in/{name}.sh' for name in ('a', 'b', 'c')]
-    exercise('opt_in_continues', opt_in, wrapper='opt_in',
-             modes={opt_in[0]: 'skip', opt_in[1]: 'fail'}, rc=1)
+    exercise('opt_in_forward', ['tests/run.sh'], wrapper='opt_in')
     baseline = 'tests/suites/witness_contract/happy_path_baseline.sh'
     witness = [baseline] + sorted(str(path.relative_to(ROOT)) for path in
                                   (ROOT / 'tests/suites/witness_contract').glob('*.sh')
@@ -126,13 +132,21 @@ def main():
               'tests/suites/blackbox_menagerie/run.sh', 'tests/suites/blackbox_e2e/run.sh']
     for name, modes, expected, rc in (
         ('success', {}, byoxpc + ['tools/pw'], 0),
-        ('auth_failure', {byoxpc[0]: 'fail'}, byoxpc[:2], 1),
+        ('auth_failure', {byoxpc[0]: 'fail'}, byoxpc + ['tools/pw'], 1),
         ('install_failure', {byoxpc[1]: 'fail'}, byoxpc[:2], 1),
         ('install_skip', {byoxpc[1]: 'skip'}, byoxpc[:2], 0),
         ('run_failure', {byoxpc[3]: 'fail'}, byoxpc + ['tools/pw'], 1),
     ):
         exercise(f'byoxpc_{name}', byoxpc, wrapper='runner_byoxpc', modes=modes,
                  expected=expected, rc=rc)
+    leaves = ['tests/suites/blackbox_e2e/bbx_001.sh', 'tests/suites/blackbox_e2e/bbx_002.sh']
+    exercise('byoxpc_selected_leaf', byoxpc + leaves, wrapper='runner_byoxpc',
+             selected=['runner_install', 'BBX-002'], expected=[byoxpc[1], leaves[1], 'tools/pw'])
+    exercise('byoxpc_selected_failure_continues', byoxpc + leaves, wrapper='runner_byoxpc',
+             selected=['runner_install', 'BBX-001', 'BBX-002'], modes={leaves[0]: 'fail'},
+             expected=[byoxpc[1], *leaves, 'tools/pw'], rc=1)
+    exercise('byoxpc_selected_install_failure', byoxpc + leaves, wrapper='runner_byoxpc',
+             selected=['runner_install', 'BBX-002'], modes={byoxpc[1]: 'fail'}, expected=[byoxpc[1]], rc=1)
     (out / 'controls.json').write_text(json.dumps(inventory, indent=2) + '\n')
     print(f'{len(inventory)} script-group controls passed')
 

@@ -118,7 +118,7 @@ REPO_ROOT="$(cd "${HARNESS_DIR}/../../../.." && pwd)"
 
 PROBE_SRC="${HARNESS_DIR}/enforcement_probe.c"
 PROBE_BIN="${HARNESS_DIR}/enforcement_probe"
-SB_VALIDATOR="${REPO_ROOT}/dist/PolicyWitness.app/Contents/MacOS/sb_api_validator"
+SB_VALIDATOR="${PW_APP_DIR:-${REPO_ROOT}/dist/PolicyWitness.app}/Contents/MacOS/sb_api_validator"
 
 if [[ ! -x "${SB_VALIDATOR}" ]]; then
     echo "ERROR: sb_api_validator not found at ${SB_VALIDATOR}" >&2

@@ -35,3 +35,9 @@ deterministic, and checked into the repo so tests are hermetic.
 - Prefer minimal specimens unless the case requires a larger corpus.
 - If a fixture implies a new contract, update the relevant suite README and
   the suite-coverage table in `tests/README.md`.
+
+The `dispatcher` fixtures include `repository.py` (copies the public runner and
+writes a caller-supplied catalog), `selection.sh`/`selection.py` (independent
+execution receipts and controlled evidence), and the reconciliation fault
+scripts. The setup fixture is also used by Python startup controls; it contains
+no expected selections or result-checking logic.
