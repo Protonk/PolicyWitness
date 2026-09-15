@@ -5,6 +5,7 @@ These expectations are authored here, never obtained from the checker or the
 observed result. Keep the mutations and required diagnostics outside tests/lib.
 """
 import copy
+from collections import Counter
 import json
 import subprocess
 import sys
@@ -45,8 +46,10 @@ def main():
     failures = []
     count = 0
 
-    def check(name, envelope, diagnostics=(), *, expected=None, suites=None, status=0):
+    def check(name, envelope, diagnostics=(), *, expected=None, suites=None, status=0,
+              same_diagnostics_as=None):
         nonlocal count
+        observed = {}
         for suite in suites or expectations:
             count += 1
             stem = artifacts / f"{suite}.{name}"
@@ -61,17 +64,30 @@ def main():
             )
             output = result.stdout + result.stderr
             Path(f"{stem}.log").write_text(f"rc={result.returncode}\n{output}")
+            # Successful checker output is a summary, not a diagnostic.
+            lines = output.splitlines() if result.returncode else []
+            observed[suite] = lines
             if result.returncode != status or any(note not in output for note in diagnostics):
                 failures.append(f"{suite}/{name}: expected rc={status}, diagnostics={diagnostics!r}; "
                                 f"got rc={result.returncode}, output={output!r}")
-            else:
-                print(f"{suite}/{name}: ok", flush=True)
+                continue
+            if same_diagnostics_as is not None:
+                order = [line for line in lines if line.startswith("expected step IDs in order ")]
+                remaining = Counter(lines) - Counter(order)
+                reference = Counter(same_diagnostics_as[suite])
+                if len(order) != 1 or remaining != reference:
+                    failures.append(f"{suite}/{name}: reordering changed step diagnostics; "
+                                    f"order errors={len(order)}, missing={list((reference - remaining).elements())!r}, "
+                                    f"unexpected={list((remaining - reference).elements())!r}")
+                    continue
+            print(f"{suite}/{name}: ok", flush=True)
+        return observed
 
     def mutate():
         envelope = copy.deepcopy(baseline)
         return envelope, envelope["data"]["runner_result"]["steps"]
 
-    check("valid_nullable_evidence", baseline)
+    valid_diagnostics = check("valid_nullable_evidence", baseline)
     for channel, key, diagnostic in (
         ("sandbox_check", "errno", "missing sandbox_check.errno"),
         ("sandbox_check", "filter_type_id", "missing sandbox_check.filter_type_id"),
@@ -129,12 +145,10 @@ def main():
     steps[2]["drift"] = 0
     check("integer_drift", broken, ("invalid drift",), status=1)
 
-    for name in ("duplicate", "reordered", "missing", "unknown", "non_object"):
+    for name in ("duplicate", "missing", "unknown", "non_object"):
         broken, steps = mutate()
         if name == "duplicate":
             steps[2]["step_id"] = steps[1]["step_id"]
-        elif name == "reordered":
-            steps.reverse()
         elif name == "missing":
             steps.pop()
         elif name == "unknown":
@@ -142,6 +156,21 @@ def main():
         else:
             steps[1] = None
         check(f"{name}_step", broken, ("expected step IDs in order",), status=1)
+
+    # Reordering may add one order error, but must neither invent nor lose
+    # step failures. Compare observed diagnostics as multisets so prose and
+    # ordering can change without pinning a complete expected transcript.
+    changed, steps = mutate()
+    steps.reverse()
+    check("reordered_step", changed, ("expected step IDs in order",), status=1,
+          same_diagnostics_as=valid_diagnostics)
+    broken, steps = mutate()
+    steps[2]["attempt"].update(rc=1, exit_code=1, errno=13, syscall_errno=13)
+    attempt_errors = ("fs_read_allowed: expected attempt_ok=True", "fs_read_allowed: expected errno=None")
+    ordered_diagnostics = check("attribution_bad_attempt", broken, attempt_errors, status=1)
+    steps.reverse()  # The faulty step moves, while its expectation stays put.
+    check("reordered_bad_attempt", broken, ("expected step IDs in order", *attempt_errors), status=1,
+          same_diagnostics_as=ordered_diagnostics)
 
     broken, steps = mutate()
     steps[0]["sandbox_check"]["outcome"] = "deny"

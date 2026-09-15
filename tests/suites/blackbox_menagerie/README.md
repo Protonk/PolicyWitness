@@ -52,6 +52,11 @@ also require a later failure to defeat an earlier pending mismatch skip, and
 protect the policy-hash, file-observation, and annotated-mismatch checks.
 They also reject missing, malformed or contradictory compatibility aliases and
 exercise optional diagnostic text and explicitly expected null errno values.
+Paired ordered/reordered responses must differ only by one order diagnostic,
+both for valid evidence and for an attempt that contradicts its expected success.
+The faulty step moves with the response. Comparing diagnostic multisets preserves
+its attribution and rejects invented, lost, or duplicated errors while allowing
+diagnostic order and wording to change together across each pair.
 The controls import neither the shared checker nor production code.
 
 ## Artifacts

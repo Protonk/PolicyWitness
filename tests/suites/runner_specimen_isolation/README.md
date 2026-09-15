@@ -49,9 +49,15 @@ or boolean errno evidence. Alias disagreements with otherwise valid types must
 fail, while matching EPERM and EACCES aliases both pass. The unmodified captures
 are positive controls, including explicit null on successful attempts.
 
-Combined controls require both an ordering error and the correctly attributed
-attempt error, or both a malformed prediction and a missing alias on another
-step. Every rejected case requires the relevant diagnostic, not merely an
+Each run has paired ordered/reordered controls for valid evidence and for an
+exec attempt that contradicts its expected success. Reordering must add exactly
+one order error and preserve the multiset of all other diagnostics, including
+the moved attempt's attribution. Extra, lost, and duplicated step errors fail;
+diagnostic line order is unconstrained. The ordered inputs must independently
+pass or report the specified attempt failure, so agreement alone cannot pass.
+
+Combined controls also require both a malformed prediction and a missing alias
+on another step. Every rejected case requires the relevant diagnostic, not merely an
 exception or an unrelated assertion failure. All controls use the actual suite
 checker and retain their candidate envelopes and diagnostics.
 

@@ -74,6 +74,10 @@ shared nullable fields, integer/boolean distinctions, malformed envelopes,
 step correlation, alias presence/agreement, and combined failures, alongside
 each suite's own rules. Valid fixtures contain explicit compatibility aliases;
 optional diagnostic text and expected null errno values have positive controls.
+Paired responses with reordered steps must retain exactly the same step
+diagnostics and add only one order error. These controls cover valid evidence
+and a moved faulty attempt, comparing diagnostic multisets without pinning a
+full transcript or its line order.
 
 ## Artifacts
 

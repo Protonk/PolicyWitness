@@ -1,5 +1,6 @@
 """Keep two ordinary CLI specimens live, then finish B while A remains held."""
 import copy
+from collections import Counter
 from contextlib import ExitStack
 import json
 import os
@@ -120,7 +121,7 @@ def exercise_checker(witnesses, envelopes, out):
 
     counts = {'accepted': 0, 'rejected': 0}
 
-    def check(name, broken, witness, required=()):
+    def check(name, broken, witness, required=(), *, same_diagnostics_as=None):
         save(controls / f'{name}.json', broken)
         errors = envelope_errors(broken, witness)
         diagnostic = '\n'.join(errors)
@@ -132,6 +133,17 @@ def exercise_checker(witnesses, envelopes, out):
         else:
             assert not errors, (name, errors)
             counts['accepted'] += 1
+        if same_diagnostics_as is not None:
+            prefix = f"{witness['label']}: expected step IDs in order "
+            order = [error for error in errors if error.startswith(prefix)]
+            remaining = Counter(errors) - Counter(order)
+            reference = Counter(same_diagnostics_as)
+            assert len(order) == 1 and remaining == reference, (
+                name, 'reordering changed step diagnostics',
+                {'order_errors': len(order),
+                 'missing': list((reference - remaining).elements()),
+                 'unexpected': list((remaining - reference).elements())})
+        return errors
 
     for owner, other in ((0, 1), (1, 0)):
         witness = witnesses[owner]
@@ -208,13 +220,24 @@ def exercise_checker(witnesses, envelopes, out):
                         errno=error, syscall_errno=error)
                     check(f"{witness['label']}_step{index}_permission_{error}", changed, witness)
 
+        # Baseline acceptance and the named attempt failure are independent
+        # expectations. Their paired reorders must preserve all step errors,
+        # including multiplicity, while allowing diagnostic order to change.
+        valid_diagnostics = check(f"{witness['label']}_attribution_valid_ordered", envelope, witness)
+        changed = copy.deepcopy(envelope)
+        changed['data']['runner_result']['steps'].reverse()
+        check(f"{witness['label']}_reordered_valid", changed, witness,
+              ['expected step IDs in order'], same_diagnostics_as=valid_diagnostics)
         changed = copy.deepcopy(envelope)
         steps = changed['data']['runner_result']['steps']
-        steps.reverse()
-        steps[0]['attempt']['rc'] = False
+        steps[0]['attempt'].update(rc=1, exit_code=1, errno=13, syscall_errno=13)
+        step_id = witness['specimen']['probe_plan'][0]['step_id']
+        attempt_errors = [f"{step_id}: expected attempt_ok=True", f"{step_id}: expected errno=None"]
+        ordered_diagnostics = check(f"{witness['label']}_attribution_bad_attempt", changed, witness,
+                                    attempt_errors)
+        steps.reverse()  # Move the faulty exec step away from its request position.
         check(f"{witness['label']}_reordered_and_bad_attempt", changed, witness,
-              ['expected step IDs in order',
-               f"{witness['specimen']['probe_plan'][2]['step_id']}: invalid attempt.rc"])
+              ['expected step IDs in order', *attempt_errors], same_diagnostics_as=ordered_diagnostics)
         changed = copy.deepcopy(envelope)
         steps = changed['data']['runner_result']['steps']
         steps[0]['sandbox_check'] = None

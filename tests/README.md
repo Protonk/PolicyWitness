@@ -137,6 +137,9 @@ nullable path fields remain present, while attempt `error` text is optional.
 Black-box and filter controls exercise checker CLIs without importing the helper
 or production code. Isolation controls call the suite adapter with separately
 recorded witnesses. Both approaches require combined faults to remain visible.
+Black-box and isolation controls also compare ordered/reordered response pairs:
+only the order diagnostic may change, preserving actual step failures without
+inventing others. Diagnostic order is unconstrained.
 The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
 step identity, operation, filter value, and either a supported file-open or
 denied-sysctl attempt contract. Their independent controls run through
