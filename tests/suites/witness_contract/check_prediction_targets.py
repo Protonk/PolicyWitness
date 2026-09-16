@@ -2,6 +2,10 @@
 
 The crossed queries deliberately describe different targets from the attempts.
 Their expected drift tests the harness; it is no claim about a compiler bug.
+
+Keep this test as a contract guard even when the implementation prevents target
+substitution by construction. A future refactor must still route queries and
+attempts independently.
 """
 import copy
 import errno
