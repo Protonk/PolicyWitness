@@ -25,6 +25,7 @@ scripts=(
 # should surface.
   "${SUITE_DIR}/runner_sandbox_diagnostics_on_denied.sh"
   "${SUITE_DIR}/instrumentation_field_rejected.sh"
+  "${SUITE_DIR}/prediction_target_is_independent_of_attempt_target.sh"
   "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"
   "${SUITE_DIR}/validator_decode_failure_reports_degraded.sh"
   "${SUITE_DIR}/validator_spawn_failed_reports_degraded.sh"

@@ -903,6 +903,14 @@
             "bash",
             "tests/suites/witness_contract/drift_determination_via_validator_seam.sh"
           ]
+        },
+        {
+          "id": "prediction_target_is_independent_of_attempt_target",
+          "description": "Swapping real validator query targets reverses predictions while independently observed write effects stay fixed",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/prediction_target_is_independent_of_attempt_target.sh"
+          ]
         }
       ],
       "include": [

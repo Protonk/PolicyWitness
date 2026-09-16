@@ -176,7 +176,7 @@ prerequisites should fail, not skip.
 | `runner_exec_lifecycle` | Baseline | A public CLI exec deadline stops both observed helper processes, preserves output, and permits a subsequent file write with independently checked effects. | Built app + XPC + macOS C toolchain + Python 3 | — | No test overrides or worker ABI dependency. Roughly 10 seconds; artifacts retain PID/group/exit observations and before/after bytes. |
 | `runner_exec_inheritance` | Baseline | Exec children report empty environments, only standard descriptors, stdin EOF, and usable output. The CLI case uses ordinary specimens; a controlled worker launch proves random environment/descriptor resources existed to leak. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared observer and assertions have direct contamination controls. The worker adapter owns the ABI dependency; opt-in mutation checks verify real leak detection. |
 | `opt_in` | Opt-in | Select all non-default catalog cases | See registry | — | `tests/OPT_IN_TESTS.md` |
-| `witness_contract` | Baseline | Pins the load-bearing behaviors PolicyWitness contracts to provide: verdicts + attempts + validator failures attributed + removed fields rejected + test seam functioning + audit-rule enforcement. | Built app + XPC | — | `happy_path_baseline` is the regression sentinel and should always pass. End-to-end drift *surfacing* is still uncovered here — no current op+filter combination produces clean userland-vs-kernel disagreement through a real specimen (all known cases route to `prediction_unavailable`). The drift *classifier logic* itself (the asymmetric truth table) is unit-tested directly in `runner_unit`'s `computeDrift` table, which drives synthetic verdict/attempt pairs no specimen can currently produce. |
+| `witness_contract` | Baseline | Pins verdicts, attempts, independent query/attempt routing, validator-failure attribution, rejected fields, test seams, and audit rules. | Built app + XPC | — | The routing case swaps real prediction targets while independently observed writes stay fixed; its intentional target mismatch tests drift reporting without claiming a compiler bug. The steered-validator case separately tests classifier inputs end-to-end, and `runner_unit` pins the asymmetric truth table. `happy_path_baseline` is the regression sentinel. |
 
 ## Conventions
 
@@ -210,8 +210,9 @@ artifact contract.
 
 ### Black-box validation
 
-`blackbox_e2e`, `blackbox_menagerie`, `runner_specimen_isolation`, and the three
-`runner_filter_*` suites share `tests/lib/blackbox.py` for envelope checks, step
+`blackbox_e2e`, `blackbox_menagerie`, `runner_specimen_isolation`, the
+`witness_contract` prediction-target case, and the three `runner_filter_*` suites
+share `tests/lib/blackbox.py` for envelope checks, step
 identity/order, evidence fields and types, and explicit per-step expectations. Each suite owns its
 policy, file-observation, denial, and skip rules. The helper only collects
 errors; it neither runs PolicyWitness nor chooses expectations. Required attempt
