@@ -226,21 +226,29 @@ private func timeoutMsForCWorker(override: Int?) -> Int {
 // MARK: - Translation: request → driver inputs
 
 private func workerSlotsFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [CWorkerSlotInput] {
-    return plan.map { step in
-        // Exec attempts pass argv[1..N] via attempt.args; other kinds
-        // ignore the field. Defensive: only thread the args when the
-        // resolved attempt kind is .execSpawn so a caller that
-        // mistakenly populates args on a file probe doesn't pay the
-        // shm-write cost for ignored bytes.
-        let kind = mapAttemptKind(step.attempt)
-        let args: [String] = (kind == .execSpawn) ? (step.attempt.args ?? []) : []
-        return CWorkerSlotInput(
-            stepId: step.step_id,
-            attemptKind: kind,
-            target: step.attempt.target,
-            args: args
-        )
+    var slots: [CWorkerSlotInput] = []
+    slots.reserveCapacity(plan.count)
+    for step in plan {
+        let slot = makeWorkerSlot(stepID: step.step_id, attempt: step.attempt)
+        slots.append(slot)
     }
+    return slots
+}
+
+private func makeWorkerSlot(stepID: String, attempt: PWRunnerAttempt) -> CWorkerSlotInput {
+    // Exec attempts pass argv[1..N] via attempt.args; other kinds
+    // ignore the field. Defensive: only thread the args when the
+    // resolved attempt kind is .execSpawn so a caller that
+    // mistakenly populates args on a file probe doesn't pay the
+    // shm-write cost for ignored bytes.
+    let kind = mapAttemptKind(attempt)
+    let args: [String] = (kind == .execSpawn) ? (attempt.args ?? []) : []
+    return CWorkerSlotInput(
+        stepId: stepID,
+        attemptKind: kind,
+        target: attempt.target,
+        args: args
+    )
 }
 
 /// (kind, action) → C-worker PWAttemptKind. Returns nil for any
@@ -292,47 +300,54 @@ private func validatorProbesFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [Valid
     var probes: [ValidatorProbe] = []
     probes.reserveCapacity(plan.count)
     for step in plan {
-        let kind = step.sandbox_check.filter.kind
-        let opFilterPair = PredictionUnavailablePair(
-            operation: step.sandbox_check.operation,
-            filterKind: kind
-        )
-        if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair) {
-            // Don't ask the validator about this pair. The verdict is
-            // synthesized as prediction_unavailable in the step builder.
-            continue
+        if let probe = makeValidatorProbe(stepID: step.step_id, check: step.sandbox_check) {
+            probes.append(probe)
         }
-        if !knownFilterKinds.contains(kind) {
-            // Unknown filter kind: skip the validator probe and let the
-            // step builder synthesize prediction_unavailable. Avoids
-            // killing the whole plan when a specimen mixes a recognized
-            // probe with one whose filter kind hasn't been verified.
-            continue
-        }
-        // Per-step path-resolution gate: when the path filter doesn't
-        // resolve via realpath, the kernel won't reach a sandbox
-        // decision (file ops ENOENT first), so any libsandbox verdict
-        // for the path is a userland canonicalization artifact rather
-        // than a kernel prediction. Skip the validator probe; the
-        // step builder synthesizes prediction_unavailable so consumers
-        // see the prediction was honestly absent rather than wrong.
-        if pathFilterIsUnresolvable(kind, step.sandbox_check.filter.value) {
-            continue
-        }
-        // NONE-filter probes must not carry a filter_value in the
-        // validator wire (the validator rejects it as bad_filter).
-        // Callers commonly pass "" for kind=none — coerce that to nil.
-        let filterValue: String? = (kind == PWRunnerWire.sandboxFilterNone)
-            ? nil
-            : step.sandbox_check.filter.value
-        probes.append(ValidatorProbe(
-            stepId: step.step_id,
-            operation: step.sandbox_check.operation,
-            filterType: mapFilterKindToValidator(kind),
-            filterValue: filterValue
-        ))
     }
     return probes
+}
+
+/// Returns nil when this query has no available prediction.
+private func makeValidatorProbe(stepID: String, check: PWRunnerSandboxCheck) -> ValidatorProbe? {
+    let kind = check.filter.kind
+    let opFilterPair = PredictionUnavailablePair(
+        operation: check.operation,
+        filterKind: kind
+    )
+    if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair) {
+        // Don't ask the validator about this pair. The verdict is
+        // synthesized as prediction_unavailable in the step builder.
+        return nil
+    }
+    if !knownFilterKinds.contains(kind) {
+        // Unknown filter kind: skip the validator probe and let the
+        // step builder synthesize prediction_unavailable. Avoids
+        // killing the whole plan when a specimen mixes a recognized
+        // probe with one whose filter kind hasn't been verified.
+        return nil
+    }
+    // Per-step path-resolution gate: when the path filter doesn't
+    // resolve via realpath, the kernel won't reach a sandbox
+    // decision (file ops ENOENT first), so any libsandbox verdict
+    // for the path is a userland canonicalization artifact rather
+    // than a kernel prediction. Skip the validator probe; the
+    // step builder synthesizes prediction_unavailable so consumers
+    // see the prediction was honestly absent rather than wrong.
+    if pathFilterIsUnresolvable(kind, check.filter.value) {
+        return nil
+    }
+    // NONE-filter probes must not carry a filter_value in the
+    // validator wire (the validator rejects it as bad_filter).
+    // Callers commonly pass "" for kind=none — coerce that to nil.
+    let filterValue: String? = (kind == PWRunnerWire.sandboxFilterNone)
+        ? nil
+        : check.filter.value
+    return ValidatorProbe(
+        stepId: stepID,
+        operation: check.operation,
+        filterType: mapFilterKindToValidator(kind),
+        filterValue: filterValue
+    )
 }
 
 /// True when the step's filter is a path whose value does not
