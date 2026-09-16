@@ -5,8 +5,10 @@
 Create a small, checked inventory for `tests/fixtures/exec/control.py`.
 A reader should be able to find the canonical test cases that directly use this
 module and the cases that directly test its behavior. The inventory itself is
-the readable output. Existing `source_drift` checking will reject broken
-references and invalid inventory records.
+the readable output. A dedicated `test_equipment` suite will check inventory
+format and reference validity, with a separate case testing the validator itself.
+Passing these checks does not establish agreement between declarations and
+actual source dependencies; that remains a dated, reviewable manual claim.
 
 This is an implementation plan. Writing the specification, tracing dependencies,
 populating the inventory, and writing tests are tasks below; none is complete
@@ -22,14 +24,17 @@ process-observation equipment.
 Record declared direct dependencies at canonical test-case granularity. Manual
 source review establishes the initial membership. Automated validation establishes
 that records are well formed and their references resolve. Neither validation nor
-a passing consumer proves that the equipment is adequately tested. Completeness
-applies only to the direct consumers reviewed for this module; subsequent new
-consumers require a manual inventory update.
+a passing consumer proves that the equipment is adequately tested. Any claim of
+completeness applies only to the sources examined at the recorded review revision.
+Adding or removing an import can leave reference validation green while making
+membership stale. Changes to consumers require manual review and an inventory
+update where appropriate.
 
 Keep this metadata separate from `tests/catalog.json`'s execution `depends_on`
-relationships. It must not change test selection, ordering, prerequisites, or
-execution. Do not add dependency discovery, transitive analysis, new runner flags,
-a report generator, or inventories for other equipment.
+relationships. Add two ordinary offline cases without changing selection,
+ordering, prerequisites, or execution semantics for existing cases. Do not add
+dependency discovery, transitive analysis, new runner flags, a report generator,
+or inventories for other equipment.
 
 ## Starting points
 
@@ -39,8 +44,11 @@ a report generator, or inventories for other equipment.
   form `suite/leaf`, such as `exec_fixture/controls`. A case included by several
   suites still has one canonical identity. `exec_fixture/controls` and
   `run_capture/controls` are distinct cases despite sharing a leaf name.
-- `tests/suites/source_drift/check.py`, `run.sh`, and `README.md`: existing
-  mechanical registry checks and the integration point.
+- `tests/suites/source_drift/check.py` and `README.md`: existing source and
+  registry agreement checks. They will verify ordinary registration of the new
+  suite; inventory validation must not be folded into their current case.
+- `tests/suites/dispatcher/run.sh` and `tests/lib/case.sh`: existing patterns for
+  separately selectable cases, failure propagation, and retained diagnostics.
 - `tests/fixtures/exec/control.py` and its directory's `README.md`: the module
   being inventoried and its intended behavior.
 - `tests/suites/exec_fixture/check.py`: direct equipment controls to examine.
@@ -74,8 +82,9 @@ Specify:
 - What qualifies as a direct consumer or a direct control, how to map a script
   to a case, and how to represent a case that serves both roles.
 - Equipment identity by repository-relative path, with this inventory keyed to
-  `tests/fixtures/exec/control.py`. A same-named file elsewhere cannot satisfy a
-  missing referenced path; basename lookup or fallback is not permitted.
+  `tests/fixtures/exec/control.py`. Resolve the declared path from the repository
+  root. Checking its existence does not check the reviewer's attribution of a
+  consumer to that module.
 - Exact, suite-qualified `suite/leaf` references for both consumers and controls.
   Reject bare leaves even when unique, and reject unknown qualified references
   rather than resolving their leaf in another suite. Duplicate detection applies
@@ -89,6 +98,7 @@ Specify:
   tests should not require an exact paragraph or line order.
 - The maintenance rule for changing direct consumers or controls, and the
   distinction between reference validity and manually reviewed completeness.
+  Include the source-trace and review-provenance requirements from step 2.
 
 Use this specification to settle routine format choices before writing tests.
 Do not introduce additional metadata without a need in this scope.
@@ -97,16 +107,46 @@ Do not introduce additional metadata without a need in this scope.
 
 Populate `tests/equipment.json` by reviewing actual imports, uses, wrappers, and
 case definitions. Read the assertions before calling a case a direct equipment
-control: merely using the observer is not sufficient. Add a short review note in
-`tests/TEST-EQUIPMENT.md` linking the source locations that justify membership.
-Keep the canonical lists in the inventory rather than maintaining a second list
-in prose. Record `tests/fixtures/worker_harness/control.py` as examined and
-excluded, citing the path resolution in `check_worker_setup.py` and explaining
-that it is a separate builder/harness stand-in. This exclusion records the review
-decision; it does not add a second equipment entry.
+control: merely using the observer is not sufficient. Add a compact review note
+in `tests/TEST-EQUIPMENT.md` that lets a reader re-check each attribution:
+
+- Record the review date and full reviewed commit SHA. Review the committed
+  source tree and confirm that the cited sources and existing case/wrapper
+  definitions match it. Do not attach a commit SHA to a review of uncommitted
+  source changes; refresh the review against their committed version if needed.
+  Uncommitted inventory, validator, or documentation work does not by itself
+  prevent reviewing the unchanged consumer sources. Retain one current review
+  record, not a history log.
+- For each consumer entry, cite the `sys.path.insert` or explicit path-construction
+  statement, the import and actual use, and the wrapper connection to the
+  canonical case. Give repository-relative paths and enclosing functions or
+  distinctive statements; line numbers can supplement these anchors.
+- For direct control entries, also cite the assertions that exercise the
+  equipment's behavior. An import or a passing consumer is insufficient evidence
+  that a case tests the equipment itself.
+- Record `tests/fixtures/worker_harness/control.py` as examined and excluded.
+  Cite both `FIXTURE = ROOT / 'tests/fixtures/worker_harness'` and the
+  `CONTROL_WORKER_DRIVER` assignment in `check_worker_setup.py`, explaining that
+  these resolve to the separate builder/harness stand-in.
+
+The inventory remains the authoritative membership list; the note supplies
+evidence for its entries and the exclusion. The note is a manual review record,
+not a machine-verified proof or an automatic freshness check. This is where the
+same-filename attribution risk is addressed; a validator cannot detect a false
+consumer attribution when both recorded references exist.
+
+In `tests/TEST-EQUIPMENT.md`, explain how to use the recorded SHA: substitute it
+for `REVIEWED_SHA` in `git log REVIEWED_SHA..HEAD -- tests` to locate later work,
+and use `git diff REVIEWED_SHA -- tests` plus `git status --short -- tests` to
+inspect tracked and untracked changes. The note's own later commit does not make
+the source review stale: inspect changes to consumer code, import resolution,
+wrappers, and case definitions, not just the presence of later commits. Review
+relevant changes and repeat the bounded consumer search when sources change;
+searching all of `tests` includes potential new consumers outside the original
+list. This is a documented manual procedure, not a new freshness checker.
 
 Write independent validator controls under
-`tests/suites/source_drift/check_equipment.py`. Use a tiny, hand-authored case
+`tests/suites/test_equipment/check_controls.py`. Use a tiny, hand-authored case
 catalog and temporary inert helper files. Expected answers must come from the
 specification, not from the real inventory or validator output. These tests must
 not import or execute the real process-observation module.
@@ -117,8 +157,6 @@ step 1:
 - A valid helper with two consumers and one direct control passes.
 - A missing helper, an unknown consumer, and an unknown control each fail with
   an identifying diagnostic.
-- A missing referenced helper still fails when an unrelated helper with the same
-  basename exists elsewhere in the temporary repository.
 - Two distinct suite-qualified references sharing the leaf `controls` pass
   together; neither is treated as a duplicate of the other.
 - Bare `controls` fails both when the leaf is shared and when it is unique.
@@ -155,29 +193,58 @@ final tests. Do not hard-code the current consumer list into the validator.
 
 ### 4. Integrate and verify
 
-Call the validator from `tests/suites/source_drift/check.py` and incorporate its
-problems into the existing failure reporting. Run the independent validator
-controls through the existing `source_drift` suite as well. Keep its current
-canonical case and preserve failure status and diagnostics from both the
-controls and the live inventory check.
+Create `tests/suites/test_equipment/run.sh` using the existing case helpers, with
+two independently selectable default cases registered in `tests/catalog.json`:
 
-Add a bounded integration control demonstrating that invalid inventory produces
-a failing source-drift result. Use disposable inputs or a temporary owned copy;
-do not corrupt the working inventory to perform the check. Reuse existing fixture
-machinery where it fits, and avoid a new repository-copying framework. The control
-must establish that validation participates in the result, not merely that the
-validator can be called in isolation.
+- `test_equipment/inventory_references`: a thin `check_inventory.py` entry point
+  validates the real inventory's format, helper path, and canonical references.
+  Success means only that the declared records and references are valid.
+- `test_equipment/validator_controls`: runs the independent controls from step 2.
+  Success means the validator accepts and rejects the specified inputs correctly.
 
-Update `tests/suites/source_drift/README.md` for the added checks and fixtures.
-Link `tests/TEST-EQUIPMENT.md` from `tests/README.md` and
-`tests/fixtures/exec/README.md`. Document the inventory as maintained declarations,
-without implying automatic dependency discovery or measured coverage.
+Both cases need only Python and the ordinary shell harness. Give each its own
+result, diagnostics, and artifacts. Keep
+`source_drift/runner_source_manifests_agree` and its existing checks separate;
+its result must not silently include either new check.
 
-Run the independent controls and `tests/run.sh --suite source_drift`, using a
-dedicated `PW_TEST_OUT_DIR` inside `tests/out`. Run dispatcher selection controls
-only if shared catalog-reading behavior changes. This work requires no app
-build, signing, live PW run, execution of the inventoried cases, or full suite.
-Review the diff and run `git diff --check`.
+Keep each wrapper block as the ordinary selected-case setup, a direct
+`test_check_python` invocation of the intended checker with explicit inputs,
+and `test_pass` only after that succeeds. Add no custom status interpretation,
+fallback input selection, or validation logic in the shell wrapper. Review the
+checker path, inputs, and ordering explicitly.
+
+Use the independent validator controls for acceptance/rejection behavior and the
+existing shell-helper and dispatcher controls for failure propagation. Do not add
+a suite-specific disposable-repository integration test or extend shared fixture
+machinery for this MVP. Passing public-command runs check registration and normal
+execution; they do not prove the wrapper rejects invalid input. Correct wiring
+remains a small, explicit code-review obligation. If the wrapper needs its own
+conditional behavior or result translation, reconsider a targeted test of that
+behavior rather than silently expanding this plan's fixture setup.
+
+Update all public discovery surfaces as planned implementation work:
+
+- In `tests/catalog.json`, give the two new cases descriptions of their limited
+  claims. Preserve the existing source-drift description's count enumeration as
+  a diff-visible review cue. Update its suite count for the new suite (currently
+  37 to 38), checking the enumeration against actual source-drift output. These
+  counts are maintained description text, not an automatically enforced claim
+  about dependency coverage.
+- Add a `test_equipment` row to the suite-coverage table in `tests/README.md`,
+  distinguishing reference validation from validator controls and manual review.
+  Correct the `source_drift` row to cover its existing registry/outcome checks as
+  well as runner source manifests. Do not attribute dependency discovery to it.
+- Create `tests/suites/test_equipment/README.md` with the two cases' claims,
+  artifacts, prerequisites, and limits. Link `tests/TEST-EQUIPMENT.md` from
+  `tests/README.md` and `tests/fixtures/exec/README.md`.
+
+Exercise each new case through an exact `--case` selector to verify independent
+selection and reporting. Then run `tests/run.sh --suite test_equipment --suite
+source_drift`, using a dedicated `PW_TEST_OUT_DIR` inside `tests/out`, to verify
+the real inventory, controls, and suite registration together. Run dispatcher
+selection controls only if shared catalog-reading behavior changes. This work
+requires no app build, signing, live PW run, execution of the inventoried cases,
+or full suite. Review the diff and run `git diff --check`.
 
 ## Completion and handoff
 
@@ -185,13 +252,16 @@ The work is complete when:
 
 - The written specification matches the inventory and validator controls.
 - Exactly one real equipment module is inventoried, with membership justified
-  by source review and valid canonical references.
+  by revision-specific source traces, the recorded exclusion, and valid canonical
+  references. Manual provenance is distinct from automated validation.
 - Positive and negative controls pass, including acceptance of an empty control
-  list, and the source-drift integration rejects invalid inventory.
-- Existing source-drift checks still pass and the test runner's execution
-  semantics are unchanged.
-- The documentation explains how to maintain the record and what validation
-  cannot establish.
+  list. Public-command runs verify selection, registration, and normal execution;
+  review confirms direct checker invocation and use of the shared failure path.
+- Inventory validity and validator controls have separate canonical cases and
+  results. Existing source-drift checks still pass, the suite is registered in
+  every discovery surface, and execution semantics for existing cases are unchanged.
+- The documentation explains how to use the recorded revision to inspect later
+  changes, how to maintain the record, and what validation cannot establish.
 
 Report the changed files, membership-review rationale, commands and results,
 retained failure/pass evidence paths, and any unresolved limitation. Distinguish
