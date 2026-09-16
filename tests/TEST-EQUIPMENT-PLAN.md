@@ -147,9 +147,12 @@ list. This is a documented manual procedure, not a new freshness checker.
 
 Write independent validator controls under
 `tests/suites/test_equipment/check_controls.py`. Use a tiny, hand-authored case
-catalog and temporary inert helper files. Expected answers must come from the
-specification, not from the real inventory or validator output. These tests must
-not import or execute the real process-observation module.
+catalog and temporary inert helper files. Load that catalog through
+`tests/lib/test_cli.py::catalog`, using the same catalog-loading path as the real
+inventory checker, and pass its canonical case universe to the validator.
+Expected answers must come from the specification, not from the real inventory
+or validator output. These tests must not import or execute the real
+process-observation module.
 
 Cover at least the following agreed behaviors, plus the input rules settled in
 step 1:
@@ -165,8 +168,13 @@ step 1:
 - Repeating the same fully qualified ID within a role fails rather than being
   silently collapsed.
 - An explicitly empty control list passes and remains represented as empty.
-- Suite inclusion preserves canonical identity, and the chosen representation
-  for a case serving both roles is accepted.
+- Suite inclusion preserves canonical identity: when an including suite lists
+  another suite's case, the owning suite's canonical reference passes and an
+  invented reference under the including suite fails. Exercise both roles.
+- An opt-in case (`default: false`) with declared runtime prerequisites passes
+  as both a consumer and a control without checking those prerequisites or
+  executing its command.
+- The chosen representation for a case serving both roles is accepted.
 
 Run the tests before implementing the validator and retain the commands and
 failure output under a dedicated `tests/out/` directory. A missing module or
@@ -240,11 +248,16 @@ Update all public discovery surfaces as planned implementation work:
 
 Exercise each new case through an exact `--case` selector to verify independent
 selection and reporting. Then run `tests/run.sh --suite test_equipment --suite
-source_drift`, using a dedicated `PW_TEST_OUT_DIR` inside `tests/out`, to verify
-the real inventory, controls, and suite registration together. Run dispatcher
-selection controls only if shared catalog-reading behavior changes. This work
-requires no app build, signing, live PW run, execution of the inventoried cases,
-or full suite. Review the diff and run `git diff --check`.
+source_drift` to verify the real inventory, controls, and suite registration
+together. Set an explicit, separate `PW_TEST_OUT_DIR` inside `tests/out` for every
+public-command run, including both exact-case runs and the combined run. Keep
+these directories and the retained development evidence directory non-overlapping;
+none may contain another. The dispatcher replaces its selected output directory
+before execution, so using the default `tests/out` or reusing an evidence
+directory would erase earlier failure or pass evidence. Run dispatcher selection
+controls only if shared catalog-reading behavior changes. This work requires no
+app build, signing, live PW run, execution of the inventoried cases, or full suite.
+Review the diff and run `git diff --check`.
 
 ## Completion and handoff
 
