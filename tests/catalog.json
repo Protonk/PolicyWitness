@@ -227,7 +227,7 @@
       "cases": [
         {
           "id": "host_kills_hung_worker",
-          "description": "runner_timeout fired: host SIGKILLed the hung worker (term_signal=9, exit_code=null)"
+          "description": "host SIGKILL timeout with explicit empty steps, no validator, and both overrides honored"
         }
       ]
     },
@@ -515,7 +515,7 @@
         },
         {
           "id": "worker_timeout_ms_honored",
-          "description": "worker_timeout_ms honored on C-worker path (sentinel fires before hang completes)"
+          "description": "worker timeout preserves the completed write, its file effect, and drift=false"
         }
       ]
     },
@@ -853,6 +853,14 @@
           ]
         },
         {
+          "id": "create_existing_file_preserves_contents",
+          "description": "create preserves existing bytes and identities while enforcing write permission",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/create_existing_file_preserves_contents.sh"
+          ]
+        },
+        {
           "id": "runner_sandbox_diagnostics_on_denied",
           "command": [
             "bash",
@@ -892,6 +900,7 @@
         },
         {
           "id": "worker_post_apply_hang_seam",
+          "description": "host timeout preserves allowed and denied write evidence, file effects, and drift=false",
           "command": [
             "bash",
             "tests/suites/witness_contract/worker_post_apply_hang_seam.sh"

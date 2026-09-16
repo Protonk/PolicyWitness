@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_use_c_worker"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
@@ -400,62 +400,18 @@ PY
   test_pass "unknown attempt → per-step skip; sibling step + sandbox_check verdict survive" "{\"stdout\":\"${run_stdout}\"}"
 }
 
-# ---- test_id: worker_timeout_ms_honored (PR H #3 regression) ------------
+# ---- test_id: worker_timeout_ms_honored ---------------------------------
 
 run_worker_timeout_ms_honored() {
   local test_id="worker_timeout_ms_honored"
   test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "worker_timeout_ms=500 + worker_post_apply_hang_ms=1500 → runner_timeout (used to be ignored, returning ok after the full hang)"
-
-  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
-
-  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  cat >"${specimen}" <<'EOF'
-{
-  "schema_version": 1,
-  "specimen_id": "use_c_worker_timeout",
-  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
-  "probe_plan": [{
-    "step_id": "s1",
-    "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "/etc/hosts"}},
-    "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"}
-  }],
-  "_test_overrides": {
-    "worker_timeout_ms": 500,
-    "worker_post_apply_hang_ms": 1500
-  }
-}
-EOF
-
-  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
-  set +e
-  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
-  set -e
-
-  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
-  set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
-import json, sys
-env = json.loads(open(sys.argv[1]).read())
-r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "runner_timeout", "outcome={0}".format(r["normalized_outcome"])
-assert r["rc"] == 1
-# Mirror-back of both overrides should survive into the response.
-to = r["test_overrides"]
-assert to["worker_timeout_ms"] == 500
-assert to["worker_post_apply_hang_ms"] == 1500
-print("ok: worker_timeout_ms drives the C-worker sentinel deadline; outcome=runner_timeout")
-PY
-  local arc=$?
-  set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
-    return 0
-  fi
-  test_pass "worker_timeout_ms honored on C-worker path (sentinel fires before hang completes)" "{\"stdout\":\"${run_stdout}\"}"
+  test_require_pw
+  test_step run "worker deadline fires while a completed write retains its effect and evidence"
+  test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "successful-write worker timeout contract failed" \
+    "${ROOT_DIR}/tests/suites/runner_outcome_runner_timeout/check.py" \
+    write "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
+  test_pass "worker timeout preserves the completed write, its file effect, and drift=false"
 }
 
 # ---- test_id: drift_null_for_non_policy_failure (PR H #5 regression) ----

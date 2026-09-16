@@ -68,6 +68,48 @@ Run it independently with:
 tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt_target
 ```
 
+## Create on an existing file
+
+`create_existing_file_preserves_contents` submits two `file/create` attempts
+through the CLI, using the real validator and no test overrides. Both targets
+already contain distinct random bytes. Policy allows writing one and denies
+writing the other. The allowed attempt must succeed with its observed path;
+the denied attempt must report `open_failed` with a permission errno. Their
+predictions must be allow and deny respectively, with `drift=false` for both.
+Both children exit cleanly and the steps retain their identities and evidence.
+
+Before decoding the envelope, the test independently reads both files and
+checks that every seed byte and each device/inode pair survived. This protects
+create's existing-file semantics: open for writing without truncation,
+replacement, or an exclusive-create requirement. The denied-write step also
+rejects substituting a read-only open that would preserve the bytes.
+`runner_c_worker_harness/create_allow` separately covers creating an absent file.
+
+Artifacts include before/after bytes, `identities.before.json` and
+`identities.after.json`, the specimen, expectations, raw envelope, stderr,
+capture metadata, and assertion log. Run with:
+
+```sh
+tests/run.sh --case witness_contract/create_existing_file_preserves_contents
+```
+
+## Completed observations after a worker timeout
+
+`worker_post_apply_hang_seam` attempts an allowed write and a denied write,
+then uses a post-apply hang longer than the worker deadline and reap grace.
+The host reports `runner_timeout` and SIGKILL termination, with CLI/runner
+failure, a deadline diagnostic, and both overrides echoed. Independent file
+reads must show changed, nonempty bytes for the allowed write and intact seed
+bytes for the denied write before the envelope is decoded.
+
+Both completed attempts retain their distinct outcomes, step IDs/order, paths,
+errno evidence, matching real validator predictions, and `drift=false`.
+The validator exits cleanly and `partial_steps=false`: failed run completion
+does not erase completed observations. The shared checker, timing margins,
+and retained artifacts are documented in `runner_outcome_runner_timeout`.
+That suite owns the deliberately empty-plan timeout control;
+`runner_use_c_worker/worker_timeout_ms_honored` covers a single successful write.
+
 ## Artifacts
 
 - `tests/out/suites/witness_contract/<test_id>/artifacts/*`

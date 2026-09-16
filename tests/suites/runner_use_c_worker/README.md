@@ -1,9 +1,10 @@
 # runner_use_c_worker
 
 End-to-end coverage for the runner's C code path. Specimens here
-intentionally carry no `_test_overrides`, so each run also
-double-checks that production-shape requests assemble a complete
-v4 envelope without test-seam help.
+normally carry no `_test_overrides`, so those runs also
+double-check that production-shape requests assemble a complete
+v4 envelope without test-seam help. `worker_timeout_ms_honored` uses the timeout
+and post-apply hang overrides to exercise host failure handling.
 
 The runner runs `pw-probe-runner` (attempts) + `sb_api_validator
 --batch` (sandbox_check verdicts) as two children of the XPC
@@ -57,9 +58,13 @@ guards for the request-validation and drift-classification rules:
    good step runs end-to-end, and the unrecognized step gets
    `attempt.outcome == "unsupported"` while its `sandbox_check`
    verdict still runs. `drift` is `null` for the unsupported step.
-6. **worker_timeout_ms_honored** — `_test_overrides.worker_timeout_ms`
-   paired with `_test_overrides.worker_post_apply_hang_ms` makes the
-   host SIGKILL the hung C worker. Asserts `runner_timeout`.
+6. **worker_timeout_ms_honored** — a 2-second worker deadline and 8-second
+   post-apply hang produce a host SIGKILL timeout after an allowed write.
+   Independent file bytes must change before the envelope is checked. The
+   completed write retains its ID, paths, successful attempt, real validator
+   prediction, and `drift=false`; `partial_steps=false`. Also checks CLI/runner
+   failure, termination, the deadline diagnostic, and both honored overrides.
+   Uses the checker and capture described in `runner_outcome_runner_timeout`.
 7. **drift_null_for_non_policy_failure** — non-sandbox lookup
    failure (`BOOTSTRAP_UNKNOWN_SERVICE`). Asserts `drift == null`
    because the attempt didn't fail for a sandbox-policy reason.

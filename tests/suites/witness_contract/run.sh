@@ -15,6 +15,7 @@ scripts=(
   "${SUITE_DIR}/attempt_outcome_matrix_enforced.sh"
   "${SUITE_DIR}/bug_report_returns_attempts.sh"
   "${SUITE_DIR}/bug_report_returns_verdicts.sh"
+  "${SUITE_DIR}/create_existing_file_preserves_contents.sh"
   "${SUITE_DIR}/debuggable_mode_rejected.sh"
 # drift_surfaced_in_envelope removed: its original premise (BBX-001
 # mach-lookup global-name drift) was a wrong-filter-ID bug, not real

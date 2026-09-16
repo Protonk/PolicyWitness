@@ -66,10 +66,14 @@ pre-apply self-defense branches.
 
 ### File attempt kinds
 
-These drive the two attempt kinds that no other suite executes. The
-harness owns the on-disk target (it is unsandboxed); the worker is what
+These exercise unlink under allow/deny policies and creation of an absent file.
+The harness owns the on-disk target (it is unsandboxed); the worker is what
 runs the unlink/create under the scenario policy, and the harness reports
 `target_exists_after` as the durable proof.
+
+The CLI case `witness_contract/create_existing_file_preserves_contents`
+separately checks create on existing files, preserving their bytes and identities
+while enforcing write permission.
 
 7. **unlink_allow** — `PW_ATTEMPT_FILE_UNLINK` under `(allow default)`:
    `rc=0` and the harness-created target is gone afterward.

@@ -414,7 +414,7 @@ run_max_slots_deny_default
 run_sigkill_fallback
 run_params_round_trip
 
-# #1 — file attempt kinds (unlink/create) with no other execution coverage.
+# File unlink and creation of an absent target through the worker ABI.
 run_unlink_allow
 run_unlink_deny
 run_create_allow
