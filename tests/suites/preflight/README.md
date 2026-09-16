@@ -31,6 +31,17 @@ Offline release controls also exercise the release procedure's decision points.
   skipped cases, wrong runner provenance, mutation, and corrupt ZIPs, while a
   usable local source app remains untouched. Real signature semantics are covered
   separately by `signed_artifact_controls`.
+- `release_deadline_controls` runs the actual release command CLI against a
+  parent/child fixture that flushes partial stdout and stderr, then waits on a
+  test-owned socket. Each process configured to ignore SIGINT must survive a
+  direct interrupt before the timeout case proceeds. A normal release must succeed; a hung tree must fail
+  within the outer deadline. A third case lets the parent exit zero on the
+  wrapper's SIGINT while its child remains stuck: the wrapper must still fail
+  for timeout and stop the child. Independent invocation receipts require one
+  launch, raw bytes must survive unchanged, and the shared exec observer requires
+  kernel exit events for both peers before test cleanup. These controls make no
+  Apple requests and need no built app, signing identity, or compiler. macOS
+  socket/process observation may require escalation in an automation sandbox.
 
 ## Fixtures
 
@@ -38,6 +49,8 @@ Offline release controls also exercise the release procedure's decision points.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/release/tools.py`: controlled external-tool boundary and receipts.
+- `tests/fixtures/release/hanging_command.py`: real command processes; reuses
+  `tests/fixtures/exec/control.py` for socket readiness and independent OS exits.
 
 ## Artifacts
 
@@ -49,4 +62,5 @@ Run:
 ./tests/run.sh --case preflight/codesign.preflight
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/release_controls
+./tests/run.sh --case preflight/release_deadline_controls
 ```

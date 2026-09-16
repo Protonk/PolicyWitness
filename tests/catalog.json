@@ -27,6 +27,11 @@
           "id": "release_controls",
           "requires": [],
           "description": "Uncertain Apple replies stop continuation; archive checks use the extracted app and preserve inputs"
+        },
+        {
+          "id": "release_deadline_controls",
+          "requires": [],
+          "description": "Real hung release commands stop within their deadline, preserve output, and leave no live child or retry"
         }
       ]
     },

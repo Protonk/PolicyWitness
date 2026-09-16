@@ -4,6 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/case.sh"
 
+if test_selected release_deadline_controls; then
+test_begin preflight release_deadline_controls
+test_step deadline "observe real hung commands, retained output, and kernel process exits"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release deadline controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_release_deadline.py" "${PW_TEST_ARTIFACTS}"
+test_pass "release deadlines stop stubborn command groups once and preserve raw output"
+fi
+
 if test_selected release_controls; then
 test_begin preflight release_controls
 test_step release "exercise uncertain Apple replies and final-archive acceptance using independent tools"
