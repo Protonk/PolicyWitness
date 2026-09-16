@@ -23,23 +23,25 @@ test:
 notarize:
 	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
 		echo "ERROR: set NOTARY_KEYCHAIN_PROFILE to your notarytool keychain profile name"; \
-		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile"; \
+		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1"; \
 		exit 2; \
 	fi
 	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
 		echo "ERROR: set IDENTITY or opt-in to auto selection with YOLO=1"; \
-		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile IDENTITY='Developer ID Application: ...'"; \
-		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile YOLO=1"; \
+		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'"; \
+		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1"; \
 		exit 2; \
 	fi
 	@$(MAKE) build
 	@echo "==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip"
-	@xcrun notarytool submit "$(DIST_DIR)/PolicyWitness.zip" --keychain-profile "$(NOTARY_KEYCHAIN_PROFILE)" --wait
+	@/usr/bin/python3 -B notarize.py "$(DIST_DIR)/PolicyWitness.zip" "$(NOTARY_KEYCHAIN_PROFILE)"
 	@echo "==> [notarize] staple $(DIST_DIR)/PolicyWitness.app"
-	@xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"
+	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/bin/xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"
 	@echo "==> [notarize] validate $(DIST_DIR)/PolicyWitness.app"
-	@xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"
-	@spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"
+	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/bin/xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"
+	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/sbin/spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"
 	@echo "==> [notarize] re-zip stapled app"
 	@rm -f "$(DIST_DIR)/PolicyWitness.zip"
 	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"
+	@echo "==> [notarize] accept the final ZIP"
+	@bash tests/accept-release.sh "$(DIST_DIR)/PolicyWitness.zip"

@@ -83,6 +83,13 @@ owning suite, `--suite opt_in`, or `--all` to select them. Direct suite scripts
 remain developer entrypoints, but do not provide the public command's planning,
 configuration validation, or completion guarantees.
 
+Release ZIP acceptance is a separate explicit command:
+`bash tests/accept-release.sh dist/PolicyWitness.zip`. It inspects a temporary
+extraction, checks the staple and Gatekeeper assessment, runs the existing allow
+and deny contracts through the extracted controller, and records the ZIP hash
+and before/after integrity. It never builds or signs. See `SIGNING.md` for the
+complete release procedure and the handling of delayed or uncertain Apple replies.
+
 ## Configuration
 
 - `PW_APP_DIR`: app bundle to test; defaults to `dist/PolicyWitness.app`.
@@ -133,7 +140,7 @@ prerequisites should fail, not skip.
 
 | Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
 | --- | --- | --- | --- | --- | --- |
-| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes | Built app; signing controls also need matching Developer ID | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
+| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; offline release continuation controls | Built app for inspection; signing controls also need matching Developer ID; release controls are offline | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
 | `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. | Python 3 | — | `tests/out/suites/source_drift/.../check.log` |
 | `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3 | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No app or toolchain; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |

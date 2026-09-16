@@ -7,6 +7,8 @@ deterministic, and checked into the repo so tests are hermetic.
 
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
+- `release/`: independent Apple/tool responses and execution receipts for release
+  continuation and archive acceptance; no real submission, signing, or PW run.
 - `shell_case/`: independent builder/checker commands, shell cases, and
   controlled child scripts for Python startup, prerequisite, result-finalization, log/report,
   and wrapper execution controls in `shell_helpers`.

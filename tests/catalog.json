@@ -22,6 +22,11 @@
             "app",
             "identity"
           ]
+        },
+        {
+          "id": "release_controls",
+          "requires": [],
+          "description": "Uncertain Apple replies stop continuation; archive checks use the extracted app and preserve inputs"
         }
       ]
     },

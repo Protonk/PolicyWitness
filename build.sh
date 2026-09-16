@@ -479,12 +479,14 @@ DONE:
   - ${ZIP_NAME}
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
-Next (notarize with your saved profile):
-  make notarize NOTARY_KEYCHAIN_PROFILE=dev-profile
-  # or manually:
-  xcrun notarytool submit "${ZIP_NAME}" --keychain-profile "dev-profile" --wait
+Next (see SIGNING.md; make notarize builds again):
+  make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
+  # Or submit this existing ZIP once and wait for explicit acceptance:
+  /usr/bin/python3 -B notarize.py "${ZIP_NAME}" entitlement-jail
+  # Only after that command succeeds:
   xcrun stapler staple "${APP_BUNDLE}"
   xcrun stapler validate -v "${APP_BUNDLE}"
   spctl -a -vv --type execute "${APP_BUNDLE}"
   /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
+  bash tests/accept-release.sh "${ZIP_NAME}"
 EOF
