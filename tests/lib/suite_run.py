@@ -13,6 +13,7 @@ import signal
 import subprocess
 import sys
 import time
+import artifact
 
 
 def save(path, value):
@@ -131,9 +132,11 @@ def counts(reports):
     return result
 
 
-def finish(out, run_id, started, invocations, plan):
+def finish(out, run_id, started, invocations, plan, integrity=None):
     reports = [report for item in invocations for report in item['reports']]
     errors = [error for item in invocations for error in item['harness_errors']]
+    if integrity:
+        errors.extend(integrity['harness_errors'])
     case_results = [case for item in invocations for case in item['case_results']]
     selected = Counter(case['id'] for case in plan['cases'])
     accounted = Counter(case['id'] for case in case_results)
@@ -164,6 +167,7 @@ def finish(out, run_id, started, invocations, plan):
         'invocations': invocations, 'harness_errors': errors,
         'plan': plan, 'configuration': plan['configuration'],
         'case_results': case_results,
+        'artifact_integrity': integrity,
     }
     run['completion'] = {state: sum(c['state'] == state for c in run['case_results'])
                          for state in ('completed', 'skipped', 'unrun')}
@@ -280,49 +284,106 @@ def execute(root, out, run_id, started, plan, config):
                PYTHONDONTWRITEBYTECODE='1')
     previous_events, previous_reports, seen_cases = b'', {}, {}
     interrupted, cache, outcomes = False, {}, {}
-    for item in invocations:
-        group = item['cases']
-        group_ids = {c['id'] for c in group}
+    integrity = None
+    if any({'app', 'worker'} & set(c['requires']) for c in plan['cases']):
+        integrity = {'app': config['app_dir'], 'valid_before': False, 'unchanged': None,
+                     'report_dir': 'artifact-integrity', 'harness_errors': []}
+        evidence = out / integrity['report_dir']
+        evidence.mkdir()
+        before = None
         try:
-            missing = [] if interrupted else sorted({req for c in group for req in requirements(c, config, env, root, cache)})
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            missing = [f'prerequisite check failed: {exc}']
+            before = artifact.inventory(Path(config['app_dir']))
+            save(evidence / 'before.json', before)
+            inspection = artifact.inspect(Path(config['app_dir']))
+            save(evidence / 'inspection.json', inspection)
+            integrity['valid_before'] = inspection['ok']
+            if not inspection['ok']:
+                integrity_error(integrity, 'artifact_invalid',
+                                'selected app failed inspection; see artifact-integrity/inspection.json',
+                                findings=inspection['errors'])
+        except (OSError, ValueError) as exc:
+            integrity_error(integrity, 'artifact_inspection_failed', str(exc))
         except KeyboardInterrupt:
-            missing = []
             interrupted = True
-        dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
-        failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
-        if interrupted or missing or failed_deps:
-            item['state'] = 'blocked'
-            reason = 'interrupted' if interrupted else f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}'
-            item['blocked_reason'] = reason
-            problem(item, 'not_run', reason)
-        else:
-            print('==> [selection] ' + ', '.join(c['id'] for c in group), flush=True)
-            item.update(state='running', started_at_unix_ms=time.time_ns() // 1_000_000)
-            save(journal, {'run_id': run_id, 'invocations': invocations})
-            child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
-            command = group[0]['command']
+            integrity_error(integrity, 'artifact_inspection_interrupted', 'artifact inspection interrupted')
+        cache.update(app=integrity['valid_before'], worker=integrity['valid_before'])
+    try:
+        for item in invocations:
+            group = item['cases']
+            group_ids = {c['id'] for c in group}
             try:
-                if group[0]['context'] == 'standard':
-                    returncode = run_standard_command(command, root, child_env)
-                else:
-                    returncode = subprocess.run(command, cwd=root, env=child_env).returncode
-                item.update(state='exited', returncode=returncode)
-                if item['returncode'] != 0:
-                    problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
-            except OSError as exc:
-                item['state'] = 'launch_failed'
-                problem(item, 'launch_failed', str(exc))
+                missing = [] if interrupted else sorted({req for c in group for req in requirements(c, config, env, root, cache)})
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                missing = [f'prerequisite check failed: {exc}']
             except KeyboardInterrupt:
-                item['state'] = 'interrupted'
+                missing = []
                 interrupted = True
+            dependencies = {dep for c in group for dep in c['depends_on'] if dep not in group_ids}
+            failed_deps = sorted(dep for dep in dependencies if outcomes.get(dep) != 'pass')
+            if interrupted or missing or failed_deps:
+                item['state'] = 'blocked'
+                reason = 'interrupted' if interrupted else f'missing prerequisites: {missing}' if missing else f'dependencies did not pass: {failed_deps}'
+                item['blocked_reason'] = reason
+                problem(item, 'not_run', reason)
+            else:
+                print('==> [selection] ' + ', '.join(c['id'] for c in group), flush=True)
+                item.update(state='running', started_at_unix_ms=time.time_ns() // 1_000_000)
+                save(journal, {'run_id': run_id, 'invocations': invocations})
+                child_env = {**env, 'PW_TEST_CASES': '\n'.join(c['test_id'] for c in group)}
+                command = group[0]['command']
+                try:
+                    if group[0]['context'] == 'standard':
+                        returncode = run_standard_command(command, root, child_env)
+                    else:
+                        returncode = subprocess.run(command, cwd=root, env=child_env).returncode
+                    item.update(state='exited', returncode=returncode)
+                    if item['returncode'] != 0:
+                        problem(item, 'suite_exit', f"case command exited with status {item['returncode']}")
+                except OSError as exc:
+                    item['state'] = 'launch_failed'
+                    problem(item, 'launch_failed', str(exc))
+                except KeyboardInterrupt:
+                    item['state'] = 'interrupted'
+                    interrupted = True
+                    problem(item, 'interrupted', 'test execution interrupted')
+                item['finished_at_unix_ms'] = time.time_ns() // 1_000_000
+                previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
+                                                              previous_reports, seen_cases)
+            account(item)
+            for case in item['case_results']:
+                outcomes[case['id']] = case['status'] if not item['harness_errors'] else 'fail'
+            save(journal, {'run_id': run_id, 'invocations': invocations})
+    except KeyboardInterrupt:
+        # Also account for cancellation between commands or during reconciliation.
+        for item in invocations:
+            if not item['case_results']:
+                item.update(state='blocked', blocked_reason='interrupted')
                 problem(item, 'interrupted', 'test execution interrupted')
-            item['finished_at_unix_ms'] = time.time_ns() // 1_000_000
-            previous_events, previous_reports = reconcile(item, out, run_id, previous_events,
-                                                          previous_reports, seen_cases)
-        account(item)
-        for case in item['case_results']:
-            outcomes[case['id']] = case['status'] if not item['harness_errors'] else 'fail'
+                account(item)
         save(journal, {'run_id': run_id, 'invocations': invocations})
-    return finish(out, run_id, started, invocations, plan)
+    finally:
+        if integrity:
+            # Cancellation must not suppress the final read-only inventory. Ignore
+            # repeated Ctrl-C only for this bounded finalization step.
+            previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            try:
+                after = artifact.inventory(Path(config['app_dir']))
+                save(evidence / 'after.json', after)
+                if before is not None:
+                    delta = artifact.changes(before, after)
+                    save(evidence / 'changes.json', delta)
+                    integrity['unchanged'] = not delta
+                    if delta:
+                        integrity_error(integrity, 'artifact_changed',
+                                        'selected app changed during testing; see artifact-integrity/changes.json',
+                                        paths=list(delta))
+            except (OSError, ValueError) as exc:
+                integrity_error(integrity, 'artifact_inventory_failed', str(exc))
+            finally:
+                signal.signal(signal.SIGINT, previous)
+    return finish(out, run_id, started, invocations, plan, integrity)
+
+
+def integrity_error(integrity, code, message, **details):
+    integrity['harness_errors'].append(dict(invocation=None, requested_suite='dispatcher',
+                                           code=code, message=message, **details))

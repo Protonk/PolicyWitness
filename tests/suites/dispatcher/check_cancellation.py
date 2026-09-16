@@ -12,17 +12,22 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner
+from artifacts import bundle
 sys.path.insert(0, str(ROOT / 'tests/fixtures/exec'))
 from control import TreeControl, ExitObserver
 
 
-def exercise(out, interrupt):
+def exercise(out, interrupt, app_guard=False):
     name = 'interrupt' if interrupt else 'release'
+    if app_guard:
+        name += '_artifact'
     work = out / name
     repo = work / 'fixture repo'
-    install_runner(ROOT, repo, {'cancel': {'cases': [
+    install_runner(ROOT, repo, {'cancel': {'requires': ['app'] if app_guard else [], 'cases': [
         {'id': case, 'command': ['bash', 'tests/fixtures/dispatcher/cancellation.sh', case]}
-        for case in ('completed', 'active', 'queued')]}})
+        for case in ('completed', 'active', 'queued')]}}, signed_fixtures=app_guard)
+    if app_guard:
+        bundle(repo / 'dist/PolicyWitness.app')
     for leaf in ('cancellation.sh', 'cancellation.py'):
         relative = Path('tests/fixtures/dispatcher') / leaf
         target = repo / relative
@@ -64,6 +69,8 @@ def exercise(out, interrupt):
                 assert [json.loads(line)['case'] for line in receipts.read_text().splitlines()] == ['completed', 'active']
                 started = time.monotonic()
                 if interrupt:
+                    if app_guard:
+                        (repo / 'dist/PolicyWitness.app/Contents/MacOS/pw-runner-client').write_bytes(b'mutated before cancellation')
                     os.killpg(process.pid, signal.SIGINT)
                 else:
                     tree.release()
@@ -75,6 +82,13 @@ def exercise(out, interrupt):
                 observation['exited_peers'] = sorted(tree.exited)
 
             run = json.loads((child_out / 'run.json').read_text())
+            if app_guard:
+                assert run['artifact_integrity']['valid_before'] is True
+                assert run['artifact_integrity']['unchanged'] is (not interrupt)
+                delta = json.loads((child_out / 'artifact-integrity/changes.json').read_text())
+                assert set(delta) == ({'Contents/MacOS/pw-runner-client'} if interrupt else set())
+                if interrupt:
+                    assert 'artifact_changed' in {e['code'] for e in run['harness_errors']}
             journal = json.loads((child_out / 'dispatch.json').read_text())
             assert journal['invocations'] == run['invocations']
             assert completed.read_bytes() == prior_bytes
@@ -117,5 +131,6 @@ if __name__ == '__main__':
     out.mkdir(parents=True, exist_ok=True)
     for interrupted in (False, True):
         exercise(out, interrupted)
-    (out / 'controls.json').write_text(json.dumps(['release', 'interrupt']) + '\n')
-    print('2 cancellation controls passed')
+        exercise(out, interrupted, app_guard=True)
+    (out / 'controls.json').write_text(json.dumps(['release', 'interrupt', 'release_artifact', 'interrupt_artifact']) + '\n')
+    print('4 cancellation controls passed')

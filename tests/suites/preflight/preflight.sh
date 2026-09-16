@@ -14,7 +14,7 @@ usage:
   tests/suites/preflight/preflight.sh [--out <path>]
 
 notes:
-  - emits a JSON report used by integration tests to decide what to skip
+  - requires complete bundle layout, valid signatures, and matching manifest hashes
   - does not execute any artifacts (codesign inspection only)
 EOF
 }
@@ -58,135 +58,7 @@ mkdir -p "$(dirname "${OUT_PATH}")"
 
 APP_PATH="${PW_APP_DIR}"
 
-step "codesign_inspection" "inspect codesign metadata"
+step "artifact_inspection" "verify bundle components, signatures, and evidence hashes"
+/usr/bin/python3 "${ROOT_DIR}/tests/lib/artifact.py" "${APP_PATH}" "${OUT_PATH}"
 
-/usr/bin/python3 - "${OUT_PATH}" "${APP_PATH}" <<'PY'
-import json
-import os
-import plistlib
-import subprocess
-import sys
-
-out_path, app_path = sys.argv[1:3]
-
-def run(cmd):
-    return subprocess.run(cmd, capture_output=True, text=False)
-
-def extract_plist(data):
-    if not data:
-        return None
-    start = data.find(b"<plist")
-    end = data.rfind(b"</plist>")
-    if start == -1 or end == -1:
-        return None
-    payload = data[start:end + len(b"</plist>")]
-    try:
-        return plistlib.loads(payload)
-    except Exception:
-        return None
-
-def codesign_verify(path, deep=False):
-    if not os.path.exists(path):
-        return False, "missing"
-    cmd = ["/usr/bin/codesign", "--verify", "--strict"]
-    if deep:
-        cmd.append("--deep")
-    cmd.append(path)
-    proc = run(cmd)
-    if proc.returncode == 0:
-        return True, None
-    err = (proc.stderr or proc.stdout or b"").decode("utf-8", errors="ignore").strip()
-    return False, err or "codesign verify failed"
-
-def codesign_entitlements(path):
-    if not os.path.exists(path):
-        return None, "missing"
-    proc = run(["/usr/bin/codesign", "-d", "--entitlements", ":-", path])
-    blob = (proc.stdout or b"") + (proc.stderr or b"")
-    plist = extract_plist(blob)
-    if plist is None:
-        err = (proc.stderr or proc.stdout or b"").decode("utf-8", errors="ignore").strip()
-        return None, err or "entitlements not found"
-    return plist, None
-
-ENT_KEYS = {
-    "app_sandbox": "com.apple.security.app-sandbox",
-    "get_task_allow": "com.apple.security.get-task-allow",
-    "disable_library_validation": "com.apple.security.cs.disable-library-validation",
-    "allow_dyld_environment_variables": "com.apple.security.cs.allow-dyld-environment-variables",
-    "allow_jit": "com.apple.security.cs.allow-jit",
-    "allow_unsigned_executable_memory": "com.apple.security.cs.allow-unsigned-executable-memory",
-    "network_client": "com.apple.security.network.client",
-    "downloads_read_write": "com.apple.security.files.downloads.read-write",
-    "user_selected_executable": "com.apple.security.files.user-selected.executable",
-    "bookmarks_app_scope": "com.apple.security.files.bookmarks.app-scope",
-    "cs_debugger": "com.apple.security.cs.debugger",
-}
-
-def service_record(service_name, bundle_id=None):
-    bin_path = os.path.join(
-        app_path,
-        "Contents",
-        "XPCServices",
-        f"{service_name}.xpc",
-        "Contents",
-        "MacOS",
-        service_name,
-    )
-    exists = os.path.exists(bin_path)
-    signed, sign_error = codesign_verify(bin_path) if exists else (False, "missing")
-    entitlements, ent_error = codesign_entitlements(bin_path) if exists else (None, "missing")
-    ent_map = {}
-    if entitlements:
-        for alias, key in ENT_KEYS.items():
-            if key in entitlements:
-                ent_map[alias] = bool(entitlements.get(key))
-    return {
-        "bundle_id": bundle_id,
-        "service_name": service_name,
-        "path": bin_path,
-        "exists": exists,
-        "signed": signed,
-        "sign_error": sign_error,
-        "entitlements": ent_map,
-        "entitlements_error": ent_error if entitlements is None else None,
-    }
-
-services = {}
-xpc_services_dir = os.path.join(app_path, "Contents", "XPCServices")
-if os.path.isdir(xpc_services_dir):
-    for entry in sorted(os.listdir(xpc_services_dir)):
-        if not entry.endswith(".xpc"):
-            continue
-        svc_name = entry[:-4]
-        info_path = os.path.join(xpc_services_dir, entry, "Contents", "Info.plist")
-        bundle_id = None
-        if os.path.exists(info_path):
-            try:
-                with open(info_path, "rb") as fh:
-                    info = plistlib.load(fh)
-                if isinstance(info, dict):
-                    bundle_id = info.get("CFBundleIdentifier")
-            except Exception:
-                bundle_id = None
-        services[svc_name] = service_record(service_name=svc_name, bundle_id=bundle_id)
-
-app_exists = os.path.exists(app_path)
-app_signed, app_error = codesign_verify(app_path, deep=True) if app_exists else (False, "missing")
-
-report = {
-    "schema_version": 1,
-    "app": {
-        "path": app_path,
-        "exists": app_exists,
-        "signed": app_signed,
-        "sign_error": app_error,
-    },
-    "services": services,
-}
-
-with open(out_path, "w", encoding="utf-8") as fh:
-    json.dump(report, fh, indent=2, sort_keys=True)
-PY
-
-test_pass "preflight report written" "{\"out_path\":\"${OUT_PATH}\"}"
+test_pass "bundle signatures and evidence hashes agree" "{\"out_path\":\"${OUT_PATH}\"}"

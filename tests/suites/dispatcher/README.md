@@ -2,7 +2,7 @@
 
 Offline contracts for public selection, configuration, execution, and evidence
 reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls`,
-`accounting_controls`, `cancellation_controls`, or `selection_controls` by their full `dispatcher/<case>`
+`accounting_controls`, `cancellation_controls`, `artifact_controls`, or `selection_controls` by their full `dispatcher/<case>`
 IDs. Each group runs once in its own invocation through the public command, so
 a failure in reconciliation does not suppress the accounting group.
 
@@ -72,6 +72,9 @@ fixture's `TreeControl` and `ExitObserver` obtain peer PIDs from Unix sockets an
 require kernel exit events for both active processes before test teardown can
 release or kill them. This case needs macOS local sockets and process observation;
 sandboxed automation may need escalation even though no PW app is launched.
+Two additional scenarios guard a fixture app: normal release preserves it, and
+cancellation after an independently applied mutation must retain the exact diff
+and fail artifact integrity as well as execution.
 
 `check_selection.py` uses an independently authored tiny catalog and fixture
 commands that import no test machinery. Their execution receipts record actual
@@ -89,7 +92,19 @@ Two runnable stub bundles also verify default and explicit app selection. The
 selected controller records its own path, arguments, and bundle-local marker;
 an ignored override must fail even when the fallback app is usable.
 
-`tests/fixtures/dispatcher/repository.py` only copies equipment and writes the
+`artifact_controls` runs real file damage through the public command: missing
+helper, broken signature, validly resealed stale manifest, omitted/duplicate
+entries, malformed manifest, and a helper escaping the app through a symlink.
+App and worker cases must remain unrun while the independent offline case runs.
+Mutations during passing, failing, and crashing commands must produce precise
+final diffs covering bytes, modes, additions, deletions, and symlinks.
+
+`tests/fixtures/dispatcher/repository.py` copies equipment and writes the
 caller-supplied catalog; it contains no expected selections or result oracle.
+For app controls only, it points the copied inspector's codesign executable at
+`artifacts.py` inside the disposable repository. That independent file-seal model
+imports no test library; manifest parsing, hashing, and inventories still use the
+real inspector. Production has no bypass setting. Apple's signature semantics
+are checked separately by `preflight/signed_artifact_controls`.
 Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
 and `controls.json` remain in artifacts for inspection.

@@ -66,6 +66,18 @@ For ordinary cases, Ctrl-C during command execution stops the active command's
 process group and cancels queued work. Completed and partial evidence survives;
 the failed summary accounts for unfinished selections with an interruption reason.
 
+When a selection requires the app or embedded worker, the dispatcher first
+requires the complete bundle layout, valid local codesign signatures, and
+matching embedded manifest hashes. Invalid artifacts block those cases; offline
+cases can still run. A shared read-only inspector also backs `preflight`.
+The dispatcher inventories the selected app before testing and again during
+finalization, including after case failures or Ctrl-C. Added, removed, or changed
+files, modes, directories, and symlink targets fail the run with a retained diff.
+Inspection never repairs the app. Rebuild through `build.sh` to replace a stale
+artifact; regenerating evidence over a mutated app would hide the defect.
+These checks do not certify notarization and cannot detect a transient mutation
+restored before the final inventory. Direct suite scripts do not have this guard.
+
 Opt-in cases are documented in `tests/OPT_IN_TESTS.md`; use an exact case, an
 owning suite, `--suite opt_in`, or `--all` to select them. Direct suite scripts
 remain developer entrypoints, but do not provide the public command's planning,
@@ -121,9 +133,9 @@ prerequisites should fail, not skip.
 
 | Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
 | --- | --- | --- | --- | --- | --- |
-| `preflight` | Baseline | Collect codesign, entitlements, and bundle metadata for inspection | `dist/PolicyWitness.app` | — | `tests/out/suites/preflight/.../preflight.json` |
+| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes | Built app; signing controls also need matching Developer ID | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
 | `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. | Python 3 | — | `tests/out/suites/source_drift/.../check.log` |
-| `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3 | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No app or toolchain; BYOXPC and worker-setup controls use simulated children. |
+| `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3 | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No app or toolchain; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | — | `tests/out/suites/unit/.../cargo-test-bins.log` |
 | `runner_unit` | Baseline | Swift runner internals (`applySandboxPolicy`, the `CWorkerOrchestrator` envelope invariants, the `computeDrift` validator-vs-kernel truth table, the `classify` worker/validator→normalized-outcome table, the `buildAttemptResult` (kind, action, slot)→attempt-outcome table, prediction_unavailable host-mirror, CWorker + ValidatorClient drivers) are correct at the unit level. Covers paths that no real specimen can reach — including the `runner_failed`, `validator_no_reply`, and `runner_sandbox_denied` outcomes that have no e2e seam — and pins the attempt-outcome mapping as a table (so its two stacked layers can't silently disagree) rather than relying on the scattered per-outcome e2e suites. | `swift` on PATH | — | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Built via `runner/Package.swift`. |
@@ -144,7 +156,7 @@ prerequisites should fail, not skip.
 | `runner_c_worker_harness` | Baseline | Proves `pw-probe-runner` (the C worker) in isolation across 15 hand-built-shm scenarios: `(allow default)` happy path, bare `(deny default)` isolation, clean exit-byte teardown, SIGKILL fallback, a 256-slot multi-page shared-memory run, an SBPL-params round-trip that proves `policy.params` reach the kernel (kernel-observed deny on `/etc/hosts` when `TARGET=/private/etc` is passed through `sandbox_create_params` + `sandbox_set_param`), the file unlink/create attempt kinds (allow + deny), and the worker's pre-apply self-defense exits (compile failure survives with `apply_rc=-1`; abi/prepared/step_count/param_count/policy-overflow refusals → exit 4/5/6/7/8). | Built app + harness | — | Compiles `harness.c` once per suite run into `tests/out/.../harness.runner_c_worker` |
 | `runner_use_c_worker` | Baseline | End-to-end coverage of the runner's C code path. Drives real specimens through `controller → XPC service → CWorkerOrchestrator → pw-probe-runner + sb_api_validator --batch` with NO `_test_overrides` (so each run also double-checks production-shape assembly). Covers: v4 envelope shape (validator_subprocess populated, drift computed, prediction_unavailable verdicts synthesized locally), bug-report `(deny default)` survival, and regression cases for duplicate step_ids (plan-killer), unsupported attempt combos (per-step skip), worker_timeout_ms wiring, ENOENT/BOOTSTRAP_UNKNOWN_SERVICE not counted as drift, sandbox_check.pid = worker PID, DAC EACCES not counted as drift, and the access_failed outcome. | Built app + XPC | — | |
 | `runner_mach_service_liveness` | Baseline | The built `PWRunner` executable, launched directly with `--mach-service <name>` (the BYOXPC LaunchAgent launch shape), binds `NSXPCListener(machServiceName:)` and stays alive instead of aborting under `xpc_main`. Regression guard for the BYOXPC `xpc_timeout` crash: a host that calls `NSXPCListener.service()` for this launch aborts immediately (`"An XPC Service cannot be run directly."`), which is what made `runner verify` time out. Complements `runner_unit`'s `pwListenerConfig` table (which pins the argv→listener selection) by asserting the shipped binary itself does not abort. | Built app | — | Launches the host binary without launchd, so it never services a connection here — it only asserts the process does not abort. `tests/out/suites/runner_mach_service_liveness/.../artifacts/pwrunner.stderr.log` |
-| `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Annotated mismatch condition in shared menagerie cases only | Uses the shared smoke and blackbox assertions, including checker controls. BBX prediction disagreements fail and do not suppress attempt validation. |
+| `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Annotated mismatch condition in shared menagerie cases only | Uses an owned, uniquely named runner copy; signing preserves the selected app and cleanup verifies removal. Shared smoke/blackbox assertions include checker controls. BBX prediction disagreements fail and do not suppress attempt validation. |
 | `smoke` | Baseline + opt-in caller-auth case | Quick end-to-end checks against a built app bundle | Built app + XPC; selecting the whole suite also requires a matching Developer ID | — | `--suite smoke` includes `runner_caller_auth`. For ordinary smoke without signing equipment, select `--case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard`. Ordinary specimens also run under `runner_byoxpc`. Caller-auth checks use signed app copies, identical-client restricted/relaxed controls, independent file effects, and a missing-service control. |
 | `blackbox_e2e` | Baseline | End-to-end black-box cases (BBX-*) validate the returned JSON envelope, attempts, and step identity/order. Prediction disagreements fail; independent checker controls ensure one failure cannot hide another. | Built app + XPC; checker controls need only Python 3 | — | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` |
 | `blackbox_menagerie` | Baseline | Real SBPL fixtures exercising specimen ingestion and evidence correlation; controls drive both black-box checkers against independent envelopes and faults | Built app + XPC; validation controls need only Python 3 | Annotated mismatch is absent after all evidence checks pass | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
@@ -231,6 +243,11 @@ tests/out/
   run.json
   dispatch.json
   events.jsonl
+  artifact-integrity/  # when selected cases require app/worker
+    inspection.json
+    before.json
+    after.json
+    changes.json
   suites/<suite>/<test_id>/
     report.json
     events.jsonl
@@ -244,6 +261,10 @@ installation and cleanup. The installation case is also a selected dependency.
 
 `run.json` retains reports/counts and includes the plan, effective configuration,
 invocations, harness errors, and one `case_results` entry per selected case.
+`artifact_integrity` records initial validity, final equality, evidence location,
+and artifact errors, or is null for an entirely offline selection. Artifact errors
+fail `ok` independently of case reports; incomplete inspections retain diagnostics
+instead of claiming equality.
 Distinct catalog cases must use distinct report paths; collisions are rejected
 before output is replaced. The executor also refuses ambiguous report ownership
 and checks complete, unique selection accounting before reporting success.

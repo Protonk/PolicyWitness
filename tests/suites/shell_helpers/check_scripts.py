@@ -22,6 +22,10 @@ def main():
         library.parent.mkdir(parents=True)
         shutil.copyfile(ROOT / 'tests/lib/scripts.sh', library)
         shutil.copyfile(ROOT / 'tests/lib/testlib.sh', library.with_name('testlib.sh'))
+        if wrapper == 'runner_byoxpc':
+            helper = repo / 'tests/fixtures/byoxpc/session.py'
+            helper.parent.mkdir(parents=True)
+            shutil.copyfile(FIXTURE / 'session_cleanup.py', helper)
         config = {'root': str(repo), 'journal': str(work / 'receipts.jsonl'), 'modes': modes or {}}
         config_path = work / 'config.json'
         config_path.write_text(json.dumps(config, indent=2) + '\n')
@@ -82,6 +86,8 @@ def main():
             for record in records:
                 assert record['alias'] == 'runner_byoxpc', (name, record)
                 setup = record['script'].endswith(('/runner_auth_external.sh', '/runner_install.sh'))
+                if record['script'] == 'tools/pw' and (modes or {}).get('tests/suites/runner_byoxpc/runner_install.sh') == 'partial_fail':
+                    setup = True  # cleanup runs before runner-mode export
                 assert record['runner_mode'] == (None if setup else 'byoxpc'), (name, record)
                 assert record['service'] == (None if setup else 'fixture.service'), (name, record)
                 assert record['kind'] == (None if setup else 'byoxpc'), (name, record)
@@ -134,6 +140,8 @@ def main():
         ('success', {}, byoxpc + ['tools/pw'], 0),
         ('auth_failure', {byoxpc[0]: 'fail'}, byoxpc + ['tools/pw'], 1),
         ('install_failure', {byoxpc[1]: 'fail'}, byoxpc[:2], 1),
+        ('partial_install_failure', {byoxpc[1]: 'partial_fail'}, byoxpc[:2] + ['tools/pw'], 1),
+        ('cleanup_failure', {'tools/pw': 'fail'}, byoxpc + ['tools/pw'], 1),
         ('install_skip', {byoxpc[1]: 'skip'}, byoxpc[:2], 0),
         ('run_failure', {byoxpc[3]: 'fail'}, byoxpc + ['tools/pw'], 1),
     ):

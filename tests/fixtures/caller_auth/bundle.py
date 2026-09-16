@@ -3,7 +3,6 @@
 This fixture owns signing and command capture, not authorization expectations.
 Never re-sign a launched bundle: each service gets a unique identity beforehand.
 """
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,8 +12,11 @@ import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+from artifact import digest, inventory
 
 CLIENT = Path('Contents/MacOS/pw-runner-client')
 SERVICE = Path('Contents/XPCServices/PWRunner.xpc')
@@ -22,17 +24,6 @@ SERVICE = Path('Contents/XPCServices/PWRunner.xpc')
 
 def save(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def inventory(app):
-    return {str(p.relative_to(app)): {'mode': p.lstat().st_mode,
-            'symlink': os.readlink(p)} if p.is_symlink() else
-            {'mode': p.stat().st_mode, 'sha256': digest(p)}
-            for p in sorted(app.rglob('*')) if p.is_symlink() or p.is_file()}
 
 
 def command(out, argv, *, timeout=30, check=True):
@@ -55,8 +46,8 @@ def command(out, argv, *, timeout=30, check=True):
     return meta
 
 
-def signature(path, out):
-    command(out, ['/usr/bin/codesign', '-d', '--verbose=4', '--entitlements', '-', path])
+def signature(path, out, *, invoke=command):
+    invoke(out, ['/usr/bin/codesign', '-d', '--verbose=4', '--entitlements', '-', path])
     text = (out / 'stderr').read_text()
     fields = dict(re.findall(r'^(Identifier|TeamIdentifier|CDHash|Timestamp)=(.*)$', text, re.M))
     fields.update(adhoc='Signature=adhoc' in text,

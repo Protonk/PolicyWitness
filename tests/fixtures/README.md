@@ -15,6 +15,9 @@ deterministic, and checked into the repo so tests are hermetic.
 - `caller_auth/`: disposable built-in XPC app copies, explicit signing and
   signature inspection, command capture, and process cleanup. Authorization
   expectations and independent file-effect checks belong to the smoke case.
+- `byoxpc/`: ownership of a disposable signed runner through setup, partial
+  installation, and verified removal; independent fake OS/CLI tools exercise
+  failures without signing or installing a real service.
 - `validator/`: checked-in NDJSON validator program and partial-reply
   transcripts (EOF and malformed JSON), used by `runner_validator_failure`
   and the corresponding `witness_contract` entry points.
@@ -49,3 +52,8 @@ startup controls; it contains no expected selections or result-checking logic.
 `cancellation.sh`/`cancellation.py` supply standard cases and a helper that ignores
 SIGINT. They use the exec fixture's existing readiness/ping/release protocol;
 the cancellation checker reuses its kernel process-exit observer.
+`artifacts.py` supplies fake signed bundles and an independent file-seal command
+only inside fixture repositories. The real inspector still parses and checks
+their manifests and inventories. Real signing controls use disposable copies
+through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
+in `tests/lib/artifact.py` to protect their source app.

@@ -8,6 +8,10 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 
 - Requires launchd bootstrap from a logged-in GUI session.
 - Installs a BYOXPC runner under the user scope and removes it after the suite.
+- The team-matched path copies the complete runner to an owned `/private/tmp`
+  directory and gives it a unique service identifier. Only that copy is signed;
+  source signatures/entitlements and before/after file inventories are retained.
+  The caller-auth settings and embedded helper bytes must stay unchanged.
 - Shared smoke and blackbox scripts receive `PW_TEST_RUNNER_MODE=byoxpc` and the
   installed service name.
 
@@ -43,3 +47,11 @@ specimens after failures, and removes the runner on exit. Missing required GUI,
 app, or signing equipment fails with explicit unrun selections in the public
 summary. `PW_TEST_RUNNER_*` variables are private to this wrapper; select cases
 instead of exporting those variables to `tests/run.sh`.
+
+Cleanup ownership starts before installation, including failures before a runner
+environment or successful install report exists. Removal warnings and lingering
+registry/launchd/plist state fail the wrapper and retain staging for inspection.
+A partial installation without a registry entry is removed only when its exact
+plist proves ownership. The wrapper never pre-cleans the ordinary runner's
+identifier. See `tests/fixtures/byoxpc/README.md` for the ownership contract and
+`shell_helpers/byoxpc_setup` for offline failure controls.

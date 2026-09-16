@@ -9,6 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner
+from artifacts import bundle, seal
 
 LITERAL = "literal spaces 'quoted' $(touch CANARY)"
 
@@ -43,7 +44,7 @@ def main():
                        'context': 'byoxpc', 'cases': ['install', {'id': 'first', 'depends_on': ['remote/install']}]},
             'alias': {'include': ['probe/first']},
         }
-        install_runner(ROOT, repo, suites)
+        install_runner(ROOT, repo, suites, signed_fixtures=True)
         for suite in ('probe', 'optional', 'equipment', 'remote'):
             path = repo / f'tests/suites/{suite}/run.sh'
             path.parent.mkdir(parents=True)
@@ -59,9 +60,7 @@ def main():
         app_dir = repo / 'An app.app'
         binary = app_dir / 'Contents/MacOS/policy-witness'
         if app:
-            binary.parent.mkdir(parents=True)
-            binary.write_text('#!/bin/sh\nexit 0\n')
-            binary.chmod(0o755)
+            bundle(app_dir)
         receipt = work / 'receipts.jsonl'
         controller_receipt = work / 'controller-receipts.jsonl'
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
@@ -76,6 +75,11 @@ def main():
             env['PW_APP_DIR'] = str(app_dir)
         if corrupt:
             corrupt(repo)
+        # Selection controls vary path aliases, not artifact validity. Preserve
+        # real inspection/hash checks and reseal only our independent fake apps.
+        for candidate in (app_dir, repo / 'dist/PolicyWitness.app'):
+            if candidate.exists():
+                seal(candidate)
         before = snapshot(repo)
         result = subprocess.run(['bash', str(repo / 'tests/run.sh'), *args], cwd=work,
                                 env=env, capture_output=True, timeout=15)
@@ -127,8 +131,8 @@ def main():
 
     def usable_bundles(repo):
         for app_path, marker in [('dist/PolicyWitness.app', 'default'), ('An app.app', 'alternate')]:
+            bundle(repo / app_path)
             binary = repo / app_path / 'Contents/MacOS/policy-witness'
-            binary.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/controller.py', binary)
             binary.chmod(0o755)
             binary.with_name('controller-marker.txt').write_text(marker)

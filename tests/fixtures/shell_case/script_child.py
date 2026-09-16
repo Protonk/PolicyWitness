@@ -18,10 +18,12 @@ record = {
 }
 with Path(config['journal']).open('a') as stream:
     stream.write(json.dumps(record) + '\n')
-if script.endswith('/runner_install.sh') and mode == 'pass':
+if script.endswith('/runner_install.sh') and mode in ('pass', 'partial_fail'):
     path = Path(os.environ['PW_TEST_RUNNER_ENV_PATH'])
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({'runner_id': 'fixture-id', 'service_name': 'fixture.service'}))
+    path.with_name('session.json').write_text(json.dumps({'runner_id': 'fixture-id'}))
+    if mode == 'pass':
+        path.write_text(json.dumps({'runner_id': 'fixture-id', 'service_name': 'fixture.service'}))
 print(f'{script}: {mode}', flush=True)
 print(f'{script}: stderr', file=sys.stderr, flush=True)
-raise SystemExit(17 if mode == 'fail' else 0)
+raise SystemExit(17 if mode in ('fail', 'partial_fail') else 0)

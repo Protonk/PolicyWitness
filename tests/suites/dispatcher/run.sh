@@ -3,6 +3,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/case.sh"
 
+if test_selected artifact_controls; then
+test_begin dispatcher artifact_controls
+test_step integrity "reject damaged bundles and retain changes after passing or failing cases"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "artifact controls failed" \
+  "${ROOT_DIR}/tests/suites/dispatcher/check_artifacts.py" "${PW_TEST_ARTIFACTS}"
+test_pass "app-dependent cases require a valid artifact and testing preserves the selected bundle"
+fi
+
 if test_selected controls; then
 test_begin dispatcher controls
 test_step reconcile "compare real dispatcher exits and summaries against controlled suite evidence"

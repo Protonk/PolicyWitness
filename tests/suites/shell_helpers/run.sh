@@ -62,3 +62,14 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_worker_setup
 fi
 test_pass "worker cases share setup; equipment failures stop before assertions and preserve evidence"
 fi
+
+if test_selected byoxpc_setup; then
+test_begin shell_helpers byoxpc_setup
+test_step controls "exercise disposable signing, partial installation, and verified removal with fake tools"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_byoxpc_setup.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "BYOXPC ownership controls failed; see artifacts/assertions.log"
+fi
+test_pass "BYOXPC staging preserves the source, owns partial installation, and verifies cleanup"
+fi

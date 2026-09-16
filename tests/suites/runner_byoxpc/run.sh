@@ -29,6 +29,17 @@ if ! test_selected runner_install; then exit "${failures}"; fi
 RUNNER_ENV_PATH="${PW_TEST_OUT_DIR}/suites/runner_byoxpc/runner_install/artifacts/runner_env.json"
 export PW_TEST_RUNNER_ENV_PATH="${RUNNER_ENV_PATH}"
 
+# Own setup failures too: installation may have reached launchd before it
+# produced runner_env.json or a successful case report.
+cleanup() {
+  local status=$?
+  trap - EXIT
+  /usr/bin/python3 "${ROOT_DIR}/tests/fixtures/byoxpc/session.py" cleanup \
+    "${PW_BIN}" "${RUNNER_ENV_PATH%/*}/session.json" || status=1
+  exit "${status}"
+}
+trap cleanup EXIT
+
 if ! test_run_scripts "${ROOT_DIR}/tests/suites/runner_byoxpc/runner_install.sh"; then
   exit 1
 fi
@@ -49,13 +60,6 @@ if [[ -z "${RUNNER_ID}" || -z "${SERVICE_NAME}" ]]; then
   echo "missing runner_id/service_name in ${RUNNER_ENV_PATH}" 1>&2
   exit 1
 fi
-
-cleanup() {
-  if [[ -n "${RUNNER_ID:-}" ]]; then
-    "${PW_BIN}" runner remove --id "${RUNNER_ID}" >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
 
 export PW_TEST_RUNNER_MODE="byoxpc"
 export PW_TEST_RUNNER_SERVICE="${SERVICE_NAME}"

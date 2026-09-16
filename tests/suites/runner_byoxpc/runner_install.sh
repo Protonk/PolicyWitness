@@ -1,147 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
-PW_TEST_SUITE="${PW_TEST_SUITE_OVERRIDE:-runner_byoxpc}"
-PW_TEST_ID="runner_install"
-
-PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
-RUNNER_BUNDLE="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc"
-
-test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "preflight" "install BYOXPC runner"
-
-ENV_PATH_DEFAULT="${PW_TEST_ARTIFACTS}/runner_env.json"
-RUNNER_ENV_PATH="${PW_TEST_RUNNER_ENV_PATH:-${ENV_PATH_DEFAULT}}"
-
-if ! require_pw_app "${PW_BIN}"; then
-  exit 0
+test_begin "${PW_TEST_SUITE_OVERRIDE:-runner_byoxpc}" runner_install
+test_require_pw
+RUNNER_ENV_PATH="${PW_TEST_RUNNER_ENV_PATH:-${PW_TEST_ARTIFACTS}/runner_env.json}"
+SESSION_TOOL="${ROOT_DIR}/tests/fixtures/byoxpc/session.py"
+# The wrapper owns cleanup across specimen cases. A direct setup invocation
+# instead removes its installation on exit, including failed setup.
+if [[ -z "${PW_TEST_RUNNER_ENV_PATH+x}" ]]; then
+  cleanup() {
+    local status=$?
+    trap - EXIT
+    /usr/bin/python3 "${SESSION_TOOL}" cleanup "${PW_BIN}" "${PW_TEST_ARTIFACTS}/session.json" || status=1
+    exit "${status}"
+  }
+  trap cleanup EXIT
 fi
-
-if ! require_runner_bundle "${RUNNER_BUNDLE}"; then
-  exit 0
-fi
-
-INFO_PLIST="${RUNNER_BUNDLE}/Contents/Info.plist"
-BUNDLE_ID="$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "${INFO_PLIST}" 2>/dev/null || true)"
-if [[ -z "${BUNDLE_ID}" ]]; then
-  test_fail "failed to read CFBundleIdentifier from ${INFO_PLIST}"
-fi
-cleanup_runner_service "${PW_BIN}" "${BUNDLE_ID}" "user"
-
-# The runner bundle here is a copy of the shipped PWRunner.xpc, which carries
-# the built-in caller-auth keys (PWRunnerRequireSignedCaller). Authenticating
-# the pw-runner-client caller requires the runner be signed with a Developer ID
-# whose team matches the caller's — an ad-hoc runner has no team and is rejected
-# (NSXPCConnectionInvalid). So this e2e signs with a real, team-matched identity
-# rather than --allow-adhoc. (The ad-hoc, auth-off path is covered separately by
-# opt_in/runner_auth_external.sh.)
-BYOXPC_IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
-if [[ -z "${BYOXPC_IDENTITY}" ]]; then
-  skip_no_signing_identity
-  exit 0
-fi
-
-INSTALL_STDOUT="${PW_TEST_ARTIFACTS}/runner_install.user.stdout.json"
-INSTALL_STDERR="${PW_TEST_ARTIFACTS}/runner_install.user.stderr.txt"
-
-set +e
-"${PW_BIN}" runner install \
-  --bundle "${RUNNER_BUNDLE}" \
-  --kind byoxpc \
-  --scope user \
-  --identity "${BYOXPC_IDENTITY}" >"${INSTALL_STDOUT}" 2>"${INSTALL_STDERR}"
-INSTALL_RC=$?
-set -e
-
-if [[ ${INSTALL_RC} -ne 0 ]]; then
-  USER_ERR="$(cat "${INSTALL_STDERR}" 2>/dev/null || true)"
-  if [[ "${USER_ERR}" == *"Domain does not support specified action"* || "${USER_ERR}" == *"Bootstrap failed: 125"* ]]; then
-    if ! has_gui_launchd_domain; then
-      skip_runner_install_non_gui "{\"stdout\":\"${INSTALL_STDOUT}\",\"stderr\":\"${INSTALL_STDERR}\"}"
-      exit 0
-    fi
-    test_fail "runner install failed: ${USER_ERR}" "{\"stdout\":\"${INSTALL_STDOUT}\",\"stderr\":\"${INSTALL_STDERR}\"}"
-  fi
-  skip_runner_install_failed "{\"stdout\":\"${INSTALL_STDOUT}\",\"stderr\":\"${INSTALL_STDERR}\"}"
-  exit 0
-fi
-
-read -r RUNNER_ID SERVICE_NAME < <(/usr/bin/python3 - "${INSTALL_STDOUT}" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-data = env.get("data") or {}
-runner = data.get("runner") or {}
-rid = runner.get("id") or ""
-svc = runner.get("service_name") or ""
-if not rid or not svc:
-    raise SystemExit("missing runner id/service name from install output")
-print(rid, svc)
-PY
-)
-
-VERIFY_STDOUT="${PW_TEST_ARTIFACTS}/runner_verify.user.stdout.json"
-VERIFY_STDERR="${PW_TEST_ARTIFACTS}/runner_verify.user.stderr.txt"
-
-set +e
-"${PW_BIN}" runner verify --service-name "${SERVICE_NAME}" >"${VERIFY_STDOUT}" 2>"${VERIFY_STDERR}"
-VERIFY_RC=$?
-set -e
-
-/usr/bin/python3 - "${VERIFY_STDOUT}" "${VERIFY_STDERR}" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-stderr = ""
-if len(sys.argv) > 2:
-    try:
-        stderr = Path(sys.argv[2]).read_text(encoding="utf-8")
-    except Exception:
-        stderr = ""
-result = env.get("result", {})
-if result.get("ok") is True:
-    raise SystemExit(0)
-outcome = result.get("normalized_outcome") or ""
-# Only a genuine sandboxed-harness constraint is a skip. With a team-matched
-# Developer ID runner, verify must otherwise succeed: xpc_error (e.g. a caller
-# auth rejection) and xpc_timeout (a crash-on-launch regression) are hard fails.
-blob = (result.get("error") or "") + "\n" + stderr
-sandboxed = (
-    "Sandbox restriction" in blob
-    or "Cannot run while sandboxed" in blob
-    or "NSCocoaErrorDomain=4099" in blob
-)
-if sandboxed:
-    raise SystemExit(3)
-raise SystemExit(f"expected result.ok=true (got {result.get('ok')!r}, outcome={outcome!r})")
-PY
-PY_STATUS=$?
-
-if [[ ${PY_STATUS} -eq 3 ]]; then
-  skip_sandbox_restriction "{\"stdout\":\"${VERIFY_STDOUT}\",\"stderr\":\"${VERIFY_STDERR}\"}"
-  exit 0
-fi
-if [[ ${PY_STATUS} -ne 0 || ${VERIFY_RC} -ne 0 ]]; then
-  test_fail "runner verify failed" "{\"stdout\":\"${VERIFY_STDOUT}\",\"stderr\":\"${VERIFY_STDERR}\"}"
-fi
-
-/usr/bin/python3 - "${RUNNER_ENV_PATH}" "${RUNNER_ID}" "${SERVICE_NAME}" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-out_path, rid, svc = sys.argv[1:4]
-payload = {"runner_id": rid, "service_name": svc}
-Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-Path(out_path).write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-PY
-
-test_pass "byoxpc runner installed + verified (team-matched Developer ID)" "{\"runner_env\":\"${RUNNER_ENV_PATH}\"}"
+IDENTITY="$(resolve_app_signing_identity "${PW_APP_DIR}")"
+[[ -n "${IDENTITY}" ]] || test_fail "BYOXPC setup requires a matching Developer ID identity"
+test_step install "copy, inspect, sign, install, and verify an owned BYOXPC runner"
+test_check_python "${PW_TEST_ARTIFACTS}/setup.log" "BYOXPC setup failed" \
+  "${SESSION_TOOL}" install "${PW_BIN}" "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${RUNNER_ENV_PATH}" "${IDENTITY}"
+test_pass "disposable BYOXPC runner signed, installed, and verified"

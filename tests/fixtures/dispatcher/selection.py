@@ -12,6 +12,14 @@ result = 0
 for leaf in os.environ['PW_TEST_CASES'].splitlines():
     key = f'{suite}/{leaf}'
     mode = modes.get(key, 'pass')
+    if mode.startswith('mutate_'):
+        app = Path(os.environ['PW_APP_DIR'])
+        (app / 'Contents/MacOS/pw-runner-client').write_bytes(b'changed during case execution\n')
+        (app / 'Contents/added-resource').write_text('new resource')
+        (app / 'Contents/Resources/Evidence/symbols.json').unlink()
+        (app / 'Contents').chmod(0o700)
+        (app / 'Contents/new-link').symlink_to('added-resource')
+        mode = mode.removeprefix('mutate_')
     with Path(os.environ['CONTROL_SELECTION_RECEIPTS']).open('a') as stream:
         stream.write(json.dumps({'id': key, 'argv': sys.argv[2:], 'cwd': os.getcwd(),
                                  'app': os.environ['PW_APP_DIR'], 'bin': os.environ['PW_BIN'],

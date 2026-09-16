@@ -40,6 +40,16 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ## Registry (current opt-in tests)
 
+### signed artifact controls
+
+- **Case:** `preflight/signed_artifact_controls`
+- **Location:** `tests/suites/preflight/check_signed_artifacts.py`
+- **Purpose:** Verify that real signature damage fails inspection and validly
+  re-signing a copied runner cannot conceal a stale embedded manifest.
+- **Resource dependency:** Built app and matching Developer ID. Uses disposable
+  copies under `/private/tmp`; never launches or modifies the selected source app.
+- **When to run:** After changing artifact inspection, inventory, or signing setup.
+
 ### built-in caller authentication
 
 - **Case:** `smoke/runner_caller_auth`
@@ -54,7 +64,7 @@ selection, deduplication, configuration validation, and complete accounting.
 ### runner_byoxpc
 
 - **Location:** `tests/suites/runner_byoxpc/run.sh`
-- **Purpose:** Run smoke + blackbox suites through a BYOXPC runner.
+- **Purpose:** Run smoke + blackbox suites through an owned, disposable BYOXPC runner copy; preserve the selected app and verify removal, including partial setup.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.

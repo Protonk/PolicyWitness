@@ -12,7 +12,16 @@
       "cases": [
         {
           "id": "codesign.preflight",
-          "description": "Collect signing, entitlements, and bundle metadata for inspection"
+          "description": "Require complete bundle layout, valid signatures, and matching embedded evidence hashes"
+        },
+        {
+          "id": "signed_artifact_controls",
+          "description": "Real codesign accepts the intact copy and rejects damaged or validly re-signed stale evidence",
+          "default": false,
+          "requires": [
+            "app",
+            "identity"
+          ]
         }
       ]
     },
@@ -55,6 +64,10 @@
         {
           "id": "worker_setup",
           "description": "worker cases share setup; equipment failures stop before assertions and preserve evidence"
+        },
+        {
+          "id": "byoxpc_setup",
+          "description": "BYOXPC staging preserves the source, owns partial installation, and verifies cleanup"
         }
       ]
     },
@@ -80,6 +93,10 @@
         {
           "id": "selection_controls",
           "description": "Public selectors, inspection, configuration, and completion agree with independent execution receipts"
+        },
+        {
+          "id": "artifact_controls",
+          "description": "Reject invalid artifacts before app-dependent cases and detect mutation after passing or failing tests"
         }
       ]
     },
@@ -1010,6 +1027,7 @@
     },
     "opt_in": {
       "include": [
+        "preflight/signed_artifact_controls",
         "runner_exec_inheritance/mutation_controls",
         "smoke/runner_caller_auth",
         "runner_byoxpc/runner_auth_external",
