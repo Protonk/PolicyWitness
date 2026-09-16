@@ -670,7 +670,7 @@
         },
         {
           "id": "runner_caller_auth",
-          "description": "Built-in runner accepts the authorized client and rejects ad-hoc and mismatched identifiers",
+          "description": "Built-in caller authorization changes real file effects; paired clients and missing-service controls prove the route",
           "command": [
             "bash",
             "tests/suites/smoke/pw_runner_caller_auth.sh"

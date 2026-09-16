@@ -12,6 +12,9 @@ deterministic, and checked into the repo so tests are hermetic.
   and wrapper execution controls in `shell_helpers`.
 - `capture/`: independent CLI-shaped byte emitter with a socket gate for
   capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
+- `caller_auth/`: disposable built-in XPC app copies, explicit signing and
+  signature inspection, command capture, and process cleanup. Authorization
+  expectations and independent file-effect checks belong to the smoke case.
 - `validator/`: checked-in NDJSON validator program and partial-reply
   transcripts (EOF and malformed JSON), used by `runner_validator_failure`
   and the corresponding `witness_contract` entry points.

@@ -44,10 +44,11 @@ selection, deduplication, configuration validation, and complete accounting.
 
 - **Case:** `smoke/runner_caller_auth`
 - **Location:** `tests/suites/smoke/pw_runner_caller_auth.sh`
-- **Purpose:** Authorized client acceptance and rejection of ad-hoc or differently
-  identified clients.
-- **Resource dependency:** Built app and matching Developer ID for signing a
-  disposable mismatched client.
+- **Purpose:** Prove authorization-dependent acceptance/rejection with identical
+  candidate bytes, restricted/relaxed service policies, and independent file effects.
+  Missing-service and relaxed-policy controls exercise the rejection checker.
+- **Resource dependency:** Built app and matching Developer ID for disposable app
+  fixtures. Runs real built-in XPC outside the automation sandbox; no BYOXPC install.
 - **When to run:** After changing built-in caller authorization.
 
 ### runner_byoxpc
