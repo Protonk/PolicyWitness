@@ -59,14 +59,17 @@ failures into one category merely to reduce the number of branches.
   `runner/Tests/PWRunnerCoreTests/SandboxApplyTests.swift`: a Swift apply helper
   with unit-test callers only; its tests do not establish C-worker coverage.
   `computePolicyHash` in the same source file has a separate, live role.
+- `runner/Sources/PWRunnerCore/Signals.swift`: unused signal-observer helpers.
+  The live per-step producer is `CWorkerOrchestrator.zeroSignalResult`, which
+  supplies zero counts without observing that channel.
 - `runner/AGENTS.md`, `tests/README.md`, and `tests/catalog.json`: test boundaries,
   override rules, canonical case registration, and evidence retention.
 
 Useful existing protection lives in `runner_abi_layout`, `runner_c_worker_harness`,
 `runner_unit`, `runner_outcome_bad_request`, `runner_outcome_runner_timeout`,
 `runner_ready_byte_resilience`, `runner_validator_failure`, `validator_batch_mode`,
-and `witness_contract`. Trace individual assertions before deciding whether to
-extend a case or add a complementary one.
+`source_drift`, and `witness_contract`. Trace individual assertions before deciding
+whether to extend a case or add a complementary one.
 
 ## Proposed observer contract
 
@@ -149,6 +152,13 @@ reordering the classifier's branches.
   interim diagnostic must not claim an observed apply return when it cannot
   distinguish the operation. A published zero or inconsistent flags do not
   establish failure either. Successful application has its own `applied` marker.
+  Correct the existing `apply_rc`, `apply_errno`, and `done` comments in
+  `pw_probe_runner_abi.h` in this batch: describe their actual producers and
+  publication validity, including `done` on pre-apply failure. Correcting these
+  descriptions requires no ABI revision. Trace `sandbox_create_params`,
+  `sandbox_set_param`, compilation, and the defensive parameter NUL check
+  separately; the last follows forced string termination and is not evidence
+  of a reliably reachable specimen failure.
 - [ ] Repair the host's polling/cleanup observations before changing their
   classification. Record why polling stopped, including sentinel deadline expiry
   separately from any later termination request. Retain termination-call results
@@ -167,11 +177,25 @@ reordering the classifier's branches.
   signal does not prove kernel sandbox attribution, and no progress evidence added
   in later steps changes that. Do not retain the inference merely because an
   existing test expects the label.
+- [ ] Replace the fabricated per-step `deny_signal` zero record with an explicit
+  unavailable representation. The C worker does not observe this channel, so
+  successful and failed runs alike must not publish measured signal counts.
+  Settle null versus an unavailable object and JSON compatibility in this batch;
+  update `PWRunnerStepResult` encoding/decoding, public documentation, and
+  dependent checks together. Its current `deny_signal` field is non-optional,
+  so changing only the producer is insufficient. This is a report of current
+  instrumentation availability and requires no worker ABI change. Implementing
+  signal collection or removing the unused `Signals.swift` helpers is outside
+  this effort.
 - [ ] Decouple termination/log correlation from a prior sandbox-cause label in
   the same batch as changing that label. Capture already runs for known worker
   PIDs when enabled; the current outcome gate selects the `first_deny` summary.
   Use observed process/application facts to report abnormal termination and
   correlated events separately. Preserve capture for successful runs as well.
+  Adapt `tests/suites/witness_contract/runner_sandbox_diagnostics_on_denied.sh`
+  around confirmed termination, the chosen correlation representation, mirrored
+  overrides, and observer invocation. Update its registration if renamed or
+  split; retain CLI coverage of controller synthesis and capture invocation.
 - [ ] Define correlation criteria and their limits, including process identity,
   the capture window, and event relevance. A first PID match can be an ordinary
   denied probe followed by an unrelated crash or self-signal. Stronger causal
@@ -214,12 +238,33 @@ reordering the classifier's branches.
   same specimen without overrides as a positive control and require the deny
   prediction, permission-failure attempt, and `drift=false` that the failure
   run must not contain, so the absence assertions are not vacuous. Assert that
-  neither run claims that the sandbox caused termination. Write the case before
-  the classifier change so it fails on the current attribution and passes after.
+  neither run claims that the sandbox caused termination, and that every step
+  in both runs reports the signal channel as unavailable without measured counts.
+  Write the case before the classifier change so it fails on the current
+  attribution and passes after.
   Register it in the suite `run.sh`, `tests/catalog.json`,
   `tests/COVERAGE.md`, and the suite README. Record, without asserting, whether
   the per-step prediction shape distinguishes a validator that never ran from
   one that answered short; that decision belongs to step 1A.
+- [ ] Document in `runner/AGENTS.md` the narrow exception to the exact-outcome
+  assertion recipe for this new evidence-focused witness case. Its absence
+  assertions supplement classifier tests that pin the chosen outcome mapping;
+  keep the artifact, override-mirroring, and structural assertions. Other
+  override-driven cases retain their exact-outcome checks.
+- [ ] Complete the dependency updates below and verify `source_drift` alongside
+  the affected unit and CLI cases before handing off step 0. Recheck the listed
+  artifacts against the final diff; this inventory is not an exhaustive search.
+
+Step-0 dependency checks (paths below identify existing artifacts):
+
+| Artifacts | Required update or verification |
+| --- | --- |
+| `runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift`, `CWorkerTests.swift`, and `EnvelopeInvariantTests.swift` | Pin the interim classifier table, retain real-worker signal-seam coverage, and update outcome constants/prose while preserving subprocess-presence and process-status assertions. |
+| `controller/src/run_flow.rs` and `controller/src/sandbox_log.rs` tests | Exercise the revised correlation gate and keep process correlation distinct from a cause claim; preserve capture for successful runs. |
+| `tests/suites/sbpl_allowdeny_consistency/check.py`, `tests/suites/blackbox_e2e/validate_run.py`, `tests/suites/blackbox_menagerie/checker_controls.py`, and `tests/fixtures/blackbox_e2e/` | Replace assumptions of measured `deny_signal.delta == 0` with the chosen unavailable-channel contract; update fixtures and checker controls while retaining their other evidence assertions. Include the signal record constructed by `EnvelopeInvariantTests`. |
+| `PWRunnerAPI.swift::NormalizedOutcome`, `tests/COVERAGE.md`, and `tests/suites/source_drift/check.py` | Keep outcome constants and matrix rows in bidirectional agreement, and retain a matrix row for every `runner_outcome_<name>` suite. Run the existing `source_drift` gate; preserve its checks. |
+| `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, `runner/AGENTS.md`, and `tests/README.md` | Update outcome, signal-evidence, diagnostics, and override descriptions to the implemented contract. Check the adjacent `runner_failed` description too. Describe the pre-ready delay together with its timeout budget: it already can fail under a short deadline, while the resilience case with sufficient budget must remain `ok`. |
+| `tests/suites/runner_ready_byte_resilience/`, `tests/suites/runner_c_worker_harness/`, `tests/suites/runner_use_c_worker/`, and `tests/suites/witness_contract/` | Update affected README prose, shell assertion messages, and harness comments that encode the old attribution. Preserve assertions on successful execution, completed probes, worker publication, and post-apply timeout evidence. |
 
 This step removes claims unsupported by the existing evidence. It does not make
 the legacy status fields sufficient to distinguish all failed operations.
@@ -285,6 +330,10 @@ a contract, not an edit count.
   slots. Record readiness already observed by the host. Preserve the step-0
   distinctions among deadline expiry, termination requests and their results,
   and successfully obtained process status when joining the new worker evidence.
+  Recheck `decodeProfileCapture` against the confirmed observations while
+  preserving its requirement for successful application before exposing a
+  capture. Refusal to expose an unconfirmed capture is not itself an observed
+  application failure; keep that distinction in its diagnostic wording.
 - [ ] Carry worker evidence and host observations through `CWorkerOutput`, the
   orchestrator, runner JSON, client forwarding, and controller envelope. Reuse
   the client's byte forwarding and the controller's opaque JSON retention where
@@ -370,6 +419,7 @@ the step-2 inventory and step-3 controls.
 | 0 | Deadline expiry followed by voluntary exit during grace | Host driver and classifier controls | Observed deadline expiry retained without requiring SIGKILL; separately obtained exit status retained | Pending |
 | 0 | Failed termination/reaping calls | Host driver and classifier controls | Termination request and call result distinguished; exit/signal status absent unless successfully obtained by reaping | Pending |
 | 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | Pending |
+| 0 | Unobserved per-step signal channel | Runner JSON encoding/decoding and real CLI failure/success controls, including the pre-apply case above | Both controls report the channel as unavailable without measured counts; the chosen JSON shape survives forwarding and dependent checkers accept it without dropping other evidence checks | Pending |
 | 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
 | 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
 | 1C | Child stops reading during host policy transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it | Pending |
@@ -543,8 +593,10 @@ the next agent can tell which implementation the CLI results establish.
 
 Select verification according to the changed boundary: C harness and ABI layout,
 Swift classifier/envelope tests, validator transport tests, controller parsing
-tests, and real CLI cases. Register new cases and update `tests/README.md`,
-`tests/COVERAGE.md`, suite documentation, and public JSON documentation as needed.
+tests, and real CLI cases. Include `source_drift` when outcome constants or
+coverage registrations change; it is required for step 0. Register new cases and
+update `tests/README.md`, `tests/COVERAGE.md`, suite documentation, and public JSON
+documentation as needed.
 Run relevant existing success, timeout, and partial-evidence cases alongside new
 failure cases. Acceptance must check evidence and provenance as well as any
 normalized outcome contract. Review the diff and run `git diff --check`.
@@ -566,7 +618,7 @@ A check that was not run remains unverified, with its reason recorded.
 | Completed implementation batch | None; implementation has not started |
 | Next batch | Step 0: correct unsupported attribution using the existing ABI |
 | ABI revision state | Existing ABI version 5 is the accepted baseline; no new revision is under construction |
-| Chosen field contract locations | Pending step 0 for repaired host observations and step 1A for new worker fields; no new field contract has been selected |
+| Chosen field contract locations | Pending step 0 for repaired host observations and unavailable signal-channel JSON, and step 1A for new worker fields; no new field contract has been selected |
 | Inventory entries closed / remaining limitations | None closed; implementation and acceptance work remain pending; stderr capture remains a deferred coverage question |
 | Verified source and signed app | No implementation build verified; record source revision and local changes, build command, app path, and bundle-integrity evidence when available |
 | Checks, results, and evidence paths | No implementation checks run; record exact commands, results, and retained evidence for the completed batch |
