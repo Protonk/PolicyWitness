@@ -47,7 +47,9 @@ bundle scaffolding under `runner/Services/PWRunner/`.
     re-routed by `_test_overrides.libsandbox_path` (see "Test seam"
     below).
 - `Sources/PWRunnerCore/SandboxApply.swift`
-  - Policy hashing and single-shot `sandbox_apply` path.
+  - `computePolicyHash` is used by the host. The `applySandboxPolicy` helper
+    has unit-test callers only; production compilation and application run in
+    the C worker.
 - `Sources/PWRunnerCore/ProbeRunner.swift`
   - `sandbox_check` helpers and shared prediction-unavailable metadata.
 - `Sources/PWRunnerCore/PathUtils.swift`

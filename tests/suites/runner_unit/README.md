@@ -11,6 +11,11 @@ classifier branches that no real specimen can exercise.
   Command Line Tools without full Xcode.
 - `PWRunnerCore` is built with `-enable-testing` so tests can
   `@testable import` it; production builds via `build.sh` are unaffected.
+- `SandboxApplyTests` exercises the unused Swift `applySandboxPolicy` helper
+  with stubbed library calls. It provides no coverage of production C-worker
+  failures or their forwarding. `HostOutcomeClassifierTests` covers the host's
+  interpretation of constructed worker results; `runner_c_worker_harness` owns
+  the real-worker `compile_failure` case.
 - The fast CWorker per-exec deadline diagnostic remains here; process-group
   cleanup, output retention, and plan continuation are covered through the
   public CLI by `runner_exec_lifecycle`.

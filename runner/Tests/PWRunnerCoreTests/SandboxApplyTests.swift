@@ -2,13 +2,13 @@ import Foundation
 import Darwin
 @testable import PWRunnerCore
 
-// Covers the runner's "the libsandbox call failed" branches that surface as
-// normalized_outcome = "sandbox_apply_failed". The C worker writes the same
-// apply_rc = -1 for a failed sandbox_compile_string as for a failed
-// sandbox_apply, so this outcome covers both compile and apply failure (the
-// run flow no longer turns compile errors into "bad_policy"). Here we
-// feed applySandboxPolicy a stub SandboxLib whose compile/apply hooks return
-// failure, then check the error message the host would forward.
+// Tests applySandboxPolicy with stubbed SandboxLib calls. This Swift helper
+// has no production callers; these assertions cover its return values,
+// messages, and compile-error buffer cleanup only. They do not exercise the
+// production C worker, shared-memory publication, host classification, or CLI
+// forwarding. HostOutcomeClassifierTests covers classification of constructed
+// worker results; runner_c_worker_harness/compile_failure exercises a real
+// worker compilation failure and its published result.
 //
 // C function pointer types (`@convention(c)`) cannot capture closure context,
 // so the few tests that need to observe side effects route through

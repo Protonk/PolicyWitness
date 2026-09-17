@@ -4,10 +4,10 @@
 
 This is a proposed work sequence, not an implemented contract or a finished
 specification. All work below is pending. Record layouts, public field names,
-compatibility behavior, and exact test placement need to be settled as each step
-is prepared. A preliminary correction precedes the three major steps. Each step
-should produce reviewable changes and acceptance evidence before the next begins;
-the first major step is divided into smaller implementation batches.
+JSON compatibility behavior, and exact test placement need to be settled as each
+step is prepared. A preliminary correction precedes the three major steps. Each
+step should produce reviewable changes and acceptance evidence before the next
+begins; the first major step is divided into smaller implementation batches.
 
 ## Goal and scope
 
@@ -55,8 +55,8 @@ failures into one category merely to reduce the number of branches.
 - `controller/src/bin/sbpl-check.rs` and `controller/src/policy_check.rs`: fallback
   compilation diagnostics, including the helper's own source-size rejection.
 - `runner/Sources/PWRunnerCore/SandboxApply.swift` and
-  `runner/Tests/PWRunnerCoreTests/SandboxApplyTests.swift`: the Swift apply helper
-  and tests whose claimed relationship to the production C worker needs review.
+  `runner/Tests/PWRunnerCoreTests/SandboxApplyTests.swift`: a Swift apply helper
+  with unit-test callers only; its tests do not establish C-worker coverage.
   `computePolicyHash` in the same source file has a separate, live role.
 - `runner/AGENTS.md`, `tests/README.md`, and `tests/catalog.json`: test boundaries,
   override rules, canonical case registration, and evidence retention.
@@ -169,10 +169,13 @@ reordering the classifier's branches.
   capture-disabled, unavailable, and no-match results distinct, with the same
   underlying execution status across those conditions.
 - [ ] Audit the production reachability of tests credited with protecting these
-  decisions. Verify callers of `applySandboxPolicy`; its Swift tests do not by
-  themselves exercise C-worker failures. Correct coverage claims and add coverage
-  at the live boundary. Removing unused implementation is a separate decision;
-  preserve unrelated live helpers in the same file.
+  decisions. Credit host interpretation with constructed inputs, real C-worker
+  publication, and CLI forwarding separately, and add required coverage at the
+  live boundaries. Keep coverage claims aligned with the implementation.
+  `SandboxApplyTests` exercises the unused Swift helper only; do not extend that
+  helper to imitate the new production reporting model. Removal of the helper,
+  its helper-specific error type, and its tests is separate cleanup outside this
+  effort. Preserve the live `computePolicyHash` function in the same source file.
 - [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply
   exit and signal, pre-apply host termination, and reported failure plus cleanup
   trouble. Use the existing pre-ready delay seam for a real CLI deadline case.
@@ -186,6 +189,24 @@ the legacy status fields sufficient to distinguish all failed operations.
 ### 1. Establish observer-owned progress and failure reporting through to the CLI
 
 #### A. Specify progress and publication, then implement the minimal record
+
+Retain exact-version ABI rejection without dual-version encoding or decoding.
+Aim for one coherent ABI revision for step 1: settle the storage and publication
+contract for both the minimal record and the diagnostic region here, including
+an explicit state for no diagnostic published. Step 1B can implement diagnostic
+production and forwarding separately. If the diagnostic contract cannot be
+settled responsibly here, a second revision in 1B is acceptable.
+
+A revision under construction can be refined within an unfinished implementation
+batch without incrementing the version for each edit. Rebuild host and worker
+together and verify their definitions agree; equal version numbers alone do not
+establish compatibility between intermediate builds. Record whether the revision
+is under construction or accepted in the current execution state. Once the ABI
+contract is accepted at batch completion, incompatible changes to its layout,
+field meanings, or publication requirements need a new version. Refactoring,
+tests, fixes within the contract, and diagnostic codes covered by its
+unfamiliar-value rules do not inherently require a bump. The version identifies
+a contract, not an edit count.
 
 - [ ] Define a small set of useful worker milestones. For each, state whether it
   means an operation started or completed and what an acquire reader can rely on.
@@ -230,11 +251,11 @@ the legacy status fields sufficient to distinguish all failed operations.
   the client's byte forwarding and the controller's opaque JSON retention where
   they already work. Distinguish failed operations in the evidence before deciding
   which merit separate top-level outcome strings.
-- [ ] Settle ABI and JSON compatibility before choosing offsets. The header's
-  reserved space is an option, not a specification. Update the C/Swift layout
-  and version together as needed, extend layout checks, and specify incompatible
-  worker behavior. Include a basic unfamiliar-diagnostic-code preservation control
-  for the worker-to-CLI route.
+- [ ] Apply the ABI rule above and settle JSON compatibility before choosing
+  offsets. The header's reserved space is an option, not a specification. Update
+  the C/Swift definitions together, extend layout checks, and verify rejection
+  of incompatible workers. Include a basic unfamiliar-diagnostic-code
+  preservation control for the worker-to-CLI route.
 
 #### B. Prove reporting with compilation failure and add diagnostic detail
 
@@ -246,8 +267,9 @@ Sparse-evidence cases remain separate acceptance obligations.
   parameter setup and an observed apply result. Keep the minimal operation/status
   change reviewable separately from diagnostic-text storage and forwarding.
 - [ ] Use a preallocated shared-memory text region as the primary route for
-  PW-authored diagnostics after a compatible mapping exists. Set its bounds and
-  publication semantics; make missing, partial, and truncated text explicit.
+  PW-authored diagnostics after a compatible mapping exists. Implement the bounds
+  and publication contract settled in 1A, or explicitly settle a further ABI
+  revision if needed; make missing, partial, and truncated text explicit.
   Publishing reliable status must not depend on a successful diagnostic write.
 - [ ] Preserve existing early stderr diagnostics where shared-memory reporting
   is unavailable. The text region cannot recover diagnostics emitted before a
@@ -501,6 +523,7 @@ A check that was not run remains unverified, with its reason recorded.
 | --- | --- |
 | Completed implementation batch | None; implementation has not started |
 | Next batch | Step 0: correct unsupported attribution using the existing ABI |
+| ABI revision state | Existing ABI version 5 is the accepted baseline; no new revision is under construction |
 | Chosen field contract locations | Pending step 1A; no new field contract has been selected |
 | Inventory entries closed / remaining limitations | None closed; implementation and acceptance work remain pending; stderr capture remains a deferred coverage question |
 | Verified source and signed app | No implementation build verified; record source revision and local changes, build command, app path, and bundle-integrity evidence when available |
@@ -510,7 +533,7 @@ A check that was not run remains unverified, with its reason recorded.
 
 - Exact milestone meanings, the state table needed before consolidating fields,
   publication protocol, and final host observation points; then the shared-memory
-  layout and ABI compatibility.
+  layout under the ABI revision rule in step 1A.
 - Public representation of observer-owned evidence, reuse of subprocess metadata,
   and JSON compatibility without duplicated authoritative facts.
 - Minimal failed-operation/status representation and bounds/publication for the
@@ -521,8 +544,8 @@ A check that was not run remains unverified, with its reason recorded.
   `sandbox_apply_failed` and `runner_sandbox_denied`.
 - Correlation criteria, capture availability, and the evidence needed for any
   stronger policy-cause claim, kept separate from PW's execution summary.
-- Placement of coverage for production C-worker failures and the disposition of
-  unused Swift apply implementation and its separately scoped tests.
+- Placement of coverage for production C-worker failures; unused Swift apply
+  implementation and test removal remain outside this effort.
 - The smallest test arrangement that proves unfamiliar-code preservation across
   the full route without introducing result-forcing production seams.
 - Where groups genuinely share reporting code, and where separate paths better
