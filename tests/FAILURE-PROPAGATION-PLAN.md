@@ -182,6 +182,29 @@ reordering the classifier's branches.
   Add a correlation control with an ordinary denial followed by unrelated
   termination: retain both observations without claiming a sandbox kill. Preserve
   existing successful, post-apply timeout, and partial-result contracts.
+- [ ] Add one CLI contract case that pins the first observer rule end to end:
+  `tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh`.
+  Use a populated plan under a policy that would deny one probe and allow
+  another, with `worker_pre_ready_hang_ms` and `worker_timeout_ms` set so the
+  host gives up before application. Choose the delay to exceed the fixed 1s
+  ready-byte wait, the overridden sentinel, and the 1s exit grace by a wide
+  margin, and run with `--no-log-capture`; log correlation independence belongs
+  to the correlation control above. Assert absence rather than a specific
+  outcome name, so the case survives later renames: `normalized_outcome` is not
+  `ok`, `sandbox_apply_failed`, `bad_policy`, or `runner_sandbox_denied`; the
+  summary and any structured failure record state no apply or compile return
+  value; `sandboxed_after_apply` is not true; `validator_subprocess` is null;
+  every step has no allow/deny prediction, a missing-evidence attempt outcome
+  with null errno, and null drift; `runner_sandbox_diagnostics` makes no cause
+  claim; `runner_subprocess` and both mirrored overrides are present. Run the
+  same specimen without overrides as a positive control and require the deny
+  prediction, permission-failure attempt, and `drift=false` that the failure
+  run must not contain, so the absence assertions are not vacuous. Write the
+  case before the classifier change so it fails on the current attribution and
+  passes after. Register it in the suite `run.sh`, `tests/catalog.json`,
+  `tests/COVERAGE.md`, and the suite README. Record, without asserting, whether
+  the per-step prediction shape distinguishes a validator that never ran from
+  one that answered short; that decision belongs to step 1A.
 
 This step removes claims unsupported by the existing evidence. It does not make
 the legacy status fields sufficient to distinguish all failed operations.
@@ -328,6 +351,7 @@ the step-2 inventory and step-3 controls.
 | 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | Pending |
 | 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | Pending |
 | 0 | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | Pending |
+| 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | No allow/deny prediction, permission-failure attempt, drift value, or sandbox-cause summary anywhere in the envelope; the control run produces each of those from the same specimen; process evidence and overrides retained | Pending |
 | 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
 | 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
 | 1C | Child stops reading during host policy transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it | Pending |
