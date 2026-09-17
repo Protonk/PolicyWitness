@@ -7,8 +7,8 @@ specification. All implementation work below is pending. Record layouts, public
 field names, and exact test placement need to be settled as each step is prepared,
 subject to the planned compatibility rules in step 0. A preliminary correction
 precedes the three major steps. Each step should produce reviewable changes and
-acceptance evidence before the next begins; the first major step is divided into
-smaller implementation batches.
+acceptance evidence before the next begins; the preliminary correction and the
+first major step are divided into smaller implementation batches.
 
 ## Goal and scope
 
@@ -152,27 +152,101 @@ The rules below apply even when only some observers can report.
 ### 0. Correct unsupported attribution using the existing ABI
 
 Correct the existing evidence contract before adding new worker fields. This
-step spans the host driver, classifier, JSON consumers, and log correlation;
-it is not a classifier-only patch. Organize it into reviewable changes: first
-the failing CLI witness case and interim evidence table, then host observations
-and classification, then the signal-channel and correlation contracts with their
-dependent updates. Keep one step-0 acceptance gate: all required contracts and
-checks below must be complete before step 1A begins. Existing worker publications
-are sufficient for this limited correction; keep worker ABI version 5 unchanged.
+step spans the host driver, classifier, JSON consumers, and log correlation.
+Execute three sequential batches: 0A defines the interim contract and captures
+the regression, 0B repairs host observations, and 0C applies the corrected
+classification and public evidence semantics. Keep one step-0 acceptance gate:
+all required contracts and checks below must be complete before step 1A begins.
+Existing worker publications are sufficient for this limited correction; keep
+worker ABI version 5 unchanged throughout all three batches.
 
-- [ ] Stop treating unpublished `apply_rc`/`apply_errno` storage as a reported
-  failure. For legacy pre-apply failures, require the worker's `done` publication.
-  Even then, `apply_rc = -1` can describe parameter setup or compilation; the
-  interim diagnostic must not claim an observed apply return when it cannot
-  distinguish the operation. A published zero or inconsistent flags do not
-  establish failure either. Successful application has its own `applied` marker.
-  Correct the existing `apply_rc`, `apply_errno`, and `done` comments in
-  `pw_probe_runner_abi.h` in this batch: describe their actual producers and
-  publication validity, including `done` on pre-apply failure. Correcting these
-  descriptions requires no ABI revision. Trace `sandbox_create_params`,
-  `sandbox_set_param`, compilation, and the defensive parameter NUL check
-  separately; the last follows forced string termination and is not evidence
-  of a reliably reachable specimen failure.
+Outcome-label changes and their dependent correlation changes belong together
+in 0C. Publish response version 5 together with the explicit signal null and
+corrected outcome semantics in that batch. Neither 0A nor 0B establishes the
+accepted step-0 public contract. The new CLI witness remains an explicitly
+expected failure through 0B; retain its actual failed result without suppressing
+it or marking it passed. Record intermediate results and remaining work in the
+current execution state at each handoff.
+
+#### 0A. Define the interim contract and capture the regression
+
+- [ ] Write an interim evidence/classification table before changing production
+  behavior. Cover absent publication, inconsistent flags, pre-apply exit and
+  signal, observed deadline expiry, reported failure plus cleanup trouble, and
+  completed reports followed by abnormal or unconfirmed process disposition.
+  Specify summary precedence for concurrent failures without discarding their
+  independent evidence. Identify the required host observations and proposed
+  JSON locations, using authoritative subprocess metadata. Keep this table as
+  the specification for 0B's observations and 0C's classifier controls.
+- [ ] Include the meaning of `runner_sandbox_denied` in this review. Decide and
+  document interim outcome semantics and compatibility explicitly. A post-apply
+  signal does not prove kernel sandbox attribution, and no progress evidence added
+  in later steps changes that. Do not retain the inference merely because an
+  existing test expects the label.
+- [ ] Audit the production reachability of tests credited with protecting these
+  decisions. Credit host interpretation with constructed inputs, real C-worker
+  publication, and CLI forwarding separately. Assign required live-boundary
+  coverage to the witness in 0A, host-driver controls in 0B, and classification
+  and public-contract controls in 0C. Keep coverage claims aligned with the
+  implementation.
+  `SandboxApplyTests` exercises the unused Swift helper only; do not extend that
+  helper to imitate the new production reporting model. Removal of the helper,
+  its helper-specific error type, and its tests is separate cleanup outside this
+  effort. Preserve the live `computePolicyHash` function in the same source file.
+- [ ] Add one CLI contract case that pins the first observer rule end to end:
+  `tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh`.
+  Use a populated plan under a policy that would deny one probe and allow
+  another, with `worker_pre_ready_hang_ms` and `worker_timeout_ms` set so the
+  host gives up before application. Both overrides already exist; this case
+  requires no new request seam. Choose the delay to exceed the fixed 1s
+  ready-byte wait, the overridden sentinel, and the 1s exit grace by a wide
+  margin, and run with `--no-log-capture`; log correlation independence belongs
+  to the correlation control in 0C. The seam sleeps after successful compilation
+  and optional profile capture, before the ready byte and application. It tests
+  absence of published application evidence, not that compilation never ran or
+  failed; neither the override nor a missing ready byte is a native call result.
+  Assert absence rather than a specific outcome name, so the case survives later
+  renames: `normalized_outcome` is not
+  `ok`, `sandbox_apply_failed`, `bad_policy`, or `runner_sandbox_denied`; the
+  summary and any structured failure record state no apply or compile return
+  value; `sandboxed_after_apply` is not true; `validator_subprocess` is absent or
+  null; every step has no allow/deny prediction, a missing-evidence attempt outcome
+  with null errno, and null drift; `runner_sandbox_diagnostics` makes no cause
+  claim; `runner_subprocess` and both mirrored overrides are present. Run the
+  same specimen without overrides as a positive control and require the deny
+  prediction, permission-failure attempt, and `drift=false` that the failure
+  run must not contain, so the absence assertions are not vacuous. Assert that
+  neither run claims that the sandbox caused termination, and that every step
+  in both runs contains `deny_signal: null`, without measured counts.
+  Write the case before the classifier change so it fails on the current
+  attribution and passes after. Retain the unsupported-attribution assertion
+  failure independently of expected schema/signal-shape mismatches; a version
+  assertion alone is not the required before-change evidence.
+  Register it in the suite `run.sh`, `tests/catalog.json`,
+  `tests/COVERAGE.md`, and the suite README. Record, without asserting, whether
+  the per-step prediction shape distinguishes a validator that never ran from
+  one that answered short; that decision belongs to step 1A. Currently both use
+  `sandbox_check.outcome="error"`, synthetic `rc=0`, and the same missing-verdict
+  message for supported queries. This is not an observed sandbox_check return.
+- [ ] Document in `runner/AGENTS.md` the narrow exception to the exact-outcome
+  assertion recipe for this new evidence-focused witness case. Its absence
+  assertions supplement classifier tests that pin the chosen outcome mapping;
+  keep the artifact, override-mirroring, and structural assertions. Other
+  override-driven cases retain their exact-outcome checks.
+
+Exit condition: reviewable interim contract decisions, registered witness and
+positive control, and retained baseline evidence showing unsupported attribution
+independently of schema/signal-shape mismatches. Retain the positive control's
+prediction and attempt evidence even though its new signal-null assertion is
+expected to fail before 0C. No production behavior is changed in this batch.
+
+#### 0B. Repair host lifecycle observations
+
+Implement the host observations required by the 0A table before changing the
+classifier. Keep the existing outcome vocabulary, response version, and signal
+shape until 0C; new observation fields must be additive. Document their producer,
+validity, and JSON representation beside the authoritative definitions.
+
 - [ ] Repair the host's polling/cleanup observations before changing their
   classification. Record why polling stopped, including sentinel deadline expiry
   separately from any later termination request. Retain termination-call results
@@ -188,6 +262,43 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   unreaped-child limitation; this repair does not add a global lifecycle timeout.
   These repairs require no worker ABI change and belong in this batch. The
   policy-write failure path's evidence preservation remains step 1C work.
+- [ ] Correct the existing `apply_rc`, `apply_errno`, and `done` comments in
+  `pw_probe_runner_abi.h` in this batch: describe their actual producers and
+  publication validity, including `done` on pre-apply failure. Correcting these
+  descriptions requires no ABI revision. Trace `sandbox_create_params`,
+  `sandbox_set_param`, compilation, and the defensive parameter NUL check
+  separately; the last follows forced string termination and is not evidence
+  of a reliably reachable specimen failure.
+- [ ] Add host-driver controls for deadline expiry followed by voluntary exit
+  during the grace period, a completed report followed by cleanup termination,
+  completed reports followed by an independent signal or nonzero exit, and failed
+  termination/reaping calls. Exercise lifecycle observations through the host
+  driver; use narrow test-only OS-call controls where real failure is unreliable,
+  not result-forcing request overrides. Deadline detection must not depend on
+  SIGKILL, and failure to obtain wait status must leave process status absent.
+  Use driver and JSON encoding controls to establish the observations needed by
+  the classifier rows in 0C.
+
+Exit condition: host-driver and encoding controls establish trustworthy polling,
+termination, and reaping observations, including explicitly missing process
+status. Verify their CLI forwarding through a normal signed build. Preserve
+existing budgets and document any unreaped-child limitation. The 0A witness
+remains an expected failure because classification and signal semantics are
+still pending; this batch does not satisfy the step-0 acceptance gate.
+
+#### 0C. Apply corrected classification and public evidence semantics
+
+Use the 0B observations to implement the 0A table. Change unsupported outcome
+attribution together with dependent log correlation, and publish response version
+5 together with the signal-null contract. Complete the consumer, documentation,
+and coverage updates against this combined public contract.
+
+- [ ] Stop treating unpublished `apply_rc`/`apply_errno` storage as a reported
+  failure. For legacy pre-apply failures, require the worker's `done` publication.
+  Even then, `apply_rc = -1` can describe parameter setup or compilation; the
+  interim diagnostic must not claim an observed apply return when it cannot
+  distinguish the operation. A published zero or inconsistent flags do not
+  establish failure either. Successful application has its own `applied` marker.
 - [ ] Distinguish pre-apply exit, signal, and host-enforced deadline using the
   confirmed observations. A clean exit without completion does not establish
   a timeout. A published failure followed by cleanup trouble must retain both
@@ -196,11 +307,16 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   failure to obtain wait status. The current classifier can fall through to `ok`
   in these states. A completed report must survive, but does not establish clean
   process completion; an abnormal or unconfirmed disposition must not yield `ok`.
-- [ ] Include the meaning of `runner_sandbox_denied` in this review. Decide and
-  document interim outcome semantics and compatibility explicitly. A post-apply
-  signal does not prove kernel sandbox attribution, and no progress evidence added
-  in later steps changes that. Do not retain the inference merely because an
-  existing test expects the label.
+- [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply
+  exit and signal, pre-apply host termination, reported failure plus cleanup
+  trouble, and completed reports followed by abnormal or unconfirmed disposition.
+  Pin the 0A table with constructed inputs using the observations established in
+  0B. Passing these rows does not replace the host-driver acceptance evidence.
+  Use the existing pre-ready delay seam for the real CLI deadline case begun in
+  0A, and require it and its positive control to pass under the completed contract.
+  Add a correlation control with an ordinary denial followed by unrelated
+  termination: retain both observations without claiming a sandbox kill. Preserve
+  existing successful, post-apply timeout, and partial-result contracts.
 - [ ] Replace the fabricated per-step `deny_signal` zero record with an explicit
   JSON null: every new `steps[]` entry must contain `"deny_signal": null`.
   The C worker does not observe this channel, so successful and failed runs
@@ -269,78 +385,21 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   against PID reuse without the observations needed to establish them. Test
   missing/mismatched event PIDs, a host/client-only reply, and different operations
   on the same path, as well as capture availability and successful-run capture.
-- [ ] Audit the production reachability of tests credited with protecting these
-  decisions. Credit host interpretation with constructed inputs, real C-worker
-  publication, and CLI forwarding separately, and add required coverage at the
-  live boundaries. Keep coverage claims aligned with the implementation.
-  `SandboxApplyTests` exercises the unused Swift helper only; do not extend that
-  helper to imitate the new production reporting model. Removal of the helper,
-  its helper-specific error type, and its tests is separate cleanup outside this
-  effort. Preserve the live `computePolicyHash` function in the same source file.
-- [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply
-  exit and signal, pre-apply host termination, and reported failure plus cleanup
-  trouble. Add host-driver controls for deadline expiry followed by voluntary exit
-  during the grace period, a completed report followed by cleanup termination,
-  completed reports followed by an independent signal or nonzero exit, and failed
-  termination/reaping calls. Pin the classifier table with constructed inputs and
-  exercise lifecycle observations through the host driver; use narrow test-only
-  OS-call controls where real failure is unreliable, not result-forcing request
-  overrides. Passing constructed classifier rows does not complete the driver
-  acceptance gate. Deadline detection must not depend on SIGKILL, and failure to
-  obtain wait status must leave process status absent.
-  Use the existing pre-ready delay seam for a real CLI deadline case.
-  Add a correlation control with an ordinary denial followed by unrelated
-  termination: retain both observations without claiming a sandbox kill. Preserve
-  existing successful, post-apply timeout, and partial-result contracts.
-- [ ] Add one CLI contract case that pins the first observer rule end to end:
-  `tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh`.
-  Use a populated plan under a policy that would deny one probe and allow
-  another, with `worker_pre_ready_hang_ms` and `worker_timeout_ms` set so the
-  host gives up before application. Both overrides already exist; this case
-  requires no new request seam. Choose the delay to exceed the fixed 1s
-  ready-byte wait, the overridden sentinel, and the 1s exit grace by a wide
-  margin, and run with `--no-log-capture`; log correlation independence belongs
-  to the correlation control above. The seam sleeps after successful compilation
-  and optional profile capture, before the ready byte and application. It tests
-  absence of published application evidence, not that compilation never ran or
-  failed; neither the override nor a missing ready byte is a native call result.
-  Assert absence rather than a specific outcome name, so the case survives later
-  renames: `normalized_outcome` is not
-  `ok`, `sandbox_apply_failed`, `bad_policy`, or `runner_sandbox_denied`; the
-  summary and any structured failure record state no apply or compile return
-  value; `sandboxed_after_apply` is not true; `validator_subprocess` is absent or
-  null; every step has no allow/deny prediction, a missing-evidence attempt outcome
-  with null errno, and null drift; `runner_sandbox_diagnostics` makes no cause
-  claim; `runner_subprocess` and both mirrored overrides are present. Run the
-  same specimen without overrides as a positive control and require the deny
-  prediction, permission-failure attempt, and `drift=false` that the failure
-  run must not contain, so the absence assertions are not vacuous. Assert that
-  neither run claims that the sandbox caused termination, and that every step
-  in both runs contains `deny_signal: null`, without measured counts.
-  Write the case before the classifier change so it fails on the current
-  attribution and passes after. Retain the unsupported-attribution assertion
-  failure independently of expected schema/signal-shape mismatches; a version
-  assertion alone is not the required before-change evidence.
-  Register it in the suite `run.sh`, `tests/catalog.json`,
-  `tests/COVERAGE.md`, and the suite README. Record, without asserting, whether
-  the per-step prediction shape distinguishes a validator that never ran from
-  one that answered short; that decision belongs to step 1A. Currently both use
-  `sandbox_check.outcome="error"`, synthetic `rc=0`, and the same missing-verdict
-  message for supported queries. This is not an observed sandbox_check return.
 - [ ] Correct missing-attempt prose in the builder and public/test documentation.
   An absent or incomplete slot establishes no completed attempt result, not that
   the worker never reached the operation. If `not_run_worker_died` remains as a
   compatibility spelling in step 0, explicitly document that limited meaning;
   settle its final spelling with the step-1A evidence contract. Keep null errno
   and drift when no result supports a comparison.
-- [ ] Document in `runner/AGENTS.md` the narrow exception to the exact-outcome
-  assertion recipe for this new evidence-focused witness case. Its absence
-  assertions supplement classifier tests that pin the chosen outcome mapping;
-  keep the artifact, override-mirroring, and structural assertions. Other
-  override-driven cases retain their exact-outcome checks.
 - [ ] Complete the dependency updates below and verify `source_drift` alongside
   the affected unit and CLI cases before handing off step 0. Recheck the listed
   artifacts against the final diff; this inventory is not an exhaustive search.
+
+Exit condition and step-0 acceptance gate: the new CLI witness and positive
+control pass, the host-driver and classifier controls agree, and existing
+success, timeout, and partial-evidence contracts remain protected. Complete the
+dependency checks below, including `source_drift`, and retain signed-build CLI
+evidence. Do not begin step 1A until this gate passes.
 
 Step-0 dependency checks (paths below identify existing artifacts):
 
@@ -532,23 +591,28 @@ plus the canonical catalog ID for public cases. Where several tests establish a
 row, identify which boundary each covers. Use the same test-entry convention for
 the step-2 inventory and step-3 controls.
 
+For step-0 rows shared across batches, 0A retains baseline failures and 0B
+establishes host observations; classification and combined public-contract
+acceptance remain pending until 0C. Do not mark a row complete using only its
+earlier batch's evidence.
+
 | First owning batch | Case | Boundary to exercise | Evidence that must reach the consumer | Implemented test entry |
 | --- | --- | --- | --- | --- |
 | 1A | Ordinary successful specimen | Real worker through CLI | Existing attempt/prediction evidence; no fabricated failure record | Pending |
 | 1C | Source exceeds the existing worker cap at the worker boundary | C worker guard and host policy-transfer handling | Worker rejection and relevant byte limit; last progress and process evidence retained even if the policy pipe also fails | Pending |
 | 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | Pending |
 | 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | Pending |
-| 0 | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | Pending |
-| 0 | Deadline expiry followed by voluntary exit during grace | Host driver and classifier controls | Observed deadline expiry retained without requiring SIGKILL; separately obtained exit status retained | Pending |
-| 0 | Failed termination/reaping calls | Host driver and classifier controls | Termination request and call result distinguished; exit/signal status absent unless successfully obtained by reaping | Pending |
-| 0 | Completed report followed by nonzero exit, independent signal, or unavailable wait status | Host driver and classifier controls | Published completion and step results survive; process disposition remains independent; run is not `ok` and claims no sandbox cause | Pending |
-| 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | Pending |
-| 0 | Unobserved per-step signal channel | Runner JSON encoding/decoding and real CLI failure/success controls, including the pre-apply case above | Response version 5 and literal `deny_signal: null` survive forwarding; legacy reply decoding remains supported and dependent checkers retain their other evidence checks | Pending |
-| 0 | Correlation with incomplete identity, irrelevant events, or repeated attempts | Controller correlation and CLI observer-invocation controls | No worker correlation from host/client PID or missing/mismatched event PID; relevance follows the attempt rather than an independently routed query; same-path unrelated operations do not match; repeated identical attempts retain ambiguity; availability and window limits are explicit | Pending |
+| 0C (baseline in 0A) | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | Pending |
+| 0B (classifier in 0C) | Deadline expiry followed by voluntary exit during grace | Host driver and classifier controls | Observed deadline expiry retained without requiring SIGKILL; separately obtained exit status retained | Pending |
+| 0B (classifier in 0C) | Failed termination/reaping calls | Host driver and classifier controls | Termination request and call result distinguished; exit/signal status absent unless successfully obtained by reaping | Pending |
+| 0B (classifier in 0C) | Completed report followed by nonzero exit, independent signal, or unavailable wait status | Host driver and classifier controls | Published completion and step results survive; process disposition remains independent; run is not `ok` and claims no sandbox cause | Pending |
+| 0C (baseline in 0A) | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | Pending |
+| 0C | Unobserved per-step signal channel | Runner JSON encoding/decoding and real CLI failure/success controls, including the pre-apply case above | Response version 5 and literal `deny_signal: null` survive forwarding; legacy reply decoding remains supported and dependent checkers retain their other evidence checks | Pending |
+| 0C | Correlation with incomplete identity, irrelevant events, or repeated attempts | Controller correlation and CLI observer-invocation controls | No worker correlation from host/client PID or missing/mismatched event PID; relevance follows the attempt rather than an independently routed query; same-path unrelated operations do not match; repeated identical attempts retain ambiguity; availability and window limits are explicit | Pending |
 | 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
 | 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
 | 1C | Child closes policy input or exits during host transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it; this does not cover an open but undrained pipe | Pending |
-| 0 | Completed report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states; step 1C rechecks new worker failure records | Reported completion or failure and subsequent supervisor observations both survive; cleanup termination alone does not establish sentinel deadline expiry | Pending |
+| 0B (classifier in 0C) | Completed report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states; step 1C rechecks new worker failure records | Reported completion or failure and subsequent supervisor observations both survive; cleanup termination alone does not establish sentinel deadline expiry | Pending |
 | 1C | Failure after completed probes | Real worker through CLI, with independent effect checks | Completed step evidence and independently checked effects survive | Pending |
 | 1A | Unpublished or incomplete record | C publication and Swift shared-memory decoding controls | No payload fields treated as confirmed evidence | Pending |
 | 1A | Publication during cleanup after sentinel deadline | Host driver with controlled publication timing | Final confirmed records/slots survive; late completion does not erase the observed deadline | Pending |
@@ -806,9 +870,9 @@ A check that was not run remains unverified, with its reason recorded.
 | Item | Current state |
 | --- | --- |
 | Completed implementation batch | None; implementation has not started |
-| Next batch | Step 0: correct unsupported attribution using the existing ABI |
+| Next batch | Step 0A: define the interim contract and capture the regression; 0B repairs host observations, then 0C completes the public contract and step-0 acceptance gate |
 | ABI revision state | Existing ABI version 5 is the accepted baseline; no new revision is under construction |
-| Chosen field contract locations | Step 0 of this plan specifies response version 5, explicit per-step signal null, and semantic absence for optional subprocess objects; implementation and authoritative API documentation are pending. Repaired host observation fields remain to be specified in step 0; new worker fields in step 1A. |
+| Chosen field contract locations | Step 0 of this plan specifies response version 5, explicit per-step signal null, and semantic absence for optional subprocess objects; implementation and authoritative API documentation are pending. The interim evidence/classification table is pending in 0A, authoritative host observation fields in 0B, and the combined public contract in 0C; new worker fields remain step 1A work. |
 | Inventory entries closed / remaining limitations | None closed; implementation and acceptance work remain pending. A transfer deadline for an open but undrained policy pipe is explicitly deferred; stderr capture remains a deferred coverage question. |
 | Verified source and signed app | No implementation build verified; record source revision and local changes, build command, app path, and bundle-integrity evidence when available |
 | Checks, results, and evidence paths | No implementation checks run; record exact commands, results, and retained evidence for the completed batch |
