@@ -13,10 +13,12 @@ the first major step is divided into smaller implementation batches.
 
 Organize failure evidence around the component that observed it. Worker progress,
 reported failures, host actions, and process status are independent observations.
-A reader should be able to distinguish a PW rejection, an observed library
-failure, a supervisor action, and a missing or unusable reply without
-reconstructing the implementation from an outcome string. An honest account of
-the available observations may leave the cause unknown.
+PW execution status and policy evidence are separate axes. A reader should be
+able to distinguish a PW rejection, an observed library failure, a supervisor
+action, and a missing or unusable reply without reconstructing the implementation
+from an outcome string. An honest account of the available observations may leave
+the cause unknown, including whether a post-apply gap reflects policy behavior
+or an instrumentation defect.
 
 Keep existing input capacities, output capacities, and timeout budgets unchanged.
 This work does not decide how large or expensive a specimen PW should support.
@@ -47,6 +49,9 @@ failures into one category merely to reduce the number of branches.
   generated XPC failure results.
 - `controller/src/runner_client.rs`, `utils.rs`, and `run_flow.rs`: captured
   output, JSON parsing, the outer envelope, and startup diagnostics.
+- `controller/src/sandbox_log.rs` and
+  `controller/src/bin/sandbox-log-observer.rs`: captured denial events and their
+  correlation with process/step evidence; `run_flow.rs` synthesizes `first_deny`.
 - `controller/src/bin/sbpl-check.rs` and `controller/src/policy_check.rs`: fallback
   compilation diagnostics, including the helper's own source-size rejection.
 - `runner/Sources/PWRunnerCore/SandboxApply.swift` and
@@ -64,19 +69,27 @@ extend a case or add a complementary one.
 
 ## Proposed observer contract
 
-These ownership rules guide acceptance tests; exact public sub-objects and field
-names remain open. Preserve existing subprocess blocks as authoritative where
-they already serve this purpose. Avoid duplicating facts into several mutable
-representations. A layer can summarize another observer's evidence, but must not
-rewrite that observer's account or imply an unsupported causal order.
+The first rule is that `normalized_outcome` describes whether and how PW completed
+its work. It must not assign an unsupported policy cause or imply an access
+decision. Each policy claim needs its own supporting observation. Observer records
+can contain predictions, attempt results, or kernel denial events without turning
+them into a cause of run termination. A post-apply reporting gap alone establishes
+neither sandbox interference nor an instrumentation defect.
+
+The ownership rules below guide acceptance tests; exact public sub-objects and
+field names remain open. Preserve existing subprocess blocks as authoritative
+where they already serve this purpose. Avoid duplicating facts into several
+mutable representations. A layer can summarize another observer's evidence, but
+must not rewrite that observer's account or imply an unsupported causal order.
 
 | Observer | Evidence it owns |
 | --- | --- |
 | Worker | Published progress, failed operation, meaningful native result, and any published diagnostic detail |
-| Runner host | Admission decisions, spawn/pipe/readiness observations, deadlines, termination requests and their results, successful reaping, and captured worker stderr |
+| Runner host | Admission decisions, spawn/pipe/readiness observations, deadlines, termination requests and their results, successful reaping, and worker stderr if capture is implemented |
 | Validator | Emitted check results and validator diagnostics; the host separately owns transport loss and process observations |
+| Sandbox log observer | Captured kernel denial events and capture status; the controller separately owns correlation with run observations |
 | Runner client | Received reply bytes or its own XPC error/timeout observations |
-| Controller | Client invocation, capture and parsing observations, local rejection or truncation, and the outer summary |
+| Controller | Client invocation, capture and parsing observations, local rejection or truncation, correlation evidence, and the outer execution summary |
 | Fallback `sbpl-check` | Its own admission or compilation result, independent of the missing worker reply |
 
 The rules below apply even when only some observers can report.
@@ -101,15 +114,23 @@ The rules below apply even when only some observers can report.
   by the receiver. `normalized_outcome` summarizes evidence; it does not replace it.
   Document summary precedence once, including concurrent failures, without using
   precedence to discard another observer's evidence.
-- Completed attempts, available predictions, and their provenance survive later
-  failures when received intact. Missing observations do not establish agreement
-  or disagreement. Do not blanket-reset valid step evidence on run failure.
+- Each channel's valid evidence survives independently. A completed prediction
+  remains evidence when its attempt never finishes; a kernel denial event may
+  concern an operation that killed the worker before it published an attempt
+  result. Attempt completion alone does not make a permission failure a proven
+  policy denial. Missing observations do not establish agreement or disagreement.
+  Do not blanket-reset valid step evidence on run failure.
 - Diagnostics themselves may be bounded. Specify publication validity and any
   truncation explicitly so a shortened message remains distinguishable from a
   complete one. No design can guarantee delivery after every possible process or
   transport failure; the closest surviving observer must state what it knows.
 - A signal after application, without a host kill, does not establish that the
   sandbox sent it. The worker's self-signal test seam produces that same shape.
+- A PID-matched denial does not by itself explain termination. Correlation and a
+  causal conclusion require distinct criteria. Log capture disabled, unavailable,
+  and completed without a match are different observations; none proves that
+  policy played no role. Optional log evidence must not change the underlying
+  execution status merely by becoming available.
 - A fallback compilation result describes that helper's execution. It cannot
   establish how far a missing worker progressed or why its reply was lost.
 
@@ -135,15 +156,28 @@ reordering the classifier's branches.
   document interim outcome semantics and compatibility explicitly. A stage marker
   cannot make a post-apply signal prove kernel sandbox attribution. Do not retain
   that inference merely because an existing test expects the label.
+- [ ] Decouple termination/log correlation from a prior sandbox-cause label in
+  the same batch as changing that label. Capture already runs for known worker
+  PIDs when enabled; the current outcome gate selects the `first_deny` summary.
+  Use observed process/application facts to report abnormal termination and
+  correlated events separately. Preserve capture for successful runs as well.
+- [ ] Define correlation criteria and their limits, including process identity,
+  the capture window, and event relevance. A first PID match can be an ordinary
+  denied probe followed by an unrelated crash or self-signal. Stronger causal
+  attribution requires explicit supporting evidence beyond PID matching. Keep
+  capture-disabled, unavailable, and no-match results distinct, with the same
+  underlying execution status across those conditions.
 - [ ] Audit the production reachability of tests credited with protecting these
   decisions. Verify callers of `applySandboxPolicy`; its Swift tests do not by
   themselves exercise C-worker failures. Correct coverage claims and add coverage
   at the live boundary. Removing unused implementation is a separate decision;
   preserve unrelated live helpers in the same file.
-- [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply exit and signal,
-  pre-apply host termination, and reported failure plus cleanup trouble. Use the
-  existing pre-ready delay seam for a real CLI deadline case. Preserve existing
-  successful, post-apply timeout, and partial-result contracts.
+- [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply
+  exit and signal, pre-apply host termination, and reported failure plus cleanup
+  trouble. Use the existing pre-ready delay seam for a real CLI deadline case.
+  Add a correlation control with an ordinary denial followed by unrelated
+  termination: retain both observations without claiming a sandbox kill. Preserve
+  existing successful, post-apply timeout, and partial-result contracts.
 
 This step removes claims unsupported by the existing evidence. It does not make
 the legacy status fields sufficient to distinguish all failed operations.
@@ -157,11 +191,21 @@ the legacy status fields sufficient to distinguish all failed operations.
   Specify optional transitions and failure exits. Readiness can fail while the
   worker proceeds; `done` is also published following compilation failure. Do not
   infer successful application from a simple ordering of all stage numbers.
+- [ ] Write a small state table before consolidating progress and failure fields.
+  Include death between a completed stage and the next started stage, a returned
+  failure, a readiness failure followed by continued execution, and repeated
+  parameter calls. Distinguish an operation returning from its succeeding, and
+  identify which call failed inside a coarse stage. A generic nonzero-result rule
+  is insufficient: compilation fails by returning NULL.
 - [ ] Settle the minimum failed-operation record and its publication rules,
   independently of diagnostic text. Distinguish no report, a valid report with
   zero values, and an incomplete or incompatible report. Keep native call results
   distinct from PW's own diagnostic codes. An unfamiliar stage value must not be
   interpreted as successful application merely because its number is larger.
+  Retain explicit operation/result evidence unless the state table demonstrates
+  an equally clear consolidated encoding. Existing `done` may publish a terminal
+  payload without an additional validity word, but payload validity, failed
+  operation, and terminal success/failure still need unambiguous meanings.
 - [ ] Implement worker publication in preallocated, pre-touched shared memory.
   Publish payload validity with release/acquire ordering; document its relation
   to progress, `applied`, `done`, and per-slot completion. Keep the post-apply path
@@ -191,19 +235,28 @@ Sparse-evidence cases remain separate acceptance obligations.
 - [ ] Show the compilation failure reaching the normal CLI, distinguished from
   parameter setup and an observed apply result. Keep the minimal operation/status
   change reviewable separately from diagnostic-text storage and forwarding.
-- [ ] Choose bounded diagnostic storage and capture deliberately. Evaluate a
-  worker text region and host stderr capture according to the evidence each can
-  retain; do not automatically build two copies of the same diagnostic channel.
-  Make missing, partial, and truncated text explicit. Publishing reliable status
-  must not depend on a successful diagnostic write.
-- [ ] If capturing stderr, specify draining during policy transfer and waits,
-  buffer exhaustion, dropped bytes, EOF, and cleanup. Ignoring SIGPIPE does not
-  prevent a full pipe from blocking. Treat captured bytes as host-observed context;
-  do not parse prose into authoritative failure classifications. Preserve and test
-  the rule against worker diagnostic writes after successful application, where
-  they could create denial evidence attributable to instrumentation.
-- [ ] Verify the compiler diagnostic reaches the CLI, while controls with absent
-  or incomplete text retain the same justified operation/status attribution.
+- [ ] Use a preallocated shared-memory text region as the primary route for
+  PW-authored diagnostics after a compatible mapping exists. Set its bounds and
+  publication semantics; make missing, partial, and truncated text explicit.
+  Publishing reliable status must not depend on a successful diagnostic write.
+- [ ] Preserve existing early stderr diagnostics where shared-memory reporting
+  is unavailable. The text region cannot recover diagnostics emitted before a
+  usable mapping, direct dependency/runtime stderr output, or unpublished details
+  lost in a reporting-path crash. A separate stream may retain context when the
+  shared-memory mechanism itself fails. Record this coverage gap explicitly;
+  preserving an emission does not establish that the CLI can collect it.
+- [ ] Keep a narrowly scoped, deferred evaluation of capturing early or otherwise
+  uninstrumented diagnostics in step 2. Shared-memory text does not close that
+  question. Capturing stderr adds no worker writes by itself, but its destination,
+  resources, draining, and teardown can affect execution. Any proposed capture
+  must justify those costs before joining normal runs.
+- [ ] Preserve and test the restriction on post-apply diagnostic syscalls and
+  new allocation dependencies. A pre-apply-only helper for the existing stderr
+  sites must not disable post-apply memory-only result/error publication. Existing
+  per-step shared-memory diagnostics remain available after application.
+- [ ] Verify the compiler diagnostic reaches the CLI. For otherwise identical
+  observed failures, controls with rich, missing, and truncated text must retain
+  the same justified operation/status classification.
 
 #### C. Retain sparse-evidence and competing-failure cases
 
@@ -223,6 +276,11 @@ that record through a simultaneous pipe failure.
 - [ ] Include early failures before publication, unexpected termination, and a
   report followed by cleanup trouble. These remain first-class acceptance cases
   even when ordinary admission prevents a particular specimen from reaching them.
+- [ ] Cover failed mapping without classifying it as a host bug merely because
+  no worker report exists. `map_region` failures in `fstat`, region-size checking,
+  and `mmap` share exit code 3; process status cannot recover the missing errno or
+  detailed reason. Preserve the actual observations and leave unavailable facts
+  absent. Use a deterministic harness boundary for the failure.
 
 Acceptance should cover the following observations, with expected facts written
 before implementation. Exact diagnostic prose need not be fixed.
@@ -235,11 +293,12 @@ before implementation. Exact diagnostic prose need not be fixed.
 | Observed application failure | Operation and meaningful native result retained; use a deterministic existing test boundary if no reliable live specimen reaches it |
 | Existing pre-ready delay exceeds the worker budget | The host's deadline/termination observations, with no invented library failure |
 | Unexpected worker exit without a report | Actual process status and absence of a report; unknown underlying cause |
+| Failed mapping with no usable worker report | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame |
 | Child stops reading during host policy transfer | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it |
 | Failure report followed by cleanup trouble | Original reported failure and subsequent supervisor observations both survive |
 | Failure after completed probes | Completed step evidence and independently checked effects survive |
 | Unpublished or incomplete record | No payload fields treated as confirmed evidence |
-| Valid report with absent/truncated text | Reliable operation/status attribution survives the missing detail |
+| Same observed failure with rich, missing, or truncated text | Identical justified operation/status classification across diagnostic availability |
 
 Use real worker failures and existing override boundaries for CLI coverage.
 Use the C harness for publication/early-exit behavior and Swift unit tests for
@@ -288,6 +347,8 @@ Runtime evidence loss and observation boundaries:
 | Controller reply capture | 1 MiB prefix currently used for JSON parsing | Receiver-owned capture-limit evidence, distinct from malformed producer JSON |
 | Execution budgets | Worker nominal 60s polling budget, validator 30s I/O, client default 240s | Observer-owned deadlines with phase, process status, and partial evidence; `--timeout-ms` does not set all budgets |
 | Readiness and child lifecycle | Ready-byte timeout, spawn failure, early exit, post-apply hang/signal, and cleanup grace | Distinguish synchronization hints, actual stops, and unexplained termination |
+| Denial-log correlation | Optional capture; `first_deny` summary currently gated by a sandbox-cause outcome | Independent correlation with observed execution facts; a matching denial does not establish termination cause |
+| Early or uninstrumented stderr diagnostics | No usable shared-memory report, direct dependency/runtime output, or reporting-path failure | Deferred capture evaluation; process status alone cannot recover diagnostic detail |
 | Optional compiled-object capture and exec output | 1 MiB capture region; 1,023 payload bytes per child output stream | Explicit unavailable/truncated evidence; optional capture failure must not become specimen failure |
 | Earlier setup and transport | Request decoding, library loading, shared-memory/pipe setup, XPC loss, reply encoding/decoding | Reporting by the component that actually observed failure; fallback where no child report is available |
 
@@ -317,6 +378,17 @@ Runtime evidence loss and observation boundaries:
   and parse-error label exist. Use valid producer JSON beyond the existing cap to
   prove the result identifies the controller's own loss of evidence. Contrast that
   with malformed producer output within the cap in an independent control.
+- [ ] Recheck the correlation path revised in step 0 against the observer records
+  adopted in step 1. Preserve independently obtained predictions and kernel events
+  when an attempt lacks a completed result. A post-apply gap must not default to
+  either policy interference or an instrumentation defect.
+- [ ] Keep the stderr evaluation bounded and explicitly deferred until its costs
+  and benefits are reviewed. Specify pre-mapping coverage, direct dependency
+  output, blocking/backpressure, dropped bytes, EOF, and cleanup; ignoring SIGPIPE
+  does not prevent a full pipe from blocking. If pursued, use a limited capture
+  experiment to assess those obligations before adopting capture in normal runs.
+  Treat captured text as context without deriving failure classifications from it. An
+  explicit decision to omit capture must retain the documented coverage gap.
 - [ ] Keep `sbpl-check` on the missing-reply path as an independent observation.
   Report its admission refusal separately from compiler rejection. A successful
   helper compilation does not explain the missing worker reply or establish the
@@ -394,15 +466,19 @@ a change history. Leave unchecked work visibly pending.
 
 ## Decisions still open in this draft
 
-- Exact milestone meanings, optional transitions, publication protocol, and final
-  host observation points; then the shared-memory layout and ABI compatibility.
+- Exact milestone meanings, the state table needed before consolidating fields,
+  publication protocol, and final host observation points; then the shared-memory
+  layout and ABI compatibility.
 - Public representation of observer-owned evidence, reuse of subprocess metadata,
   and JSON compatibility without duplicated authoritative facts.
-- Minimal failed-operation/status representation and the subsequent choice of
-  bounded text storage, stderr capture, or distinct justified uses of both.
+- Minimal failed-operation/status representation and bounds/publication for the
+  primary shared-memory text region. Early or uninstrumented stderr capture
+  remains a separate deferred coverage question, with no assumed replacement.
 - Summary precedence for multiple observations and the compatibility treatment of
   outcomes whose present names or rules imply unsupported causes, particularly
   `sandbox_apply_failed` and `runner_sandbox_denied`.
+- Correlation criteria, capture availability, and the evidence needed for any
+  stronger policy-cause claim, kept separate from PW's execution summary.
 - Placement of coverage for production C-worker failures and the disposition of
   unused Swift apply implementation and its separately scoped tests.
 - The smallest test arrangement that proves unfamiliar-code preservation across
