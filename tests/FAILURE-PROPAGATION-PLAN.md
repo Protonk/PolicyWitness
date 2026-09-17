@@ -1,13 +1,14 @@
 # Failure evidence through the worker, runner, and controller
 
-## Status: outline draft
+## Status: execution plan; implementation pending
 
-This is a proposed work sequence, not an implemented contract or a finished
-specification. All work below is pending. Record layouts, public field names,
-JSON compatibility behavior, and exact test placement need to be settled as each
-step is prepared. A preliminary correction precedes the three major steps. Each
-step should produce reviewable changes and acceptance evidence before the next
-begins; the first major step is divided into smaller implementation batches.
+This is an execution plan, not an implemented contract or a finished
+specification. All implementation work below is pending. Record layouts, public
+field names, JSON compatibility behavior, and exact test placement need to be
+settled as each step is prepared. A preliminary correction precedes the three
+major steps. Each step should produce reviewable changes and acceptance evidence
+before the next begins; the first major step is divided into smaller
+implementation batches.
 
 ## Goal and scope
 
@@ -148,8 +149,17 @@ reordering the classifier's branches.
   interim diagnostic must not claim an observed apply return when it cannot
   distinguish the operation. A published zero or inconsistent flags do not
   establish failure either. Successful application has its own `applied` marker.
+- [ ] Repair the host's polling/cleanup observations before changing their
+  classification. Record why polling stopped, including sentinel deadline expiry
+  separately from any later termination request. Retain termination-call results
+  and report exit/signal status only when `waitpid` actually reaped the child;
+  zero-initialized wait storage is not a clean exit. Carry these host observations
+  through `CWorkerOutput` and the CLI, reusing authoritative subprocess metadata,
+  and document their validity and meanings beside the relevant definitions.
+  These repairs require no worker ABI change and belong in this batch. The
+  policy-write failure path's evidence preservation remains step 1C work.
 - [ ] Distinguish pre-apply exit, signal, and host-enforced deadline using the
-  evidence already available. A clean exit without completion does not establish
+  confirmed observations. A clean exit without completion does not establish
   a timeout. A published failure followed by cleanup trouble must retain both
   observations; do not unconditionally let a later kill replace an earlier report.
 - [ ] Include the meaning of `runner_sandbox_denied` in this review. Decide and
@@ -178,7 +188,11 @@ reordering the classifier's branches.
   effort. Preserve the live `computePolicyHash` function in the same source file.
 - [ ] Add classifier rows for absent publication, inconsistent flags, pre-apply
   exit and signal, pre-apply host termination, and reported failure plus cleanup
-  trouble. Use the existing pre-ready delay seam for a real CLI deadline case.
+  trouble. Add host-driver controls for deadline expiry followed by voluntary exit
+  during the grace period, a completed report followed by cleanup termination,
+  and failed termination/reaping calls. Deadline detection must not depend on
+  SIGKILL, and failure to obtain wait status must leave process status absent.
+  Use the existing pre-ready delay seam for a real CLI deadline case.
   Add a correlation control with an ordinary denial followed by unrelated
   termination: retain both observations without claiming a sandbox kill. Preserve
   existing successful, post-apply timeout, and partial-result contracts.
@@ -199,9 +213,10 @@ reordering the classifier's branches.
   claim; `runner_subprocess` and both mirrored overrides are present. Run the
   same specimen without overrides as a positive control and require the deny
   prediction, permission-failure attempt, and `drift=false` that the failure
-  run must not contain, so the absence assertions are not vacuous. Write the
-  case before the classifier change so it fails on the current attribution and
-  passes after. Register it in the suite `run.sh`, `tests/catalog.json`,
+  run must not contain, so the absence assertions are not vacuous. Assert that
+  neither run claims that the sandbox caused termination. Write the case before
+  the classifier change so it fails on the current attribution and passes after.
+  Register it in the suite `run.sh`, `tests/catalog.json`,
   `tests/COVERAGE.md`, and the suite README. Record, without asserting, whether
   the per-step prediction shape distinguishes a validator that never ran from
   one that answered short; that decision belongs to step 1A.
@@ -267,8 +282,9 @@ a contract, not an edit count.
   compatible mapping exists still need a supervisor-only fallback.
 - [ ] Review when the host observes progress and takes its final snapshot around
   reaping. Account for publication during timeout/cleanup and preserve confirmed
-  slots. Record readiness already observed by the host. Inspect ignored signal
-  and wait results rather than copying them into fields with stronger meanings.
+  slots. Record readiness already observed by the host. Preserve the step-0
+  distinctions among deadline expiry, termination requests and their results,
+  and successfully obtained process status when joining the new worker evidence.
 - [ ] Carry worker evidence and host observations through `CWorkerOutput`, the
   orchestrator, runner JSON, client forwarding, and controller envelope. Reuse
   the client's byte forwarding and the controller's opaque JSON retention where
@@ -351,11 +367,13 @@ the step-2 inventory and step-3 controls.
 | 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | Pending |
 | 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | Pending |
 | 0 | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | Pending |
-| 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | No allow/deny prediction, permission-failure attempt, drift value, or sandbox-cause summary anywhere in the envelope; the control run produces each of those from the same specimen; process evidence and overrides retained | Pending |
+| 0 | Deadline expiry followed by voluntary exit during grace | Host driver and classifier controls | Observed deadline expiry retained without requiring SIGKILL; separately obtained exit status retained | Pending |
+| 0 | Failed termination/reaping calls | Host driver and classifier controls | Termination request and call result distinguished; exit/signal status absent unless successfully obtained by reaping | Pending |
+| 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | Pending |
 | 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
 | 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
 | 1C | Child stops reading during host policy transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it | Pending |
-| 1C | Failure report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states | Original reported failure and subsequent supervisor observations both survive | Pending |
+| 0 | Completed report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states; step 1C rechecks new worker failure records | Reported completion or failure and subsequent supervisor observations both survive; cleanup termination alone does not establish sentinel deadline expiry | Pending |
 | 1C | Failure after completed probes | Real worker through CLI, with independent effect checks | Completed step evidence and independently checked effects survive | Pending |
 | 1A | Unpublished or incomplete record | C publication and Swift shared-memory decoding controls | No payload fields treated as confirmed evidence | Pending |
 | 1B | Same observed failure with rich, missing, or truncated text | Worker diagnostic publication, host decoding/classification, and CLI preservation | Identical justified operation/status classification across diagnostic availability | Pending |
@@ -548,12 +566,12 @@ A check that was not run remains unverified, with its reason recorded.
 | Completed implementation batch | None; implementation has not started |
 | Next batch | Step 0: correct unsupported attribution using the existing ABI |
 | ABI revision state | Existing ABI version 5 is the accepted baseline; no new revision is under construction |
-| Chosen field contract locations | Pending step 1A; no new field contract has been selected |
+| Chosen field contract locations | Pending step 0 for repaired host observations and step 1A for new worker fields; no new field contract has been selected |
 | Inventory entries closed / remaining limitations | None closed; implementation and acceptance work remain pending; stderr capture remains a deferred coverage question |
 | Verified source and signed app | No implementation build verified; record source revision and local changes, build command, app path, and bundle-integrity evidence when available |
 | Checks, results, and evidence paths | No implementation checks run; record exact commands, results, and retained evidence for the completed batch |
 
-## Decisions still open in this draft
+## Decisions to resolve within implementation batches
 
 - Exact milestone meanings, the state table needed before consolidating fields,
   publication protocol, and final host observation points; then the shared-memory
@@ -575,5 +593,5 @@ A check that was not run remains unverified, with its reason recorded.
 - Where groups genuinely share reporting code, and where separate paths better
   preserve the meaning of the evidence.
 
-Resolve these questions within the relevant step. This draft does not authorize
+Resolve these questions within the relevant step. This plan does not authorize
 raising limits or replacing the existing test-equipment plan.
