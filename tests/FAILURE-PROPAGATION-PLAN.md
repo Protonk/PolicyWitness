@@ -153,9 +153,10 @@ reordering the classifier's branches.
   a timeout. A published failure followed by cleanup trouble must retain both
   observations; do not unconditionally let a later kill replace an earlier report.
 - [ ] Include the meaning of `runner_sandbox_denied` in this review. Decide and
-  document interim outcome semantics and compatibility explicitly. A stage marker
-  cannot make a post-apply signal prove kernel sandbox attribution. Do not retain
-  that inference merely because an existing test expects the label.
+  document interim outcome semantics and compatibility explicitly. A post-apply
+  signal does not prove kernel sandbox attribution, and no progress evidence added
+  in later steps changes that. Do not retain the inference merely because an
+  existing test expects the label.
 - [ ] Decouple termination/log correlation from a prior sandbox-cause label in
   the same batch as changing that label. Capture already runs for known worker
   PIDs when enabled; the current outcome gate selects the `first_deny` summary.
@@ -206,6 +207,15 @@ the legacy status fields sufficient to distinguish all failed operations.
   an equally clear consolidated encoding. Existing `done` may publish a terminal
   payload without an additional validity word, but payload validity, failed
   operation, and terminal success/failure still need unambiguous meanings.
+- [ ] Before implementing new or changed cross-language fields, record their
+  contract beside the authoritative ABI/API definitions or in existing contract
+  documentation. For each field specify its producer, publication/validity
+  condition, type (including width and signedness), units, Swift interpretation,
+  and final JSON path and type. Include absent versus zero (and omitted versus
+  null), unfamiliar values, and whether each receiving boundary decodes or forwards
+  it unchanged. Reference existing layout definitions rather than copying offsets
+  into a second schema. Link the chosen contract locations in the current
+  execution state below; keep them current when later batches change fields.
 - [ ] Implement worker publication in preallocated, pre-touched shared memory.
   Publish payload validity with release/acquire ordering; document its relation
   to progress, `applied`, `done`, and per-slot completion. Keep the post-apply path
@@ -224,7 +234,7 @@ the legacy status fields sufficient to distinguish all failed operations.
   reserved space is an option, not a specification. Update the C/Swift layout
   and version together as needed, extend layout checks, and specify incompatible
   worker behavior. Include a basic unfamiliar-diagnostic-code preservation control
-  now; step 3 will exercise the additional routes introduced later.
+  for the worker-to-CLI route.
 
 #### B. Prove reporting with compilation failure and add diagnostic detail
 
@@ -244,16 +254,13 @@ Sparse-evidence cases remain separate acceptance obligations.
   usable mapping, direct dependency/runtime stderr output, or unpublished details
   lost in a reporting-path crash. A separate stream may retain context when the
   shared-memory mechanism itself fails. Record this coverage gap explicitly;
-  preserving an emission does not establish that the CLI can collect it.
-- [ ] Keep a narrowly scoped, deferred evaluation of capturing early or otherwise
-  uninstrumented diagnostics in step 2. Shared-memory text does not close that
-  question. Capturing stderr adds no worker writes by itself, but its destination,
-  resources, draining, and teardown can affect execution. Any proposed capture
-  must justify those costs before joining normal runs.
+  preserving an emission does not establish that the CLI can collect it. This
+  step does not add stderr capture.
 - [ ] Preserve and test the restriction on post-apply diagnostic syscalls and
-  new allocation dependencies. A pre-apply-only helper for the existing stderr
-  sites must not disable post-apply memory-only result/error publication. Existing
-  per-step shared-memory diagnostics remain available after application.
+  new allocation dependencies. If the existing stderr sites are routed through a
+  helper that is silent after application, that helper must not disable the
+  post-apply memory-only result/error publication. Existing per-step
+  shared-memory diagnostics remain available after application.
 - [ ] Verify the compiler diagnostic reaches the CLI. For otherwise identical
   observed failures, controls with rich, missing, and truncated text must retain
   the same justified operation/status classification.
@@ -270,9 +277,11 @@ that record through a simultaneous pipe failure.
   path to preserve evidence when a child stops reading; do not kill-and-discard
   its status or lose the report through EPIPE/SIGPIPE handling. Record local pipe
   failure and child evidence independently, retaining bounded cleanup.
-- [ ] Keep a host-driver test for a child that stops consuming input even after
-  source admission moves upstream in step 2. Test report-present and report-absent
-  behavior at suitable boundaries, without requiring one timing-dependent race.
+- [ ] Add a host-driver test for a child that stops consuming input. Do not make
+  it depend on an oversized specimen reaching the worker, so it stays valid if
+  admission later rejects such input upstream. Test report-present and
+  report-absent behavior at suitable boundaries, without requiring one
+  timing-dependent race.
 - [ ] Include early failures before publication, unexpected termination, and a
   report followed by cleanup trouble. These remain first-class acceptance cases
   even when ordinary admission prevents a particular specimen from reaching them.
@@ -283,22 +292,27 @@ that record through a simultaneous pipe failure.
   absent. Use a deterministic harness boundary for the failure.
 
 Acceptance should cover the following observations, with expected facts written
-before implementation. Exact diagnostic prose need not be fixed.
+before implementation. Exact diagnostic prose need not be fixed. The owning batch
+first establishes each row; later batches must recheck rows whose evidence changes.
+When implemented, replace `Pending` with the actual test file and case/function,
+plus the canonical catalog ID for public cases. Where several tests establish a
+row, identify which boundary each covers. Use the same test-entry convention for
+the step-2 inventory and step-3 controls.
 
-| Case | Evidence that must reach the consumer |
-| --- | --- |
-| Ordinary successful specimen | Existing attempt/prediction evidence; no fabricated failure record |
-| Source exceeds the existing worker cap at the worker boundary | Worker rejection and relevant byte limit; last progress and process evidence retained even if the policy pipe also fails |
-| Ordinary SBPL syntax error | An actual compilation failure and its diagnostic, distinguished from an observed application result |
-| Observed application failure | Operation and meaningful native result retained; use a deterministic existing test boundary if no reliable live specimen reaches it |
-| Existing pre-ready delay exceeds the worker budget | The host's deadline/termination observations, with no invented library failure |
-| Unexpected worker exit without a report | Actual process status and absence of a report; unknown underlying cause |
-| Failed mapping with no usable worker report | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame |
-| Child stops reading during host policy transfer | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it |
-| Failure report followed by cleanup trouble | Original reported failure and subsequent supervisor observations both survive |
-| Failure after completed probes | Completed step evidence and independently checked effects survive |
-| Unpublished or incomplete record | No payload fields treated as confirmed evidence |
-| Same observed failure with rich, missing, or truncated text | Identical justified operation/status classification across diagnostic availability |
+| First owning batch | Case | Boundary to exercise | Evidence that must reach the consumer | Implemented test entry |
+| --- | --- | --- | --- | --- |
+| 1A | Ordinary successful specimen | Real worker through CLI | Existing attempt/prediction evidence; no fabricated failure record | Pending |
+| 1C | Source exceeds the existing worker cap at the worker boundary | C worker guard and host policy-transfer handling | Worker rejection and relevant byte limit; last progress and process evidence retained even if the policy pipe also fails | Pending |
+| 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | Pending |
+| 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | Pending |
+| 0 | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | Pending |
+| 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
+| 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
+| 1C | Child stops reading during host policy transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it | Pending |
+| 1C | Failure report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states | Original reported failure and subsequent supervisor observations both survive | Pending |
+| 1C | Failure after completed probes | Real worker through CLI, with independent effect checks | Completed step evidence and independently checked effects survive | Pending |
+| 1A | Unpublished or incomplete record | C publication and Swift shared-memory decoding controls | No payload fields treated as confirmed evidence | Pending |
+| 1B | Same observed failure with rich, missing, or truncated text | Worker diagnostic publication, host decoding/classification, and CLI preservation | Identical justified operation/status classification across diagnostic availability | Pending |
 
 Use real worker failures and existing override boundaries for CLI coverage.
 Use the C harness for publication/early-exit behavior and Swift unit tests for
@@ -308,7 +322,9 @@ its status is evidence about process handling, not sandbox policy behavior.
 Publication claims need review of the synchronization protocol as well as tests.
 Do not use a convenient syntax-error case as a substitute for early-exit and
 missing-report coverage, or use synthetic transport records to claim production
-failure attribution coverage.
+failure attribution coverage. Record any boundary left untested; a passing
+classifier test or unused Swift apply-helper test cannot complete a row that
+requires C-worker publication or CLI forwarding.
 
 This step is complete when a real compilation failure and its diagnostic reach
 the CLI, progress remains useful without a report, and the pathological cases
@@ -336,7 +352,7 @@ Admission limits:
 | Source size | 262,143 bytes (`POLICY_MAX` includes NUL) | Share the existing cap with host admission; retain and test the worker guard |
 | Probe count and parameter count | 256 steps; 1,024 parameters | Shared host-admission reporting with field, observed count, and capacity |
 | Worker string/argument storage | Step ID 63 bytes; target 511; parameter key 127 and value 383; 15 supplied exec args of 127 bytes each | Same admission route where appropriate, retaining units and offending field/step |
-| Fallback `sbpl-check` | 4 MiB source cap | Helper-owned admission rejection; distinguish declined compilation from compiler rejection |
+| Fallback `sbpl-check` | 4 MiB source cap; its `policy_too_large` outcome reaches `policy_check_status`, but the startup note prose reports any non-compile as failed | Helper-owned admission rejection; keep the distinction in the note prose as well |
 
 Runtime evidence loss and observation boundaries:
 
@@ -382,17 +398,23 @@ Runtime evidence loss and observation boundaries:
   adopted in step 1. Preserve independently obtained predictions and kernel events
   when an attempt lacks a completed result. A post-apply gap must not default to
   either policy interference or an instrumentation defect.
-- [ ] Keep the stderr evaluation bounded and explicitly deferred until its costs
-  and benefits are reviewed. Specify pre-mapping coverage, direct dependency
-  output, blocking/backpressure, dropped bytes, EOF, and cleanup; ignoring SIGPIPE
-  does not prevent a full pipe from blocking. If pursued, use a limited capture
-  experiment to assess those obligations before adopting capture in normal runs.
-  Treat captured text as context without deriving failure classifications from it. An
-  explicit decision to omit capture must retain the documented coverage gap.
+- [ ] Evaluate capture of early or otherwise uninstrumented stderr diagnostics
+  as a bounded, deferred question. Shared-memory text does not close it. Capturing
+  stderr adds no worker writes by itself, but its destination, resources,
+  draining, and teardown can affect execution, and any proposed capture must
+  justify those costs before joining normal runs. Specify pre-mapping coverage,
+  direct dependency output, blocking/backpressure, dropped bytes, EOF, and
+  cleanup; ignoring SIGPIPE does not prevent a full pipe from blocking. If
+  pursued, use a limited capture experiment to assess those obligations first.
+  Treat captured text as context without deriving failure classifications from
+  it. An explicit decision to omit capture must retain the documented coverage
+  gap.
 - [ ] Keep `sbpl-check` on the missing-reply path as an independent observation.
-  Report its admission refusal separately from compiler rejection. A successful
-  helper compilation does not explain the missing worker reply or establish the
-  worker's last stage; no reply does not prove the worker never published a record.
+  Its admission refusal already reaches `policy_check_status` as a distinct
+  outcome; keep that distinction in the startup note prose, which reports any
+  non-compile as failed. A successful helper compilation does not explain the
+  missing worker reply or establish the worker's last stage; no reply does not
+  prove the worker never published a record.
 - [ ] Keep every existing capacity and budget fixed. For the controller's capture
   boundary, make loss explicit; whether parsing should have a separate/larger
   budget is a later decision. Do not promise preservation of a record inside an
@@ -450,6 +472,10 @@ paths for public test runs; the dispatcher replaces its selected output director
 Use normal signed builds for changes to the worker, ABI, or runner, and run CLI
 cases through `tests/run.sh` so bundle integrity and case results are recorded.
 Do not edit binaries inside an already inspected app to create test failures.
+SwiftPM unit tests do not rebuild the signed app used by CLI tests. Record the
+source revision (and any uncommitted source changes), exact build command, tested
+app path (`PW_APP_DIR` if set), and the dispatcher's bundle-integrity evidence so
+the next agent can tell which implementation the CLI results establish.
 
 Select verification according to the changed boundary: C harness and ABI layout,
 Swift classifier/envelope tests, validator transport tests, controller parsing
@@ -464,6 +490,22 @@ closed, remaining limitations, exact tests and results, and evidence paths.
 Explain any changed outcome semantics without turning current-behavior docs into
 a change history. Leave unchecked work visibly pending.
 
+### Current execution state
+
+Update this block in place after each implementation batch and before handing off;
+keep the status paragraph and checkboxes consistent with it. Link to retained
+evidence and authoritative contracts rather than adding a chronological work log.
+A check that was not run remains unverified, with its reason recorded.
+
+| Item | Current state |
+| --- | --- |
+| Completed implementation batch | None; implementation has not started |
+| Next batch | Step 0: correct unsupported attribution using the existing ABI |
+| Chosen field contract locations | Pending step 1A; no new field contract has been selected |
+| Inventory entries closed / remaining limitations | None closed; implementation and acceptance work remain pending; stderr capture remains a deferred coverage question |
+| Verified source and signed app | No implementation build verified; record source revision and local changes, build command, app path, and bundle-integrity evidence when available |
+| Checks, results, and evidence paths | No implementation checks run; record exact commands, results, and retained evidence for the completed batch |
+
 ## Decisions still open in this draft
 
 - Exact milestone meanings, the state table needed before consolidating fields,
@@ -473,7 +515,7 @@ a change history. Leave unchecked work visibly pending.
   and JSON compatibility without duplicated authoritative facts.
 - Minimal failed-operation/status representation and bounds/publication for the
   primary shared-memory text region. Early or uninstrumented stderr capture
-  remains a separate deferred coverage question, with no assumed replacement.
+  remains a separate deferred coverage question.
 - Summary precedence for multiple observations and the compatibility treatment of
   outcomes whose present names or rules imply unsupported causes, particularly
   `sandbox_apply_failed` and `runner_sandbox_denied`.
