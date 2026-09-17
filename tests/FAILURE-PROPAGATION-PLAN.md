@@ -73,6 +73,13 @@ Useful existing protection lives in `runner_abi_layout`, `runner_c_worker_harnes
 `source_drift`, and `witness_contract`. Trace individual assertions before deciding
 whether to extend a case or add a complementary one.
 
+For compilation failure, `runner_c_worker_harness/compile_failure` observes real
+C-worker publication and exit. In
+`runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift`, the case
+`postApplied hook does not fire when compile fails` drives the real worker through
+the Swift host driver and checks validator-hook suppression. Neither establishes
+compilation diagnostics reaching the CLI; retain both while adding that coverage.
+
 ## Proposed observer contract
 
 The first rule is that `normalized_outcome` describes whether and how PW completed
@@ -240,9 +247,24 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   path matches when an event lacks a PID and does not require operation agreement.
   Require a confirmed worker PID for worker correlation; retain unmatched events
   as observer evidence. Define operation relevance before attaching an event to
-  a step, including any supported operation aliases, and do not treat a shared
-  path alone as step identity. The current observer uses a trailing `--last`
-  window and parsed events have no structured timestamp. Report that window and
+  a step, including any supported operation aliases. Derive relevant operations
+  from the submitted attempt's kind/action, joined to the reply by step ID:
+  sandbox_check queries and attempts are independently routed, so the query's
+  operation is not authoritative for what was attempted. The current reply's
+  attempt object omits kind/action; the controller retains the submitted request
+  and can use that provenance without adding duplicate authoritative fields.
+  Keep query filter values separate from attempt targets and observed paths.
+  The existing `prediction_target_is_independent_of_attempt_target` witness case
+  protects this routing distinction; add a correlation control in which query
+  and attempt operations differ as well.
+  Do not treat a shared path alone as step identity. Even matching worker PID,
+  operation, and path cannot distinguish repeated identical attempts without
+  further observations. Represent such matches as ambiguous candidate
+  associations, not unique step occurrences; retain the event once in observer
+  evidence even if several steps reference it. Pin this with repeated-attempt
+  controls and document the chosen representation.
+  The current observer uses a trailing `--last` window and parsed events have no
+  structured timestamp. Report that window and
   its limits; do not claim exact run membership, step ordering, or protection
   against PID reuse without the observations needed to establish them. Test
   missing/mismatched event PIDs, a host/client-only reply, and different operations
@@ -263,8 +285,9 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   termination/reaping calls. Pin the classifier table with constructed inputs and
   exercise lifecycle observations through the host driver; use narrow test-only
   OS-call controls where real failure is unreliable, not result-forcing request
-  overrides. Deadline detection must not depend on SIGKILL, and failure to obtain
-  wait status must leave process status absent.
+  overrides. Passing constructed classifier rows does not complete the driver
+  acceptance gate. Deadline detection must not depend on SIGKILL, and failure to
+  obtain wait status must leave process status absent.
   Use the existing pre-ready delay seam for a real CLI deadline case.
   Add a correlation control with an ordinary denial followed by unrelated
   termination: retain both observations without claiming a sandbox kill. Preserve
@@ -273,7 +296,8 @@ are sufficient for this limited correction; keep worker ABI version 5 unchanged.
   `tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh`.
   Use a populated plan under a policy that would deny one probe and allow
   another, with `worker_pre_ready_hang_ms` and `worker_timeout_ms` set so the
-  host gives up before application. Choose the delay to exceed the fixed 1s
+  host gives up before application. Both overrides already exist; this case
+  requires no new request seam. Choose the delay to exceed the fixed 1s
   ready-byte wait, the overridden sentinel, and the 1s exit grace by a wide
   margin, and run with `--no-log-capture`; log correlation independence belongs
   to the correlation control above. The seam sleeps after successful compilation
@@ -323,7 +347,7 @@ Step-0 dependency checks (paths below identify existing artifacts):
 | Artifacts | Required update or verification |
 | --- | --- |
 | `runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift`, `CWorkerTests.swift`, and `EnvelopeInvariantTests.swift` | Pin the interim classifier table, retain real-worker signal-seam coverage, and update outcome constants/prose while preserving subprocess-presence and process-status assertions. |
-| `controller/src/run_flow.rs`, `controller/src/sandbox_log.rs`, and observer tests in `controller/src/bin/sandbox-log-observer.rs` | Exercise worker identity, revised correlation gate, event relevance, and capture-window limitations; keep correlation distinct from cause and preserve capture for successful runs. |
+| `controller/src/run_flow.rs`, `controller/src/sandbox_log.rs`, and observer tests in `controller/src/bin/sandbox-log-observer.rs` | Exercise worker identity, revised correlation gate, attempt-derived operation relevance, repeated-attempt ambiguity, and capture-window limitations; keep correlation distinct from cause and preserve capture for successful runs. |
 | `tests/suites/sbpl_allowdeny_consistency/check.py`, `tests/suites/blackbox_e2e/validate_run.py`, `tests/suites/blackbox_menagerie/checker_controls.py`, and `tests/fixtures/blackbox_e2e/` | Replace assumptions of measured `deny_signal.delta == 0` with the chosen unavailable-channel contract; update fixtures and checker controls while retaining their other evidence assertions. Include the signal record constructed by `EnvelopeInvariantTests`. |
 | `PWRunnerAPI.swift::NormalizedOutcome`, `tests/COVERAGE.md`, and `tests/suites/source_drift/check.py` | Keep outcome constants and matrix rows in bidirectional agreement, and retain a matrix row for every `runner_outcome_<name>` suite. Run the existing `source_drift` gate; preserve its checks. |
 | `PWRunnerAPI.swift::PWRunnerRunResult` and `PWRunnerStepResult`, `runner/Clients/PWRunnerClient/main.swift`, `EnvelopeInvariantTests.swift`, and schema assertions/fixtures throughout `tests/` | Pin response version 5 and literal signal null, retain legacy reply decoding, and keep optional subprocess absence distinct from explicit per-step null requirements. |
@@ -409,8 +433,10 @@ a contract, not an edit count.
   runner result, and the controller retains `serde_json::Value` within its capture
   limit. Test those paths with unfamiliar fields/codes; do not add typed
   reconstruction or diagnostic-specific branches to these receivers merely to
-  forward the new record. Distinguish failed operations in the evidence before
-  deciding which merit separate top-level outcome strings.
+  forward the new record. Focus recognition-dependent preservation checks on
+  shared-memory decoding and runner assembly, while still proving client and
+  controller forwarding through the CLI. Distinguish failed operations in the
+  evidence before deciding which merit separate top-level outcome strings.
 - [ ] Settle the per-step missing-evidence contract before extending the result
   types. Distinguish a validator that was not invoked from one that ran but did
   not supply this step's verdict, using run/step observations without duplicating
@@ -425,7 +451,11 @@ a contract, not an edit count.
   offsets. The header's reserved space is an option, not a specification. Update
   the C/Swift definitions together, extend layout checks, and verify rejection
   of incompatible workers. Include a basic unfamiliar-diagnostic-code
-  preservation control for the worker-to-CLI route.
+  preservation control for the worker-to-CLI route. A separately built test
+  producer selected through the existing `worker_executable_path` override can
+  publish a controlled record using the batch's ABI contract, exercising the real
+  host driver and forwarding path. Use the step-3 fixture constraints below;
+  do not add a result-forcing request key or modify an inspected app to do this.
 
 #### B. Prove reporting with compilation failure and add diagnostic detail
 
@@ -514,7 +544,7 @@ the step-2 inventory and step-3 controls.
 | 0 | Completed report followed by nonzero exit, independent signal, or unavailable wait status | Host driver and classifier controls | Published completion and step results survive; process disposition remains independent; run is not `ok` and claims no sandbox cause | Pending |
 | 0 | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | Pending |
 | 0 | Unobserved per-step signal channel | Runner JSON encoding/decoding and real CLI failure/success controls, including the pre-apply case above | Response version 5 and literal `deny_signal: null` survive forwarding; legacy reply decoding remains supported and dependent checkers retain their other evidence checks | Pending |
-| 0 | Correlation with incomplete identity or irrelevant events | Controller correlation and CLI observer-invocation controls | No worker correlation from host/client PID or missing/mismatched event PID; same-path unrelated operations do not establish step identity; availability and window limits are explicit | Pending |
+| 0 | Correlation with incomplete identity, irrelevant events, or repeated attempts | Controller correlation and CLI observer-invocation controls | No worker correlation from host/client PID or missing/mismatched event PID; relevance follows the attempt rather than an independently routed query; same-path unrelated operations do not match; repeated identical attempts retain ambiguity; availability and window limits are explicit | Pending |
 | 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
 | 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
 | 1C | Child closes policy input or exits during host transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it; this does not cover an open but undrained pipe | Pending |
@@ -572,6 +602,7 @@ Runtime evidence loss and observation boundaries:
 | Policy transfer and early exit | Worker closes policy input or exits while host writes | Host pipe observations plus available worker report and process status; retain step-1 protection after admission changes |
 | Open but undrained policy pipe | Blocking host writes precede sentinel polling; a live non-reading child need not produce EPIPE | Explicitly deferred liveness limitation under step 1C; no transfer deadline or claim of bounded transfer is added by this plan |
 | Validator request framing and result association | 65,536-byte line buffer; overlong input yields a diagnostic with null step ID; classifier counts all records while step assembly drops unassociated ones | Preserve validator-owned diagnostics independently of the step join; record count alone does not establish prediction completeness |
+| Validator reply byte decoding | Whole-stream UTF-8 conversion falls back to an empty string on any invalid byte, discarding valid preceding verdicts without a decode diagnostic | Host-owned decode failure with retained valid frames, byte evidence, and process observations; keep distinct from malformed JSON and an empty reply |
 | Validator lifecycle | Partial-result return retains evidence, but kill/wait results are unchecked and zero-initialized wait storage is decoded | Apply the step-0 host observation contract to the validator, preserving verdicts alongside cleanup errors |
 | Controller reply capture | Full subprocess output is collected before only a 1 MiB prefix is retained/parsed | Receiver-owned loss with exact received-byte count and retained-prefix count, distinct from malformed producer JSON; this is not a streaming memory bound |
 | Execution budgets | Worker nominal 60s polling budget, synchronous validator hook with 30s I/O, client default 240s | Observer-owned deadlines with phase, process status, and partial evidence; readiness, policy transfer, and hook time are not one end-to-end worker deadline; `--timeout-ms` does not set all budgets |
@@ -607,9 +638,31 @@ Runtime evidence loss and observation boundaries:
   Add a real validator-to-CLI case with an overlong encoded request between valid
   probes, keeping the worker's step IDs and attempt inputs within their caps and
   exceeding framing through an independently routed sandbox_check query field.
+  Use a long query operation with a supported, resolvable path filter and short
+  valid attempt inputs: current admission rejects an empty operation but does not
+  cap its length. Do not rely on an overlong path value; `makeValidatorProbe`
+  skips paths rejected by `pathFilterIsUnresolvable`, which can prevent the test
+  from reaching the validator. Measure the serialized line including JSON framing
+  and show that the middle query reached the batch reader's overlong-line guard.
   The framing diagnostic survives, both valid results keep their IDs,
   the unanswered step has no prediction/drift, completed attempts survive, and
   the run is not `ok`. Keep decoder controls separate from this production case.
+- [ ] Preserve valid validator frames before an invalid UTF-8 frame. The current
+  `String(data: stdoutBytes, encoding: .utf8) ?? ""` conversion erases the whole
+  stream on a single invalid byte; it cannot distinguish that boundary failure
+  from an empty reply. Frame the bytes before decoding and retain preceding
+  valid verdicts with their original step IDs. Report decoding failure as a host
+  observation, with received-byte evidence and process metadata, without
+  inventing a validator verdict or repairing invalid text into accepted JSON.
+  Retain any independently observed I/O failure as well.
+  Add direct decoder controls and a validator-fixture-to-CLI case containing valid
+  replies followed by invalid UTF-8. Require retained predictions and completed
+  attempts, missing prediction/drift for the unanswered step, and a non-`ok`
+  summary identifying the decode boundary. Keep malformed-JSON and empty-reply
+  controls separate. Include valid multibyte text split across read boundaries
+  and an incomplete multibyte tail, so transport chunking is not mistaken for
+  invalid encoding. These controls establish receiver behavior, not a claim that
+  a normal validator produces invalid UTF-8.
 - [ ] Group changes around a shared reporting path and its evidence contract.
   First examine excess steps and excess parameters: keep their local capacity
   checks, but try to route both through the same host-admission failure record
@@ -685,7 +738,12 @@ still require their defined rejection or fallback behavior.
 - [ ] Choose a bounded test arrangement after the record format exists: direct
   decoder/forwarding controls and, if practical, a test-only producer exercising
   the worker-to-CLI route. Use at least two unfamiliar codes and distinct payloads
-  without registering them in production outcome mappings.
+  without registering them in production outcome mappings. Extend the basic
+  step-1A control; prefer a separately built fixture selected by the existing
+  `worker_executable_path` boundary override. Keep its source and controlled
+  payloads in test equipment, its executable outside the inspected app, and the
+  override mirrored in the final reply. It must obey the supported ABI's real
+  publication protocol; it does not establish production failure attribution.
 - [ ] Carry each record through the applicable C/Swift decoding, runner encoding,
   client forwarding, and controller parsing boundaries. Check the final record's
   producer, operation, code/domain, and diagnostic detail against the independently
@@ -772,7 +830,8 @@ A check that was not run remains unverified, with its reason recorded.
   `sandbox_apply_failed` and `runner_sandbox_denied`.
 - Correlation criteria, capture availability, and the evidence needed for any
   stronger policy-cause claim, kept separate from PW's execution summary. Enforce
-  step 0's worker-identity requirements and state the trailing-window limits.
+  step 0's worker-identity and attempt-provenance requirements, specify ambiguous
+  associations for repeated attempts, and state the trailing-window limits.
 - Per-step missing-prediction and incomplete-attempt representation in step 1A,
   including compatibility sentinels and outcome spellings; these must not imply
   unobserved native returns or prove that an operation never started.
