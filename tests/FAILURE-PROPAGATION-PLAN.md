@@ -73,6 +73,14 @@ Useful existing protection lives in `runner_abi_layout`, `runner_c_worker_harnes
 `source_drift`, and `witness_contract`. Trace individual assertions before deciding
 whether to extend a case or add a complementary one.
 
+The `runner_unit` summary alone does not establish real-worker coverage.
+`CWorkerTests` and `CWorkerValidatorTests` can print `SKIP` and return when their
+selected binaries are missing; `TestKit.run` then counts that return as a pass.
+The catalog requires only `swift` for this suite, so selecting it alone also
+does not trigger the dispatcher's app-integrity inspection. Apply the live-test
+evidence requirements under [Verification and handoff](#verification-and-handoff)
+before crediting these cases.
+
 For compilation failure, `runner_c_worker_harness/compile_failure` observes real
 C-worker publication and exit. In
 `runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift`, the case
@@ -188,7 +196,9 @@ current execution state at each handoff.
   publication, and CLI forwarding separately. Assign required live-boundary
   coverage to the witness in 0A, host-driver controls in 0B, and classification
   and public-contract controls in 0C. Keep coverage claims aligned with the
-  implementation.
+  implementation. Identify which Swift cases require built children and verify
+  their actual execution in retained logs; a passing `runner_unit` summary that
+  includes an internal `SKIP` does not complete their acceptance rows.
   `SandboxApplyTests` exercises the unused Swift helper only; do not extend that
   helper to imitate the new production reporting model. Removal of the helper,
   its helper-specific error type, and its tests is separate cleanup outside this
@@ -667,6 +677,7 @@ Runtime evidence loss and observation boundaries:
 | Open but undrained policy pipe | Blocking host writes precede sentinel polling; a live non-reading child need not produce EPIPE | Explicitly deferred liveness limitation under step 1C; no transfer deadline or claim of bounded transfer is added by this plan |
 | Validator request framing and result association | 65,536-byte line buffer; overlong input yields a diagnostic with null step ID; classifier counts all records while step assembly drops unassociated ones | Preserve validator-owned diagnostics independently of the step join; record count alone does not establish prediction completeness |
 | Validator reply byte decoding | Whole-stream UTF-8 conversion falls back to an empty string on any invalid byte, discarding valid preceding verdicts without a decode diagnostic | Host-owned decode failure with retained valid frames, byte evidence, and process observations; keep distinct from malformed JSON and an empty reply |
+| Validator verdict structure | `verdictFromJSONObject` accepts any JSON object and extracts optional fields; assembly substitutes `rc=-1` when absent while retaining an `allow` or `deny` outcome | Receiver-owned structural rejection, distinct from JSON syntax failure and unfamiliar valid diagnostics; missing native results must not become predictions |
 | Validator lifecycle | Partial-result return retains evidence, but kill/wait results are unchecked and zero-initialized wait storage is decoded | Apply the step-0 host observation contract to the validator, preserving verdicts alongside cleanup errors |
 | Controller reply capture | Full subprocess output is collected before only a 1 MiB prefix is retained/parsed | Receiver-owned loss with exact received-byte count and retained-prefix count, distinct from malformed producer JSON; this is not a streaming memory bound |
 | Execution budgets | Worker nominal 60s polling budget, synchronous validator hook with 30s I/O, client default 240s | Observer-owned deadlines with phase, process status, and partial evidence; readiness, policy transfer, and hook time are not one end-to-end worker deadline; `--timeout-ms` does not set all budgets |
@@ -727,6 +738,30 @@ Runtime evidence loss and observation boundaries:
   and an incomplete multibyte tail, so transport chunking is not mistaken for
   invalid encoding. These controls establish receiver behavior, not a claim that
   a normal validator produces invalid UTF-8.
+- [ ] Validate validator record structure separately from UTF-8 decoding, JSON
+  syntax, and step-ID association. `verdictFromJSONObject` currently accepts any
+  JSON object, including one with a recognized step ID and `"outcome":"allow"`
+  but no `rc`; `buildSandboxCheckResult` then substitutes `rc=-1` while retaining
+  the allow prediction. An expected ID or adequate record count cannot make that
+  a valid observed verdict. Specify required fields and types for supported
+  verdict and diagnostic variants beside the authoritative decoder/types before
+  implementing validation. An allow/deny prediction must carry its observed,
+  correctly typed native result; a missing, null, or wrongly typed result must
+  not be repaired into a prediction. Preserve legitimate diagnostic variants
+  that do not report a native call, including `parse_error` with `step_id:null`,
+  and the documented semantics of per-step errors and unsupported operations.
+  Keep structurally valid unfamiliar diagnostics transportable without a
+  known-code-only allowlist; lack of recognition and malformed structure are
+  separate conditions.
+  Add direct decoder controls for missing/null/wrongly typed required fields,
+  and a validator-fixture-to-CLI control with valid replies followed by an
+  incomplete allow/deny record for an expected step ID. Retain valid predictions,
+  completed attempts, and process observations; the invalid record supplies no
+  prediction or drift, and the run is non-`ok` with a host-owned structural
+  diagnostic. Contrast this with valid diagnostic records lacking native
+  results and unfamiliar valid diagnostics. Retain bounded rejected-frame context
+  with any truncation explicit, without presenting it as an accepted validator
+  verdict.
 - [ ] Group changes around a shared reporting path and its evidence contract.
   First examine excess steps and excess parameters: keep their local capacity
   checks, but try to route both through the same host-admission failure record
@@ -845,6 +880,19 @@ source revision (and any uncommitted source changes), exact build command, teste
 app path (`PW_APP_DIR` if set), and the dispatcher's bundle-integrity evidence so
 the next agent can tell which implementation the CLI results establish.
 
+For acceptance that credits real-worker Swift cases, select `runner_unit`
+together with an app-dependent case in the same public dispatcher invocation
+(for example, `--suite runner_unit --suite runner_c_worker_harness`) so the
+selected app is inspected. Record the actual worker and validator paths used by
+the credited cases and retain `pwrunner_core_tests.log`. Inspect that log for
+internal `SKIP` messages as well as failures: `TestKit` counts a missing-binary
+early return as passed, and the suite wrapper only checks exit status and the
+summary. A skipped required case remains unverified even if the batch reports
+all tests passed. Supply the matching signed build and rerun before accepting
+that row; newly added required live controls must fail clearly when their test
+equipment is absent. Pure classifier/encoding controls may still be credited
+independently. This requirement does not call for a general test-harness redesign.
+
 Select verification according to the changed boundary: C harness and ABI layout,
 Swift classifier/envelope tests, validator transport tests, controller parsing
 tests, and real CLI cases. Include `source_drift` when outcome constants or
@@ -899,6 +947,9 @@ A check that was not run remains unverified, with its reason recorded.
 - Per-step missing-prediction and incomplete-attempt representation in step 1A,
   including compatibility sentinels and outcome spellings; these must not imply
   unobserved native returns or prove that an operation never started.
+- Validator verdict/diagnostic structural requirements in step 2, including
+  legitimate absence of native results and preservation of unfamiliar valid
+  diagnostics; syntactically valid JSON and a matching step ID are insufficient.
 - Placement of coverage for production C-worker failures; unused Swift apply
   implementation and test removal remain outside this effort.
 - The smallest test arrangement that proves unfamiliar-code preservation across
