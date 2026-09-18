@@ -55,3 +55,6 @@ A partial installation without a registry entry is removed only when its exact
 plist proves ownership. The wrapper never pre-cleans the ordinary runner's
 identifier. See `tests/fixtures/byoxpc/README.md` for the ownership contract and
 `shell_helpers/byoxpc_setup` for offline failure controls.
+
+Shared BBX file targets also use owned `/private/tmp` scratch, with before/after
+artifacts and exit cleanup. Existing privacy-database entries are not modified.

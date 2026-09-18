@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import CoreFoundation
 
 /*
  * ValidatorClient — Swift driver for `sb_api_validator --batch <pid>`.
@@ -16,17 +17,10 @@ import Foundation
  *   1. Create stdin + stdout pipes.
  *   2. posix_spawn the validator with FDs dup'd to 0 (probes-in) and
  *      1 (verdicts-out). Argv: ["sb_api_validator", "--batch", "<pid>"].
- *   3. Write all probe lines to stdin in one pass; close stdin to
- *      signal EOF to the validator's fgets loop.
- *   4. Read stdout to EOF (the validator exits when stdin EOFs, which
- *      flushes stdout); parse each non-blank line as a JSON verdict.
- *   5. waitpid the validator with a bounded grace; SIGKILL fallback if
- *      it hangs (it shouldn't — the validator is one fgets loop).
- *
- * The probe-write happens BEFORE any reads so a sudden surge of
- * verdicts doesn't block on a still-unsent probe; the validator's
- * batch is small enough (< ~64 KiB) that the kernel pipe buffer
- * absorbs the whole batch in one write call.
+ *   3. Interleave nonblocking writes and reads under the I/O deadline.
+ *   4. Frame received bytes, then strictly decode UTF-8, JSON and structure.
+ *   5. Use the shared child observer for grace, termination and successful reap.
+ * Transport, decoding, association and process disposition remain independent.
  */
 
 // MARK: - Public input/output types
@@ -46,19 +40,6 @@ public struct ValidatorProbe {
     }
 }
 
-public struct ValidatorVerdict {
-    public var stepId: String?
-    public var operation: String?
-    public var filterType: String?
-    public var filterTypeId: Int?
-    public var filterValue: String?
-    public var rc: Int?
-    public var errnoVal: Int?
-    public var outcome: String             // "allow"|"deny"|"error"|"parse_error"|"bad_filter"
-    public var error: String?
-    public var rawLine: String             // for debugging
-}
-
 public struct ValidatorOutput {
     public var validatorPid: pid_t
     public var verdicts: [ValidatorVerdict]
@@ -72,18 +53,49 @@ public struct ValidatorOutput {
     /// failed to parse mid-line" (> 0 with verdicts.count smaller
     /// than expected).
     public var rawStdoutBytes: Int
+    public var reaped: Bool?
+    public var terminationRequest: PWRunnerTerminationRequest?
+    public var waitErrors: [PWRunnerWaitError]?
+    public var ioError: String?
+    public var decodeFault: PWValidatorDecodeFault?
+    public var expectedProbes: [ValidatorProbe]?
+    public var readError: String?
+    public var stdoutCollectionStop: String?
+    public var expectedStepIds: [String]? { expectedProbes?.map { $0.stepId } }
+    public var probeBytesWritten: Int?
+    public var probeBytesExpected: Int?
 
     public init(validatorPid: pid_t,
                 verdicts: [ValidatorVerdict],
                 exitCode: Int32? = nil,
                 termSignal: Int32? = nil,
                 sentSigkill: Bool = false,
-                rawStdoutBytes: Int = 0) {
+                rawStdoutBytes: Int = 0,
+                reaped: Bool? = nil,
+                terminationRequest: PWRunnerTerminationRequest? = nil,
+                waitErrors: [PWRunnerWaitError]? = nil,
+                ioError: String? = nil,
+                decodeFault: PWValidatorDecodeFault? = nil,
+                expectedProbes: [ValidatorProbe]? = nil,
+                readError: String? = nil,
+                stdoutCollectionStop: String? = nil,
+                probeBytesWritten: Int? = nil,
+                probeBytesExpected: Int? = nil) {
         self.validatorPid = validatorPid
         self.verdicts = verdicts
         self.exitCode = exitCode
         self.termSignal = termSignal
         self.sentSigkill = sentSigkill
+        self.reaped = reaped
+        self.terminationRequest = terminationRequest
+        self.waitErrors = waitErrors
+        self.ioError = ioError
+        self.decodeFault = decodeFault
+        self.expectedProbes = expectedProbes
+        self.readError = readError
+        self.stdoutCollectionStop = stdoutCollectionStop
+        self.probeBytesWritten = probeBytesWritten
+        self.probeBytesExpected = probeBytesExpected
         self.rawStdoutBytes = rawStdoutBytes
     }
 }
@@ -95,6 +107,7 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
     case probeSerializationFailed(String)
     case verdictReadFailed(String)
     case verdictParseFailed(line: String, why: String)
+    case verdictDecodeFailed(PWValidatorDecodeFault)
 
     public var description: String {
         switch self {
@@ -103,6 +116,8 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
         case .probeWriteFailed(let why):          return "write(probes): \(why)"
         case .probeSerializationFailed(let why):  return "serialize probes: \(why)"
         case .verdictReadFailed(let why):         return "read(verdicts): \(why)"
+        case .verdictDecodeFailed(let fault):
+            return "validator \(fault.kind) failure at byte \(fault.byte_offset): \(fault.message)"
         case .verdictParseFailed(let line, let why):
             return "verdict parse failed: \(why); line=\(line)"
         }
@@ -148,6 +163,10 @@ public struct ValidatorClientInput {
 }
 
 public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult {
+    runValidator(input, processCalls: ChildProcessCalls())
+}
+
+func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls) -> ValidatorClientResult {
     // ===== Phase 1: pre-spawn. Any failure here returns .failure with
     // partial=nil because no process or pipe state exists yet. =====
 
@@ -176,17 +195,21 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
             partial: nil
         )
     }
-    _ = fcntl(stdinPipe[1], F_SETFD, FD_CLOEXEC)
-    _ = fcntl(stdoutPipe[0], F_SETFD, FD_CLOEXEC)
-    // Both parent-side pipe ends must be nonblocking so the I/O loop
-    // can drive them interleaved via poll(). Without this, the writer
-    // blocks once the kernel pipe buffer (64 KiB on macOS) is full,
-    // and a validator that emits verdicts faster than we drain them
-    // would deadlock against us.
-    let stdinFlags = fcntl(stdinPipe[1], F_GETFL, 0)
-    if stdinFlags >= 0 { _ = fcntl(stdinPipe[1], F_SETFL, stdinFlags | O_NONBLOCK) }
-    let stdoutFlags = fcntl(stdoutPipe[0], F_GETFL, 0)
-    if stdoutFlags >= 0 { _ = fcntl(stdoutPipe[0], F_SETFL, stdoutFlags | O_NONBLOCK) }
+    // Close all original descriptors across exec; only explicit dup2 targets
+    // belong in the child. Suppress SIGPIPE on this writer, not process-wide.
+    func pipeSetupFailure(_ operation: String) -> ValidatorClientResult {
+        let detail = "\(operation): errno=\(errno) \(String(cString: strerror(errno)))"
+        for fd in stdinPipe + stdoutPipe { close(fd) }
+        return .failure(error: .pipeFailed(detail), partial: nil)
+    }
+    for fd in stdinPipe + stdoutPipe {
+        if fcntl(fd, F_SETFD, FD_CLOEXEC) == -1 { return pipeSetupFailure("F_SETFD") }
+    }
+    if fcntl(stdinPipe[1], F_SETNOSIGPIPE, 1) == -1 { return pipeSetupFailure("F_SETNOSIGPIPE") }
+    for fd in [stdinPipe[1], stdoutPipe[0]] {
+        let flags = fcntl(fd, F_GETFL, 0)
+        if flags == -1 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1 { return pipeSetupFailure("O_NONBLOCK") }
+    }
 
     var fa: posix_spawn_file_actions_t? = nil
     posix_spawn_file_actions_init(&fa)
@@ -224,6 +247,8 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
     var stdinOpen = true
     var stdoutOpen = true
     var ioError: ValidatorClientError? = nil
+    var readError: ValidatorClientError? = nil
+    var collectionStop = "eof"
     let deadline = Date().addingTimeInterval(TimeInterval(input.verdictReadTimeoutMs) / 1000.0)
 
     // Interleave writes (payload → validator stdin) with reads
@@ -232,7 +257,8 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
     // deadline check stays sharp.
     while stdinOpen || stdoutOpen {
         if Date() > deadline {
-            ioError = .verdictReadFailed(
+            collectionStop = stdoutOpen ? "deadline" : "eof"
+            readError = .verdictReadFailed(
                 "exceeded \(input.verdictReadTimeoutMs) ms I/O deadline; "
                 + "wrote \(writeOffset) of \(payload.count) probe bytes; "
                 + "drained \(stdoutBytes.count) stdout bytes"
@@ -258,7 +284,8 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
         }
         if pollRC < 0 {
             if errno == EINTR { continue }
-            ioError = .verdictReadFailed("poll: \(String(cString: strerror(errno)))")
+            collectionStop = "poll_error"
+            readError = .verdictReadFailed("poll: \(String(cString: strerror(errno)))")
             break
         }
         if pollRC == 0 { continue }  // tick, recheck deadline
@@ -288,12 +315,12 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
                             stdinOpen = false
                         }
                     }
-                    if writeOffset >= payload.count {
+                    if stdinOpen && writeOffset >= payload.count {
                         close(stdinPipe[1])
                         stdinOpen = false
                     }
                 }
-                if (pfd.revents & (Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL))) != 0 {
+                if stdinOpen && (pfd.revents & (Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL))) != 0 {
                     if writeOffset < payload.count {
                         ioError = .probeWriteFailed(
                             "stdin closed by peer after \(writeOffset)/\(payload.count) bytes"
@@ -305,120 +332,67 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
             }
             // Reader side: append every available byte until EOF.
             if pfd.fd == stdoutPipe[0] && stdoutOpen {
-                if (pfd.revents & Int16(POLLIN)) != 0 {
+                if (pfd.revents & (Int16(POLLIN) | Int16(POLLHUP) | Int16(POLLERR) | Int16(POLLNVAL))) != 0 {
                     var buf = [UInt8](repeating: 0, count: 8192)
-                    let n = buf.withUnsafeMutableBufferPointer { bp -> Int in
-                        guard let base = bp.baseAddress else { return 0 }
-                        return Darwin.read(stdoutPipe[0], base, bp.count)
-                    }
-                    if n > 0 {
-                        stdoutBytes.append(contentsOf: buf.prefix(n))
-                    } else if n == 0 {
-                        stdoutOpen = false  // validator EOF'd stdout
-                    } else if errno != EAGAIN && errno != EINTR {
-                        ioError = .verdictReadFailed(
-                            "read after \(stdoutBytes.count) bytes: "
-                            + String(cString: strerror(errno))
-                        )
-                        stdoutOpen = false
-                    }
-                }
-                if (pfd.revents & (Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL))) != 0 {
-                    // Drain whatever the kernel still has buffered.
-                    var buf = [UInt8](repeating: 0, count: 8192)
-                    let n = buf.withUnsafeMutableBufferPointer { bp -> Int in
-                        guard let base = bp.baseAddress else { return 0 }
-                        return Darwin.read(stdoutPipe[0], base, bp.count)
-                    }
-                    if n > 0 {
-                        stdoutBytes.append(contentsOf: buf.prefix(n))
-                    } else {
+                    let n = buf.withUnsafeMutableBytes { Darwin.read(stdoutPipe[0], $0.baseAddress!, $0.count) }
+                    if n > 0 { stdoutBytes.append(contentsOf: buf.prefix(n)) }
+                    else if n == 0 { stdoutOpen = false }
+                    else if errno != EAGAIN && errno != EINTR {
+                        collectionStop = "read_error"
+                        readError = .verdictReadFailed("read after \(stdoutBytes.count) bytes: errno=\(errno) \(String(cString: strerror(errno)))")
                         stdoutOpen = false
                     }
                 }
             }
         }
 
-        if ioError != nil { break }
+        if readError != nil { break }
+        // A failed input write does not end independent stdout collection.
+        // Continue under the original deadline until EOF or a read failure.
     }
 
     // Idempotent close — paths above may have already closed stdin.
     if stdinOpen { close(stdinPipe[1]) }
     close(stdoutPipe[0])
 
-    // Parse verdicts up to the first malformed line. A parse failure
-    // doesn't drop the prior verdicts — they're real evidence.
-    var verdicts: [ValidatorVerdict] = []
-    var parseError: ValidatorClientError? = nil
-    let raw = String(data: stdoutBytes, encoding: .utf8) ?? ""
-    for line in raw.split(separator: "\n", omittingEmptySubsequences: true) {
-        let lineStr = String(line)
-        guard let lineData = lineStr.data(using: .utf8) else { continue }
-        do {
-            let parsed = try JSONSerialization.jsonObject(with: lineData, options: [])
-            guard let obj = parsed as? [String: Any] else {
-                parseError = .verdictParseFailed(line: lineStr,
-                                                 why: "verdict line is not a JSON object")
-                break
-            }
-            verdicts.append(verdictFromJSONObject(obj, rawLine: lineStr))
-        } catch {
-            parseError = .verdictParseFailed(line: lineStr,
-                                             why: String(describing: error))
-            break
-        }
-    }
+    let decoded = decodeValidatorFrames(stdoutBytes)
 
-    // Reap with grace + SIGKILL fallback.
-    var status: Int32 = 0
-    var reaped: pid_t = 0
-    var sentSigkill = false
+    // Status is usable only when the shared observer actually reaped this PID.
+    var process = ChildProcessState(pid: pid, calls: processCalls)
     let pollNs: UInt64 = 10_000_000
     let iters = max(1, input.exitGraceMs * 1_000_000 / Int(pollNs))
     for _ in 0..<iters {
-        let r = waitpid(pid, &status, WNOHANG)
-        if r == pid { reaped = r; break }
+        let observation = process.wait(options: WNOHANG, phase: "exit_grace")
+        if observation != .pending { break }
         sleepNs(pollNs)
     }
-    if reaped != pid {
-        _ = kill(pid, SIGKILL)
-        sentSigkill = true
-        _ = waitpid(pid, &status, 0)
-    }
-
-    let exitCode: Int32?
-    let termSignal: Int32?
-    let wifexited = (status & 0x7f) == 0
-    if wifexited {
+    process.terminate()
+    var exitCode: Int32? = nil
+    var termSignal: Int32? = nil
+    if let status = process.status, (status & 0x7f) == 0 {
         exitCode = (status >> 8) & 0xff
-        termSignal = nil
-    } else {
-        exitCode = nil
+    } else if let status = process.status, (((status & 0x7f) + 1) >> 1 > 0) {
         termSignal = status & 0x7f
     }
-
     let output = ValidatorOutput(
-        validatorPid: pid,
-        verdicts: verdicts,
-        exitCode: exitCode,
-        termSignal: termSignal,
-        sentSigkill: sentSigkill,
-        rawStdoutBytes: stdoutBytes.count
+        validatorPid: pid, verdicts: decoded.verdicts,
+        exitCode: exitCode, termSignal: termSignal,
+        sentSigkill: process.terminationRequest != nil, rawStdoutBytes: stdoutBytes.count,
+        reaped: process.status != nil, terminationRequest: process.terminationRequest,
+        waitErrors: process.waitErrors, ioError: (ioError ?? readError)?.description,
+        decodeFault: decoded.fault, expectedProbes: input.probes,
+        readError: readError?.description, stdoutCollectionStop: collectionStop,
+        probeBytesWritten: writeOffset, probeBytesExpected: payload.count
     )
-
-    // ioError takes precedence over parseError — an I/O failure means
-    // we have a possibly-truncated stdout that the parser may then
-    // also have rejected, but the I/O failure is the root cause to
-    // report. Either way, every parsed verdict is in `output.verdicts`.
-    if let err = ioError ?? parseError {
-        return .failure(error: err, partial: output)
-    }
+    // Preserve both independent faults; precedence only selects the summary.
+    if let error = ioError ?? readError { return .failure(error: error, partial: output) }
+    if let fault = decoded.fault { return .failure(error: .verdictDecodeFailed(fault), partial: output) }
     return .success(output)
 }
 
 // MARK: - Probe serialization
 
-private func serializeProbes(_ probes: [ValidatorProbe]) throws -> Data {
+func serializeProbes(_ probes: [ValidatorProbe]) throws -> Data {
     var out = Data()
     for probe in probes {
         var dict: [String: Any] = [
@@ -442,18 +416,108 @@ private func serializeProbes(_ probes: [ValidatorProbe]) throws -> Data {
     return out
 }
 
-private func verdictFromJSONObject(_ obj: [String: Any], rawLine: String) -> ValidatorVerdict {
-    return ValidatorVerdict(
-        stepId:        obj["step_id"] as? String,
-        operation:     obj["operation"] as? String,
-        filterType:    obj["filter_type"] as? String,
-        filterTypeId:  obj["filter_type_id"] as? Int,
-        filterValue:   obj["filter_value"] as? String,
-        rc:            obj["rc"] as? Int,
-        errnoVal:      obj["errno"] as? Int,
-        outcome:       (obj["outcome"] as? String) ?? "missing_outcome",
-        error:         obj["error"] as? String,
-        rawLine:       rawLine
-    )
+// MARK: - Receiver contract
+
+/// NDJSON is framed on byte LF before strict UTF-8 decoding. Empty frames are
+/// ignored; a final nonempty fragment is decoded too. Stop on the first fault.
+/// All records require kind=sb_api_validator_verdict, integer schema_version=1,
+/// present string-or-null step_id and nonempty string outcome. Known optional
+/// fields must have their declared type or null (Bool is not an integer).
+/// Allow/deny require nonempty step_id, operation, filter_type and integer rc,
+/// errno. Diagnostic outcomes require string error, but may omit native results.
+/// Unfamiliar diagnostic outcomes and extra JSON fields are retained. Rejected
+/// bytes are context only, never accepted evidence. See the routing inventory.
+struct ValidatorDecodedFrames {
+    var verdicts: [ValidatorVerdict] = []
+    var fault: PWValidatorDecodeFault? = nil
 }
 
+func decodeValidatorFrames(_ bytes: Data) -> ValidatorDecodedFrames {
+    var result = ValidatorDecodedFrames()
+    var offset = 0
+    for frame in bytes.split(separator: 0x0a, omittingEmptySubsequences: false) {
+        defer { offset += frame.count + 1 }
+        if frame.isEmpty { continue }
+        func reject(_ kind: String, _ message: String) -> ValidatorDecodedFrames {
+            let prefix = Data(frame.prefix(256))
+            result.fault = PWValidatorDecodeFault(kind: kind, message: message,
+                byte_offset: offset, frame_bytes: frame.count, retained_bytes: prefix.count,
+                context_b64: prefix.base64EncodedString(), context_truncated: frame.count > prefix.count)
+            return result
+        }
+        guard let line = String(data: frame, encoding: .utf8) else {
+            return reject("utf8", "invalid UTF-8 in validator reply")
+        }
+        let json: Any
+        do { json = try JSONSerialization.jsonObject(with: Data(frame), options: [.fragmentsAllowed]) }
+        catch { return reject("json", "verdict parse failed: " + String(describing: error)) }
+        guard let obj = json as? [String: Any] else { return reject("structure", "verdict must be an object") }
+        if let why = validatorStructureError(obj) { return reject("structure", why) }
+        result.verdicts.append(ValidatorVerdict(
+            stepId: obj["step_id"] as? String, operation: obj["operation"] as? String,
+            filterType: obj["filter_type"] as? String, filterTypeId: validatorInteger(obj["filter_type_id"]),
+            filterValue: obj["filter_value"] as? String, rc: validatorInteger(obj["rc"]),
+            errnoVal: validatorInteger(obj["errno"]), outcome: obj["outcome"] as! String,
+            error: obj["error"] as? String, rawLine: line))
+    }
+    return result
+}
+
+private func validatorInteger(_ value: Any?) -> Int? {
+    guard let n = value as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID(),
+          String(cString: n.objCType) != "d", String(cString: n.objCType) != "f" else { return nil }
+    return Int(n.stringValue)
+}
+
+private func validatorStructureError(_ obj: [String: Any]) -> String? {
+    guard obj["kind"] as? String == "sb_api_validator_verdict" else { return "missing or invalid kind" }
+    guard validatorInteger(obj["schema_version"]) == 1 else { return "missing or invalid schema_version" }
+    guard obj.keys.contains("step_id") else { return "missing step_id (string or null required)" }
+    guard let outcome = obj["outcome"] as? String, !outcome.isEmpty else { return "missing or invalid outcome" }
+    for key in ["step_id", "operation", "filter_type", "filter_value", "error"] {
+        if let value = obj[key], !(value is NSNull), !(value is String) { return "invalid string field \(key)" }
+    }
+    for key in ["rc", "errno", "filter_type_id"] {
+        if let value = obj[key], !(value is NSNull), validatorInteger(value) == nil { return "invalid integer field \(key)" }
+    }
+    if outcome == "allow" || outcome == "deny" {
+        for key in ["step_id", "operation", "filter_type"] {
+            guard let value = obj[key] as? String, !value.isEmpty else { return "\(outcome) requires \(key)" }
+        }
+        for key in ["rc", "errno"] {
+            if validatorInteger(obj[key]) == nil { return "\(outcome) requires integer \(key)" }
+        }
+    } else if !(obj["error"] is String) { return "diagnostic outcome requires string error" }
+    return nil
+}
+
+/// Duplicate IDs are ambiguous, so none of their records enters the step join.
+/// All accepted records remain at run scope, including unknown and null IDs.
+func associateValidatorVerdicts(_ verdicts: [ValidatorVerdict], expected: [ValidatorProbe]) -> (byStep: [String: ValidatorVerdict], issues: [PWValidatorAssociationIssue]) {
+    let wanted = Set(expected.map { $0.stepId })
+    let groups = Dictionary(grouping: verdicts.compactMap { v in v.stepId.map { ($0, v) } }, by: { $0.0 })
+    var byStep: [String: ValidatorVerdict] = [:]
+    var issues: [PWValidatorAssociationIssue] = []
+    for probe in expected {
+        let id = probe.stepId
+        let matches = groups[id] ?? []
+        if matches.count == 1 {
+            let v = matches[0].1
+            // Diagnostics may omit query metadata. Any supplied metadata must
+            // agree; predictions must describe exactly the submitted query.
+            let prediction = v.outcome == "allow" || v.outcome == "deny"
+            let mismatch = (prediction || v.operation != nil) && v.operation != probe.operation
+                || (prediction || v.filterType != nil) && v.filterType != probe.filterType
+                || (prediction || v.filterValue != nil) && v.filterValue != probe.filterValue
+            if mismatch { issues.append(PWValidatorAssociationIssue(kind: "query_mismatch", step_id: id, count: 1)) }
+            else { byStep[id] = v }
+        }
+        else { issues.append(PWValidatorAssociationIssue(kind: matches.isEmpty ? "missing_id" : "duplicate_id", step_id: id, count: matches.count)) }
+    }
+    for id in groups.keys.sorted() where !wanted.contains(id) {
+        issues.append(PWValidatorAssociationIssue(kind: "unexpected_id", step_id: id, count: groups[id]!.count))
+    }
+    let unassociated = verdicts.filter { $0.stepId == nil }.count
+    if unassociated > 0 { issues.append(PWValidatorAssociationIssue(kind: "unassociated", count: unassociated)) }
+    return (byStep, issues)
+}

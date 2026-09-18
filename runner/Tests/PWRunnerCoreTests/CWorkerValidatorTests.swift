@@ -15,7 +15,7 @@ import Foundation
  * in CWorkerTests + validator_batch_mode + runner_c_worker_harness;
  * this file pins the integration handshake itself.
  *
- * Skips cleanly when either binary is missing.
+ * Required live cases fail when either binary is missing.
  */
 
 private func repoRootForCV() -> URL {
@@ -54,8 +54,7 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
     tk.group("CWorker + ValidatorClient orchestration") {
         tk.run("postApplied hook spawns validator against worker_pid; both outputs round-trip") {
             guard bothBinariesExist() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner or sb_api_validator missing; run ./build.sh\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner or sb_api_validator missing; run ./build.sh")
             }
 
             // Specimen-shaped input. Two steps so the per-step index
@@ -159,8 +158,7 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
         // applied=0 ⇒ hook never fires.)
         tk.run("postApplied hook does not fire when compile fails") {
             guard bothBinariesExist() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             // Malformed SBPL — compile fails inside the worker.
             let input = CWorkerInput(
@@ -219,8 +217,7 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
         // validator's filter coverage.
         tk.run("256 probes with long paths drive both pipes without deadlock") {
             guard bothBinariesExist() else {
-                FileHandle.standardOutput.write(Data("  SKIP  sb_api_validator missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: sb_api_validator missing")
             }
             // Padding to push each probe line near 1 KiB → 256 lines ≈ 250 KiB total.
             let longPath = "/etc/" + String(repeating: "x", count: 900)

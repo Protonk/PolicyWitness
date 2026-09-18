@@ -1,13 +1,15 @@
 # Failure evidence through the worker, runner, and controller
 
-## Status: step 0 complete; 1A pending
+## Status: steps 0–2 complete; step 3 pending
 
-Batches 0A, 0B and 0C are complete and the combined step-0 acceptance gate
-passes. Response 5 uses publication and confirmed host observations for execution
-classification, explicit signal null, and independent denial-log correlation.
-The previously failing CLI witness and its populated positive control now pass.
-Worker ABI 5, capacities and timeout budgets remain unchanged. Step 1A has not
-begun; the new worker record/publication design remains pending.
+Batches 0A–0C, 1A–1C and step 2 are complete. Worker ABI 6 reports atomic progress,
+precise failures and bounded diagnostics. Host admission, both child lifecycles,
+validator byte/record/ID handling, and controller capture now retain their own
+observations. Response schema 5, request schema 1, capacities and production
+budgets are unchanged. [Routing inventory](FAILURE-PROPAGATION-INVENTORY.md) records
+accepted boundaries and explicit limitations; [step-2 evidence](out/failure-propagation-2/README.md)
+identifies signed builds, controls and remaining coverage gaps. Step 3's expanded
+unfamiliar-code and mutation experiment has not begun.
 
 ## Goal and scope
 
@@ -454,18 +456,18 @@ tests, fixes within the contract, and diagnostic codes covered by its
 unfamiliar-value rules do not inherently require a bump. The version identifies
 a contract, not an edit count.
 
-- [ ] Define a small set of useful worker milestones. For each, state whether it
+- [x] Define a small set of useful worker milestones. For each, state whether it
   means an operation started or completed and what an acquire reader can rely on.
   Specify optional transitions and failure exits. Readiness can fail while the
   worker proceeds; `done` is also published following compilation failure. Do not
   infer successful application from a simple ordering of all stage numbers.
-- [ ] Write a small state table before consolidating progress and failure fields.
+- [x] Write a small state table before consolidating progress and failure fields.
   Include death between a completed stage and the next started stage, a returned
   failure, a readiness failure followed by continued execution, and repeated
   parameter calls. Distinguish an operation returning from its succeeding, and
   identify which call failed inside a coarse stage. A generic nonzero-result rule
   is insufficient: compilation fails by returning NULL.
-- [ ] Settle the minimum failed-operation record and its publication rules,
+- [x] Settle the minimum failed-operation record and its publication rules,
   independently of diagnostic text. Distinguish no report, a valid report with
   zero values, and an incomplete or incompatible report. Keep native call results
   distinct from PW's own diagnostic codes. An unfamiliar stage value must not be
@@ -474,7 +476,7 @@ a contract, not an edit count.
   an equally clear consolidated encoding. Existing `done` may publish a terminal
   payload without an additional validity word, but payload validity, failed
   operation, and terminal success/failure still need unambiguous meanings.
-- [ ] Before implementing new or changed cross-language fields, record their
+- [x] Before implementing new or changed cross-language fields, record their
   contract beside the authoritative ABI/API definitions or in existing contract
   documentation. For each field specify its producer, publication/validity
   condition, type (including width and signedness), units, Swift interpretation,
@@ -483,12 +485,12 @@ a contract, not an edit count.
   it unchanged. Reference existing layout definitions rather than copying offsets
   into a second schema. Link the chosen contract locations in the current
   execution state below; keep them current when later batches change fields.
-- [ ] Implement worker publication in preallocated, pre-touched shared memory.
+- [x] Implement worker publication in preallocated, pre-touched shared memory.
   Publish payload validity with release/acquire ordering; document its relation
   to progress, `applied`, `done`, and per-slot completion. Keep the post-apply path
   free of new allocation and diagnostic I/O dependencies. Failures before a usable,
   compatible mapping exists still need a supervisor-only fallback.
-- [ ] Review when the host observes progress and takes its final snapshot around
+- [x] Review when the host observes progress and takes its final snapshot around
   reaping. The current driver snapshots flags and slots before requesting exit
   and does not refresh them after cleanup; publications during grace can be lost.
   Account for those publications and preserve confirmed slots. Keep the reason
@@ -501,7 +503,7 @@ a contract, not an edit count.
   preserving its requirement for successful application before exposing a
   capture. Refusal to expose an unconfirmed capture is not itself an observed
   application failure; keep that distinction in its diagnostic wording.
-- [ ] Carry worker evidence and host observations through `CWorkerOutput`, the
+- [x] Carry worker evidence and host observations through `CWorkerOutput`, the
   orchestrator, runner JSON, client forwarding, and controller envelope. Reuse
   the client's byte forwarding and the controller's opaque JSON retention where
   they already work: the client writes received reply bytes without decoding a
@@ -512,7 +514,7 @@ a contract, not an edit count.
   shared-memory decoding and runner assembly, while still proving client and
   controller forwarding through the CLI. Distinguish failed operations in the
   evidence before deciding which merit separate top-level outcome strings.
-- [ ] Settle the per-step missing-evidence contract before extending the result
+- [x] Settle the per-step missing-evidence contract before extending the result
   types. Distinguish a validator that was not invoked from one that ran but did
   not supply this step's verdict, using run/step observations without duplicating
   subprocess authority. The current shared error shape and synthetic `rc=0`
@@ -522,7 +524,7 @@ a contract, not an edit count.
   describe an incomplete slot as lacking a completed result, without claiming
   the attempt never started. Add controls for never-invoked and short-reply
   validators, and for an attempt that starts but never publishes completion.
-- [ ] Apply the ABI rule above and settle JSON compatibility before choosing
+- [x] Apply the ABI rule above and settle JSON compatibility before choosing
   offsets. The header's reserved space is an option, not a specification. Update
   the C/Swift definitions together, extend layout checks, and verify rejection
   of incompatible workers. Include a basic unfamiliar-diagnostic-code
@@ -538,27 +540,27 @@ Use an ordinary SBPL syntax error as the central real-worker proving case. It
 isolates a deterministic failed operation without requiring a policy-pipe failure.
 Sparse-evidence cases remain separate acceptance obligations.
 
-- [ ] Show the compilation failure reaching the normal CLI, distinguished from
+- [x] Show the compilation failure reaching the normal CLI, distinguished from
   parameter setup and an observed apply result. Keep the minimal operation/status
   change reviewable separately from diagnostic-text storage and forwarding.
-- [ ] Use a preallocated shared-memory text region as the primary route for
+- [x] Use a preallocated shared-memory text region as the primary route for
   PW-authored diagnostics after a compatible mapping exists. Implement the bounds
   and publication contract settled in 1A, or explicitly settle a further ABI
   revision if needed; make missing, partial, and truncated text explicit.
   Publishing reliable status must not depend on a successful diagnostic write.
-- [ ] Preserve existing early stderr diagnostics where shared-memory reporting
+- [x] Preserve existing early stderr diagnostics where shared-memory reporting
   is unavailable. The text region cannot recover diagnostics emitted before a
   usable mapping, direct dependency/runtime stderr output, or unpublished details
   lost in a reporting-path crash. A separate stream may retain context when the
   shared-memory mechanism itself fails. Record this coverage gap explicitly;
   preserving an emission does not establish that the CLI can collect it. This
   step does not add stderr capture.
-- [ ] Preserve and test the restriction on post-apply diagnostic syscalls and
+- [x] Preserve and test the restriction on post-apply diagnostic syscalls and
   new allocation dependencies. If the existing stderr sites are routed through a
   helper that is silent after application, that helper must not disable the
   post-apply memory-only result/error publication. Existing per-step
   shared-memory diagnostics remain available after application.
-- [ ] Verify the compiler diagnostic reaches the CLI. For otherwise identical
+- [x] Verify the compiler diagnostic reaches the CLI. For otherwise identical
   observed failures, controls with rich, missing, and truncated text must retain
   the same justified operation/status classification.
 
@@ -580,20 +582,20 @@ describe broken-pipe acceptance or the client timeout as proof of bounded host
 transfer. Cleanup after an observed pipe failure must use the step-0 termination
 and reaping contract without an unbounded wait after a failed kill.
 
-- [ ] Exercise oversized source through the worker guard and account for its
+- [x] Exercise oversized source through the worker guard and account for its
   report, last progress, and process status. Fix the host's policy-write failure
   path to preserve evidence when a child closes its input or exits; do not discard
   its status or lose the report through EPIPE/SIGPIPE handling. Record local pipe
   failure and child evidence independently, retaining bounded cleanup.
-- [ ] Add a host-driver test for a child that closes its input or exits during
+- [x] Add a host-driver test for a child that closes its input or exits during
   transfer. Do not make it depend on an oversized specimen reaching the worker,
   so it stays valid if admission later rejects such input upstream. Test report-present and
   report-absent behavior at suitable boundaries, without requiring one
   timing-dependent race.
-- [ ] Include early failures before publication, unexpected termination, and a
+- [x] Include early failures before publication, unexpected termination, and a
   report followed by cleanup trouble. These remain first-class acceptance cases
   even when ordinary admission prevents a particular specimen from reaching them.
-- [ ] Cover failed mapping without classifying it as a host bug merely because
+- [x] Cover failed mapping without classifying it as a host bug merely because
   no worker report exists. `map_region` failures in `fstat`, region-size checking,
   and `mmap` share exit code 3; process status cannot recover the missing errno or
   detailed reason. Preserve the actual observations and leave unavailable facts
@@ -614,10 +616,10 @@ batch's checks.
 
 | First owning batch | Case | Boundary to exercise | Evidence that must reach the consumer | Implemented test entry |
 | --- | --- | --- | --- | --- |
-| 1A | Ordinary successful specimen | Real worker through CLI | Existing attempt/prediction evidence; no fabricated failure record | Pending |
-| 1C | Source exceeds the existing worker cap at the worker boundary | C worker guard and host policy-transfer handling | Worker rejection and relevant byte limit; last progress and process evidence retained even if the policy pipe also fails | Pending |
-| 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | Pending |
-| 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | Pending |
+| 1A | Ordinary successful specimen | Real worker through CLI | Existing attempt/prediction evidence; no fabricated failure record | `witness_contract/worker_progress_and_failure`, `check_worker_evidence.py` success branch (real worker/CLI, independent file bytes). |
+| 1C | Source exceeds the existing worker cap at the worker boundary | C worker guard and host policy-transfer handling | Worker rejection and relevant byte limit; last progress and process evidence retained even if the policy pipe also fails | `witness_contract/worker_sparse_failure`, `check_worker_sparse.py` oversize branch; `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` real source guard. Real C source limit 262143 and simultaneous host EPIPE reach the CLI. |
+| 1B | Ordinary SBPL syntax error | Real worker through CLI | An actual compilation failure and its diagnostic, distinguished from an observed application result | `witness_contract/worker_progress_and_failure`, `check_worker_evidence.py` real compile and diagnostic fixture branches; `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` text availability and deny-default memory publication. |
+| 1A | Observed application failure | C producer and Swift interpretation; deterministic harness if no reliable live specimen reaches it | Operation and meaningful native result retained | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` production C apply failure; separately compiled real C main with only apply return controlled. |
 | 0C (baseline in 0A) | Existing pre-ready delay exceeds the worker budget | Real CLI with existing delay override | The host's deadline/termination observations, with no invented library failure | 0A baseline: `witness_contract/pre_apply_failure_reports_no_policy_verdict`, `check_pre_apply_failure.py::main` / `common_evidence`; retained attribution failure. 0C: all witness groups pass under response 5; `lifecycle_observations` retains the independent deadline/termination facts. |
 | 0B (classifier in 0C) | Deadline expiry followed by voluntary exit during grace | Host driver and classifier controls | Observed deadline expiry retained without requiring SIGKILL; separately obtained exit status retained | 0B: `runner_unit/pwrunner_core_unit_executable`, `CWorkerTests` case `postApplyHangMs > sentinelTimeoutMs produces done=false`, including production subprocess encoding. 0C classifier verified in `HostOutcomeClassifierTests` and the corresponding live driver control. |
 | 0B (classifier in 0C) | Failed termination/reaping calls | Host driver and classifier controls | Termination request and call result distinguished; exit/signal status absent unless successfully obtained by reaping | 0B: `runner_unit/pwrunner_core_unit_executable`, `CWorkerLifecycleTests` failed-kill, failed-reap, recovered/repeated EINTR, ECHILD and poll-error cases; `EnvelopeInvariantTests` compatibility controls. 0C classifier verified in `HostOutcomeClassifierTests` and the corresponding live driver control. |
@@ -625,15 +627,15 @@ batch's checks.
 | 0C (baseline in 0A) | Failure before application under a policy that would deny a probe | Real CLI with existing delay and deadline overrides, plus an un-overridden positive control | Failure run has no allow/deny prediction, permission-failure attempt, or drift value; control produces the deny prediction, permission-failure attempt, and drift=false from the same specimen; neither run claims sandbox-caused termination; failure run retains process evidence and overrides | 0A baseline: `witness_contract/pre_apply_failure_reports_no_policy_verdict`, `check_pre_apply_failure.py::common_evidence` / `no_cause_claim`; 0A/0B retained real attribution failures. 0C: positive control, absence, attribution, lifecycle and signal-null groups all pass. |
 | 0C | Unobserved per-step signal channel | Runner JSON encoding/decoding and real CLI failure/success controls, including the pre-apply case above | Response version 5 and literal `deny_signal: null` survive forwarding; legacy reply decoding remains supported and dependent checkers retain their other evidence checks | 0A CLI baseline: `witness_contract/pre_apply_failure_reports_no_policy_verdict`, `check_pre_apply_failure.py::signal_contract` fails separately for both runs; response version recorded as 4. 0C: response-5 literal null and legacy object decoding pass in `EnvelopeInvariantTests`; CLI witness and real client errors in `smoke/runner_caller_auth` pass. |
 | 0C | Correlation with incomplete identity, irrelevant events, or repeated attempts | Controller correlation and CLI observer-invocation controls | No worker correlation from host/client PID or missing/mismatched event PID; relevance follows the attempt rather than an independently routed query; same-path unrelated operations do not match; repeated identical attempts retain ambiguity; availability and window limits are explicit | `unit/rust.unit`: `run_flow::tests`, `sandbox_log::tests`, observer parser controls; `witness_contract/worker_termination_and_log_correlation` with repeated denied writes, independent read queries, self-signal, disabled/enabled capture and successful-run capture. Passed; populated-event cases are deterministic unit controls when live capture has no match. |
-| 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | Pending |
-| 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | Pending |
-| 1C | Child closes policy input or exits during host transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it; this does not cover an open but undrained pipe | Pending |
-| 0B (classifier in 0C) | Completed report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states; step 1C rechecks new worker failure records | Reported completion or failure and subsequent supervisor observations both survive; cleanup termination alone does not establish sentinel deadline expiry | 0B: `runner_unit/pwrunner_core_unit_executable`, `CWorkerLifecycleTests` completed-report cleanup-kill and published-legacy-failure cleanup cases, failed-kill/reap controls and actual subprocess JSON. 0C classifier verified; 1C worker records remain pending. |
-| 1C | Failure after completed probes | Real worker through CLI, with independent effect checks | Completed step evidence and independently checked effects survive | Pending |
-| 1A | Unpublished or incomplete record | C publication and Swift shared-memory decoding controls | No payload fields treated as confirmed evidence | Pending |
-| 1A | Publication during cleanup after sentinel deadline | Host driver with controlled publication timing | Final confirmed records/slots survive; late completion does not erase the observed deadline | Pending |
-| 1A | Missing prediction or incomplete attempt | Step assembly and JSON controls for never-invoked/short-reply validators and an attempt interrupted after starting | Missing evidence does not become a native return or a claim that an operation never started; absence reasons follow the chosen contract | Pending |
-| 1B | Same observed failure with rich, missing, or truncated text | Worker diagnostic publication, host decoding/classification, and CLI preservation | Identical justified operation/status classification across diagnostic availability | Pending |
+| 1C | Unexpected worker exit without a report | Controlled child through host driver | Actual process status and absence of a report; unknown underlying cause | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` early exit with no publication; real driver retains exit 17 and absence. |
+| 1C | Failed mapping with no usable worker report | C worker harness and host process-status interpretation | Obtained process status and an incomplete account; no invented errno, detailed cause, or blame | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` mapping failure; `witness_contract/worker_sparse_failure`, mapping branch. C production main with its mapping FD closed exercises fstat failure; host/CLI retain exit 3 without claiming the unavailable errno or detailed reason. Other map-region failure variants are not claimed as separately exercised. |
+| 1C | Child closes policy input or exits during host transfer | Controlled child through host driver, independent of source admission | Host pipe error, available worker evidence, and reaped status or explicit failure to obtain it; this does not cover an open but undrained pipe | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` closed policy input and pipe failure with failed termination; `witness_contract/worker_sparse_failure` close_report/close_absent. Input closure is independent of source admission. The failed-kill control exposed and now guards duplicate inherited pipe FDs. |
+| 0B (classifier in 0C) | Completed report followed by cleanup trouble | Host driver and classifier controls for otherwise unreliable states; step 1C rechecks new worker failure records | Reported completion or failure and subsequent supervisor observations both survive; cleanup termination alone does not establish sentinel deadline expiry | 0B: `runner_unit/pwrunner_core_unit_executable`, `CWorkerLifecycleTests` completed-report cleanup-kill and published-legacy-failure cleanup cases, failed-kill/reap controls and actual subprocess JSON. 0C classifier verified; 1C `WorkerEvidenceTests` pipe failure with failed termination retains the new failure record, EPIPE and unconfirmed disposition independently. |
+| 1C | Failure after completed probes | Real worker through CLI, with independent effect checks | Completed step evidence and independently checked effects survive | `witness_contract/worker_sparse_failure`, check_worker_sparse.py after_probes branch; real worker self-signal retains completed write/prediction and independently compared file bytes. |
+| 1A | Unpublished or incomplete record | C publication and Swift shared-memory decoding controls | No payload fields treated as confirmed evidence | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` publication gates and started-attempt poison controls. |
+| 1A | Publication during cleanup after sentinel deadline | Host driver with controlled publication timing | Final confirmed records/slots survive; late completion does not erase the observed deadline | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` cleanup publication and `CWorkerTests` late done during grace. |
+| 1A | Missing prediction or incomplete attempt | Step assembly and JSON controls for never-invoked/short-reply validators and an attempt interrupted after starting | Missing evidence does not become a native return or a claim that an operation never started; absence reasons follow the chosen contract | `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` never-invoked/short-reply assembly and started-attempt controls; CLI witness checks native_rc null. |
+| 1B | Same observed failure with rich, missing, or truncated text | Worker diagnostic publication, host decoding/classification, and CLI preservation | Identical justified operation/status classification across diagnostic availability | `witness_contract/worker_progress_and_failure`, `check_worker_evidence.py` real compile and diagnostic fixture branches; `runner_unit/pwrunner_core_unit_executable`, `WorkerEvidenceTests` text availability and deny-default memory publication. |
 
 Use real worker failures and existing override boundaries for CLI coverage.
 Use the C harness for publication/early-exit behavior and Swift unit tests for
@@ -688,24 +690,24 @@ Runtime evidence loss and observation boundaries:
 | Controller reply capture | Full subprocess output is collected before only a 1 MiB prefix is retained/parsed | Receiver-owned loss with exact received-byte count and retained-prefix count, distinct from malformed producer JSON; this is not a streaming memory bound |
 | Execution budgets | Worker nominal 60s polling budget, synchronous validator hook with 30s I/O, client default 240s | Observer-owned deadlines with phase, process status, and partial evidence; readiness, policy transfer, and hook time are not one end-to-end worker deadline; `--timeout-ms` does not set all budgets |
 | Readiness and child lifecycle | Ready-byte timeout, spawn failure, early exit, post-apply hang/signal, and cleanup grace | Distinguish synchronization hints, actual stops, and unexplained termination |
-| Denial-log correlation | Optional capture; `first_deny` summary currently gated by a sandbox-cause outcome | Independent correlation with observed execution facts; a matching denial does not establish termination cause |
+| Denial-log correlation | Optional capture with worker identity, attempt provenance and ambiguous candidate references | Independent correlation with observed execution facts; a matching denial does not establish termination cause |
 | Early or uninstrumented stderr diagnostics | No usable shared-memory report, direct dependency/runtime output, or reporting-path failure | Deferred capture evaluation; process status alone cannot recover diagnostic detail |
 | Optional compiled-object capture and exec output | 1 MiB capture region; 1,023 payload bytes per child output stream | Explicit unavailable/truncated evidence; optional capture failure must not become specimen failure |
 | Earlier setup and transport | Request decoding, library loading, shared-memory/pipe setup, XPC loss, reply encoding/decoding | Reporting by the component that actually observed failure; fallback where no child report is available |
 
-- [ ] Trace each boundary to its final CLI representation, including diagnostics
+- [x] Trace each boundary to its final CLI representation, including diagnostics
   that are only emitted on stderr or replaced during cleanup. Use the existing
   validator partial-result behavior as a source of reusable patterns. Its
   `.failure(error, partial)` shape is useful, but is not evidence that its process
   status or result association is already correct.
-- [ ] Repair validator termination/reaping observations using the step-0 host
+- [x] Repair validator termination/reaping observations using the step-0 host
   contract. Retain termination-call results and obtain exit/signal status only
   from successful reaping; keep parsed verdicts when cleanup fails. Add driver,
   classifier, and JSON controls for failed kill/reap and abnormal exit after
   verdict production. An adequate verdict count must not conceal a process
   failure or an unconfirmed disposition. Do not infer clean exit merely from the
   driver's `.success` case.
-- [ ] Preserve validator diagnostics that cannot be joined to a step. The C batch
+- [x] Preserve validator diagnostics that cannot be joined to a step. The C batch
   reader emits one `parse_error` record with `step_id:null` for an overlong line
   and exits zero at EOF. Today that record can satisfy the classifier's expected
   count while being dropped by the step-ID join, leaving missing predictions
@@ -728,7 +730,7 @@ Runtime evidence loss and observation boundaries:
   The framing diagnostic survives, both valid results keep their IDs,
   the unanswered step has no prediction/drift, completed attempts survive, and
   the run is not `ok`. Keep decoder controls separate from this production case.
-- [ ] Preserve valid validator frames before an invalid UTF-8 frame. The current
+- [x] Preserve valid validator frames before an invalid UTF-8 frame. The current
   `String(data: stdoutBytes, encoding: .utf8) ?? ""` conversion erases the whole
   stream on a single invalid byte; it cannot distinguish that boundary failure
   from an empty reply. Frame the bytes before decoding and retain preceding
@@ -744,7 +746,7 @@ Runtime evidence loss and observation boundaries:
   and an incomplete multibyte tail, so transport chunking is not mistaken for
   invalid encoding. These controls establish receiver behavior, not a claim that
   a normal validator produces invalid UTF-8.
-- [ ] Validate validator record structure separately from UTF-8 decoding, JSON
+- [x] Validate validator record structure separately from UTF-8 decoding, JSON
   syntax, and step-ID association. `verdictFromJSONObject` currently accepts any
   JSON object, including one with a recognized step ID and `"outcome":"allow"`
   but no `rc`; `buildSandboxCheckResult` then substitutes `rc=-1` while retaining
@@ -768,26 +770,26 @@ Runtime evidence loss and observation boundaries:
   results and unfamiliar valid diagnostics. Retain bounded rejected-frame context
   with any truncation explicit, without presenting it as an accepted validator
   verdict.
-- [ ] Group changes around a shared reporting path and its evidence contract.
+- [x] Group changes around a shared reporting path and its evidence contract.
   First examine excess steps and excess parameters: keep their local capacity
   checks, but try to route both through the same host-admission failure record
   and forwarding code. The consumer should not need a case for each field.
-- [ ] Move the unchanged source cap into the shared contract and reject oversized
+- [x] Move the unchanged source cap into the shared contract and reject oversized
   source in host admission with field, actual UTF-8 length, and maximum. Verify
   C/Swift agreement, retain the worker's defensive check, and keep distinct tests
   for admission, the worker guard, and a child interrupting policy transfer.
-- [ ] Add acceptance cases for every member of a proposed group. Assert origin,
+- [x] Add acceptance cases for every member of a proposed group. Assert origin,
   affected field, actual/allowed values and units, process presence or absence,
   and retained evidence. Where byte boundaries matter, cover exact/over-limit
   and multibyte input; for NDJSON measure encoded framing, not just source text.
-- [ ] Review the diff for actual reuse. A shared checker alone does not show that
+- [x] Review the diff for actual reuse. A shared checker alone does not show that
   production routing is shared. Record which inventory entries one change closes
   and why, or explain why distinct handling is needed. Closing several entries
   together is an aspiration, not a quota that justifies a generic framework.
-- [ ] Preserve distinctions among local admission rejection, child-reported
+- [x] Preserve distinctions among local admission rejection, child-reported
   failure, supervisor action, and reply loss. Avoid manufacturing worker records
   for host-only failures or relabeling a receiver's truncation as sender corruption.
-- [ ] Do not close the controller-capture entry merely because a truncation flag
+- [x] Do not close the controller-capture entry merely because a truncation flag
   and parse-error label exist. Use valid producer JSON beyond the existing cap to
   prove the result identifies the controller's own loss of evidence. Contrast that
   with malformed producer output within the cap in an independent control.
@@ -798,11 +800,11 @@ Runtime evidence loss and observation boundaries:
   a lower bound, call the cap a streaming allocation bound, or increase the parse
   budget. Include a multibyte boundary control so byte counts do not become
   character counts or counts of replacement characters.
-- [ ] Recheck the correlation path revised in step 0 against the observer records
+- [x] Recheck the correlation path revised in step 0 against the observer records
   adopted in step 1. Preserve independently obtained predictions and kernel events
   when an attempt lacks a completed result. A post-apply gap must not default to
   either policy interference or an instrumentation defect.
-- [ ] Evaluate capture of early or otherwise uninstrumented stderr diagnostics
+- [x] Evaluate capture of early or otherwise uninstrumented stderr diagnostics
   as a bounded, deferred question. Shared-memory text does not close it. Capturing
   stderr adds no worker writes by itself, but its destination, resources,
   draining, and teardown can affect execution, and any proposed capture must
@@ -813,17 +815,17 @@ Runtime evidence loss and observation boundaries:
   Treat captured text as context without deriving failure classifications from
   it. An explicit decision to omit capture must retain the documented coverage
   gap.
-- [ ] Keep `sbpl-check` on the missing-reply path as an independent observation.
+- [x] Keep `sbpl-check` on the missing-reply path as an independent observation.
   Its admission refusal already reaches `policy_check_status` as a distinct
   outcome; keep that distinction in the startup note prose, which reports any
   non-compile as failed. A successful helper compilation does not explain the
   missing worker reply or establish the worker's last stage; no reply does not
   prove the worker never published a record.
-- [ ] Keep every existing capacity and budget fixed. For the controller's capture
+- [x] Keep every existing capacity and budget fixed. For the controller's capture
   boundary, make loss explicit; whether parsing should have a separate/larger
   budget is a later decision. Do not promise preservation of a record inside an
   envelope the receiver could not retain or decode.
-- [ ] Account for affected diagnostic, schema, and outcome documentation and
+- [x] Account for affected diagnostic, schema, and outcome documentation and
   existing tests. Preserve complementary contracts rather than replacing useful
   assertions with a single generic failure assertion.
 
@@ -923,13 +925,13 @@ A check that was not run remains unverified, with its reason recorded.
 
 | Item | Current state |
 | --- | --- |
-| Completed implementation batch | 0A, 0B and 0C. The combined step-0 public gate passes: trustworthy host observations, corrected classifier/precedence, response 5 with explicit signal null, and independent log correlation. |
-| Next batch | 1A: settle worker progress/failure records and publication rules, implement the minimal record and final snapshot preservation. Not started. |
-| ABI revision state | Worker ABI 5 unchanged and accepted for step 0; response schema 5 is implemented. No new worker revision is under construction. |
-| Chosen field contract locations | [Step-0 contract](FAILURE-PROPAGATION-CONTRACT.md) owns the evidence table and precedence; [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) defines the response types. [Public correlation contract](../PolicyWitness.md#denial-log-correlation) defines PID/attempt-operation/path matching, candidate event references, ambiguity and window limits. New worker records remain 1A. |
-| Inventory entries closed / remaining limitations | Host polling/termination/reaping observation repair and step-0 execution attribution are complete. Signals no longer imply sandbox cause; legacy preparation/application status maps to runner_failed without a native-call claim. Observed sentinel expiry maps to runner_timeout, independently of cleanup. First-deny and step matching now require authoritative worker identity; step associations require attempt provenance and retain ambiguity. Live captures remain optional and lack exact membership/order/PID-reuse protection. Missing predictions still use the legacy error/rc=0 shape. Late publications remain 1A, policy-write partial evidence 1C, validator lifecycle/structure step 2, unfamiliar diagnostic transport step 3; transfer deadline and early stderr capture are deferred. 0B's unreaped-child/blocking-successful-kill limitation remains. |
-| Verified source and signed app | Revision `ce73b1ac26340cd564b61137c185f66caf4fa906` plus retained uncommitted changes. [Final tested source](out/failure-propagation-0c/provenance/final-tested-source.json), [handoff source](out/failure-propagation-0c/provenance/final-source.json). Normal `YOLO=1 ./build.sh` succeeded outside the sandbox ([handoff command](out/failure-propagation-0c/provenance/build.handoff.json), [log](out/failure-propagation-0c/provenance/build.handoff.log)); tested app `/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app`. Worker, diagnostic/production validator, host, client, controller and observer hashes are recorded. Public inspections prove valid, unchanged bundles; disposable caller-auth copies leave the selected app intact. |
-| Checks, results, and evidence paths | [0C evidence index](out/failure-propagation-0c/README.md) retains commands, before/after links and limitations. Core selection: 57 pass. Final-contract selection: 12 pass; final handoff ABI/CLI selection: 4 pass after a comment-only worker correction. Together: 63 distinct passing cases, no skips/failures. Swift 176/176 with no internal SKIP; Rust bins 98/98. All 12 pre-apply/positive-control groups pass, including formerly failing attribution/signal groups. The denial/self-signal control passes with capture disabled/enabled and on success; actual client error replies and black-box signal/checker controls pass. ABI, C harness, source_drift, readiness, timeout and partial-evidence controls pass. [Acceptance audit](out/failure-propagation-0c/provenance/acceptance.json); final source_drift/static checks and `git diff --check` pass. Later batches remain unimplemented/unverified. |
+| Completed implementation batch | 0A–0C, 1A–1C, step 2 and the [audit corrections](FAILURE-PROPAGATION-AUDIT.md). The inventory covers host/worker evidence, immutable query planning and tuple association, independent validator collection, strict capture in all three controller receivers and required test equipment. |
+| Next batch | Step 3: expanded unfamiliar-code transport and mutation controls. Not started. |
+| ABI revision state | Worker ABI 6; response schema 6 (nullable query PID); request schema 1. No revision under construction and no capacity/budget increase. |
+| Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h`, `PWRunnerAPI.swift`, and `ValidatorClient.swift`. Admission belongs to the host; worker publications/transfer observations to `runner_subprocess`; validator records/receiver/process observations to `validator_subprocess`; controller byte counts/local loss to runner-client, policy-check and log-observer capture objects. |
+| Inventory entries closed / remaining limitations | Each row has an owner and acceptance or an explicit limitation. Query tuples and pre-attempt exclusions govern joining; input failure no longer abandons stdout. All controller JSON receivers count original bytes and distinguish local loss. Early/dependency stderr remains uncollected; an open undrained policy pipe has no transfer deadline. Successful kill still uses blocking wait; failed cleanup may leave a child unreaped. No streaming allocation bound. Native setup exhaustion, destructive XPC/reply faults, a forced client timer and worker exec stderr truncation remain stated coverage gaps. Log-observer upstream lossy conversion leaves raw pathname fidelity unresolved. Existing TCC entries are unchanged. |
+| Verified source and signed app | Base `0670db1` plus steps 1–2 and audit corrections; the commit is recorded in the [correction index](out/failure-propagation-corrections/README.md). Normal `YOLO=1 ./build.sh` outside the automation sandbox, app `/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app`. [Build/source/executable hashes](out/failure-propagation-corrections/accepted-build.json), [build log](out/failure-propagation-corrections/build.accepted.log), [final source snapshot](out/failure-propagation-corrections/final-source.json). Fixtures remain outside the inspected app. |
+| Checks, results, and evidence paths | [Correction acceptance](out/failure-propagation-corrections/README.md): 93 distinct latest passing catalog cases, Swift 256/256 without internal SKIP/FAIL, Rust 106/106 plus 10 CLI integration tests. Broad run: 87 pass and one new nullable-PID decoder control failed; the fallback was corrected and all 14 final focused cases pass. Both BYOXPC BBX cases and all 13 selected BYOXPC cases pass. All inspected builds valid/unchanged. Missing-equipment negative control yields 51 normal failures, no crash/skip. Prior [step 1](out/failure-propagation-1c/README.md) and [step 2](out/failure-propagation-2/README.md) evidence is retained. Syntax and git diff --check pass. |
 
 ## Decisions to resolve within implementation batches
 

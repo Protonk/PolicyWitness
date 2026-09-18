@@ -31,12 +31,20 @@ Don't reach for `runner_unit` when:
 **Host lifecycle controls.** `CWorkerLifecycleTests.swift` drives the production
 host driver with a separately built ABI fixture, then encodes the actual
 `buildWorkerSubprocess` result. The fixture never applies a sandbox and cannot
-establish a policy cause. Internal `CWorkerProcessCalls` closures control only
+establish a policy cause. Internal `ChildProcessCalls` closures control only
 `kill`/`waitpid` results where real failure is unreliable; no request override
 selects them. Tests own independent cleanup of any fixture child left unreaped
-by a fault control. Real-worker publication remains separately covered by
+by a fault control. `WorkerEvidenceTests` also exercises the production C main with isolated native
+call substitutions, final publications, missing step evidence, and policy-write
+partial results. These controlled call failures are not kernel attribution.
+The ABI fixture and its companion executables remain outside the inspected app.
+`ValidatorEvidenceTests` drives the same shared lifecycle observer with a separate
+validator child (`.validator`), validates byte frames/record structure, and owns
+cleanup after controlled kill/wait failures. `failure_boundaries` covers the real
+C overlong-line guard plus transcript-to-CLI UTF-8/structure/association controls.
+Real-worker publication remains separately covered by
 `CWorkerTests`, `CWorkerValidatorTests`, and `runner_c_worker_harness`. Retain the
-Swift log and inspect it for internal `SKIP` before crediting those live cases.
+Swift log; the wrapper rejects internal `SKIP`/`FAIL` before crediting live cases.
 
 **Stubbing C function pointers.** `SandboxLib`'s function-pointer slots are `@convention(c)`, which forbids closure capture. To observe side effects (call counts, freed-pointer lists) from a stub, route through file-scope `private var`s and reset them at the top of any test that uses them. `SandboxApplyTests.swift` is the worked example.
 

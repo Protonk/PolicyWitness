@@ -163,25 +163,28 @@ Top-level fields:
 - `pid` names the C worker when `runner_subprocess` exists. Correlation uses
   only `runner_subprocess.pid`, never a fallback host/client PID.
 - `runner_subprocess` carries the worker PID, exit/signal status, partial-step
-  flag and independent host lifecycle observations. Outcome precedence is host
-  admission failure, inconsistent publication, published legacy failure,
-  observed sentinel deadline, other worker/reporting/process failure, validator
-  failure, then `ok`. A recovered EINTR alone is not failure. The authoritative
+  flag, worker publications and independent host lifecycle observations.
+  Outcome precedence is host admission failure, published worker failure,
+  host transfer failure, invalid publication/legacy failure, observed sentinel
+  deadline, other worker/reporting/process failure, validator failure, then `ok`. A recovered EINTR alone is not failure. The authoritative
   table is [the failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md).
   Ambiguous legacy failures, incomplete reports, abnormal/unconfirmed exits and
   cleanup faults use `runner_failed`; cause may remain unknown. Deadline expiry
   uses `runner_timeout` even after voluntary grace exit. A cleanup request alone
   is not a timeout. `runner_sandbox_denied` and `sandbox_apply_failed` remain
-  legacy/reserved spellings and are not emitted without supporting evidence.
-- `validator_subprocess` carries the validator child's
-  `{ pid, exit_code, term_signal }`, or is `null` when no validator
+  legacy/reserved spellings; current producers retain specific native failure
+  evidence under `runner_failed`.
+- `validator_subprocess` carries the validator child's process observations,
+  accepted records, expected IDs, association issues, byte counts, and independent
+  I/O/decode faults, or is `null` when no validator
   ran (every probe was in the prediction-unavailable set, or
   spawning the validator failed).
 
 The host also writes `runner_subprocess.ready_byte_received`, `done_observed`,
 `poll_stop_reason`, `exit_requested`, `termination_request`, `reaped`, and
 `wait_errors`. Polling stops for `done`, `child_reaped`, `sentinel_deadline`, or
-`wait_error`; later cleanup preserves that reason. A termination request records
+`wait_error`, or `policy_write_error`; later cleanup preserves that reason.
+`done_observed` and completed slots use the final acquire snapshot after cleanup. A termination request records
 the signal and `kill` return, with errno only on failure. Exit code and signal
 are populated only after `waitpid` returned the child's PID. If reaping is
 unconfirmed, both are absent/null even when the termination request succeeded.
@@ -193,10 +196,10 @@ ends that phase; ECHILD stops further waits and signals to that PID. Failed kill
 permits only a nonblocking final wait. An unreaped child may remain. Successful
 kill retains the blocking final wait, so this is no global lifecycle timeout.
 Readiness, sentinel and exit-grace budgets are unchanged. Authoritative field
-validity and encoding are documented in `PWRunnerAPI.swift`; policy-write errors
-still lack partial subprocess evidence.
+validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
+retain partial subprocess evidence and independent transfer observations.
 
-Response schema is 5; request schema 1 and worker ABI 5 are independent. Legacy
+Response schema is 6; request schema 1 and worker ABI 6 are independent. Legacy
 replies remain decodable. Typed readers that require a signal object must migrate
 to a nullable field. Optional subprocess objects retain omitted-or-null absence.
 
@@ -287,3 +290,41 @@ Some development harnesses run tools inside an OS sandbox. In those environments
 Treat this as an environment constraint, not a PolicyWitness regression.
 
 If you suspect you are running under a sandboxed automation harness, re-run from a normal Terminal (or with escalation) before debugging PolicyWitness itself.
+
+Worker ABI 6 appends a pre-touched progress/failure header and a 4,096-byte text
+region after capture, leaving existing capacities intact. The release/acquire
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#step-1-contract-abi-6-accepted)
+defines milestones, native results, open numeric codes, and text availability.
+`runner_subprocess.worker_evidence` carries these publications through the normal
+reply. Policy-write errors retain partial output and host byte/errno evidence in
+`policy_transfer_error`; FD-scoped SIGPIPE suppression and close-on-exec source
+pipe descriptors make closed-input failure observable. An undrained open pipe
+still blocks before sentinel polling. Early stderr capture is not implemented.
+
+Host capacity refusals share `admission_failure` on the runner result, with field,
+actual/maximum and UTF-8-byte or item units. Both child drivers share the finite
+`ChildProcessState` wait/termination observer; parsed validator records survive
+failed cleanup. Validator replies are byte-framed, strictly decoded, structurally
+validated, then associated by unique requested ID. Allow/deny records require
+native integer results. Null-ID and unfamiliar valid diagnostics remain at run
+scope; missing/duplicate/unexpected replies cannot be hidden by record count.
+See [routing inventory](../tests/FAILURE-PROPAGATION-INVENTORY.md) and
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for capacities, acceptance
+rules and remaining observation/liveness limitations.
+
+
+Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
+PID, or explicit null when no worker exists. It never substitutes the host PID.
+Typed readers must accept null; stored integer-PID replies remain decodable.
+The top-level legacy PID convention is unchanged. Request schema 1 and worker
+ABI 6 remain separate.
+
+Per-step `native_rc` is authoritative for native returns. A received diagnostic
+without a native return retains `result_source="validator"`, `native_rc=null`
+and compatibility `rc=-1`; this is not a synthetic validator record or a claimed
+native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+missing reason. `outcome="error"` alone does not identify a native call failure.
+
+See [the query and receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
+for immutable query planning, query association, independent pipe collection,
+and exact-byte controller capture semantics.

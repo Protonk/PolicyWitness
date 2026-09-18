@@ -135,8 +135,8 @@ references is supported by the compiler.
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
-policy itself; its legacy preparation/application failure status cannot identify
-the failed native operation and surfaces as `runner_failed`. The controller runs
+policy itself; its ABI 6 failure record identifies the failed operation and
+available native result, summarized as `runner_failed`. The controller runs
 `sbpl-check` only after `xpc_error`, retaining its independent result under
 `data.policy_check`. That fallback says nothing about how far a missing worker
 progressed or why its reply was lost. You can also run the tool directly for the
@@ -180,8 +180,9 @@ for a malformed filter argument). `bad_policy` is distinct from
 `missing_params` and `policy_too_large` above, both of which gate
 before the policy reaches libsandbox. In the run flow a policy that
 fails to compile is **not** reported as `bad_policy`: it reaches the C
-worker and surfaces as `runner_failed` with a published legacy status.
-That status can also describe parameter setup or application failure.
+worker and surfaces as `runner_failed` with an operation=5 compilation record,
+NULL-result evidence and any published compiler diagnostic. Parameter setup
+and application failures have their own operation/result records.
 `bad_policy` in a run is now emitted only by the runner host for a
 structurally invalid policy (missing `sbpl_source`, or a non-`sbpl`
 `format`); the host runs `sbpl-check` itself only on the
@@ -320,8 +321,8 @@ Example:
 
 ### Shape and schema_version
 
-Runner responses use `schema_version = 5`, separately from request schema 1,
-the controller envelope and worker ABI 5. The XPC host stays unsandboxed and
+Runner responses use `schema_version = 6`, separately from request schema 1,
+the controller envelope and worker ABI 6. The XPC host stays unsandboxed and
 spawns a sandboxed attempt worker plus a batch validator. Worker identity for
 correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
 the host or client when no worker metadata exists.
@@ -402,6 +403,38 @@ Top-level fields beyond `pid` / `runner_subprocess`:
        produce `drift=true` when the validator predicted `allow`.
   Encoded as explicit JSON `null` so the key is always present.
 
+The authoritative child object also includes `worker_evidence` when a child was
+spawned. Its ABI version identifies the host-selected layout, not proof that
+the child reached ABI validation. It contains the latest atomic `progress`, an
+independently published `failure` (operation, diagnostic code, native result
+kind/value, meaningful errno and optional parameter index), the worker's
+readiness-write result, and a bounded `diagnostic`. Compilation returning NULL
+is distinct from parameter setup or application returning an integer failure.
+Numeric operation/code values are open: unfamiliar values remain available.
+Missing/incomplete publication exposes no payload. Diagnostic text can be absent,
+complete, empty, truncated or incomplete; its availability does not determine
+failure classification. The shared-memory text payload limit is 4,095 bytes; its length counts stored
+bytes, and invalid UTF-8 is decoded with replacement characters. Early stderr and
+unpublished text are not recovered by this channel.
+
+`done_observed` and completed slots reflect the final acquire snapshot after
+cleanup. `poll_stop_reason` retains an earlier deadline even if the worker
+finishes during grace. On a failed policy write, `policy_transfer_error` records
+the host's errno and written/expected UTF-8 byte counts, while worker evidence
+and process status remain available. Written bytes do not prove child receipt.
+An open but undrained policy pipe still has no host transfer deadline.
+
+Step channels expose `result_source`, `native_rc` and optional `missing_reason`.
+A missing prediction retains the compatibility `rc=0` but has source `synthetic`,
+`native_rc:null`, and distinguishes `validator_not_invoked` from
+`validator_no_verdict`. An incomplete attempt retains `not_run_worker_died`,
+meaning no completed result; it may have started. Completed attempts use source
+`worker`, but their rc is PW attempt status, not a raw syscall return, so their
+`native_rc` is also null. Received predictions use source `validator`; native rc
+is retained only for native-call result records. See the
+[field contract](tests/FAILURE-PROPAGATION-CONTRACT.md#step-1-contract-abi-6-accepted)
+for publication, absence and numeric-code definitions.
+
 The request schema also accepts an optional `_test_overrides`
 field. The leading underscore is intentional: it marks `_test_overrides`
 as a private, unsupported field used by the project's own tests to
@@ -447,10 +480,11 @@ Notes:
 - `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
   `prediction_unavailable`.
     - `allow` / `deny`: `sandbox_check` returned a clean verdict.
-    - `error`: `sandbox_check` returned a non-EINVAL failure
-      (rare in practice). `error` is always populated with
-      `strerror(errno)` — consumers should never see
-      `outcome == "error"` with `error == null`.
+    - `error`: no usable prediction. This includes native call errors,
+      validator diagnostics and synthetic missing replies. Consult
+      `result_source`, `native_rc`, `missing_reason` and run-level records;
+      the outcome alone does not establish that a native call ran.
+      Diagnostic text need not be `strerror(errno)`.
     - `unsupported_operation`: `sandbox_check` returned `rc=-1` +
       `errno=22` (EINVAL), which most commonly means the operation
       name is one libsandbox doesn't recognize. SBPL family
@@ -578,9 +612,10 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_
 `sbpl-check` tool outcomes `missing_params` and `policy_too_large`,
 are documented under SBPL check above):
 
-- `ok` — worker completion and clean disposition are confirmed, and the current
-  validator mapping reports sufficient verdicts without a transport failure.
-  Validator lifecycle/record validation is a separate evidence boundary.
+- `ok` — worker completion and clean disposition are confirmed. Any invoked
+  validator also has confirmed clean disposition, valid received records for
+  every requested step ID, and no transport, decoding, or association failure.
+  Uniquely associated per-step diagnostics retain their per-step semantics.
 - `runner_sandbox_denied` — recognized legacy string, not emitted by current
   producers. Neither a process signal nor a PID-matched denial establishes that
   the sandbox caused termination.
@@ -588,7 +623,7 @@ are documented under SBPL check above):
   budget. This remains a timeout if the child voluntarily exits during grace;
   a cleanup termination request alone does not establish a deadline.
 - `runner_failed` — execution/reporting failure, including inconsistent
-  publication, a published legacy preparation/application failure, an incomplete
+  publication, a published worker operation failure or legacy status, an incomplete
   report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
   The cause may be unknown; this label does not prove a host defect. A completed
   report survives an abnormal exit, but cannot establish clean run completion.
@@ -599,24 +634,32 @@ are documented under SBPL check above):
   in `steps[*].attempt` as degraded evidence.
 - `validator_no_reply` — host encountered validator probe-write or verdict-read
   I/O failure. Independently completed verdicts and attempts remain available.
-- `validator_decode_failure` — validator emitted bytes the host
-  couldn't parse as NDJSON verdicts.
-- `validator_unavailable` — fewer validator verdicts arrived than expected.
+- `validator_decode_failure` — the host rejected a validator reply frame at the
+  UTF-8, JSON syntax, or record-structure boundary. Earlier valid records survive.
+- `validator_unavailable` — requested IDs lack unique replies, unassociated or
+  unexpected records arrived, or validator disposition/cleanup is abnormal or
+  unconfirmed. A sufficient record count alone cannot establish success.
   Partial verdicts and attempts survive. Missing supported-query verdicts use
-  the legacy `outcome="error"`, `rc=0` shape, not an observed native return.
+  the compatibility `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
+  `native_rc:null`, and a missing reason.
 - `bad_request` — request rejected before any worker spawn. Causes
   include: JSON decode failure, empty `sandbox_check.operation`
   (`validateSandboxChecks`), unsupported top-level field (e.g.
-  `instrumentation`), or duplicate `step_id` in the probe plan.
+  `instrumentation`), duplicate `step_id`, or a worker capacity refusal.
+  Capacity refusals carry host-owned `admission_failure` with field, actual and
+  maximum, `utf8_bytes` or `items`, and applicable step/key/index. Source permits
+  262143 UTF-8 bytes; steps 256; parameters 1024; step ID/target 63/511 bytes;
+  parameter key/value 127/383 bytes; supplied exec args 15 of 127 bytes each.
+  These payload byte limits exclude NUL and are checked before child spawn.
   Unknown `filter.kind` and unsupported `(attempt.kind,
   attempt.action)` combos do NOT produce `bad_request` — they
   downgrade to per-step `prediction_unavailable` and `unsupported`
   respectively (see the per-step sections above).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
-- `sandbox_apply_failed` — retained legacy/reserved spelling. The current
-  ambiguous worker status does not justify a precise native apply classification,
-  so current producers use `runner_failed` with published legacy status detail.
+- `sandbox_apply_failed` — retained legacy/reserved spelling. Current producers
+  use `runner_failed`; the worker record distinguishes an observed native apply
+  failure from compilation, parameter setup and failures without a report.
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -1058,3 +1101,39 @@ Registry location:
 ```
 ~/Library/Application Support/PolicyWitness/runners.json
 ```
+
+### Receiver evidence
+
+`validator_subprocess` retains accepted `records` (including null-ID diagnostics)
+and their `raw_line`, expected IDs, association issues, received stdout byte
+count, probe write counts, independent I/O/decode faults, termination-call
+observations and actual reap status. Duplicate IDs supply no unique per-step
+prediction. Decode context is at most 256 original bytes in base64 with explicit
+truncation; it is not an accepted verdict. Unfamiliar structurally valid diagnostic
+outcomes remain visible even when their per-step summary is `error`.
+
+`data.runner_client` reports exact received/retained stdout and stderr byte counts
+and the unchanged 1 MiB `capture_limit_bytes`. `stdout_capture_error` means the
+controller truncated its own retained reply; `stdout_parse_error` means the
+untruncated bytes could not be decoded as JSON. Full subprocess output is collected
+before prefix selection, so this is not a streaming memory bound. Records inside
+a lost envelope are unavailable. The independent fallback helper's admission
+refusal remains `policy_too_large`; successful helper compilation cannot explain
+a missing worker reply.
+
+
+Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
+PID, or explicit null when no worker exists. It never substitutes the host PID.
+Typed readers must accept null; stored integer-PID replies remain decodable.
+The top-level legacy PID convention is unchanged. Request schema 1 and worker
+ABI 6 remain separate.
+
+Per-step `native_rc` is authoritative for native returns. A received diagnostic
+without a native return retains `result_source="validator"`, `native_rc=null`
+and compatibility `rc=-1`; this is not a synthetic validator record or a claimed
+native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+missing reason. `outcome="error"` alone does not identify a native call failure.
+
+See [the query and receiver contract](tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
+for immutable query planning, query association, independent pipe collection,
+and exact-byte controller capture semantics.

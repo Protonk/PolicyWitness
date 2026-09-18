@@ -577,6 +577,14 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     } else {
         printf(",\"exit_code\":null,\"term_signal\":null");
     }
+    pw_shm_evidence_t *ev = (pw_shm_evidence_t *)((char *)base + PW_SHM_REGION_BYTES
+        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES);
+    uint32_t published = atomic_load_explicit(&ev->failure_published, memory_order_acquire);
+    printf(",\"failure_published\":%u", published);
+    if (published == 1) {
+        printf(",\"failure\":{\"operation\":%u,\"code\":%u,\"detail\":%u,\"native_kind\":%u,\"errno_present\":%u}",
+               ev->operation, ev->code, ev->detail, ev->native_kind, ev->errno_present);
+    }
     printf(",\"slots\":[");
     for (uint32_t i = 0; i < scen->step_count; i++) {
         if (i) putc(',', stdout);

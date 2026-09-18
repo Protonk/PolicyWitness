@@ -9,7 +9,7 @@ use std::ffi::OsString;
 use std::process::{Command, Stdio};
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::utils::truncate_output;
+use crate::utils::{capture_json_output, JsonOutputCapture};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SandboxDenyEvent {
@@ -58,11 +58,8 @@ pub struct SandboxLogCapture {
     pub capture_status: String,
     pub tool_exit_code: i32,
     pub blocked_reason: Option<String>,
-    pub stdout_parse_error: Option<String>,
-    pub stdout_truncated: bool,
-    pub stdout_raw: Option<String>,
-    pub stderr: String,
-    pub stderr_truncated: bool,
+    #[serde(flatten)]
+    pub output: JsonOutputCapture,
     pub observer: Option<Value>,
     pub observed_deny: Option<bool>,
     pub deny_events: Option<Vec<SandboxDenyEvent>>,
@@ -243,19 +240,13 @@ pub fn capture_sandbox_logs_last(
         .output()
         .map_err(|e| format!("failed to run sandbox-log-observer: {e}"))?;
 
+    Ok(parse_observer_output(&out, last))
+}
+
+fn parse_observer_output(out: &std::process::Output, last: &str) -> SandboxLogCapture {
     let exit_code = out.status.code().unwrap_or(1);
 
-    let (stdout, stdout_truncated) = truncate_output(&out.stdout);
-    let (stderr, stderr_truncated) = truncate_output(&out.stderr);
-
-    let mut parsed: Option<Value> = None;
-    let mut parse_error: Option<String> = None;
-    if !stdout.trim().is_empty() {
-        match serde_json::from_str::<Value>(&stdout) {
-            Ok(v) => parsed = Some(v),
-            Err(e) => parse_error = Some(format!("{e}")),
-        }
-    }
+    let (output, parsed) = capture_json_output(out, "sandbox-log-observer");
 
     let observed_deny = parsed
         .as_ref()
@@ -264,7 +255,9 @@ pub fn capture_sandbox_logs_last(
     let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
     let deny_events = parsed.as_ref().and_then(observer_deny_events);
 
-    let capture_status = if parse_error.is_some() {
+    let capture_status = if output.stdout_capture_error.is_some() {
+        "capture_error".to_string()
+    } else if output.stdout_parse_error.is_some() {
         "parse_error".to_string()
     } else if blocked_reason.is_some() {
         "blocked".to_string()
@@ -272,37 +265,76 @@ pub fn capture_sandbox_logs_last(
         "error".to_string()
     } else if exit_code != 0 {
         "error".to_string()
-    } else if parsed.is_some() {
+    } else if observed_deny.is_some() {
         "captured".to_string()
+    } else if parsed.is_some() {
+        "invalid_reply".to_string()
     } else {
         "error".to_string()
     };
 
-    Ok(SandboxLogCapture {
+    SandboxLogCapture {
         window: SandboxLogWindow::trailing(last),
         capture_status,
         tool_exit_code: exit_code,
         blocked_reason,
-        stdout_parse_error: parse_error.clone(),
-        stdout_truncated,
-        stdout_raw: if parse_error.is_some() {
-            Some(stdout)
-        } else {
-            None
-        },
-        stderr,
-        stderr_truncated,
+        output,
         observer: parsed,
         observed_deny,
         deny_events,
         step_denies: None,
-    })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn observer_receiver_uses_original_bytes_and_reports_local_loss() {
+        use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
+        for (mode, expected) in [
+            ("valid", "captured"),
+            ("oversized", "capture_error"),
+            ("utf8", "parse_error"),
+            ("malformed", "parse_error"),
+            ("empty", "error"),
+            ("missing", "invalid_reply"),
+        ] {
+            let original = receiver_fixture(
+                r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319}}"#,
+                mode,
+            );
+            let capture = parse_observer_output(&original, "10s");
+            let wire = serde_json::to_value(&capture).unwrap();
+            assert_eq!(capture.capture_status, expected, "{mode}");
+            assert_eq!(wire["stdout_bytes_received"], original.stdout.len());
+            assert_eq!(
+                wire["stdout_bytes_retained"],
+                original.stdout.len().min(MAX_CAPTURE_BYTES)
+            );
+            assert_eq!(wire["stderr_bytes_received"], 1048578);
+            assert_eq!(wire["stderr_bytes_retained"], MAX_CAPTURE_BYTES);
+            assert_eq!(
+                capture.observed_deny,
+                if mode == "valid" { Some(true) } else { None }
+            );
+            if mode == "oversized" {
+                assert!(serde_json::from_slice::<Value>(&original.stdout).is_ok());
+                assert!(capture.output.stdout_capture_error.is_some());
+                assert!(capture.output.stdout_parse_error.is_none());
+            }
+            if mode == "valid" {
+                assert_eq!(capture.observer.unwrap()["data"]["code"], 97319);
+            } else if mode == "missing" {
+                assert_eq!(capture.observer.unwrap()["data"]["code"], 97319);
+            } else {
+                assert!(capture.observer.is_none());
+                assert!(capture.deny_events.is_none());
+            }
+        }
+    }
 
     fn deny(pid: Option<i32>, op: &str, path: &str) -> SandboxDenyEvent {
         SandboxDenyEvent {

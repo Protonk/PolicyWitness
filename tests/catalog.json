@@ -930,6 +930,30 @@
             "bash",
             "tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh"
           ]
+        },
+        {
+          "id": "worker_progress_and_failure",
+          "description": "Worker progress and operation failure publications survive the real host and CLI; unfamiliar codes remain opaque",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_progress_and_failure.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
+        },
+        {
+          "id": "worker_sparse_failure",
+          "description": "Real source guard and competing EPIPE retain partial evidence; failed mapping and completed-probe failures remain observable",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_sparse_failure.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
         }
       ],
       "include": [
@@ -1080,6 +1104,41 @@
         "runner_byoxpc/opt_bucket5_subpath",
         "runner_byoxpc/BBX-001",
         "runner_byoxpc/BBX-002"
+      ]
+    },
+    "failure_boundaries": {
+      "command": [
+        "bash",
+        "tests/suites/failure_boundaries/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "admission",
+          "description": "Every unchanged worker capacity reports host-owned limits and UTF-8 units"
+        },
+        {
+          "id": "validator_frames",
+          "description": "Valid prefix survives UTF-8 and structural rejection; unfamiliar diagnostic remains accepted"
+        },
+        {
+          "id": "validator_association",
+          "description": "Duplicate and unexpected IDs cannot hide missing predictions or trap the join"
+        },
+        {
+          "id": "validator_overlong_request",
+          "description": "Real C batch framing diagnostic survives between valid probes through the CLI"
+        },
+        {
+          "id": "fallback_helper",
+          "description": "Shipped sbpl-check retains its independent 4 MiB admission refusal"
+        },
+        {
+          "id": "validator_removed_target",
+          "description": "Received prediction survives completed unlink; step association uses submitted IDs"
+        }
       ]
     }
   }

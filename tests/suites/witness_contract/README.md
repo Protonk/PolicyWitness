@@ -137,7 +137,7 @@ groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
-enforces the response-5 contract; acceptance status and retained before/after
+enforces the response-6 contract; acceptance status and retained before/after
 evidence live in
 [`FAILURE-PROPAGATION-PLAN.md`](../../FAILURE-PROPAGATION-PLAN.md).
 
@@ -181,3 +181,15 @@ and `observations.json`. No signed app is altered to steer observer output.
 
 Included in the default battery. The catalog shares the two partial-validator
 failure cases with `runner_validator_failure`, executing each canonical case once.
+
+`worker_progress_and_failure` checks real-worker success and compilation failure,
+plus an external ABI fixture whose unfamiliar operation/code/native-kind values
+survive the host, XPC client and controller. Its fixture establishes transport
+only; the success run checks independent file contents.
+
+`worker_sparse_failure` checks admitted-size policy transfer interruption and host EPIPE,
+a fixture that closes input with or without a report, real C mapping refusal,
+and a real self-signal after completed probes with independent file effects.
+Its fixtures are built outside the signed app; selected worker paths remain
+mirrored in each reply. `worker_progress_and_failure` also compares diagnostic
+availability without changing the justified operation/status classification.

@@ -1,9 +1,7 @@
 //! Host-side `sbpl-check` helper wiring.
 //!
-//! On an `xpc_error` the controller runs a lightweight `sbpl-check` compile to
-//! disambiguate the failure — telling a policy that never compiled from one
-//! that compiled but then blocked the XPC reply — since the runner could not
-//! report for itself.
+//! On an `xpc_error` the controller records an independent helper compilation.
+//! That result does not establish the worker's progress or explain a missing reply.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -12,17 +10,14 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::utils::truncate_output;
+use crate::utils::{capture_json_output, JsonOutputCapture};
 
 #[derive(Serialize)]
 pub struct PolicyCheckCapture {
     pub status: String,
     pub tool_exit_code: i32,
-    pub stdout_parse_error: Option<String>,
-    pub stdout_truncated: bool,
-    pub stdout_raw: Option<String>,
-    pub stderr: String,
-    pub stderr_truncated: bool,
+    #[serde(flatten)]
+    pub output: JsonOutputCapture,
     pub envelope: Option<Value>,
     pub policy_format: Option<String>,
     pub policy_sha256: Option<String>,
@@ -36,11 +31,7 @@ impl PolicyCheckCapture {
         PolicyCheckCapture {
             status: "unavailable".to_string(),
             tool_exit_code: 1,
-            stdout_parse_error: None,
-            stdout_truncated: false,
-            stdout_raw: None,
-            stderr: error,
-            stderr_truncated: false,
+            output: JsonOutputCapture::unavailable(error),
             envelope: None,
             policy_format: None,
             policy_sha256: None,
@@ -86,18 +77,12 @@ pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, Strin
         .output()
         .map_err(|e| format!("failed to run sbpl-check: {e}"))?;
 
-    let exit_code = out.status.code().unwrap_or(1);
-    let (stdout, stdout_truncated) = truncate_output(&out.stdout);
-    let (stderr, stderr_truncated) = truncate_output(&out.stderr);
+    Ok(parse_policy_check_output(&out))
+}
 
-    let mut parsed: Option<Value> = None;
-    let mut parse_error: Option<String> = None;
-    if !stdout.trim().is_empty() {
-        match serde_json::from_str::<Value>(&stdout) {
-            Ok(v) => parsed = Some(v),
-            Err(e) => parse_error = Some(format!("{e}")),
-        }
-    }
+fn parse_policy_check_output(out: &std::process::Output) -> PolicyCheckCapture {
+    let exit_code = out.status.code().unwrap_or(1);
+    let (output, parsed) = capture_json_output(out, "sbpl-check");
 
     let (compiled, policy_format, policy_sha256, compile_error, normalized_outcome) =
         if let Some(env) = parsed.as_ref() {
@@ -112,7 +97,9 @@ pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, Strin
             (None, None, None, None, None)
         };
 
-    let status = if parse_error.is_some() {
+    let status = if output.stdout_capture_error.is_some() {
+        "capture_error".to_string()
+    } else if output.stdout_parse_error.is_some() {
         "parse_error".to_string()
     } else if compiled == Some(true) {
         "compiled".to_string()
@@ -124,24 +111,64 @@ pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, Strin
     } else if exit_code != 0 {
         "tool_error".to_string()
     } else if parsed.is_some() {
-        "ok".to_string()
+        "invalid_reply".to_string()
     } else {
         "tool_error".to_string()
     };
 
-    Ok(PolicyCheckCapture {
+    PolicyCheckCapture {
         status,
         tool_exit_code: exit_code,
-        stdout_parse_error: parse_error.clone(),
-        stdout_truncated,
-        stdout_raw: if parse_error.is_some() { Some(stdout) } else { None },
-        stderr,
-        stderr_truncated,
+        output,
         envelope: parsed,
         policy_format,
         policy_sha256,
         compiled,
         compile_error,
         normalized_outcome,
-    })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
+    #[test]
+    fn helper_receiver_preserves_loss_and_never_invents_compilation() {
+        for (mode, expected) in [
+            ("valid", "compiled"),
+            ("oversized", "capture_error"),
+            ("utf8", "parse_error"),
+            ("malformed", "parse_error"),
+            ("empty", "tool_error"),
+            ("missing", "invalid_reply"),
+        ] {
+            let original = receiver_fixture(r#"{"data":{"compiled":true}}"#, mode);
+            let capture = parse_policy_check_output(&original);
+            let wire = serde_json::to_value(&capture).unwrap();
+            assert_eq!(capture.status, expected, "{mode}");
+            assert_eq!(wire["stdout_bytes_received"], original.stdout.len());
+            assert_eq!(
+                wire["stdout_bytes_retained"],
+                original.stdout.len().min(MAX_CAPTURE_BYTES)
+            );
+            assert_eq!(wire["stderr_bytes_received"], 1048578);
+            assert_eq!(wire["stderr_bytes_retained"], MAX_CAPTURE_BYTES);
+            assert_eq!(wire["capture_limit_bytes"], MAX_CAPTURE_BYTES);
+            assert_eq!(
+                capture.compiled,
+                if mode == "valid" { Some(true) } else { None }
+            );
+            if mode == "oversized" {
+                assert!(serde_json::from_slice::<Value>(&original.stdout).is_ok());
+                assert!(capture.output.stdout_capture_error.is_some());
+                assert!(capture.output.stdout_parse_error.is_none());
+                assert!(capture.envelope.is_none());
+            }
+            if mode == "missing" {
+                assert_eq!(capture.envelope.unwrap()["data"]["code"], 97319);
+                assert!(capture.compile_error.is_none());
+            }
+        }
+    }
 }

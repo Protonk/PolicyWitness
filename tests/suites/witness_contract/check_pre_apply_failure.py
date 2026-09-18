@@ -32,7 +32,7 @@ def library_claims(value, path='runner'):
         operation = value.get('operation')
         library_operation = operation in (
             'sandbox_apply', 'sandbox_compile_string', 'apply', 'compile',
-            'application', 'compilation')
+            'application', 'compilation', 5, 8)
         for key, item in value.items():
             if item is not None and (
                 key in ('apply_rc', 'apply_errno', 'compile_rc', 'compile_errno')
@@ -84,7 +84,7 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    assert runner['schema_version'] == 5, runner
+    assert runner['schema_version'] == 6, runner
     steps = runner['steps']
     assert [s['step_id'] for s in steps] == [s['step_id'] for s in specimen['probe_plan']], steps
     if failure:

@@ -46,7 +46,7 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
     let rows: [ClassifyRow] = [
         // ---- worker side: shape/setup/spawn failures (validator not reached) ----
         ClassifyRow(label: "worker rejects oversized plan → bad_request",
-                    worker: .failure(.slotCountExceeded(999)),
+                    worker: .failure(.admissionFailed(PWRunnerAdmissionFailure(field: "probe_plan", actual: 999, maximum: 256, unit: "items"))),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.badRequest),
         ClassifyRow(label: "worker posix_spawn fails → worker_spawn_failed",
@@ -185,16 +185,19 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     validator: .failure(error: .probeSerializationFailed("encode"), partial: nil),
                     expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "absent validator cannot hide expected queries",
+                    worker: .success(workerOut()), validator: nil,
+                    expectedVerdictCount: 1, expected: NormalizedOutcome.validatorUnavailable),
         // Clean exit but fewer verdicts than expected → attempts-only mode.
         ClassifyRow(label: "validator clean exit, short verdict count → validator_unavailable",
                     worker: .success(workerOut(done: true)),
-                    validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [])),
+                    validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [], exitCode: 0, reaped: true, waitErrors: [], expectedProbes: [])),
                     expectedVerdictCount: 1,
                     expected: NormalizedOutcome.validatorUnavailable),
         // Clean exit, verdict count meets expectation (0 of 0) → ok.
         ClassifyRow(label: "validator clean exit, full verdict count → ok",
                     worker: .success(workerOut(done: true)),
-                    validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [])),
+                    validator: .success(ValidatorOutput(validatorPid: 0, verdicts: [], exitCode: 0, reaped: true, waitErrors: [], expectedProbes: [])),
                     expectedVerdictCount: 0,
                     expected: NormalizedOutcome.ok),
     ]

@@ -66,6 +66,7 @@ func runAppliedProfileCaptureTests(_ tk: TestKit) {
         tk.run("successful capture cannot turn failed apply or incomplete/dead worker into availability") {
             let b = fixture()
             try expectEqual(read(b, applied: false).status, "unavailable")
+            try expectEqual(read(b, applied: false).reason, "successful_application_unconfirmed")
             try expectEqual(read(b, rc: -1).status, "unavailable")
             try expectEqual(read(b, done: false).status, "unavailable")
             try expectEqual(read(b, exit: nil, signal: 9).status, "unavailable")
@@ -91,7 +92,7 @@ func runAppliedProfileCaptureTests(_ tk: TestKit) {
             for n: String? in [nil, "", String(repeating: "A", count: 32), String(repeating: "0", count: 31)] {
                 let input = CWorkerInput(workerExecutablePath: "/nonexistent", policy: source, slots: [],
                     captureAppliedProfile: true, captureNonce: n)
-                guard case .failure(.captureNonceInvalid) = runCWorker(input) else {
+                guard case .failure(.captureNonceInvalid, _) = runCWorker(input) else {
                     throw TestFailure(message: "invalid nonce reached worker spawn")
                 }
             }

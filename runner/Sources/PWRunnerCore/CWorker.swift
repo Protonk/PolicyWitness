@@ -46,16 +46,19 @@ import CryptoKit
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
-    public static let abiVersion: UInt32   = 5
+    public static let abiVersion: UInt32   = 6
 
     public static let headerBytes: Int     = 64
     public static let slotBytes: Int       = 8192
     public static let maxSteps: Int        = 256
+    public static let policyBytes: Int     = 262144
     public static let paramBytes: Int      = 512
     public static let maxParams: Int       = 1024
     public static let captureHeaderBytes: Int = 144
     public static let captureBytes: Int = 1048576
     public static let captureNonceBytes: Int = 16
+    public static let evidenceHeaderBytes: Int = 64
+    public static let diagnosticBytes: Int = 4096
 
     // Exec-attempt input bounds (ABI v4). argvBytes is the per-entry
     // byte cap (including the trailing NUL); maxArgv is the number of
@@ -68,7 +71,7 @@ public enum PWShmLayout {
     public static let childOutputBytes: Int = 1024
 
     public static let regionBytes: Int =
-        headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes
+        headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes + evidenceHeaderBytes + diagnosticBytes
 
     // Header field offsets (in bytes from region base).
     public static let abiVersionOffset: Int    = 0
@@ -97,6 +100,23 @@ public enum PWShmLayout {
     public static let captureParamsSha256Offset: Int = 64
     public static let captureBytecodeSha256Offset: Int = 96
     public static let captureRequestNonceOffset: Int = 128
+
+    public static let evidenceOffset: Int = captureOffset + captureHeaderBytes + captureBytes
+    public static let evidenceProgressOffset: Int = 0
+    public static let evidenceFailurePublishedOffset: Int = 4
+    public static let evidenceOperationOffset: Int = 8
+    public static let evidenceCodeOffset: Int = 12
+    public static let evidenceNativeKindOffset: Int = 16
+    public static let evidenceNativeResultOffset: Int = 20
+    public static let evidenceErrnoValOffset: Int = 24
+    public static let evidenceErrnoPresentOffset: Int = 28
+    public static let evidenceItemIndexOffset: Int = 32
+    public static let evidenceDetailOffset: Int = 36
+    public static let evidenceReadyPublishedOffset: Int = 40
+    public static let evidenceReadyRcOffset: Int = 44
+    public static let evidenceReadyErrnoOffset: Int = 48
+    public static let evidenceDiagnosticStateOffset: Int = 52
+    public static let evidenceDiagnosticLengthOffset: Int = 56
 
     // Slot field offsets (from the slot's base). ABI v4 interposes
     // argv_count + argv between the v3 inputs and the v3 outputs, so
@@ -303,6 +323,57 @@ public struct CWorkerOutput {
     public var terminationRequest: PWRunnerTerminationRequest? = nil
     public var reaped: Bool? = nil
     public var waitErrors: [PWRunnerWaitError]? = nil
+    public var workerEvidence: PWWorkerEvidence? = nil
+    public var policyTransferError: PWWorkerPolicyTransferError? = nil
+}
+
+
+// Only publication words gate non-atomic payload reads. Progress itself is atomic.
+// Unknown codes remain numbers; structural bounds, not recognition, gate validity.
+func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
+    guard UInt32(bitPattern: readI32(base, offset: PWShmLayout.abiVersionOffset)) == PWShmLayout.abiVersion else { return nil }
+    let e = base.advanced(by: PWShmLayout.evidenceOffset)
+    func u(_ offset: Int) -> UInt32 { UInt32(bitPattern: readI32(e, offset: offset)) }
+    let raw = loadAcquire(e, offset: PWShmLayout.evidenceProgressOffset)
+    let item = raw & 0xfffff
+    let progress = raw == 0 ? nil : PWWorkerProgress(raw: raw, operation: raw >> 24,
+        phase: (raw >> 20) & 15, index: item == 0 ? nil : item - 1)
+    let published = loadAcquire(e, offset: PWShmLayout.evidenceFailurePublishedOffset)
+    var state = published == 0 ? "absent" : published == 2 ? "incomplete" : "invalid"
+    var failure: PWWorkerFailure? = nil
+    if published == 1 && u(PWShmLayout.evidenceErrnoPresentOffset) <= 1
+        && (u(PWShmLayout.evidenceNativeKindOffset) != 2
+            || readI32(e, offset: PWShmLayout.evidenceNativeResultOffset) == 0) {
+        let kind = u(PWShmLayout.evidenceNativeKindOffset)
+        let index = u(PWShmLayout.evidenceItemIndexOffset)
+        state = "published"
+        failure = PWWorkerFailure(operation: u(PWShmLayout.evidenceOperationOffset),
+            code: u(PWShmLayout.evidenceCodeOffset), native_kind: kind,
+            native_result: kind == 0 ? nil : readI32(e, offset: PWShmLayout.evidenceNativeResultOffset),
+            errno: u(PWShmLayout.evidenceErrnoPresentOffset) == 1 ? readI32(e, offset: PWShmLayout.evidenceErrnoValOffset) : nil,
+            index: index == UInt32.max ? nil : index, detail: u(PWShmLayout.evidenceDetailOffset))
+    }
+    var readiness: PWWorkerReadiness? = nil
+    if loadAcquire(e, offset: PWShmLayout.evidenceReadyPublishedOffset) == 1 {
+        let rc = readI32(e, offset: PWShmLayout.evidenceReadyRcOffset)
+        readiness = PWWorkerReadiness(rc: rc, errno: rc == 0 ? nil : readI32(e, offset: PWShmLayout.evidenceReadyErrnoOffset))
+    }
+    let ds = loadAcquire(e, offset: PWShmLayout.evidenceDiagnosticStateOffset)
+    var diagnostic = PWWorkerDiagnostic(state: ds,
+        status: ds == 0 ? "absent" : ds == 3 ? "incomplete" : "unknown")
+    if ds == 1 || ds == 2 {
+        let length = u(PWShmLayout.evidenceDiagnosticLengthOffset)
+        if length < PWShmLayout.diagnosticBytes
+            && e[PWShmLayout.evidenceHeaderBytes + Int(length)] == 0 {
+            diagnostic.status = ds == 1 ? "complete" : "truncated"
+            diagnostic.length = length
+            diagnostic.text = String(decoding: UnsafeBufferPointer(start:
+                e.advanced(by: PWShmLayout.evidenceHeaderBytes), count: Int(length)), as: UTF8.self)
+        } else { diagnostic.status = "invalid" }
+    }
+    return PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: progress,
+        failure_publication: published, failure_state: state, failure: failure,
+        readiness: readiness, diagnostic: diagnostic)
 }
 
 
@@ -339,7 +410,7 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
     func unavailable(_ reason: String) -> AppliedProfileCapture {
         AppliedProfileCapture(status: "unavailable", reason: reason, worker_pid: Int(workerPid))
     }
-    guard applied && applyRC == 0 else { return unavailable("application_not_successful") }
+    guard applied && applyRC == 0 else { return unavailable("successful_application_unconfirmed") }
     guard done && exitCode == 0 && termSignal == nil else { return unavailable("worker_not_complete") }
     guard loadAcquire(base, offset: PWShmLayout.captureCompletedOffset) == 1 else {
         return unavailable("capture_not_complete")
@@ -376,12 +447,7 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
 
 public enum CWorkerRunError: Error, CustomStringConvertible {
     case captureNonceInvalid
-    case slotCountExceeded(Int)
-    case paramCountExceeded(Int)
-    case slotInputTooLong(field: String, stepId: String, max: Int)
-    case paramInputTooLong(field: String, key: String, max: Int)
-    case argvCountExceeded(stepId: String, count: Int, max: Int)
-    case argvEntryTooLong(stepId: String, index: Int, max: Int)
+    case admissionFailed(PWRunnerAdmissionFailure)
     case execTargetNotAbsolute(stepId: String, target: String)
     case shmSetupFailed(String)
     case pipeFailed(String)
@@ -392,21 +458,8 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
         switch self {
         case .captureNonceInvalid:
             return "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce"
-        case .slotCountExceeded(let n):
-            return "request has \(n) probe steps; pw-probe-runner ABI caps at \(PWShmLayout.maxSteps)"
-        case .paramCountExceeded(let n):
-            return "request has \(n) policy params; pw-probe-runner ABI caps at \(PWShmLayout.maxParams)"
-        case .slotInputTooLong(let field, let stepId, let max):
-            return "slot \(stepId) \(field) exceeds ABI max (\(max) bytes including NUL)"
-        case .paramInputTooLong(let field, let key, let max):
-            return "param \(key) \(field) exceeds ABI max (\(max) bytes including NUL)"
-        case .argvCountExceeded(let stepId, let count, let max):
-            // The wire-visible cap is one less than maxArgv: argv[0] is
-            // the binary path (slot.target) and exec args occupy
-            // argv[1..N].
-            return "slot \(stepId) exec args count \(count) exceeds ABI max (\(max))"
-        case .argvEntryTooLong(let stepId, let index, let max):
-            return "slot \(stepId) exec args[\(index)] exceeds ABI max (\(max) bytes including NUL)"
+        case .admissionFailed(let record):
+            return "\(record.field) has \(record.actual) \(record.unit); maximum \(record.maximum)"
         case .execTargetNotAbsolute(let stepId, let target):
             return "slot \(stepId) exec target must be an absolute path (got \(target.isEmpty ? "<empty>" : target))"
         case .shmSetupFailed(let why): return "shm setup: \(why)"
@@ -419,7 +472,36 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
 
 public enum CWorkerRunResult {
     case success(CWorkerOutput)
-    case failure(CWorkerRunError)
+    case failure(CWorkerRunError, CWorkerOutput? = nil)
+}
+
+/// Capacity checks are local to the host's ABI writer. The C source reader
+/// retains its independent defensive guard. Units always exclude string NULs.
+func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? {
+    func check(_ field: String, _ actual: Int, _ maximum: Int, _ unit: String,
+               step: String? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
+        guard actual > maximum else { return nil }
+        return PWRunnerAdmissionFailure(field: field, actual: actual, maximum: maximum,
+            unit: unit, step_id: step, parameter_key: key, index: index)
+    }
+    if let r = check("policy.sbpl_source", input.policy.utf8.count, PWShmLayout.policyBytes - 1, "utf8_bytes") { return r }
+    if let r = check("probe_plan", input.slots.count, PWShmLayout.maxSteps, "items") { return r }
+    if let r = check("policy.params", input.params.count, PWShmLayout.maxParams, "items") { return r }
+    for slot in input.slots {
+        if let r = check("step_id", slot.stepId.utf8.count, PWShmLayout.stepIdMax - 1, "utf8_bytes", step: slot.stepId) { return r }
+        if let r = check("target", slot.target.utf8.count, PWShmLayout.targetMax - 1, "utf8_bytes", step: slot.stepId) { return r }
+        if slot.attemptKind == .execSpawn {
+            if let r = check("args", slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId) { return r }
+            for (i, arg) in slot.args.enumerated() {
+                if let r = check("args", arg.utf8.count, PWShmLayout.argvBytes - 1, "utf8_bytes", step: slot.stepId, index: i) { return r }
+            }
+        }
+    }
+    for p in input.params {
+        if let r = check("key", p.key.utf8.count, PWShmLayout.paramKeyMax - 1, "utf8_bytes", key: p.key) { return r }
+        if let r = check("value", p.value.utf8.count, PWShmLayout.paramValueMax - 1, "utf8_bytes", key: p.key) { return r }
+    }
+    return nil
 }
 
 // MARK: - Driver
@@ -436,20 +518,20 @@ public typealias CWorkerPostAppliedHook = (pid_t) -> Void
 
 public func runCWorker(_ input: CWorkerInput,
                        postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
-    runCWorker(input, processCalls: CWorkerProcessCalls(), postApplied: postApplied)
+    runCWorker(input, processCalls: ChildProcessCalls(), postApplied: postApplied)
 }
 
 /// Internal OS-call boundary for driver tests, never selected by request JSON.
 /// Production always uses Darwin. Tests can fail one real boundary without
 /// manufacturing CWorkerOutput or a normalized outcome.
-struct CWorkerProcessCalls {
+struct ChildProcessCalls {
     var wait: (pid_t, UnsafeMutablePointer<Int32>, Int32) -> pid_t = {
         Darwin.waitpid($0, $1, $2)
     }
     var kill: (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) }
 }
 
-private enum CWorkerWaitObservation { case pending, reaped, failed }
+enum ChildWaitObservation { case pending, reaped, failed }
 
 /// One child's host observations. Status is assigned only by a successful reap.
 /// Across polling/grace/final reap, allow two EINTR retries total. A terminal
@@ -461,21 +543,21 @@ private enum CWorkerWaitObservation { case pending, reaped, failed }
 /// limits bound failed calls, not kernel exit latency or the whole lifecycle.
 /// Unconfirmed disposition may leave a live child or zombie; no global reaper
 /// or new lifecycle timeout is introduced here.
-private struct CWorkerProcessState {
+struct ChildProcessState {
     let pid: pid_t
-    let calls: CWorkerProcessCalls
+    let calls: ChildProcessCalls
     var status: Int32? = nil
     var terminationRequest: PWRunnerTerminationRequest? = nil
     var waitErrors: [PWRunnerWaitError] = []
     var childUnavailable = false
     private var interruptRetries = 2
 
-    init(pid: pid_t, calls: CWorkerProcessCalls) {
+    init(pid: pid_t, calls: ChildProcessCalls) {
         self.pid = pid
         self.calls = calls
     }
 
-    mutating func wait(options: Int32, phase: String) -> CWorkerWaitObservation {
+    mutating func wait(options: Int32, phase: String) -> ChildWaitObservation {
         while true {
             var candidate: Int32 = 0
             let rc = calls.wait(pid, &candidate, options)
@@ -506,67 +588,15 @@ private struct CWorkerProcessState {
     }
 }
 
-func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
+func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                 postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
     if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
         return .failure(.captureNonceInvalid)
     }
-    // ---- Validation: bound the inputs to ABI caps before we touch shm.
-    if input.slots.count > PWShmLayout.maxSteps {
-        return .failure(.slotCountExceeded(input.slots.count))
-    }
-    if input.params.count > PWShmLayout.maxParams {
-        return .failure(.paramCountExceeded(input.params.count))
-    }
-    for slot in input.slots {
-        if slot.stepId.utf8.count >= PWShmLayout.stepIdMax {
-            return .failure(.slotInputTooLong(field: "step_id", stepId: slot.stepId,
-                                              max: PWShmLayout.stepIdMax))
-        }
-        if slot.target.utf8.count >= PWShmLayout.targetMax {
-            return .failure(.slotInputTooLong(field: "target", stepId: slot.stepId,
-                                              max: PWShmLayout.targetMax))
-        }
-        // Exec args validation: bound count + per-entry byte length so
-        // any overrun fails pre-spawn with a clean bad_request rather
-        // than truncating in shm. argv[0] is target; args fill
-        // argv[1..maxArgv-1], so the count cap is one less than maxArgv.
-        if slot.attemptKind == .execSpawn {
-            // Reject non-absolute exec targets pre-spawn. The contract
-            // (PWRunnerAPI.swift::PWRunnerAttempt + PolicyWitness.md →
-            // Attempt kinds) is that exec.target is an absolute path
-            // to the helper binary. A relative path would otherwise
-            // be resolved against the worker's cwd at posix_spawn
-            // time, which is sandbox-dependent and not what callers
-            // typically intend.
-            if !slot.target.hasPrefix("/") {
-                return .failure(.execTargetNotAbsolute(stepId: slot.stepId,
-                                                        target: slot.target))
-            }
-            let argsMax = PWShmLayout.maxArgv - 1
-            if slot.args.count > argsMax {
-                return .failure(.argvCountExceeded(stepId: slot.stepId,
-                                                    count: slot.args.count,
-                                                    max: argsMax))
-            }
-            for (idx, arg) in slot.args.enumerated() {
-                if arg.utf8.count >= PWShmLayout.argvBytes {
-                    return .failure(.argvEntryTooLong(stepId: slot.stepId,
-                                                       index: idx,
-                                                       max: PWShmLayout.argvBytes))
-                }
-            }
-        }
-    }
-    for p in input.params {
-        if p.key.utf8.count >= PWShmLayout.paramKeyMax {
-            return .failure(.paramInputTooLong(field: "key", key: p.key,
-                                                max: PWShmLayout.paramKeyMax))
-        }
-        if p.value.utf8.count >= PWShmLayout.paramValueMax {
-            return .failure(.paramInputTooLong(field: "value", key: p.key,
-                                                max: PWShmLayout.paramValueMax))
-        }
+    // All capacity refusals use the same host-owned record, before shm/spawn.
+    if let failure = workerAdmissionFailure(input) { return .failure(.admissionFailed(failure)) }
+    for slot in input.slots where slot.attemptKind == .execSpawn && !slot.target.hasPrefix("/") {
+        return .failure(.execTargetNotAbsolute(stepId: slot.stepId, target: slot.target))
     }
 
     // ---- shm region.
@@ -692,9 +722,21 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
         close(readyPipe[0]); close(readyPipe[1])
         return .failure(.pipeFailed("policy pipe: \(String(cString: strerror(errno)))"))
     }
-    // Parent-only ends close on exec; child gets the dup2'd FDs only.
-    _ = fcntl(readyPipe[0], F_SETFD, FD_CLOEXEC)
-    _ = fcntl(policyPipe[1], F_SETFD, FD_CLOEXEC)
+    // FD-scoped SIGPIPE suppression leaves process-wide signal handling intact.
+    guard fcntl(policyPipe[1], F_SETNOSIGPIPE, 1) == 0 else {
+        let error = errno
+        close(readyPipe[0]); close(readyPipe[1]); close(policyPipe[0]); close(policyPipe[1])
+        return .failure(.pipeFailed("F_SETNOSIGPIPE: \(String(cString: strerror(error)))"))
+    }
+    // Original pipe descriptors close on exec; only the explicit dup2 targets
+    // survive. An extra policy read end would keep a closed stdin pipe alive.
+    for fd in readyPipe + policyPipe {
+        guard fcntl(fd, F_SETFD, FD_CLOEXEC) == 0 else {
+            let error = errno
+            for opened in readyPipe + policyPipe { close(opened) }
+            return .failure(.pipeFailed("FD_CLOEXEC: \(String(cString: strerror(error)))"))
+        }
+    }
 
     // ---- posix_spawn.
     var fa: posix_spawn_file_actions_t? = nil
@@ -739,39 +781,34 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
     // Close parent-side ends that the child now owns.
     close(policyPipe[0])
     close(readyPipe[1])
-    var process = CWorkerProcessState(pid: pid, calls: processCalls)
+    var process = ChildProcessState(pid: pid, calls: processCalls)
 
     // ---- Write policy and close.
     let policyBytes = Array(input.policy.utf8)
     var policyWriteErrno: Int32 = 0
-    let policyWritten: Int = policyBytes.withUnsafeBufferPointer { buf in
-        guard let baseAddr = buf.baseAddress else { return 0 }
-        var written = 0
-        while written < buf.count {
-            let n = Darwin.write(policyPipe[1], baseAddr.advanced(by: written),
-                                 buf.count - written)
+    var policyWritten = 0
+    policyBytes.withUnsafeBufferPointer { buf in
+        guard let baseAddr = buf.baseAddress else { return }
+        while policyWritten < buf.count {
+            let n = Darwin.write(policyPipe[1], baseAddr.advanced(by: policyWritten),
+                                 buf.count - policyWritten)
             if n < 0 {
-                if errno == EINTR { continue }
-                policyWriteErrno = errno
-                return -1
+                let error = errno
+                if error == EINTR { continue }
+                policyWriteErrno = error
+                break
             }
-            written += n
+            policyWritten += n
         }
-        return written
     }
     close(policyPipe[1])
-    if policyWritten < 0 {
-        // Use the same finite failed-call handling here. Preserving the child
-        // report/process observations in this error return remains step 1C.
-        process.terminate()
-        close(readyPipe[0])
-        return .failure(.policyWriteFailed("write: \(String(cString: strerror(policyWriteErrno)))"))
-    }
+    let transferError = policyWritten < policyBytes.count ? PWWorkerPolicyTransferError(
+        errno: policyWriteErrno, bytes_written: policyWritten, bytes_expected: policyBytes.count) : nil
 
     // ---- Read pre-apply ready byte.
     var readyByte: UInt8 = 0
     var readyByteReceived = false
-    do {
+    if transferError == nil {
         let pollIntervalNs: UInt64 = 10_000_000   // 10 ms
         let deadlineIters = max(1, input.readyByteTimeoutMs * 1_000_000 / Int(pollIntervalNs))
         // Set the read end nonblocking so we don't pin the loop on a single read.
@@ -794,8 +831,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
     // the full sentinel deadline over a corpse.
     var sawApplied = false
     var sawDone = false
-    var pollStopReason = "sentinel_deadline"
-    do {
+    var pollStopReason = transferError == nil ? "sentinel_deadline" : "policy_write_error"
+    if transferError == nil {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
         let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
         // Probe for a dead worker only every ~50ms, not every 2ms: a
@@ -846,19 +883,44 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
         }
     }
 
-    // ---- Snapshot legacy storage. Only applied/done publish these fields;
-    // unconfirmed storage is not a native result. Classification is corrected
-    // in 0C; the final snapshot during/after cleanup is step 1A work.
-    let applyRC = readI32(rawBase, offset: PWShmLayout.applyRcOffset)
-    let applyErrno = readI32(rawBase, offset: PWShmLayout.applyErrnoOffset)
+    // ---- Request worker exit (a no-op if it already died on its own).
+    storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
 
-    // ---- Read slot outputs (must be done before exit_requested so the
-    // shm reads are paired with the worker's release-store of completed).
+    // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
+    // reaped a worker that exited without flipping `done`.
+    if process.status == nil && !process.childUnavailable {
+        let pollIntervalNs: UInt64 = 10_000_000
+        let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
+        grace: for _ in 0..<graceIters {
+            switch process.wait(options: WNOHANG, phase: "exit_grace") {
+            case .reaped, .failed:
+                break grace
+            case .pending:
+                sleepNs(pollIntervalNs)
+            }
+        }
+        process.terminate()
+    }
+
+    // Final acquire snapshot after cleanup. Publications are immutable, so this
+    // also safely retains results if cleanup failed and the child is still alive.
+    // Never rewrite pollStopReason or run the validator against a reaped child.
+    sawApplied = loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1
+    sawDone = loadAcquire(rawBase, offset: PWShmLayout.doneOffset) == 1
+    let applyRC = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyRcOffset) : 0
+    let applyErrno = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyErrnoOffset) : 0
+
+    // Slot payloads are immutable after release publication. Read only confirmed slots.
     var slotResults: [CWorkerSlotResult] = []
     slotResults.reserveCapacity(input.slots.count)
     for i in 0..<input.slots.count {
         let slotBase = rawBase.advanced(by: PWShmLayout.slotsOffset + i * PWShmLayout.slotBytes)
         let completed = loadAcquire(slotBase, offset: PWShmLayout.slotCompletedOffset)
+        if completed != 1 {
+            slotResults.append(CWorkerSlotResult(stepId: input.slots[i].stepId,
+                rc: 0, errnoVal: 0, completed: false))
+            continue
+        }
         let stepId = readString(slotBase, offset: PWShmLayout.slotStepIdOffset,
                                 max: PWShmLayout.stepIdMax)
         let rc = readI32(slotBase, offset: PWShmLayout.slotRcOffset)
@@ -898,25 +960,6 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
         ))
     }
 
-    // ---- Request worker exit (a no-op if it already died on its own).
-    storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
-
-    // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
-    // reaped a worker that exited without flipping `done`.
-    if process.status == nil && !process.childUnavailable {
-        let pollIntervalNs: UInt64 = 10_000_000
-        let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
-        grace: for _ in 0..<graceIters {
-            switch process.wait(options: WNOHANG, phase: "exit_grace") {
-            case .reaped, .failed:
-                break grace
-            case .pending:
-                sleepNs(pollIntervalNs)
-            }
-        }
-        process.terminate()
-    }
-
     let exitCode: Int32?
     let termSignal: Int32?
     if let status = process.status, (status & 0x7f) == 0 {
@@ -930,7 +973,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
         termSignal = nil
     }
 
-    return .success(CWorkerOutput(
+    let output = CWorkerOutput(
         workerPid: pid,
         readyByteReceived: readyByteReceived,
         applied: sawApplied,
@@ -949,8 +992,15 @@ func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
         exitRequested: true,
         terminationRequest: process.terminationRequest,
         reaped: process.status != nil,
-        waitErrors: process.waitErrors
-    ))
+        waitErrors: process.waitErrors,
+        workerEvidence: decodeWorkerEvidence(rawBase),
+        policyTransferError: transferError
+    )
+    if let error = transferError {
+        return .failure(.policyWriteFailed("errno=\(error.errno) (\(String(cString: strerror(error.errno)))); "
+            + "wrote \(error.bytes_written) of \(error.bytes_expected) bytes"), output)
+    }
+    return .success(output)
 }
 
 // MARK: - Layout helpers

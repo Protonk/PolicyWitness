@@ -25,6 +25,7 @@ int main(void) {
      * header; the driver maps each C name to its Swift counterpart. */
     printf("PW_PROBE_RUNNER_ABI_VERSION=%u\n", PW_PROBE_RUNNER_ABI_VERSION);
     printf("PW_SHM_HEADER_BYTES=%u\n",         PW_SHM_HEADER_BYTES);
+    printf("PW_SHM_POLICY_BYTES=%u\n", PW_SHM_POLICY_BYTES);
     printf("PW_SHM_MAX_STEPS=%u\n",            PW_SHM_MAX_STEPS);
     printf("PW_SHM_SLOT_BYTES=%u\n",           PW_SHM_SLOT_BYTES);
     printf("PW_SHM_MAX_PARAMS=%u\n",           PW_SHM_MAX_PARAMS);
@@ -108,5 +109,24 @@ int main(void) {
     printf("region.capture_offset=%zu\n", (size_t)PW_SHM_HEADER_BYTES
         + (size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES + (size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES);
 
+    printf("PW_SHM_EVIDENCE_HEADER_BYTES=%u\n", PW_SHM_EVIDENCE_HEADER_BYTES);
+    printf("PW_SHM_DIAGNOSTIC_BYTES=%u\n", PW_SHM_DIAGNOSTIC_BYTES);
+    printf("region.evidence_offset=%zu\n", (size_t)PW_SHM_REGION_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES - PW_SHM_DIAGNOSTIC_BYTES);
+    printf("sizeof.pw_shm_evidence_t=%zu\n", sizeof(pw_shm_evidence_t));
+    printf("offsetof.pw_shm_evidence_t.progress=%zu\n", offsetof(pw_shm_evidence_t, progress));
+    printf("offsetof.pw_shm_evidence_t.failure_published=%zu\n", offsetof(pw_shm_evidence_t, failure_published));
+    printf("offsetof.pw_shm_evidence_t.operation=%zu\n", offsetof(pw_shm_evidence_t, operation));
+    printf("offsetof.pw_shm_evidence_t.code=%zu\n", offsetof(pw_shm_evidence_t, code));
+    printf("offsetof.pw_shm_evidence_t.native_kind=%zu\n", offsetof(pw_shm_evidence_t, native_kind));
+    printf("offsetof.pw_shm_evidence_t.native_result=%zu\n", offsetof(pw_shm_evidence_t, native_result));
+    printf("offsetof.pw_shm_evidence_t.errno_val=%zu\n", offsetof(pw_shm_evidence_t, errno_val));
+    printf("offsetof.pw_shm_evidence_t.errno_present=%zu\n", offsetof(pw_shm_evidence_t, errno_present));
+    printf("offsetof.pw_shm_evidence_t.item_index=%zu\n", offsetof(pw_shm_evidence_t, item_index));
+    printf("offsetof.pw_shm_evidence_t.detail=%zu\n", offsetof(pw_shm_evidence_t, detail));
+    printf("offsetof.pw_shm_evidence_t.ready_published=%zu\n", offsetof(pw_shm_evidence_t, ready_published));
+    printf("offsetof.pw_shm_evidence_t.ready_rc=%zu\n", offsetof(pw_shm_evidence_t, ready_rc));
+    printf("offsetof.pw_shm_evidence_t.ready_errno=%zu\n", offsetof(pw_shm_evidence_t, ready_errno));
+    printf("offsetof.pw_shm_evidence_t.diagnostic_state=%zu\n", offsetof(pw_shm_evidence_t, diagnostic_state));
+    printf("offsetof.pw_shm_evidence_t.diagnostic_length=%zu\n", offsetof(pw_shm_evidence_t, diagnostic_length));
     return 0;
 }

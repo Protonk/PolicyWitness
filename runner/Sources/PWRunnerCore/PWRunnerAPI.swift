@@ -434,9 +434,14 @@ public struct PWRunnerPathDiagnostics: Codable {
 }
 
 public struct PWRunnerSandboxCheckResult: Codable {
+    /// Additive provenance; absence in stored replies means unknown. See the
+    /// step-1 contract for native returns versus PW status and missing reasons.
+    public var result_source: String? = nil
+    public var native_rc: Int? = nil
+    public var missing_reason: String? = nil
     public var rc: Int
     public var outcome: String
-    public var pid: Int
+    public var pid: Int?
     public var operation: String
     public var scope: String
     public var filter_kind: String
@@ -450,7 +455,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
     public init(
         rc: Int,
         outcome: String,
-        pid: Int,
+        pid: Int?,
         operation: String,
         scope: String,
         filter_kind: String,
@@ -476,6 +481,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case result_source, native_rc, missing_reason
         case rc
         case outcome
         case pid
@@ -492,6 +498,9 @@ public struct PWRunnerSandboxCheckResult: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(result_source, forKey: .result_source)
+        if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
+        try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encode(rc, forKey: .rc)
         try container.encode(outcome, forKey: .outcome)
         try container.encode(pid, forKey: .pid)
@@ -533,9 +542,12 @@ public struct PWRunnerSandboxCheckResult: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
+        native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
+        missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         rc = try container.decode(Int.self, forKey: .rc)
         outcome = try container.decode(String.self, forKey: .outcome)
-        pid = try container.decodeIfPresent(Int.self, forKey: .pid) ?? -1
+        pid = try container.decodeIfPresent(Int.self, forKey: .pid)
         operation = try container.decodeIfPresent(String.self, forKey: .operation) ?? ""
         scope = try container.decode(String.self, forKey: .scope)
         filter_kind = try container.decode(String.self, forKey: .filter_kind)
@@ -549,6 +561,11 @@ public struct PWRunnerSandboxCheckResult: Codable {
 }
 
 public struct PWRunnerAttemptResult: Codable {
+    /// Additive provenance; absence in stored replies means unknown. See the
+    /// step-1 contract for native returns versus PW status and missing reasons.
+    public var result_source: String? = nil
+    public var native_rc: Int? = nil
+    public var missing_reason: String? = nil
     public var rc: Int
     public var exit_code: Int
     public var errno: Int?
@@ -609,6 +626,7 @@ public struct PWRunnerAttemptResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case result_source, native_rc, missing_reason
         case rc
         case exit_code
         case errno
@@ -627,6 +645,9 @@ public struct PWRunnerAttemptResult: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(result_source, forKey: .result_source)
+        if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
+        try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encode(rc, forKey: .rc)
         try container.encode(exit_code, forKey: .exit_code)
         if let errno {
@@ -672,6 +693,9 @@ public struct PWRunnerAttemptResult: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
+        native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
+        missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         rc = try container.decode(Int.self, forKey: .rc)
         exit_code = try container.decodeIfPresent(Int.self, forKey: .exit_code) ?? rc
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
@@ -823,11 +847,55 @@ public struct PWRunnerWaitError: Codable {
     }
 }
 
+/// Host-observed UTF-8 policy transfer failure; counts are writes, not child reads.
+/// See tests/FAILURE-PROPAGATION-CONTRACT.md for field validity and JSON semantics.
+public struct PWWorkerPolicyTransferError: Codable {
+    public var errno: Int32
+    public var bytes_written: Int
+    public var bytes_expected: Int
+}
+/// ABI 6 worker publications. Numeric codes are open, never Codable enums.
+public struct PWWorkerProgress: Codable {
+    public var raw: UInt32
+    public var operation: UInt32
+    public var phase: UInt32
+    public var index: UInt32?
+}
+public struct PWWorkerFailure: Codable {
+    public var operation: UInt32
+    public var code: UInt32
+    public var native_kind: UInt32
+    public var native_result: Int32?
+    public var errno: Int32?
+    public var index: UInt32?
+    public var detail: UInt32
+}
+public struct PWWorkerReadiness: Codable {
+    public var rc: Int32
+    public var errno: Int32?
+}
+public struct PWWorkerDiagnostic: Codable {
+    public var state: UInt32
+    public var status: String
+    public var length: UInt32?
+    public var text: String?
+}
+public struct PWWorkerEvidence: Codable {
+    /// Host-selected layout, not proof that a child reached ABI validation.
+    public var abi_version: UInt32
+    public var progress: PWWorkerProgress?
+    public var failure_publication: UInt32
+    public var failure_state: String
+    public var failure: PWWorkerFailure?
+    public var readiness: PWWorkerReadiness?
+    public var diagnostic: PWWorkerDiagnostic
+}
+
 /// Authoritative worker process metadata, produced by the unsandboxed host.
-/// Lifecycle observations use the unchanged worker ABI 5.
+/// Lifecycle observations are host-owned; worker_evidence uses worker ABI 6.
 /// All live CWorkerOutput paths populate the optional observation fields below;
 /// optionality preserves decoding of older stored replies as unknown, not false.
-/// The policy-write failure path still lacks a partial result (step 1C).
+/// Policy-write failures retain partial child observations.
 public struct PWRunnerSubprocess: Codable {
     public var pid: Int
     /// JSON integers, meaningful only after waitpid returned this child's PID.
@@ -835,12 +903,16 @@ public struct PWRunnerSubprocess: Codable {
     public var term_signal: Int?
     public var exit_code: Int?
     public var partial_steps: Bool
+    /// Worker publication snapshot; absent in legacy replies and before spawn.
+    public var worker_evidence: PWWorkerEvidence? = nil
+    /// Host transfer observation independent of any child publication.
+    public var policy_transfer_error: PWWorkerPolicyTransferError? = nil
     /// Host read of the ready byte; false does not prove compilation failed.
     public var ready_byte_received: Bool?
-    /// Acquire observation of done during polling, not successful application.
-    /// Cleanup-time publication refresh remains step 1A work.
+    /// Final acquire observation of done after cleanup, not successful application.
+    /// poll_stop_reason separately retains the reason the polling phase ended.
     public var done_observed: Bool?
-    /// Host string: done, child_reaped, sentinel_deadline, or wait_error.
+    /// Host string: done, child_reaped, sentinel_deadline, wait_error, or policy_write_error.
     /// Identifies why polling stopped; later cleanup must not rewrite it.
     /// Only sentinel_deadline establishes exhaustion of the polling budget.
     /// Unknown strings survive decoding; they do not imply a known condition.
@@ -880,33 +952,98 @@ public struct PWRunnerSubprocess: Codable {
     }
 }
 
-/// Validator child process metadata. Introduced in
-/// PWRunnerRunResult.schema_version=4 to mirror `runner_subprocess` for
-/// the `sb_api_validator --batch` child the runner host spawns
-/// alongside the C worker. `pid` is the validator's PID; `exit_code`
-/// is its waitpid status when the validator clean-exited; `term_signal`
-/// is set when the validator was signaled (typically only the host's
-/// SIGKILL grace fallback). Exactly one of `exit_code` or `term_signal`
-/// is non-nil for a completed run.
-///
-/// `validator_subprocess` is nil on the runner response when the
-/// validator child didn't run. Two cases reach this: every probe in
-/// the plan had an (operation, filter) pair in the
-/// `prediction_unavailable` set (the orchestrator skipped the
-/// validator and synthesized verdicts locally), or the validator
-/// child failed to spawn before any metadata could be captured.
-/// In the latter case `normalized_outcome` is set to
-/// `validator_spawn_failed`.
+public struct ValidatorVerdict: Codable {
+    enum CodingKeys: String, CodingKey {
+        case stepId = "step_id", operation, filterType = "filter_type"
+        case filterTypeId = "filter_type_id", filterValue = "filter_value"
+        case rc, errnoVal = "errno", outcome, error, rawLine = "raw_line"
+    }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(stepId, forKey: .stepId)
+        try c.encodeIfPresent(operation, forKey: .operation)
+        try c.encodeIfPresent(filterType, forKey: .filterType)
+        try c.encodeIfPresent(filterTypeId, forKey: .filterTypeId)
+        try c.encodeIfPresent(filterValue, forKey: .filterValue)
+        try c.encodeIfPresent(rc, forKey: .rc)
+        try c.encodeIfPresent(errnoVal, forKey: .errnoVal)
+        try c.encode(outcome, forKey: .outcome)
+        try c.encodeIfPresent(error, forKey: .error)
+        try c.encode(rawLine, forKey: .rawLine)
+    }
+    public var stepId: String?
+    public var operation: String?
+    public var filterType: String?
+    public var filterTypeId: Int?
+    public var filterValue: String?
+    public var rc: Int?
+    public var errnoVal: Int?
+    public var outcome: String             // "allow"|"deny"|"error"|"parse_error"|"bad_filter"
+    public var error: String?
+    public var rawLine: String             // for debugging
+}
+
+/// Receiver-owned rejected frame context. The prefix is bytes, not repaired
+/// JSON. Offsets/lengths are exact received byte counts; at most 256 context
+/// bytes are retained. Unknown diagnostic outcome names are not decode faults.
+public struct PWValidatorDecodeFault: Codable {
+    public var origin: String = "runner_host"
+    public var kind: String // utf8, json, structure
+    public var message: String
+    public var byte_offset: Int
+    public var frame_bytes: Int
+    public var retained_bytes: Int
+    public var context_b64: String
+    public var context_truncated: Bool
+}
+
+public struct PWValidatorAssociationIssue: Codable {
+    public var origin: String = "runner_host"
+    public var kind: String // missing_id, duplicate_id, unexpected_id, unassociated
+    public var step_id: String? = nil
+    public var count: Int
+}
+
+/// Validator child observations. Legacy missing host fields remain unknown.
+/// Only successful reaping supplies exit/signal. Records are accepted validator
+/// evidence, independently retained even when association/transport/cleanup fails.
+/// A null-ID record is never assigned an invented step identity.
 public struct PWRunnerValidatorSubprocess: Codable {
     public var pid: Int
     public var term_signal: Int?
     public var exit_code: Int?
+    public var reaped: Bool?
+    public var termination_request: PWRunnerTerminationRequest?
+    public var wait_errors: [PWRunnerWaitError]?
+    public var read_error: String?
+    public var stdout_collection_stop: String?
+    public var stdout_bytes_received: Int?
+    public var probe_bytes_written: Int?
+    public var probe_bytes_expected: Int?
+    public var io_error: String?
+    public var decode_fault: PWValidatorDecodeFault?
+    public var records: [ValidatorVerdict]?
+    public var expected_step_ids: [String]?
+    public var association_issues: [PWValidatorAssociationIssue]?
 
     public init(pid: Int, term_signal: Int? = nil, exit_code: Int? = nil) {
         self.pid = pid
         self.term_signal = term_signal
         self.exit_code = exit_code
     }
+}
+
+/// Host admission: no worker publication or child process is implied.
+/// UTF-8 lengths are payload bytes excluding NUL; item counts use `items`.
+public struct PWRunnerAdmissionFailure: Codable {
+    public var origin: String = "runner_host"
+    public var field: String
+    public var actual: Int
+    public var maximum: Int
+    public var unit: String
+    public var step_id: String?
+    public var parameter_key: String?
+    public var index: Int?
 }
 
 public struct PWRunnerRunResult: Codable {
@@ -937,6 +1074,7 @@ public struct PWRunnerRunResult: Codable {
     //       evidence-based execution classification without sandbox-cause
     //       inference. Legacy signal objects remain decodable. Readers that
     //       require an object must migrate; ABI and request versions are separate.
+    //   6 — sandbox_check.pid is nullable when no worker was spawned.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -952,11 +1090,12 @@ public struct PWRunnerRunResult: Codable {
     public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
     public var runner_subprocess: PWRunnerSubprocess?
+    public var admission_failure: PWRunnerAdmissionFailure?
     public var validator_subprocess: PWRunnerValidatorSubprocess?
     public var test_overrides: PWRunnerTestOverrides?
 
     public init(
-        schema_version: Int = 5,
+        schema_version: Int = 6,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -972,7 +1111,8 @@ public struct PWRunnerRunResult: Codable {
         runner_subprocess: PWRunnerSubprocess? = nil,
         validator_subprocess: PWRunnerValidatorSubprocess? = nil,
         test_overrides: PWRunnerTestOverrides? = nil,
-        applied_profile: AppliedProfileCapture? = nil
+        applied_profile: AppliedProfileCapture? = nil,
+        admission_failure: PWRunnerAdmissionFailure? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -985,6 +1125,7 @@ public struct PWRunnerRunResult: Codable {
         self.policy_format = policy_format
         self.policy_sha256 = policy_sha256
         self.applied_profile = applied_profile
+        self.admission_failure = admission_failure
         self.sandboxed_after_apply = sandboxed_after_apply
         self.deny_signal_total = deny_signal_total
         self.steps = steps

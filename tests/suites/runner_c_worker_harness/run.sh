@@ -89,6 +89,10 @@ assert not r["applied"], f"applied must stay false on a pre-apply refusal: {r}"
 assert not r["done"], f"done must stay false on a pre-apply refusal: {r}"
 assert not r["ready_byte_received"], f"ready byte must not precede a pre-apply refusal: {r}"
 assert not r["sent_sigkill"], f"worker should self-exit; no SIGKILL fallback expected: {r}"
+if r['scenario'] == 'policy_overflow':
+    assert r['failure_published'] == 1, r
+    assert r['failure'] == {'operation': 2, 'code': 2, 'detail': 262143,
+                            'native_kind': 0, 'errno_present': 0}, r
 print(f"ok: worker refused with exit_code={want}; no ready/applied/done")
 PY
   local arc=$?

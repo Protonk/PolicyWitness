@@ -53,6 +53,7 @@
 #include <unistd.h>
 
 #include "pw_probe_runner_abi.h"
+#include "pw_worker_evidence.h"
 #include "pw_profile_capture.h"
 
 /*
@@ -1068,9 +1069,13 @@ int main(int argc, char **argv) {
                 hdr->abi_version, PW_PROBE_RUNNER_ABI_VERSION);
         return 4;
     }
+    pw_shm_evidence_t *evidence = pw_evidence(base);
+    pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_STARTED, UINT32_MAX);
     if (atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1u) {
         fprintf(stderr,
                 "pw-probe-runner: host did not set prepared=1; refusing to proceed\n");
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_UNPREPARED, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, 0);
+        pw_diagnostic(evidence, "host did not set prepared=1");
         return 5;
     }
 
@@ -1082,6 +1087,8 @@ int main(int argc, char **argv) {
         fprintf(stderr,
                 "pw-probe-runner: header step_count=%u exceeds PW_SHM_MAX_STEPS=%u\n",
                 hdr->step_count, PW_SHM_MAX_STEPS);
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_STEP_LIMIT, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, PW_SHM_MAX_STEPS);
+        pw_diagnostic(evidence, "step count exceeds shared-memory capacity");
         return 6;
     }
     if (args.step_count != 0 && args.step_count != hdr->step_count) {
@@ -1105,8 +1112,11 @@ int main(int argc, char **argv) {
         fprintf(stderr,
                 "pw-probe-runner: header param_count=%u exceeds PW_SHM_MAX_PARAMS=%u\n",
                 hdr->param_count, PW_SHM_MAX_PARAMS);
+        pw_failure(evidence, PW_OP_HEADER, PW_FAILURE_PARAM_LIMIT, PW_NATIVE_NONE, 0, 0, 0, UINT32_MAX, PW_SHM_MAX_PARAMS);
+        pw_diagnostic(evidence, "parameter count exceeds shared-memory capacity");
         return 8;
     }
+    pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_RETURNED, UINT32_MAX);
     uint32_t param_count = hdr->param_count;
     for (uint32_t i = 0; i < param_count; i++) {
         params[i].key[PW_SHM_PARAM_KEY_MAX - 1u] = '\0';
@@ -1130,10 +1140,16 @@ int main(int argc, char **argv) {
      * typically small (KiB); cap at 256 KiB so a runaway producer
      * fails loudly rather than allocating unboundedly or silently
      * truncating. */
-    enum { POLICY_MAX = 256 * 1024 };
-    static char policy_buf[POLICY_MAX];
+    static char policy_buf[PW_SHM_POLICY_BYTES];
+    pw_progress(evidence, PW_OP_POLICY_READ, PW_PROGRESS_STARTED, UINT32_MAX);
     ssize_t plen = read_all_from_fd(args.policy_fd, policy_buf, sizeof(policy_buf));
+    int policy_errno = errno;
+    pw_progress(evidence, PW_OP_POLICY_READ, PW_PROGRESS_RETURNED, UINT32_MAX);
     if (plen < 0) {
+        pw_failure(evidence, PW_OP_POLICY_READ, plen == -2 ? PW_FAILURE_SOURCE_LIMIT : PW_FAILURE_POLICY_READ,
+                   plen == -2 ? PW_NATIVE_NONE : PW_NATIVE_INTEGER,
+                   plen == -2 ? 0 : -1, plen != -2, policy_errno, UINT32_MAX, PW_SHM_POLICY_BYTES - 1);
+        pw_diagnostic(evidence, plen == -2 ? "policy exceeds fixed source buffer" : "failed reading policy input");
         if (plen == -2) {
             fprintf(stderr,
                     "pw-probe-runner: policy exceeds fixed buffer (%zu bytes max)\n",
@@ -1159,8 +1175,12 @@ int main(int argc, char **argv) {
     params = consumed_params;
     void *params_obj = NULL;
     if (param_count > 0) {
+        pw_progress(evidence, PW_OP_PARAMS_CREATE, PW_PROGRESS_STARTED, UINT32_MAX);
         params_obj = sandbox_create_params();
+        pw_progress(evidence, PW_OP_PARAMS_CREATE, PW_PROGRESS_RETURNED, UINT32_MAX);
         if (!params_obj) {
+            pw_failure(evidence, PW_OP_PARAMS_CREATE, PW_FAILURE_NATIVE, PW_NATIVE_NULL, 0, 0, 0, UINT32_MAX, 0);
+            pw_diagnostic(evidence, "sandbox_create_params returned NULL");
             fprintf(stderr,
                     "pw-probe-runner: sandbox_create_params returned NULL\n");
             hdr->apply_rc = -1;
@@ -1170,13 +1190,19 @@ int main(int argc, char **argv) {
         for (uint32_t i = 0; i < param_count; i++) {
             if (!memchr(params[i].key, 0, sizeof(params[i].key))
                     || !memchr(params[i].value, 0, sizeof(params[i].value))) {
+                pw_failure(evidence, PW_OP_PARAM_SET, PW_FAILURE_PARAM_ENCODING, PW_NATIVE_NONE, 0, 0, 0, i, 0);
+                pw_diagnostic(evidence, "parameter is not NUL terminated");
                 sandbox_free_params(params_obj);
                 hdr->apply_rc = -1;
                 atomic_store_explicit(&hdr->done, 1u, memory_order_release);
                 spin_for_exit(hdr);
             }
+            pw_progress(evidence, PW_OP_PARAM_SET, PW_PROGRESS_STARTED, i);
             int srv = sandbox_set_param(params_obj, params[i].key, params[i].value);
+            pw_progress(evidence, PW_OP_PARAM_SET, PW_PROGRESS_RETURNED, i);
             if (srv != 0) {
+                pw_failure(evidence, PW_OP_PARAM_SET, PW_FAILURE_NATIVE, PW_NATIVE_INTEGER, srv, 0, 0, i, 0);
+                pw_diagnostic(evidence, "sandbox_set_param returned failure");
                 fprintf(stderr,
                         "pw-probe-runner: sandbox_set_param[%u] (key=%s) failed rc=%d\n",
                         i, params[i].key, srv);
@@ -1191,11 +1217,17 @@ int main(int argc, char **argv) {
     /* Compile. sandbox_compile_string allocates internally; that's
      * before sandbox_apply so it's safe. */
     char *compile_err = NULL;
+    pw_progress(evidence, PW_OP_COMPILE, PW_PROGRESS_STARTED, UINT32_MAX);
     void *profile = sandbox_compile_string(policy_buf, params_obj, &compile_err);
+    pw_progress(evidence, PW_OP_COMPILE, PW_PROGRESS_RETURNED, UINT32_MAX);
+    if (!profile) {
+        pw_failure(evidence, PW_OP_COMPILE, PW_FAILURE_NATIVE, PW_NATIVE_NULL, 0, 0, 0, UINT32_MAX, 0);
+    }
     /* Whether compile succeeded or not, the params object is no longer
      * needed (libsandbox copies what it needs into the profile). */
     if (params_obj) sandbox_free_params(params_obj);
     if (!profile) {
+        pw_diagnostic(evidence, compile_err);
         fprintf(stderr,
                 "pw-probe-runner: sandbox_compile_string failed: %s\n",
                 compile_err ? compile_err : "(no error string)");
@@ -1209,11 +1241,13 @@ int main(int argc, char **argv) {
      * Output has no pipe backpressure and is published independently of apply.
      * A failed capture leaves policy execution unchanged and reports unavailable. */
     if (hdr->capture_requested == 1u) {
+        pw_progress(evidence, PW_OP_CAPTURE, PW_PROGRESS_STARTED, UINT32_MAX);
         unsigned char *capture_base = (unsigned char *)hdr + PW_SHM_HEADER_BYTES
             + PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES + PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES;
         pw_capture_profile((pw_shm_capture_t *)capture_base,
             capture_base + PW_SHM_CAPTURE_HEADER_BYTES, profile,
             policy_buf, strlen(policy_buf), params, param_count, capture_nonce);
+        pw_progress(evidence, PW_OP_CAPTURE, PW_PROGRESS_RETURNED, UINT32_MAX);
     }
 
     /* Pre-ready hang test seam: delay after compilation can overrun the
@@ -1234,7 +1268,14 @@ int main(int argc, char **argv) {
      * closed --ready-fd (e.g. a slow compile overran its readyByteTimeout)
      * the write returns EPIPE rather than killing us (SIGPIPE is ignored
      * in main), and we continue to apply + the shm sentinel path. */
-    if (write_ready_byte(args.ready_fd) != 0) {
+    pw_progress(evidence, PW_OP_READY, PW_PROGRESS_STARTED, UINT32_MAX);
+    int ready_rc = write_ready_byte(args.ready_fd);
+    int ready_errno = errno;
+    evidence->ready_rc = ready_rc;
+    evidence->ready_errno = ready_rc ? ready_errno : 0;
+    atomic_store_explicit(&evidence->ready_published, 1, memory_order_release);
+    pw_progress(evidence, PW_OP_READY, PW_PROGRESS_RETURNED, UINT32_MAX);
+    if (ready_rc != 0) {
         fprintf(stderr,
                 "pw-probe-runner: write(ready_fd=%d): %s\n",
                 args.ready_fd, strerror(errno));
@@ -1244,10 +1285,14 @@ int main(int argc, char **argv) {
 
     /* Apply. After this point: no allocations, no stdout writes
      * that the policy hasn't been authored to permit. */
+    pw_progress(evidence, PW_OP_APPLY, PW_PROGRESS_STARTED, UINT32_MAX);
     int apply_rc = sandbox_apply(profile);
     int apply_errno = errno;   /* capture immediately; only meaningful on failure */
+    pw_progress(evidence, PW_OP_APPLY, PW_PROGRESS_RETURNED, UINT32_MAX);
     hdr->apply_rc = apply_rc;
     if (apply_rc != 0) {
+        pw_failure(evidence, PW_OP_APPLY, PW_FAILURE_NATIVE, PW_NATIVE_INTEGER, apply_rc, 1, apply_errno, UINT32_MAX, 0);
+        pw_diagnostic(evidence, "sandbox_apply returned failure");
         /* Surface WHY apply failed (e.g. EPERM: the witness worker lacks
          * the entitlements this profile requires) so the host can report
          * it instead of a bare -1. */
@@ -1262,7 +1307,9 @@ int main(int argc, char **argv) {
     /* Run attempts. Dispatch by attempt_kind; each helper writes
      * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
+        pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
         run_attempt(&slots[i], i);
+        pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
     }
 
     /* Test-seam hang. nanosleep IS a syscall and could be denied by a
@@ -1291,6 +1338,7 @@ int main(int argc, char **argv) {
          * then publishes done below; the request alone proves no termination. */
     }
 
+    pw_progress(evidence, PW_OP_FINISHED, PW_PROGRESS_RETURNED, UINT32_MAX);
     atomic_store_explicit(&hdr->done, 1u, memory_order_release);
     spin_for_exit(hdr);
 }

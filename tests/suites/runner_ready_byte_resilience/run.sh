@@ -115,6 +115,13 @@ if sub.get("term_signal") is not None:
 if sub.get("exit_code") != 0:
     raise SystemExit(f"expected runner_subprocess.exit_code=0 (got {sub.get('exit_code')!r})")
 
+# Worker observation is independent of the host read and later successful apply.
+import errno
+assert sub["ready_byte_received"] is False, sub
+assert sub["worker_evidence"]["readiness"] == {"rc": -1, "errno": errno.EPIPE}, sub
+assert sub["worker_evidence"]["failure_state"] == "absent", sub
+assert runner["sandboxed_after_apply"] is True, runner
+
 # Worker survived → applied → the validator child ran and scored the probe.
 if "validator_subprocess" not in runner:
     raise SystemExit("expected validator_subprocess (worker applied, so the validator should have run)")

@@ -8,8 +8,8 @@ import Foundation
  * Swift, so the integration paths the host depends on are exercised
  * inside the same process the host runs.
  *
- * Skips cleanly when pw-probe-runner isn't built (e.g. fresh
- * checkout without `./build.sh`). Pin: the worker path resolves
+ * Required live cases fail when pw-probe-runner is missing.
+ * The worker path resolves
  * relative to the repo root so the test doesn't need an env var.
  */
 
@@ -41,8 +41,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // ---- happy default-allow: file_open_read /etc/hosts ----------------
         tk.run("happy default-allow: /etc/hosts read succeeds with observed_path") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing; run ./build.sh\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing; run ./build.sh")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -74,8 +73,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // ---- bare (deny default): the bug-report regression ----------------
         tk.run("bare deny-default: worker survives + reports kernel deny") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -106,8 +104,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // ---- params round-trip: TARGET=/private/etc fires the deny rule -----
         tk.run("params round-trip: TARGET=/private/etc denies /etc/hosts") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -143,8 +140,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // ---- sysctl_read: third curated attempt family -----------------------
         tk.run("sysctl_read under allow-default succeeds") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -171,8 +167,7 @@ func runCWorkerTests(_ tk: TestKit) {
 
         tk.run("sysctl_read under mismatched allow is denied") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -209,8 +204,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // SBPL macro expansion.
         tk.run("many params (128) round-trip through the shm region") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let n = 128
             var params: [CWorkerParam] = []
@@ -274,11 +268,17 @@ func runCWorkerTests(_ tk: TestKit) {
                                      target: "/etc/hosts")
                 ]
             ))
-            guard case .failure(let err) = result else {
+            guard case .failure(let err, _) = result else {
                 throw TestFailure(message: "expected pre-spawn rejection for over-cap params")
             }
-            let msg = String(describing: err)
-            try expectContains(msg, "policy params")
+            guard case .admissionFailed(let record) = err else {
+                throw TestFailure(message: "expected structured admission refusal, got \(err)")
+            }
+            try expectEqual(record.origin, "runner_host")
+            try expectEqual(record.field, "policy.params")
+            try expectEqual(record.actual, 1025)
+            try expectEqual(record.maximum, 1024)
+            try expectEqual(record.unit, "items")
         }
 
         // ---- input validation: every bounded field rejects pre-spawn -------
@@ -296,8 +296,8 @@ func runCWorkerTests(_ tk: TestKit) {
                                          target: "/tmp")]
             ))
             switch result {
-            case .failure(.slotInputTooLong(let field, _, _)):
-                try expectEqual(field, "step_id", "wrong field reported for oversized step_id")
+            case .failure(.admissionFailed(let record), _):
+                try expectEqual(record.field, "step_id", "wrong field reported for oversized step_id")
             default:
                 throw TestFailure(message: "expected slotInputTooLong(step_id), got \(result)")
             }
@@ -313,8 +313,8 @@ func runCWorkerTests(_ tk: TestKit) {
                                          target: big)]
             ))
             switch result {
-            case .failure(.slotInputTooLong(let field, _, _)):
-                try expectEqual(field, "target", "wrong field reported for oversized target")
+            case .failure(.admissionFailed(let record), _):
+                try expectEqual(record.field, "target", "wrong field reported for oversized target")
             default:
                 throw TestFailure(message: "expected slotInputTooLong(target), got \(result)")
             }
@@ -331,8 +331,8 @@ func runCWorkerTests(_ tk: TestKit) {
                                          target: "")]
             ))
             switch result {
-            case .failure(.paramInputTooLong(let field, _, _)):
-                try expectEqual(field, "key", "wrong field reported for oversized param key")
+            case .failure(.admissionFailed(let record), _):
+                try expectEqual(record.field, "key", "wrong field reported for oversized param key")
             default:
                 throw TestFailure(message: "expected paramInputTooLong(key), got \(result)")
             }
@@ -349,8 +349,8 @@ func runCWorkerTests(_ tk: TestKit) {
                                          target: "")]
             ))
             switch result {
-            case .failure(.paramInputTooLong(let field, _, _)):
-                try expectEqual(field, "value", "wrong field reported for oversized param value")
+            case .failure(.admissionFailed(let record), _):
+                try expectEqual(record.field, "value", "wrong field reported for oversized param value")
             default:
                 throw TestFailure(message: "expected paramInputTooLong(value), got \(result)")
             }
@@ -363,10 +363,8 @@ func runCWorkerTests(_ tk: TestKit) {
         // flips inside the deadline. The host then signals
         // exit_requested in spite of done=0; the worker's spin loop
         // observes it AFTER the hang completes and clean-exits.
-        // The success criterion is the saw_done=false shape — not a
-        // SIGKILL — proving the runner_timeout-class condition is
-        // observable on the C-worker path.
-        tk.run("postApplyHangMs > sentinelTimeoutMs produces done=false") {
+        // Final done publication survives grace, independently of the deadline.
+        tk.run("late done during grace preserves sentinel deadline") {
             guard workerExists() else {
                 throw TestFailure(message: "required deadline/grace worker missing at \(workerPath()); build the signed app")
             }
@@ -387,8 +385,8 @@ func runCWorkerTests(_ tk: TestKit) {
                 throw TestFailure(message: "runCWorker reported setup failure: \(result)")
             }
             try expectTrue(out.applied, "applied should still flip — hang is post-apply")
-            try expectFalse(out.done,
-                            "done should not flip inside 300ms when worker hangs 800ms post-apply")
+            try expectTrue(out.done,
+                            "final snapshot must preserve done published during grace")
             // The worker eventually completes — slot was filled — but the
             // host gave up polling and went to exit_requested. The
             // exitGraceMs (2s) is wide enough for the worker to wake
@@ -461,8 +459,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // like the "no child output" success state.
         tk.run("exec /usr/bin/true under (allow default) → ok, child_pid>0, child_exit_code=0") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -495,8 +492,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // the helper's verdict, NOT a sandbox event.
         tk.run("exec /usr/bin/false → exec_failed semantics with child_pid>0, child_exit_code=1") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -526,8 +522,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // blocked spawn" from "child exited non-zero").
         tk.run("exec /nonexistent → exec_failed with child_pid=0, errno=ENOENT") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -560,8 +555,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // is minimal" and the witness is unreliable.
         tk.run("exec /usr/bin/true under (deny default) → spawn EPERM/EACCES, child_pid=0") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -616,10 +610,10 @@ func runCWorkerTests(_ tk: TestKit) {
                 ]
             )
             let result = runCWorker(input)
-            guard case .failure(let err) = result else {
+            guard case .failure(let err, _) = result else {
                 throw TestFailure(message: "expected argv-count rejection; got \(result)")
             }
-            guard case .argvCountExceeded = err else {
+            guard case .admissionFailed(let record) = err, record.field == "args", record.unit == "items" else {
                 throw TestFailure(message: "expected argvCountExceeded; got \(err)")
             }
         }
@@ -638,10 +632,10 @@ func runCWorkerTests(_ tk: TestKit) {
                 ]
             )
             let result = runCWorker(input)
-            guard case .failure(let err) = result else {
+            guard case .failure(let err, _) = result else {
                 throw TestFailure(message: "expected argv-entry rejection; got \(result)")
             }
-            guard case .argvEntryTooLong = err else {
+            guard case .admissionFailed(let record) = err, record.field == "args", record.unit == "utf8_bytes" else {
                 throw TestFailure(message: "expected argvEntryTooLong; got \(err)")
             }
         }
@@ -661,7 +655,7 @@ func runCWorkerTests(_ tk: TestKit) {
                 ]
             )
             let result = runCWorker(input)
-            guard case .failure(let err) = result else {
+            guard case .failure(let err, _) = result else {
                 throw TestFailure(message: "expected absolute-path rejection; got \(result)")
             }
             guard case .execTargetNotAbsolute = err else {
@@ -678,12 +672,10 @@ func runCWorkerTests(_ tk: TestKit) {
         // child_term_signal=SIGKILL (9), error mentions deadline.
         tk.run("exec helper hung past deadline → SIGKILL + exec_failed with deadline error") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             guard FileManager.default.isExecutableFile(atPath: "/bin/sleep") else {
-                FileHandle.standardOutput.write(Data("  SKIP  /bin/sleep missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: /bin/sleep missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -739,8 +731,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // args to stdout followed by a newline; nothing to stderr.
         tk.run("exec /bin/echo round-trips stdout into the slot") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required equipment: pw-probe-runner missing")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),

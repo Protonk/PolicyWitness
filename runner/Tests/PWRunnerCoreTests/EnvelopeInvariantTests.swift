@@ -161,9 +161,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
     tk.group("PWRunnerRunResult: production-shaped success result") {
 
-        tk.run("schema_version is 5, test_overrides is nil, runner_subprocess is present") {
+        tk.run("schema_version is 6, test_overrides is nil, runner_subprocess is present") {
             let result = okResult(pid: 7777, stepCount: 2)
-            try expectEqual(result.schema_version, 5)
+            try expectEqual(result.schema_version, 6)
             try expectNil(result.test_overrides)
             try expectNotNil(result.runner_subprocess)
             // validator_subprocess is nil when the host didn't spawn
@@ -203,7 +203,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
             let data = try pwRunnerEncodeJSON(result)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
-            try expectEqual(decoded.schema_version, 5)
+            try expectEqual(decoded.schema_version, 6)
             try expectNotNil(decoded.validator_subprocess)
             try expectEqual(decoded.validator_subprocess?.pid, 9002)
             try expectEqual(decoded.validator_subprocess?.exit_code, 0)
@@ -229,7 +229,24 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
         }
     }
 
-    tk.group("response 5: signal absence and legacy compatibility") {
+    tk.group("nullable query PID") {
+        tk.run("no worker PID encodes null; legacy integer PID remains readable") {
+            var result = okResult(stepCount: 1)
+            result.steps[0].sandbox_check.pid = nil
+            let bytes = try pwRunnerEncodeJSON(result)
+            let raw = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
+            let step = (raw["steps"] as! [[String: Any]])[0]
+            try expectTrue((step["sandbox_check"] as! [String: Any])["pid"] is NSNull)
+            try expectNil(try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes).steps[0].sandbox_check.pid)
+            result.schema_version = 5
+            result.steps[0].sandbox_check.pid = 123
+            let old = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
+            try expectEqual(old.schema_version, 5)
+            try expectEqual(old.steps[0].sandbox_check.pid, 123)
+        }
+    }
+
+    tk.group("response 6: signal absence and legacy compatibility") {
         tk.run("new success and failure steps encode literal signal null") {
             for outcome in [NormalizedOutcome.ok, NormalizedOutcome.runnerFailed, NormalizedOutcome.runnerTimeout] {
                 var result = okResult(stepCount: 1)
@@ -237,7 +254,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 result.rc = outcome == NormalizedOutcome.ok ? 0 : 1
                 let bytes = try pwRunnerEncodeJSON(result)
                 let raw = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-                try expectEqual(raw["schema_version"] as? Int, 5)
+                try expectEqual(raw["schema_version"] as? Int, 6)
                 let step = (raw["steps"] as! [[String: Any]])[0]
                 try expectTrue(step["deny_signal"] is NSNull)
                 try expectTrue(step["drift"] is NSNull)
@@ -253,12 +270,12 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.steps[0].deny_signal?.delta, 0)
             try expectEqual(decoded.steps[0].deny_signal?.signal, "SIGUSR1")
         }
-        tk.run("client XPC failure emitters share response 5 default") {
+        tk.run("client XPC failure emitters share response 6 default") {
             for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
                             NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
                 let result = hostShortCircuitResult(outcome: outcome)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
-                try expectEqual(decoded.schema_version, 5)
+                try expectEqual(decoded.schema_version, 6)
                 try expectNil(decoded.runner_subprocess)
                 try expectTrue(decoded.steps.isEmpty)
             }

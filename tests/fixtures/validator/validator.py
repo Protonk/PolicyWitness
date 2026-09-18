@@ -27,15 +27,32 @@ def main():
         verdict = dict(probe, kind='sb_api_validator_verdict', schema_version=1,
                        filter_type_id=1, outcome=response['outcome'], rc=response['rc'],
                        errno=response['errno'])
+        verdict.update(response.get('fields', {}))
+        for key in response.get('omit', []): verdict.pop(key, None)
         lines.append(json.dumps(verdict, sort_keys=True))
-    if case['tail'] == 'malformed':
+    tail = case['tail']
+    if tail == 'malformed':
         lines.append('invalid-verdict:' + probes[-1]['step_id'])
+    elif tail in ('incomplete_allow', 'incomplete_deny', 'diagnostic', 'duplicate', 'unexpected'):
+        index = 0 if tail == 'duplicate' else -1
+        verdict = dict(probes[index], kind='sb_api_validator_verdict', schema_version=1,
+                       outcome='allow', rc=0, errno=0)
+        if tail == 'incomplete_allow': verdict.pop('rc')
+        if tail == 'incomplete_deny': verdict.update(outcome='deny', rc=None)
+        if tail == 'diagnostic':
+            verdict.pop('rc'); verdict.pop('errno')
+            for key in ('operation', 'filter_type', 'filter_value'): verdict.pop(key, None)
+            verdict.update(outcome='future_937', error='unfamiliar diagnostic', future_code=97319)
+        if tail == 'unexpected': verdict['step_id'] = 'never-requested'
+        lines.append(json.dumps(verdict, sort_keys=True))
     else:
-        assert case['tail'] == 'eof', 'unknown transcript tail'
-    output = '\n'.join(lines) + '\n'
-    here.with_suffix('.emitted.ndjson').write_text(output)
-    sys.stdout.write(output)
-    sys.stdout.flush()
+        assert tail in ('eof', 'invalid_utf8'), 'unknown transcript tail'
+    output = ('\n'.join(lines) + '\n').encode()
+    if tail == 'invalid_utf8': output += b'\xff\n'
+    here.with_suffix('.emitted.ndjson').write_bytes(output)
+    sys.stdout.buffer.write(output)
+    sys.stdout.buffer.flush()
+
 
 
 if __name__ == '__main__':

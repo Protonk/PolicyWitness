@@ -1,0 +1,27 @@
+{
+  "probe_count": 3,
+  "responses": [
+    {
+      "probe_index": 0,
+      "outcome": "allow",
+      "rc": 0,
+      "errno": 0
+    },
+    {
+      "probe_index": 1,
+      "outcome": "allow",
+      "rc": 0,
+      "errno": 0
+    },
+    {
+      "probe_index": 2,
+      "outcome": "allow",
+      "rc": 0,
+      "errno": 0,
+      "fields": {
+        "filter_value": "com.apple.not.asked"
+      }
+    }
+  ],
+  "tail": "eof"
+}

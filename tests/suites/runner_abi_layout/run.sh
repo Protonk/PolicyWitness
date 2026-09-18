@@ -95,6 +95,13 @@ def swift_name_for(printer_key: str) -> str:
         return "slotBytes"
     if printer_key == "sizeof.pw_shm_param_t":
         return "paramBytes"
+    if printer_key == "sizeof.pw_shm_evidence_t":
+        return "evidenceHeaderBytes"
+    if printer_key == "region.evidence_offset":
+        return "evidenceOffset"
+    if printer_key.startswith("offsetof.pw_shm_evidence_t."):
+        field = printer_key[len("offsetof.pw_shm_evidence_t."):]
+        return "evidence" + title_first(to_camel(field)) + "Offset"
     if printer_key == "sizeof.pw_shm_capture_t":
         return "captureHeaderBytes"
     if printer_key.startswith("offsetof.pw_shm_capture_t."):

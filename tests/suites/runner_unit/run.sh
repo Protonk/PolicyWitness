@@ -41,6 +41,10 @@ if [[ "${RC}" -ne 0 ]]; then
     "{\"log\":\"${RUN_LOG}\"}"
 fi
 
+if grep -Eq '^[[:space:]]*(SKIP|FAIL)[[:space:]]' "${RUN_LOG}"; then
+  test_fail "required Swift cases reported internal SKIP/FAIL" "{\"log\":\"${RUN_LOG}\"}"
+fi
+
 # Parse the summary line ("N/M tests passed") to surface counts in the
 # success message.
 SUMMARY="$(grep -E '^[0-9]+/[0-9]+ tests passed$' "${RUN_LOG}" | tail -n 1 || true)"

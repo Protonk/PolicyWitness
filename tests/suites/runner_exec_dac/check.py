@@ -31,8 +31,15 @@ def main():
         }
         # Complete BOTH controls before asserting drift, so the known defect
         # cannot prevent the restored-permission case from being exercised.
-        for name, mode in (("nonexecutable", 0o644), ("executable", 0o755)):
+        for name, mode in (("nonexecutable", 0o644), ("executable", 0o755), ("deny_prediction_dac", 0o644)):
             helper.chmod(mode)
+            if name == "deny_prediction_dac":
+                # Deny a separate submitted query while leaving the attempted
+                # helper allowed by SBPL. DAC is independently observed below.
+                query = Path(work) / "denied-query"
+                shutil.copyfile("/usr/bin/true", query)
+                spec["policy"]["sbpl_source"] = '(version 1)(allow default)(deny process-exec* (literal "' + str(query) + '"))'
+                spec["probe_plan"][0]["sandbox_check"]["filter"]["value"] = str(query)
             try:
                 direct_run = subprocess.run([str(helper)], capture_output=True, timeout=5)
                 direct = {"spawned": True, "exit_code": direct_run.returncode}
@@ -51,11 +58,15 @@ def main():
         assert len(runner["steps"]) == 1
         step = runner["steps"][0]
         assert step["step_id"] == "exec"
-        assert step["sandbox_check"]["outcome"] == "allow", (name, step)
+        assert step["sandbox_check"]["outcome"] == ("deny" if name == "deny_prediction_dac" else "allow"), (name, step)
         steps[name] = step
 
     assert records["nonexecutable"][0] == {"spawned": False, "errno": errno.EACCES}
     assert records["executable"][0] == {"spawned": True, "exit_code": 0}
+    assert records["deny_prediction_dac"][0] == {"spawned": False, "errno": errno.EACCES}
+    denied = steps["deny_prediction_dac"]
+    assert denied["attempt"]["errno"] == errno.EACCES and denied["attempt"]["outcome"] == "exec_failed", denied
+    assert denied["drift"] is False and denied["deny_signal"] is None, denied
     failure = steps["nonexecutable"]["attempt"]
     assert failure["outcome"] == "exec_failed" and failure["rc"] == -1
     assert failure["child_pid"] == 0 and failure["child_exit_code"] == -1

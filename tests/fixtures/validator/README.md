@@ -23,3 +23,16 @@ validator degradation.
 with fresh IDs and targets. The CLI contract then checks accepted verdicts,
 completed attempts, and missing-prediction semantics independently of the
 fixture's transcript configuration.
+
+Additional checked-in transcripts return two valid replies then invalid UTF-8,
+an incomplete allow/deny record, an unfamiliar diagnostic, a duplicate ID or an
+unexpected ID. `failure_boundaries` copies each transcript beside the unchanged
+fixture executable and compares the retained emitted bytes with host evidence.
+The unfamiliar diagnostic includes an extra numeric code in raw JSON. These
+transcripts test the real receiver; they do not classify normal validator output
+as corrupt. Byte output is written and retained without text replacement.
+
+Responses may override returned query fields with `fields` or remove them with
+`omit`, independently of the recorded incoming probes. Wrong-query controls
+cover operation, filter type, filter value and missing required filter value.
+The unfamiliar diagnostic omits query metadata and native results.

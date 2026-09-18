@@ -35,15 +35,15 @@
 #include <stdint.h>
 
 /*
- * ABI version 5 includes a bounded, opt-in compiled-object capture region
- * after the existing slots and params. The version is a hard host↔worker
+ * ABI version 6 adds observer-owned progress, failure and diagnostic records
+ * after the existing capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
  * boundary, defended by the
  * abi_version check at worker entry. In practice host + worker ship
  * together (the worker binary is bundle-local inside each XPC service),
  * so the check is a defense-in-depth tripwire rather than a live
  * compatibility boundary.
  */
-#define PW_PROBE_RUNNER_ABI_VERSION 5u
+#define PW_PROBE_RUNNER_ABI_VERSION 6u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
  * 8 KiB + 1024 params × 512 B + bounded capture = about 3.5 MiB per run.
@@ -52,6 +52,7 @@
  * specimen plan. The param cap is sized for real-world SBPL profile
  * closures (Apple system profiles bind 100+ derived params once
  * imports are resolved), with substantial headroom. */
+#define PW_SHM_POLICY_BYTES 262144u /* includes terminating NUL */
 #define PW_SHM_MAX_STEPS    256u
 #define PW_SHM_SLOT_BYTES   8192u
 #define PW_SHM_MAX_PARAMS   1024u
@@ -63,11 +64,14 @@
 #define PW_SHM_CAPTURE_HEADER_BYTES 144u
 #define PW_SHM_CAPTURE_BYTES 1048576u
 #define PW_SHM_CAPTURE_NONCE_BYTES 16u
+#define PW_SHM_EVIDENCE_HEADER_BYTES 64u
+#define PW_SHM_DIAGNOSTIC_BYTES 4096u
 #define PW_SHM_REGION_BYTES                                                  \
     ((size_t)PW_SHM_HEADER_BYTES                                             \
      + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES)                        \
      + ((size_t)PW_SHM_MAX_PARAMS * PW_SHM_PARAM_BYTES)                      \
-     + PW_SHM_CAPTURE_HEADER_BYTES + PW_SHM_CAPTURE_BYTES)
+     + PW_SHM_CAPTURE_HEADER_BYTES + PW_SHM_CAPTURE_BYTES                 \
+     + PW_SHM_EVIDENCE_HEADER_BYTES + PW_SHM_DIAGNOSTIC_BYTES)
 
 /* Bounded string sizes inside a slot. They add up below the slot
  * budget; the remainder is reserved padding for future fields. */
@@ -177,6 +181,45 @@ typedef struct {
     uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
     uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 14u];
 } pw_shm_header_t;
+
+/* Open numeric values: unknown operation/code values remain transportable. */
+enum {
+    PW_OP_HEADER = 1, PW_OP_POLICY_READ = 2, PW_OP_PARAMS_CREATE = 3,
+    PW_OP_PARAM_SET = 4, PW_OP_COMPILE = 5, PW_OP_CAPTURE = 6,
+    PW_OP_READY = 7, PW_OP_APPLY = 8, PW_OP_ATTEMPT = 9, PW_OP_FINISHED = 10
+};
+enum { PW_PROGRESS_STARTED = 1, PW_PROGRESS_RETURNED = 2 };
+enum {
+    PW_FAILURE_NATIVE = 1, PW_FAILURE_SOURCE_LIMIT = 2, PW_FAILURE_POLICY_READ = 3,
+    PW_FAILURE_STEP_LIMIT = 4, PW_FAILURE_PARAM_LIMIT = 5,
+    PW_FAILURE_PARAM_ENCODING = 6, PW_FAILURE_UNPREPARED = 7
+};
+enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2 };
+
+/* ABI 6. Worker-owned publication contract is specified in
+ * tests/FAILURE-PROPAGATION-CONTRACT.md, Step 1. All payloads immutable after
+ * their publication word reaches 1 (diagnostic also accepts 2=truncated).
+ * Progress is a single atomic value, never a gate for reading other storage. */
+typedef struct {
+    _Atomic uint32_t progress;
+    _Atomic uint32_t failure_published;
+    uint32_t operation;
+    uint32_t code;
+    uint32_t native_kind;
+    int32_t native_result;
+    int32_t errno_val;
+    uint32_t errno_present;
+    uint32_t item_index;
+    uint32_t detail;
+    _Atomic uint32_t ready_published;
+    int32_t ready_rc;
+    int32_t ready_errno;
+    _Atomic uint32_t diagnostic_state;
+    uint32_t diagnostic_length;
+    uint32_t reserved;
+} pw_shm_evidence_t;
+_Static_assert(sizeof(pw_shm_evidence_t) == PW_SHM_EVIDENCE_HEADER_BYTES,
+               "evidence header budget");
 
 /*
  * Per-step slot. Inputs are written by the host pre-spawn; outputs

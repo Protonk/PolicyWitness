@@ -31,7 +31,16 @@ if [[ ! -f "${EXPECTED_JSON}" ]]; then
   test_fail "fixture missing: ${EXPECTED_JSON}"
 fi
 
-WORK_ROOT="${PW_TEST_ARTIFACTS}/workspace"
+# The worker must not touch privacy-protected checkout paths.
+WORK_ROOT="$(mktemp -d /private/tmp/pw-bbx.XXXXXX)"
+cleanup_workspace() {
+  local rc=$?
+  trap - EXIT
+  cp -R "${WORK_ROOT}" "${PW_TEST_ARTIFACTS}/workspace.after" || rc=1
+  rm -rf "${WORK_ROOT}" || rc=1
+  exit "${rc}"
+}
+trap cleanup_workspace EXIT
 ALLOW_DIR="${WORK_ROOT}/allow-write"
 DENY_DIR="${WORK_ROOT}/deny-write"
 ALLOW_FILE="${ALLOW_DIR}/existing.txt"
@@ -40,6 +49,8 @@ DENY_FILE="${DENY_DIR}/existing.txt"
 mkdir -p "${ALLOW_DIR}" "${DENY_DIR}"
 printf 'seed\n' >"${ALLOW_FILE}"
 printf 'seed\n' >"${DENY_FILE}"
+
+cp -R "${WORK_ROOT}" "${PW_TEST_ARTIFACTS}/workspace.before"
 
 SPECIMEN_JSON="${PW_TEST_ARTIFACTS}/specimen.rendered.json"
 

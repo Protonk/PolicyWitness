@@ -6,7 +6,7 @@ import Foundation
 // The fixture never applies a sandbox. These tests establish host observations,
 // not policy causes. Required equipment must fail clearly instead of SKIP+pass.
 private func lifecycleFixture(_ mode: String,
-                              calls: CWorkerProcessCalls = CWorkerProcessCalls()) throws -> CWorkerOutput {
+                              calls: ChildProcessCalls = ChildProcessCalls()) throws -> CWorkerOutput {
     guard let path = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"],
           FileManager.default.isExecutableFile(atPath: path) else {
         throw TestFailure(message: "required PW_LIFECYCLE_WORKER_FIXTURE missing; run tests/run.sh --suite runner_unit")
@@ -124,7 +124,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try expectEqual(out.terminationRequest?.rc, 0)
         }
         tk.run("failed kill permits only nonblocking reap and no invented status") {
-            var calls = CWorkerProcessCalls()
+            var calls = ChildProcessCalls()
             var killRequested = false
             var finalOptions: [Int32] = []
             calls.kill = { _, _ in killRequested = true; errno = EPERM; return -1 }
@@ -147,7 +147,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try expectEqual(out.waitErrors?.count, 0)
         }
         tk.run("successful kill followed by failed reap does not decode wait storage") {
-            var calls = CWorkerProcessCalls()
+            var calls = ChildProcessCalls()
             calls.wait = { pid, status, options in
                 if options == 0 { status.pointee = 0; errno = ECHILD; return -1 }
                 return Darwin.waitpid(pid, status, options)
@@ -160,7 +160,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try expectEqual(out.waitErrors?.map { $0.errno }, [ECHILD])
         }
         tk.run("interrupted grace reap recovers and retains the interruption") {
-            var calls = CWorkerProcessCalls()
+            var calls = ChildProcessCalls()
             var interrupted = false
             calls.wait = { pid, status, options in
                 if !interrupted { interrupted = true; status.pointee = 0; errno = EINTR; return -1 }
@@ -174,7 +174,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try expectEqual(out.waitErrors?.map { $0.errno }, [EINTR])
         }
         tk.run("repeated EINTR returns with finite attempts and unconfirmed status") {
-            var calls = CWorkerProcessCalls()
+            var calls = ChildProcessCalls()
             var waitCalls = 0
             calls.wait = { _, status, _ in
                 waitCalls += 1
@@ -193,7 +193,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
         }
         for mode in ["complete_hang", "no_report_hang"] {
             tk.run("ECHILD stops \(mode) waits without signaling an unowned PID") {
-                var calls = CWorkerProcessCalls()
+                var calls = ChildProcessCalls()
                 var killCalls = 0
                 calls.wait = { _, status, _ in status.pointee = 0; errno = ECHILD; return -1 }
                 calls.kill = { _, _ in killCalls += 1; errno = EPERM; return -1 }
@@ -209,7 +209,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             }
         }
         tk.run("poll failure survives successful cleanup without claiming deadline expiry") {
-            var calls = CWorkerProcessCalls()
+            var calls = ChildProcessCalls()
             var failed = false
             calls.wait = { pid, status, options in
                 if !failed { failed = true; errno = EIO; return -1 }

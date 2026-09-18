@@ -84,3 +84,9 @@ full transcript or its line order.
 
 - `tests/out/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_e2e` when run directly).
 - Checker artifacts retain each synthetic envelope, exit status, and diagnostics.
+
+BBX file targets live in unique owned `/private/tmp/pw-bbx.*` directories,
+including when the shared scripts run under BYOXPC. The rendered specimen and
+`workspace.before`/`workspace.after` copies remain in artifacts; exit cleanup
+removes scratch on success or failure. Test correctness does not depend on
+Desktop/Documents privacy consent.

@@ -115,7 +115,9 @@ def check_cli(case, out, pw):
                 assert 'returned 2' in runner['error'] and 'expected 3' in runner['error'], runner['error']
             else:
                 assert 'parse failed' in runner['error'], runner['error']
-                assert 'invalid-verdict:' + plan[-1]['step_id'] in runner['error'], runner['error']
+                assert validator_status['decode_fault']['kind'] == 'json', validator_status
+                import base64
+                assert base64.b64decode(validator_status['decode_fault']['context_b64']).decode() == 'invalid-verdict:' + plan[-1]['step_id']
             steps = runner['steps']
             assert [s['step_id'] for s in steps] == [s['step_id'] for s in plan], steps
             for i, (step, outcome) in enumerate(zip(steps, ('ok', 'open_failed', 'access_failed'))):

@@ -5,12 +5,16 @@ This test copies `/usr/bin/true` into a private temporary directory and runs
 the same `(allow default)` specimen with its execute bits removed and then
 restored. It also executes the helper directly outside PW in both modes.
 
-Both controls must complete before the drift assertion:
+All controls must complete before the drift assertion:
 
 - With mode 0644, direct execution fails with EACCES; PW predicts allow but
   reports `exec_failed`, errno EACCES, and no spawned child.
 - With mode 0755, direct execution and PW both succeed; PW reports a child
   that exited zero and `drift=false`.
+- A third run denies a separate prediction target while allowing the attempted
+  helper under SBPL. Direct and PW execution both observe DAC EACCES; the deny
+  prediction yields directional `drift=false`. This is agreement of outcomes,
+  not evidence that the sandbox caused the attempted helper's failure.
 - The first run must have `drift=null`: an ordinary filesystem permission
   error cannot substantiate a disagreement about sandbox enforcement.
 
@@ -23,6 +27,6 @@ Run `tests/run.sh --suite runner_exec_dac` outside an automation sandbox
 Missing builds or failed controls fail the test.
 
 `RunCapture` retains `specimen.json`, `run.json`, `pw.stderr`, and `capture.json`
-under separate `nonexecutable/` and `executable/` artifact directories. Direct
+under separate `nonexecutable/`, `executable/` and `deny_prediction_dac/` artifact directories. Direct
 execution results and `assert.log` remain at the artifact root. The temporary
 helper is removed afterward. Shell setup and checker logging use `case.sh`.

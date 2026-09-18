@@ -111,6 +111,19 @@ fn load_app_provenance(app_root: &Path) -> Result<AppProvenance, String> {
     })
 }
 
+fn fallback_policy_note(check: &PolicyCheckCapture) -> String {
+    let detail = if check.status == "policy_too_large" {
+        "sbpl-check admission refused: policy_too_large"
+    } else {
+        match check.compiled {
+            Some(true) => "sbpl-check compiled ok",
+            Some(false) => "sbpl-check compilation failed",
+            None => "sbpl-check compilation unavailable",
+        }
+    };
+    format!("runner did not reply; worker progress and cause unavailable; sbpl-check describes only the fallback helper ({detail})")
+}
+
 fn synthetic_runner_client(note: &str) -> RunnerClientRun {
     let now = now_unix_ms();
     RunnerClientRun {
@@ -118,11 +131,7 @@ fn synthetic_runner_client(note: &str) -> RunnerClientRun {
         started_at_unix_ms: now,
         ended_at_unix_ms: now,
         exit_code: 2,
-        stdout_parse_error: None,
-        stdout_truncated: false,
-        stdout_raw: None,
-        stderr: note.to_string(),
-        stderr_truncated: false,
+        output: crate::utils::JsonOutputCapture::unavailable(note.to_string()),
     }
 }
 
@@ -319,16 +328,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             Ok(report) => report,
             Err(err) => PolicyCheckCapture::unavailable(err),
         };
-        let mut note = "runner did not reply; worker progress and cause unavailable; sbpl-check describes only the fallback helper".to_string();
-        match check.compiled {
-            Some(true) => note.push_str(" (sbpl-check compiled ok)"),
-            Some(false) => note.push_str(" (sbpl-check failed)"),
-            None => {
-                if check.status == "unavailable" {
-                    note.push_str(" (sbpl-check unavailable)")
-                }
-            }
-        }
+        let note = fallback_policy_note(&check);
         let diagnostics = RunnerStartupDiagnostics {
             status: "xpc_error".to_string(),
             note,
@@ -357,11 +357,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     capture_status: "requested_unavailable".to_string(),
                     tool_exit_code: 1,
                     blocked_reason: None,
-                    stdout_parse_error: None,
-                    stdout_truncated: false,
-                    stdout_raw: None,
-                    stderr: err,
-                    stderr_truncated: false,
+                    output: crate::utils::JsonOutputCapture::unavailable(err),
                     observer: None,
                     observed_deny: None,
                     deny_events: None,
@@ -428,7 +424,9 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         .and_then(|v| v.as_str())
     {
         Some(v.to_string())
-    } else if let Some(v) = data.runner_client.stdout_parse_error.as_ref() {
+    } else if let Some(v) = data.runner_client.output.stdout_capture_error.as_ref() {
+        Some(v.clone())
+    } else if let Some(v) = data.runner_client.output.stdout_parse_error.as_ref() {
         Some(format!("runner output parse error: {v}"))
     } else {
         Some("run did not complete successfully".to_string())
@@ -528,17 +526,34 @@ mod tests {
     use crate::sandbox_log::SandboxDenyEvent;
     use serde_json::json;
 
+    #[test]
+    fn fallback_admission_and_compile_results_remain_distinct() {
+        for (status, compiled, expected) in [
+            (
+                "policy_too_large",
+                Some(false),
+                "admission refused: policy_too_large",
+            ),
+            ("compile_error", Some(false), "compilation failed"),
+            ("compiled", Some(true), "compiled ok"),
+            ("unavailable", None, "compilation unavailable"),
+        ] {
+            let mut check = PolicyCheckCapture::unavailable("test".into());
+            check.status = status.into();
+            check.compiled = compiled;
+            let note = fallback_policy_note(&check);
+            assert!(note.contains(expected));
+            assert!(note.contains("worker progress and cause unavailable"));
+        }
+    }
+
     fn capture_with(status: &str, events: Vec<SandboxDenyEvent>) -> SandboxLogCapture {
         SandboxLogCapture {
             window: SandboxLogWindow::trailing("10s"),
             capture_status: status.into(),
             tool_exit_code: 0,
             blocked_reason: None,
-            stdout_parse_error: None,
-            stdout_truncated: false,
-            stdout_raw: None,
-            stderr: String::new(),
-            stderr_truncated: false,
+            output: crate::utils::JsonOutputCapture::unavailable(String::new()),
             observer: None,
             observed_deny: Some(!events.is_empty()),
             deny_events: Some(events),
@@ -559,6 +574,36 @@ mod tests {
             "runner_subprocess": {"pid": 42, "reaped": true, "term_signal": signal,
                 "exit_code": if signal.is_none() { Some(0) } else { None }, "termination_request": null}})
     }
+    #[test]
+    fn incomplete_attempt_retains_independent_prediction_and_event_without_cause() {
+        let mut runner = worker("runner_failed", Some(9));
+        runner["runner_subprocess"]["done_observed"] = json!(false);
+        runner["steps"] = json!([{"step_id": "s",
+            "sandbox_check": {"result_source": "validator", "outcome": "deny", "native_rc": 1},
+            "attempt": {"result_source": "synthetic", "native_rc": null,
+                "missing_reason": "slot_incomplete", "outcome": "not_run_worker_died"},
+            "drift": null}]);
+        let before = runner.clone();
+        let plan = [json!({"step_id": "s", "attempt": {
+            "kind": "file", "action": "open_write", "target": "/attempt"}})];
+        let cap = capture_with("captured", vec![event(Some(42))]);
+        let associations = match_step_denies(
+            runner["steps"].as_array().unwrap(),
+            &plan,
+            cap.deny_events.as_ref().unwrap(),
+            Some(42),
+        );
+        assert_eq!(associations.len(), 1);
+        assert_eq!(associations[0].event_index, 0);
+        assert_eq!(associations[0].candidate_step_ids, ["s"]);
+        assert_eq!(associations[0].association, "candidate");
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        assert_eq!(diag.first_deny.unwrap().event_index, 0);
+        assert_eq!(runner, before);
+        assert_eq!(cap.deny_events.as_ref().unwrap().len(), 1);
+    }
+
     #[test]
     fn ordinary_denial_and_unrelated_signal_remain_separate_observations() {
         let runner = worker("runner_failed", Some(9));

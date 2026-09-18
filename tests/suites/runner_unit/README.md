@@ -56,3 +56,19 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
 Requires Swift and clang. Selecting an app-dependent suite alongside it records
 the signed app's integrity. Direct SwiftPM execution requires first building the
 fixture and exporting its path as `PW_LIFECYCLE_WORKER_FIXTURE`.
+
+`WorkerEvidenceTests` requires the lifecycle builder's companion producers. It
+checks actual C-main publication for controlled parameter/apply failures, open
+numeric codes, publication validity, late completed slots, missing predictions,
+memory-only text under deny-default, mapping failure and broken-policy-pipe
+partial output. Failed-kill controls independently reap their owned fixtures.
+
+`ValidatorEvidenceTests` checks strict byte-frame/record decoding and actual
+validator driver cleanup. The shared `ChildProcessCalls` test boundary changes
+only kill/wait observations. The `.validator` fixture is built beside the worker
+fixture, outside the app; tests fail when it is absent and own independent cleanup.
+
+Required worker/validator equipment failures throw `TestFailure`; they do not
+return as passing cases. The wrapper also rejects any internal `SKIP` or `FAIL`
+line before crediting the summary. Missing fixture environment is a normal
+reported failure, not a force-unwrap crash.

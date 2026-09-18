@@ -49,7 +49,8 @@ public enum CWorkerOrchestrator {
         // ---- translation: request → driver inputs ------------------------
         let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
         let workerParams = workerParamsFromPolicy(parsed.policy)
-        let validatorProbes = validatorProbesFromProbePlan(parsed.probe_plan)
+        let queryPlan = planValidatorQueries(parsed.probe_plan)
+        let validatorProbes = queryPlan.compactMap { $0.probe }
 
         // _test_overrides.worker_timeout_ms drives the sentinel
         // deadline on the C-worker path. Floored at 50 ms because a
@@ -99,19 +100,17 @@ public enum CWorkerOrchestrator {
 
         let stepResults = buildStepResults(
             probePlan: parsed.probe_plan,
+            queryPlan: queryPlan,
             workerOutput: workerOutput,
             validatorOutput: validatorOutput
         )
 
+        let admissionFailure: PWRunnerAdmissionFailure?
+        if case .failure(.admissionFailed(let record), _) = workerResult { admissionFailure = record }
+        else { admissionFailure = nil }
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
         let runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
-        let validatorSubprocess = validatorOutput.map {
-            PWRunnerValidatorSubprocess(
-                pid: Int($0.validatorPid),
-                term_signal: $0.termSignal.map { Int($0) },
-                exit_code: $0.exitCode.map { Int($0) }
-            )
-        }
+        let validatorSubprocess = validatorOutput.map(buildValidatorSubprocess)
 
         _ = stepCount  // referenced for future partial-step logic; silence unused warning
 
@@ -131,7 +130,8 @@ public enum CWorkerOrchestrator {
             runner_subprocess: runnerSubprocess,
             validator_subprocess: validatorSubprocess,
             test_overrides: parsed._test_overrides,
-            applied_profile: workerOutput?.profileCapture
+            applied_profile: workerOutput?.profileCapture,
+            admission_failure: admissionFailure
         )
     }
 
@@ -289,58 +289,31 @@ private func workerParamsFromPolicy(_ policy: PWRunnerPolicySpec) -> [CWorkerPar
     return dict.keys.sorted().map { CWorkerParam(key: $0, value: dict[$0] ?? "") }
 }
 
-private func validatorProbesFromProbePlan(_ plan: [PWRunnerProbeStep]) -> [ValidatorProbe] {
-    var probes: [ValidatorProbe] = []
-    probes.reserveCapacity(plan.count)
-    for step in plan {
-        if let probe = makeValidatorProbe(stepID: step.step_id, check: step.sandbox_check) {
-            probes.append(probe)
-        }
-    }
-    return probes
+/// Snapshot the host's query decision before any worker attempt can change paths.
+struct ValidatorQueryDecision {
+    let stepId: String
+    let probe: ValidatorProbe?
+    let exclusionReason: String?
 }
 
-/// Returns nil when this query has no available prediction.
-private func makeValidatorProbe(stepID: String, check: PWRunnerSandboxCheck) -> ValidatorProbe? {
-    let kind = check.filter.kind
-    let opFilterPair = PredictionUnavailablePair(
-        operation: check.operation,
-        filterKind: kind
-    )
-    if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair) {
-        // Don't ask the validator about this pair. The verdict is
-        // synthesized as prediction_unavailable in the step builder.
-        return nil
+func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecision] {
+    plan.map { step in
+        let check = step.sandbox_check
+        let kind = check.filter.kind
+        let reason: String?
+        if predictionUnavailableOpFiltersHostMirror.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {
+            reason = "prediction unavailable for this operation and filter"
+        } else if !knownFilterKinds.contains(kind) {
+            reason = "prediction unavailable for unrecognized filter kind"
+        } else if pathFilterIsUnresolvable(kind, check.filter.value) {
+            reason = "target path \(check.filter.value ?? "") did not resolve on the host when the query was planned"
+        } else { reason = nil }
+        return ValidatorQueryDecision(stepId: step.step_id,
+            probe: reason == nil ? ValidatorProbe(stepId: step.step_id, operation: check.operation,
+                filterType: mapFilterKindToValidator(kind),
+                filterValue: kind == PWRunnerWire.sandboxFilterNone ? nil : check.filter.value) : nil,
+            exclusionReason: reason)
     }
-    if !knownFilterKinds.contains(kind) {
-        // Unknown filter kind: skip the validator probe and let the
-        // step builder synthesize prediction_unavailable. Avoids
-        // killing the whole plan when a specimen mixes a recognized
-        // probe with one whose filter kind hasn't been verified.
-        return nil
-    }
-    // Per-step path-resolution gate: when the path filter doesn't
-    // resolve via realpath, the kernel won't reach a sandbox
-    // decision (file ops ENOENT first), so any libsandbox verdict
-    // for the path is a userland canonicalization artifact rather
-    // than a kernel prediction. Skip the validator probe; the
-    // step builder synthesizes prediction_unavailable so consumers
-    // see the prediction was honestly absent rather than wrong.
-    if pathFilterIsUnresolvable(kind, check.filter.value) {
-        return nil
-    }
-    // NONE-filter probes must not carry a filter_value in the
-    // validator wire (the validator rejects it as bad_filter).
-    // Callers commonly pass "" for kind=none — coerce that to nil.
-    let filterValue: String? = (kind == PWRunnerWire.sandboxFilterNone)
-        ? nil
-        : check.filter.value
-    return ValidatorProbe(
-        stepId: stepID,
-        operation: check.operation,
-        filterType: mapFilterKindToValidator(kind),
-        filterValue: filterValue
-    )
 }
 
 /// True when the step's filter is a path whose value does not
@@ -393,7 +366,7 @@ private func mapFilterKindToValidator(_ wireKind: String) -> String {
 private func unwrapWorkerOutput(_ result: CWorkerRunResult) -> CWorkerOutput? {
     switch result {
     case .success(let out): return out
-    case .failure:          return nil
+    case .failure(_, let partial): return partial
     }
 }
 
@@ -407,8 +380,9 @@ private func unwrapValidatorOutput(_ result: ValidatorClientResult?) -> Validato
 
 // MARK: - Step builder
 
-private func buildStepResults(
+func buildStepResults(
     probePlan: [PWRunnerProbeStep],
+    queryPlan: [ValidatorQueryDecision],
     workerOutput: CWorkerOutput?,
     validatorOutput: ValidatorOutput?
 ) -> [PWRunnerStepResult] {
@@ -416,31 +390,46 @@ private func buildStepResults(
     let workerSlotsByStep: [String: CWorkerSlotResult] = Dictionary(
         uniqueKeysWithValues: (workerOutput?.slots ?? []).map { ($0.stepId, $0) }
     )
-    let verdictsByStep: [String: ValidatorVerdict] = Dictionary(
-        uniqueKeysWithValues: (validatorOutput?.verdicts ?? []).compactMap { v in
-            v.stepId.map { ($0, v) }
-        }
-    )
-
-    // sandbox_check.pid is consistently the sandboxed worker PID so
-    // unified-log correlation can use a single PID per run, and so
-    // validator-backed AND synthesized verdicts carry the same per-step
-    // pid. Falls back to the host PID only when no worker exists (spawn
-    // failed before pid was known).
-    let sbCheckPid = Int(workerOutput?.workerPid ?? pid_t(getpid()))
+    let probes = queryPlan.compactMap { $0.probe }
+    let decisions = Dictionary(uniqueKeysWithValues: queryPlan.map { ($0.stepId, $0) })
+    let verdictsByStep = associateValidatorVerdicts(validatorOutput?.verdicts ?? [], expected: probes).byStep
+    // No worker means no PID for a worker-targeted sandbox query.
+    let sbCheckPid = workerOutput.map { Int($0.workerPid) }
 
     var results: [PWRunnerStepResult] = []
     results.reserveCapacity(probePlan.count)
     for step in probePlan {
-        let sandboxCheck = buildSandboxCheckResult(
+        var sandboxCheck = buildSandboxCheckResult(
             step: step,
             verdict: verdictsByStep[step.step_id],
-            sandboxCheckPid: sbCheckPid
+            sandboxCheckPid: sbCheckPid,
+            exclusionReason: decisions[step.step_id]?.exclusionReason
         )
-        let attempt = buildAttemptResult(
+        var attempt = buildAttemptResult(
             step: step,
             slot: workerSlotsByStep[step.step_id]
         )
+        // Excluded queries are synthesized even if an unexpected validator
+        // record names their step. Do not attribute the synthesized result to it.
+        let verdict = sandboxCheck.outcome == SandboxCheckOutcome.predictionUnavailable
+            ? nil : verdictsByStep[step.step_id]
+        sandboxCheck.result_source = verdict == nil ? "synthetic" : "validator"
+        sandboxCheck.native_rc = verdict.flatMap {
+            ["allow", "deny", "error"].contains($0.outcome) ? $0.rc : nil
+        }
+        if verdict == nil {
+            sandboxCheck.missing_reason = sandboxCheck.outcome == SandboxCheckOutcome.predictionUnavailable
+                ? "query_not_requested" : validatorOutput == nil ? "validator_not_invoked" : "validator_no_verdict"
+        }
+        let slot = workerSlotsByStep[step.step_id]
+        let supported = mapAttemptKindOrNil(step.attempt) != nil
+        attempt.result_source = slot?.completed == true && supported ? "worker" : "synthetic"
+        // Slot rc is PW's attempt status (often 0/1), not the raw syscall
+        // return (e.g. an open FD). ABI 6 does not carry that native return.
+        attempt.native_rc = nil
+        if attempt.result_source == "synthetic" {
+            attempt.missing_reason = !supported ? "attempt_not_supported" : slot == nil ? "slot_absent" : "slot_incomplete"
+        }
         let drift = computeDrift(sandboxCheck: sandboxCheck, attempt: attempt)
         let stepResult = PWRunnerStepResult(
             step_id: step.step_id,
@@ -457,74 +446,16 @@ private func buildStepResults(
 private func buildSandboxCheckResult(
     step: PWRunnerProbeStep,
     verdict: ValidatorVerdict?,
-    sandboxCheckPid: Int
+    sandboxCheckPid: Int?,
+    exclusionReason: String?
 ) -> PWRunnerSandboxCheckResult {
-    let opFilterPair = PredictionUnavailablePair(
-        operation: step.sandbox_check.operation,
-        filterKind: step.sandbox_check.filter.kind
-    )
     let scope = PWRunnerWire.sandboxCheckScopePost
     let kind = step.sandbox_check.filter.kind
     let value = step.sandbox_check.filter.value
-
-    // Synthesize prediction_unavailable in three cases that share
-    // the wire shape:
-    //
-    //   (a) a known op+filter pair that empirically drifts from
-    //       kernel enforcement (iokit/sysctl families);
-    //   (b) a filter kind the runner doesn't know how to validate
-    //       (e.g. preference_domain, mach_port);
-    //   (c) per-step host condition: a path-filter value that
-    //       doesn't resolve via realpath. For absent paths the
-    //       kernel never reaches a sandbox decision (file-* ops
-    //       ENOENT first), so whatever verdict libsandbox returns
-    //       is a userland-side canonicalization artifact, not a
-    //       prediction the kernel would produce. We surface the
-    //       gate's reason in `error` so a consumer can see which
-    //       branch fired without having to inspect path_diagnostics.
-    //
-    // In all three cases the validator wasn't asked, the attempt
-    // is the reliable evidence, and the consumer-visible shape is
-    // identical (rc=-1, drift=null).
-    if predictionUnavailableOpFiltersHostMirror.contains(opFilterPair)
-        || !knownFilterKinds.contains(kind) {
-        return PWRunnerSandboxCheckResult(
-            rc: -1,
-            outcome: SandboxCheckOutcome.predictionUnavailable,
-            pid: sandboxCheckPid,
-            operation: step.sandbox_check.operation,
-            scope: scope,
-            filter_kind: kind,
-            filter_value: value,
-            effective_filter_value: value,
-            filter_type_id: nil,
-            errno: nil,
-            error: nil,
-            path_diagnostics: nil
-        )
-    }
-    if pathFilterIsUnresolvable(kind, value) {
-        // path_diagnostics is added later by PWRunnerService's
-        // enrichPathDiagnostics pass (which always runs for
-        // path-kind results), so a consumer can still see
-        // realpath_resolved=null alongside this outcome.
-        let target = value ?? ""
-        return PWRunnerSandboxCheckResult(
-            rc: -1,
-            outcome: SandboxCheckOutcome.predictionUnavailable,
-            pid: sandboxCheckPid,
-            operation: step.sandbox_check.operation,
-            scope: scope,
-            filter_kind: kind,
-            filter_value: value,
-            effective_filter_value: value,
-            filter_type_id: nil,
-            errno: nil,
-            error: "target path \(target.debugDescription) did not resolve on the host; "
-                + "the kernel ENOENTs file-* access before reaching the sandbox check, "
-                + "so libsandbox's verdict for this path is not a kernel prediction",
-            path_diagnostics: nil
-        )
+    if let reason = exclusionReason {
+        return PWRunnerSandboxCheckResult(rc: -1, outcome: SandboxCheckOutcome.predictionUnavailable,
+            pid: sandboxCheckPid, operation: step.sandbox_check.operation, scope: scope,
+            filter_kind: kind, filter_value: value, effective_filter_value: value, error: reason)
     }
 
     // Validator didn't return a verdict for this step (validator never
@@ -818,7 +749,7 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
 // Internal for driver-to-JSON controls. Preserve the host's observations in the
 // authoritative subprocess object; classification does not rewrite them.
 func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
-    PWRunnerSubprocess(
+    var result = PWRunnerSubprocess(
         pid: Int(out.workerPid),
         term_signal: out.termSignal.map { Int($0) },
         exit_code: out.exitCode.map { Int($0) },
@@ -831,6 +762,28 @@ func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
         reaped: out.reaped,
         wait_errors: out.waitErrors
     )
+    result.worker_evidence = out.workerEvidence
+    result.policy_transfer_error = out.policyTransferError
+    return result
+}
+
+func buildValidatorSubprocess(_ out: ValidatorOutput) -> PWRunnerValidatorSubprocess {
+    var result = PWRunnerValidatorSubprocess(pid: Int(out.validatorPid),
+        term_signal: out.termSignal.map(Int.init), exit_code: out.exitCode.map(Int.init))
+    result.reaped = out.reaped
+    result.termination_request = out.terminationRequest
+    result.wait_errors = out.waitErrors
+    result.stdout_bytes_received = out.rawStdoutBytes
+    result.probe_bytes_written = out.probeBytesWritten
+    result.probe_bytes_expected = out.probeBytesExpected
+    result.io_error = out.ioError
+    result.read_error = out.readError
+    result.stdout_collection_stop = out.stdoutCollectionStop
+    result.decode_fault = out.decodeFault
+    result.records = out.verdicts
+    result.expected_step_ids = out.expectedStepIds
+    result.association_issues = out.expectedProbes.map { associateValidatorVerdicts(out.verdicts, expected: $0).issues }
+    return result
 }
 
 private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
@@ -862,12 +815,15 @@ func classify(
     // attempt channel is the load-bearing observation; without it the
     // validator's predictions have nothing to compare against).
     switch workerResult {
-    case .failure(let err):
+    case .failure(let err, let partial):
+        if let partial, partial.workerEvidence?.failure != nil {
+            let reported = classify(workerResult: .success(partial), validatorResult: validatorResult,
+                                    expectedVerdictCount: expectedVerdictCount)
+            return ClassifiedRun(outcome: reported.outcome, rc: 1,
+                error: (reported.error ?? "worker failure") + "; host " + err.description)
+        }
         switch err {
-        case .captureNonceInvalid, .slotCountExceeded, .paramCountExceeded,
-             .slotInputTooLong, .paramInputTooLong,
-             .argvCountExceeded, .argvEntryTooLong,
-             .execTargetNotAbsolute:
+        case .captureNonceInvalid, .admissionFailed, .execTargetNotAbsolute:
             return ClassifiedRun(outcome: NormalizedOutcome.badRequest,
                                  rc: 1, error: err.description)
         case .shmSetupFailed, .pipeFailed, .policyWriteFailed:
@@ -881,6 +837,22 @@ func classify(
         // Precedence is specified in tests/FAILURE-PROPAGATION-CONTRACT.md.
         // Publication, deadline, cleanup and disposition remain independent;
         // this summary never rewrites their evidence or assigns a policy cause.
+        if let evidence = out.workerEvidence {
+            if let failure = evidence.failure {
+                let names: [UInt32: String] = [1: "header validation", 2: "policy read", 3: "sandbox_create_params",
+                    4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply"]
+                let operation = names[failure.operation] ?? "operation \(failure.operation)"
+                var detail = "pw-probe-runner reported \(operation) failure (code=\(failure.code))"
+                if let rc = failure.native_result { detail += "; native_kind=\(failure.native_kind), result=\(rc)" }
+                if let error = failure.errno { detail += "; errno=\(error)" }
+                if let text = evidence.diagnostic.text, !text.isEmpty { detail += ": " + text }
+                return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1, error: detail)
+            }
+            if evidence.failure_state != "absent" {
+                return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                    error: "pw-probe-runner failure publication \(evidence.failure_state)")
+            }
+        }
         if (out.applied && out.applyRC != 0) || (out.done && !out.applied && out.applyRC == 0) {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
                 error: "pw-probe-runner published inconsistent application/completion state")
@@ -925,10 +897,10 @@ func classify(
     // Worker completed cleanly. Now classify the validator side.
     switch validatorResult {
     case nil:
-        // No probes were sent (every step's (op, filter) was in
-        // prediction_unavailable). That's a valid happy-path shape —
-        // every step has a synthesized prediction_unavailable
-        // verdict, attempts ran cleanly.
+        if expectedVerdictCount > 0 {
+            return ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
+                                 error: "validator not invoked; expected \(expectedVerdictCount) query results")
+        }
         return ClassifiedRun(outcome: NormalizedOutcome.ok, rc: 0, error: nil)
 
     case .failure(let err, _):
@@ -938,7 +910,7 @@ func classify(
                 outcome: NormalizedOutcome.validatorSpawnFailed,
                 rc: 1, error: err.description
             )
-        case .verdictParseFailed:
+        case .verdictParseFailed, .verdictDecodeFailed:
             return ClassifiedRun(
                 outcome: NormalizedOutcome.validatorDecodeFailure,
                 rc: 1, error: err.description
@@ -956,16 +928,26 @@ func classify(
         }
 
     case .success(let vOut):
-        // Validator clean-exited. Verify it produced the expected
-        // verdict count; a short count means it walked off the end
-        // of stdin early and we have attempts-only evidence for the
-        // missing tail.
-        if vOut.verdicts.count < expectedVerdictCount {
-            return ClassifiedRun(
-                outcome: NormalizedOutcome.validatorUnavailable,
-                rc: 1,
-                error: "validator returned \(vOut.verdicts.count) verdicts; expected \(expectedVerdictCount)"
-            )
+        var problems: [String] = []
+        if vOut.reaped != true { problems.append("process disposition unconfirmed") }
+        else if let signal = vOut.termSignal { problems.append("reaped with signal \(signal)") }
+        else if vOut.exitCode != 0 { problems.append("nonzero or unavailable exit status \(String(describing: vOut.exitCode))") }
+        if vOut.terminationRequest != nil { problems.append("host requested termination during cleanup") }
+        if vOut.waitErrors == nil || vOut.waitErrors?.contains(where: { $0.errno != EINTR }) == true {
+            problems.append("unresolved or unavailable host wait observations")
+        }
+        if let error = vOut.ioError { problems.append(error) }
+        if let fault = vOut.decodeFault { problems.append("\(fault.kind): \(fault.message)") }
+        if let expected = vOut.expectedProbes {
+            let association = associateValidatorVerdicts(vOut.verdicts, expected: expected)
+            if !association.issues.isEmpty || expected.count != expectedVerdictCount {
+                problems.append("returned \(association.byStep.count) uniquely associated records; expected \(expectedVerdictCount); "
+                    + association.issues.map { "\($0.kind):\($0.step_id ?? "null")" }.joined(separator: ", "))
+            }
+        } else { problems.append("submitted queries unavailable") }
+        if !problems.isEmpty {
+            return ClassifiedRun(outcome: NormalizedOutcome.validatorUnavailable, rc: 1,
+                                 error: "validator: " + problems.joined(separator: "; "))
         }
         return ClassifiedRun(outcome: NormalizedOutcome.ok, rc: 0, error: nil)
     }
