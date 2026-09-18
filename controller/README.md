@@ -106,17 +106,21 @@ Exit codes:
 
 ### Output contract
 
+Runner responses use version 5: every step contains `deny_signal: null` because
+that channel is unobserved. Legacy signal objects remain readable by the Swift
+decoder; external typed readers requiring an object must support null. The Rust
+controller forwards the runner object without version coercion. Optional
+subprocess objects may be omitted/null; per-step signal/errno/drift nulls require
+key presence. Worker ABI 5 and request schema 1 are separate contracts.
+
 The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing for the client call
-- `data.policy_check`: SBPL compile report from `sbpl-check`. Present
-  only when the runner returns `xpc_error` — the host runs `sbpl-check` there to tell
-  a non-compiling policy from one that compiled but blocked the XPC reply.
-  `null` on every run the runner can answer: the C worker exercises the policy
-  itself (a compile failure surfaces as `sandbox_apply_failed`, since the
-  worker does not distinguish compile from apply failure), so a second
-  host-side compile would be pure overhead.
+- `data.policy_check`: independent `sbpl-check` report, requested only on
+  `xpc_error`. It describes that helper's compilation, not the missing worker's
+  progress or the cause of a lost reply. Published legacy worker failures use
+  `runner_failed` because they cannot identify the failed native operation.
 - `data.policy_augmentation`: present only when `policy.augments` (see
   PolicyWitness.md → Augments) was non-empty. Records
   `{ applied: [name, ...], original_sha256, applied_sha256 }` so
@@ -128,15 +132,24 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   or codesign reject the bundle outright). This `xpc_error` path is the only
   one that triggers a host-side `sbpl-check` compile (to populate
   `policy_check_status` and disambiguate the failure).
-- `data.runner_sandbox_diagnostics`: present when
-  `normalized_outcome == "runner_sandbox_denied"`. Carries
-  `first_deny: { operation, path, raw_line }` — the first unified-log
-  kernel deny attributed to the worker PID — or `first_deny: null` when
-  log capture was blocked/unavailable or no event matched. PID-filtered;
-  no process-name fallback (avoids over-attribution to concurrent
-  runners). Consumers can branch on `first_deny != null` directly.
-- `data.sandbox_log_capture`: optional unified-log evidence (best-effort);
-  `null` when `--no-log-capture` was passed or the runner returned no PID
+- `data.runner_sandbox_diagnostics`: process disposition and optional denial
+  correlation, independent of outcome labels. `worker_pid` comes only from
+  `runner_subprocess.pid`. `process_disposition` is `no_worker`, `unconfirmed`,
+  `clean_exit`, `nonzero_exit`, or `signaled`; abnormal/unconfirmed disposition
+  has `termination_cause="unknown"`. `capture_status` distinguishes disabled,
+  no worker and observer availability. `correlation_status` is `not_attempted`,
+  `unavailable`, `no_match`, or `pid_match`. `first_deny` is an `{event_index}`
+  reference into `sandbox_log_capture.deny_events`, not a termination cause.
+- `data.sandbox_log_capture`: optional observer evidence, also captured for
+  successful runs; null when disabled or no authoritative worker PID exists.
+  `window` records trailing `last` and explicitly disclaims structured event
+  timestamps, exact run membership, step ordering and PID-reuse protection.
+  `step_denies` contains event references with candidate step IDs: one candidate
+  is `candidate`, repeated matching attempts are `ambiguous`. Matching requires
+  worker PID, exact attempt-relevant operation and exact target/path evidence.
+  Attempt kind/action come from the request joined by unique step ID, never the
+  independent sandbox-check query. Unmatched events remain in `deny_events`.
+  [Operation mapping and correlation limits](../PolicyWitness.md#denial-log-correlation).
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 

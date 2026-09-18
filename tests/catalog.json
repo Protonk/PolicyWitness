@@ -147,7 +147,8 @@
         "tests/suites/runner_unit/run.sh"
       ],
       "requires": [
-        "swift"
+        "swift",
+        "clang"
       ],
       "cases": [
         {
@@ -861,11 +862,12 @@
           ]
         },
         {
-          "id": "runner_sandbox_diagnostics_on_denied",
+          "id": "worker_termination_and_log_correlation",
           "command": [
             "bash",
-            "tests/suites/witness_contract/runner_sandbox_diagnostics_on_denied.sh"
-          ]
+            "tests/suites/witness_contract/worker_termination_and_log_correlation.sh"
+          ],
+          "description": "Ordinary denied writes and unrelated self-signal retain independent disposition, optional capture and ambiguous attempt associations"
         },
         {
           "id": "instrumentation_field_rejected",
@@ -919,6 +921,14 @@
           "command": [
             "bash",
             "tests/suites/witness_contract/prediction_target_is_independent_of_attempt_target.sh"
+          ]
+        },
+        {
+          "id": "pre_apply_failure_reports_no_policy_verdict",
+          "description": "Pre-apply deadline makes no library or policy claim; the same un-overridden specimen supplies real allow/deny controls and both runs require signal null",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/pre_apply_failure_reports_no_policy_verdict.sh"
           ]
         }
       ],

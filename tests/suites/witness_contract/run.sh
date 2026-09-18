@@ -24,9 +24,10 @@ scripts=(
 # prediction_unavailable — also not drift. Reintroduce when a real
 # current drift case is identified that the R10 steps[].drift field
 # should surface.
-  "${SUITE_DIR}/runner_sandbox_diagnostics_on_denied.sh"
+  "${SUITE_DIR}/worker_termination_and_log_correlation.sh"
   "${SUITE_DIR}/instrumentation_field_rejected.sh"
   "${SUITE_DIR}/prediction_target_is_independent_of_attempt_target.sh"
+  "${SUITE_DIR}/pre_apply_failure_reports_no_policy_verdict.sh"
   "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"
   "${SUITE_DIR}/validator_decode_failure_reports_degraded.sh"
   "${SUITE_DIR}/validator_spawn_failed_reports_degraded.sh"

@@ -244,11 +244,15 @@ def main():
           expected=expected, suites=("blackbox_menagerie",), status=1)
 
     expected = copy.deepcopy(expectations)
-    expected["blackbox_e2e"]["steps"][1].update(deny_signal_delta=0, expect_denial=False)
+    expected["blackbox_e2e"]["steps"][1].update(deny_signal_unavailable=True, expect_denial=False)
     check("signal_and_denial", baseline, expected=expected, suites=("blackbox_e2e",))
     broken, steps = mutate()
-    steps[1]["deny_signal"]["delta"] = 1
-    check("wrong_signal_delta", broken, ("expected deny_signal delta=0",),
+    steps[1]["deny_signal"] = {"signal": "SIGUSR1", "count_before": 0, "count_after": 0, "delta": 0}
+    check("fabricated_zero_signal", broken, ("expected explicit deny_signal=null",),
+          expected=expected, suites=("blackbox_e2e",), status=1)
+    broken, steps = mutate()
+    del steps[1]["deny_signal"]
+    check("missing_signal_key", broken, ("expected explicit deny_signal=null",),
           expected=expected, suites=("blackbox_e2e",), status=1)
     broken, steps = mutate()
     steps[1]["sandbox_check"].update(outcome="deny", rc=1)

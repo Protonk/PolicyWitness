@@ -56,7 +56,9 @@ notes:
 }
 
 fn cmd_output_to_string(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).trim_end_matches('\n').to_string()
+    String::from_utf8_lossy(bytes)
+        .trim_end_matches('\n')
+        .to_string()
 }
 
 fn now_unix_ms() -> u64 {
@@ -145,7 +147,20 @@ fn parse_sandbox_deny_line(line: &str) -> Option<SandboxDenyEvent> {
         return None;
     }
     let operation = parts.next().map(|v| v.to_string());
-    let path = parts.next().map(|v| v.to_string());
+    // Preserve the entire remaining target, including internal spaces. A
+    // first-token path could falsely associate /tmp/a b with an attempt /tmp/a.
+    // Additional unparsed suffixes stay in this value; correlation requires
+    // exact equality and does not guess where such a suffix begins.
+    let path = operation.as_ref().and_then(|op| {
+        let after_proc = msg.strip_prefix(proc_token)?.trim_start();
+        let after_deny = after_proc.strip_prefix(deny_token)?.trim_start();
+        let target = after_deny.strip_prefix(op)?.trim_start();
+        if target.is_empty() {
+            None
+        } else {
+            Some(target.to_string())
+        }
+    });
     let (process, pid) = parse_proc_pid(proc_token);
     Some(SandboxDenyEvent {
         pid,
@@ -273,10 +288,7 @@ fn main() {
 
     let mut idx = 0usize;
     while idx < args.len() {
-        let arg = args
-            .get(idx)
-            .and_then(|s| s.to_str())
-            .unwrap_or_default();
+        let arg = args.get(idx).and_then(|s| s.to_str()).unwrap_or_default();
         match arg {
             "-h" | "--help" => {
                 print_usage();
@@ -894,7 +906,39 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::sandbox_predicate;
+    use super::{parse_sandbox_deny_line, sandbox_predicate};
+
+    #[test]
+    fn parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims() {
+        let line =
+            "2026-09-17 12:00:00 Sandbox: pw-probe-runner(42) deny(1) file-write-data /tmp/attempt";
+        let event = parse_sandbox_deny_line(line).unwrap();
+        assert_eq!(event.pid, Some(42));
+        assert_eq!(event.operation.as_deref(), Some("file-write-data"));
+        assert_eq!(event.path.as_deref(), Some("/tmp/attempt"));
+        assert_eq!(event.raw_line, line);
+        let raw = serde_json::to_value(event).unwrap();
+        assert!(raw.get("timestamp").is_none());
+    }
+
+    #[test]
+    fn path_with_spaces_is_not_shortened_to_a_different_target() {
+        let event = parse_sandbox_deny_line(
+            "Sandbox: pw-probe-runner(42) deny(1) file-read-data /tmp/a  b",
+        )
+        .unwrap();
+        assert_eq!(event.path.as_deref(), Some("/tmp/a  b"));
+    }
+
+    #[test]
+    fn absent_or_malformed_pid_remains_absent_in_observer_evidence() {
+        for proc in ["pw-probe-runner", "pw-probe-runner(unknown)"] {
+            let line = format!("Sandbox: {proc} deny(1) file-read-data /tmp/x");
+            let event = parse_sandbox_deny_line(&line).unwrap();
+            assert_eq!(event.pid, None);
+            assert_eq!(event.raw_line, line);
+        }
+    }
 
     #[test]
     fn predicate_escapes_quotes_and_includes_pid() {

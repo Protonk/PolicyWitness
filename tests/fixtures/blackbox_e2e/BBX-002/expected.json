@@ -8,21 +8,21 @@
       "sandbox_outcome": "prediction_unavailable",
       "attempt_ok": false,
       "errno": 2,
-      "deny_signal_delta": 0
+      "deny_signal_unavailable": true
     },
     {
       "step_id": "mach_lookup_invalid",
       "sandbox_outcome": "allow",
       "attempt_ok": false,
       "expect_denial": false,
-      "deny_signal_delta": 0
+      "deny_signal_unavailable": true
     },
     {
       "step_id": "fs_read_allowed",
       "sandbox_outcome": "allow",
       "attempt_ok": true,
       "expect_denial": false,
-      "deny_signal_delta": 0
+      "deny_signal_unavailable": true
     }
   ]
 }

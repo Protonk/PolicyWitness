@@ -32,7 +32,8 @@ import CryptoKit
  *
  * Errors are surfaced via CWorkerRunError; CWorkerOrchestrator maps
  * them to the runner's normalized_outcome vocabulary. Nothing in
- * this module reaches into PWRunnerAPI's existing types.
+ * this module changes classification. Host syscall observations use the
+ * authoritative Codable record types documented in PWRunnerAPI.swift.
  */
 
 // MARK: - ABI mirror
@@ -211,17 +212,14 @@ public struct CWorkerInput {
     /// Optional test-seam routed to pw-probe-runner as
     /// `--post-apply-kill-signal <N>`. When > 0, the worker raises signal N
     /// on itself after `applied` but before `done`, so the host observes a
-    /// foreign termination signal with done unset — the `runner_sandbox_denied`
-    /// outcome, reachable from a deterministic specimen. Production callers
-    /// pass nil.
+    /// termination signal with done unset: runner_failed, without a policy
+    /// cause. Production callers pass nil.
     public var postApplyKillSignal: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--pre-ready-hang-ms <N>`. When > 0, the worker sleeps N ms
-    /// before writing the pre-apply ready byte, modelling a slow
-    /// compile that overruns `readyByteTimeoutMs` so the ready write
-    /// lands on a host-closed pipe. Pins that the worker survives that
-    /// (SIGPIPE ignored) and still reaches apply. Production callers
-    /// pass nil.
+    /// after compilation/capture and before the ready byte. A sufficient
+    /// sentinel budget lets it survive a closed ready pipe (SIGPIPE ignored);
+    /// a shorter budget can expire before application. Production callers pass nil.
     public var preReadyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--exec-child-deadline-ms <N>`. Overrides the worker's
@@ -283,17 +281,28 @@ public struct CWorkerOutput {
     public var workerPid: pid_t
     public var readyByteReceived: Bool
     public var applied: Bool
+    /// Legacy storage, published by applied/done. -1 also represents parameter
+    /// setup and compilation failures; without publication it is not a result.
     public var applyRC: Int32
-    /// errno the worker captured after a failed `sandbox_apply` (0 when
-    /// apply succeeded or the worker never reached apply). Lets the
-    /// classifier report WHY apply failed (e.g. EPERM).
+    /// Meaningful native errno only on a failed apply published by done.
+    /// Zero alone distinguishes neither success nor absence of a call.
     public var applyErrno: Int32
     public var done: Bool
-    public var sentSigkill: Bool
-    public var exitCode: Int32?     // nil if signaled
-    public var termSignal: Int32?   // nil if clean exit
+    /// Derived convenience for existing driver tests: a SIGKILL request was made, regardless
+    /// of its result. Derived, not an independent authoritative observation.
+    public var sentSigkill: Bool { terminationRequest?.signal == SIGKILL }
+    public var exitCode: Int32?     // nil unless successfully reaped with exit
+    public var termSignal: Int32?   // nil unless successfully reaped with signal
     public var slots: [CWorkerSlotResult]
     public var profileCapture: AppliedProfileCapture? = nil
+    /// Host-only fields, forwarded to runner_subprocess without reinterpretation.
+    /// Defaults support constructed legacy test inputs, not live observations.
+    /// See PWRunnerSubprocess for JSON paths, types and absence semantics.
+    public var pollStopReason: String? = nil
+    public var exitRequested: Bool? = nil
+    public var terminationRequest: PWRunnerTerminationRequest? = nil
+    public var reaped: Bool? = nil
+    public var waitErrors: [PWRunnerWaitError]? = nil
 }
 
 
@@ -427,6 +436,78 @@ public typealias CWorkerPostAppliedHook = (pid_t) -> Void
 
 public func runCWorker(_ input: CWorkerInput,
                        postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
+    runCWorker(input, processCalls: CWorkerProcessCalls(), postApplied: postApplied)
+}
+
+/// Internal OS-call boundary for driver tests, never selected by request JSON.
+/// Production always uses Darwin. Tests can fail one real boundary without
+/// manufacturing CWorkerOutput or a normalized outcome.
+struct CWorkerProcessCalls {
+    var wait: (pid_t, UnsafeMutablePointer<Int32>, Int32) -> pid_t = {
+        Darwin.waitpid($0, $1, $2)
+    }
+    var kill: (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) }
+}
+
+private enum CWorkerWaitObservation { case pending, reaped, failed }
+
+/// One child's host observations. Status is assigned only by a successful reap.
+/// Across polling/grace/final reap, allow two EINTR retries total. A terminal
+/// wait error ends that phase; ECHILD ends all waits/kills because ownership is
+/// lost. At most five failed calls can be recorded (two recovered interruptions
+/// plus one terminal error in each of three phases). No errors are dropped.
+/// Grace retains its existing budget. A failed kill permits only a nonblocking
+/// final wait. After successful kill the existing blocking wait remains: retry
+/// limits bound failed calls, not kernel exit latency or the whole lifecycle.
+/// Unconfirmed disposition may leave a live child or zombie; no global reaper
+/// or new lifecycle timeout is introduced here.
+private struct CWorkerProcessState {
+    let pid: pid_t
+    let calls: CWorkerProcessCalls
+    var status: Int32? = nil
+    var terminationRequest: PWRunnerTerminationRequest? = nil
+    var waitErrors: [PWRunnerWaitError] = []
+    var childUnavailable = false
+    private var interruptRetries = 2
+
+    init(pid: pid_t, calls: CWorkerProcessCalls) {
+        self.pid = pid
+        self.calls = calls
+    }
+
+    mutating func wait(options: Int32, phase: String) -> CWorkerWaitObservation {
+        while true {
+            var candidate: Int32 = 0
+            let rc = calls.wait(pid, &candidate, options)
+            let savedErrno = rc == -1 ? errno : nil
+            if rc == pid {
+                status = candidate
+                return .reaped
+            }
+            if rc == 0 { return .pending }
+            if let error = savedErrno {
+                waitErrors.append(PWRunnerWaitError(phase: phase, rc: rc, errno: error))
+                if error == ECHILD { childUnavailable = true }
+                if error == EINTR && interruptRetries > 0 {
+                    interruptRetries -= 1
+                    continue
+                }
+            }
+            return .failed
+        }
+    }
+
+    mutating func terminate() {
+        guard status == nil && !childUnavailable else { return }
+        let rc = calls.kill(pid, SIGKILL)
+        let savedErrno = rc == -1 ? errno : nil
+        terminationRequest = PWRunnerTerminationRequest(signal: SIGKILL, rc: rc, errno: savedErrno)
+        _ = wait(options: rc == 0 ? 0 : WNOHANG, phase: "after_termination")
+    }
+}
+
+func runCWorker(_ input: CWorkerInput, processCalls: CWorkerProcessCalls,
+                postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
     if input.captureAppliedProfile && captureNonceBytes(input.captureNonce) == nil {
         return .failure(.captureNonceInvalid)
     }
@@ -658,9 +739,11 @@ public func runCWorker(_ input: CWorkerInput,
     // Close parent-side ends that the child now owns.
     close(policyPipe[0])
     close(readyPipe[1])
+    var process = CWorkerProcessState(pid: pid, calls: processCalls)
 
     // ---- Write policy and close.
     let policyBytes = Array(input.policy.utf8)
+    var policyWriteErrno: Int32 = 0
     let policyWritten: Int = policyBytes.withUnsafeBufferPointer { buf in
         guard let baseAddr = buf.baseAddress else { return 0 }
         var written = 0
@@ -669,6 +752,7 @@ public func runCWorker(_ input: CWorkerInput,
                                  buf.count - written)
             if n < 0 {
                 if errno == EINTR { continue }
+                policyWriteErrno = errno
                 return -1
             }
             written += n
@@ -677,12 +761,11 @@ public func runCWorker(_ input: CWorkerInput,
     }
     close(policyPipe[1])
     if policyWritten < 0 {
-        // Reap the worker before bailing so we don't leak the process.
-        _ = kill(pid, SIGKILL)
-        var st: Int32 = 0
-        _ = waitpid(pid, &st, 0)
+        // Use the same finite failed-call handling here. Preserving the child
+        // report/process observations in this error return remains step 1C.
+        process.terminate()
         close(readyPipe[0])
-        return .failure(.policyWriteFailed("write: \(String(cString: strerror(errno)))"))
+        return .failure(.policyWriteFailed("write: \(String(cString: strerror(policyWriteErrno)))"))
     }
 
     // ---- Read pre-apply ready byte.
@@ -711,8 +794,7 @@ public func runCWorker(_ input: CWorkerInput,
     // the full sentinel deadline over a corpse.
     var sawApplied = false
     var sawDone = false
-    var workerExited = false
-    var workerExitStatus: Int32 = 0
+    var pollStopReason = "sentinel_deadline"
     do {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
         let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
@@ -724,7 +806,7 @@ public func runCWorker(_ input: CWorkerInput,
         // than spinning the whole deadline over a corpse.
         let exitCheckEvery = max(1, 50_000_000 / Int(pollIntervalNs))   // 25 iters
         var hookFired = false
-        for iter in 0..<deadlineIters {
+        polling: for iter in 0..<deadlineIters {
             if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) != 0 {
                 sawApplied = true
             }
@@ -739,6 +821,7 @@ public func runCWorker(_ input: CWorkerInput,
             }
             if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) != 0 {
                 sawDone = true
+                pollStopReason = "done"
                 break
             }
             // Normal completion flips `done` (checked above) and then the
@@ -748,10 +831,14 @@ public func runCWorker(_ input: CWorkerInput,
             // its status and let the classifier read the signal/exit as
             // the source of truth.
             if iter % exitCheckEvery == 0 {
-                var st: Int32 = 0
-                if waitpid(pid, &st, WNOHANG) == pid {
-                    workerExited = true
-                    workerExitStatus = st
+                switch process.wait(options: WNOHANG, phase: "poll") {
+                case .reaped:
+                    pollStopReason = "child_reaped"
+                    break polling
+                case .failed:
+                    pollStopReason = "wait_error"
+                    break polling
+                case .pending:
                     break
                 }
             }
@@ -759,8 +846,9 @@ public func runCWorker(_ input: CWorkerInput,
         }
     }
 
-    // ---- Read apply_rc + apply_errno (regular loads — the worker writes
-    // each once, before the done sentinel).
+    // ---- Snapshot legacy storage. Only applied/done publish these fields;
+    // unconfirmed storage is not a native result. Classification is corrected
+    // in 0C; the final snapshot during/after cleanup is step 1A work.
     let applyRC = readI32(rawBase, offset: PWShmLayout.applyRcOffset)
     let applyErrno = readI32(rawBase, offset: PWShmLayout.applyErrnoOffset)
 
@@ -815,34 +903,26 @@ public func runCWorker(_ input: CWorkerInput,
 
     // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
     // reaped a worker that exited without flipping `done`.
-    var status: Int32 = 0
-    var sentSigkill = false
-    if workerExited {
-        status = workerExitStatus
-    } else {
-        var reaped: pid_t = 0
+    if process.status == nil && !process.childUnavailable {
         let pollIntervalNs: UInt64 = 10_000_000
         let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
-        for _ in 0..<graceIters {
-            let r = waitpid(pid, &status, WNOHANG)
-            if r == pid { reaped = r; break }
-            sleepNs(pollIntervalNs)
+        grace: for _ in 0..<graceIters {
+            switch process.wait(options: WNOHANG, phase: "exit_grace") {
+            case .reaped, .failed:
+                break grace
+            case .pending:
+                sleepNs(pollIntervalNs)
+            }
         }
-        if reaped != pid {
-            _ = kill(pid, SIGKILL)
-            sentSigkill = true
-            _ = waitpid(pid, &status, 0)
-        }
+        process.terminate()
     }
 
     let exitCode: Int32?
     let termSignal: Int32?
-    let wifexited = (status & 0x7f) == 0
-    let wifsignaled = !wifexited && (((status & 0x7f) + 1) >> 1 > 0)
-    if wifexited {
+    if let status = process.status, (status & 0x7f) == 0 {
         exitCode = (status >> 8) & 0xff
         termSignal = nil
-    } else if wifsignaled {
+    } else if let status = process.status, (((status & 0x7f) + 1) >> 1 > 0) {
         exitCode = nil
         termSignal = status & 0x7f
     } else {
@@ -857,7 +937,6 @@ public func runCWorker(_ input: CWorkerInput,
         applyRC: applyRC,
         applyErrno: applyErrno,
         done: sawDone,
-        sentSigkill: sentSigkill,
         exitCode: exitCode,
         termSignal: termSignal,
         slots: slotResults,
@@ -865,7 +944,12 @@ public func runCWorker(_ input: CWorkerInput,
             rawBase.advanced(by: PWShmLayout.captureOffset), workerPid: pid,
             applied: sawApplied, applyRC: applyRC, done: sawDone,
             exitCode: exitCode, termSignal: termSignal, source: input.policy, params: input.params,
-            nonce: input.captureNonce) : nil
+            nonce: input.captureNonce) : nil,
+        pollStopReason: pollStopReason,
+        exitRequested: true,
+        terminationRequest: process.terminationRequest,
+        reaped: process.status != nil,
+        waitErrors: process.waitErrors
     ))
 }
 

@@ -142,22 +142,26 @@ typedef enum {
  *                    returns successfully. Host's signal that the
  *                    worker is now under the policy and the validator
  *                    can safely query the worker_pid.
- *   done           — worker → host. Set to 1 after every populated
- *                    slot has completed = 1.
+ *   done           — worker → host. Release-publishes a terminal payload:
+ *                    either every populated slot completed after application,
+ *                    OR a pre-apply failure wrote apply_rc. An acquire reader
+ *                    must not infer successful application from done alone.
  *   exit_requested — host → worker. Set to 1 once the host has read
  *                    all needed results; worker polls this in the
  *                    post-done spin loop and _exit(0)s when observed.
- *   apply_rc       — worker writes the sandbox_apply return code so
- *                    the host can classify "applied=0 because apply
- *                    failed" without inferring from worker exit.
+ *   apply_rc       — worker writes the sandbox_apply return code, OR -1 on
+ *                    sandbox_create_params returning NULL, sandbox_set_param
+ *                    failure, the defensive parameter NUL check, or compilation
+ *                    returning NULL. Those -1 values are PW status, not the
+ *                    native result of the failed call. The NUL check follows
+ *                    forced string termination; it is not a reliably reachable
+ *                    specimen failure. Read only after acquiring applied or
+ *                    done. Unpublished zeroed storage reports no call result.
  *   apply_errno    — worker writes the errno captured immediately after
  *                    a FAILED sandbox_apply (left 0 when apply
- *                    succeeded). Lets the host report WHY apply failed —
- *                    e.g. EPERM (1) when the unentitled witness worker
- *                    is not permitted to apply the profile — instead of
- *                    a bare -1. Occupies former reserved space; offsets
- *                    of all prior fields are unchanged, so an old worker
- *                    (which never writes here) leaves it zero.
+ *                    succeeded or was not called). Failure publication is done;
+ *                    zero alone establishes neither success nor a call. The
+ *                    parameter/compile failure paths do not write this field.
  */
 typedef struct {
     uint32_t abi_version;
@@ -168,7 +172,7 @@ typedef struct {
     _Atomic uint32_t exit_requested;
     int32_t apply_rc;
     uint32_t param_count;            /* 0..PW_SHM_MAX_PARAMS */
-    int32_t apply_errno;             /* errno after a failed sandbox_apply; 0 on success */
+    int32_t apply_errno;             /* failed-apply errno, valid with done; otherwise see above */
     uint32_t capture_requested;      /* host input; exactly 1 opts into sensitive capture */
     uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
     uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 14u];

@@ -135,13 +135,12 @@ references is supported by the compiler.
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
-policy itself (a non-compiling policy surfaces as `sandbox_apply_failed` — the
-worker does not distinguish compile failure from apply failure), so the run
-flow does **not** run `sbpl-check` on the happy path — it invokes `sbpl-check`
-only to disambiguate an `xpc_error` (a policy that compiled but then blocked
-the XPC reply vs. one that never compiled), surfacing the result under
-`data.policy_check` and `data.runner_startup_diagnostics`. You can also run
-the tool directly for any of the diagnostics below. The sbpl-check envelope
+policy itself; its legacy preparation/application failure status cannot identify
+the failed native operation and surfaces as `runner_failed`. The controller runs
+`sbpl-check` only after `xpc_error`, retaining its independent result under
+`data.policy_check`. That fallback says nothing about how far a missing worker
+progressed or why its reply was lost. You can also run the tool directly for the
+diagnostics below. The sbpl-check envelope
 exposes:
 
 - `params_referenced`: names found in `(param "...")` forms in the source
@@ -181,8 +180,8 @@ for a malformed filter argument). `bad_policy` is distinct from
 `missing_params` and `policy_too_large` above, both of which gate
 before the policy reaches libsandbox. In the run flow a policy that
 fails to compile is **not** reported as `bad_policy`: it reaches the C
-worker and surfaces as `sandbox_apply_failed` (the worker writes the
-same `apply_rc = -1` for a compile failure as for an apply failure).
+worker and surfaces as `runner_failed` with a published legacy status.
+That status can also describe parameter setup or application failure.
 `bad_policy` in a run is now emitted only by the runner host for a
 structurally invalid policy (missing `sbpl_source`, or a non-`sbpl`
 `format`); the host runs `sbpl-check` itself only on the
@@ -321,24 +320,34 @@ Example:
 
 ### Shape and schema_version
 
-Runner responses use `schema_version = 4`. The XPC service host stays
-unsandboxed and spawns two children per specimen: `pw-probe-runner`
-(the sandboxed C worker that applies the policy and runs probe
-attempts) and `sb_api_validator --batch` (queries `sandbox_check`
-verdicts against the worker's PID). `data.runner_result.pid` names
-the worker process when `runner_subprocess` is present; use it for
-unified-log correlation. `runner_subprocess` records
-`{ pid, term_signal, exit_code, partial_steps }`.
-`validator_subprocess` records the validator child's
-`{ pid, exit_code, term_signal }` or is `null` when no validator
-ran (see [Top-level fields](#top-level-fields) below).
+Runner responses use `schema_version = 5`, separately from request schema 1,
+the controller envelope and worker ABI 5. The XPC host stays unsandboxed and
+spawns a sandboxed attempt worker plus a batch validator. Worker identity for
+correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
+the host or client when no worker metadata exists.
+
+`runner_subprocess` retains PID, exit/signal and partial-step status, plus
+`ready_byte_received`, `done_observed`, `poll_stop_reason`, `exit_requested`,
+`termination_request`, `reaped`, and `wait_errors`. Polling reasons are `done`,
+`child_reaped`, `sentinel_deadline`, or `wait_error`. Termination requests record
+signal, syscall return and errno only on failure. Exit/signal values require a
+successful reap; both are absent/null when disposition is unconfirmed. Wait
+errors retain their phase and native return/errno, including recovered EINTR.
+Old replies missing these fields contain unknown observations, not false values.
+Application remains independently reported by `sandboxed_after_apply`.
+
+Every new step contains `deny_signal: null`: the C worker does not measure this
+channel. This is distinct from a measured count of zero. Stored legacy signal
+objects remain decodable, with their original version and counts; readers that
+require an object must migrate to a nullable field. Optional subprocess objects
+may be omitted or null. Signal, errno and drift nulls on steps require key
+presence. Outcome mappings below use execution evidence without assigning a
+sandbox termination cause from a signal or log match.
 
 The `exec` attempt kind adds five optional per-step fields under
 `steps[].attempt` — `child_pid`, `child_exit_code`,
 `child_term_signal`, `stdout`, `stderr` — populated only for
-`("exec", "spawn")` attempts. These are **additive optional fields
-under the existing schema_version=4 contract** (no version bump):
-consumers that don't introspect them see no shape change, and
+`("exec", "spawn")` attempts. These are optional fields;
 consumers that branch on `attempt.outcome == "exec_failed"` see all
 five fields exactly when an exec attempt's slot was filled. A
 non-exec attempt's envelope omits the keys entirely so a sysctl /
@@ -510,10 +519,9 @@ Notes:
   isn't in PolicyWitness's implemented set. Per-step skip: the
   worker no-ops this slot; the `sandbox_check` verdict still runs;
   `drift` is `null` for the step.
-- `not_run_worker_died` — the worker exited before reaching this
-  slot. Distinct from a per-attempt failure: the attempt itself
-  never ran, so the absent verdict is a missing-evidence signal
-  rather than a deny attribution.
+- `not_run_worker_died` — compatibility spelling for no completed attempt
+  result. Missing or incomplete publication does not prove the operation never
+  started. Errno and drift are null when no result supports them.
 
 ### path_diagnostics
 
@@ -570,36 +578,32 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_
 `sbpl-check` tool outcomes `missing_params` and `policy_too_large`,
 are documented under SBPL check above):
 
-- `ok` — worker completed the probe plan and the validator returned
-  verdicts for every non-skipped probe; both children clean-exited.
-- `runner_sandbox_denied` — worker spawned, applied the policy, then
-  was terminated by a fatal signal before flipping its `done`
-  sentinel. The kernel sandbox is the overwhelming cause on macOS;
-  the precise signal is preserved in `runner_subprocess.term_signal`
-  (commonly `9` for SIGKILL, or `5`/`6` for SIGTRAP/SIGABRT from
-  runtime allocation traps under `(deny default)`).
-  `data.sandbox_log_capture.deny_events` carries the matching
-  unified-log evidence when available.
-- `runner_timeout` — worker did not flip `done` within the host's
-  sentinel deadline. The host SIGKILLs the worker before replying.
-- `runner_failed` — worker exited cleanly but didn't reach `done`,
-  or hit a non-fatal failure mode that doesn't fit the other
-  outcomes. Reachable only as a defense-in-depth path; no
-  deterministic specimen produces it.
+- `ok` — worker completion and clean disposition are confirmed, and the current
+  validator mapping reports sufficient verdicts without a transport failure.
+  Validator lifecycle/record validation is a separate evidence boundary.
+- `runner_sandbox_denied` — recognized legacy string, not emitted by current
+  producers. Neither a process signal nor a PID-matched denial establishes that
+  the sandbox caused termination.
+- `runner_timeout` — the host observed exhaustion of its sentinel polling
+  budget. This remains a timeout if the child voluntarily exits during grace;
+  a cleanup termination request alone does not establish a deadline.
+- `runner_failed` — execution/reporting failure, including inconsistent
+  publication, a published legacy preparation/application failure, an incomplete
+  report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
+  The cause may be unknown; this label does not prove a host defect. A completed
+  report survives an abnormal exit, but cannot establish clean run completion.
 - `worker_spawn_failed` — host could not `posix_spawn` the worker
   (filesystem/codesign/quota error). Worker never ran.
 - `validator_spawn_failed` — host could not `posix_spawn` the
   validator child. `result.ok=false`; attempts are still surfaced
   in `steps[*].attempt` as degraded evidence.
-- `validator_no_reply` — validator started but exited without
-  emitting the expected number of verdicts. Partial verdicts (if
-  any) appear in `steps[*].sandbox_check`; missing verdicts surface
-  as `null`.
+- `validator_no_reply` — host encountered validator probe-write or verdict-read
+  I/O failure. Independently completed verdicts and attempts remain available.
 - `validator_decode_failure` — validator emitted bytes the host
   couldn't parse as NDJSON verdicts.
-- `validator_unavailable` — envelope has attempts but no validator
-  ran. Distinct from the failure-mode-specific validator outcomes
-  so a consumer can recognize the attempts-only degradation mode.
+- `validator_unavailable` — fewer validator verdicts arrived than expected.
+  Partial verdicts and attempts survive. Missing supported-query verdicts use
+  the legacy `outcome="error"`, `rc=0` shape, not an observed native return.
 - `bad_request` — request rejected before any worker spawn. Causes
   include: JSON decode failure, empty `sandbox_check.operation`
   (`validateSandboxChecks`), unsupported top-level field (e.g.
@@ -610,14 +614,9 @@ are documented under SBPL check above):
   respectively (see the per-step sections above).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
-- `sandbox_apply_failed` — the C worker wrote a non-zero `apply_rc` to
-  shared memory before exiting. This covers **both** a failed
-  `sandbox_compile_string` and a failed `sandbox_apply`: the worker
-  writes `apply_rc = -1` either way and does not distinguish them, so a
-  policy that won't compile lands here too (the controller no longer
-  turns compile errors into `bad_policy`). `error` reads
-  "sandbox_apply returned -1 inside pw-probe-runner"; run `sbpl-check`
-  directly for the specific libsandbox compile diagnostic.
+- `sandbox_apply_failed` — retained legacy/reserved spelling. The current
+  ambiguous worker status does not justify a precise native apply classification,
+  so current producers use `runner_failed` with published legacy status detail.
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -735,11 +734,9 @@ combinations:
   no policy fd, no other exec slots' pipes) and an empty
   environment.
 
-  Note that `data.runner_sandbox_diagnostics.first_deny` does NOT
-  identify the denied syscall for an exec attempt — that
-  diagnostic fires only for the `runner_sandbox_denied` outcome and
-  is PID-scoped to the worker, not its children. Per-child deny
-  correlation is a separate enhancement.
+  `data.runner_sandbox_diagnostics.first_deny` is a worker-PID correlation
+  reference, not a denied-syscall or termination-cause claim. Exec children have
+  different PIDs; per-child log correlation is not provided.
 
 Specimens are free to author probes with other attempt combinations
 (`("iokit", "open")`, future kinds, etc.) — those steps surface
@@ -779,38 +776,64 @@ time:
 $PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
 ```
 
+### Denial-log correlation
+
+The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
+It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports
+`process_disposition` (`no_worker`, `unconfirmed`, `clean_exit`, `nonzero_exit`,
+`signaled`), `capture_status`, and `correlation_status` (`not_attempted`,
+`unavailable`, `no_match`, `pid_match`). Abnormal/unconfirmed termination has
+`termination_cause="unknown"`. These fields do not change `normalized_outcome`.
+
+`first_deny` references an event by array index. Step associations under
+`sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
+association}`. Events remain in `deny_events`, including unmatched events;
+associations do not copy them. A single candidate uses `association="candidate"`;
+multiple candidates use `"ambiguous"`. Neither establishes a unique occurrence.
+
+Step matching requires a positive worker PID matching the event, an exact
+operation relevant to the submitted attempt joined by unique step ID, and an
+exact target/path match. Query operations and filter values are independent and
+are never used as attempt provenance. Targets come from the submitted attempt
+and its requested/normalized/observed path evidence. Supported operations are:
+
+| Attempt | Relevant event operations |
+| --- | --- |
+| file open_read/access | file-read-data |
+| file open_write | file-write-data |
+| file create | file-write-create or file-write-data |
+| file unlink | file-write-unlink |
+| mach_lookup bootstrap_look_up | mach-lookup |
+| sysctl read | sysctl-read |
+| exec spawn | process-exec, worker PID only |
+
+There are no wildcard or prefix aliases. Missing/unknown operations or ambiguous
+step-ID joins stay unmatched. Create can create a new file or open an existing
+one for writing. A missing completed attempt does not prevent a candidate
+association: a denial can precede interrupted publication.
+
+Capture uses trailing `--last` (default `10s`), recorded in `capture.window`.
+Parsed events have no structured timestamps. Window fields explicitly report no
+exact run membership, step ordering, or PID-reuse protection. Raw log lines are
+retained; array position is not proof of execution order. A PID match can reflect
+an ordinary denied probe followed by an unrelated self-signal or crash.
+
 ### Troubleshooting
 
 - Service not found: run `policy-witness runner list` and confirm the service name.
 - System scope install fails: use `--scope user` or run with admin privileges.
 - Verify fails with no reply: check launchd state and the service plist.
 - BYOXPC crashes at launch: confirm `XPC_SERVICE_PATH` is set and the bundle is a valid XPC service (`CFBundlePackageType=XPC!`).
-- `normalized_outcome` is `runner_sandbox_denied` and you expected
-  `ok`: uncommon. The C worker's post-apply syscall surface is small
-  (just shared-memory stores and a nanosleep), so most `(deny default)`
-  policies don't actually kill it. The residual cases that do produce
-  this outcome are policies that explicitly deny one of the syscalls
-  in the worker's post-apply path, or kernel-issued aborts on the
-  worker process for an unrelated reason. The worker was terminated
-  by a fatal signal before flipping its `done` sentinel.
-  - **Quickest read:** `data.runner_sandbox_diagnostics.first_deny` carries
-    the first kernel deny attributed to the worker PID — `operation`,
-    `path` if applicable, and the raw unified-log line. Use this when you
-    want one line that names the cause.
-  - `data.runner_sandbox_diagnostics.first_deny` is `null` when log capture
-    was blocked/unavailable or when no deny event matches the worker PID
-    (rare; usually means the capture window missed the event). The outer
-    `runner_sandbox_diagnostics` object is present whenever the outcome is
-    `runner_sandbox_denied`, so consumers can branch on `first_deny != null`
-    directly.
-  - For the full deny list (when one isn't enough), see
-    `data.sandbox_log_capture.deny_events`.
-  - `data.runner_result.runner_subprocess.term_signal` carries the
-    exit signal. The C worker has a minimal post-apply syscall
-    surface (shm writes only), so most `(deny default)` policies
-    don't actually kill it; if you see `runner_sandbox_denied`, the
-    `first_deny` line usually names the specific operation the
-    policy needs to allow.
+- `normalized_outcome` is `runner_failed`: inspect the published-state diagnostic
+  and independent `runner_subprocess` observations. A signal or missing report
+  may leave the underlying cause unknown. Completed predictions, attempts and
+  captured denial events remain usable for their own claims.
+- `data.runner_sandbox_diagnostics` separates process disposition from capture
+  status and correlation. `first_deny` is an `{event_index}` reference to the
+  first worker-PID match in `sandbox_log_capture.deny_events` array order, not
+  the first event in time or a cause of death. Capture can be disabled,
+  unavailable, or captured without a match; none proves policy played no role.
+  Successful runs also retain capture. See the correlation contract below.
 - `normalized_outcome` is `worker_spawn_failed`: the host could not
   `posix_spawn` the worker. Verify the bundle is signed and on a writable
   filesystem; `pgrep -fl PWRunner` should show no stragglers.

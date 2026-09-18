@@ -3,6 +3,7 @@
   "result": {"ok": true},
   "data": {
     "runner_result": {
+      "schema_version": 5,
       "normalized_outcome": "ok",
       "policy_format": "sbpl",
       "sandboxed_after_apply": true,
@@ -22,7 +23,7 @@
             "normalized_path": null, "observed_path": null
           },
           "drift": null,
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         },
         {
           "step_id": "mach_lookup_invalid",
@@ -37,7 +38,7 @@
             "requested_path": null, "normalized_path": null, "observed_path": null
           },
           "drift": null,
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         },
         {
           "step_id": "fs_read_allowed",
@@ -54,7 +55,7 @@
             "observed_path": "/private/tmp/pw-bbx-checker/allow.txt"
           },
           "drift": false,
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         }
       ]
     }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_unit"
 PW_TEST_ID="pwrunner_core_unit_executable"
@@ -22,6 +22,11 @@ if [[ ! -f "${PACKAGE_DIR}/Package.swift" ]]; then
 fi
 
 RUN_LOG="${PW_TEST_ARTIFACTS}/pwrunner_core_tests.log"
+
+test_step fixture "build the ABI-compatible child for required host lifecycle controls"
+export PW_LIFECYCLE_WORKER_FIXTURE="${PW_TEST_ARTIFACTS}/worker-lifecycle-fixture"
+test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build.sh" \
+  "${PW_LIFECYCLE_WORKER_FIXTURE}" "${PW_TEST_ARTIFACTS}/lifecycle-fixture-build.log"
 
 set +e
 swift run --package-path "${PACKAGE_DIR}" PWRunnerCoreTests >"${RUN_LOG}" 2>&1

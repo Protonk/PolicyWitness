@@ -35,7 +35,7 @@ def check_envelope(envelope, rc, specimen, expected):
     assert runner['sandboxed_after_apply'] is True, runner
     assert runner['test_overrides'] == specimen['_test_overrides'], runner
     error = runner['error']
-    assert all(text in error for text in ('pw-probe-runner', 'sentinel deadline', 'host SIGKILL')), error
+    assert all(text in error for text in ('pw-probe-runner', 'sentinel deadline', 'host requested SIGKILL')), error
 
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker

@@ -108,17 +108,13 @@ typedef struct {
      * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
     /* Post-apply fatal-signal gate (_test_overrides.worker_post_apply_kill_signal).
-     * When > 0, the worker raises signal N on itself AFTER the `applied`
-     * sentinel + slot results are durable but BEFORE the `done` sentinel
-     * flips. The host then observes applied=1, done=0, and a worker that died
-     * from a signal it did NOT send — exactly the runner_sandbox_denied shape
-     * (a real kernel sandbox kill produces the same observable state). Makes
-     * runner_sandbox_denied reachable from a deterministic specimen.
-     * Defaults to 0 (no kill). Safe to leave 0 in production. */
+     * Raises signal N after applied and completed slots, before done. This
+     * establishes abnormal process disposition, never a kernel sandbox cause.
+     * Defaults to 0 (no signal). */
     int post_apply_kill_signal;
     /* Pre-ready hang gate (_test_overrides.worker_pre_ready_hang_ms).
      * When > 0, the worker calls nanosleep(N ms) BEFORE writing the
-     * pre-apply ready byte. Models a slow sandbox_compile_string that
+     * pre-apply ready byte. Delays after compilation and optional capture, before readiness. It
      * overruns the host's readyByteTimeout: the host closes the ready
      * pipe first, so the subsequent ready-byte write hits a closed read
      * end. With SIGPIPE ignored (see main) the worker survives that and
@@ -151,10 +147,9 @@ static void print_usage(FILE *to) {
         "  --post-apply-kill-signal N  Optional test-seam. Raise signal N on\n"
         "                         self AFTER slot results are durable but\n"
         "                         BEFORE flipping `done`, so the host sees\n"
-        "                         applied=1/done=0 and a foreign signal —\n"
-        "                         the runner_sandbox_denied shape.\n"
+        "                         applied=1/done=0 and a self-signal.\n"
         "  --pre-ready-hang-ms N  Optional test-seam. Sleep N ms BEFORE\n"
-        "                         the ready byte, modelling a slow compile\n"
+        "                         the ready byte, delaying after compilation\n"
         "                         that overruns the host's readyByteTimeout\n"
         "                         (the ready write then lands on a closed\n"
         "                         pipe; SIGPIPE is ignored).\n"
@@ -1221,7 +1216,7 @@ int main(int argc, char **argv) {
             policy_buf, strlen(policy_buf), params, param_count, capture_nonce);
     }
 
-    /* Pre-ready hang test seam: model a slow compile that overruns the
+    /* Pre-ready hang test seam: delay after compilation can overrun the
      * host's readyByteTimeout (so the ready byte below lands on a
      * host-closed pipe). nanosleep is a pre-apply syscall — safe here,
      * before any policy is applied. */
@@ -1287,17 +1282,13 @@ int main(int argc, char **argv) {
         nanosleep(&ts, NULL);
     }
 
-    /* Test-seam fatal signal. Fires AFTER the `applied` sentinel + slot
-     * results are durable but BEFORE `done` flips, so the host observes
-     * applied=1, done=0, and a worker that died from a signal it did NOT send
-     * — exactly the runner_sandbox_denied shape (a real kernel sandbox kill
-     * produces the same observable state). This re-routes a *condition* (the
-     * worker takes a fatal signal mid-run); the host classifier runs for real
-     * on it. */
+    /* Test-seam signal after applied and completed slots, before done. A fatal
+     * delivery yields abnormal disposition without establishing a policy cause.
+     * The host interprets the real publication and reaped status independently. */
     if (args.post_apply_kill_signal > 0) {
         kill(getpid(), args.post_apply_kill_signal);
-        /* SIGKILL never returns. A catchable/ignored signal falls through;
-         * the host still sees done=0 and times out — never a false "ok". */
+        /* A failed request or nonfatal/ignored signal can return. The worker
+         * then publishes done below; the request alone proves no termination. */
     }
 
     atomic_store_explicit(&hdr->done, 1u, memory_order_release);

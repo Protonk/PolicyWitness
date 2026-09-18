@@ -47,14 +47,13 @@ enum PWRunnerWire {
 // unchanged); these are just the typo-proof spellings.
 //
 // Adding an outcome: declare it here, then teach the matching test suite
-// (tests/suites/runner_outcome_*/ or runner_sandbox_denied/) to assert
+// (tests/suites/runner_outcome_*/ or witness_contract/) to assert
 // against it. PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 public enum NormalizedOutcome {
-    // ----- emitted by the C worker (pw-probe-runner), forwarded by host.
-    // `sandbox_apply_failed` covers a failed sandbox_compile_string AND a
-    // failed sandbox_apply: the worker writes apply_rc=-1 for either and the
-    // host classifier does not distinguish them.
+    // Successful execution and a reserved precise apply-failure spelling.
+    // Legacy ABI status cannot identify a failed native operation; current
+    // published preparation/application failures map to runner_failed.
     public static let ok = "ok"
     public static let sandboxApplyFailed = "sandbox_apply_failed"
 
@@ -65,7 +64,7 @@ public enum NormalizedOutcome {
     // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
     // missing sbpl_source / non-sbpl format), NOT a compile-error signal — SBPL
     // that fails to compile reaches the worker and surfaces as
-    // sandbox_apply_failed.
+    // runner_failed with an ambiguous published legacy status.
     public static let badPolicy = "bad_policy"
     public static let badRequest = "bad_request"
     public static let alreadyRan = "already_ran"
@@ -73,6 +72,8 @@ public enum NormalizedOutcome {
 
     // ----- emitted by the host classifier (CWorker.swift sentinel
     // observation + CWorkerOrchestrator classification)
+    // Recognized legacy string only; signals and PID-matched denials do not
+    // establish a sandbox cause, so current producers never emit this label.
     public static let runnerSandboxDenied = "runner_sandbox_denied"
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
@@ -103,13 +104,9 @@ public enum NormalizedOutcome {
 /// source_drift enforces that every constant has a row in
 /// tests/COVERAGE.md's attempt-outcome matrix.
 ///
-/// `not_run_worker_died` signals that the host saw a slot with
-/// completed=0 because the C worker exited before reaching it.
-/// Distinct from the per-attempt failure outcomes (`open_failed`,
-/// etc.) — those mean "the attempt itself ran and produced a
-/// failure"; `not_run_worker_died` means "the attempt never had a
-/// chance." Consumers should treat the latter as missing evidence,
-/// not as a verdict.
+/// `not_run_worker_died` is a compatibility spelling for no completed attempt
+/// result. Missing publication does not prove the operation never started.
+/// Treat it as missing evidence, never as an access verdict.
 public enum AttemptOutcome {
     public static let ok = "ok"
     public static let openFailed = "open_failed"
@@ -159,6 +156,10 @@ public enum SandboxCheckOutcome {
 }
 
 public struct PWRunnerRunSpec: Codable {
+    //   5 — explicit steps[].deny_signal:null (channel unobserved), and
+    //       evidence-based execution classification without sandbox-cause
+    //       inference. Legacy signal objects remain decodable. Readers that
+    //       require an object must migrate; ABI and request versions are separate.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -211,17 +212,10 @@ public struct PWRunnerRunSpec: Codable {
 // |                             | are durable but BEFORE writing the `done` sentinel, pushing   |                             |
 // |                             | host past its sentinel_timeout. Drives the runner_timeout     |                             |
 // |                             | suite.                                                        |                             |
-// | `worker_pre_ready_hang_ms`  | passed to pw-probe-runner as `--pre-ready-hang-ms <N>`; the   | `ok` (resilience: worker    |
-// |                             | C worker nanosleeps N ms BEFORE the pre-apply ready byte,     | survives a closed ready     |
-// |                             | modelling a slow compile that overruns readyByteTimeout so    | pipe and still applies)     |
-// |                             | the ready write lands on a host-closed pipe. Pins that the    |                             |
-// |                             | worker survives (SIGPIPE ignored) and still reaches apply.    |                             |
-// | `worker_post_apply_kill_signal` | passed to pw-probe-runner as                             | `runner_sandbox_denied`     |
-// |                             | `--post-apply-kill-signal <N>`; the C worker raises signal N  |                             |
-// |                             | on itself AFTER `applied` but BEFORE `done`, so the host sees |                             |
-// |                             | applied=1/done=0 + a foreign term signal — the same shape a   |                             |
-// |                             | real kernel sandbox kill produces. Makes runner_sandbox_denied|                             |
-// |                             | reachable from a deterministic specimen.                      |                             |
+// | `worker_pre_ready_hang_ms` | sleep after compile/capture, before ready byte                 | ok with sufficient budget; |
+// |                             | (not evidence of a native compilation failure)                | runner_timeout if expired  |
+// | `worker_post_apply_kill_signal` | self-signal after applied/slots, before done               | runner_failed              |
+// |                             | Signal establishes disposition, not a sandbox cause.          |                            |
 //
 // See AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
@@ -713,7 +707,9 @@ public struct PWRunnerStepResult: Codable {
     public var step_id: String
     public var sandbox_check: PWRunnerSandboxCheckResult
     public var attempt: PWRunnerAttemptResult
-    public var deny_signal: PWRunnerSignalResult
+    /// Unobserved by the C worker: new responses encode explicit null.
+    /// Legacy objects remain decodable; their counts are not new observations.
+    public var deny_signal: PWRunnerSignalResult?
 
     /// Drift between the validator's predicted verdict and the attempt's
     /// observed verdict. Introduced in PWRunnerRunResult.schema_version=4.
@@ -727,7 +723,7 @@ public struct PWRunnerStepResult: Codable {
     ///               (e.g. `prediction_unavailable` filter pair), validator
     ///               wasn't run (Swift-worker code path), validator failed
     ///               to produce a verdict for this step, or the attempt
-    ///               didn't run.
+    ///               has no completed result.
     ///
     /// `nil` is the default and is encoded as explicit JSON null so
     /// consumers can distinguish "field absent on v3" from "field present
@@ -738,7 +734,7 @@ public struct PWRunnerStepResult: Codable {
         step_id: String,
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
-        deny_signal: PWRunnerSignalResult,
+        deny_signal: PWRunnerSignalResult? = nil,
         drift: Bool? = nil
     ) {
         self.step_id = step_id
@@ -764,7 +760,11 @@ public struct PWRunnerStepResult: Codable {
         try container.encode(step_id, forKey: .step_id)
         try container.encode(sandbox_check, forKey: .sandbox_check)
         try container.encode(attempt, forKey: .attempt)
-        try container.encode(deny_signal, forKey: .deny_signal)
+        if let deny_signal {
+            try container.encode(deny_signal, forKey: .deny_signal)
+        } else {
+            try container.encodeNil(forKey: .deny_signal)
+        }
         if let drift {
             try container.encode(drift, forKey: .drift)
         } else {
@@ -777,7 +777,7 @@ public struct PWRunnerStepResult: Codable {
         step_id = try container.decode(String.self, forKey: .step_id)
         sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
         attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
-        deny_signal = try container.decode(PWRunnerSignalResult.self, forKey: .deny_signal)
+        deny_signal = try container.decodeIfPresent(PWRunnerSignalResult.self, forKey: .deny_signal)
         // decodeIfPresent handles both "key absent" (v3 producer) and
         // "key present but null" (v4 producer with no comparison) →
         // both land as Bool? = nil on the reader side. That's the
@@ -786,22 +786,97 @@ public struct PWRunnerStepResult: Codable {
     }
 }
 
+/// Host observation of one kill(2) request, not evidence of its delivery or cause.
+/// JSON: runner_subprocess.termination_request.{signal,rc,errno}. All numbers
+/// are signed 32-bit syscall values encoded as JSON integers (no units).
+/// errno is captured immediately only when rc == -1; otherwise it is absent/null.
+/// An absent/null request means no request when the new host fields are present;
+/// old stored replies have no observation. Structurally valid values are decoded
+/// without a signal/errno allowlist. The client/controller forward this object.
+public struct PWRunnerTerminationRequest: Codable {
+    public let signal: Int32
+    public let rc: Int32
+    public let errno: Int32?
+
+    public init(signal: Int32, rc: Int32, errno: Int32?) {
+        self.signal = signal
+        self.rc = rc
+        self.errno = errno
+    }
+}
+
+/// One host-observed failed waitpid(2) call, including recovered interruptions.
+/// JSON: runner_subprocess.wait_errors[].{phase,rc,errno}. phase is a string
+/// (poll, exit_grace, after_termination); rc/errno are signed 32-bit integers.
+/// Only rc == -1 produces a record, with errno captured before another call.
+/// Unknown phase/errno values remain transportable. Empty array means no errors
+/// observed; absent/null array means unavailable (e.g. an older stored reply).
+public struct PWRunnerWaitError: Codable {
+    public let phase: String
+    public let rc: Int32
+    public let errno: Int32
+
+    public init(phase: String, rc: Int32, errno: Int32) {
+        self.phase = phase
+        self.rc = rc
+        self.errno = errno
+    }
+}
+
+/// Authoritative worker process metadata, produced by the unsandboxed host.
+/// Lifecycle observations use the unchanged worker ABI 5.
+/// All live CWorkerOutput paths populate the optional observation fields below;
+/// optionality preserves decoding of older stored replies as unknown, not false.
+/// The policy-write failure path still lacks a partial result (step 1C).
 public struct PWRunnerSubprocess: Codable {
     public var pid: Int
+    /// JSON integers, meaningful only after waitpid returned this child's PID.
+    /// Both may be absent/null when status was not obtained; zero is a real exit.
     public var term_signal: Int?
     public var exit_code: Int?
     public var partial_steps: Bool
+    /// Host read of the ready byte; false does not prove compilation failed.
+    public var ready_byte_received: Bool?
+    /// Acquire observation of done during polling, not successful application.
+    /// Cleanup-time publication refresh remains step 1A work.
+    public var done_observed: Bool?
+    /// Host string: done, child_reaped, sentinel_deadline, or wait_error.
+    /// Identifies why polling stopped; later cleanup must not rewrite it.
+    /// Only sentinel_deadline establishes exhaustion of the polling budget.
+    /// Unknown strings survive decoding; they do not imply a known condition.
+    public var poll_stop_reason: String?
+    /// Host performed the release-store of exit_requested; not worker receipt.
+    public var exit_requested: Bool?
+    public var termination_request: PWRunnerTerminationRequest?
+    /// True only when waitpid actually returned this PID. False is explicitly
+    /// unconfirmed disposition, distinct from absent/null legacy observation.
+    public var reaped: Bool?
+    public var wait_errors: [PWRunnerWaitError]?
 
     public init(
         pid: Int,
         term_signal: Int? = nil,
         exit_code: Int? = nil,
-        partial_steps: Bool
+        partial_steps: Bool,
+        ready_byte_received: Bool? = nil,
+        done_observed: Bool? = nil,
+        poll_stop_reason: String? = nil,
+        exit_requested: Bool? = nil,
+        termination_request: PWRunnerTerminationRequest? = nil,
+        reaped: Bool? = nil,
+        wait_errors: [PWRunnerWaitError]? = nil
     ) {
         self.pid = pid
         self.term_signal = term_signal
         self.exit_code = exit_code
         self.partial_steps = partial_steps
+        self.ready_byte_received = ready_byte_received
+        self.done_observed = done_observed
+        self.poll_stop_reason = poll_stop_reason
+        self.exit_requested = exit_requested
+        self.termination_request = termination_request
+        self.reaped = reaped
+        self.wait_errors = wait_errors
     }
 }
 
@@ -844,8 +919,8 @@ public struct PWRunnerRunResult: Codable {
     //       additive: clients pinned to v1 ignore it transparently.
     //   3 — splits the XPC service host from the sandboxed worker process.
     //       `pid` is the sandboxed worker PID when `runner_subprocess` is
-    //       present, so unified-log correlation should continue to use this
-    //       top-level field. `runner_subprocess` carries the worker exit
+    //       present. Correlation uses runner_subprocess.pid, never a fallback
+    //       top-level host/client PID. `runner_subprocess` carries the worker exit
     //       status observed by the unsandboxed host.
     //   4 — adds `validator_subprocess` (alongside `runner_subprocess`)
     //       describing the sb_api_validator --batch child the host spawns
@@ -858,6 +933,10 @@ public struct PWRunnerRunResult: Codable {
     //       is possible (validator wasn't run for the step, or the
     //       (validator-allow, ambiguous-deny) asymmetry applies).
     //       Top-level `pid` semantics from v3 are preserved.
+    //   5 — explicit steps[].deny_signal:null (channel unobserved), and
+    //       evidence-based execution classification without sandbox-cause
+    //       inference. Legacy signal objects remain decodable. Readers that
+    //       require an object must migrate; ABI and request versions are separate.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -877,7 +956,7 @@ public struct PWRunnerRunResult: Codable {
     public var test_overrides: PWRunnerTestOverrides?
 
     public init(
-        schema_version: Int = 4,
+        schema_version: Int = 5,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,

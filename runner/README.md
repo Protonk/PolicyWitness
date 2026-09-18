@@ -101,10 +101,10 @@ External to `runner/` but conceptually part of the runner:
 
 `Package.swift` declares a test-only SwiftPM layout that mirrors the
 source set build.sh ships in `PWRunner.xpc`. The `runner_unit` suite
-runs the `PWRunnerCoreTests` executable via:
+runs the `PWRunnerCoreTests` executable and builds its required lifecycle fixture:
 
 ```sh
-swift run --package-path runner PWRunnerCoreTests
+tests/run.sh --suite runner_unit --suite runner_c_worker_harness
 ```
 
 The executable hand-rolls a small XCTest-shaped harness so the test
@@ -134,7 +134,8 @@ unset.
 | `worker_timeout_ms` | 60000 (floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | bundle-local `sb_api_validator` | `posix_spawn` path in `ValidatorClient.runValidator` | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | 0 (disabled) | `--post-apply-hang-ms` argv to `pw-probe-runner` | `runner_timeout` |
-| `worker_post_apply_kill_signal` | 0 (disabled) | `--post-apply-kill-signal` argv to `pw-probe-runner` (worker self-signals after `applied`, before `done`) | `runner_sandbox_denied` |
+| `worker_post_apply_kill_signal` | 0 (disabled) | `--post-apply-kill-signal` argv to `pw-probe-runner` (worker self-signals after `applied`, before `done`) | `runner_failed` |
+| `worker_pre_ready_hang_ms` | 0 (disabled) | Sleep after compilation/capture and before readiness; may outlast the ready-byte wait | `ok` with sufficient sentinel budget; `runner_timeout` with a short budget |
 
 See `runner/AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test
@@ -159,21 +160,53 @@ libSystem-dynamic helper spawn under `(deny default)`).
 
 Top-level fields:
 
-- `pid` is the sandboxed C worker's PID when `runner_subprocess` is
-  present; use it for unified-log correlation.
-- `runner_subprocess` carries the worker's `{ exit_code, term_signal,
-  partial_steps }`. The classifier in `CWorkerOrchestrator` maps the
-  sentinel state + waitpid outcome to `normalized_outcome`: `done`
-  sentinel flipped + clean exit → `ok`; signal-before-done →
-  `runner_sandbox_denied` (the precise signal stays in
-  `term_signal`); host SIGKILL after sentinel timeout →
-  `runner_timeout`; failure to `posix_spawn` → `worker_spawn_failed`.
+- `pid` names the C worker when `runner_subprocess` exists. Correlation uses
+  only `runner_subprocess.pid`, never a fallback host/client PID.
+- `runner_subprocess` carries the worker PID, exit/signal status, partial-step
+  flag and independent host lifecycle observations. Outcome precedence is host
+  admission failure, inconsistent publication, published legacy failure,
+  observed sentinel deadline, other worker/reporting/process failure, validator
+  failure, then `ok`. A recovered EINTR alone is not failure. The authoritative
+  table is [the failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md).
+  Ambiguous legacy failures, incomplete reports, abnormal/unconfirmed exits and
+  cleanup faults use `runner_failed`; cause may remain unknown. Deadline expiry
+  uses `runner_timeout` even after voluntary grace exit. A cleanup request alone
+  is not a timeout. `runner_sandbox_denied` and `sandbox_apply_failed` remain
+  legacy/reserved spellings and are not emitted without supporting evidence.
 - `validator_subprocess` carries the validator child's
   `{ pid, exit_code, term_signal }`, or is `null` when no validator
   ran (every probe was in the prediction-unavailable set, or
   spawning the validator failed).
 
+The host also writes `runner_subprocess.ready_byte_received`, `done_observed`,
+`poll_stop_reason`, `exit_requested`, `termination_request`, `reaped`, and
+`wait_errors`. Polling stops for `done`, `child_reaped`, `sentinel_deadline`, or
+`wait_error`; later cleanup preserves that reason. A termination request records
+the signal and `kill` return, with errno only on failure. Exit code and signal
+are populated only after `waitpid` returned the child's PID. If reaping is
+unconfirmed, both are absent/null even when the termination request succeeded.
+Wait errors retain their phase, return and errno, including recovered EINTR.
+Older replies omit these observations; missing booleans mean unknown.
+
+The driver allows two EINTR retries across all wait phases. A terminal wait error
+ends that phase; ECHILD stops further waits and signals to that PID. Failed kill
+permits only a nonblocking final wait. An unreaped child may remain. Successful
+kill retains the blocking final wait, so this is no global lifecycle timeout.
+Readiness, sentinel and exit-grace budgets are unchanged. Authoritative field
+validity and encoding are documented in `PWRunnerAPI.swift`; policy-write errors
+still lack partial subprocess evidence.
+
+Response schema is 5; request schema 1 and worker ABI 5 are independent. Legacy
+replies remain decodable. Typed readers that require a signal object must migrate
+to a nullable field. Optional subprocess objects retain omitted-or-null absence.
+
 Per-step fields under `steps[]`:
+
+- `deny_signal` is explicit null on every new step, including failures. The C
+  worker does not measure this channel; zero counts would invent evidence.
+- `not_run_worker_died` is a compatibility attempt-outcome spelling for no
+  completed result, not proof that an operation never began. Errno/drift stay
+  null when no result supports them.
 
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
   `filter_value` and a best-effort `effective_filter_value` (for `path`

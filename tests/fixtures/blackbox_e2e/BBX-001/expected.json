@@ -8,7 +8,7 @@
       "sandbox_outcome": "allow",
       "attempt_ok": true,
       "expect_denial": false,
-      "deny_signal_delta": 0
+      "deny_signal_unavailable": true
     },
     {
       "step_id": "fs_write_denied",
@@ -21,7 +21,7 @@
       "sandbox_outcome": "deny",
       "attempt_ok": false,
       "expect_denial": true,
-      "deny_signal_delta": 0
+      "deny_signal_unavailable": true
     }
   ]
 }

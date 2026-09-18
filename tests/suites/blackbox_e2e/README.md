@@ -11,8 +11,9 @@ the BYOXPC runner suite.
 - Every probe step has sandbox_check and attempt results; step IDs are unique
   and retain their expected order.
 - Probe actions are idempotent and scoped under a per-run test root.
-- Denial classification is based on D (sandbox_check) plus the attempt outcome;
-  we do not rely on deny-signal alone.
+- Denial classification uses the prediction plus attempt evidence. Response 5
+  requires explicit `deny_signal: null`; the channel is unobserved. The checker
+  retains support for legacy signal expectations on stored pre-5 replies.
 
 ## How to run
 

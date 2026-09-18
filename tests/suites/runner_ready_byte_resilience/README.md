@@ -8,7 +8,7 @@ closed `--ready-fd`. The worker must **not** die of SIGPIPE on that
 write — it must continue to `sandbox_apply` and report through the shm
 sentinels, so the run still scores normally.
 
-The suite models the slow compile deterministically with
+The suite delays readiness after compilation and optional capture with
 `_test_overrides.worker_pre_ready_hang_ms = 2000` (no 13s WebProcess
 compile needed): `pw-probe-runner` `nanosleep`s 2000ms before the ready
 byte, so the host's 1000ms `readyByteTimeout` fires first and closes the
@@ -21,10 +21,10 @@ scores a one-step probe plan.
   write to a host-closed pipe returns EPIPE instead of killing the
   worker. Its "Continue anyway" comment after `write_ready_byte` then
   holds: apply + the shm sentinel path still run.
-- On the **pre-fix** worker this exact path SIGPIPEs the worker before
-  apply: no `applied`, `apply_rc` reads zero-init 0,
-  `normalized_outcome="sandbox_apply_failed"`, `term_signal=13`. So a
-  regression fails this suite loudly.
+- The sentinel budget is sufficient for the delay, so the run must succeed.
+  `witness_contract/pre_apply_failure_reports_no_policy_verdict` instead pairs a
+  longer delay with a short sentinel budget and verifies `runner_timeout` without
+  a fabricated compilation/application result.
 
 ## Success criteria
 

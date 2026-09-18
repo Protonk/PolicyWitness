@@ -21,7 +21,7 @@ guards for the request-validation and drift-classification rules:
 
 1. **happy_default_allow** — `(allow default)` + one file read.
    Asserts:
-   - `schema_version == 4`
+   - `schema_version == 5`
    - `validator_subprocess` populated with clean exit
    - `runner_subprocess` populated, `pid` mirrors back at top level
    - `steps[0].sandbox_check.outcome == "allow"` (validator)
@@ -94,9 +94,10 @@ Deadline cleanup and output retention are covered by `runner_exec_lifecycle`.
   covers `validator_spawn_failed`; the remaining three are wired in
   the classifier (`CWorkerOrchestrator`) but lack dedicated e2e
   specimens.
-- **`sandbox_apply_failed`.** Reachable when `sandbox_apply`
-  returns nonzero inside the C worker; not yet driven by an
-  e2e specimen.
+- **Precise native application failure.** Legacy worker status cannot identify
+  the failed operation. Published preparation/application failures currently use
+  `runner_failed`; deterministic producer-level native-result coverage belongs
+  to the worker failure-record work.
 
 ## Run
 

@@ -3,6 +3,7 @@
   "result": {"ok": true},
   "data": {
     "runner_result": {
+      "schema_version": 5,
       "normalized_outcome": "ok",
       "policy_format": "sbpl",
       "sandboxed_after_apply": true,
@@ -21,7 +22,7 @@
             "normalized_path": "/private/tmp/pw-bbx-checker/allow.txt",
             "observed_path": "/private/tmp/pw-bbx-checker/allow.txt"
           },
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         },
         {
           "step_id": "fs_write_denied",
@@ -37,7 +38,7 @@
             "normalized_path": "/private/tmp/pw-bbx-checker/deny.txt",
             "observed_path": null
           },
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         },
         {
           "step_id": "mach_lookup_denied",
@@ -51,7 +52,7 @@
             "outcome": "lookup_failed", "rc": 1102, "exit_code": 1102, "errno": null, "syscall_errno": null,
             "requested_path": null, "normalized_path": null, "observed_path": null
           },
-          "deny_signal": {"delta": 0}
+          "deny_signal": null
         }
       ]
     }

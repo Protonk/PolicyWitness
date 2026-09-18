@@ -1,7 +1,7 @@
 # runner_unit
 
 Swift unit tests for the `PWRunnerCore` library — small helpers and
-classifier branches that no real specimen can exercise.
+classifier branches, live worker/validator drivers, and host lifecycle observations.
 
 ## Invariants
 
@@ -30,16 +30,29 @@ classifier branches that no real specimen can exercise.
 
 ## Fixtures
 
-- None on disk. Tests construct fixtures inline.
+- `tests/fixtures/worker_lifecycle/worker.c` is built by the wrapper with clang.
+  It publishes controlled ABI payloads without applying a sandbox. The real
+  host driver records completion followed by abnormal exit, cleanup kill, and
+  failed/interrupted OS calls. Tests encode the assembled subprocess fields and
+  independently clean up children left by fault controls. This is host coverage,
+  not sandbox attribution or real C-worker publication coverage.
+- Required real-worker deadline/grace and polling-reap controls use the signed
+  app selected by `PW_APP_DIR` (default `dist/PolicyWitness.app`). Missing required
+  equipment fails. Other live tests can print internal `SKIP`; inspect the log
+  before crediting them, regardless of the summary.
 
 ## Artifacts
 
 - `tests/out/suites/runner_unit/<test_id>/artifacts/pwrunner_core_tests.log`
+- The same artifact directory retains `worker-lifecycle-fixture` and
+  `lifecycle-fixture-build.log`; subprocess JSON is printed in the Swift log.
 
 ## Run
 
 ```
-./tests/run.sh --suite runner_unit
+./tests/run.sh --suite runner_unit --suite runner_c_worker_harness
 ```
 
-Skips when `swift` is not on `PATH` or `runner/Package.swift` is absent.
+Requires Swift and clang. Selecting an app-dependent suite alongside it records
+the signed app's integrity. Direct SwiftPM execution requires first building the
+fixture and exporting its path as `PW_LIFECYCLE_WORKER_FIXTURE`.

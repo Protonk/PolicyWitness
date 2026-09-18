@@ -26,7 +26,12 @@ def validate_run(run, expected):
         attempt = step.get("attempt")
         exit_code = attempt.get("exit_code") if isinstance(attempt, dict) else None
         attempt_ok = exit_code == 0 if type(exit_code) is int else None
-        if "deny_signal_delta" in exp:
+        runner = (run.get("data") or {}).get("runner_result") or {}
+        if exp.get("deny_signal_unavailable") is True or runner.get("schema_version", 0) >= 5:
+            if "deny_signal" not in step or step["deny_signal"] is not None:
+                fail(f"{step_id}: expected explicit deny_signal=null")
+        # Legacy expectations remain usable when validating stored old replies.
+        elif "deny_signal_delta" in exp:
             signal = step.get("deny_signal")
             delta = signal.get("delta") if isinstance(signal, dict) else None
             expected_delta = exp["deny_signal_delta"]

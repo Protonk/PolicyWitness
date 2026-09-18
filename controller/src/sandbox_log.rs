@@ -20,14 +20,41 @@ pub struct SandboxDenyEvent {
     pub raw_line: Option<String>,
 }
 
+/// References into capture.deny_events, not copies or uniquely identified
+/// occurrences. Even a single candidate has no exact run/ordering guarantee.
 #[derive(Serialize)]
 pub struct SandboxLogStepDeny {
-    pub step_id: String,
-    pub deny_events: Vec<SandboxDenyEvent>,
+    pub event_index: usize,
+    pub candidate_step_ids: Vec<String>,
+    pub association: String,
+}
+
+#[derive(Serialize)]
+pub struct SandboxLogWindow {
+    pub kind: &'static str,
+    pub last: String,
+    pub event_timestamps_available: bool,
+    pub exact_run_membership: bool,
+    pub step_ordering: bool,
+    pub pid_reuse_protection: bool,
+}
+
+impl SandboxLogWindow {
+    pub fn trailing(last: &str) -> Self {
+        Self {
+            kind: "trailing",
+            last: last.to_string(),
+            event_timestamps_available: false,
+            exact_run_membership: false,
+            step_ordering: false,
+            pid_reuse_protection: false,
+        }
+    }
 }
 
 #[derive(Serialize)]
 pub struct SandboxLogCapture {
+    pub window: SandboxLogWindow,
     pub capture_status: String,
     pub tool_exit_code: i32,
     pub blocked_reason: Option<String>,
@@ -64,7 +91,10 @@ fn observer_blocked_reason(obj: &Value) -> Option<String> {
         return Some(reason.to_string());
     }
     let err = observer_log_error(obj)?;
-    if err.to_ascii_lowercase().contains("cannot run while sandboxed") {
+    if err
+        .to_ascii_lowercase()
+        .contains("cannot run while sandboxed")
+    {
         return Some(err);
     }
     None
@@ -91,40 +121,97 @@ fn step_attempt_paths(step: &Value) -> Vec<String> {
     out
 }
 
+/// Only authoritative spawned-worker metadata can identify a worker. Stored
+/// replies remain readable without falling back to a host/client top-level PID.
+pub fn worker_pid(result: Option<&Value>) -> Option<i32> {
+    let pid = result?.get("runner_subprocess")?.get("pid")?.as_i64()?;
+    i32::try_from(pid).ok().filter(|pid| *pid > 0)
+}
+
+// Exact operation names from the attempted syscall, never the independently
+// routed sandbox_check. No wildcard/prefix aliases. create can open an existing
+// file for writing or create a new file. Unlisted operations remain unmatched.
+fn attempt_operations(attempt: &Value) -> &'static [&'static str] {
+    match (
+        attempt.get("kind").and_then(Value::as_str),
+        attempt.get("action").and_then(Value::as_str),
+    ) {
+        (Some("file"), Some("open_read" | "access")) => &["file-read-data"],
+        (Some("file"), Some("open_write")) => &["file-write-data"],
+        (Some("file"), Some("create")) => &["file-write-create", "file-write-data"],
+        (Some("file"), Some("unlink")) => &["file-write-unlink"],
+        (Some("mach_lookup"), Some("bootstrap_look_up")) => &["mach-lookup"],
+        (Some("sysctl"), Some("read")) => &["sysctl-read"],
+        (Some("exec"), Some("spawn")) => &["process-exec"],
+        _ => &[],
+    }
+}
+
 pub fn match_step_denies(
     steps: &[Value],
+    submitted_plan: &[Value],
     deny_events: &[SandboxDenyEvent],
-    pid: Option<i64>,
+    pid: Option<i32>,
 ) -> Vec<SandboxLogStepDeny> {
-    let pid = pid.and_then(|v| i32::try_from(v).ok());
-    let mut out: Vec<SandboxLogStepDeny> = Vec::new();
-    for step in steps {
-        let step_id = match step.get("step_id").and_then(|v| v.as_str()) {
-            Some(v) => v.to_string(),
-            None => continue,
-        };
-        let paths = step_attempt_paths(step);
-        if paths.is_empty() {
+    let Some(pid) = pid.filter(|p| *p > 0) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for (event_index, event) in deny_events.iter().enumerate() {
+        if event.pid != Some(pid) {
             continue;
         }
-        // Match log lines to step paths to avoid over-attributing denials.
-        let mut matched: Vec<SandboxDenyEvent> = Vec::new();
-        for event in deny_events {
-            if let (Some(event_pid), Some(pid)) = (event.pid, pid) {
-                if event_pid != pid {
-                    continue;
-                }
+        let (Some(operation), Some(path)) = (event.operation.as_deref(), event.path.as_deref())
+        else {
+            continue;
+        };
+        let mut candidates = Vec::new();
+        for step in steps {
+            let Some(id) = step.get("step_id").and_then(Value::as_str) else {
+                continue;
+            };
+            // A duplicate ID on either side makes the provenance join unusable.
+            if steps
+                .iter()
+                .filter(|s| s.get("step_id").and_then(Value::as_str) == Some(id))
+                .count()
+                != 1
+            {
+                continue;
             }
-            if let Some(path) = event.path.as_ref() {
-                if paths.iter().any(|p| p == path) {
-                    matched.push(event.clone());
-                }
+            let mut submitted = submitted_plan
+                .iter()
+                .filter(|s| s.get("step_id").and_then(Value::as_str) == Some(id));
+            let Some(request) = submitted.next() else {
+                continue;
+            };
+            if submitted.next().is_some() {
+                continue;
+            }
+            let Some(attempt) = request.get("attempt") else {
+                continue;
+            };
+            if !attempt_operations(attempt).contains(&operation) {
+                continue;
+            }
+            let mut paths = step_attempt_paths(step);
+            if let Some(target) = attempt.get("target").and_then(Value::as_str) {
+                paths.push(target.to_string());
+            }
+            if paths.iter().any(|p| p == path) {
+                candidates.push(id.to_string());
             }
         }
-        if !matched.is_empty() {
+        if !candidates.is_empty() {
             out.push(SandboxLogStepDeny {
-                step_id,
-                deny_events: matched,
+                event_index,
+                association: if candidates.len() > 1 {
+                    "ambiguous"
+                } else {
+                    "candidate"
+                }
+                .to_string(),
+                candidate_step_ids: candidates,
             });
         }
     }
@@ -170,7 +257,9 @@ pub fn capture_sandbox_logs_last(
         }
     }
 
-    let observed_deny = parsed.as_ref().and_then(observed_deny_from_observer_envelope);
+    let observed_deny = parsed
+        .as_ref()
+        .and_then(observed_deny_from_observer_envelope);
     let observer_log_error = parsed.as_ref().and_then(observer_log_error);
     let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
     let deny_events = parsed.as_ref().and_then(observer_deny_events);
@@ -190,12 +279,17 @@ pub fn capture_sandbox_logs_last(
     };
 
     Ok(SandboxLogCapture {
+        window: SandboxLogWindow::trailing(last),
         capture_status,
         tool_exit_code: exit_code,
         blocked_reason,
         stdout_parse_error: parse_error.clone(),
         stdout_truncated,
-        stdout_raw: if parse_error.is_some() { Some(stdout) } else { None },
+        stdout_raw: if parse_error.is_some() {
+            Some(stdout)
+        } else {
+            None
+        },
         stderr,
         stderr_truncated,
         observer: parsed,
@@ -207,58 +301,156 @@ pub fn capture_sandbox_logs_last(
 
 #[cfg(test)]
 mod tests {
-    // Deterministic coverage of step↔deny correlation. Pairs with the
-    // first_deny synthesis tests in run_flow.rs; both pin the populated-deny
-    // path that the e2e (runner_sandbox_diagnostics_on_denied) can't produce —
-    // its seam-killed worker logs no kernel deny (COVERAGE.md).
     use super::*;
     use serde_json::json;
 
-    fn deny(pid: i32, op: &str, path: &str) -> SandboxDenyEvent {
+    fn deny(pid: Option<i32>, op: &str, path: &str) -> SandboxDenyEvent {
         SandboxDenyEvent {
-            pid: Some(pid),
-            process: Some("PWRunner".to_string()),
-            operation: Some(op.to_string()),
-            path: Some(path.to_string()),
-            raw_line: Some(format!("Sandbox: PWRunner({pid}) deny(1) {op} {path}")),
+            pid,
+            process: Some("pw-probe-runner".into()),
+            operation: Some(op.into()),
+            path: Some(path.into()),
+            raw_line: Some(format!("fixture {pid:?} {op} {path}")),
         }
     }
-
+    fn request(id: &str, action: &str, target: &str) -> Value {
+        json!({"step_id": id, "sandbox_check": {"operation": "file-read-data", "filter": {"value": "/query"}},
+               "attempt": {"kind": "file", "action": action, "target": target}})
+    }
+    fn reply(id: &str) -> Value {
+        json!({"step_id": id, "sandbox_check": {"operation": "file-read-data", "filter_value": "/query"},
+               "attempt": {"requested_path": "/attempt", "observed_path": "/observed"}})
+    }
     #[test]
-    fn matches_deny_to_step_by_path_and_pid() {
-        let steps = vec![json!({
-            "step_id": "p1",
-            "attempt": { "requested_path": "/tmp/x", "observed_path": "/tmp/x" }
-        })];
-        let events = vec![deny(1234, "file-read-data", "/tmp/x")];
-        let out = match_step_denies(&steps, &events, Some(1234));
+    fn only_authoritative_positive_worker_pid_is_usable() {
+        for value in [
+            json!({"pid": 12}),
+            json!({"pid": 12, "runner_subprocess": null}),
+            json!({"runner_subprocess": {"pid": 0}}),
+            json!({"runner_subprocess": {"pid": -1}}),
+            json!({"runner_subprocess": {"pid": 2147483648i64}}),
+        ] {
+            assert_eq!(worker_pid(Some(&value)), None);
+        }
+        assert_eq!(
+            worker_pid(Some(&json!({"pid": 12, "runner_subprocess": {"pid": 34}}))),
+            Some(34)
+        );
+    }
+    #[test]
+    fn attempt_operation_and_paths_are_independent_of_query() {
+        let steps = [reply("s")];
+        let plan = [request("s", "open_write", "/attempt")];
+        let events = [
+            deny(Some(42), "file-read-data", "/attempt"),
+            deny(Some(42), "file-write-data", "/query"),
+            deny(Some(42), "file-write-data", "/observed"),
+        ];
+        let out = match_step_denies(&steps, &plan, &events, Some(42));
         assert_eq!(out.len(), 1);
-        assert_eq!(out[0].step_id, "p1");
-        assert_eq!(out[0].deny_events.len(), 1);
-        assert_eq!(out[0].deny_events[0].path.as_deref(), Some("/tmp/x"));
+        assert_eq!(out[0].event_index, 2);
+        assert_eq!(out[0].candidate_step_ids, ["s"]);
+        assert_eq!(out[0].association, "candidate");
     }
-
     #[test]
-    fn rejects_deny_with_mismatched_pid() {
-        // When both PIDs are known and differ, the deny is not the worker's.
-        let steps = vec![json!({"step_id": "p1", "attempt": {"requested_path": "/tmp/x"}})];
-        let events = vec![deny(9999, "file-read-data", "/tmp/x")];
-        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    fn missing_or_mismatched_pid_and_operation_cannot_match() {
+        let steps = [reply("s")];
+        let plan = [request("s", "open_read", "/attempt")];
+        for pid in [None, Some(7)] {
+            assert!(match_step_denies(
+                &steps,
+                &plan,
+                &[deny(pid, "file-read-data", "/attempt")],
+                Some(42)
+            )
+            .is_empty());
+        }
+        for pid in [None, Some(0), Some(-1)] {
+            assert!(match_step_denies(
+                &steps,
+                &plan,
+                &[deny(Some(42), "file-read-data", "/attempt")],
+                pid
+            )
+            .is_empty());
+        }
+        for op in ["file-write-data", "file-read-metadata", "file-read*"] {
+            assert!(
+                match_step_denies(&steps, &plan, &[deny(Some(42), op, "/attempt")], Some(42))
+                    .is_empty()
+            );
+        }
+        let mut missing = deny(Some(42), "file-read-data", "/attempt");
+        missing.operation = None;
+        assert!(match_step_denies(&steps, &plan, &[missing], Some(42)).is_empty());
     }
-
     #[test]
-    fn rejects_deny_with_unrelated_path() {
-        // A deny whose path matches no attempt path of the step is not pinned
-        // to it (avoids over-attribution).
-        let steps = vec![json!({"step_id": "p1", "attempt": {"requested_path": "/tmp/x"}})];
-        let events = vec![deny(1234, "file-read-data", "/etc/passwd")];
-        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    fn repeated_attempts_reference_one_event_with_ambiguous_candidates() {
+        let steps = [reply("second"), reply("first")];
+        let plan = [
+            request("first", "open_write", "/attempt"),
+            request("second", "open_write", "/attempt"),
+        ];
+        let events = [deny(Some(42), "file-write-data", "/attempt")];
+        let out = match_step_denies(&steps, &plan, &events, Some(42));
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].event_index, 0);
+        assert_eq!(out[0].candidate_step_ids, ["second", "first"]);
+        assert_eq!(out[0].association, "ambiguous");
+        let raw = serde_json::to_value(out).unwrap();
+        assert!(raw[0].get("deny_events").is_none());
     }
-
     #[test]
-    fn step_without_attempt_paths_is_skipped() {
-        let steps = vec![json!({"step_id": "p1", "attempt": {}})];
-        let events = vec![deny(1234, "file-read-data", "/tmp/x")];
-        assert!(match_step_denies(&steps, &events, Some(1234)).is_empty());
+    fn unknown_or_duplicate_step_provenance_is_not_correlated() {
+        let event = [deny(Some(42), "file-read-data", "/attempt")];
+        assert!(match_step_denies(&[reply("s")], &[], &event, Some(42)).is_empty());
+        assert!(match_step_denies(
+            &[reply("s")],
+            &[request("other", "open_read", "/attempt")],
+            &event,
+            Some(42)
+        )
+        .is_empty());
+        let plan = [request("s", "open_read", "/attempt")];
+        assert!(match_step_denies(&[reply("s"), reply("s")], &plan, &event, Some(42)).is_empty());
+        assert!(match_step_denies(
+            &[reply("s")],
+            &[plan[0].clone(), plan[0].clone()],
+            &event,
+            Some(42)
+        )
+        .is_empty());
+    }
+    #[test]
+    fn create_supports_only_explicit_create_and_write_operations() {
+        let steps = [reply("s")];
+        let plan = [request("s", "create", "/attempt")];
+        for op in ["file-write-create", "file-write-data"] {
+            assert_eq!(
+                match_step_denies(&steps, &plan, &[deny(Some(42), op, "/attempt")], Some(42)).len(),
+                1
+            );
+        }
+        assert!(match_step_denies(
+            &steps,
+            &plan,
+            &[deny(Some(42), "file-write-unlink", "/attempt")],
+            Some(42)
+        )
+        .is_empty());
+    }
+    #[test]
+    fn trailing_window_reports_missing_temporal_evidence() {
+        let v = serde_json::to_value(SandboxLogWindow::trailing("10s")).unwrap();
+        assert_eq!(v["last"], "10s");
+        assert_eq!(v["kind"], "trailing");
+        for field in [
+            "event_timestamps_available",
+            "exact_run_membership",
+            "step_ordering",
+            "pid_reuse_protection",
+        ] {
+            assert_eq!(v[field], false);
+        }
     }
 }

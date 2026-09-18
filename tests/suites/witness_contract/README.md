@@ -110,6 +110,65 @@ and retained artifacts are documented in `runner_outcome_runner_timeout`.
 That suite owns the deliberately empty-plan timeout control;
 `runner_use_c_worker/worker_timeout_ms_honored` covers a single successful write.
 
+## Failure before published application
+
+`pre_apply_failure_reports_no_policy_verdict` runs the same two-file specimen
+twice with real worker/validator binaries. Policy allows one write and denies
+the other. The failure run uses `worker_pre_ready_hang_ms=10000` and
+`worker_timeout_ms=200`: the delay exceeds the fixed 1s ready-byte wait,
+sentinel budget and 1s exit grace by a wide margin. The seam sleeps after
+compilation and optional profile capture, before the ready byte and application;
+it provides no evidence of compilation failure. Both runs disable log capture.
+
+The failure run must retain its subprocess and both overrides while reporting
+no observed compile/apply return, allow/deny prediction, completed attempt or
+drift comparison. The positive control removes only the overrides and requires
+allow/success and deny/permission-failure with `drift=false`. Independent file
+reads precede JSON checking: both seeds survive the failure run; the positive
+control changes the allowed file and preserves the denied file. Both runs must
+avoid a sandbox-termination claim and explicitly emit `deny_signal: null` on
+every step. Missing attempts use the current compatibility spelling
+`not_run_worker_died`, meaning no completed result, without proving that the
+operation never started.
+
+`check_pre_apply_failure.py` collects separate attribution, step/process evidence,
+file-effect, lifecycle, cause and signal assertion groups in `assertions.json`. Lifecycle
+groups check polling reason, ready/done observations, termination-call results,
+successful reaping and wait-error arrays through the signed CLI. A failing
+group does not prevent the positive control from running. Any failing group
+fails the case normally; it is never converted into a pass or skip. This case
+enforces the response-5 contract; acceptance status and retained before/after
+evidence live in
+[`FAILURE-PROPAGATION-PLAN.md`](../../FAILURE-PROPAGATION-PLAN.md).
+
+Artifacts include `pre_apply/` and `positive_control/` requests, raw envelopes,
+stderr, CLI capture metadata and before/after file bytes. The checker also
+records `prediction_observations.json` without asserting a distinction between
+a never-invoked validator and one that replied short; that distinction belongs
+to step 1A. Run with:
+
+```sh
+tests/run.sh --case witness_contract/pre_apply_failure_reports_no_policy_verdict
+```
+
+## Termination and denial-log correlation
+
+`worker_termination_and_log_correlation` uses two repeated denied writes with
+independent read queries, then an unrelated self-SIGKILL. Its delay seam gives
+the validator time to answer before the signal. The case retains completed
+attempts and unchanged file bytes, requires `runner_failed`, confirmed signal
+status and no host termination request, and makes no sandbox-cause claim.
+
+The same failure runs with capture disabled and enabled; both retain the same
+execution status. An un-overridden run verifies successful-run capture. The
+checker verifies worker identity in observer output, explicit capture/window
+limits and any actual event associations. Repeated attempts reference each event
+once with ambiguous candidate IDs. Logs can be unavailable or contain no match;
+Rust tests deterministically cover populated, missing/mismatched PID, unrelated
+operation, independent query, repeated-attempt and unavailable-capture cases.
+Artifacts retain each request, raw envelope, stderr, capture metadata, file bytes
+and `observations.json`. No signed app is altered to steer observer output.
+
 ## Artifacts
 
 - `tests/out/suites/witness_contract/<test_id>/artifacts/*`

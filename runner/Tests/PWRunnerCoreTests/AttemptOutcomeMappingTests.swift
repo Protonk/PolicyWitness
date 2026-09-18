@@ -125,7 +125,7 @@ func runAttemptOutcomeMappingTests(_ tk: TestKit) {
             }
         }
 
-        // ---- slot missing → not_run_worker_died (worker never reached it) ----
+        // ---- slot missing → not_run_worker_died (no completed result) ----
         tk.run("supported pair, slot missing → not_run_worker_died") {
             let at = buildAttemptResult(
                 step: step(kind: W.attemptKindFile, action: W.attemptActionOpenRead),

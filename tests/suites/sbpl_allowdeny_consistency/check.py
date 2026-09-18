@@ -74,7 +74,7 @@ def main():
             if i == allowed_index:
                 assert step["sandbox_check"]["outcome"] == "allow"
                 assert attempt["exit_code"] == 0 and attempt["syscall_errno"] is None
-                assert step["deny_signal"]["delta"] == 0
+                assert "deny_signal" in step and step["deny_signal"] is None
             else:
                 assert step["sandbox_check"]["outcome"] == "deny"
                 assert attempt["exit_code"] != 0 and attempt["syscall_errno"] in (1, 13)

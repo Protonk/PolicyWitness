@@ -3,16 +3,10 @@
 //! The controller reads the request, selects a runner, invokes the Swift client,
 //! and attaches best-effort evidence (sandbox logs, cross-check results).
 //!
-//! The host-side `sbpl-check` compile is not on the happy path. A non-compiling
-//! policy is caught by the C worker — compile failure and apply failure both
-//! surface as `sandbox_apply_failed` (the worker does not distinguish them) —
-//! so the host runs `sbpl-check` only to disambiguate an `xpc_error`
-//! (compiled-but-reply-blocked vs. never-compiled). This retires the
-//! controller's old `bad_policy`
-//! short-circuit for compile errors; `bad_policy` in a run now comes only from
-//! the runner host's structural check (missing `sbpl_source` / wrong format).
-//! Unified-log capture is best-effort and can be turned off per run with
-//! `--no-log-capture`.
+//! Published legacy preparation/application failures are runner_failed: the
+//! existing worker payload cannot distinguish the failed native operation.
+//! Fallback sbpl-check reports only its own compilation, not missing worker
+//! progress or the cause of a lost reply. Unified-log capture is optional.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -32,7 +26,9 @@ use crate::runner_select::{
     parse_runner_selector_value, resolve_runner_target, runner_provenance_from_target,
     RunnerProvenance,
 };
-use crate::sandbox_log::{capture_sandbox_logs_last, match_step_denies, SandboxLogCapture};
+use crate::sandbox_log::{
+    capture_sandbox_logs_last, match_step_denies, worker_pid, SandboxLogCapture, SandboxLogWindow,
+};
 use crate::utils::now_unix_ms;
 
 pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
@@ -70,14 +66,19 @@ pub struct RunData {
 
 #[derive(Serialize)]
 pub struct RunnerSandboxDiagnostics {
-    pub first_deny: Option<DenyEventSummary>,
+    pub worker_pid: Option<i32>,
+    pub process_disposition: &'static str,
+    pub capture_status: String,
+    pub correlation_status: &'static str,
+    pub termination_cause: Option<&'static str>,
+    /// First PID match in the capture array, not the first event in time or a
+    /// cause of termination. Reference keeps the event in observer evidence.
+    pub first_deny: Option<DenyEventReference>,
 }
 
 #[derive(Serialize)]
-pub struct DenyEventSummary {
-    pub operation: Option<String>,
-    pub path: Option<String>,
-    pub raw_line: Option<String>,
+pub struct DenyEventReference {
+    pub event_index: usize,
 }
 
 #[derive(Serialize)]
@@ -182,7 +183,10 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 
     let request_path = request_path.ok_or_else(|| "missing <request.json>".to_string())?;
     if !request_path.exists() {
-        return Err(format!("request.json not found: {}", request_path.display()));
+        return Err(format!(
+            "request.json not found: {}",
+            request_path.display()
+        ));
     }
 
     let app_root = app_root_from_current_exe()?;
@@ -217,10 +221,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 );
             }
         } else {
-            runner_obj.insert(
-                "mode".to_string(),
-                Value::String(kind.as_str().to_string()),
-            );
+            runner_obj.insert("mode".to_string(), Value::String(kind.as_str().to_string()));
             request_modified = true;
         }
     }
@@ -293,18 +294,8 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         request_path.clone()
     };
 
-    // No host-side sbpl-check compile on the happy path. A non-compiling policy
-    // is caught by the C worker: compile failure and apply failure both write
-    // apply_rc=-1, which the host classifies as `sandbox_apply_failed`, so we
-    // don't need a separate host compile to reject bad input (this retires the
-    // controller's old `bad_policy` short-circuit for compile errors — that
-    // outcome now comes only from the runner host's structural check). The one
-    // non-redundant job left for sbpl-check is disambiguating an `xpc_error`
-    // ("did the policy never compile, or did it compile and then block the XPC
-    // reply?"), so it is run lazily in that branch alone (below). That removes
-    // a full `sandbox_compile_string` from every run the runner can answer,
-    // including the large-profile tail where the duplicate compile costs
-    // seconds.
+    // The worker owns its published failure. A fallback compilation is only
+    // requested on xpc_error, and cannot explain missing worker execution.
     let (runner_client, runner_result) = run_pw_runner_client(
         &runner_target.service_name,
         &request_path_for_run,
@@ -312,10 +303,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         &runner_target.connection,
     )?;
 
-    let runner_pid = runner_result
-        .as_ref()
-        .and_then(|v| v.get("pid"))
-        .and_then(|v| v.as_i64());
+    let runner_pid = worker_pid(runner_result.as_ref());
     let runner_outcome = runner_result
         .as_ref()
         .and_then(|v| v.get("normalized_outcome"))
@@ -324,18 +312,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         .to_string();
     let ok = runner_outcome == "ok";
 
-    // The sbpl-check compile runs only here, to disambiguate a no-reply: the
-    // runner could not answer, so we compile host-side to tell "never compiled"
-    // (check fails) from "compiled but blocked the reply" (check ok). On every
-    // other outcome `policy_check` stays None — the worker's own compile
-    // is authoritative and a second host-side compile would be pure overhead.
+    // Retain the independent fallback result without assigning a worker cause.
     let mut policy_check: Option<PolicyCheckCapture> = None;
     let runner_startup_diagnostics = if runner_outcome == "xpc_error" {
         let check = match run_policy_check(&request_path_for_run) {
             Ok(report) => report,
             Err(err) => PolicyCheckCapture::unavailable(err),
         };
-        let mut note = "runner did not reply; process may have exited during sandbox apply or policy may block Mach/XPC reply".to_string();
+        let mut note = "runner did not reply; worker progress and cause unavailable; sbpl-check describes only the fallback helper".to_string();
         match check.compiled {
             Some(true) => note.push_str(" (sbpl-check compiled ok)"),
             Some(false) => note.push_str(" (sbpl-check failed)"),
@@ -362,19 +346,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     };
 
     let mut sandbox_log_capture = if no_log_capture {
-        // `--no-log-capture`: skip the unified-log scan entirely. The scan
-        // (`log show`) is archive-bound and costs seconds per run regardless
-        // of the `--log-last` window, so callers that don't consume the deny
-        // evidence opt out to reclaim it. `sandbox_log_capture` is then null
-        // (the field stays present), and any outcome-gated diagnostics that
-        // would have drawn on it (e.g. `first_deny`) degrade to null exactly
-        // as they do when the observer is blocked/unavailable.
+        // Explicitly disabled; diagnostics distinguish this from unavailable capture.
         None
     } else {
         runner_pid.map(|pid| {
             // Capture unified-log evidence only when the runner PID is known.
-            capture_sandbox_logs_last(pid, &runner_target.process_name, &log_last).unwrap_or_else(|err| {
-                SandboxLogCapture {
+            capture_sandbox_logs_last(i64::from(pid), "pw-probe-runner", &log_last).unwrap_or_else(
+                |err| SandboxLogCapture {
+                    window: SandboxLogWindow::trailing(&log_last),
                     capture_status: "requested_unavailable".to_string(),
                     tool_exit_code: 1,
                     blocked_reason: None,
@@ -387,8 +366,8 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     observed_deny: None,
                     deny_events: None,
                     step_denies: None,
-                }
-            })
+                },
+            )
         })
     };
 
@@ -400,16 +379,21 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             .and_then(|v| v.as_array()),
     ) {
         if let Some(deny_events) = capture.deny_events.as_ref() {
-            let matches = match_step_denies(steps, deny_events, runner_pid);
-            if !matches.is_empty() {
-                capture.step_denies = Some(matches);
+            if capture.capture_status == "captured" {
+                let plan = request_value.get("probe_plan").and_then(Value::as_array);
+                capture.step_denies = Some(match_step_denies(
+                    steps,
+                    plan.map(Vec::as_slice).unwrap_or(&[]),
+                    deny_events,
+                    runner_pid,
+                ));
             }
         }
     }
 
     let runner_sandbox_diagnostics = synthesize_runner_sandbox_diagnostics(
-        &runner_outcome,
-        runner_pid,
+        runner_result.as_ref(),
+        no_log_capture,
         sandbox_log_capture.as_ref(),
     );
 
@@ -465,66 +449,89 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     Ok(if ok { 0 } else { 1 })
 }
 
-// Surface the first kernel sandbox deny that killed the worker so
-// consumers can route by cause without parsing the full deny_events
-// array. PID-filtered (no process-name fallback) to avoid attribution
-// to concurrent runners.
-//
-// Contract: the outer `runner_sandbox_diagnostics` object is present
-// for any outcome where a sandbox deny is the suspected cause
-// (currently just `runner_sandbox_denied`); within it, `first_deny`
-// is populated when a matching deny event was captured and `null`
-// otherwise. Consumers can branch on `first_deny != null` without
-// first checking that the outer object exists. For unrelated outcomes
-// the outer object is `null` because no kernel-deny narrative applies.
+// Execution disposition and optional log correlation are separate observations.
+// No outcome gate, host/client PID fallback, or causal interpretation of a match.
 fn synthesize_runner_sandbox_diagnostics(
-    normalized_outcome: &str,
-    worker_pid: Option<i64>,
+    runner: Option<&Value>,
+    disabled: bool,
     capture: Option<&SandboxLogCapture>,
 ) -> Option<RunnerSandboxDiagnostics> {
-    if normalized_outcome != "runner_sandbox_denied" {
-        return None;
-    }
-    let first_deny = capture
-        .filter(|c| c.capture_status == "captured")
-        .and_then(|c| {
-            let pid = worker_pid.and_then(|v| i32::try_from(v).ok())?;
-            let events = c.deny_events.as_ref()?;
-            events.iter().find(|e| e.pid == Some(pid)).map(|e| DenyEventSummary {
-                operation: e.operation.clone(),
-                path: e.path.clone(),
-                raw_line: e.raw_line.clone(),
+    let pid = worker_pid(runner);
+    let sub = runner.and_then(|r| r.get("runner_subprocess"));
+    let reaped = sub.and_then(|s| s.get("reaped")).and_then(Value::as_bool) == Some(true);
+    let signal = sub
+        .and_then(|s| s.get("term_signal"))
+        .and_then(Value::as_i64);
+    let exit = sub.and_then(|s| s.get("exit_code")).and_then(Value::as_i64);
+    let disposition = if pid.is_none() {
+        "no_worker"
+    } else if !reaped {
+        "unconfirmed"
+    } else if signal.is_some() {
+        "signaled"
+    } else if exit == Some(0) {
+        "clean_exit"
+    } else if exit.is_some() {
+        "nonzero_exit"
+    } else {
+        "unconfirmed"
+    };
+    let capture_status = if disabled {
+        "disabled"
+    } else if pid.is_none() {
+        "no_worker"
+    } else {
+        capture
+            .map(|c| c.capture_status.as_str())
+            .unwrap_or("requested_unavailable")
+    };
+    let first_deny = if capture_status == "captured" {
+        capture
+            .and_then(|c| c.deny_events.as_ref())
+            .and_then(|events| {
+                let pid = pid?;
+                events
+                    .iter()
+                    .position(|e| e.pid == Some(pid))
+                    .map(|event_index| DenyEventReference { event_index })
             })
-        });
-    Some(RunnerSandboxDiagnostics { first_deny })
+    } else {
+        None
+    };
+    let correlation_status = if disabled || pid.is_none() {
+        "not_attempted"
+    } else if capture_status != "captured" || capture.and_then(|c| c.deny_events.as_ref()).is_none()
+    {
+        "unavailable"
+    } else if first_deny.is_some() {
+        "pid_match"
+    } else {
+        "no_match"
+    };
+    Some(RunnerSandboxDiagnostics {
+        worker_pid: pid,
+        process_disposition: disposition,
+        capture_status: capture_status.to_string(),
+        correlation_status,
+        termination_cause: if matches!(disposition, "signaled" | "nonzero_exit" | "unconfirmed") {
+            Some("unknown")
+        } else {
+            None
+        },
+        first_deny,
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    // Deterministic coverage of the `first_deny` synthesis. The e2e
-    // (tests/suites/witness_contract/runner_sandbox_diagnostics_on_denied.sh)
-    // drives `runner_sandbox_denied` via the `worker_post_apply_kill_signal`
-    // seam, but that only exercises the object-present / `first_deny: null`
-    // shape — the seam-killed worker logs no kernel deny. The *populated*
-    // first_deny path needs a real fatal-on-deny kernel event (unforgeable),
-    // so these tests feed the synthesizer synthetic captures to pin the
-    // matching branch logic that no e2e can reach.
     use super::*;
-    use crate::sandbox_log::{SandboxDenyEvent, SandboxLogCapture};
-
-    fn deny_event(pid: i32, op: &str, path: &str) -> SandboxDenyEvent {
-        SandboxDenyEvent {
-            pid: Some(pid),
-            process: Some("PWRunner".to_string()),
-            operation: Some(op.to_string()),
-            path: Some(path.to_string()),
-            raw_line: Some(format!("Sandbox: PWRunner({pid}) deny(1) {op} {path}")),
-        }
-    }
+    use crate::sandbox_log::SandboxDenyEvent;
+    use serde_json::json;
 
     fn capture_with(status: &str, events: Vec<SandboxDenyEvent>) -> SandboxLogCapture {
         SandboxLogCapture {
-            capture_status: status.to_string(),
+            window: SandboxLogWindow::trailing("10s"),
+            capture_status: status.into(),
             tool_exit_code: 0,
             blocked_reason: None,
             stdout_parse_error: None,
@@ -538,60 +545,109 @@ mod tests {
             step_denies: None,
         }
     }
-
-    #[test]
-    fn non_denied_outcome_yields_no_diagnostics() {
-        // The outer object is reserved for the sandbox-deny narrative: any
-        // other outcome must be None so consumers can read its mere presence
-        // as "a kernel deny is the suspected cause".
-        let cap = capture_with("captured", vec![deny_event(1234, "file-read-data", "/tmp/x")]);
-        assert!(synthesize_runner_sandbox_diagnostics("ok", Some(1234), Some(&cap)).is_none());
-        assert!(synthesize_runner_sandbox_diagnostics("runner_timeout", Some(1234), Some(&cap)).is_none());
+    fn event(pid: Option<i32>) -> SandboxDenyEvent {
+        SandboxDenyEvent {
+            pid,
+            process: Some("pw-probe-runner".into()),
+            operation: Some("file-write-data".into()),
+            path: Some("/attempt".into()),
+            raw_line: Some("ordinary denied write before unrelated self-signal".into()),
+        }
     }
-
-    #[test]
-    fn denied_with_matching_pid_populates_first_deny() {
-        let cap = capture_with(
-            "captured",
-            vec![
-                deny_event(9999, "mach-lookup", "/other"), // wrong pid — must be ignored
-                deny_event(1234, "file-read-data", "/tmp/x"), // the worker's deny
-            ],
-        );
-        let diag = synthesize_runner_sandbox_diagnostics("runner_sandbox_denied", Some(1234), Some(&cap))
-            .expect("runner_sandbox_denied must produce the outer diagnostics object");
-        let first = diag
-            .first_deny
-            .expect("a deny event matching the worker pid must populate first_deny");
-        assert_eq!(first.operation.as_deref(), Some("file-read-data"));
-        assert_eq!(first.path.as_deref(), Some("/tmp/x"));
-        assert!(first.raw_line.as_deref().unwrap_or_default().contains("deny(1)"));
+    fn worker(outcome: &str, signal: Option<i32>) -> Value {
+        json!({"pid": 9999, "normalized_outcome": outcome, "sandboxed_after_apply": true,
+            "runner_subprocess": {"pid": 42, "reaped": true, "term_signal": signal,
+                "exit_code": if signal.is_none() { Some(0) } else { None }, "termination_request": null}})
     }
-
     #[test]
-    fn denied_without_capture_is_present_object_with_null_first_deny() {
-        // Contract: outer object present for runner_sandbox_denied; first_deny
-        // null when there is no capture (e.g. --no-log-capture, or blocked).
-        let diag = synthesize_runner_sandbox_diagnostics("runner_sandbox_denied", Some(1234), None)
-            .expect("outer object present even when no capture is available");
-        assert!(diag.first_deny.is_none());
+    fn ordinary_denial_and_unrelated_signal_remain_separate_observations() {
+        let runner = worker("runner_failed", Some(9));
+        let original = runner.clone();
+        let cap = capture_with("captured", vec![event(Some(99)), event(Some(42))]);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        assert_eq!(diag.worker_pid, Some(42));
+        assert_eq!(diag.process_disposition, "signaled");
+        assert_eq!(diag.first_deny.unwrap().event_index, 1);
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        assert_eq!(diag.correlation_status, "pid_match");
+        assert_eq!(cap.deny_events.as_ref().unwrap().len(), 2);
+        assert_eq!(runner, original);
     }
-
     #[test]
-    fn denied_with_pid_mismatch_yields_null_first_deny() {
-        // PID-filtered with no process-name fallback: a deny attributed to a
-        // different PID must not be pinned on the worker.
-        let cap = capture_with("captured", vec![deny_event(9999, "file-read-data", "/tmp/x")]);
-        let diag = synthesize_runner_sandbox_diagnostics("runner_sandbox_denied", Some(1234), Some(&cap)).unwrap();
-        assert!(diag.first_deny.is_none());
+    fn capture_conditions_do_not_change_execution_status_or_cause() {
+        let runner = worker("runner_failed", Some(9));
+        let original = runner.clone();
+        for (disabled, status, expected_capture, expected_correlation) in [
+            (true, "captured", "disabled", "not_attempted"),
+            (false, "blocked", "blocked", "unavailable"),
+            (false, "error", "error", "unavailable"),
+            (
+                false,
+                "requested_unavailable",
+                "requested_unavailable",
+                "unavailable",
+            ),
+            (false, "captured", "captured", "no_match"),
+        ] {
+            let cap = capture_with(status, vec![]);
+            let diag =
+                synthesize_runner_sandbox_diagnostics(Some(&runner), disabled, Some(&cap)).unwrap();
+            assert_eq!(diag.capture_status, expected_capture);
+            assert_eq!(diag.correlation_status, expected_correlation);
+            assert_eq!(diag.process_disposition, "signaled");
+            assert_eq!(diag.termination_cause, Some("unknown"));
+            assert!(diag.first_deny.is_none());
+            assert_eq!(runner, original);
+        }
     }
-
     #[test]
-    fn denied_with_uncaptured_status_yields_null_first_deny() {
-        // Events from a non-`captured` observer run (blocked/error) are not
-        // trustworthy evidence and must be ignored.
-        let cap = capture_with("blocked", vec![deny_event(1234, "file-read-data", "/tmp/x")]);
-        let diag = synthesize_runner_sandbox_diagnostics("runner_sandbox_denied", Some(1234), Some(&cap)).unwrap();
-        assert!(diag.first_deny.is_none());
+    fn successful_run_keeps_correlations_without_a_termination_cause() {
+        let runner = worker("ok", None);
+        let cap = capture_with("captured", vec![event(Some(42))]);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        assert_eq!(diag.process_disposition, "clean_exit");
+        assert_eq!(diag.capture_status, "captured");
+        assert_eq!(diag.first_deny.unwrap().event_index, 0);
+        assert_eq!(diag.termination_cause, None);
+        assert_eq!(runner["normalized_outcome"], "ok");
+    }
+    #[test]
+    fn no_worker_never_uses_host_or_client_pid() {
+        for outcome in ["bad_request", "xpc_error", "runner_sandbox_denied"] {
+            let runner =
+                json!({"pid": 42, "normalized_outcome": outcome, "runner_subprocess": null});
+            let cap = capture_with("captured", vec![event(Some(42))]);
+            let diag =
+                synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+            assert_eq!(diag.worker_pid, None);
+            assert_eq!(diag.capture_status, "no_worker");
+            assert_eq!(diag.process_disposition, "no_worker");
+            assert_eq!(diag.correlation_status, "not_attempted");
+            assert!(diag.first_deny.is_none());
+        }
+    }
+    #[test]
+    fn missing_mismatched_pid_and_unavailable_events_never_supply_first_deny() {
+        let runner = worker("runner_failed", Some(9));
+        for status in ["captured", "blocked", "parse_error"] {
+            let cap = capture_with(status, vec![event(None), event(Some(99))]);
+            let diag =
+                synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+            assert!(diag.first_deny.is_none());
+        }
+        let mut cap = capture_with("captured", vec![]);
+        cap.deny_events = None;
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        assert_eq!(diag.correlation_status, "unavailable");
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, None).unwrap();
+        assert_eq!(diag.capture_status, "requested_unavailable");
+    }
+    #[test]
+    fn unconfirmed_reap_does_not_manufacture_clean_disposition_from_status_storage() {
+        let mut runner = worker("runner_failed", None);
+        runner["runner_subprocess"]["reaped"] = json!(false);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert_eq!(diag.process_disposition, "unconfirmed");
+        assert_eq!(diag.termination_cause, Some("unknown"));
     }
 }

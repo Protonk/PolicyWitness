@@ -34,6 +34,11 @@ def call(fixture, work, label, *, authorized=False, service=None):
     after = target.read_bytes()
     (out / 'after.bin').write_bytes(after)
     result = json.loads((out / 'client/stdout').read_text())
+    # Both actual XPC replies and the client's locally generated error replies
+    # use the response-5 contract. No process status is invented on rejection.
+    assert result['schema_version'] == 5, result
+    for step in result['steps']:
+        assert 'deny_signal' in step and step['deny_signal'] is None, step
     observation = {'command': meta, 'result': result, 'specimen': spec,
                    'service': service or fixture['service'], 'changed': after != seed,
                    'nonempty': bool(after), 'client_sha256': digest(client)}

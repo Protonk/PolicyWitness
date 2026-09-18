@@ -1,31 +1,9 @@
+import Darwin
 import Foundation
 @testable import PWRunnerCore
 
-/*
- * HostOutcomeClassifierTests — the worker/validator → NormalizedOutcome
- * decision table.
- *
- * `classify(workerResult:validatorResult:expectedVerdictCount:)` is the
- * host's counterpart to computeDrift: it folds a run's shape (worker
- * setup error, apply failure, host SIGKILL, foreign signal, clean exit;
- * then validator spawn/read/parse failure or short verdict count) onto
- * the single NormalizedOutcome the controller reports. The branch
- * structure is a nested switch ladder — exactly the kind of code a
- * refactor reshuffles.
- *
- * This is a behavior test: it drives the public boundary `classify`
- * with concrete inputs and asserts the resulting outcome, never naming
- * the internal ordering. Reorganize the ladder however you like; only a
- * change in MEANING fails a row.
- *
- * It also reaches three outcomes COVERAGE.md marks e2e-unreachable —
- * validator_no_reply (not seam-reachable through _test_overrides),
- * runner_failed, and runner_sandbox_denied — because at this altitude
- * they are just input shapes, not pipeline accidents.
- */
-
-// A clean worker run with overridable failure knobs. classify never
-// reads `slots`, so an empty slot list is fine.
+// Constructed interpretation controls pin the interim evidence table.
+// Real driver/publication controls live separately in CWorkerLifecycleTests.
 private func workerOut(
     applied: Bool = true,
     applyRC: Int32 = 0,
@@ -33,7 +11,11 @@ private func workerOut(
     done: Bool = true,
     sentSigkill: Bool = false,
     termSignal: Int32? = nil,
-    exitCode: Int32? = 0
+    exitCode: Int32? = 0,
+    stop: String? = "done",
+    reaped: Bool? = true,
+    waitErrors: [PWRunnerWaitError]? = [],
+    killRC: Int32 = 0
 ) -> CWorkerOutput {
     return CWorkerOutput(
         workerPid: 0,
@@ -42,10 +24,13 @@ private func workerOut(
         applyRC: applyRC,
         applyErrno: applyErrno,
         done: done,
-        sentSigkill: sentSigkill,
         exitCode: exitCode,
         termSignal: termSignal,
-        slots: []
+        slots: [],
+        pollStopReason: stop,
+        terminationRequest: sentSigkill ? PWRunnerTerminationRequest(signal: 9, rc: killRC, errno: killRC == -1 ? EPERM : nil) : nil,
+        reaped: reaped,
+        waitErrors: waitErrors
     )
 }
 
@@ -73,29 +58,107 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
 
-        // ---- worker side: ran, but apply / done / signal outcomes ----
-        ClassifyRow(label: "sandbox_apply failed inside worker → sandbox_apply_failed",
-                    worker: .success(workerOut(applied: false, applyRC: 2)),
+        // Worker publication, deadline, cleanup and disposition rows.
+        ClassifyRow(label: "published legacy failure",
+                    worker: .success(workerOut(applied: false, applyRC: -1)),
                     validator: nil, expectedVerdictCount: 0,
-                    expected: NormalizedOutcome.sandboxApplyFailed),
-        // The load-bearing asymmetry, part 1: the HOST sent SIGKILL after
-        // its grace timer — the worker's death is the host's doing, NOT a
-        // sandbox denial. Must read as runner_timeout.
-        ClassifyRow(label: "host SIGKILL after grace timer → runner_timeout (not sandbox)",
-                    worker: .success(workerOut(done: false, sentSigkill: true, termSignal: 9)),
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "inconsistent done without application or failure",
+                    worker: .success(workerOut(applied: false, applyRC: 0)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "inconsistent applied with failure status",
+                    worker: .success(workerOut(applyRC: -1)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "inconsistent publication outranks deadline",
+                    worker: .success(workerOut(applied: false, done: true, stop: "sentinel_deadline")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "published failure outranks cleanup and deadline",
+                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, termSignal: 9, exitCode: nil, stop: "sentinel_deadline")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "published failure survives failed kill and reap",
+                    worker: .success(workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false, killRC: -1)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "unpublished zeros and pre-apply clean exit",
+                    worker: .success(workerOut(applied: false, done: false, stop: "child_reaped")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "unpublished arbitrary storage and pre-apply nonzero exit",
+                    worker: .success(workerOut(applied: false, applyRC: -83, applyErrno: 97, done: false, exitCode: 17, stop: "child_reaped")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "pre-apply signal",
+                    worker: .success(workerOut(applied: false, done: false, termSignal: 9, exitCode: nil, stop: "child_reaped")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "pre-apply deadline and host termination",
+                    worker: .success(workerOut(applied: false, done: false, sentSigkill: true, termSignal: 9, exitCode: nil, stop: "sentinel_deadline")),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerTimeout),
-        // Part 2: a FOREIGN signal (host did not SIGKILL) on a worker that
-        // never flipped done IS sandbox-denial evidence.
-        ClassifyRow(label: "foreign signal before done → runner_sandbox_denied",
-                    worker: .success(workerOut(done: false, sentSigkill: false, termSignal: 9)),
-                    validator: nil, expectedVerdictCount: 0,
-                    expected: NormalizedOutcome.runnerSandboxDenied),
-        // No signal, just failed to flip done in time → timeout, not denial.
-        ClassifyRow(label: "clean exit without done → runner_timeout",
-                    worker: .success(workerOut(done: false, sentSigkill: false, termSignal: nil)),
+        ClassifyRow(label: "pre-apply deadline survives unconfirmed disposition",
+                    worker: .success(workerOut(applied: false, done: false, sentSigkill: true, exitCode: nil, stop: "sentinel_deadline", reaped: false, killRC: -1)),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerTimeout),
+        ClassifyRow(label: "incomplete post-apply signal has no sandbox cause",
+                    worker: .success(workerOut(done: false, termSignal: 9, exitCode: nil, stop: "child_reaped")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "incomplete clean exit is not a deadline",
+                    worker: .success(workerOut(done: false, stop: "child_reaped")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "deadline survives voluntary grace exit",
+                    worker: .success(workerOut(done: false, stop: "sentinel_deadline")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerTimeout),
+        ClassifyRow(label: "deadline survives host cleanup termination",
+                    worker: .success(workerOut(done: false, sentSigkill: true, termSignal: 9, exitCode: nil, stop: "sentinel_deadline")),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerTimeout),
+        ClassifyRow(label: "completed report and cleanup kill is not a deadline",
+                    worker: .success(workerOut(sentSigkill: true, termSignal: 9, exitCode: nil)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "completed report and cleanup request followed by exit zero",
+                    worker: .success(workerOut(sentSigkill: true)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "completed report and nonzero exit",
+                    worker: .success(workerOut(exitCode: 17)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "completed report and independent signal",
+                    worker: .success(workerOut(termSignal: 15, exitCode: nil)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "completed report and failed reap",
+                    worker: .success(workerOut(exitCode: nil, reaped: false)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "status storage cannot override unconfirmed reap",
+                    worker: .success(workerOut(exitCode: 0, reaped: false)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "unavailable host observations cannot prove completion",
+                    worker: .success(workerOut(reaped: nil, waitErrors: nil)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "incomplete wait error without deadline",
+                    worker: .success(workerOut(applied: false, done: false, exitCode: nil, stop: "wait_error", reaped: false)),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "wait error survives later clean reap",
+                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(phase: "poll", rc: -1, errno: EIO)])),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.runnerFailed),
+        ClassifyRow(label: "recovered EINTR does not fail a clean report",
+                    worker: .success(workerOut(waitErrors: [PWRunnerWaitError(phase: "exit_grace", rc: -1, errno: EINTR)])),
+                    validator: nil, expectedVerdictCount: 0,
+                    expected: NormalizedOutcome.ok),
 
         // ---- worker clean: validator-side classification ----
         ClassifyRow(label: "worker ok, no probes sent (validator nil) → ok",
@@ -153,32 +216,36 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
         }
     }
 
-    // The apply-failed error string must surface the worker's apply_errno
-    // so a reader can tell WHY apply failed (e.g. EPERM = the unentitled
-    // witness worker isn't permitted to apply the profile) rather than
-    // seeing a bare rc.
-    tk.group("classify: sandbox_apply_failed surfaces apply errno") {
-        tk.run("non-zero errno appears in the error string") {
-            let got = classify(
-                workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: 1)),
-                validatorResult: nil,
-                expectedVerdictCount: 0
-            )
-            try expectEqual(got.outcome, NormalizedOutcome.sandboxApplyFailed)
-            try expectContains(got.error ?? "", "returned -1")
-            try expectContains(got.error ?? "", "errno 1")
-        }
-        tk.run("zero errno omits the errno clause") {
-            let got = classify(
-                workerResult: .success(workerOut(applied: false, applyRC: 2, applyErrno: 0)),
-                validatorResult: nil,
-                expectedVerdictCount: 0
-            )
-            try expectEqual(got.outcome, NormalizedOutcome.sandboxApplyFailed)
-            try expectContains(got.error ?? "", "returned 2")
-            if (got.error ?? "").contains("errno") {
-                throw TestFailure(message: "expected no errno clause when applyErrno==0, got: \(got.error ?? "")")
+    tk.group("classify: publication validity and independent diagnostics") {
+        tk.run("legacy failure retains status and meaningful legacy errno without native attribution") {
+            for legacyErrno: Int32 in [0, 1, 4567] {
+                let got = classify(workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: legacyErrno)),
+                                   validatorResult: nil, expectedVerdictCount: 0)
+                try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
+                try expectContains(got.error ?? "", "status=-1")
+                if legacyErrno != 0 { try expectContains(got.error ?? "", "legacy errno=\(legacyErrno)") }
+                else { try expectFalse((got.error ?? "").contains("errno")) }
+                try expectFalse((got.error ?? "").contains("sandbox_apply"))
+                try expectFalse((got.error ?? "").contains("returned"))
             }
+        }
+        tk.run("unpublished storage is ignored including arbitrary nonzero values") {
+            let clean = classify(workerResult: .success(workerOut(applied: false, done: false, stop: "child_reaped")),
+                                 validatorResult: nil, expectedVerdictCount: 0)
+            let garbage = classify(workerResult: .success(workerOut(applied: false, applyRC: -83, applyErrno: 97,
+                                                                     done: false, stop: "child_reaped")),
+                                   validatorResult: nil, expectedVerdictCount: 0)
+            try expectEqual(garbage.outcome, clean.outcome)
+            try expectEqual(garbage.error, clean.error)
+        }
+        tk.run("worker failure precedence retains validator failure independently") {
+            let worker = workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false)
+            let validator = ValidatorClientResult.failure(error: .spawnFailed("fixture validator"), partial: nil)
+            let got = classify(workerResult: .success(worker), validatorResult: validator, expectedVerdictCount: 1)
+            try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
+            try expectContains(got.error ?? "", "status=-1")
+            try expectEqual(buildWorkerSubprocess(worker).termination_request?.rc, 0)
+            try expectEqual(buildWorkerSubprocess(worker).reaped, false)
         }
     }
 }

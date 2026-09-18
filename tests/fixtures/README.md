@@ -29,6 +29,9 @@ deterministic, and checked into the repo so tests are hermetic.
   controls live in the `exec_fixture` suite.
 - `worker_harness/`: shared compiler recipe for the C-worker ABI harness and
   independent builder/harness stand-ins for shell setup controls.
+- `worker_lifecycle/`: test-only ABI producer for `runner_unit` host polling,
+  cleanup and process-status controls. It never applies a sandbox; tests own
+  cleanup of children deliberately left unreaped by OS-call fault controls.
 - `pw_runner/`: minimal specimens for smoke/integration/runner suites and
   opt-in paths (single-step SBPL cases).
 - `runner_smoke/`: template-based fixtures used by smoke and runner verification.

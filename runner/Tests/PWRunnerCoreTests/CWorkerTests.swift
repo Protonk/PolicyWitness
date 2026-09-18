@@ -368,8 +368,7 @@ func runCWorkerTests(_ tk: TestKit) {
         // observable on the C-worker path.
         tk.run("postApplyHangMs > sentinelTimeoutMs produces done=false") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required deadline/grace worker missing at \(workerPath()); build the signed app")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -397,20 +396,26 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectFalse(out.sentSigkill,
                             "host should not need SIGKILL — worker exits cleanly post-hang")
             try expectEqual(out.exitCode, Int32(0))
+            try expectEqual(out.pollStopReason, "sentinel_deadline",
+                            "voluntary exit during grace must not erase the observed deadline")
+            try expectEqual(out.reaped, true)
+            try expectNil(out.terminationRequest)
+            try expectEqual(out.waitErrors?.count, 0)
+            let data = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
+            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            try expectEqual(classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0).outcome,
+                            NormalizedOutcome.runnerTimeout)
+            try expectEqual(decoded.poll_stop_reason, "sentinel_deadline")
+            try expectEqual(decoded.exit_code, 0)
+            try expectEqual(decoded.reaped, true)
+            try expectNil(decoded.termination_request)
         }
 
-        // ---- postApplyKillSignal test seam -------------------
-        // Drives the runner_sandbox_denied condition from a real specimen.
-        // The worker raises SIGKILL on itself AFTER `applied` but BEFORE
-        // flipping `done`, so the host observes applied=1, done=0, and a
-        // foreign termination signal — the exact shape a kernel sandbox kill
-        // produces. The HOST did not send the signal (sentSigkill=false), which
-        // is the distinction classify() uses to keep this apart from a
-        // host-grace SIGKILL (which is runner_timeout).
-        tk.run("postApplyKillSignal terminates worker before done -> runner_sandbox_denied") {
+        // Real worker self-signals after application and completed slots, before
+        // done. The signal proves abnormal disposition, not a policy cause.
+        tk.run("postApplyKillSignal terminates worker before done -> runner_failed") {
             guard workerExists() else {
-                FileHandle.standardOutput.write(Data("  SKIP  pw-probe-runner missing\n".utf8))
-                return
+                throw TestFailure(message: "required polling-reap worker missing at \(workerPath()); build the signed app")
             }
             let input = CWorkerInput(
                 workerExecutablePath: workerPath(),
@@ -431,15 +436,24 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectTrue(out.applied, "applied should flip — the kill is post-apply")
             try expectFalse(out.done, "done must not flip — the worker is killed before writing it")
             try expectFalse(out.sentSigkill,
-                            "worker self-signals; the HOST did not SIGKILL (the distinction that separates runner_sandbox_denied from runner_timeout)")
+                            "worker self-signals; no host termination request")
             try expectEqual(out.termSignal, Int32(SIGKILL),
                             "worker reaped with the foreign termination signal")
+            try expectEqual(out.pollStopReason, "child_reaped")
+            try expectEqual(out.reaped, true)
+            try expectNil(out.terminationRequest)
+            try expectEqual(out.waitErrors?.count, 0)
+            let data = try pwRunnerEncodeJSON(buildWorkerSubprocess(out))
+            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            try expectEqual(decoded.poll_stop_reason, "child_reaped")
+            try expectEqual(decoded.term_signal, Int(SIGKILL))
+            try expectEqual(decoded.reaped, true)
+            try expectNil(decoded.termination_request)
 
-            // The whole point of the seam: this real worker shape must
-            // classify as runner_sandbox_denied.
+            // No signal alone establishes a sandbox cause.
             let classified = classify(workerResult: result, validatorResult: nil, expectedVerdictCount: 0)
-            try expectEqual(classified.outcome, NormalizedOutcome.runnerSandboxDenied,
-                            "a foreign signal before done is the sandbox-denial-shaped outcome")
+            try expectEqual(classified.outcome, NormalizedOutcome.runnerFailed,
+                            "a signal establishes no sandbox cause")
         }
 
         // ---- exec attempt: happy path (/usr/bin/true) ---------------------------

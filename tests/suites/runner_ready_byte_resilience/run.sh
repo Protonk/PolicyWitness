@@ -24,7 +24,7 @@ fi
 # must NOT die of SIGPIPE on that write: it must continue to sandbox_apply
 # and report through the shm sentinels, so the run still scores normally.
 #
-# Mechanism (no 13s WebProcess compile needed — the seam models it):
+# Mechanism: the seam sleeps after compilation/capture, before readiness:
 #   - worker_pre_ready_hang_ms=2000 makes pw-probe-runner nanosleep 2000ms
 #     BEFORE the ready byte. The host's default 1000ms readyByteTimeout
 #     fires first and closes the read end, so the worker's later ready-byte
@@ -32,9 +32,9 @@ fi
 #   - With SIGPIPE ignored, that write returns EPIPE and the worker
 #     proceeds: applies (allow default), runs the probe, flips done, exits
 #     cleanly. Outcome=ok, validator ran, no signal.
-#   - On the pre-fix worker this same path SIGPIPEs the worker before apply:
-#     no `applied`, apply_rc reads zero-init 0, outcome=sandbox_apply_failed,
-#     term_signal=13. So this suite fails loudly on a regression.
+#   - A signal or missing publication fails this success control without
+#     inventing an apply result. This case keeps enough sentinel budget;
+#     the separate pre-apply witness deliberately expires that budget.
 
 SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 /usr/bin/python3 - "${SPECIMEN_PATH}" <<'PY'
@@ -100,9 +100,7 @@ runner = env.get("data", {}).get("runner_result") or {}
 outcome = runner.get("normalized_outcome")
 if outcome != "ok":
     raise SystemExit(
-        f"expected normalized_outcome=ok (got {outcome!r}); on the pre-fix worker "
-        f"this is 'sandbox_apply_failed' because the worker SIGPIPEs on the ready "
-        f"byte before sandbox_apply runs."
+        f"expected normalized_outcome=ok after surviving the closed ready pipe (got {outcome!r})"
     )
 
 # The worker must have survived and exited cleanly — NOT died of SIGPIPE (13).

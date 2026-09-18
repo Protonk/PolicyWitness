@@ -30,7 +30,7 @@ private func okResult(pid: Int = 4242, stepCount: Int = 0) -> PWRunnerRunResult 
                 filter_kind: "none"
             ),
             attempt: PWRunnerAttemptResult(rc: 0, outcome: "ok"),
-            deny_signal: PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: 0)
+            deny_signal: nil
         )
     }
     return PWRunnerRunResult(
@@ -83,6 +83,53 @@ private func postSpawnFailureResult(outcome: String, signal: Int?) -> PWRunnerRu
 }
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
+    tk.group("PWRunnerSubprocess: additive host observations") {
+        tk.run("legacy absent or null observations remain unknown") {
+            for suffix in ["", ",\"ready_byte_received\":null,\"done_observed\":null,\"poll_stop_reason\":null,\"exit_requested\":null,\"termination_request\":null,\"reaped\":null,\"wait_errors\":null"] {
+                let data = Data("{\"pid\":42,\"exit_code\":0,\"partial_steps\":false\(suffix)}".utf8)
+                let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+                try expectEqual(decoded.exit_code, 0)
+                try expectNil(decoded.ready_byte_received)
+                try expectNil(decoded.done_observed)
+                try expectNil(decoded.poll_stop_reason)
+                try expectNil(decoded.exit_requested)
+                try expectNil(decoded.termination_request)
+                try expectNil(decoded.reaped)
+                try expectNil(decoded.wait_errors)
+            }
+        }
+        tk.run("observed false and empty errors survive encoding without inventing status") {
+            let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
+                partial_steps: true, ready_byte_received: false, done_observed: false,
+                poll_stop_reason: "wait_error", exit_requested: true, reaped: false, wait_errors: [])
+            let data = try pwRunnerEncodeJSON(record)
+            let raw = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            try expectEqual(raw["ready_byte_received"] as? Bool, false)
+            try expectEqual(raw["done_observed"] as? Bool, false)
+            try expectEqual(raw["reaped"] as? Bool, false)
+            try expectEqual((raw["wait_errors"] as? [Any])?.count, 0)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            try expectNil(decoded.exit_code)
+            try expectNil(decoded.term_signal)
+            try expectNil(decoded.termination_request)
+        }
+        tk.run("unfamiliar host observation strings and errno values survive encoding") {
+            let record = PWRunnerSubprocess(pid: 42, term_signal: nil, exit_code: nil,
+                partial_steps: false, poll_stop_reason: "future_stop",
+                termination_request: PWRunnerTerminationRequest(signal: 31, rc: -1, errno: 123456),
+                reaped: false, wait_errors: [PWRunnerWaitError(phase: "future_phase", rc: -1, errno: 654321)])
+            let data = try pwRunnerEncodeJSON(record)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerSubprocess.self, from: data)
+            try expectEqual(decoded.poll_stop_reason, "future_stop")
+            try expectEqual(decoded.termination_request?.signal, 31)
+            try expectEqual(decoded.termination_request?.rc, -1)
+            try expectEqual(decoded.termination_request?.errno, 123456)
+            try expectEqual(decoded.wait_errors?.first?.phase, "future_phase")
+            try expectEqual(decoded.wait_errors?.first?.rc, -1)
+            try expectEqual(decoded.wait_errors?.first?.errno, 654321)
+        }
+    }
+
     tk.group("PWRunnerRunResult: Codable round-trip preserves semantic absence") {
 
         tk.run("nil test_overrides survives encode → decode as nil") {
@@ -114,9 +161,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
     tk.group("PWRunnerRunResult: production-shaped success result") {
 
-        tk.run("schema_version is 4, test_overrides is nil, runner_subprocess is present") {
+        tk.run("schema_version is 5, test_overrides is nil, runner_subprocess is present") {
             let result = okResult(pid: 7777, stepCount: 2)
-            try expectEqual(result.schema_version, 4)
+            try expectEqual(result.schema_version, 5)
             try expectNil(result.test_overrides)
             try expectNotNil(result.runner_subprocess)
             // validator_subprocess is nil when the host didn't spawn
@@ -156,7 +203,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
             let data = try pwRunnerEncodeJSON(result)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
-            try expectEqual(decoded.schema_version, 4)
+            try expectEqual(decoded.schema_version, 5)
             try expectNotNil(decoded.validator_subprocess)
             try expectEqual(decoded.validator_subprocess?.pid, 9002)
             try expectEqual(decoded.validator_subprocess?.exit_code, 0)
@@ -179,6 +226,42 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                            "expected explicit \"drift\":null in v4 envelope; raw=\(raw)")
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
             try expectNil(decoded.steps[0].drift)
+        }
+    }
+
+    tk.group("response 5: signal absence and legacy compatibility") {
+        tk.run("new success and failure steps encode literal signal null") {
+            for outcome in [NormalizedOutcome.ok, NormalizedOutcome.runnerFailed, NormalizedOutcome.runnerTimeout] {
+                var result = okResult(stepCount: 1)
+                result.normalized_outcome = outcome
+                result.rc = outcome == NormalizedOutcome.ok ? 0 : 1
+                let bytes = try pwRunnerEncodeJSON(result)
+                let raw = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
+                try expectEqual(raw["schema_version"] as? Int, 5)
+                let step = (raw["steps"] as! [[String: Any]])[0]
+                try expectTrue(step["deny_signal"] is NSNull)
+                try expectTrue(step["drift"] is NSNull)
+                try expectNil(try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes).steps[0].deny_signal)
+            }
+        }
+        tk.run("stored response 4 signal object remains decodable without upgrading its version") {
+            var old = okResult(stepCount: 1)
+            old.schema_version = 4
+            old.steps[0].deny_signal = PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: 0)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(old))
+            try expectEqual(decoded.schema_version, 4)
+            try expectEqual(decoded.steps[0].deny_signal?.delta, 0)
+            try expectEqual(decoded.steps[0].deny_signal?.signal, "SIGUSR1")
+        }
+        tk.run("client XPC failure emitters share response 5 default") {
+            for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
+                            NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
+                let result = hostShortCircuitResult(outcome: outcome)
+                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
+                try expectEqual(decoded.schema_version, 5)
+                try expectNil(decoded.runner_subprocess)
+                try expectTrue(decoded.steps.isEmpty)
+            }
         }
     }
 
@@ -211,7 +294,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(timeout.runner_subprocess?.term_signal, 9)
             try expectNil(timeout.runner_subprocess?.exit_code)
 
-            // runner_sandbox_denied: kernel sandbox terminated the worker.
+            // Stored legacy outcome spelling; a signal does not establish cause.
             let denied = postSpawnFailureResult(
                 outcome: NormalizedOutcome.runnerSandboxDenied,
                 signal: 5

@@ -104,14 +104,7 @@ public enum CWorkerOrchestrator {
         )
 
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
-        let runnerSubprocess = workerOutput.map { out in
-            PWRunnerSubprocess(
-                pid: Int(out.workerPid),
-                term_signal: out.termSignal.map { Int($0) },
-                exit_code: out.exitCode.map { Int($0) },
-                partial_steps: anySlotNotCompleted(out.slots)
-            )
-        }
+        let runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
         let validatorSubprocess = validatorOutput.map {
             PWRunnerValidatorSubprocess(
                 pid: Int($0.validatorPid),
@@ -453,7 +446,7 @@ private func buildStepResults(
             step_id: step.step_id,
             sandbox_check: sandboxCheck,
             attempt: attempt,
-            deny_signal: zeroSignalResult(),
+            deny_signal: nil,
             drift: drift
         )
         results.append(stepResult)
@@ -618,16 +611,14 @@ func buildAttemptResult(
             observed_path: nil
         )
     }
-    // Slot missing → worker never reached the step. Surface as
-    // not_run_worker_died so consumers can tell "the attempt failed"
-    // (slot present, rc non-zero) from "the attempt never ran"
-    // (slot missing).
+    // Missing or incomplete slots establish no completed attempt result.
+    // The compatibility spelling does not prove the operation never started.
     guard let s = slot else {
         return PWRunnerAttemptResult(
             rc: -1,
             errno: nil,
             outcome: AttemptOutcome.notRunWorkerDied,
-            error: "worker exited before reaching this slot",
+            error: "no completed attempt result: slot unavailable",
             requested_path: step.attempt.target,
             normalized_path: nil,
             observed_path: nil
@@ -638,7 +629,7 @@ func buildAttemptResult(
             rc: -1,
             errno: nil,
             outcome: AttemptOutcome.notRunWorkerDied,
-            error: "worker exited before this slot completed",
+            error: "no completed attempt result: slot publication incomplete",
             requested_path: step.attempt.target,
             normalized_path: nil,
             observed_path: nil
@@ -824,13 +815,22 @@ private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> Attempt
     }
 }
 
-private func zeroSignalResult() -> PWRunnerSignalResult {
-    // PWRunnerSignalResult: signal name + before/after counts + delta.
-    // The C worker doesn't yet observe per-step deny signals — the
-    // host doesn't share a signal handler with it. The field is
-    // zeroed for now; a future chunk can wire in a per-slot signal
-    // counter if the data turns out to matter.
-    return PWRunnerSignalResult(signal: "SIGUSR1", count_before: 0, count_after: 0)
+// Internal for driver-to-JSON controls. Preserve the host's observations in the
+// authoritative subprocess object; classification does not rewrite them.
+func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
+    PWRunnerSubprocess(
+        pid: Int(out.workerPid),
+        term_signal: out.termSignal.map { Int($0) },
+        exit_code: out.exitCode.map { Int($0) },
+        partial_steps: anySlotNotCompleted(out.slots),
+        ready_byte_received: out.readyByteReceived,
+        done_observed: out.done,
+        poll_stop_reason: out.pollStopReason,
+        exit_requested: out.exitRequested,
+        termination_request: out.terminationRequest,
+        reaped: out.reaped,
+        wait_errors: out.waitErrors
+    )
 }
 
 private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
@@ -852,8 +852,7 @@ struct ClassifiedRun {
 // host's counterpart to computeDrift — the test pins each run shape to
 // its outcome so the branch ladder can be reorganized without silently
 // changing what the controller reports (and reaches outcomes no e2e
-// specimen can produce: validator_no_reply, runner_failed,
-// runner_sandbox_denied).
+// specimen can reliably produce, including validator_no_reply).
 func classify(
     workerResult: CWorkerRunResult,
     validatorResult: ValidatorClientResult?,
@@ -879,55 +878,47 @@ func classify(
                                  rc: 1, error: err.description)
         }
     case .success(let out):
-        if !out.applied {
-            // sandbox_apply failed inside the worker. apply_rc carries
-            // the cause (the worker writes it to shm before flipping
-            // done and entering the spin loop). Compile failure follows
-            // the same path. apply_errno (when non-zero) names WHY apply
-            // failed — e.g. EPERM, the unentitled witness worker not
-            // being permitted to apply the profile.
-            let errnoSuffix = out.applyErrno != 0
-                ? " (errno \(out.applyErrno): \(String(cString: strerror(out.applyErrno))))"
-                : ""
-            return ClassifiedRun(
-                outcome: NormalizedOutcome.sandboxApplyFailed,
-                rc: 1,
-                error: "sandbox_apply returned \(out.applyRC)\(errnoSuffix) inside pw-probe-runner"
-            )
+        // Precedence is specified in tests/FAILURE-PROPAGATION-CONTRACT.md.
+        // Publication, deadline, cleanup and disposition remain independent;
+        // this summary never rewrites their evidence or assigns a policy cause.
+        if (out.applied && out.applyRC != 0) || (out.done && !out.applied && out.applyRC == 0) {
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                error: "pw-probe-runner published inconsistent application/completion state")
         }
-        // sentSigkill means the HOST sent SIGKILL after its grace
-        // timer expired. The worker's termSignal=9 is then evidence
-        // of the host's kill, NOT of a sandbox denial. Always classify
-        // as runner_timeout in that case. Only consider termSignal as
-        // sandbox-denial evidence when the worker died from a signal
-        // we did NOT send.
-        if out.sentSigkill {
-            return ClassifiedRun(
-                outcome: NormalizedOutcome.runnerTimeout,
-                rc: 1,
-                error: "pw-probe-runner did not flip done within sentinel deadline; host SIGKILL grace fired"
-            )
+        if !out.applied && out.done {
+            let detail = out.applyErrno != 0 ? "; legacy errno=\(out.applyErrno)" : ""
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                error: "pw-probe-runner published a legacy preparation/application failure "
+                    + "(status=\(out.applyRC)\(detail)); failed operation and native return unavailable")
         }
-        if !out.done {
-            // done sentinel never flipped AND host didn't SIGKILL — the
-            // worker exited on its own without writing done. If it
-            // exited from a signal, attribute that to the sandbox
-            // (the worker's post-apply syscall surface is tiny; the
-            // most likely external cause is a sandbox kill). Otherwise
-            // surface as runner_timeout — the worker exited cleanly
-            // but failed to write done within the sentinel window.
-            if let sig = out.termSignal, sig != 0 {
-                return ClassifiedRun(
-                    outcome: NormalizedOutcome.runnerSandboxDenied,
-                    rc: 1,
-                    error: "pw-probe-runner exited with signal \(sig) before flipping done"
-                )
-            }
-            return ClassifiedRun(
-                outcome: NormalizedOutcome.runnerTimeout,
-                rc: 1,
-                error: "pw-probe-runner did not flip done within sentinel deadline"
-            )
+        if out.pollStopReason == "sentinel_deadline" {
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1,
+                error: "pw-probe-runner sentinel deadline expired; "
+                    + (out.terminationRequest != nil ? "host requested SIGKILL during cleanup" : "no termination requested"))
+        }
+        var problems: [String] = []
+        if !out.applied { problems.append("no published application") }
+        if !out.done { problems.append("no completed report") }
+        if out.done && anySlotNotCompleted(out.slots) { problems.append("incomplete slot publication") }
+        if out.reaped != true {
+            problems.append("process disposition unconfirmed")
+        } else if let signal = out.termSignal {
+            problems.append("reaped with signal \(signal)")
+        } else if let code = out.exitCode {
+            if code != 0 { problems.append("reaped with exit code \(code)") }
+        } else {
+            problems.append("reaped without usable exit status")
+        }
+        if out.terminationRequest != nil { problems.append("host requested termination during cleanup") }
+        // Recovered EINTR is retained evidence, not a run failure. A poll error
+        // or any other wait error remains a host fault even if later reaped.
+        if out.pollStopReason == "wait_error" || out.waitErrors == nil
+            || out.waitErrors?.contains(where: { $0.errno != EINTR }) == true {
+            problems.append("unresolved or unavailable host wait observations")
+        }
+        if !problems.isEmpty {
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed, rc: 1,
+                error: "pw-probe-runner: " + problems.joined(separator: "; "))
         }
     }
 

@@ -44,3 +44,8 @@ Run:
 ```
 ./tests/run.sh --suite smoke
 ```
+
+The caller-auth checker also requires response schema 5 from both successful XPC
+replies and real client-generated XPC errors. Every returned step must contain
+explicit signal null; rejected calls retain empty steps and absent subprocess
+metadata alongside the existing authorization and file-effect controls.

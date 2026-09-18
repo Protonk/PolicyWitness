@@ -80,7 +80,7 @@ env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
 # Envelope shape: v4 + both subprocess records + override mirrored back.
-assert r["schema_version"] == 4, "schema {0}".format(r["schema_version"])
+assert r["schema_version"] == 5, "schema {0}".format(r["schema_version"])
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["validator_subprocess"] is not None, "validator_subprocess missing"

@@ -13,7 +13,7 @@ SwiftPM is test-only here. Production builds still go through `build.sh`; the Sw
 **When to add a unit test rather than an e2e suite.** Reach for `runner_unit` when:
 
 1. The behavior is a small pure function that backs an outcome decision (e.g. the orchestrator's drift computation, `CWorker`'s sentinel-deadline math, `ValidatorClient`'s verdict-by-step-id join). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
-2. The outcome is unreachable from a real specimen because something upstream short-circuits it or the worker survives the condition (`runner_sandbox_denied` needs a fatal signal the minimal-surface worker rarely takes under `(deny default)`; `runner_failed` requires an intermediate failure no fixture can produce).
+2. A required observation is unreliable from an ordinary specimen, such as a failed host kill/reap or completed publication followed by an abnormal exit. Use narrow driver controls; constructed classifier rows establish interpretation separately.
 3. You're testing a failure mode of a small helper (validator partial-evidence on EOF, prediction-unavailable host-mirror agreement) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
 
 Don't reach for `runner_unit` when:
@@ -26,7 +26,17 @@ Don't reach for `runner_unit` when:
 1. Drop a `Foo*Tests.swift` file under `runner/Tests/PWRunnerCoreTests/`. Each file exports one function `runFooTests(_ tk: TestKit)`.
 2. Inside, group related assertions with `tk.group("name") { tk.run("case") { try expect...(...) } }`.
 3. Add a call to `runFooTests(tk)` in `runner/Tests/PWRunnerCoreTests/main.swift`. SwiftPM picks up the new file automatically.
-4. Run locally with `swift run --package-path runner PWRunnerCoreTests` or `tests/run.sh --suite runner_unit`.
+4. Run with `tests/run.sh --suite runner_unit --suite runner_c_worker_harness` against a normal signed build. The wrapper builds the required lifecycle fixture and sets `PW_LIFECYCLE_WORKER_FIXTURE`. Direct SwiftPM runs must build `tests/fixtures/worker_lifecycle/build.sh <output>` and export that executable path first. Required lifecycle and deadline/reap controls fail when their equipment is absent.
+
+**Host lifecycle controls.** `CWorkerLifecycleTests.swift` drives the production
+host driver with a separately built ABI fixture, then encodes the actual
+`buildWorkerSubprocess` result. The fixture never applies a sandbox and cannot
+establish a policy cause. Internal `CWorkerProcessCalls` closures control only
+`kill`/`waitpid` results where real failure is unreliable; no request override
+selects them. Tests own independent cleanup of any fixture child left unreaped
+by a fault control. Real-worker publication remains separately covered by
+`CWorkerTests`, `CWorkerValidatorTests`, and `runner_c_worker_harness`. Retain the
+Swift log and inspect it for internal `SKIP` before crediting those live cases.
 
 **Stubbing C function pointers.** `SandboxLib`'s function-pointer slots are `@convention(c)`, which forbids closure capture. To observe side effects (call counts, freed-pointer lists) from a stub, route through file-scope `private var`s and reset them at the top of any test that uses them. `SandboxApplyTests.swift` is the worked example.
 
@@ -48,6 +58,20 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
    - `data.runner_result.test_overrides.<key>` equals the value you sent. Without this, a stale build that ignores the override would pass.
    - Structural fields downstream of the failure are appropriately empty (`runner_subprocess == null` when the host short-circuits; `steps == []`; etc.).
 
+**Narrow evidence-focused exception.**
+`witness_contract/pre_apply_failure_reports_no_policy_verdict` checks that the
+summary excludes `ok`, `sandbox_apply_failed`, `bad_policy`, and
+`runner_sandbox_denied`, rather than pinning one replacement outcome. This case
+protects absence of unsupported library/policy claims across outcome renames;
+classifier tests separately pin the mapping in
+[`tests/FAILURE-PROPAGATION-CONTRACT.md`](../tests/FAILURE-PROPAGATION-CONTRACT.md).
+Keep its real failure-artifact assertion, both mirrored overrides, subprocess
+and missing-step evidence checks, and the un-overridden positive control. Its
+assertion groups must retain attribution failures independently of signal/schema
+failures and still fail the case normally. Optional subprocess objects may be
+omitted or null; explicit per-step signal/errno/drift nulls require key presence.
+All other override-driven cases retain the exact-outcome recipe above.
+
 **Supported override keys** (defined in `runner/Sources/PWRunnerCore/PWRunnerAPI.swift::PWRunnerTestOverrides`):
 
 | Key | Type | Boundary it re-routes | Outcome it lets you reach |
@@ -57,8 +81,8 @@ Several `normalized_outcome` values are only reachable when a specific boundary 
 | `worker_timeout_ms` | integer (ms, floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
 | `validator_executable_path` | string | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` (C-worker code path) | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | integer (ms, 0..60000) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |
-| `worker_post_apply_kill_signal` | integer (signal, 0..31) | Passed as `--post-apply-kill-signal` to `pw-probe-runner`; the C worker `kill(getpid(), N)`s itself after `applied` but before `done`, so the host sees a foreign termination signal with `done` unset — the same shape a real kernel sandbox kill produces | `runner_sandbox_denied` |
-| `worker_pre_ready_hang_ms` | integer (ms, 0..60000) | Passed as `--pre-ready-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms *before* the pre-apply ready byte, modelling a slow `sandbox_compile_string` that overruns the host's `readyByteTimeout` so the ready write lands on a host-closed pipe. Pins that the worker survives that (SIGPIPE is ignored) and still reaches `sandbox_apply` | `ok` (resilience, not a failure outcome — see `runner_ready_byte_resilience`) |
+| `worker_post_apply_kill_signal` | integer (signal, 0..31) | Passed as `--post-apply-kill-signal` to `pw-probe-runner`; the C worker `kill(getpid(), N)`s itself after `applied` but before `done`, so the host observes a signal with `done` unset; no policy cause follows | `runner_failed` |
+| `worker_pre_ready_hang_ms` | integer (ms, 0..60000) | Passed as `--pre-ready-hang-ms` to `pw-probe-runner`; the C worker sleeps after compilation/optional capture and before the ready byte. A sufficient sentinel budget lets it survive the closed ready pipe; a shorter budget expires before publication | `ok` with sufficient budget; `runner_timeout` with the pre-apply witness budget |
 
 A hostile value drives a real failure: a `/nonexistent/...` path makes `posix_spawn` return a real errno; a tight `worker_timeout_ms` paired with a long `worker_post_apply_hang_ms` makes the host's deadline fire before the C worker flips its `done` sentinel. The classifier in `CWorkerOrchestrator` is the same code that runs in production — only its *input* is steered.
 

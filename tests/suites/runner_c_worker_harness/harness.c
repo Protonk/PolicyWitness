@@ -203,10 +203,10 @@ static const char SCEN_PARAMS_ROUND_TRIP_POLICY[] =
  * sandbox_compile_string fail. Exercises the worker's compile-failure
  * branch — apply_rc=-1, done flips, applied stays 0, and the worker
  * still clean-exits on the exit byte rather than dying. This is the same
- * worker branch a real `sandbox_apply_failed` run takes (the controller no
- * longer runs sbpl-check on the happy path, so malformed SBPL reaches the worker,
- * where compile failure and apply failure are indistinguishable); the harness
- * exercises it in isolation without the host/XPC path. */
+ * worker publication that the host interprets as a legacy runner_failed
+ * status. The status alone cannot distinguish compilation, parameter setup,
+ * and application failures; this harness tests the real compilation branch
+ * in isolation without host/XPC classification. */
 static const char SCEN_COMPILE_FAILURE_POLICY[] =
     "(version 1)\n"
     "(allow default";
