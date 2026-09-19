@@ -292,6 +292,30 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn unfamiliar_diagnostics_survive_observer_capture() {
+        let records = crate::utils::transport_diagnostics();
+        let original = serde_json::json!({"data": {"diagnostics": records,
+            "observed_deny": false, "deny_events": [], "log_error": "independent collection failure"}});
+        for mode in ["valid", "oversized"] {
+            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let capture = parse_observer_output(&output, "10s");
+            let wire = serde_json::to_value(&capture).unwrap();
+            if mode == "valid" {
+                assert_eq!(wire["observer"], original);
+                assert_eq!(wire["observed_deny"], false);
+                assert_eq!(capture.capture_status, "error");
+                assert_eq!(wire["deny_events"], serde_json::json!([]));
+            } else {
+                assert!(serde_json::from_slice::<Value>(&output.stdout).is_ok());
+                assert!(capture.observer.is_none());
+                assert!(capture.observed_deny.is_none());
+                assert_eq!(capture.capture_status, "capture_error");
+                assert!(capture.output.stdout_parse_error.is_none());
+            }
+        }
+    }
+
+    #[test]
     fn observer_receiver_uses_original_bytes_and_reports_local_loss() {
         use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
         for (mode, expected) in [

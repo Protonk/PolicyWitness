@@ -40,3 +40,8 @@ bounds failures in the test equipment itself.
 The validator companion echoes the submitted query. Its closed-input control
 closes stdin before emitting over 32 KiB of valid JSON whitespace plus a verdict
 and invalid UTF-8 tail, requiring multiple reads after input failure.
+
+`transport_*` and `close_transport_beta` modes use the separate
+[`diagnostic transport inputs`](../diagnostic_transport/README.md). They publish
+controlled unfamiliar records using the supported protocol, retain independent
+exit/EPIPE evidence, and provide absent/unpublished/invalid/version/text controls.

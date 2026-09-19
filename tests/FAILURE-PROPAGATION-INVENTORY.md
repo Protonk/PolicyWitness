@@ -99,7 +99,7 @@ The earlier [step-2 index](out/failure-propagation-2/README.md) remains retained
   kill/wait observations. Record acceptance and association are separate reusable
   functions; assembly/classification use actual submitted queries, not record count.
   Valid per-step diagnostics keep existing semantics; unfamiliar diagnostics are
-  preserved without step 3's broader mutation experiment.
+  preserved; the broader mutation experiment below extends these controls.
 - Controller capture/UTF-8: Rust runner-client, sbpl-check and observer receiver tests use real subprocess output,
   independently verify complete oversized producer JSON, and check exact byte
   metadata, local loss, malformed within-cap JSON, invalid UTF-8 and multibyte cut.
@@ -163,4 +163,43 @@ unchanged. Both installed BYOXPC BBX cases pass; all four standard/BYOXPC BBX
 workspaces are removed with before/after artifacts retained. The deliberate
 missing-equipment run reaches 205/256 with 51 ordinary required-equipment
 failures, zero internal skips, and exit 1 rather than a crash. It is negative
-control evidence, not an acceptance failure. Step 3 remains unstarted.
+control evidence, not an acceptance failure. Step-3 acceptance below extends this verified baseline.
+
+## Unfamiliar-code transport experiment
+
+The step-3 controls extend the earlier single-code witness without adding any
+production registrations or mappings. The supported worker ABI, response and
+request versions remain 6/6/1. Production behavior is unchanged.
+
+| Boundary | Control and claim | Limits |
+| --- | --- | --- |
+| Worker publication → Swift → runner JSON → XPC client → controller | `witness_contract/unfamiliar_diagnostic_transport`: independent alpha/beta payloads, including unknown operation/kind and known operation with unknown code; exact code/result/errno/index/detail/text and authoritative worker PID | Controlled producer, no native-call attribution. Incompatible control changes the version word in the current layout. |
+| Structural publication and text | Same CLI control plus `DiagnosticTransportTests`: absent/unpublished/invalid payloads, incompatible version, invalid extent and real 4095-byte text truncation | Numeric preservation does not promise unavailable text or future ABI support. |
+| Host failure beside worker record | Actual admitted-size EPIPE remains under policy_transfer_error beside beta; exit 23, incomplete attempts and non-ok summary remain | Fixture worker reports are controlled; EPIPE is an actual host observation. |
+| Validator → Swift → runner/client/controller | Two unfamiliar diagnostic records and complete raw JSON survive a UTF-8 receiver fault beside a fixture-supplied allow record and an independently checked real-worker file change. Clean EOF preserves existing diagnostic semantics | The transcript producer never calls sandbox_check; even the allow/native-result fields are supplied test data. Record co-preservation establishes no causal relationship. |
+| All controller JSON receivers | Rust real subprocess controls compare complete runner/helper/observer envelopes, including supplied failure reports, and contrast with oversized valid JSON | Helper/observer capture functions are exercised directly; supplied failure reports do not establish real XPC-loss, compiler or kernel-log failures. |
+| Mutation sensitivity | Known-code-only worker decoding, known-outcome-only validator forwarding and shared receiver detail removal must fail preservation controls | Temporary mutations are excluded from restored source and final signed app; they are negative controls, not acceptance. |
+
+Real worker success, compile failure, interrupted transfer, lifecycle, timeout,
+partial-validator, receiver-rejection and admission controls remain required
+regressions. The earlier liveness, stderr, buffering and log-pathname limitations
+remain unchanged. Retained experiment evidence is indexed in
+[step 3](out/failure-propagation-3/README.md).
+
+Step-3 acceptance: all 49 selected catalog cases pass, with 258/258 Swift tests,
+109/109 Rust unit tests and 10 CLI integration tests; no internal Swift SKIP/FAIL.
+All eleven CLI transport controls pass. Known-code worker filtering causes five
+CLI control failures and a normal 253/258 Swift summary; validator filtering
+causes both validator CLI controls and the direct control to fail (257/258).
+Shared-receiver detail removal fails all three new Rust receiver controls.
+The final signed app is valid/unchanged and all mutation sources are restored
+byte-for-byte. See the [acceptance audit](out/failure-propagation-3/acceptance.json)
+for exact commands, paths, hashes, negative controls and limitations. No production
+recognition-dependent boundary was found in the exercised routes.
+
+The [step-3 closeout](out/failure-propagation-3/closeout/README.md) verifies the
+retained results and restored sources against the current signed app, with only
+documentation differences from the tested snapshot. Its corrected coverage
+claims separate fixture-supplied fields from observed host/receiver/process facts
+and real-worker effects. All seven step-3 requirements are complete; interpretation
+of joined observations and consumer recovery remain in steps 4–5.

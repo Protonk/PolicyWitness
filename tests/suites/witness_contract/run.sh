@@ -28,6 +28,7 @@ scripts=(
   "${SUITE_DIR}/instrumentation_field_rejected.sh"
   "${SUITE_DIR}/prediction_target_is_independent_of_attempt_target.sh"
   "${SUITE_DIR}/pre_apply_failure_reports_no_policy_verdict.sh"
+  "${SUITE_DIR}/unfamiliar_diagnostic_transport.sh"
   "${SUITE_DIR}/worker_progress_and_failure.sh"
   "${SUITE_DIR}/worker_sparse_failure.sh"
   "${SUITE_DIR}/shm_sentinel_under_deny_default.sh"

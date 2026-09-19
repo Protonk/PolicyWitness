@@ -100,6 +100,26 @@ mod tests {
     }
 
     #[test]
+    fn unfamiliar_diagnostics_survive_runner_capture() {
+        let records = crate::utils::transport_diagnostics();
+        let original = serde_json::json!({"data": {"diagnostics": records},
+            "result": {"ok": false, "normalized_outcome": "runner_failed", "rc": 1}});
+        for mode in ["valid", "oversized"] {
+            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
+            if mode == "valid" {
+                assert_eq!(received, Some(original.clone()));
+                assert!(capture.output.stdout_capture_error.is_none());
+            } else {
+                assert!(serde_json::from_slice::<Value>(&output.stdout).is_ok());
+                assert!(received.is_none());
+                assert!(capture.output.stdout_capture_error.is_some());
+                assert!(capture.output.stdout_parse_error.is_none());
+            }
+        }
+    }
+
+    #[test]
     fn valid_oversized_producer_is_receiver_loss_not_malformed_json() {
         let (capture, parsed, full) =
             producer("import sys; sys.stdout.write('{\"value\":\"' + 'x'*1048576 + '\"}')");

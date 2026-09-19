@@ -95,3 +95,19 @@ subprocess producers for valid oversized JSON, malformed within-cap output,
 invalid UTF-8, and multibyte prefix boundaries. The C harness separately checks
 the defensive source guard and published failure record; normal CLI oversized
 source is rejected by the host before spawn.
+
+## Unfamiliar diagnostic preservation
+
+`witness_contract/unfamiliar_diagnostic_transport` exercises an ABI-compatible
+test worker with two open codes, distinct operations/native results/errno/detail
+and UTF-8 diagnostic text. It checks absent/unpublished/malformed/incompatible
+records, text truncation independent of code recognition, and a real host EPIPE
+beside the unfamiliar worker record. The same case checks two validator
+diagnostics beside an observed UTF-8 receiver fault and a fixture-supplied allow
+record. That record tests preservation of native-result fields; the transcript
+producer does not call `sandbox_check`. The real worker's file change is checked
+independently.
+`DiagnosticTransportTests` supplies direct ABI/validator decoding and Codable
+controls. Rust `unfamiliar_diagnostics_survive_*_capture` tests cover runner,
+helper and observer JSON receivers. These are transport controls; real producer
+attribution remains covered by the step 1–2 witnesses.

@@ -73,3 +73,8 @@ unfamiliar diagnostics and duplicate/unexpected IDs. The worker lifecycle build
 also produces a `.validator` companion for actual host driver lifecycle and pipe
 controls. [Fixture contract](worker_lifecycle/README.md),
 [transcript contract](validator/README.md).
+
+`diagnostic_transport/` supplies independent JSON oracles and C fixture literals
+for open-code preservation through ABI decoding, runner/client/controller
+forwarding, validator diagnostics and helper receivers. The fixture establishes
+transport only; see its README for structural and competing-failure controls.

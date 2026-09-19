@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "../diagnostic_transport/worker.h"
 
 int main(void) {
     struct stat st;
@@ -33,6 +34,9 @@ int main(void) {
         used += (size_t)n;
         if (strchr(mode, '\n') && !strncmp(mode, "close_", 6)) {
             pw_shm_evidence_t *e = pw_evidence(base);
+            if (!strncmp(mode, "close_transport_beta\n", 21)) {
+                transport_record(e, 1, "transport_beta");
+            }
             if (!strncmp(mode, "close_report\n", 13) || !strncmp(mode, "close_hang_report\n", 18)) {
                 pw_progress(e, 2, 2, UINT32_MAX);
                 pw_failure(e, 239, 987654, 1, -19, 0, 0, UINT32_MAX, 123);
@@ -51,6 +55,17 @@ int main(void) {
     }
     if (!strcmp(mode, "early_exit")) return 17;
     pw_shm_evidence_t *e = pw_evidence(base);
+    if (!strncmp(mode, "transport_", 10)) {
+        transport_record(e, strstr(mode, "beta") != NULL, mode);
+        if (!strcmp(mode, "transport_incompatible")) hdr->abi_version = 7;
+        hdr->apply_rc = -1;
+        atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        close(4);
+        /* No apply claim, no fabricated attempt. Bound fixture life separately. */
+        alarm(10);
+        while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
+        return 23;
+    }
     if (!strncmp(mode, "diagnostic_", 11)) {
         static char long_text[PW_SHM_DIAGNOSTIC_BYTES + 200];
         const char *text = "controlled compiler diagnostic";

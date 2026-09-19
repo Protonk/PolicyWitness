@@ -72,3 +72,10 @@ Required worker/validator equipment failures throw `TestFailure`; they do not
 return as passing cases. The wrapper also rejects any internal `SKIP` or `FAIL`
 line before crediting the summary. Missing fixture environment is a normal
 reported failure, not a force-unwrap crash.
+
+`DiagnosticTransportTests` compares direct ABI decoding and Codable forwarding
+against independent JSON inputs for two unfamiliar codes, then checks structural
+publication gates. Its validator control preserves both unfamiliar diagnostics
+and a known UTF-8 decoder fault through the actual subprocess encoder. The CLI
+transport witness separately exercises C publication and client/controller
+forwarding; these unit inputs do not establish native failure attribution.

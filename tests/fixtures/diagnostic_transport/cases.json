@@ -1,0 +1,62 @@
+{
+  "worker": [
+    {
+      "id": "alpha",
+      "failure": {
+        "operation": 239,
+        "code": 4000000001,
+        "native_kind": 77,
+        "native_result": -123,
+        "errno": 0,
+        "index": 17,
+        "detail": 7654321
+      },
+      "progress": {
+        "operation": 239,
+        "phase": 2,
+        "index": 17
+      },
+      "text": "alpha opaque detail: snowman ☃ / 4000000001"
+    },
+    {
+      "id": "beta",
+      "failure": {
+        "operation": 8,
+        "code": 4000000179,
+        "native_kind": 1,
+        "native_result": -37,
+        "errno": 13,
+        "detail": 1234567890
+      },
+      "progress": {
+        "operation": 8,
+        "phase": 2
+      },
+      "text": "beta native detail: café / 4000000179"
+    }
+  ],
+  "diagnostics": [
+    {
+      "producer": "transport-fixture-alpha",
+      "domain": "future.alpha.domain",
+      "code": 4000000001,
+      "operation": "future-alpha-operation",
+      "detail": {
+        "message": "snowman ☃",
+        "native_result": -123,
+        "errno": 0
+      }
+    },
+    {
+      "producer": "transport-fixture-beta",
+      "domain": "future.beta.domain",
+      "code": 4000000179,
+      "operation": "future-beta-operation",
+      "detail": {
+        "message": "café",
+        "native_result": -37,
+        "errno": 13
+      }
+    }
+  ]
+}

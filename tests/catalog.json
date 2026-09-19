@@ -954,6 +954,18 @@
             "app",
             "clang"
           ]
+        },
+        {
+          "id": "unfamiliar_diagnostic_transport",
+          "description": "Two unfamiliar payloads survive worker and validator forwarding with structural and independent failure controls",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/unfamiliar_diagnostic_transport.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
         }
       ],
       "include": [

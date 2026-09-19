@@ -193,3 +193,27 @@ and a real self-signal after completed probes with independent file effects.
 Its fixtures are built outside the signed app; selected worker paths remain
 mirrored in each reply. `worker_progress_and_failure` also compares diagnostic
 availability without changing the justified operation/status classification.
+
+## Unfamiliar diagnostic transport
+
+`unfamiliar_diagnostic_transport` builds the ABI fixture outside the selected
+app and runs eleven controls through the standard CLI. Two independently
+specified codes and distinct payloads must survive, including a known operation
+with an unfamiliar code. The mirrored override, worker/validator PIDs, native
+fields, diagnostics, failed/incomplete disposition and independent file effects
+are checked separately. Absent/unpublished/invalid/incompatible records are not
+promoted to accepted evidence. Numeric records survive truncated or invalid
+text; an actual EPIPE and a validator UTF-8 fault survive alongside unfamiliar
+records. All controls run before the checker reports aggregate failures.
+
+The validator transcript supplies every record, including the allow/native-result
+fields; it does not call `sandbox_check`. The worker file change, receiver UTF-8
+fault and child disposition are independently observed. The controls establish
+preservation of these records, not attribution or comparability between them.
+
+Fixture inputs and limitations are documented in
+[`diagnostic_transport`](../../fixtures/diagnostic_transport/README.md).
+Direct Swift and Rust receiver controls complement this CLI route. Temporary
+known-code filtering or detail-dropping mutations must fail these controls;
+mutation patches/results live in the step-3 evidence directory and are excluded
+from the restored production implementation.

@@ -478,3 +478,40 @@ memory bound.
 The directional `drift=false` case for a deny prediction plus ambiguous
 EPERM/EACCES is unchanged. False does not establish that the sandbox caused the
 attempt failure; the separate-query DAC control demonstrates this distinction.
+
+
+## Unfamiliar diagnostic preservation controls
+
+Open values do not require a production code registration. Two distinct worker
+payloads are checked against independent fixture inputs through C publication,
+Swift decoding and encoding, XPC client forwarding and Rust reception. The worker
+producer/domain is the containing worker PID and ABI-6 channel; JSON diagnostic
+records additionally exercise explicit producer/domain/operation/code/detail.
+Known operation/native-result fields survive an unfamiliar diagnostic code. The
+fixture supplies these values, including errno; it does not establish that the
+named native calls ran. Unknown operation names do not imply a compile/apply or
+sandbox cause.
+
+Absent/unpublished payloads remain unavailable; structural failures and an
+incompatible version word remain rejected. Truncated or invalid text does not
+erase a valid numeric failure. A host EPIPE remains independently visible beside
+a worker record. Two valid validator diagnostics survive alongside a known
+UTF-8 receiver fault, a fixture-supplied allow record and an independently checked
+file change from the real worker. The transcript producer does not call
+`sandbox_check`; its allow record tests forwarding of declared native-result
+fields, not native verdict attribution. A shared envelope does not establish a
+causal relationship between the retained records.
+Legitimate per-step diagnostics with clean transport retain the existing run
+semantics; an unfamiliar name alone does not create a run failure.
+
+Rust subprocess controls compare complete received JSON for all three capture
+paths, including unfamiliar diagnostics beside fixture-supplied failed reports. Local
+truncation precludes parsing and cannot be mistaken for diagnostic rejection.
+These helper controls test receiver transport; they do not manufacture real
+XPC loss, helper compilation failure or kernel log output. The normal worker
+success/failure controls continue to establish native attribution separately.
+
+See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture boundaries and
+`witness_contract/unfamiliar_diagnostic_transport` for CLI assertions. Temporary
+code-filtering and detail-dropping mutations are test experiments only; source
+and the signed app must be restored before acceptance.

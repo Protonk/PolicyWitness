@@ -134,6 +134,34 @@ mod tests {
     use super::*;
     use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
     #[test]
+    fn unfamiliar_diagnostics_survive_helper_capture() {
+        let records = crate::utils::transport_diagnostics();
+        let original = serde_json::json!({"data": {"diagnostics": records,
+            "compiled": false, "compile_error": "independent helper diagnostic"},
+            "result": {"normalized_outcome": "compile_error"}});
+        for mode in ["valid", "oversized"] {
+            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let capture = parse_policy_check_output(&output);
+            let wire = serde_json::to_value(&capture).unwrap();
+            if mode == "valid" {
+                assert_eq!(wire["envelope"], original);
+                assert_eq!(wire["compiled"], false);
+                assert_eq!(capture.status, "compile_error");
+                assert_eq!(
+                    capture.compile_error.as_deref(),
+                    Some("independent helper diagnostic")
+                );
+            } else {
+                assert!(serde_json::from_slice::<Value>(&output.stdout).is_ok());
+                assert!(capture.envelope.is_none());
+                assert!(capture.compiled.is_none());
+                assert_eq!(capture.status, "capture_error");
+                assert!(capture.output.stdout_parse_error.is_none());
+            }
+        }
+    }
+
+    #[test]
     fn helper_receiver_preserves_loss_and_never_invents_compilation() {
         for (mode, expected) in [
             ("valid", "compiled"),

@@ -1,6 +1,6 @@
 # Failure evidence through the worker, runner, and controller
 
-## Status: steps 0–2 complete; step 3 acceptance pending; steps 4–5 planned
+## Status: steps 0–3 complete; steps 4–5 planned
 
 Batches 0A–0C, 1A–1C, step 2 and their audit corrections are complete. Worker
 ABI 6 retains atomic progress, precise failures and bounded diagnostics. Host
@@ -10,9 +10,13 @@ are separate contracts; capacities and production budgets remain unchanged.
 The unfamiliar-code experiment preserves two distinct worker and JSON diagnostic
 payloads, rejects structural invalidity, and detects temporary code filtering or
 detail loss. It required no production behavior change or code registration.
-Those step-3 controls remain credited; the limited acceptance review and handoff
-specified below are pending. Step 4 attempts to reconcile derived claims with
-their evidence, including the plan's own conflicting drift acceptance criteria.
+Step 3's acceptance review and handoff are complete. Fixture-supplied fields,
+actual host/receiver/process observations and real-worker effects are now
+distinguished explicitly in its coverage claims. The retained executable sources
+and signed app match; the [closeout review](out/failure-propagation-3/closeout/README.md)
+records the evidence and documentation-only corrections. Step 4 attempts to
+reconcile derived claims with their evidence, including the plan's own conflicting
+drift acceptance criteria.
 It does not promise to resolve every causal or comparison question. Finish the
 step-4 handoff, commit and pause before step 5's plan acceptance, permanent
 consumer-recovery checks and final closeout commit.
@@ -884,11 +888,11 @@ establish correct attribution at the producer. If the experiment reveals another
 recognition-dependent boundary, fix that boundary and rerun the same controls
 instead of adding the unfamiliar code to an allowlist.
 
-The completed controls above remain credited. The following acceptance work is
-still undone within step 3; this does not reopen implementation of the transport
-experiment or move the interpretation work from step 4 into it.
+The transport controls and the following acceptance review are complete. This
+acceptance is limited to diagnostic preservation; interpretation work remains
+in step 4.
 
-- [ ] Review the step-3 acceptance claims against the retained inputs, outputs
+- [x] Review the step-3 acceptance claims against the retained inputs, outputs
   and mutation failures. Distinguish preservation of supplied diagnostic fields,
   independently observed host/process facts, and producer attribution established
   by real-failure controls. An unfamiliar fixture code does not establish its
@@ -896,14 +900,26 @@ experiment or move the interpretation work from step 4 into it.
   them. Qualify any broader claims in the contract, inventory and evidence index.
   Repair a demonstrated transport/structural-validation gap within this step;
   leave comparison, drift and evidence-join semantics to step 4.
-- [ ] Complete the step-3 handoff with the reviewed scope, remaining coverage
-  limits and an exact account of the uncommitted changes and tested build. Retain
+- [x] Complete the step-3 handoff with the reviewed scope, remaining coverage
+  limits and an exact account of the source changes and tested build. Retain
   the existing successful controls and failed mutations; rerun only checks
   affected by a correction or an unresolved verification concern. Distinguish
   later documentation edits from the source snapshot used for the signed build.
   Report step 3 complete only after these two acceptance items are discharged;
   completion establishes diagnostic transport, not the correctness of every
   derived policy claim.
+
+Acceptance: the transcript producer supplies its allow/native-result record and
+never calls `sandbox_check`; worker native-result/errno payloads and Rust helper
+failure reports are also supplied test inputs. Documentation now distinguishes
+them from observed EPIPE, UTF-8 rejection, reaped child status and the real-worker
+file change. Co-preservation establishes no causal relationship. No transport or
+structural-validation correction was needed. The closeout checks the retained
+49 passing cases, 258/258 Swift tests, 109 Rust unit tests, 10 CLI integration
+tests and all three failed/restored mutations against unchanged executable
+sources and all eight signed executables. Fresh `source_drift` and unsandboxed
+app-integrity checks pass. [Review, provenance and commit receipt](out/failure-propagation-3/closeout/README.md)
+complete the handoff; all seven step-3 requirements are discharged.
 
 ### 4. Attempt to reconcile derived claims with their supporting observations
 
@@ -1069,11 +1085,11 @@ that item pending and explain the required follow-up.
   unknown answer. Completion requires this disposition of every reviewed item,
   not a claim that every pair of streams can be unified or every cause resolved.
 
-Commit the reviewed implementation, tests and supporting documentation from
-steps 3–4 with their verification and remaining limitations, then pause. Keep
-that work uncommitted until this checkpoint. The plan/audit planning commit is
-separate. This checkpoint does not dissolve the plan or settle all interpretation
-questions; resume step 5 as a separate task and make its final commit separately.
+Commit the reviewed step-4 implementation, tests and supporting documentation
+with their verification and remaining limitations, then pause. Step 3 has its
+own closeout commit; the plan/audit planning commit is also separate. This
+checkpoint does not dissolve the plan or settle all interpretation questions;
+resume step 5 as a separate task and make its final commit separately.
 
 ### 5. Accept the plan and transfer consumer obligations into permanent tests
 
@@ -1221,13 +1237,13 @@ A check that was not run remains unverified, with its reason recorded.
 
 | Item | Current state |
 | --- | --- |
-| Completed implementation batch | 0A–0C, 1A–1C, step 2 and audit corrections. Step-3 transport implementation and its five checked requirements remain credited; its two acceptance/handoff items are pending. Steps 4–5 have not begun. |
-| Next batch | Finish the bounded step-3 acceptance review and handoff, then carry out step 4. Implementation, tests and supporting docs remain uncommitted through step 3. The separate planning commit contains the plan and peer-review audit; step 4 ends with the implementation commit and pause. Step 5 resumes acceptance and permanent enforcement, then makes the final commit. |
+| Completed implementation batch | 0A–0C, 1A–1C, step 2 and audit corrections, and all seven step-3 transport/acceptance requirements. Step 3 needs no remaining implementation or verification. Steps 4–5 have not begun. |
+| Next batch | Step 4: bounded review and correction of derived claims, with its compatibility/dependency gate. Step 3 closes with its own commit; step 4 ends with another commit and pause. Step 5 resumes plan acceptance and permanent consumer-recovery enforcement, then makes the final commit. |
 | ABI revision state | Worker ABI 6; response schema 6 (nullable query PID); request schema 1. No revision under construction and no capacity/budget increase. |
 | Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h`, `PWRunnerAPI.swift`, and `ValidatorClient.swift`. Admission belongs to the host; worker publications/transfer observations to `runner_subprocess`; validator records/receiver/process observations to `validator_subprocess`; controller byte counts/local loss to runner-client, policy-check and log-observer capture objects. |
 | Inventory entries closed / remaining limitations | Existing transport rows retain their acceptance or stated limitation. Their closure does not establish the derived comparisons reviewed in step 4: drift meaning/basis, query-attempt comparability, temporal assumptions, and later host enrichment provenance. Early/dependency stderr remains uncollected; an open undrained policy pipe has no transfer deadline. Successful kill still uses blocking wait; failed cleanup may leave a child unreaped. No streaming allocation bound. Native setup exhaustion, destructive XPC/reply faults, a forced client timer and worker exec stderr truncation remain stated coverage gaps. Log-observer upstream lossy conversion leaves raw pathname fidelity unresolved. Existing TCC entries are unchanged. |
-| Verified source and signed app | Retained step-3 evidence: base `6885cb4` plus the snapshotted uncommitted step-3 tests/docs, with no production behavior changes or diagnostic registrations. Normal `YOLO=1 ./build.sh` after restoring all mutations. [Build/source/executable hashes](out/failure-propagation-3/accepted-build.json), [build log](out/failure-propagation-3/build.final.log), [source snapshot](out/failure-propagation-3/final-source.json). Later plan/audit text is outside that snapshot; this plan revision runs no new build or acceptance checks. Fixtures remain outside the inspected app. |
-| Checks, results, and evidence paths | [Step-3 index](out/failure-propagation-3/README.md): all 49 selected catalog cases pass with no skips; Swift 258/258, Rust 109/109 plus 10 CLI integration tests. Eleven new CLI controls pass. Worker/validator mutations fail both direct and signed CLI controls; shared-receiver mutation fails all three receiver controls. Exact restored source hashes and final app integrity are checked. Initial selector/prose/assertion failures and all negative evidence are retained. Prior [step 1](out/failure-propagation-1c/README.md), [step 2](out/failure-propagation-2/README.md), and [audit corrections](out/failure-propagation-corrections/README.md) remain retained. |
+| Verified source and signed app | Retained step-3 build: base `6885cb4` plus the snapshotted step-3 tests/docs, with no production behavior changes or diagnostic registrations. Normal `YOLO=1 ./build.sh` after restoring all mutations. [Build/source/executable hashes](out/failure-propagation-3/accepted-build.json), [build log](out/failure-propagation-3/build.final.log), [source snapshot](out/failure-propagation-3/final-source.json). The [closeout review](out/failure-propagation-3/closeout/review.json) verifies all 51 recorded build-source hashes, all eight signed executables and every executable test source still match; later documentation differences are listed separately. No rebuild or behavioral rerun was needed. Fixtures remain outside the inspected app. |
+| Checks, results, and evidence paths | [Step-3 index](out/failure-propagation-3/README.md): 49 retained passing catalog cases, Swift 258/258, Rust 109/109 and 10 CLI integration tests; no skips. Eleven CLI controls pass. Worker/validator mutations fail direct and signed CLI controls; shared-receiver mutation fails all three receiver controls. Closeout rereads the raw results, inputs and mutation logs, reruns `source_drift`, and verifies the current app outside the automation sandbox; [closeout handoff](out/failure-propagation-3/closeout/README.md) records exact scope, corrections and commit. The sandboxed signature-check failure and successful unsandboxed repeat are retained separately. Prior [step 1](out/failure-propagation-1c/README.md), [step 2](out/failure-propagation-2/README.md), and [audit corrections](out/failure-propagation-corrections/README.md) remain retained. |
 
 ## Decisions to resolve within implementation batches
 

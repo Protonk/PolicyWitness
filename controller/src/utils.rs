@@ -122,3 +122,12 @@ sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*349526)
     assert!(output.status.success());
     output
 }
+
+#[cfg(test)]
+pub fn transport_diagnostics() -> serde_json::Value {
+    let inputs: serde_json::Value = serde_json::from_str(include_str!(
+        "../../tests/fixtures/diagnostic_transport/cases.json"
+    ))
+    .unwrap();
+    inputs["diagnostics"].clone()
+}
