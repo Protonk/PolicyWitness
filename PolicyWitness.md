@@ -394,8 +394,12 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   useful outcome comparison is available. Several limitations can coexist.
 - `steps[].attempt.requested_kind` / `requested_action` — submitted intent,
   alongside the existing `requested_path` target; these do not prove execution.
-  Broad operation queries, compound create attempts and unscoped filters retain
-  unresolved comparison scope. Native failure and missing-result evidence survive.
+  Compound create attempts, unscoped filters and broad queries without a supported
+  mapping retain unresolved scope. For exec/spawn, the supported `process-exec*`
+  query compares admission of the submitted executable target with observed spawn.
+  `exec_query_not_full_spawn_prediction` records that fork, interpreter and other
+  spawn prerequisites remain separate: allow does not promise a successful spawn.
+  Native failure and missing-result evidence survive.
 
 The [comparison contract](tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning)
 lists the supported scope mappings, observations and limits. Response 7 changes

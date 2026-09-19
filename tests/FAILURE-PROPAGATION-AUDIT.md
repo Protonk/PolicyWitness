@@ -1,244 +1,256 @@
-1. Is step 3 of `tests/FAILURE-PROPAGATION-PLAN.md` actually complete, with its completion claims supported by the implementation and retained evidence? Review the seven requirements against the source, tests, failure contract, routing inventory and `tests/out/failure-propagation-3/closeout/`, rather than treating checked boxes or closeout prose as proof. Ground your conclusion in specific source and artifacts, including whether the tested implementation matches the committed work, whether the controls and mutations establish the claimed preservation, and whether fixture-supplied fields remain clearly distinguished from independently observed facts. Identify any unfinished obligation that belongs within step 3, keeping the interpretation work explicitly assigned to steps 4–5 separate.
+1. Does step 4's chosen meaning of `drift` and `comparison` fulfill the plan's intended guarantees, or has it made acceptance easier by narrowing away an important promise?
 
-2. What, if anything, should change in the planning of steps 4–5 before execution to prevent an agent from satisfying their written acceptance criteria while failing the plan’s intended outcome? Assess the route from evidence-join review and compatibility management through design acceptance and permanent consumer-recovery tests. Examine whether the plan adequately separates settling which distinctions are justified from enforcing that consumers can recover those distinctions, while preserving legitimate uncertainty. Develop one concrete planning weakness you can substantiate, showing how it could survive the existing gates and proposing a bounded correction. Tie the critique to the actual plan and repository dependencies; do not assume that more fields, tests or mandatory certainty would resolve it.
+   Before studying the classifier or the handoff's conclusions, reconstruct the intended guarantees from `tests/FAILURE-PROPAGATION-PLAN.md`, its observer principles and the original consumer questions C1–C6. Give that reconstruction in 150–200 words, then assess the implementation against it. The central design choice is to compare recorded outcomes within matching submitted scope while leaving synchronized state, runtime identity and causal attribution unestablished. Decide whether that is a useful and justified conclusion from the evidence PW actually has. Examine whether a concrete combination of query, attempt and enrichment records could support a stronger public claim than its observations justify, conceal a useful supported distinction, or satisfy the revised contract while missing the original purpose. Ground any criticism in a specific scenario and source or retained artifacts, and materially connect it to a guarantee identified in your reconstruction. Distinguish a demonstrated defect from an architectural limitation or an untested hypothesis. An explicit limitation is not automatically an adequate disposition, but neither additional fields nor mandatory certainty are automatically a remedy. Explain what evidence supports your conclusion and what could falsify it.
+
+2. Is step 4's compatibility migration complete, and does the retained verification actually establish acceptance of the committed implementation across its affected consumers?
+
+   Independently derive the affected emitters, readers, shared helpers, fixtures and runner contexts from commit `669cfb1` and the full test catalog before comparing that scope with `tests/FAILURE-PROPAGATION-INVENTORY.md` and `tests/out/failure-propagation-4/`. Check response-version handling, supported legacy replies, changed expectations and both built-in and BYOXPC paths. Reconcile required canonical case IDs with actual results, including the claimed 108 cases on the final build and 22 retained offline controls; verify why retained results still apply, inspect internal batch failures/skips, and match tested source and signed-build provenance to the commit. Account separately for later edits. Inspect raw envelopes and control evidence rather than treating the handoff, review script or passing totals as proof. Distinguish fixture-supplied verdicts, constructed interpretation tests and independently observed effects, including the evidence supporting live log candidates. Use focused reruns or counterexamples where needed to resolve a specific doubt. Report substantiated gaps and their consequences, with precise source/artifact references and bounded corrections where warranted. Keep step 5's pending consumer-recovery enforcement separate: this audit checks step 4's delivered contract and evidence without treating readable summary labels as proof that their meanings are justified.
 
 ## Results
 
-### 1. Is step 3 complete?
+### 1. Does step 4's `drift`/`comparison` fulfil the intended guarantees?
 
-**Yes — substantively and verifiably, with one narrow unfinished obligation in the
-closeout's own account of itself.** This is the best-evidenced batch in the
-effort so far: the claims are qualified rather than inflated, and every one I
-tried to falsify held up.
+#### Reconstruction of the intended guarantees (199 words)
 
-#### What I verified independently
+The plan treats a PolicyWitness run as testimony and asks that every claim in the
+envelope be traceable to the observer that made it. Four things need separate
+justification: that a record is valid, that it answers the request it is
+associated with, that it is comparable to another observation, and that it
+supports a causal conclusion. A shared step ID or envelope establishes none of
+them. A summarizing layer may rank observations but must not rewrite them,
+invent a value nobody returned, or assign a cause nobody saw. "I cannot tell"
+must be sayable, and several known limits must coexist without one erasing
+another.
 
-| Check | Result |
-| --- | --- |
-| Closeout snapshot covers the repository | The 367-file snapshot is *exactly* the set of tracked non-`dist`/`target` files — 0 tracked files omitted, 0 extras |
-| Snapshot still matches the tree | 366/367 hash-match; the only difference is this audit file |
-| Signed build | 8/8 shipped executables and 51/51 recorded build sources hash-match `accepted-build.json` |
-| Tested implementation vs committed work | Diffing the accepted-run snapshot against the closeout snapshot: **7 files changed, all Markdown** (`COVERAGE.md`, three plan/contract/inventory docs, two READMEs, this audit). No executable or test source moved between the tested state and the commit |
-| No production behavior change | Every line the step-3 commit added to `controller/src/*.rs` and `main.swift` is inside `#[cfg(test)]`/test registration; `transport_diagnostics()` is `#[cfg(test)]` |
-| Controls re-run on the committed tree | `witness_contract/unfamiliar_diagnostic_transport` **11/11 checks, 0 failures**; `runner_unit` **258/258 with 0 internal SKIP and 0 FAIL**; `unit/rust.unit` pass; `source_drift` pass; app inspection `valid_before: true, unchanged: true` |
-| Mutations | All four retained mutation directories mutate the *exact* source now in the tree (`original_sha256 == current`) and restore it byte-for-byte (`restored == original`) |
+C1–C6 turn that into an obligation owed to a reader: from a single envelope,
+using the public contract alone, a consumer should see which steps report
+established agreement and what comparison that covers, which observed failures
+PW cannot attribute, what relation between query and attempt was established or
+left open, why a comparison is missing, which resolutions were later host
+observations, and which denial events are only candidates.
 
-#### The seven requirements
+Fulfilling this makes a drift report auditable rather than something a reader
+must trust. Withholding a conclusion is legitimate; withholding one the evidence
+supports is not.
 
-- **R1 (bounded arrangement).** Two genuinely distinct payloads:
-  alpha uses an unfamiliar operation (239) *and* an unfamiliar `native_kind` (77);
-  beta uses a **known** operation (8 = `sandbox_apply`) with an unfamiliar code.
-  Alpha also pins `errno: 0` with `errno_present = 1`, exercising "zero remains a
-  value." The producer literals (`tests/fixtures/diagnostic_transport/worker.h`)
-  and the oracle (`cases.json`) are separate files, so a transport defect and a
-  transcription slip both surface. Fixture built to `PW_TEST_ARTIFACTS`, outside
-  the inspected app; the override is asserted mirrored in the reply.
-- **R2 (carry each record through every boundary).** The CLI control drives C
-  publication → Swift decode → runner JSON → XPC client → controller parse, and
-  compares `evidence['failure']` to the oracle by whole-dict equality. Layers that
-  are *not* reached by a real producer (helper/observer receivers) are stated as
-  limits rather than implied.
-- **R3 (unsuccessful stays unsuccessful; no inferred cause).** Every worker mode
-  asserts `rc == 1`, `runner_failed`, `sandboxed_after_apply == False`, reaped
-  exit 23, and an untouched independent file witness. The sharpest assertion is
-  the pair: alpha requires `'sandbox_apply'` and `'sandbox_compile_string'` to be
-  **absent** from the error, while beta requires `'sandbox_apply'` to be
-  **present** — i.e. a known operation survives an unfamiliar code, and an
-  unfamiliar operation is never promoted to a known one.
-- **R4 (absent / unpublished / malformed / incompatible + truncation).** All four,
-  plus `transport_bad_text` (declared length out of bounds → `invalid`) and
-  `transport_beta_truncated` (real 4095-byte truncation), each asserting that the
-  numeric record survives independently of text availability.
-- **R5 (mutations must fail the controls).** Known-code-only worker decoding and
-  known-outcome-only validator forwarding each fail `runner_unit` **and**
-  `witness_contract/unfamiliar_diagnostic_transport`; shared-receiver detail
-  removal fails `unit/rust.unit`. All restored.
-- **R6 (acceptance review; fixture vs observed).** This is discharged unusually
-  well. `FAILURE-PROPAGATION-CONTRACT.md:483-516`, the inventory's transport
-  table, `COVERAGE.md` and both suite READMEs now say plainly that the transcript
-  producer never calls `sandbox_check`, that even its `allow`/`rc=0` record is
-  supplied test data, and that "a shared envelope does not establish a causal
-  relationship between the retained records." The independently observed facts —
-  host EPIPE, reaped exit 23, receiver UTF-8 fault, the real worker's file
-  change — are named separately every time.
-- **R7 (handoff).** Scope, limits, provenance and the doc-only closeout delta are
-  all recorded and reproduce exactly.
+#### Verdict
 
-#### The one unfinished obligation (inside step 3)
+**The central design choice is right, and one consequence of its implementation
+is a demonstrated defect: the entire `exec` probe family can no longer produce a
+comparison conclusion, for a reason that is an artifact of the representation
+rather than of the evidence.**
 
-The closeout's account of the mutation experiment is incomplete, in two linked
-ways.
+#### Why the narrowing itself is justified
 
-`tests/out/failure-propagation-3/mutation-worker/` retains a run of the *same*
-mutant (identical `mutant_sha256`) that did **not** fail the controls cleanly —
-it aborted the Swift suite:
+Restricting `drift` to `observation == "succeeded"` is the correct reading of the
+evidence, not an evasion. A completed *success* under a prediction is the only
+attempt observation whose meaning is unambiguous: if the kernel had enforced a
+deny the operation would have failed, and DAC can only add denials, never grant
+them. So `drift=true` (deny predicted, operation succeeded) and `drift=false`
+(allow predicted, operation succeeded) both rest on an observation that needs no
+attribution argument. Correspondingly, retiring the old
+`(allow, deniedStrongEvidence) → true` branch is right: its two members were a
+sysctl catch-all (`.some(_) → deniedStrongEvidence`, which treated *any*
+unrecognised errno as sandbox evidence) and `kr=1100`, neither of which
+identifies the enforcing mechanism. The information is not lost — a consumer
+recovers that population as `prediction=allow`, `observation=permission_failure`,
+`observation_basis ∈ {permission_errno, bootstrap_permission_result}`, with
+`sandbox_attribution_unestablished` — which is a better answer to C2 than
+`drift=true` ever was. The previous round's directional-consistency complaint is
+fully discharged: `runner_exec_dac`'s `deny_prediction_dac` now yields
+`drift=null` with `conclusion=directional_consistency` available separately.
 
-```
-  FAIL unfamiliar operation code and kind retain signed result and zero errno ...   (4 clean failures)
-  ...
-[unfamiliar diagnostic transport]
-PWRunnerCoreTests/DiagnosticTransportTests.swift:49: Fatal error: Unexpectedly
-found nil while unwrapping an Optional value          rc=133, no summary line
-```
+I looked for the opposite failure — a claim stronger than its observations — and
+did not find one. `target_relation` is string equality of *submitted* values and
+always carries `runtime_target_identity_unestablished`; `compound_attempt`,
+`query_filter_scope_unestablished` and `local_name` namespace non-equivalence are
+all handled; every comparison carries `query_attempt_order_unestablished` and
+`state_stability_unestablished`.
 
-The response was correct and is disclosed in
-`out/failure-propagation-3/README.md:86-90`: the force-cast was replaced with a
-normal `TestFailure` (the current line 49 is a `guard ... as? ... else { throw }`,
-which cannot emit that message), `mutate.py` gained the assertion *"mutation must
-fail normally, not crash"*, and the mutation was repeated as
-`mutation-worker-confirmed`. That is exactly the right handling.
+#### The defect: exec can never reach a conclusion
 
-What is missing is at the closeout, which is the document the plan's status
-paragraph points to as the handoff:
+`computeComparison` maps `("exec","spawn") → "process-exec"`
+(`CWorkerOrchestrator.swift:695`), then sets `operation_relation = "unresolved"`
+whenever `sandbox_check.operation.contains("*")` (`:705-706`). But libsandbox **rejects the
+bare name**: `PolicyWitness.md:492-494` states that SBPL family operations "must
+be passed to `sandbox_check` in their wildcard form — e.g. `process-exec*`, not
+the bare `process-exec`", and `runner_use_c_worker/run.sh:747` records the same.
+So the two spellings fail in complementary ways and there is no third.
 
-1. `closeout/README.md` opens with "**No production or test-code correction was
-   needed.**" A test-code correction *was* made inside step 3 —
-   `DiagnosticTransportTests.swift` was hardened, and the mutation driver was
-   revised (`mutate.initial.py` → `mutate.py`). Requirement 7 asks for "an exact
-   account of the source changes"; this sentence contradicts the step-3 README.
-2. Requirement 6 says to review the claims "against the retained inputs, outputs
-   and **mutation failures**." `closeout/review.py:93-110` iterates exactly three
-   directories — `worker-confirmed`, `validator`, `controller` — and never reads
-   `mutation-worker/`. The one retained mutation artifact whose outcome was a
-   suite abort rather than a control failure is the one the review program skips.
-
-This is bookkeeping, not coverage: the substance is disclosed elsewhere and the
-confirmed re-run is sound. The bounded fix is two sentences in
-`closeout/README.md` (state the mid-step test-equipment correction and why
-`mutation-worker/` is superseded) and adding that directory to `review.py` as an
-explicitly superseded entry. It is worth doing because it is the same class of
-fragility flagged earlier in this document: a control that *crashes* the suite
-prevents the remaining controls from running and leaves the log the handoff tells
-the next agent to inspect truncated. `mutate.py` now guards future mutations
-against that; nothing guards the ordinary suite, and the closeout is the natural
-place to record that residual.
-
-Nothing here belongs to steps 4–5. Drift meaning, query/attempt comparability,
-temporal assumptions, host-enrichment provenance and log causation are correctly
-excluded from step 3 and correctly assigned onward.
-
-### 2. A planning weakness in steps 4–5
-
-**The plan protects accepted *answers* from being bent to fit the
-implementation, but leaves accepted *questions* free to be bent — and the
-questions are written after the implementation is built, gated and committed.**
-
-#### Where the seam is
-
-The consumer-question table lives in step 5
-(*Settle the design judgments and expected consumer answers*), and step 5 begins
-"This step follows the step-4 commit and review." So the order is:
-
-1. Step 4 writes the claim/evidence table, chooses the representation, passes the
-   compatibility/dependency gate, updates every dependent assertion, and
-   **commits**.
-2. Step 5 then settles which distinctions are justified, and is told to use the
-   six questions as "starting points, **refining their wording to the contract
-   actually accepted**."
-3. Step 5 writes the JSON-only recovery checks against those refined questions.
-
-Step 5 guards step 2→3 well: "Do not derive expected answers from the emitted
-summary labels or copy the classifier into the oracle," and "Changes to an
-accepted answer require an explicit design reason; making a failing filter pass
-is insufficient." Both of those protect the **answer**. Nothing protects the
-**question**, and the question-refinement licence points the other way.
-
-#### How it survives every existing gate
-
-Take the third question — *"What relationship between each query and attempt was
-established, known to differ, or left unresolved?"*
-
-- **Step 4's claim/evidence table** asks "What connects their operation, target
-  and relevant conditions?" An honest, accurate row reads: *nothing in the
-  envelope connects the operations; the runner deliberately accepts independently
-  specified queries and attempts; the strongest supported conclusion is pair
-  consistency, not comparability.* Requirement satisfied.
-- **Step 4's "Implement bounded corrections"** then *endorses* changing nothing:
-  "Continue accepting independently specified queries and attempts; admission or
-  string equality alone cannot certify a meaningful comparison." And the step
-  explicitly permits stopping there — "A useful result can leave interpretation
-  unresolved."
-- **The compatibility/dependency gate** is triggered by the *chosen
-  representation*. If the representation does not touch the attempt object, the
-  gate has nothing to inventory. Gate satisfied.
-- **Step 4 acceptance** asks for "a deny query for A paired with successful
-  allowed attempt B" and "Assert both retained evidence and the limited
-  conclusion/derivation." A test asserting *no comparability claim is made*
-  passes.
-- **Step 5** refines question 3 to something the shipped envelope answers —
-  e.g. "is the submitted query target recorded alongside the attempted target?" —
-  records the expected answers, and the recovery checks pass.
-- **Step 5's anti-degeneracy control** ("Include a case where blanket unknown
-  would discard a conclusion the reviewed evidence supports") does not fire,
-  because nothing was collapsed into unknown; the distinction was never put on
-  the table.
-
-Every box is checked. The intended outcome — a consumer can recover the accepted
-distinctions from the envelope — quietly loses one, and the loss is invisible
-because the record of it is a reworded question.
-
-#### Why this is a real repository dependency, not a hypothetical
-
-The envelope today cannot answer question 3 on the operation dimension, and the
-plan already knows why. `tests/FAILURE-PROPAGATION-PLAN.md:398-402` records the
-design: relevant operations are derived "from the submitted attempt's kind/action
-… The current reply's attempt object omits kind/action; **the controller retains
-the submitted request** and can use that provenance without adding duplicate
-authoritative fields."
-
-Confirmed against live CLI output from the accepted build:
+Live, on the accepted build (`out/failure-propagation-4/accepted-build.json`;
+8/8 executables and 51/51 production sources hash-match this tree):
 
 ```
-steps[].attempt keys:  errno, exit_code, native_rc, normalized_path,
-                       observed_path, outcome, rc, requested_path,
-                       result_source, syscall_errno          # no kind, no action
-envelope data keys:    ..., request_path, ...                # a path, not the request
-"probe_plan" present in envelope: False
+step exec_star   query "process-exec*"   attempt exec/spawn /usr/bin/true (child 29359, exit 0)
+  prediction allow | observation succeeded | observation_basis spawned_child
+  target_relation same_submitted | operation_relation unresolved
+  conclusion unavailable | drift null
+  limitations [... broad_query_operation, operation:unresolved ...]
+
+step exec_bare   query "process-exec"    same attempt
+  sandbox_check.outcome unsupported_operation ("sandbox_check returned EINVAL ...")
+  prediction unavailable | operation_relation matched | conclusion unavailable | drift null
+
+step file_ok     query "file-read-data"  attempt file/open_read /etc/hosts
+  prediction allow | observation succeeded | operation_relation matched
+  conclusion agreement | drift false
 ```
 
-So the controller solved its own comparability problem by reading the request
-**file** — precisely the input step 5 forbids the consumer test from using
-("consulting … external artifacts to construct the consumer's answer is not
-[allowed]"). A JSON-only consumer can compare `sandbox_check.filter_value` with
-`attempt.requested_path`, but cannot see which syscall the attempt performed, and
-therefore cannot tell a comparable pair from an intentionally divergent one —
-the exact distinction the step-4 table row and the `runner_exec_dac`
-deny-A/attempt-B scenario exist to protect. The same asymmetry applies to
-question 6: `step_denies` is derived by the controller from the request, and a
-consumer can read the conclusion but cannot recover what it rests on.
+`file_ok` and `exec_star` are the same epistemic situation — libsandbox predicted
+allow, the gated operation demonstrably happened, the submitted target is
+identical — and PW draws the conclusion for one and withholds it for the other
+because of a `*` in a string.
 
-#### Why more fields, tests or certainty do not fix it
+This connects directly to **C1** in my reconstruction: "which steps report
+established agreement and what comparison that covers." For every exec probe the
+answer is now permanently "none," even in the case with the *strongest* evidence
+in the whole matrix. It is the third failure mode the question names — satisfying
+the revised contract while missing the original purpose — because the contract's
+generic rule ("Broad query names … retain unresolved scope, not inferred
+equivalence") is individually reasonable and collectively voids a probe family.
 
-Adding `kind`/`action` to the attempt object would answer *this* question and
-leave the mechanism untouched — the next representation choice would silently
-reshape the next question. More recovery tests make the reworded question more
-thoroughly enforced. Requiring a definitive answer is worse: "not established" is
-the *correct* answer here, and the plan is right to allow it. The defect is not
-in the contract's content but in the order of operations: the design judgment
-that decides which distinctions matter runs *after* the implementation that
-determines which distinctions are expressible.
+#### Demonstrated defect, not an architectural limitation
+
+PW has every observation it needs here; nothing about synchronization, identity
+or causation is missing that is not equally missing from `file_ok`, which does
+get `agreement`. The gap is representational: the contract's mapping table
+(`FAILURE-PROPAGATION-CONTRACT.md:570`) writes `exec spawn → process-exec` while
+the same repository documents that this spelling is unusable. Three independent
+signs suggest it was not noticed rather than decided:
+
+1. **A contract paragraph describing an unreachable case.** The contract devotes
+   a passage to exec agreement — "An exec child that ran and then failed supplies
+   spawn success independently of its later exit outcome … a useful spawn
+   comparison cannot erase a failed exec result" — and
+   `build.review-refinements.log` records a build superseded while tightening its
+   wording. Through the CLI that comparison never exists: `spawned_child` requires
+   `requested_kind == "exec"`, and exec never reaches `matched`.
+2. **A unit oracle that production cannot produce.**
+   `DriftClassifierTests.swift:122-127` reaches `drift == false` with
+   `comparisonCheck(operation: "process-exec")` — a *bare*-name query carrying an
+   `allow` verdict. My `exec_bare` run shows the real prediction channel returns
+   `unsupported_operation` for that spelling, so no envelope can contain that
+   pair. The plan permits constructed controls and the handoff credits them
+   separately, so this is not a rule violation — but the only test exercising the
+   spawn-agreement rule stands on an input the product cannot emit.
+3. **Mechanically flipped assertions and no exec scenario.**
+   `runner_exec_dac/check.py:80` changed `steps["executable"]["drift"] is False`
+   to `is None` for the fully successful, unambiguous run, and
+   `runner_use_c_worker/run.sh` gained `assert s.get("drift") is None  # broad
+   process-exec* query`. The ten new CLI comparison scenarios
+   (`comparison-expectations.json`) are **all file-based**; none is exec. The
+   plan's own acceptance bullet warns that "a passing old or mechanically
+   replaced assertion cannot settle a conflict with the meaning now promised."
+
+#### What supports this and what would falsify it
+
+Supporting: the two live runs above; the mapping in `computeComparison`; the
+mandatory-wildcard statements in `PolicyWitness.md:492-494` and
+`runner_use_c_worker/run.sh:747`; the absence of any exec CLI comparison
+scenario; the absence of any exec-specific reasoning in the contract, inventory
+or handoff (`grep process-exec` finds only the mapping line).
+
+Falsifiable by: **(a)** a `sandbox_check` operation string that is accepted by
+libsandbox *and* equals a mapped attempt operation for exec — I found none, and
+the repository asserts none exists; **(b)** a recorded design reason stating that
+exec comparison is deliberately withheld because `process-exec*` covers
+`process-exec`, `process-fork` and related vectors, which would make this a
+justified limitation rather than an oversight; or **(c)** evidence that
+`process-exec*` genuinely gates more than the spawn the attempt performs, in
+which case `unresolved` is correct and only the documentation is missing.
 
 #### Bounded correction
 
-Move the consumer-question list out of step 5 and into step 4, immediately
-**before** *"Choose a bounded public contract"*, and treat it as an input to the
-design rather than an output of it. Then extend step 4's compatibility decision
-with one column: for each frozen question, record exactly one disposition —
+No new field and no added certainty. Either:
 
-- **(a) answerable** from a single envelope under the chosen contract;
-- **(b) deliberately not answerable**, with the design reason and the evidence or
-  architectural limit that makes it so (question 3 would land here today, citing
-  the kind/action decision at plan lines 398-402);
-- **(c) answerable only with an added field or changed meaning** — which then
-  enters the dependency inventory and the version decision.
+- treat a query whose operation is the **accepted family spelling** of the mapped
+  attempt operation as `matched`, and keep the breadth visible by replacing
+  `broad_query_operation` with a specific limitation
+  (e.g. `family_scope:process-exec*`) for that case — the comparison then behaves
+  for exec exactly as it does for files, with the family breadth still reported;
+  or
+- if (b) above is the real judgment, record it: add the exec case explicitly to
+  the C1/C3 dispositions and the `runner_exec_dac` README, so a reader learns
+  that exec comparison is withheld by design rather than inferring it from a
+  generic limitation shared with `file-read*`.
 
-Step 5 keeps its wording-refinement licence but inherits the protection the plan
-already gives answers: a question may not be dropped, merged or have its
-disposition changed without an explicit design reason, and a recovery check may
-not be written against a question whose disposition changed to make it pass.
+Either way, add one exec scenario to `check_comparison.py` so the chosen
+behaviour is pinned by a CLI control rather than by two flipped assertions.
 
-This adds no field, no certainty and no test. It costs one table in step 4 and
-one sentence in step 5. What it buys is that outcome (b) — a perfectly acceptable
-result — has to be *chosen and reviewed* rather than achieved by rewording, and
-that the final ownership map in step 5 can show a reader which questions the
-product answers, which it deliberately does not, and why.
+### 2. Is the compatibility migration complete and the verification sound?
+
+**Substantially yes.** This is the most rigorous acceptance in the effort: it is
+an all-catalog run, the dependency inventory was written before the edits, and
+the review program reconciles IDs rather than trusting a selector. I found one
+substantiated gap, in the justification for retained results — not in the results
+themselves.
+
+#### What I verified independently
+
+| Check | Method | Result |
+| --- | --- | --- |
+| Required scope = whole catalog | Rebuilt case IDs from `tests/catalog.json`, diffed against `required-case-ids.txt` | 130 = 130, no ID in either set only |
+| Signed build matches the commit | Hashed all entries of `accepted-build.json` | 8/8 executables, 51/51 production sources match |
+| Tested source = committed source | `tested-source.json` vs `closeout-source.json` vs tree | differ in **5 files, all Markdown**; `closeout-source.json` (368 files = exactly the tracked non-`dist` set) matches the tree except this audit file |
+| Candidate → final delta | Recomputed from `candidate-source.json` vs `tested-source.json` | 13 files, identical to `review.json`'s list |
+| Final battery | `accepted/run.json` | 108/108 pass, 0 skip, app inspection valid and unchanged |
+| First battery | `all-candidate/run.json` | 130 run, 127 pass, 3 fail (stale expectations), 0 skip — retained, not credited |
+| Batch internals | `pwrunner_core_tests.log` in the accepted run | `262/262`, **0 internal SKIP, 0 FAIL**; Rust 110, CLI integration 10 |
+| BYOXPC | Filtered `accepted/run.json` | all **13** BYOXPC cases ran on the final build and passed, including BBX-001/002 |
+| Response version and legacy | `PWRunnerAPI.swift` (`comparison` is `decodeIfPresent`/`encodeIfPresent`; default 7) plus `EnvelopeInvariantTests` | stored versions 4–6 retain their own `drift` with `comparison`, `requested_kind`, `requested_action`, path `observer`/`phase` all nil; controller forwards the runner's version verbatim |
+| Live log candidates (C6) | Raw `signal_capture/run.json`, `success_capture/run.json` | real captured events; 1 and 2 associations; each `association: "ambiguous"` over two repeated-attempt candidates, with per-candidate `operation_source: "submitted_attempt"` and `path_sources` — genuine observation, correctly not a unique occurrence |
+| Focused rerun | `--case runner_validator_failure/transcript_controls --case runner_exec_dac/… --case witness_contract/drift_determination_via_validator_seam --suite unit --suite source_drift` | 5/5 pass on the current tree, integrity valid and unchanged |
+
+Evidence provenance is also correctly stratified: the ten CLI comparison
+scenarios use a **fixture-supplied** validator transcript (its verdicts are test
+data, not native `sandbox_check` calls) with **real** worker attempts and file
+effects; `runner_exec_dac` adds a direct out-of-band execution control;
+`DriftClassifierTests` is constructed interpretation; the log candidates are
+independently observed. The handoff says so in each case.
+
+#### Substantiated gap: the retained-result basis is stated more broadly than it holds
+
+`review.json` credits 22 of the 130 cases from the earlier `all-candidate`
+battery under this basis:
+
+> "all 22 retained cases are offline and their executable inputs/fixtures are
+> unchanged."
+
+That is not established for one of them. `review.py:36-38` implements the
+retention rule as *"the case does not require `app`"* — it never checks whether a
+retained case's own test code changed. And
+`tests/suites/runner_validator_failure/check.py` **is** in the 13-file
+candidate→final delta, and in `review.py:47-54`'s own `allowed_executable_delta`.
+`runner_validator_failure/transcript_controls` is credited from the candidate
+battery (`review.json` `case_credits`), and `runner_validator_failure/run.sh:12`
+runs exactly that file (`check.py fixture`). So its credit comes from a run that
+executed a different version of its own checker.
+
+**Consequence: none, in fact.** I read the hunk — it is confined to `check_cli`
+(lines 137-141: the drift/conclusion expectations for the two app-dependent
+cases, both of which were rerun on the final build) — and `transcript_controls`
+executes `check_fixture`, which is untouched. I then reran the case on the
+current tree and it passes. So the accounting is imprecise, not wrong.
+
+**Bounded correction**, in order of cost: rerun that one case (it needs no app
+and takes seconds) and re-credit it; and tighten the rule in `review.py` from
+"does not require `app`" to "no source reachable from the case's command changed
+since the crediting battery," so the `retained_result_basis` sentence is
+something the program actually checks. Absent that, narrow the sentence to name
+the exception.
+
+#### Smaller notes
+
+- `review.py`'s `allowed_executable_delta` is a hand-maintained allowlist. It
+  correctly caught the five executable-source changes here, but it is asserted
+  against, not derived; a future delta is only as good as the list someone edits.
+- The two claims I could not check from artifacts alone — that the tracked C
+  convenience binary was restored to committed bytes, and that no mutation or
+  fixture was installed into the inspected app — are consistent with the tree
+  (`git status` is clean apart from this file) and with the unchanged app
+  inspection, but rest on the handoff's statement.
+- Nothing in step 4 pre-empts step 5: C1–C6 remain open dispositions, and the
+  recovery filters are not yet written. The exec finding in part 1 is exactly the
+  kind of thing step 5's C1 review should catch; it is reported here because the
+  step-4 contract already promises the distinction that exec silently cannot
+  deliver.

@@ -564,15 +564,37 @@ The host supplies `attempt.requested_kind` and `requested_action`; existing
 call observations. `result_source`, native fields, child status and missing reasons
 retain their independent meanings.
 
-Only a matched single operation, compatible filter and identical submitted target
+Only a supported operation mapping, compatible filter and identical submitted target
 permit the limited comparison. The reviewed mappings are file open_read/access →
 file-read-data, open_write → file-write-data, unlink → file-write-unlink;
-exec spawn → process-exec; mach lookup → mach-lookup; sysctl read → sysctl-read.
+exec spawn → process-exec* (target execution admission); mach lookup → mach-lookup;
+sysctl read → sysctl-read.
 File/exec require path filters; mach lookup requires global_name (local namespace
-equivalence is not established); sysctl requires sysctl_name. Broad query names,
+equivalence is not established); sysctl requires sysctl_name. Other broad query names,
 NONE filters and compound create attempts retain unresolved scope, not inferred
 equivalence. Different strings establish different submitted targets, not distinct
 runtime objects. Later host canonicalization never certifies comparability.
+
+For exec, `process-exec*` is the native query spelling corresponding to target
+execution admission; bare `process-exec` is rejected by the native prediction
+channel on the tested system. This specific mapping does not generalize from
+the presence of a star or from acceptance of an operation name. In particular,
+`process-exec-interpreter` can predict deny while a binary spawns successfully.
+The exec mapping carries `exec_query_not_full_spawn_prediction`: fork permission,
+interpreter admission, executable format and other spawn requirements are outside
+the query's promised scope. An allow prediction does not promise spawn success.
+A successful spawn supplies the target-execution observation needed for a
+comparison; a failed spawn does not establish that this particular gate denied it.
+
+The native `runner_exec_dac` control exercises this distinction through ordinary
+CLI runs with real policies, validator calls and worker attempts. Independently
+changing exec, fork and interpreter permissions separates their verdicts and
+effects. A same-target allow/spawn-success comparison reports agreement, including
+a helper that prints its marker then exits 37. A denied query for a different
+target retains the successful attempt without reporting disagreement. None of
+these test-controlled interventions becomes causal evidence in a user's envelope.
+The source-level worker observation remains the successful `posix_spawn` return
+that publishes `child_pid`; it is not inferred from the helper's exit code.
 
 `drift=false` projects `comparison.conclusion=agreement`: an allow prediction and
 completed successful attempt within that submitted scope. `drift=true` projects
@@ -633,6 +655,14 @@ original drift value; it never fabricates the new derivation. The Rust controlle
 forwards the original runner response version. Consumers must interpret versions
 4–6 using their older semantics; bool/null shape compatibility is not semantic
 compatibility. Fixtures explicitly exercising old decoding keep their old versions.
+
+The native exec mapping uses schema 7's existing meanings and shape: agreement
+and disagreement still compare recorded outcomes within the documented submitted
+scope, and null still represents an unavailable or merely directional comparison.
+Supporting the usable exec spelling changes which rows have an established
+mapping, not what those conclusions promise. The additional exec limitation is
+an independent string in the existing open limitations list. No new required
+field or conclusion is introduced; request schema and worker ABI are unchanged.
 
 The [dependency inventory](FAILURE-PROPAGATION-INVENTORY.md#derived-comparison-dependencies)
 maps the source/test/public-contract changes before implementation. Acceptance

@@ -111,15 +111,37 @@ func runDriftClassifierTests(_ tk: TestKit) {
             try expectEqual(result.observation, "succeeded")
             try expectTrue(result.limitations.contains("compound_attempt"))
         }
-        tk.run("broad exec queries retain unresolved operation scope") {
+        tk.run("native exec query compares target admission with observed spawn") {
             let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process-exec*"),
+                attempt: comparisonAttempt(kind: "exec", action: "spawn", child: 123))
+            try expectEqual(result.drift, false)
+            try expectEqual(result.operation_relation, "matched")
+            try expectEqual(result.observation_basis, "spawned_child")
+            try expectTrue(result.limitations.contains("exec_query_not_full_spawn_prediction"))
+        }
+        tk.run("other wildcard exec queries remain unresolved") {
+            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process*"),
                 attempt: comparisonAttempt(kind: "exec", action: "spawn", child: 123))
             try expectNil(result.drift)
             try expectEqual(result.operation_relation, "unresolved")
+            try expectTrue(result.limitations.contains("broad_query_operation"))
+        }
+        tk.run("an accepted interpreter query cannot substitute for target admission") {
+            let result = computeComparison(sandboxCheck: comparisonCheck("deny", operation: "process-exec-interpreter"),
+                attempt: comparisonAttempt(kind: "exec", action: "spawn", child: 123))
+            try expectNil(result.drift)
+            try expectEqual(result.operation_relation, "different")
             try expectEqual(result.observation_basis, "spawned_child")
         }
+        tk.run("a rejected bare exec query preserves spawn without a comparison") {
+            let result = computeComparison(sandboxCheck: comparisonCheck("unsupported_operation", operation: "process-exec"),
+                attempt: comparisonAttempt(kind: "exec", action: "spawn", child: 123))
+            try expectNil(result.drift)
+            try expectEqual(result.prediction, "unavailable")
+            try expectEqual(result.observation, "succeeded")
+        }
         tk.run("a spawned child supplies spawn success beside a failed exec result") {
-            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process-exec"),
+            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process-exec*"),
                 attempt: comparisonAttempt(kind: "exec", action: "spawn", outcome: "exec_failed", child: 123))
             try expectEqual(result.drift, false)
             try expectEqual(result.observation_basis, "spawned_child")

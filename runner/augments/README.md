@@ -131,11 +131,17 @@ Observed failure modes:
 
 | removed rule    | observed result (sb_check / attempt)             | classification                         |
 | --------------- | ------------------------------------------------ | -------------------------------------- |
-| `process-fork`  | `sb_check=deny` (validator agrees), `attempt=exec_failed`, `child_pid=0`, `errno=1` ("posix_spawn: Operation not permitted") | sandbox-blocked spawn (clean signal)   |
-| `file-read*`    | same shape as removing process-fork: `posix_spawn` EPERM with `child_pid=0` | kernel reads binary pre-exec; without file-read of target, spawn is blocked |
-| narrow `file-read*` to `(subpath "/usr/lib") (subpath "/System/Library")` | same: target at `/tmp/...` isn't in scope, spawn blocked | confirms file-read scope must cover the target path |
+| `process-fork` | `process-exec*` query remains allow; spawn fails with `child_pid=0`, `errno=1` | Fork is a separate prerequisite; exec allow does not promise spawn success |
+| `file-read*` | `process-exec*` query remains allow; `posix_spawn` EPERM with `child_pid=0` | Broad file access removal blocks the attempt without changing the target exec query |
+| narrow `file-read*` to `(subpath "/usr/lib") (subpath "/System/Library")` | Target at `/tmp/...` is outside the admitted read scope; spawn blocked | This attempt observation does not establish the exec query verdict |
 | `mach-lookup`   | `attempt=ok`, `child_exit_code=0`                | not required for this helper           |
 | `sysctl-read`   | `attempt=ok`, `child_exit_code=0`                | not required for this helper           |
+
+The native controls in `tests/suites/runner_exec_dac/check_query_scope.py`
+separately verify the exec/fork/read verdicts and spawn observations. Denying
+only `file-read-data` on the binary does not reproduce removing all `file-read*`;
+these restrictions must not be conflated. Test-owned policy interventions do not
+make an arbitrary permission failure attributable at runtime.
 
 Pin tests (`tests/suites/runner_use_c_worker/`):
 

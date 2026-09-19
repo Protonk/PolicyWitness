@@ -30,9 +30,9 @@ def envelope_errors(envelope, witness):
         allowed = index == 0 or index - 1 == witness['allowed_index']
         expected = {'step_id': planned['step_id'], 'index': index,
                     'sandbox_outcome': 'allow' if allowed else 'deny',
-                    'attempt_ok': allowed, 'drift': False if allowed and index != 0 else None}
+                    'attempt_ok': allowed, 'drift': False if allowed else None}
         if index == 0:
-            expected['comparison'] = {'operation_relation': 'unresolved', 'observation': 'succeeded'}
+            expected['comparison'] = {'operation_relation': 'matched', 'observation': 'succeeded'}
         if allowed:
             expected['errno'] = None
         expected_steps.append(expected)

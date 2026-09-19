@@ -578,7 +578,7 @@
       "cases": [
         {
           "id": "execute_permission_is_not_sandbox_drift",
-          "description": "execute permission controls spawning; ordinary EACCES yields drift=null"
+          "description": "native exec admission and spawn prerequisites; ordinary EACCES remains unattributed"
         }
       ]
     },

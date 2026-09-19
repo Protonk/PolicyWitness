@@ -90,6 +90,28 @@ and deny contracts through the extracted controller, and records the ZIP hash
 and before/after integrity. It never builds or signs. See `SIGNING.md` for the
 complete release procedure and the handling of delayed or uncertain Apple replies.
 
+## Reusing verification results
+
+For each credited case, record its canonical ID, command/configuration, source
+snapshot and applicable build or equipment. Trace the command's scripts, shared
+helpers and fixtures conservatively, then compare their file snapshots with the
+accepted implementation. A case not requiring the app can still depend on changed
+test code; app independence alone does not justify reusing its result.
+
+Rerun a case when a dependency changed or applicability is uncertain. If an
+earlier result is retained despite a changed file, identify the exact delta,
+explain why the executed path and inputs are unaffected, and label this as a
+reviewed exception. Hash checks establish file identity; they do not establish
+complete dependency coverage or prove program reachability. An allowlist of
+changed files is likewise a review aid, not proof that every retained case is
+unaffected. Acceptance summaries must distinguish mechanically checked facts
+from these applicability judgments.
+
+Keep original runs and snapshots intact. Record corrections and replacement
+credits explicitly, including the reason for each rerun; do not turn an earlier
+failure into a passing historical run. This procedure does not require a generic
+dependency-analysis framework.
+
 ## Configuration
 
 - `PW_APP_DIR`: app bundle to test; defaults to `dist/PolicyWitness.app`.
@@ -170,7 +192,7 @@ prerequisites should fail, not skip.
 | `blackbox_menagerie` | Baseline | Real SBPL fixtures exercising specimen ingestion and evidence correlation; controls drive both black-box checkers against independent envelopes and faults | Built app + XPC; validation controls need only Python 3 | Annotated mismatch is absent after all evidence checks pass | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_menagerie`. See `tests/suites/blackbox_menagerie/README.md` for invariants and fixtures. |
 | `sbpl_allowdeny_consistency` | Baseline | Independently reads randomized file targets after writes, checks changed/nonempty bytes vs byte-for-byte preservation, restores seeds and reverses policy parameter bindings with the same probe plan, then cross-checks JSON verdicts. The fixture retains two Mach steps, checked for presence only. | Built app + XPC | — | Two specimens/envelopes plus external before/after byte snapshots; no log dependency or test overrides. |
 | `runner_live_worker_identity` | Baseline | Test-owned observer obtains the exec helper PID from the kernel socket peer, follows OS ancestry to the worker and host, independently queries libsandbox while they live, and checks PW reports that worker and those verdicts. | Built app + XPC + macOS C toolchain | — | Bounded handshake; no PW source dependencies or test overrides. `observer.json` records independent PIDs, start times, and raw queries. |
-| `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt must retain its raw evidence and have `drift=null`. | Built app + XPC | — | Strict regression check against treating spawn EACCES as strong sandbox evidence. Both permission controls run before the drift assertion. |
+| `runner_exec_dac` | Baseline | Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt must retain its raw evidence and have `drift=null`. | Built app + XPC | — | Native exec scope controls separate target admission from fork/interpreter prerequisites, preserve child failure after spawn, and reject different-target comparisons. Direct permission controls retain unattributed EACCES. |
 | `exec_fixture` | Baseline | Independently verifies the shared helper's output/status, socket rendezvous, OS process identity/exit observation, environment/descriptor inspection, and state-preserving exec forwarding. A leader-only kill must be rejected while its child still answers; releasing one tree must leave another alive. | macOS C toolchain + Python 3 | — | Direct controls; no app dependency. Normal release and group kill must pass the same exit assertion. |
 | `run_capture` | Baseline | Shared CLI capture preserves exact bytes, arguments and exit/signal status; distinguishes harness deadlines from PW results; keeps overlapping runs separate; and reaps the CLI after assertion failure | macOS + Python 3, Unix sockets and OS exit observation | — | No app or C compilation. Independent fixture, socket acknowledgements and exec fixture exit observer. Retains raw output and `capture.json`, including launch/JSON/cleanup errors. |
 | `runner_specimen_isolation` | Baseline | Two bundled-runner specimens with identical step IDs overlap; B completes while A remains held. OS identities, independent file effects, and each run's output/attempt/prediction evidence stay separate. | Built app + XPC + macOS C toolchain + Python 3 | — | Shared envelope/step validation plus independent observations. Controls cover cross-run swaps, missing/invalid evidence, alias consistency, legitimate optional fields, and combined failures; direct release controls live in `exec_fixture`. |

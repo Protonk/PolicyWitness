@@ -76,7 +76,9 @@ def main():
             assert 'deadline' in attempt['error']
             assert attempt['stdout'] == 'exec_fixture: hello from helper\n'
             assert attempt['stderr'] == stderr_marker + '\n'
-            assert hang['sandbox_check']['outcome'] == 'allow' and hang['drift'] is None
+            assert hang['sandbox_check']['outcome'] == 'allow' and hang['drift'] is False
+            assert hang['comparison']['observation_basis'] == 'spawned_child'
+            assert 'exec_result_failed_after_spawn' in hang['comparison']['limitations']
             assert following['attempt']['outcome'] == 'ok'
             assert following['sandbox_check']['outcome'] == 'allow' and following['drift'] is False
             print(f"both processes stopped, output retained, later write observed; elapsed={elapsed:.2f}s")

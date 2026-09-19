@@ -224,7 +224,10 @@ Per-step fields under `steps[]`:
 - `comparison` distinguishes recorded-outcome agreement/disagreement, directional
   consistency and unavailable comparison, with explicit operation/target relations
   and simultaneous limits. `drift` projects only agreement/disagreement to bool;
-  unattributed failures and unresolved scope retain null. See the
+  unattributed failures and unresolved scope retain null. Exec/spawn maps specifically
+  to the native `process-exec*` query for target execution admission, with
+  `exec_query_not_full_spawn_prediction` preserving its limited scope. A spawned
+  child's later failure does not erase the successful spawn. See the
   [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning).
 - `sandbox_check.path_diagnostics` records `observer="runner_host"` and
   `phase="after_orchestration"`; later host resolution is not validator evidence.

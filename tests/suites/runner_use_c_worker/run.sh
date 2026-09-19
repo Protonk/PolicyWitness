@@ -876,13 +876,13 @@ s = r["steps"][0]
 # Prediction channel: validator must predict allow against the
 # spliced (deny default) + exec_baseline policy. Pins that the
 # validator (a) accepts process-exec* + path and (b) sees the
-# spliced policy, not the pre-splice source. The broader process-exec*
-# query leaves operation scope unresolved even when the spawn succeeds.
+# spliced policy, not the pre-splice source. This compares execution admission
+# for the submitted target, not all prerequisites of posix_spawn.
 assert s["sandbox_check"]["outcome"] == "allow", \
     "sandbox_check should predict allow when augment grants process-exec*; got {0!r}".format(
         s["sandbox_check"]["outcome"])
-assert s.get("drift") is None, \
-    "broad exec query has unresolved operation scope; got {0!r}".format(s.get("drift"))
+assert s.get("drift") is False, \
+    "allowed target admission and observed spawn should agree; got {0!r}".format(s.get("drift"))
 
 a = s["attempt"]
 assert a["outcome"] == "ok", "attempt outcome={0}".format(a["outcome"])
@@ -971,7 +971,7 @@ for s, request in zip(runner["steps"], plan):
     args = request["attempt"]["args"]
     status = int(args[3])
     assert s["sandbox_check"]["outcome"] == "allow", s
-    assert s["drift"] is None, s  # broad process-exec* query
+    assert s["drift"] is False, s  # target admission agrees with observed spawn
     a = s["attempt"]
     assert a["outcome"] == ("exec_failed" if status else "ok"), a
     assert a["rc"] == status, a
@@ -1046,7 +1046,7 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 s = env["data"]["runner_result"]["steps"][0]
 assert s["sandbox_check"]["outcome"] == "allow"
-assert s.get("drift") is None  # broad process-exec* query
+assert s.get("drift") is False  # target admission agrees with observed spawn
 a = s["attempt"]
 assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
 out = a.get("stdout") or ""

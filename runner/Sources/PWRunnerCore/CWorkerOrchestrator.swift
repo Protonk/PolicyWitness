@@ -693,7 +693,12 @@ func computeComparison(
     case ("sysctl", "read"):
         operation = "sysctl-read"; filter = "sysctl_name"
     case ("exec", "spawn"):
-        operation = "process-exec"; filter = "path"
+        // The native query accepts this spelling, not bare process-exec.
+        // Native exec-scope controls isolate this target-admission query from
+        // fork/interpreter conditions. Matching it does not predict all spawn
+        // prerequisites; success supplies the execution observation separately.
+        operation = "process-exec*"; filter = "path"
+        limits.append("exec_query_not_full_spawn_prediction")
     case ("file", "create"):
         operation = nil; filter = "path"
         limits.append("compound_attempt")
@@ -702,8 +707,10 @@ func computeComparison(
         limits.append("attempt_operation_unestablished")
     }
     let operationRelation: String
-    if sandboxCheck.operation.contains("*") { limits.append("broad_query_operation") }
-    if operation == nil || sandboxCheck.operation.contains("*") {
+    let matchedExecQuery = operation == "process-exec*" && sandboxCheck.operation == operation
+    let unresolvedBroadQuery = sandboxCheck.operation.contains("*") && !matchedExecQuery
+    if unresolvedBroadQuery { limits.append("broad_query_operation") }
+    if operation == nil || unresolvedBroadQuery {
         operationRelation = "unresolved"
     } else {
         operationRelation = operation == sandboxCheck.operation ? "matched" : "different"

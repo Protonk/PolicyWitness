@@ -77,7 +77,7 @@ def main():
     assert success["outcome"] == "ok" and success["rc"] == 0
     assert success["child_pid"] > 0 and success["child_exit_code"] == 0
     assert success["child_term_signal"] == 0
-    assert steps["executable"]["drift"] is None
+    assert steps["executable"]["drift"] is False
     print("direct OS and PW controls agree: removing execute bits blocks spawn; restoring them succeeds",
           flush=True)
     assert steps["nonexecutable"]["drift"] is None, \

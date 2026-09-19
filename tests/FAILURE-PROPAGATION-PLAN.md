@@ -14,18 +14,41 @@ Step 3's acceptance review and handoff are complete. Fixture-supplied fields,
 actual host/receiver/process observations and real-worker effects are now
 distinguished explicitly in its coverage claims. The retained executable sources
 and signed app match; the [closeout review](out/failure-propagation-3/closeout/README.md)
-records the evidence and documentation-only corrections. Step 4 is complete:
-response 7 exposes scoped outcome comparisons, submitted attempt provenance,
-simultaneous limits and later host path provenance; controller log candidates
-retain their matching evidence. All 130 required catalog cases have passing
-coverage, including 108 rerun against the final signed build and 22 unchanged
-offline controls. The [step-4 handoff](out/failure-propagation-4/README.md) records
-compatibility, original consumer-question dispositions, exact provenance and
-remaining limits. Step 5 has not begun; its design acceptance, permanent
-consumer-recovery review and final closeout remain separate.
+records the evidence and documentation-only corrections. Step 4 is complete,
+including both audit corrections. Response 7 exposes scoped outcome comparisons,
+submitted attempt provenance, simultaneous limits and later host path provenance;
+controller log candidates retain their matching evidence. The
+[current handoff](out/failure-propagation-4/exec-review/README.md) records the native
+exec mapping, compatibility, case/build provenance and remaining limits. All 130
+required cases have passing coverage. The
+[original checkpoint](out/failure-propagation-4/README.md) remains available with
+its retained-result correction explicitly linked. Step 5 has not begun; its design
+acceptance, permanent consumer-recovery review and final closeout remain separate.
 [Routing inventory](FAILURE-PROPAGATION-INVENTORY.md) and
 [step-3 evidence](out/failure-propagation-3/README.md) identify the accepted routes,
 mutation failures, restored signed app and remaining coverage limits.
+
+## Step-4 audit follow-up
+
+Question 1 reopened the exec operation mapping: the initial implementation used
+an unusable native spelling for its positive constructed control and excluded
+the usable spelling in real runs. The [native review](out/failure-propagation-4/exec-review/README.md)
+records controlled exec/fork/interpreter interventions, the supported target-admission
+relationship, a schema-7-compatible mapping correction and verified acceptance.
+Question 1 is resolved by the implemented mapping and a native CLI control: 12
+policies, 80 query/attempt pairs and 11 comparison scenarios. All 130 required
+cases have passing coverage on the corrected build, with the shorter-path
+mutation rerun and later script-target extension separately accounted for.
+Earlier step-4 result records describe their own checkpoint and are not evidence
+for a subsequently changed build. Question 2 is resolved by the
+[retention correction](out/failure-propagation-4/retention-review/README.md): the
+old claim that all retained executable inputs were unchanged is superseded. The
+fixture case executed a changed checker, but the exact delta was confined to its
+unused CLI branch. That applicability judgment is recorded separately from hash
+verification. Current acceptance credits a fresh passing run of that case and
+does not depend on the original retained result. The verification procedure below
+requires dependency checks or an explicit reviewed exception before result reuse.
+Step 5 has not begun.
 
 ## Goal and scope
 
@@ -1151,21 +1174,32 @@ own closeout commit; the plan/audit planning commit is also separate. This
 checkpoint does not dissolve the plan or settle all interpretation questions;
 resume step 5 as a separate task and make its final commit separately.
 
-Acceptance: [claim/evidence review and C1–C6 dispositions](FAILURE-PROPAGATION-CONTRACT.md#derived-comparisons-and-evidence-joins-response-7)
-are implemented and [reconciled against the final diff and catalog](out/failure-propagation-4/dependencies-final.json).
-Response 7 leaves request schema 1 and worker ABI 6 unchanged. The
+Initial checkpoint acceptance: [claim/evidence review and C1–C6 dispositions](FAILURE-PROPAGATION-CONTRACT.md#derived-comparisons-and-evidence-joins-response-7)
+were implemented and [reconciled against the final diff and catalog](out/failure-propagation-4/dependencies-final.json).
+Response 7 leaves request schema 1 and worker ABI 6 unchanged. The original
 [acceptance review](out/failure-propagation-4/review.json) credits all 130 required
-cases with no skipped or unrun obligations: 108 on the final signed build and
-22 unchanged offline controls. Swift passes 262/262, Rust unit 110/110 and CLI
+cases with no skipped or unrun obligations: 108 on that signed build and
+22 retained offline controls (see the [retention correction](out/failure-propagation-4/retention-review/README.md)
+for the changed-checker exception and the limit of the original review). Swift passed 262/262, Rust unit 110/110 and CLI
 integration 10/10. Ten controlled CLI comparison scenarios and eleven unfamiliar
-diagnostic controls pass. Live log captures also verify ambiguous candidate
+diagnostic controls passed. Live log captures also verified ambiguous candidate
 matching evidence, with no change to PW execution status or causal attribution.
-All 51 recorded production-source hashes and eight shipped executables match;
-app integrity and owned BYOXPC cleanup pass. The [handoff](out/failure-propagation-4/README.md)
+All 51 recorded production-source hashes and eight shipped executables matched that checkpoint;
+app integrity and owned BYOXPC cleanup passed. The [handoff](out/failure-propagation-4/README.md)
 retains earlier failed assertions separately and accounts for every original
 question. No required implementation remains pending; temporal equivalence,
 runtime identity, full scope for broad/compound operations and causal attribution
 remain explicit design limits for step 5 to review.
+
+Audit question 1 follow-up: the [native exec review](out/failure-propagation-4/exec-review/README.md)
+establishes the specific process-exec* → exec/spawn target-admission relationship
+using native policies, verdicts and worker effects. The mapping and its visible
+limit are implemented without changing schema-7 conclusion meanings. Final
+[case/build reconciliation](out/failure-propagation-4/exec-review/review.json)
+credits all 130 required IDs, with prior failures retained and corrective runs
+identified individually. The [question-2 correction](out/failure-propagation-4/retention-review/README.md)
+supersedes the original blanket retention claim without rewriting historical
+results. Both step-4 audit findings are closed; step 5 has not begun.
 
 ### 5. Accept the plan and transfer consumer obligations into permanent tests
 
@@ -1279,6 +1313,16 @@ source revision (and any uncommitted source changes), exact build command, teste
 app path (`PW_APP_DIR` if set), and the dispatcher's bundle-integrity evidence so
 the next agent can tell which implementation the CLI results establish.
 
+Apply [the result-reuse procedure](README.md#reusing-verification-results) to
+every credited earlier result. Identify the case's scripts, shared helpers and
+fixtures conservatively and compare their snapshots with the accepted source.
+Rerun changed or uncertain dependencies. Retaining a result despite a changed
+file requires the exact delta, a reason the executed path and inputs remain
+applicable, and an explicit label identifying that reviewed exception. Neither
+an offline prerequisite nor a changed-file allowlist proves this. State which
+claims are mechanically checked and which rely on review; preserve original
+results and snapshots when recording corrections or replacement credits.
+
 For acceptance that credits real-worker Swift cases, select `runner_unit`
 together with an app-dependent case in the same public dispatcher invocation
 (for example, `--suite runner_unit --suite runner_c_worker_harness`) so the
@@ -1316,13 +1360,13 @@ A check that was not run remains unverified, with its reason recorded.
 
 | Item | Current state |
 | --- | --- |
-| Completed implementation batch | 0A–0C, 1A–1C, step 2 and audit corrections, all seven step-3 requirements, and every step-4 requirement. Step 5 has not begun. |
-| Next batch | Step 5: review the inherited C1–C6 questions and design dispositions for plan acceptance, distribute permanent consumer-recovery enforcement, then make the final commit. Step 4 has its own implementation/verification checkpoint. |
+| Completed implementation batch | Steps 0–4, including the native exec mapping correction and the retained-result accounting correction. Both audit findings are closed. The audit closeout commit contains the implementation, controls and corrected acceptance account; step 5 has not begun. |
+| Next batch | Step 5: settle the inherited C1–C6 design dispositions, establish independent expected answers, distribute permanent consumer-recovery enforcement, and make the final plan-closeout commit. |
 | ABI revision state | Worker ABI 6; response schema 7 (scoped comparisons, submitted intent and host provenance); request schema 1. No capacity/budget increase. Older replies retain their original version and absent new evidence. |
 | Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h`, `PWRunnerAPI.swift`, and `ValidatorClient.swift`. Admission belongs to the host; worker publications/transfer observations to `runner_subprocess`; validator records/receiver/process observations to `validator_subprocess`; controller byte counts/local loss to runner-client, policy-check and log-observer capture objects. |
 | Inventory entries closed / remaining limitations | Step-4 claim/evidence and compatibility/dependency inventories are closed; C1–C6 guarantees and deliberate limits are recorded in the failure contract and handoff. Query/attempt order, state stability and runtime target identity remain unestablished; broad/compound scope and sandbox attribution can remain unresolved. Earlier stderr, policy-pipe deadline, blocking reap, buffering and raw log-pathname fidelity limits are unchanged. Step 5 owns final design acceptance and consumer-recovery enforcement. |
-| Verified source and signed app | [Final signed build](out/failure-propagation-4/accepted-build.json), [build log](out/failure-propagation-4/build.final.log), [tested source](out/failure-propagation-4/tested-source.json) and [review](out/failure-propagation-4/review.json): all 51 production-source hashes and eight executables match. The accepted dispatcher run reports valid/unchanged app integrity; later Markdown edits are recorded separately. Test fixtures remain outside the inspected app. |
-| Checks, results, and evidence paths | [Step-4 handoff](out/failure-propagation-4/README.md): 130/130 required cases credited, no skips/unrun; 108 on the final build plus 22 unchanged offline controls. Swift 262/262; Rust 110/110; CLI integration 10/10; ten comparison scenarios and eleven unfamiliar-diagnostic controls. source_drift passes, all 13 BYOXPC cases pass, and the runner registry matches its initial contents. Earlier failed batches and corrected expectations remain retained without passing credit. |
+| Verified source and signed app | [Native exec signed build](out/failure-propagation-4/exec-review/accepted-build.json), [build log](out/failure-propagation-4/exec-review/build.log), [final tested source](out/failure-propagation-4/exec-review/final-tested-source.json) and [review](out/failure-propagation-4/exec-review/review.json): 51 production-source hashes and eight executables match. All app-inspected batches report valid/unchanged integrity; fixtures remain outside the app. Earlier checkpoint hashes describe that earlier implementation. |
+| Checks, results, and evidence paths | [Native exec handoff](out/failure-propagation-4/exec-review/README.md): 130/130 required cases credited with no skips/unrun. The full battery passed 129 and failed one mutation case before worker launch because its helper path reached 128 bytes; the unchanged case passed under a shorter output root. The final native checker and source_drift also pass their separate rerun. Swift 265/265, Rust 110/110, CLI integration 10/10; native exec 12 policies/80 pairs/11 comparison scenarios. BYOXPC cases pass and the registry is restored. No pre-correction build result is credited. |
 
 
 ## Decisions to resolve within implementation batches

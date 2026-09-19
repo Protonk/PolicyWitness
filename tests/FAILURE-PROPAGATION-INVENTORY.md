@@ -230,12 +230,45 @@ contracts and are not mechanically renamed. Extend/reconcile against the final d
 | `tests/catalog.json`, `tests/suites/source_drift/check.py`, `tests/README.md`, `tests/COVERAGE.md`, `tests/OPT_IN_TESTS.md` | Reconcile registrations, descriptions and actual scope; mandatory source_drift plus complete case-result accounting |
 | `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, suite/fixture READMEs, failure contract and plan pins | Publish response-7 meanings and limits consistently; distinguish historical accepted expectations from new response obligations |
 
-The [final dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
-covers all 44 changed artifacts and all 130 required cases. The
-[review](out/failure-propagation-4/review.json) credits 108 cases on the final build
-plus 22 unchanged offline controls, with no missing/skipped requirement. All 51
-recorded production sources and eight executables match; signed app integrity
-and owned BYOXPC cleanup pass. The [handoff](out/failure-propagation-4/README.md)
+The original [dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
+covered all 44 changed artifacts and all 130 required cases. Its
+[review](out/failure-propagation-4/review.json) credited 108 cases on that build
+plus 22 retained offline controls, with no missing/skipped requirement. The
+[retention correction](out/failure-propagation-4/retention-review/README.md)
+supersedes the blanket claim that all retained executable inputs were unchanged:
+`runner_validator_failure/transcript_controls` invoked a changed checker whose
+unused CLI branch was the entire delta. The old offline/allowlist checks did not
+mechanically establish applicability. At that checkpoint all 51 production-source
+and eight executable hashes matched; app integrity and owned BYOXPC cleanup passed.
+The [handoff](out/failure-propagation-4/README.md)
 maps every original C1–C6 question to delivered guarantees, acceptance evidence
 and deliberate limits. No required reporting addition remains pending. Step 5
 retains design acceptance and permanent consumer-recovery enforcement.
+
+### Native exec relationship review
+
+The [exec review](out/failure-propagation-4/exec-review/README.md) and
+[pre-edit decision](out/failure-propagation-4/exec-review/decision.md) reopen C1/C3
+for native exec mapping. Dependencies include CWorkerOrchestrator,
+DriftClassifierTests, runner_exec_dac's native controls, all successful-spawn
+expectations in runner_exec_lifecycle/inheritance/use_c_worker/specimen_isolation,
+and the public comparison contract. The existing all-130-case scope is retained,
+including source_drift, both runner contexts and indirect shared consumers.
+The original checkpoint records above remain historical; this correction has
+its own source/build and acceptance records. The question-2 retention correction
+preserves the old runs and snapshots while documenting the exact exception and
+the current replacement credit.
+
+The exec correction's [review](out/failure-propagation-4/exec-review/review.json)
+credits every required ID against the corrected build or unchanged offline code:
+130 cases, no skipped/unrun obligations, 265 Swift tests, 110 Rust unit tests and
+10 CLI integration tests. The native control passes twelve policies, eighty
+query/attempt pairs and eleven comparison scenarios. All 51 production sources
+and eight signed executables match the new build record. The full battery's
+pre-launch path-length failure, shorter-path mutation rerun and final script-target
+checker extension are retained separately. No earlier build's result is reused.
+
+Result reuse follows the [per-case dependency procedure](README.md#reusing-verification-results).
+The current `runner_validator_failure/transcript_controls` credit is its passing
+run in the exec correction's full battery, using the accepted checker. The
+historical exception therefore does not carry a current coverage obligation.
