@@ -258,8 +258,9 @@ Black-box and isolation controls also compare ordered/reordered response pairs:
 only the order diagnostic may change, preserving actual step failures without
 inventing others. Diagnostic order is unconstrained.
 The filter suites use the `unavailable_prediction.py` CLI adapter, supplying
-step identity, operation, filter value, and either a supported file-open or
-denied-sysctl attempt contract. Their independent controls run through
+step identity, operation, filter value, either a supported file-open or
+denied-sysctl attempt contract, and an explicit response-version requirement for
+live output. Stored legacy fixtures omit that requirement. Their independent controls run through
 `runner_filter_sysctl_name` before its optional app check; see its README.
 
 The menagerie's end-to-end specimens come from local copies of PAWL evidence.

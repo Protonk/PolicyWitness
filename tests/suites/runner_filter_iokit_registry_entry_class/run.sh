@@ -57,6 +57,7 @@ fi
 
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter prediction/attempt contract failed" \
   "${ROOT_DIR}/tests/lib/unavailable_prediction.py" "${RUN_STDOUT}" \
-  --step-id iosurface_open --operation iokit-open-service --filter-value IOSurfaceRoot --attempt file_open
+  --step-id iosurface_open --operation iokit-open-service --filter-value IOSurfaceRoot --attempt file_open \
+  --expected-schema-version 7
 
 test_pass "prediction_unavailable surfaced; attempt observed" "{}"

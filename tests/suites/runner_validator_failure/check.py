@@ -96,6 +96,8 @@ def check_cli(case, out, pw):
             assert after[0] and after[0] != seeds[0], 'allowed write did not change the target'
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
+            runner = envelope['data']['runner_result']
+            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 7, runner
             assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
             answers = recover_evidence(envelope)
             (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
@@ -112,7 +114,6 @@ def check_cli(case, out, pw):
             assert absent['query']['native_rc'] is None
             assert absent['attempt']['outcome'] == 'access_failed'
             assert absent['attempt']['errno'] in (errno.EPERM, errno.EACCES)
-            runner = envelope['data']['runner_result']
             assert rc == 1 and envelope['result']['ok'] is False, envelope
             expected = 'validator_unavailable' if case == 'eof' else 'validator_decode_failure'
             assert runner['normalized_outcome'] == expected and runner['rc'] == 1, runner

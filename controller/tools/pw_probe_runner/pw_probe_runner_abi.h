@@ -197,7 +197,8 @@ enum {
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2 };
 
 /* ABI 6. Worker-owned publication contract is specified in
- * tests/FAILURE-PROPAGATION-CONTRACT.md, Step 1. All payloads immutable after
+ * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract (ABI 6)".
+ * All payloads immutable after
  * their publication word reaches 1 (diagnostic also accepts 2=truncated).
  * Progress is a single atomic value, never a gate for reading other storage. */
 typedef struct {

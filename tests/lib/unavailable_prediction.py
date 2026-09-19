@@ -15,7 +15,7 @@ from blackbox import validate_run_shape, validate_step
 from consumer import recover_evidence
 
 
-def validate_run(run, step_id, operation, filter_value, attempt_contract):
+def validate_run(run, step_id, operation, filter_value, attempt_contract, *, expected_schema_version=None):
     expected = {"step_id": step_id, "sandbox_outcome": "prediction_unavailable"}
     if attempt_contract == "sysctl_denied":
         expected["attempt_ok"] = False
@@ -46,7 +46,9 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
                 errors.append(f"{step_id}: expected attempt.errno=EPERM/EACCES (got {errno!r})")
     if errors:
         return errors
-    version = ((run.get('data') or {}).get('runner_result') or {}).get('schema_version', 0)
+    version = ((run.get('data') or {}).get('runner_result') or {}).get('schema_version')
+    if expected_schema_version is not None and (type(version) is not int or version != expected_schema_version):
+        return [f'expected runner schema_version={expected_schema_version} (got {version!r})']
     if type(version) is int and version >= 7 and attempt_contract == 'sysctl_denied':
         answers = recover_evidence(run)
         answer = answers['steps'][0]
@@ -69,13 +71,16 @@ def main():
     parser.add_argument("--operation", required=True)
     parser.add_argument("--filter-value", required=True)
     parser.add_argument("--attempt", choices=("file_open", "sysctl_denied"), required=True)
+    parser.add_argument("--expected-schema-version", type=int,
+                        help="require this response version for live output; omit for legacy fixtures")
     args = parser.parse_args()
     try:
         run = json.loads(args.run.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         print(f"cannot read run JSON: {exc}", file=sys.stderr)
         return 1
-    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt)
+    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt,
+                          expected_schema_version=args.expected_schema_version)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

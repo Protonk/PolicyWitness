@@ -50,7 +50,7 @@ def main():
             }},
         }
 
-        def check(label, envelope, diagnostics=(), status=1, raw=None):
+        def check(label, envelope, diagnostics=(), status=1, raw=None, expected_schema_version=None):
             nonlocal count
             count += 1
             stem = artifacts / f"{name}.{label}"
@@ -58,6 +58,8 @@ def main():
             run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
             argv = [sys.executable, str(CHECKER), str(run_path), "--step-id", step_id,
                     "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
+            if expected_schema_version is not None:
+                argv.extend(["--expected-schema-version", str(expected_schema_version)])
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
             output = result.stdout + result.stderr
             Path(f"{stem}.log").write_text(f"argv={argv!r}\nrc={result.returncode}\n{output}")
@@ -72,6 +74,46 @@ def main():
             return envelope, envelope["data"]["runner_result"]["steps"][0]
 
         check("valid_nullable_evidence", baseline, status=0)
+        # Current live output must not take the compatibility path used by stored
+        # fixtures. These reports are authored here, independent of PW output.
+        current, step = mutate()
+        current["data"]["runner_result"]["schema_version"] = 7
+        step["attempt"].update(requested_kind="sysctl" if sysctl else "file",
+                               requested_action="read" if sysctl else "open_read",
+                               missing_reason=None)
+        step["sandbox_check"]["missing_reason"] = "query_not_requested"
+        step["comparison"] = {
+            "scope": "submitted_operation_and_target", "prediction": "unavailable",
+            "observation": "permission_failure" if sysctl else "succeeded",
+            "observation_basis": "permission_errno" if sysctl else "completed_worker_status",
+            "operation_relation": "unresolved", "target_relation": "unresolved",
+            "conclusion": "unavailable", "limitations": [
+                "query_attempt_order_unestablished", "state_stability_unestablished",
+                "prediction:query_not_requested", "query_plan:prediction_unavailable_pair",
+            ] + (["sandbox_attribution_unestablished"] if sysctl else []),
+        }
+        check("current_live_evidence", current, status=0, expected_schema_version=7)
+        for label, version in (("v4", 4), ("v5", 5), ("v6", 6), ("absent", None)):
+            legacy = copy.deepcopy(baseline)
+            if version is not None:
+                legacy["data"]["runner_result"]["schema_version"] = version
+            check("legacy_fixture_" + label, legacy, status=0)
+            check("legacy_cannot_replace_live_" + label, legacy,
+                  ("expected runner schema_version=7",), expected_schema_version=7)
+        for label, version in (("old", 6), ("null", None), ("string", "7"),
+                               ("float", 7.0), ("boolean", True), ("future", 8)):
+            changed = copy.deepcopy(current)
+            changed["data"]["runner_result"]["schema_version"] = version
+            check("wrong_live_version_" + label, changed,
+                  ("expected runner schema_version=7",), expected_schema_version=7)
+        changed = copy.deepcopy(current)
+        current_step = changed["data"]["runner_result"]["steps"][0]
+        del current_step["comparison"]
+        del current_step["attempt"]["requested_kind"]
+        del current_step["attempt"]["requested_action"]
+        check("missing_current_evidence", changed,
+              ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"),
+              expected_schema_version=7)
         changed, step = mutate()
         if sysctl:
             step["attempt"].update(errno=13, syscall_errno=13)

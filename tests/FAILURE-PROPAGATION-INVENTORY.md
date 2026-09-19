@@ -3,7 +3,23 @@
 This inventory separates admission from runtime observations. Acceptance evidence below identifies which routes were exercised and which
 coverage gaps remain. Capacities and time budgets are
 unchanged. Authoritative field contracts live beside the Swift decoder/API and in
-FAILURE-PROPAGATION-CONTRACT.md.
+[the failure contract](FAILURE-PROPAGATION-CONTRACT.md).
+
+Current guarantees and test owners are available in the tracked
+[coverage table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership),
+[receiver contract](FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract),
+and [consumer enforcement map](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement).
+The registered cases in [the catalog](catalog.json) reproduce the permanent
+checks without any saved acceptance output.
+
+**Local evidence receipts:** links below into `out/` identify optional historical
+artifacts in the gitignored `tests/out/` directory. They are available only in a
+workspace that retained those runs; they are not shipped in a clone and are not
+inputs to any permanent test. Checkpoint narratives describe the source, schemas
+and results at that checkpoint, including superseded comparison meanings. Use
+[the public comparison contract](FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning)
+for current semantics. The tracked contracts and test owners above remain
+sufficient when these local receipts are absent.
 
 ## Admission
 
@@ -79,8 +95,8 @@ requirements for `ok`, even with complete ID coverage.
 
 ## Acceptance evidence
 
-Signed-build evidence: [correction acceptance index](out/failure-propagation-corrections/README.md).
-The earlier [step-2 index](out/failure-propagation-2/README.md) remains retained.
+Signed-build evidence: [local receipt: correction acceptance index](out/failure-propagation-corrections/README.md).
+The earlier [local receipt: step-2 index](out/failure-propagation-2/README.md) remains retained.
 
 - All six admission rows: `failure_boundaries/admission` makes 30 CLI runs covering
   every exact/over and multibyte boundary, structured values/identity, absent
@@ -152,9 +168,9 @@ separately scoped observation limitation.
 | G5 | Required missing binaries/fixture environment throw TestFailure; wrapper rejects internal SKIP/FAIL. Negative equipment run must reach a normal failed summary. |
 | Directional drift | Actual DAC EACCES with a separately denied prediction retains drift=false without claiming sandbox cause; direct OS control and restored-permission run remain. |
 
-Corrective acceptance: [index and exact commands](out/failure-propagation-corrections/README.md),
-[case/integrity audit](out/failure-propagation-corrections/acceptance.json),
-[build/source hashes](out/failure-propagation-corrections/accepted-build.json).
+Corrective acceptance: [local receipt: index and exact commands](out/failure-propagation-corrections/README.md),
+[local receipt: case/integrity audit](out/failure-propagation-corrections/acceptance.json),
+[local receipt: build/source hashes](out/failure-propagation-corrections/accepted-build.json).
 The latest results cover 93 distinct passing catalog cases, 256/256 Swift tests,
 106/106 Rust unit tests and 10 CLI integration tests. The broad run's sole
 failure exposed a legacy null-PID decode fallback; the corrected decoder and
@@ -184,7 +200,7 @@ Real worker success, compile failure, interrupted transfer, lifecycle, timeout,
 partial-validator, receiver-rejection and admission controls remain required
 regressions. The earlier liveness, stderr, buffering and log-pathname limitations
 remain unchanged. Retained experiment evidence is indexed in
-[step 3](out/failure-propagation-3/README.md).
+[local receipt: step 3](out/failure-propagation-3/README.md).
 
 Step-3 acceptance: all 49 selected catalog cases pass, with 258/258 Swift tests,
 109/109 Rust unit tests and 10 CLI integration tests; no internal Swift SKIP/FAIL.
@@ -193,11 +209,11 @@ CLI control failures and a normal 253/258 Swift summary; validator filtering
 causes both validator CLI controls and the direct control to fail (257/258).
 Shared-receiver detail removal fails all three new Rust receiver controls.
 The final signed app is valid/unchanged and all mutation sources are restored
-byte-for-byte. See the [acceptance audit](out/failure-propagation-3/acceptance.json)
+byte-for-byte. See the [local receipt: acceptance audit](out/failure-propagation-3/acceptance.json)
 for exact commands, paths, hashes, negative controls and limitations. No production
 recognition-dependent boundary was found in the exercised routes.
 
-The [step-3 closeout](out/failure-propagation-3/closeout/README.md) verifies the
+The [local receipt: step-3 closeout](out/failure-propagation-3/closeout/README.md) verifies the
 retained results and restored sources against the current signed app, with only
 documentation differences from the tested snapshot. Its corrected coverage
 claims separate fixture-supplied fields from observed host/receiver/process facts
@@ -208,10 +224,10 @@ of joined observations and permanent consumer enforcement is recorded below.
 
 The response-7 contract and C1–C6 baseline are recorded in the
 [claim/evidence review](FAILURE-PROPAGATION-CONTRACT.md#claimevidence-review).
-Before implementation, the [concrete inventory](out/failure-propagation-4/dependencies-before.json)
+Before implementation, the [local receipt: concrete inventory](out/failure-propagation-4/dependencies-before.json)
 records 77 discovered executable artifacts, all canonical IDs, prerequisites,
 default/opt-in membership and runner contexts. The
-[required ID list](out/failure-propagation-4/required-case-ids.txt) contains all
+[local receipt: required ID list](out/failure-propagation-4/required-case-ids.txt) contains all
 130 registered cases: acceptance deliberately covers the entire catalog, including
 indirect helper consumers. No search candidate is excluded from execution.
 Bundle-integrity `drift` and validator/request/fixture schema numbers are different
@@ -229,24 +245,24 @@ contracts and are not mechanically renamed. Extend/reconcile against the final d
 | `tests/catalog.json`, `tests/suites/source_drift/check.py`, `tests/README.md`, `tests/COVERAGE.md`, `tests/OPT_IN_TESTS.md` | Reconcile registrations, descriptions and actual scope; mandatory source_drift plus complete case-result accounting |
 | `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, suite/fixture READMEs, failure contract and plan pins | Publish response-7 meanings and limits consistently; distinguish historical accepted expectations from new response obligations |
 
-The original [dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
+The original [local receipt: dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
 covered all 44 changed artifacts and all 130 required cases. Its
-[review](out/failure-propagation-4/review.json) credited 108 cases on that build
+[local receipt: review](out/failure-propagation-4/review.json) credited 108 cases on that build
 plus 22 retained offline controls, with no missing/skipped requirement. The
-[retention correction](out/failure-propagation-4/retention-review/README.md)
+[local receipt: retention correction](out/failure-propagation-4/retention-review/README.md)
 supersedes the blanket claim that all retained executable inputs were unchanged:
 `runner_validator_failure/transcript_controls` invoked a changed checker whose
 unused CLI branch was the entire delta. The old offline/allowlist checks did not
 mechanically establish applicability. At that checkpoint all 51 production-source
 and eight executable hashes matched; app integrity and owned BYOXPC cleanup passed.
-The [handoff](out/failure-propagation-4/README.md)
+The [local receipt: handoff](out/failure-propagation-4/README.md)
 maps every original C1–C6 question to delivered guarantees, acceptance evidence
 and deliberate limits. No required reporting addition remains pending. Final design acceptance and permanent consumer enforcement are recorded below.
 
 ### Native exec relationship review
 
-The [exec review](out/failure-propagation-4/exec-review/README.md) and
-[pre-edit decision](out/failure-propagation-4/exec-review/decision.md) reopen C1/C3
+The [local receipt: exec review](out/failure-propagation-4/exec-review/README.md) and
+[local receipt: pre-edit decision](out/failure-propagation-4/exec-review/decision.md) reopen C1/C3
 for native exec mapping. Dependencies include CWorkerOrchestrator,
 DriftClassifierTests, runner_exec_dac's native controls, all successful-spawn
 expectations in runner_exec_lifecycle/inheritance/use_c_worker/specimen_isolation,
@@ -257,7 +273,7 @@ its own source/build and acceptance records. The question-2 retention correction
 preserves the old runs and snapshots while documenting the exact exception and
 the current replacement credit.
 
-The exec correction's [review](out/failure-propagation-4/exec-review/review.json)
+The exec correction's [local receipt: review](out/failure-propagation-4/exec-review/review.json)
 credits every required ID against the corrected build or unchanged offline code:
 130 cases, no skipped/unrun obligations, 265 Swift tests, 110 Rust unit tests and
 10 CLI integration tests. The native control passes twelve policies, eighty
@@ -281,15 +297,15 @@ receiver/correlation and shared blackbox checks. Native observations, supplied
 verdicts, constructed interpretation and legacy decoding retain distinct scopes.
 The single-envelope helper reads no external oracle, classifier, plan or audit.
 
-The [initial acceptance experiment](out/failure-propagation-5/acceptance/README.md)
+The [local receipt: initial acceptance experiment](out/failure-propagation-5/acceptance/README.md)
 freezes the reviewed expectations before the filter (25 envelopes, 38 reviewed
 step answers). The permanent helper recovers those answers from all 25 inputs,
 containing 88 total steps. Registered controls reject nine representative losses,
 including a single missing concurrent limit, false host provenance, erased failed
 exec evidence after spawning, lost candidate provenance and blanket unknown.
 
-The [final closeout](out/failure-propagation-5/closeout/README.md) and
-[review](out/failure-propagation-5/closeout/review.json) reconcile every changed
+The [local receipt: final closeout](out/failure-propagation-5/closeout/README.md) and
+[local receipt: review](out/failure-propagation-5/closeout/review.json) reconcile every changed
 artifact with the existing all-catalog dependency gate. All 130 cases pass on the
 fresh signed build, with no failures, skips or unrun obligations: 267 Swift tests,
 112 Rust unit tests, 10 CLI integration tests and all 13 BYOXPC cases. The registry

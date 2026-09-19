@@ -184,7 +184,7 @@ reporting obligations and registered test owners.
 | Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` | Constructed Codable results; response 7 explicit signal null, legacy response-4 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
-| Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Retain; does not prove diagnostic text reaches CLI; 1B adds that boundary |
+| Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
 | `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 6 layout and exact-version rejection |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce response 7; missing channels remain distinct from observed failures |
@@ -332,12 +332,12 @@ identifies compilation NULL and diagnostic; producer-controlled apply failure
 retains native return/errno. Missing/incomplete publication exposes no payload.
 Late publication retains slots and deadline. Unknown codes survive fixture →
 real host → XPC → CLI. Never-invoked and short-reply validators differ; an
-interrupted started attempt remains incomplete. In 1C, worker source rejection
+interrupted started attempt remains incomplete. Worker source rejection
 and host EPIPE must coexist, closed-input controls must work without oversized
 admission, and mapping failure preserves exit 3 without invented errno/cause.
 Failures after completed real probes preserve independently checked effects.
 
-### Policy-transfer failure (1C)
+### Policy-transfer failure
 
 `CWorkerRunResult.failure(error, partial)` carries an optional actual worker
 output. No child means no partial; an observed policy write failure after spawn
@@ -351,7 +351,7 @@ A zero errno is retained if observed. No worker record is synthesized from it.
 The poll stop reason is `policy_write_error`; sentinel polling never began.
 The host suppresses SIGPIPE on this pipe's write FD using F_SETNOSIGPIPE before
 spawn, checking setup failure. After write failure it closes input, requests exit,
-and uses the step-0 grace/termination/reaping contract. All evidence reaches the
+and uses the [host observation](#host-observations) grace/termination/reaping contract. All evidence reaches the
 same partial-output assembly path. A worker failure summary takes precedence
 when published; host transfer error remains independently available and named.
 An open, undrained pipe is still a blocking pre-sentinel transfer with no deadline.
@@ -726,6 +726,14 @@ The shared blackbox checker enforces universal response-7 shape, required tempor
 and attribution limits, explicit drift projection and host-path ownership; it does
 not reconstruct the prediction/attempt decision procedure. Indirect blackbox and
 filter consumers, including BYOXPC cases, exercise the same guarantees.
+
+Live comparison, native-exec, pre-apply, validator-failure and log-correlation
+witnesses require response version 7 before relying on version-gated checks.
+The three live filter callers pass `--expected-schema-version 7` to their
+adapter. Its offline controls accept legacy fixtures without that requirement,
+reject older/missing/invalid versions when it is supplied, and reject missing
+comparison/intent evidence on current replies. Compatibility with stored replies
+cannot substitute for checking the current producer's contract.
 
 The blackbox checker controls reject losses through the actual checker CLI or
 the same single-envelope recovery helper used by live cases: missing intent,

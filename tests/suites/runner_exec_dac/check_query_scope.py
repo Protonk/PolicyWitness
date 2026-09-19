@@ -95,6 +95,7 @@ def main():
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
+            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 7, runner
             assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
             answers = recover_evidence(envelope)
             consumer_evidence[name] = answers

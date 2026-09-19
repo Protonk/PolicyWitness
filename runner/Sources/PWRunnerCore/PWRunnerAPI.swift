@@ -440,7 +440,8 @@ public struct PWRunnerPathDiagnostics: Codable {
 
 public struct PWRunnerSandboxCheckResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// step-1 contract for native returns versus PW status and missing reasons.
+    /// "Worker evidence contract (ABI 6)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// for native returns versus PW status and missing reasons.
     public var result_source: String? = nil
     public var native_rc: Int? = nil
     public var missing_reason: String? = nil
@@ -567,7 +568,8 @@ public struct PWRunnerSandboxCheckResult: Codable {
 
 public struct PWRunnerAttemptResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// step-1 contract for native returns versus PW status and missing reasons.
+    /// "Worker evidence contract (ABI 6)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// for native returns versus PW status and missing reasons.
     /// Submitted intent, not proof that the named native operation ran.
     public var requested_kind: String? = nil
     public var requested_action: String? = nil

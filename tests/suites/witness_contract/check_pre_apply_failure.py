@@ -26,7 +26,7 @@ def library_claims(value, path='runner'):
 
     Operation-tagged records and explicit apply/compile return fields are checked
     separately from prose. Ordinary step rc values are not library-failure claims.
-    Extend these checks if the step-1 record contract uses different field names.
+    Extend these checks if the worker evidence contract uses different field names.
     """
     claims = []
     if isinstance(value, dict):
@@ -114,7 +114,7 @@ def common_evidence(envelope, rc, specimen, failure):
             assert isinstance(prediction['outcome'], str) and prediction['outcome'], prediction
             assert prediction['outcome'] not in ('allow', 'deny'), prediction
             # This compatibility spelling means no completed result. It does
-            # not prove the worker never started the operation (step 1A).
+            # not prove the worker never started the operation.
             assert attempt['outcome'] == 'not_run_worker_died', attempt
             assert attempt['errno'] is None and attempt['syscall_errno'] is None, attempt
             assert step['drift'] is None, step

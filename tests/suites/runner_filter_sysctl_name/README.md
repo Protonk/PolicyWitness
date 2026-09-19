@@ -8,7 +8,8 @@ and EPERM or EACCES in both `errno` and `syscall_errno`.
 ## Shared filter contract
 
 The three `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
-with their expected step ID, operation, filter value and attempt contract. The
+with their expected step ID, operation, filter value, attempt contract and
+`--expected-schema-version 7` for live output. The
 adapter uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
 policy format, exact step identity/count, and evidence fields with their documented types.
 An unavailable prediction has integer `rc=-1`, explicitly null `filter_type_id`
@@ -33,6 +34,12 @@ fields, wrong sentinel values/types, missing or non-null drift, wrong/duplicate/
 missing step IDs, operation/filter-value mismatches, incorrect policy format,
 malformed envelopes and broken attempts must fail with relevant diagnostics.
 Combined faults must report both channels.
+
+Current-version positive controls carry comparison and submitted-attempt evidence;
+removing those fields must fail. Older, absent, null or non-integer response
+versions cannot bypass the live version requirement. Stored legacy fixtures
+remain acceptable when that explicit requirement is omitted. Each of the three
+caller contracts exercises both paths through the checker CLI.
 
 These controls need only Python 3 and run in the default battery through this
 suite. They can also be run directly:

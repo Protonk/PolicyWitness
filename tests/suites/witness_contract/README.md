@@ -217,9 +217,10 @@ preservation of these records, not attribution or comparability between them.
 Fixture inputs and limitations are documented in
 [`diagnostic_transport`](../../fixtures/diagnostic_transport/README.md).
 Direct Swift and Rust receiver controls complement this CLI route. Temporary
-known-code filtering or detail-dropping mutations must fail these controls;
-mutation patches/results live in the step-3 evidence directory and are excluded
-from the restored production implementation.
+known-code filtering or detail-dropping mutations must fail these controls.
+The [unfamiliar diagnostic preservation contract](../../FAILURE-PROPAGATION-CONTRACT.md#unfamiliar-diagnostic-preservation-controls)
+records the required distinctions and their test owners; running the controls
+requires no retained mutation experiment or acceptance output.
 
 The steered-validator case also runs ten bounded comparison scenarios through the
 CLI. `check_comparison.py` records independent expectations, direct DAC EACCES and
