@@ -68,7 +68,9 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
-- **When to run:** After changing BYOXPC install/verify behavior or runner-mode selection.
+- **When to run:** After changing BYOXPC install/verify behavior, runner-mode
+  selection, or shared response/comparison contracts and blackbox helpers. Include
+  both BBX cases and the applicable menagerie members, with owned cleanup.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
 
 ### runner_auth_external

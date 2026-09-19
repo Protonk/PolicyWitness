@@ -10,4 +10,4 @@ test_step run "completed allowed and denied writes retain their evidence after t
 test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "mixed-outcome worker timeout contract failed" \
   "${ROOT_DIR}/tests/suites/runner_outcome_runner_timeout/check.py" \
   mixed "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
-test_pass "host timeout preserves allowed and denied write evidence, file effects, and drift=false"
+test_pass "host timeout preserves allowed and denied write evidence, file effects, and limited comparison evidence"

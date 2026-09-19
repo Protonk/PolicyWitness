@@ -321,7 +321,7 @@ Example:
 
 ### Shape and schema_version
 
-Runner responses use `schema_version = 6`, separately from request schema 1,
+Runner responses use `schema_version = 7`, separately from request schema 1,
 the controller envelope and worker ABI 6. The XPC host stays unsandboxed and
 spawns a sandboxed attempt worker plus a batch validator. Worker identity for
 correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
@@ -378,30 +378,31 @@ Top-level fields beyond `pid` / `runner_subprocess`:
     2. The validator failed to spawn before any metadata could be
        captured (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
-- `steps[].drift: bool | null` — disagreement between the
-  validator's predicted verdict and the attempt's observed verdict
-  for the step. `true` when they disagree about allow/deny
-  (libsandbox-drift evidence; the property PolicyWitness exists to
-  surface). `false` when they agree.
-  `null` when no comparison is possible. Three cases produce `null`:
-    1. The validator wasn't run for this step (the step's filter
-       kind is unknown to the runner, or the (op, filter) pair is
-       in the prediction-unavailable set, or no validator child ran
-       at all).
-    2. The attempt didn't produce an allow/deny verdict (the attempt
-       errored before reaching the kernel, or the attempt outcome is
-       `not_run_worker_died`).
-    3. The attempt observed a *DAC*-ambiguous failure — EPERM or
-       EACCES on a file/access path or failed spawn — while the
-       validator predicted `allow`. Filesystem permissions and the
-       sandbox both surface as EPERM/EACCES from a file open or
-       `posix_spawn`; the runner can't tell them apart from rc/errno
-       alone, so `(validator=allow,
-       attempt=ambiguous-deny)` is reported as `null` instead of
-       `true` to avoid false libsandbox-drift attribution. Strong
-       deny evidence (mach `kr=1100`, etc.) is unambiguous and does
-       produce `drift=true` when the validator predicted `allow`.
-  Encoded as explicit JSON `null` so the key is always present.
+- `steps[].drift: bool | null` — a limited comparison of recorded outcomes
+  within matching submitted operation/target scope. `false` means allow prediction
+  plus a successful attempt; `true` means deny prediction plus a successful
+  attempt. Neither proves equal state at query/attempt time or a libsandbox bug.
+  Permission failures have unestablished sandbox attribution under either
+  prediction and therefore retain `drift:null`.
+- `steps[].comparison` — records `scope`, `prediction`, `observation`,
+  `observation_basis`, `operation_relation`, `target_relation`, `conclusion` and
+  `limitations`. Agreement, disagreement, directional consistency and unavailable
+  comparison remain distinct. Deny plus a permission failure may establish only
+  directional consistency within matching scope. Different submitted operations
+  or targets prevent a comparison; equal path spelling does not establish runtime
+  object identity. Timing and state stability remain explicit limits even when a
+  useful outcome comparison is available. Several limitations can coexist.
+- `steps[].attempt.requested_kind` / `requested_action` — submitted intent,
+  alongside the existing `requested_path` target; these do not prove execution.
+  Broad operation queries, compound create attempts and unscoped filters retain
+  unresolved comparison scope. Native failure and missing-result evidence survive.
+
+The [comparison contract](tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning)
+lists the supported scope mappings, observations and limits. Response 7 changes
+`drift` semantics; old versions 4–6 remain readable with their original values and
+no invented comparison metadata. Consumers must interpret the response version.
+Path diagnostics carry `observer="runner_host"` and `phase="after_orchestration"`:
+they describe later host resolution, not what the validator or worker saw earlier.
 
 The authoritative child object also includes `worker_evidence` when a child was
 spawned. Its ABI version identifies the host-selected layout, not proof that
@@ -448,7 +449,7 @@ debugger attach (see [Debug-attach to the worker](#debug-attach-to-the-worker)).
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_path, normalized_path, observed_path }`
+- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_kind, requested_action, requested_path, normalized_path, observed_path }`
 - `steps[].drift`: `bool | null` — see the field description above.
 
 Notes:
@@ -560,19 +561,19 @@ Notes:
 ### path_diagnostics
 
 `path_diagnostics` is emitted on every path-filter `sandbox_check`
-result. It carries the candidate kernel-side forms of the check
-path so a caller can see which prefix libsandbox could have been
-comparing against when a `(subpath ...)` rule denies a path that
-looked like it should match. Fields: `{ input, realpath_resolved,
+result with a nonempty submitted path. It carries later host-resolved path forms
+for diagnostic inspection; it cannot identify which form an earlier native check
+used. Fields: `{ observer, phase, input, realpath_resolved,
 firmlink_resolved, data_volume_form }`. The runner still passes
 the raw `filter_value` to `sandbox_check` — this block is
 observation only.
 
 Producer: `path_diagnostics` is computed by the unsandboxed runner
-host (`PWRunnerService.enrichPathDiagnostics`) after the worker
-process returns. The host's `realpath(3)` is not blocked by the
-worker's `(deny default)` policy, so `realpath_resolved` is reliably
-populated even under restrictive sandboxes.
+host (`PWRunnerService.enrichPathDiagnostics`) after orchestration returns,
+which need not establish that every child was reaped. `observer="runner_host"`
+and `phase="after_orchestration"` identify that provenance. The host's resolution
+is independent of the worker's sandbox and can see a path changed by an attempt.
+Neither a resolved path nor null establishes what the validator saw earlier.
 
 At v2+ all four keys are always emitted: a string when computed, an
 explicit `null` when the computation didn't produce a value. Consumers
@@ -750,7 +751,7 @@ combinations:
 
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
-  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are ambiguous permission failures: prediction allow yields `drift=null`, prediction deny yields directional agreement (`false`). A helper non-zero exit with `child_pid>0` is a non-policy failure (`drift=null`). |
+  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are ambiguous permission failures: prediction allow yields `drift=null`, prediction deny can yield directional consistency with `drift=null` when submitted scope matches. A helper non-zero exit with `child_pid>0` still establishes successful spawning; the comparison separately accounts for query scope. |
   | `child_exit_code` | child clean-exited | `-1` — child was signaled or no child ran | |
   | `child_term_signal` | child killed by a signal | `0` — clean-exited or no child ran | |
   | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | Captured up to 1023 bytes per stream; output past the buffer is truncated and tagged with a trailing `\n... [truncated]` marker. |

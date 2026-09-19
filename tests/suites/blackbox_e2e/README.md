@@ -90,3 +90,8 @@ including when the shared scripts run under BYOXPC. The rendered specimen and
 `workspace.before`/`workspace.after` copies remain in artifacts; exit cleanup
 removes scratch on success or failure. Test correctness does not depend on
 Desktop/Documents privacy consent.
+
+The shared checker requires response-7 comparison, submitted attempt kind/action
+and host path provenance. Checker controls include a constructed response-7
+positive case, missing comparison and independently malformed channels; the
+stored response-5 fixtures continue to exercise legacy contracts.

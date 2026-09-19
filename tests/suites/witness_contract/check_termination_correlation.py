@@ -58,7 +58,7 @@ def main():
             data = envelope['data']
             runner = data['runner_result']
             expected = 'runner_failed' if signaled else 'ok'
-            assert runner['schema_version'] == 6, runner
+            assert runner['schema_version'] == 7, runner
             assert runner['normalized_outcome'] == expected, runner
             assert envelope['result']['normalized_outcome'] == expected, envelope['result']
             assert envelope['result']['ok'] is (not signaled), envelope['result']
@@ -119,6 +119,14 @@ def main():
                         assert event['path'] == str(target), event
                         assert association['candidate_step_ids'] == ids, association
                         assert association['association'] == 'ambiguous', association
+                        evidence = association['matching_evidence']
+                        assert [item['step_id'] for item in evidence] == ids, evidence
+                        for item in evidence:
+                            assert item['operation'] == event['operation'], item
+                            assert item['operation_source'] == 'submitted_attempt', item
+                            assert (item['requested_kind'], item['requested_action']) == ('file', 'open_write'), item
+                            assert item['path'] == str(target), item
+                            assert set(item['path_sources']) == {'submitted_attempt.target', 'attempt.requested_path'}, item
                         assert 'deny_events' not in association, association
                 else:
                     assert diag['correlation_status'] == 'unavailable', diag

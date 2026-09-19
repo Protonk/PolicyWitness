@@ -460,7 +460,7 @@
         },
         {
           "id": "bare_deny_default",
-          "description": "bug-report (deny default) shape: worker survives, verdict+observation both deny, drift=false"
+          "description": "bug-report (deny default) shape: worker survives, deny prediction with unattributed permission failure, drift=null"
         },
         {
           "id": "drift_null_for_dac_eacces",
@@ -492,7 +492,7 @@
         },
         {
           "id": "happy_default_allow",
-          "description": "C-worker path produces complete v4 envelope; drift=false for matching allow/ok"
+          "description": "C-worker path produces complete response-7 envelope; drift=false for matching allow/ok"
         },
         {
           "id": "prediction_unavailable_pair",
@@ -902,7 +902,7 @@
         },
         {
           "id": "worker_post_apply_hang_seam",
-          "description": "host timeout preserves allowed and denied write evidence, file effects, and drift=false",
+          "description": "Host timeout preserves allowed/denied writes, independent file effects and limited comparison evidence",
           "command": [
             "bash",
             "tests/suites/witness_contract/worker_post_apply_hang_seam.sh"
@@ -913,7 +913,8 @@
           "command": [
             "bash",
             "tests/suites/witness_contract/drift_determination_via_validator_seam.sh"
-          ]
+          ],
+          "description": "Controlled verdicts and real attempts retain scoped comparisons, provenance and simultaneous limits"
         },
         {
           "id": "prediction_target_is_independent_of_attempt_target",

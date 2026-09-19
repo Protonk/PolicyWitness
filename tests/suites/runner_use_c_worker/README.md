@@ -21,7 +21,7 @@ guards for the request-validation and drift-classification rules:
 
 1. **happy_default_allow** — `(allow default)` + one file read.
    Asserts:
-   - `schema_version == 6`
+   - `schema_version == 7`
    - `validator_subprocess` populated with clean exit
    - `runner_subprocess` populated, `pid` mirrors back at top level
    - `steps[0].sandbox_check.outcome == "allow"` (validator)
@@ -38,7 +38,7 @@ guards for the request-validation and drift-classification rules:
      clean-exited)
    - validator predicted `deny`, attempt observed `open_failed` with
      `errno ∈ {EPERM=1, EACCES=13}`
-   - `drift == false` (validator and attempt agree on deny)
+   - `drift == null` (permission failure has unestablished sandbox attribution)
 
 3. **prediction_unavailable_pair** — `(iokit-open-service,
    iokit_registry_entry_class)` is in `predictionUnavailableOpFilters`,

@@ -106,7 +106,7 @@
             "policy": "deny",
             "attempt_ok": false,
             "predict": "deny",
-            "drift": false
+            "drift": null
           }
         },
         {
@@ -127,7 +127,7 @@
             "policy": "deny",
             "attempt_ok": false,
             "predict": "deny",
-            "drift": false
+            "drift": null
           }
         }
       ]
@@ -189,7 +189,7 @@
             "policy": "deny",
             "attempt_ok": false,
             "predict": "deny",
-            "drift": false
+            "drift": null
           }
         },
         {
@@ -264,7 +264,7 @@
             "policy": "deny",
             "attempt_ok": false,
             "predict": "deny",
-            "drift": false
+            "drift": null
           }
         },
         {
@@ -326,7 +326,7 @@
             "mismatch_reason": "canonicalization_boundary",
             "policy": "allow",
             "predict": "deny",
-            "drift": false
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -347,7 +347,7 @@
             "attempt_ok": false,
             "policy": "deny",
             "predict": "deny",
-            "drift": false
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -369,7 +369,7 @@
             "mismatch_reason": "canonicalization_boundary",
             "policy": "allow",
             "predict": "deny",
-            "drift": false
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -659,7 +659,7 @@
             "mismatch_reason": "canonicalization_boundary",
             "policy": "allow",
             "predict": "deny",
-            "drift": false
+            "drift": null
           },
           "sandbox_check": {
             "filter": {
@@ -680,7 +680,7 @@
             "attempt_ok": false,
             "policy": "deny",
             "predict": "deny",
-            "drift": false
+            "drift": null
           },
           "sandbox_check": {
             "filter": {

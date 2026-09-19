@@ -199,7 +199,7 @@ Readiness, sentinel and exit-grace budgets are unchanged. Authoritative field
 validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
-Response schema is 6; request schema 1 and worker ABI 6 are independent. Legacy
+Response schema is 7; request schema 1 and worker ABI 6 are independent. Legacy
 replies remain decodable. Typed readers that require a signal object must migrate
 to a nullable field. Optional subprocess objects retain omitted-or-null absence.
 
@@ -212,8 +212,7 @@ Per-step fields under `steps[]`:
   null when no result supports them.
 
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
-  `filter_value` and a best-effort `effective_filter_value` (for `path`
-  filters, the runner's normalized path). It also reports `pid`,
+  `filter_value` and the submitted `effective_filter_value`. It also reports `pid`,
   `operation`, `filter_type_id`, and `errno`/`error` when the check
   call fails.
 - `attempt` always includes `exit_code` and `syscall_errno` (explicit
@@ -221,10 +220,14 @@ Per-step fields under `steps[]`:
   target for every attempt kind; `normalized_path` and `observed_path`
   are file-path diagnostics and are `null` for non-file attempts. The
   `rc` and `errno` fields are retained for compatibility.
-- `drift` is a bool when both verdicts are available and comparable,
-  or `null` when no comparison is possible (validator didn't run for
-  the step, op+filter is in the prediction-unavailable set, or the
-  attempt didn't produce a verdict).
+- `attempt.requested_kind` and `requested_action` retain submitted intent.
+- `comparison` distinguishes recorded-outcome agreement/disagreement, directional
+  consistency and unavailable comparison, with explicit operation/target relations
+  and simultaneous limits. `drift` projects only agreement/disagreement to bool;
+  unattributed failures and unresolved scope retain null. See the
+  [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning).
+- `sandbox_check.path_diagnostics` records `observer="runner_host"` and
+  `phase="after_orchestration"`; later host resolution is not validator evidence.
 
 ## Entitlements and sandboxing (important distinction)
 

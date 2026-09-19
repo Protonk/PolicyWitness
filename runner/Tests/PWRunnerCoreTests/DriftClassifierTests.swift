@@ -1,217 +1,190 @@
+import Darwin
 import Foundation
 @testable import PWRunnerCore
 
-/*
- * DriftClassifierTests — the validator-vs-kernel drift truth table.
- *
- * `computeDrift(sandboxCheck:attempt:)` is the reason PolicyWitness
- * exists: it decides, for each step, whether the userland
- * sandbox_check prediction disagrees with what the kernel actually
- * did. The answer is a tri-state — true (libsandbox drift), false
- * (agreement), or nil (no attributable verdict) — and the rules are
- * deliberately ASYMMETRIC (an ambiguous file EPERM means different
- * things under a predicted allow vs a predicted deny).
- *
- * This is a behavior test, not a structure test. It drives the public
- * boundary `computeDrift` with concrete (PWRunnerSandboxCheckResult,
- * PWRunnerAttemptResult) pairs and asserts the resulting Bool?. It
- * never names the private helpers behind it (observationFromAttempt,
- * the AttemptObservation enum), so the classifier can be re-split,
- * renamed, or relocated freely — only a change in MEANING fails a row,
- * and the row's label says which invariant broke.
- *
- * Each row exercises both the 6-cell (predicted × observation) truth
- * table AND the observation classifier that maps an attempt's
- * outcome/errno/child_pid/error into one of {allowed, strongEvidence,
- * ambiguous, undefined}.
- */
-
-// A sandbox_check result carrying only the field the classifier reads
-// (outcome); the rest are plausible filler.
-private func check(_ outcome: String) -> PWRunnerSandboxCheckResult {
-    return PWRunnerSandboxCheckResult(
-        rc: outcome == SandboxCheckOutcome.allow ? 0 : 1,
-        outcome: outcome,
-        pid: 0,
-        operation: "file-read-data",
-        scope: "",
-        filter_kind: "path",
-        filter_value: "/etc/hosts"
-    )
+// Constructed interpretation controls. These inputs and expectations are chosen
+// from the public scope/attribution promises; they do not establish native causes.
+private func comparisonCheck(_ prediction: String = "allow", operation: String = "file-read-data",
+                             target: String = "/private/tmp/comparison", filter: String = "path") -> PWRunnerSandboxCheckResult {
+    var result = PWRunnerSandboxCheckResult(rc: prediction == "allow" ? 0 : 1,
+        outcome: prediction, pid: 42, operation: operation, scope: "post_sandbox",
+        filter_kind: filter, filter_value: target)
+    result.result_source = "validator"
+    result.native_rc = result.rc
+    return result
 }
 
-// An attempt result. Only outcome/errno/child_pid/error feed the
-// classifier; rc is filler (nonzero for any failure shape).
-private func attempt(
-    _ outcome: String,
-    errno: Int? = nil,
-    child_pid: Int? = nil,
-    error: String? = nil
-) -> PWRunnerAttemptResult {
-    return PWRunnerAttemptResult(
-        rc: outcome == AttemptOutcome.ok ? 0 : 1,
-        errno: errno,
-        outcome: outcome,
-        error: error,
-        child_pid: child_pid
-    )
-}
-
-private func fmtDrift(_ value: Bool?) -> String {
-    switch value {
-    case .some(true): return "true (drift)"
-    case .some(false): return "false (agreement)"
-    case .none: return "nil (no verdict)"
-    }
-}
-
-private struct DriftRow {
-    let label: String
-    let predicted: String
-    let attempt: PWRunnerAttemptResult
-    let expected: Bool?
+private func comparisonAttempt(kind: String = "file", action: String = "open_read",
+                               target: String = "/private/tmp/comparison", outcome: String = "ok",
+                               errno: Int? = nil, error: String? = nil,
+                               child: Int? = nil) -> PWRunnerAttemptResult {
+    var result = PWRunnerAttemptResult(rc: outcome == "ok" ? 0 : 1, errno: errno,
+        outcome: outcome, error: error, requested_path: target, child_pid: child)
+    result.requested_kind = kind
+    result.requested_action = action
+    result.result_source = "worker"
+    return result
 }
 
 func runDriftClassifierTests(_ tk: TestKit) {
-    // errno constants the classifier branches on, named for clarity.
-    let eperm = Int(EPERM)     // 1  — sandbox deny OR Unix DAC (ambiguous on files)
-    let eacces = Int(EACCES)   // 13 — same ambiguity
-    let enoent = Int(ENOENT)   // 2  — target missing; never a sandbox verdict
-    let einval = Int(EINVAL)   // 22 — a sysctl errno with no non-policy analogue here
-
-    let rows: [DriftRow] = [
-        // ---- happy path: prediction and observation agree on allow ----
-        DriftRow(label: "allow predicted + attempt ok",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.ok),
-                 expected: false),
-        // ---- deny predicted but the op went through → libsandbox drift ----
-        DriftRow(label: "deny predicted + attempt ok",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.ok),
-                 expected: true),
-
-        // ---- mach kr=1100 is UNAMBIGUOUS strong sandbox evidence ----
-        DriftRow(label: "allow predicted + mach kr=1100 (strong deny)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.lookupFailed,
-                                  error: "bootstrap_look_up: kr=1100"),
-                 expected: true),   // libsandbox drift
-        DriftRow(label: "deny predicted + mach kr=1100 (strong deny)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.lookupFailed,
-                                  error: "bootstrap_look_up: kr=1100"),
-                 expected: false),  // directional agreement
-        // ---- mach kr=1102 is "service not registered" — NOT a verdict ----
-        DriftRow(label: "allow predicted + mach kr=1102 (unknown service)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.lookupFailed,
-                                  error: "bootstrap_look_up: kr=1102"),
-                 expected: nil),
-        DriftRow(label: "deny predicted + mach kr=1102 (unknown service)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.lookupFailed,
-                                  error: "bootstrap_look_up: kr=1102"),
-                 expected: nil),    // no evidence to confirm the deny
-
-        // ---- file EPERM/EACCES is AMBIGUOUS (sandbox OR Unix DAC) ----
-        // The asymmetry: allow+ambiguous must be nil (don't blame
-        // libsandbox for what could be a chmod), deny+ambiguous is
-        // false (directional agreement, accepted small risk).
-        DriftRow(label: "allow predicted + file open EPERM (ambiguous)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.openFailed, errno: eperm),
-                 expected: nil),
-        DriftRow(label: "deny predicted + file open EPERM (ambiguous)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.openFailed, errno: eperm),
-                 expected: false),
-        DriftRow(label: "allow predicted + access() EACCES (ambiguous)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.accessFailed, errno: eacces),
-                 expected: nil),
-        DriftRow(label: "deny predicted + unlink EACCES (ambiguous)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.unlinkFailed, errno: eacces),
-                 expected: false),
-        // ---- file ENOENT is the file missing — NOT a sandbox verdict ----
-        DriftRow(label: "allow predicted + file open ENOENT (missing, not deny)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.openFailed, errno: enoent),
-                 expected: nil),
-
-        // ---- exec drift keys on child_pid, not just errno ----
-        // No child establishes spawn failure, not sandbox causation. The
-        // runner_exec_dac e2e control reproduces ordinary execute-permission
-        // EACCES; both permission errnos require conservative attribution.
-        DriftRow(label: "allow predicted + exec permission failure (child_pid=0, EPERM)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.execFailed, errno: eperm, child_pid: 0),
-                 expected: nil),
-        DriftRow(label: "deny predicted + exec permission failure (child_pid=0, EPERM)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.execFailed, errno: eperm, child_pid: 0),
-                 expected: false),
-        DriftRow(label: "allow predicted + exec permission failure (child_pid=0, EACCES)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.execFailed, errno: eacces, child_pid: 0),
-                 expected: nil),
-        DriftRow(label: "deny predicted + exec permission failure (child_pid=0, EACCES)",
-                 predicted: SandboxCheckOutcome.deny,
-                 attempt: attempt(AttemptOutcome.execFailed, errno: eacces, child_pid: 0),
-                 expected: false),
-        // child_pid > 0 → spawn SUCCEEDED; the helper merely exited
-        // nonzero. Not a sandbox verdict no matter the errno.
-        DriftRow(label: "allow predicted + exec child ran then exited nonzero (child_pid>0)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.execFailed, errno: eperm, child_pid: 4242),
-                 expected: nil),
-
-        // ---- sysctl: EPERM/EACCES ambiguous, ENOENT/ENOMEM undefined,
-        //      any other errno is strong (no non-policy analogue here) ----
-        DriftRow(label: "allow predicted + sysctl EPERM (ambiguous)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.sysctlFailed, errno: eperm),
-                 expected: nil),
-        DriftRow(label: "allow predicted + sysctl ENOENT (undefined)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.sysctlFailed, errno: enoent),
-                 expected: nil),
-        DriftRow(label: "allow predicted + sysctl EINVAL (strong)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.sysctlFailed, errno: einval),
-                 expected: true),
-
-        // ---- setup/shape failures: the gated syscall never ran ----
-        DriftRow(label: "allow predicted + worker died before slot (not_run_worker_died)",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.notRunWorkerDied),
-                 expected: nil),
-        DriftRow(label: "allow predicted + unsupported attempt kind",
-                 predicted: SandboxCheckOutcome.allow,
-                 attempt: attempt(AttemptOutcome.unsupported),
-                 expected: nil),
-
-        // ---- a non-allow/deny prediction never yields a verdict ----
-        DriftRow(label: "prediction_unavailable + attempt ok",
-                 predicted: SandboxCheckOutcome.predictionUnavailable,
-                 attempt: attempt(AttemptOutcome.ok),
-                 expected: nil),
-    ]
-
-    tk.group("computeDrift: validator-vs-kernel truth table") {
-        for row in rows {
-            tk.run(row.label) {
-                let got = computeDrift(
-                    sandboxCheck: check(row.predicted),
-                    attempt: row.attempt
-                )
-                if got != row.expected {
-                    throw TestFailure(message:
-                        "drift contract for [\(row.label)]: expected "
-                        + "\(fmtDrift(row.expected)), got \(fmtDrift(got))")
+    tk.group("comparison: supported conclusions and independent limits") {
+        for (prediction, conclusion, drift) in [("allow", "agreement", false), ("deny", "disagreement", true)] {
+            tk.run("matched read success under \(prediction) retains a limited \(conclusion)") {
+                let result = computeComparison(sandboxCheck: comparisonCheck(prediction), attempt: comparisonAttempt())
+                try expectEqual(result.scope, "submitted_operation_and_target")
+                try expectEqual(result.conclusion, conclusion)
+                try expectEqual(result.drift, drift)
+                try expectEqual(result.operation_relation, "matched")
+                try expectEqual(result.target_relation, "same_submitted")
+                try expectEqual(result.observation, "succeeded")
+                try expectEqual(result.observation_basis, "completed_worker_status")
+                try expectEqual(Set(result.limitations), Set(["query_attempt_order_unestablished",
+                    "state_stability_unestablished", "runtime_target_identity_unestablished"]))
+            }
+        }
+        for prediction in ["allow", "deny"] {
+            for number in [Int(EPERM), Int(EACCES)] {
+                tk.run("\(prediction) plus permission errno \(number) cannot establish enforcement agreement") {
+                    let result = computeComparison(sandboxCheck: comparisonCheck(prediction),
+                        attempt: comparisonAttempt(outcome: "open_failed", errno: number))
+                    try expectNil(result.drift)
+                    try expectEqual(result.conclusion, prediction == "deny" ? "directional_consistency" : "unavailable")
+                    try expectEqual(result.observation, "permission_failure")
+                    try expectEqual(result.observation_basis, "permission_errno")
+                    try expectTrue(result.limitations.contains("sandbox_attribution_unestablished"))
                 }
             }
+        }
+        tk.run("deny for A and successful B cannot establish disagreement") {
+            let result = computeComparison(sandboxCheck: comparisonCheck("deny", target: "/A"),
+                attempt: comparisonAttempt(target: "/B"))
+            try expectNil(result.drift)
+            try expectEqual(result.prediction, "deny")
+            try expectEqual(result.observation, "succeeded")
+            try expectEqual(result.target_relation, "different_submitted")
+        }
+        tk.run("same target with a different queried operation cannot establish disagreement") {
+            let result = computeComparison(sandboxCheck: comparisonCheck("deny", operation: "file-write-data"),
+                attempt: comparisonAttempt())
+            try expectNil(result.drift)
+            try expectEqual(result.operation_relation, "different")
+            try expectEqual(result.target_relation, "same_submitted")
+        }
+        tk.run("missing channels and mismatched scope retain all known reasons") {
+            var query = comparisonCheck("deny", operation: "file-write-data", target: "/A")
+            query.result_source = "synthetic"
+            query.missing_reason = "validator_no_verdict"
+            var attempt = comparisonAttempt(target: "/B")
+            attempt.result_source = "synthetic"
+            attempt.missing_reason = "slot_incomplete"
+            let result = computeComparison(sandboxCheck: query, attempt: attempt)
+            try expectNil(result.drift)
+            try expectEqual(result.prediction, "unavailable")
+            try expectEqual(result.observation, "unavailable")
+            for reason in ["prediction:validator_no_verdict", "attempt:slot_incomplete",
+                           "operation:different", "target:different_submitted"] {
+                try expectTrue(result.limitations.contains(reason), reason)
+            }
+        }
+        tk.run("a validator error preserves a completed success without inventing a prediction") {
+            let result = computeComparison(sandboxCheck: comparisonCheck("error"), attempt: comparisonAttempt())
+            try expectNil(result.drift)
+            try expectEqual(result.observation, "succeeded")
+            try expectTrue(result.limitations.contains("prediction:no_usable_verdict"))
+        }
+        tk.run("old records cannot acquire a derivation from matching outcome labels") {
+            var query = comparisonCheck()
+            query.result_source = nil
+            var attempt = comparisonAttempt()
+            attempt.result_source = nil
+            attempt.requested_kind = nil
+            attempt.requested_action = nil
+            let result = computeComparison(sandboxCheck: query, attempt: attempt)
+            try expectNil(result.drift)
+            try expectEqual(result.operation_relation, "unresolved")
+            try expectEqual(result.observation, "unavailable")
+        }
+        tk.run("compound create does not claim a complete single-operation comparison") {
+            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "file-write-data"),
+                attempt: comparisonAttempt(action: "create"))
+            try expectNil(result.drift)
+            try expectEqual(result.observation, "succeeded")
+            try expectTrue(result.limitations.contains("compound_attempt"))
+        }
+        tk.run("broad exec queries retain unresolved operation scope") {
+            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process-exec*"),
+                attempt: comparisonAttempt(kind: "exec", action: "spawn", child: 123))
+            try expectNil(result.drift)
+            try expectEqual(result.operation_relation, "unresolved")
+            try expectEqual(result.observation_basis, "spawned_child")
+        }
+        tk.run("a spawned child supplies spawn success beside a failed exec result") {
+            let result = computeComparison(sandboxCheck: comparisonCheck(operation: "process-exec"),
+                attempt: comparisonAttempt(kind: "exec", action: "spawn", outcome: "exec_failed", child: 123))
+            try expectEqual(result.drift, false)
+            try expectEqual(result.observation_basis, "spawned_child")
+            try expectTrue(result.limitations.contains("exec_result_failed_after_spawn"))
+            try expectTrue(result.limitations.contains("sandbox_attribution_unestablished"))
+        }
+        for filter in ["none", "local_name"] {
+            tk.run("\(filter) does not certify a lookup target's namespace") {
+                let result = computeComparison(sandboxCheck: comparisonCheck("deny", operation: "mach-lookup", filter: filter),
+                    attempt: comparisonAttempt(kind: "mach_lookup", action: "bootstrap_look_up"))
+                try expectNil(result.drift)
+                try expectEqual(result.target_relation, "unresolved")
+            }
+        }
+        for (message, observation) in [("bootstrap_look_up: kr=1100", "permission_failure"),
+                                       ("bootstrap_look_up: kr=11000", "other_failure"),
+                                       ("task_get_special_port: kr=1100", "other_failure")] {
+            tk.run("native message \(message) retains its limited meaning") {
+                let result = computeComparison(sandboxCheck: comparisonCheck("deny", operation: "mach-lookup", filter: "global_name"),
+                    attempt: comparisonAttempt(kind: "mach_lookup", action: "bootstrap_look_up", outcome: "lookup_failed", error: message))
+                try expectNil(result.drift)
+                try expectEqual(result.observation, observation)
+                try expectTrue(result.limitations.contains("sandbox_attribution_unestablished"))
+            }
+        }
+        for number in [Int(ENOENT), Int(EINVAL), 123456] {
+            tk.run("sysctl errno \(number) cannot become a strong sandbox denial") {
+                let result = computeComparison(sandboxCheck: comparisonCheck(operation: "sysctl-read", filter: "sysctl_name"),
+                    attempt: comparisonAttempt(kind: "sysctl", action: "read", outcome: "sysctl_failed", errno: number))
+                try expectNil(result.drift)
+                try expectEqual(result.observation, "other_failure")
+            }
+        }
+        tk.run("new comparison and submitted provenance survive Codable without changing native fields") {
+            let query = comparisonCheck("deny")
+            let attempt = comparisonAttempt(outcome: "open_failed", errno: Int(EACCES))
+            let comparison = computeComparison(sandboxCheck: query, attempt: attempt)
+            let step = PWRunnerStepResult(step_id: "s", sandbox_check: query, attempt: attempt,
+                drift: comparison.drift, comparison: comparison)
+            let data = try pwRunnerEncodeJSON(step)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerStepResult.self, from: data)
+            try expectEqual(decoded.comparison?.conclusion, "directional_consistency")
+            try expectEqual(decoded.comparison?.limitations, comparison.limitations)
+            try expectEqual(decoded.attempt.requested_kind, "file")
+            try expectEqual(decoded.attempt.errno, Int(EACCES))
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            try expectTrue(json?["drift"] is NSNull)
+        }
+    }
+    tk.group("host path provenance") {
+        tk.run("later host disappearance is distinct from an earlier supplied validator record") {
+            let path = "/private/tmp/pw-path-phase-" + UUID().uuidString
+            FileManager.default.createFile(atPath: path, contents: Data("before".utf8))
+            defer { try? FileManager.default.removeItem(atPath: path) }
+            let step = PWRunnerStepResult(step_id: "s", sandbox_check: comparisonCheck(target: path),
+                attempt: comparisonAttempt(target: path))
+            let before = enrichPathDiagnostics(steps: [step])[0]
+            try expectNotNil(before.sandbox_check.path_diagnostics?.realpath_resolved)
+            try FileManager.default.removeItem(atPath: path)
+            let after = enrichPathDiagnostics(steps: [step])[0]
+            try expectEqual(after.sandbox_check.outcome, "allow")
+            try expectNil(after.sandbox_check.path_diagnostics?.realpath_resolved)
+            try expectEqual(after.sandbox_check.path_diagnostics?.observer, "runner_host")
+            try expectEqual(after.sandbox_check.path_diagnostics?.phase, "after_orchestration")
+            try expectNil(after.comparison) // enrichment cannot invent comparison evidence
         }
     }
 }

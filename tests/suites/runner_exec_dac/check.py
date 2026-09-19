@@ -66,7 +66,7 @@ def main():
     assert records["deny_prediction_dac"][0] == {"spawned": False, "errno": errno.EACCES}
     denied = steps["deny_prediction_dac"]
     assert denied["attempt"]["errno"] == errno.EACCES and denied["attempt"]["outcome"] == "exec_failed", denied
-    assert denied["drift"] is False and denied["deny_signal"] is None, denied
+    assert denied["drift"] is None and denied["deny_signal"] is None, denied
     failure = steps["nonexecutable"]["attempt"]
     assert failure["outcome"] == "exec_failed" and failure["rc"] == -1
     assert failure["child_pid"] == 0 and failure["child_exit_code"] == -1
@@ -77,7 +77,7 @@ def main():
     assert success["outcome"] == "ok" and success["rc"] == 0
     assert success["child_pid"] > 0 and success["child_exit_code"] == 0
     assert success["child_term_signal"] == 0
-    assert steps["executable"]["drift"] is False
+    assert steps["executable"]["drift"] is None
     print("direct OS and PW controls agree: removing execute bits blocks spawn; restoring them succeeds",
           flush=True)
     assert steps["nonexecutable"]["drift"] is None, \

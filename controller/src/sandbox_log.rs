@@ -27,6 +27,20 @@ pub struct SandboxLogStepDeny {
     pub event_index: usize,
     pub candidate_step_ids: Vec<String>,
     pub association: String,
+    pub matching_evidence: Vec<SandboxLogMatchEvidence>,
+}
+
+/// The actual inputs that admitted a candidate. This is association evidence,
+/// not a claim that the request operation executed or caused termination.
+#[derive(Serialize)]
+pub struct SandboxLogMatchEvidence {
+    pub step_id: String,
+    pub operation: String,
+    pub operation_source: &'static str,
+    pub requested_kind: String,
+    pub requested_action: String,
+    pub path: String,
+    pub path_sources: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -102,22 +116,6 @@ fn observer_deny_events(obj: &Value) -> Option<Vec<SandboxDenyEvent>> {
     serde_json::from_value::<Vec<SandboxDenyEvent>>(value).ok()
 }
 
-fn step_attempt_paths(step: &Value) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    let attempt = match step.get("attempt") {
-        Some(v) => v,
-        None => return out,
-    };
-    for key in ["observed_path", "normalized_path", "requested_path"] {
-        if let Some(val) = attempt.get(key).and_then(|v| v.as_str()) {
-            out.push(val.to_string());
-        }
-    }
-    out.sort();
-    out.dedup();
-    out
-}
-
 /// Only authoritative spawned-worker metadata can identify a worker. Stored
 /// replies remain readable without falling back to a host/client top-level PID.
 pub fn worker_pid(result: Option<&Value>) -> Option<i32> {
@@ -125,7 +123,7 @@ pub fn worker_pid(result: Option<&Value>) -> Option<i32> {
     i32::try_from(pid).ok().filter(|pid| *pid > 0)
 }
 
-// Exact operation names from the attempted syscall, never the independently
+// Candidate operation names from submitted intent, never the independently
 // routed sandbox_check. No wildcard/prefix aliases. create can open an existing
 // file for writing or create a new file. Unlisted operations remain unmatched.
 fn attempt_operations(attempt: &Value) -> &'static [&'static str] {
@@ -163,6 +161,7 @@ pub fn match_step_denies(
             continue;
         };
         let mut candidates = Vec::new();
+        let mut matching_evidence = Vec::new();
         for step in steps {
             let Some(id) = step.get("step_id").and_then(Value::as_str) else {
                 continue;
@@ -191,12 +190,33 @@ pub fn match_step_denies(
             if !attempt_operations(attempt).contains(&operation) {
                 continue;
             }
-            let mut paths = step_attempt_paths(step);
-            if let Some(target) = attempt.get("target").and_then(Value::as_str) {
-                paths.push(target.to_string());
+            let mut path_sources = Vec::new();
+            if attempt.get("target").and_then(Value::as_str) == Some(path) {
+                path_sources.push("submitted_attempt.target".to_string());
             }
-            if paths.iter().any(|p| p == path) {
+            for key in ["observed_path", "requested_path"] {
+                if step
+                    .get("attempt")
+                    .and_then(|a| a.get(key))
+                    .and_then(Value::as_str)
+                    == Some(path)
+                {
+                    path_sources.push(format!("attempt.{key}"));
+                }
+            }
+            // normalized_path has no guaranteed observer/phase on legacy replies;
+            // an unowned enrichment alone cannot establish a candidate match.
+            if !path_sources.is_empty() {
                 candidates.push(id.to_string());
+                matching_evidence.push(SandboxLogMatchEvidence {
+                    step_id: id.to_string(),
+                    operation: operation.to_string(),
+                    operation_source: "submitted_attempt",
+                    path: path.to_string(),
+                    requested_kind: attempt["kind"].as_str().unwrap_or("").to_string(),
+                    requested_action: attempt["action"].as_str().unwrap_or("").to_string(),
+                    path_sources,
+                });
             }
         }
         if !candidates.is_empty() {
@@ -209,6 +229,7 @@ pub fn match_step_denies(
                 }
                 .to_string(),
                 candidate_step_ids: candidates,
+                matching_evidence,
             });
         }
     }
@@ -455,6 +476,39 @@ mod tests {
         assert_eq!(out[0].association, "ambiguous");
         let raw = serde_json::to_value(out).unwrap();
         assert!(raw[0].get("deny_events").is_none());
+        assert_eq!(raw[0]["matching_evidence"][0]["step_id"], "second");
+        assert_eq!(
+            raw[0]["matching_evidence"][0]["operation_source"],
+            "submitted_attempt"
+        );
+        assert_eq!(
+            raw[0]["matching_evidence"][0]["requested_action"],
+            "open_write"
+        );
+        assert_eq!(
+            raw[0]["matching_evidence"][0]["operation"],
+            "file-write-data"
+        );
+        assert_eq!(raw[0]["matching_evidence"][0]["path"], "/attempt");
+        assert!(raw[0]["matching_evidence"][0]["path_sources"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("submitted_attempt.target")));
+    }
+    #[test]
+    fn unowned_normalization_alone_does_not_supply_path_identity() {
+        let step = serde_json::json!({"step_id":"s", "attempt":{"normalized_path":"/later"}});
+        let plan = [request("s", "open_read", "/submitted")];
+        let event = [deny(Some(42), "file-read-data", "/later")];
+        assert!(match_step_denies(&[step.clone()], &plan, &event, Some(42)).is_empty());
+        let mut observed = step;
+        observed["attempt"]["observed_path"] = serde_json::json!("/later");
+        let matches = match_step_denies(&[observed], &plan, &event, Some(42));
+        assert_eq!(matches.len(), 1);
+        assert_eq!(
+            matches[0].matching_evidence[0].path_sources,
+            ["attempt.observed_path"]
+        );
     }
     #[test]
     fn unknown_or_duplicate_step_provenance_is_not_correlated() {

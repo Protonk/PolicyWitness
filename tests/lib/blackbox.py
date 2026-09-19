@@ -59,6 +59,29 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
             errors.append(f"runner.steps[{index}]: unexpected step_id={step_id!r}")
             continue
         matched.append((step, by_id[step_id]))
+        version = runner.get("schema_version")
+        if type(version) is int and version >= 7:
+            comparison = step.get("comparison")
+            if not isinstance(comparison, dict):
+                errors.append(f"{step_id}: missing comparison")
+            else:
+                for key in ("scope", "prediction", "observation", "observation_basis",
+                            "operation_relation", "target_relation", "conclusion"):
+                    if not isinstance(comparison.get(key), str) or not comparison[key]:
+                        errors.append(f"{step_id}: invalid comparison.{key}")
+                limits = comparison.get("limitations")
+                if not isinstance(limits, list) or any(not isinstance(x, str) for x in limits):
+                    errors.append(f"{step_id}: invalid comparison.limitations")
+            attempt = step.get("attempt")
+            if not isinstance(attempt, dict):
+                attempt = {}
+            for key in ("requested_kind", "requested_action"):
+                if not isinstance(attempt.get(key), str):
+                    errors.append(f"{step_id}: missing attempt.{key}")
+            query = step.get("sandbox_check")
+            paths = query.get("path_diagnostics") if isinstance(query, dict) else None
+            if isinstance(paths, dict) and (paths.get("observer"), paths.get("phase")) != ("runner_host", "after_orchestration"):
+                errors.append(f"{step_id}: path diagnostics lack host/phase provenance")
     return errors, matched
 
 
@@ -74,6 +97,10 @@ def validate_step(step, expected):
     errors = []
     fail = errors.append
     step_id = step["step_id"]
+    comparison = step.get("comparison")
+    for key, value in expected.get("comparison", {}).items():
+        if not isinstance(comparison, dict) or comparison.get(key) != value:
+            fail(f"{step_id}: expected comparison.{key}={value!r}")
     sb = step.get("sandbox_check")
     if not isinstance(sb, dict):
         fail(f"missing sandbox_check for {step_id}")

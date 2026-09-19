@@ -1,8 +1,8 @@
 # Failure evidence contract
 
-This is the implemented contract for steps 0 and 1 of
-[FAILURE-PROPAGATION-PLAN.md](FAILURE-PROPAGATION-PLAN.md): host observations,
-worker ABI 6 publications, response 6 and independent log correlation.
+This contract specifies host observations, diagnostic preservation and derived
+comparisons for [FAILURE-PROPAGATION-PLAN.md](FAILURE-PROPAGATION-PLAN.md):
+worker ABI 6 publications, response 7 and independent log correlation.
 Worker records, diagnostic text, late publications and policy-transfer partial
 outputs preserve independently observed facts through to the CLI.
 
@@ -118,7 +118,7 @@ child descriptors survive.
 
 ## Public compatibility and correlation
 
-Responses use schema 6, distinct from request schema 1, the outer controller
+Responses use schema 7, distinct from request schema 1, the outer controller
 envelope and worker ABI 6. Every new step explicitly encodes `deny_signal: null`;
 old signal objects remain decodable as stored legacy evidence. This is a wire
 change for typed readers requiring a signal object. Explicit errno/drift nulls
@@ -181,7 +181,7 @@ plan's current execution state.
 | Test entry | Production reach and current assertions | Acceptance owner / remaining obligation |
 | --- | --- | --- |
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
-| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` | Constructed Codable results; response 6 explicit signal null, legacy response-4 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` | Constructed Codable results; response 7 explicit signal null, legacy response-4 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Retain; does not prove diagnostic text reaches CLI; 1B adds that boundary |
@@ -217,7 +217,7 @@ required at the step-0 gate.
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
 following the existing capture bytes. Existing input/output capacities and
 budgets do not change. Host and worker require exactly ABI 6; there is no ABI 5
-fallback. Response schema 6 supports nullable query PIDs and additive evidence fields; request schema stays 1.
+fallback. Response schema 7 supports nullable query PIDs and additive evidence fields; request schema stays 1.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
 Legacy stored replies may omit it. Its `abi_version` is the host-selected UInt32
 layout encoded as a JSON integer, not proof the child reached ABI validation.
@@ -475,9 +475,10 @@ The observer similarly uses `capture_status="invalid_reply"` when no denial
 observation or explicit helper failure is available. This cap is not a streaming
 memory bound.
 
-The directional `drift=false` case for a deny prediction plus ambiguous
-EPERM/EACCES is unchanged. False does not establish that the sandbox caused the
-attempt failure; the separate-query DAC control demonstrates this distinction.
+Deny plus ambiguous EPERM/EACCES has `drift=null`. A matching submitted scope
+can retain directional consistency in `comparison`; a separate query target
+prevents that comparison. The direct DAC control remains test-owned evidence,
+not a runtime observation used to assign the cause.
 
 
 ## Unfamiliar diagnostic preservation controls
@@ -515,3 +516,126 @@ See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture
 `witness_contract/unfamiliar_diagnostic_transport` for CLI assertions. Temporary
 code-filtering and detail-dropping mutations are test experiments only; source
 and the signed app must be restored before acceptance.
+
+## Derived comparisons and evidence joins (response 7)
+
+### Claim/evidence review
+
+| Join / observation owners | Association and phase guarantee | Counterexample / limit | Supported public conclusion |
+| --- | --- | --- | --- |
+| Submitted query → validator record; host and validator | Unique step ID plus exact submitted operation/filter tuple; host invokes validator after observing worker application | A correctly associated query for A need not concern attempted B; a late validator can query changed state | The record answers the submitted query, not necessarily the attempt |
+| Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from an outcome comparison |
+| Query time → attempt time; two children | Worker application publication precedes validator invocation; attempts proceed independently | Attempts may change files or finish before the validator observes them | No guaranteed query/attempt order, stable state or synchronized enforcement comparison |
+| Path enrichment → query/attempt; runner host | Host resolves submitted query path after the orchestrator returns | Worker unlinks the path before host resolution; host and sandboxed worker can resolve differently | Later host diagnostic, never an earlier validator/worker observation |
+| Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates | Repeated attempts, PID reuse, trailing capture and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
+| Test control → runtime interpretation; test harness and PW | Controls can establish expected meanings independently of the classifier | Direct unsandboxed execution or a fixture oracle is not an observation available in a normal PW envelope | Credit controlled interpretation separately from native observation; no test knowledge silently becomes runtime attribution |
+
+### Consumer-question baseline and design dispositions
+
+These IDs and their scope precede representation selection. Wording changes must
+preserve the original obligation; narrowing, merging or changing a disposition
+requires a recorded design reason. Current output omissions do not prove runtime
+ignorance. Submitted kind/action describes intent; it does not prove execution.
+
+| ID | Original consumer question | Required disposition under the chosen contract |
+| --- | --- | --- |
+| C1 | Which steps report established agreement, and what comparison does that claim cover? | Recover agreement/disagreement of recorded outcomes for matching submitted scope, separately from directional consistency and unavailable comparison. No claim of synchronized sandbox enforcement agreement. |
+| C2 | Which steps observed a failure whose cause PW could not attribute to the sandbox? | Recover observed permission/other failures with unestablished sandbox attribution separately from missing worker results. Native numbers and errors survive. |
+| C3 | What relationship between each query and attempt was established, known to differ, or left unresolved? | Report submitted operation and target relations, with submitted kind/action retained. Runtime object identity, complete check coverage and temporal equivalence remain limited where unobserved. |
+| C4 | Which steps produced no comparison, and what known reasons limit it? | Recover all known missing/unusable, scope and attribution limits, allowing simultaneous reasons; retain underlying missing_reason and native observations. |
+| C5 | Which path resolutions were later host observations? | Mark path diagnostics with observer and phase; absence in older replies does not invent provenance. |
+| C6 | Which denial events are candidates for a step, and what association or capture limits remain? | Keep event references and capture limitations; add per-candidate matched operation/path evidence with provenance from the submitted request or worker reply. Unique occurrence and causal attribution remain unestablished. |
+
+All six require delivered reporting changes; none is closed by a current omission.
+The limits above reflect absent synchronization/identity/causal observations.
+They do not permit discarding known request relations, native failures or capture
+status. Step 5 reviews these judgments and enforces the accepted recovery obligations.
+
+### Public representation and meaning
+
+Each new step contains `comparison` with `scope="submitted_operation_and_target"`,
+`prediction` (allow/deny/unavailable), `observation`
+(succeeded/permission_failure/other_failure/unavailable), `observation_basis`,
+`operation_relation` (matched/different/unresolved), `target_relation`
+(same_submitted/different_submitted/unresolved), `conclusion`
+(agreement/disagreement/directional_consistency/unavailable), and `limitations`.
+The host supplies `attempt.requested_kind` and `requested_action`; existing
+`requested_path` is the submitted target. These are input provenance, not native
+call observations. `result_source`, native fields, child status and missing reasons
+retain their independent meanings.
+
+Only a matched single operation, compatible filter and identical submitted target
+permit the limited comparison. The reviewed mappings are file open_read/access →
+file-read-data, open_write → file-write-data, unlink → file-write-unlink;
+exec spawn → process-exec; mach lookup → mach-lookup; sysctl read → sysctl-read.
+File/exec require path filters; mach lookup requires global_name (local namespace
+equivalence is not established); sysctl requires sysctl_name. Broad query names,
+NONE filters and compound create attempts retain unresolved scope, not inferred
+equivalence. Different strings establish different submitted targets, not distinct
+runtime objects. Later host canonicalization never certifies comparability.
+
+`drift=false` projects `comparison.conclusion=agreement`: an allow prediction and
+completed successful attempt within that submitted scope. `drift=true` projects
+`disagreement`: a deny prediction and successful attempt within that scope.
+Both compare recorded outcomes; neither proves a libsandbox bug, causal attribution,
+runtime identity or equal state at the two observations. An exec child that ran
+and then failed supplies spawn success independently of its later exit outcome.
+It also retains `exec_result_failed_after_spawn` and `sandbox_attribution_unestablished`: a
+useful spawn comparison cannot erase a failed exec result. That result may
+reflect child exit, timeout or collection failure; it does not alone establish
+a native child failure or its cause.
+`drift=null` covers all other conclusions. Deny plus permission failure can retain
+`directional_consistency` when scope matches, but cannot establish agreement.
+Permission numbers (including Mach permission failure) do not alone establish a
+sandbox cause. Unrecognized sysctl errors never become strong denial evidence.
+No current failed-attempt path establishes attributable sandbox denial.
+
+Every comparison reports `query_attempt_order_unestablished` and
+`state_stability_unestablished`; path comparisons also report
+`runtime_target_identity_unestablished`. Additional limits report unresolved or
+different operations/targets, unavailable predictions/attempts, unusable verdicts
+broad query operations, unsupported filter scope, absent submitted targets
+and unestablished failure attribution independently, without suppressing another
+known reason. A `query_plan:` limitation retains the host's known exclusion:
+`prediction_unavailable_pair`, `unrecognized_filter_kind` or
+`path_unresolved_at_planning`. This planning observation remains separate from
+`prediction:query_not_requested`, native errors and later host path enrichment.
+The documented derivation permits recovery without reimplementing
+the classifier. A synthetic record cannot acquire a native observation by its label.
+
+| Observation basis | Supporting fields and limited meaning |
+| --- | --- |
+| `completed_worker_status` | Completed worker result: `attempt.outcome` and PW status `rc`; this is not a raw syscall return or a causal explanation |
+| `permission_errno` | Worker-reported EPERM/EACCES on a file/access/unlink/sysctl/failed-spawn result; the permission-shaped failure does not identify the enforcing mechanism |
+| `bootstrap_permission_result` | The worker's exact `bootstrap_look_up: kr=1100` report; different calls or numbers do not acquire this interpretation, and sandbox attribution remains unestablished |
+| `spawned_child` | Positive `attempt.child_pid` in a completed worker result establishes spawning independently of the child's later outcome |
+| `no_completed_worker_result` | Missing/synthetic/incomplete result; neither a native return nor proof the attempt never started |
+
+
+Path diagnostics retain their fields and add `observer="runner_host"` and
+`phase="after_orchestration"`. These provenance fields remain absent when decoding
+older records. Denial candidates add matching evidence without changing their
+candidate-only meaning; optional logs cannot change PW status or `drift`.
+Matching evidence identifies submitted operation provenance and every matched
+`submitted_attempt.target`, `attempt.requested_path` or `attempt.observed_path`.
+An unowned legacy `normalized_path` alone no longer admits a candidate; its raw
+value is retained in the runner reply. This controller correlation correction
+also applies when consuming older runner replies without rewriting their version.
+
+### Compatibility and acceptance gate
+
+Response schema advances **6 → 7** because `drift` changes meaning and comparison
+and provenance become required on newly produced steps. The default shared response
+type also versions client-generated failures. Request schema **1** and worker ABI
+**6** remain unchanged: no new C publication, capacities or time budgets are needed.
+Swift accepts older stored replies with absent new fields and preserves their
+original drift value; it never fabricates the new derivation. The Rust controller
+forwards the original runner response version. Consumers must interpret versions
+4–6 using their older semantics; bool/null shape compatibility is not semantic
+compatibility. Fixtures explicitly exercising old decoding keep their old versions.
+
+The [dependency inventory](FAILURE-PROPAGATION-INVENTORY.md#derived-comparison-dependencies)
+maps the source/test/public-contract changes before implementation. Acceptance
+selects all 130 currently registered canonical cases, including opt-ins and both
+runner contexts, plus any subsequently registered additions. This is a conservative
+superset, not a fixed ceiling. Required skips/unrun cases prevent completion.

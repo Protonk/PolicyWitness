@@ -46,10 +46,10 @@ and random step IDs stay fixed. The test reads and retains external file bytes
 before decoding PW's JSON: A must change to nonempty data and B must retain every
 seed byte in both runs.
 
-The matching run requires allow/success and deny/permission-failure, both with
-`drift=false`. The swapped run requires deny/success with `drift=true` and
-allow/permission-failure with `drift=null`. This deliberately compares different
-targets to check independent channel routing; it makes no compiler-bug claim.
+The matching run requires allow/success with `drift=false` and
+ deny/permission-failure with `drift=null`. The swapped run retains both predictions
+and attempts with `drift=null`: different submitted targets prevent comparison.
+This checks independent channel routing without promoting pairing to comparability.
 Redirecting a validator query to `attempt.target` must fail even if the envelope
 continues to echo the requested filter value. The existing classifier and
 steered-validator tests retain their separate contracts.
@@ -75,7 +75,8 @@ through the CLI, using the real validator and no test overrides. Both targets
 already contain distinct random bytes. Policy allows writing one and denies
 writing the other. The allowed attempt must succeed with its observed path;
 the denied attempt must report `open_failed` with a permission errno. Their
-predictions must be allow and deny respectively, with `drift=false` for both.
+predictions must be allow and deny respectively, with `drift=null` for the
+compound create scope.
 Both children exit cleanly and the steps retain their identities and evidence.
 
 Before decoding the envelope, the test independently reads both files and
@@ -103,7 +104,8 @@ reads must show changed, nonempty bytes for the allowed write and intact seed
 bytes for the denied write before the envelope is decoded.
 
 Both completed attempts retain their distinct outcomes, step IDs/order, paths,
-errno evidence, matching real validator predictions, and `drift=false`.
+errno evidence, matching real validator predictions, and `drift=false` for
+allow/success versus null for the unattributed permission failure.
 The validator exits cleanly and `partial_steps=false`: failed run completion
 does not erase completed observations. The shared checker, timing margins,
 and retained artifacts are documented in `runner_outcome_runner_timeout`.
@@ -123,7 +125,7 @@ it provides no evidence of compilation failure. Both runs disable log capture.
 The failure run must retain its subprocess and both overrides while reporting
 no observed compile/apply return, allow/deny prediction, completed attempt or
 drift comparison. The positive control removes only the overrides and requires
-allow/success and deny/permission-failure with `drift=false`. Independent file
+allow/success with `drift=false` and deny/permission-failure with null. Independent file
 reads precede JSON checking: both seeds survive the failure run; the positive
 control changes the allowed file and preserves the denied file. Both runs must
 avoid a sandbox-termination claim and explicitly emit `deny_signal: null` on
@@ -217,3 +219,14 @@ Direct Swift and Rust receiver controls complement this CLI route. Temporary
 known-code filtering or detail-dropping mutations must fail these controls;
 mutation patches/results live in the step-3 evidence directory and are excluded
 from the restored production implementation.
+
+The steered-validator case also runs ten bounded comparison scenarios through the
+CLI. `check_comparison.py` records independent expectations, direct DAC EACCES and
+file witnesses. It covers outcome agreement/disagreement, both permission-failure
+predictions, different target and operation, missing queries, successful attempts
+without predictions, compound create and unsupported attempts. It checks comparison
+scope, provenance and simultaneous limits. The transcript supplies verdicts; the
+worker attempts and direct OS/file witnesses are real. These are interpretation
+controls, not native compiler-drift discoveries. Swift controls separately cover
+legacy absence, unusual errors, exec child evidence and deterministic later host
+path disappearance.

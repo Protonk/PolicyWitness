@@ -65,7 +65,7 @@ def admission(pw, out):
                 assert failure['field'] == ('args' if field.startswith('args_') else field), failure
                 assert (failure['actual'], failure['maximum'], failure['unit']) == (actual, maximum, unit), failure
                 assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
-                assert runner['schema_version'] == 6, runner
+                assert runner['schema_version'] == 7, runner
                 assert all('pid' in s['sandbox_check'] and s['sandbox_check']['pid'] is None for s in runner['steps']), runner
                 assert all(s['attempt']['result_source'] == 'synthetic' and s['drift'] is None for s in runner['steps']), runner
                 if field in ('step_id', 'target', 'args_count', 'args_bytes'):

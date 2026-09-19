@@ -38,7 +38,7 @@ run_happy_default_allow() {
   local test_id="happy_default_allow"
   test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full v4 envelope"
+  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full response-7 envelope"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
@@ -80,7 +80,7 @@ env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
 # Envelope shape: v4 + both subprocess records + override mirrored back.
-assert r["schema_version"] == 6, "schema {0}".format(r["schema_version"])
+assert r["schema_version"] == 7, "schema {0}".format(r["schema_version"])
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["validator_subprocess"] is not None, "validator_subprocess missing"
@@ -101,7 +101,7 @@ assert s["sandbox_check"]["outcome"] == "allow"
 assert s["attempt"]["outcome"] == "ok"
 assert s["attempt"]["observed_path"] == "/private/etc/hosts"
 assert s["drift"] is False, "drift expected False got {0}".format(s["drift"])
-print("ok: v4 envelope, validator+worker subprocesses present, drift=false")
+print("ok: response-7 envelope, validator+worker subprocesses present, drift=false")
 PY
   local arc=$?
   set -e
@@ -111,7 +111,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "C-worker path produces complete v4 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "C-worker path produces complete response-7 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: bare_deny_default ------------------------------------------
@@ -175,9 +175,9 @@ assert s["attempt"]["rc"] == 1, "attempt rc={0}".format(s["attempt"]["rc"])
 # EPERM=1 or EACCES=13.
 assert s["attempt"]["errno"] in (1, 13), "attempt errno={0}".format(s["attempt"]["errno"])
 assert s["attempt"]["outcome"] == "open_failed"
-assert s["drift"] is False, "drift expected False (both deny) got {0}".format(s["drift"])
+assert s["drift"] is None, "ambiguous denial requires null, got {0}".format(s["drift"])
 
-print("ok: worker survived (deny default); validator+attempt agree on deny; drift=false")
+print("ok: worker survived (deny default); deny and permission failure remain directionally consistent; drift=null")
 PY
   local arc=$?
   set -e
@@ -187,7 +187,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "bug-report (deny default) shape: worker survives, verdict+observation both deny, drift=false" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "bug-report (deny default) shape: worker survives, deny prediction with unattributed permission failure, drift=null" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: prediction_unavailable_pair --------------------------------
@@ -750,9 +750,9 @@ s = r["steps"][0]
 assert s["sandbox_check"]["outcome"] == "deny", \
     "sandbox_check outcome={0!r} (validator should predict deny under deny-default)".format(
         s["sandbox_check"]["outcome"])
-# Both channels agree on deny, so drift is False, not None.
-assert s.get("drift") is False, \
-    "drift should be False (validator+attempt agree on deny); got {0!r}".format(s.get("drift"))
+# Permission failure does not establish sandbox attribution.
+assert s.get("drift") is None, \
+    "ambiguous permission failure requires null; got {0!r}".format(s.get("drift"))
 
 a = s["attempt"]
 assert a["outcome"] == "exec_failed", \
@@ -876,13 +876,13 @@ s = r["steps"][0]
 # Prediction channel: validator must predict allow against the
 # spliced (deny default) + exec_baseline policy. Pins that the
 # validator (a) accepts process-exec* + path and (b) sees the
-# spliced policy, not the pre-splice source. drift=false because
-# attempt + validator both say allow.
+# spliced policy, not the pre-splice source. The broader process-exec*
+# query leaves operation scope unresolved even when the spawn succeeds.
 assert s["sandbox_check"]["outcome"] == "allow", \
     "sandbox_check should predict allow when augment grants process-exec*; got {0!r}".format(
         s["sandbox_check"]["outcome"])
-assert s.get("drift") is False, \
-    "drift should be False (validator+attempt agree on allow); got {0!r}".format(s.get("drift"))
+assert s.get("drift") is None, \
+    "broad exec query has unresolved operation scope; got {0!r}".format(s.get("drift"))
 
 a = s["attempt"]
 assert a["outcome"] == "ok", "attempt outcome={0}".format(a["outcome"])
@@ -971,7 +971,7 @@ for s, request in zip(runner["steps"], plan):
     args = request["attempt"]["args"]
     status = int(args[3])
     assert s["sandbox_check"]["outcome"] == "allow", s
-    assert s["drift"] is (None if status else False), s
+    assert s["drift"] is None, s  # broad process-exec* query
     a = s["attempt"]
     assert a["outcome"] == ("exec_failed" if status else "ok"), a
     assert a["rc"] == status, a
@@ -1046,7 +1046,7 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 s = env["data"]["runner_result"]["steps"][0]
 assert s["sandbox_check"]["outcome"] == "allow"
-assert s.get("drift") is False
+assert s.get("drift") is None  # broad process-exec* query
 a = s["attempt"]
 assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
 out = a.get("stdout") or ""
@@ -1162,8 +1162,8 @@ assert wild["sandbox_check"]["outcome"] == "allow", \
     "wild process-exec* expected outcome=allow; got {0!r}".format(wild["sandbox_check"]["outcome"])
 assert wild["sandbox_check"].get("error") is None, \
     "wild sandbox_check.error should be null on allow; got {0!r}".format(wild["sandbox_check"].get("error"))
-assert wild.get("drift") is False, \
-    "wild drift should be False (validator+attempt agree on allow); got {0!r}".format(wild.get("drift"))
+assert wild.get("drift") is None, \
+    "broad query has unresolved operation scope; got {0!r}".format(wild.get("drift"))
 assert wild["attempt"]["outcome"] == "ok"
 
 print("ok: bare process-exec → unsupported_operation with diagnostic; wild process-exec* → allow")

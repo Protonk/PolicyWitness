@@ -21,8 +21,8 @@ import Foundation
  *        - sandbox_check from validator verdict OR synthesized
  *          prediction_unavailable result for skipped pairs
  *        - attempt from CWorker slot result
- *        - drift = boolean comparison or nil (see drift helper for
- *          the asymmetry rule)
+ *        - comparison records submitted scope, derivation and known limits;
+ *          drift projects only established outcome agreement/disagreement
  *   4. Classifier:
  *        - normalized_outcome from C-worker disposition +
  *          validator disposition + per-slot completed/done state
@@ -294,6 +294,7 @@ struct ValidatorQueryDecision {
     let stepId: String
     let probe: ValidatorProbe?
     let exclusionReason: String?
+    var exclusionCode: String? = nil
 }
 
 func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecision] {
@@ -301,18 +302,22 @@ func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecisio
         let check = step.sandbox_check
         let kind = check.filter.kind
         let reason: String?
+        let code: String?
         if predictionUnavailableOpFiltersHostMirror.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {
             reason = "prediction unavailable for this operation and filter"
+            code = "prediction_unavailable_pair"
         } else if !knownFilterKinds.contains(kind) {
             reason = "prediction unavailable for unrecognized filter kind"
+            code = "unrecognized_filter_kind"
         } else if pathFilterIsUnresolvable(kind, check.filter.value) {
             reason = "target path \(check.filter.value ?? "") did not resolve on the host when the query was planned"
-        } else { reason = nil }
+            code = "path_unresolved_at_planning"
+        } else { reason = nil; code = nil }
         return ValidatorQueryDecision(stepId: step.step_id,
             probe: reason == nil ? ValidatorProbe(stepId: step.step_id, operation: check.operation,
                 filterType: mapFilterKindToValidator(kind),
                 filterValue: kind == PWRunnerWire.sandboxFilterNone ? nil : check.filter.value) : nil,
-            exclusionReason: reason)
+            exclusionReason: reason, exclusionCode: code)
     }
 }
 
@@ -423,6 +428,8 @@ func buildStepResults(
         }
         let slot = workerSlotsByStep[step.step_id]
         let supported = mapAttemptKindOrNil(step.attempt) != nil
+        attempt.requested_kind = step.attempt.kind
+        attempt.requested_action = step.attempt.action
         attempt.result_source = slot?.completed == true && supported ? "worker" : "synthetic"
         // Slot rc is PW's attempt status (often 0/1), not the raw syscall
         // return (e.g. an open FD). ABI 6 does not carry that native return.
@@ -430,13 +437,15 @@ func buildStepResults(
         if attempt.result_source == "synthetic" {
             attempt.missing_reason = !supported ? "attempt_not_supported" : slot == nil ? "slot_absent" : "slot_incomplete"
         }
-        let drift = computeDrift(sandboxCheck: sandboxCheck, attempt: attempt)
+        let comparison = computeComparison(sandboxCheck: sandboxCheck, attempt: attempt,
+            queryExclusionReason: decisions[step.step_id]?.exclusionCode)
         let stepResult = PWRunnerStepResult(
             step_id: step.step_id,
             sandbox_check: sandboxCheck,
             attempt: attempt,
             deny_signal: nil,
-            drift: drift
+            drift: comparison.drift,
+            comparison: comparison
         )
         results.append(stepResult)
     }
@@ -517,7 +526,7 @@ private func mapValidatorOutcomeToSandboxCheckOutcome(_ vOutcome: String) -> Str
 
 // `internal` (not `private`) so AttemptOutcomeMappingTests can drive the
 // (kind, action, slot) → AttemptOutcome mapping directly. This is the
-// third host classifier alongside computeDrift/classify; the test pins
+// third host classifier alongside computeComparison/classify; the test pins
 // each cell so the two stacked tables (kind routing + the rc!=0 action
 // switch) can't silently drift apart.
 func buildAttemptResult(
@@ -619,131 +628,120 @@ func buildAttemptResult(
     )
 }
 
-// `internal` (not `private`) so DriftClassifierTests can drive the
-// validator-vs-kernel truth table directly. This is the conceptual
-// core of PolicyWitness — the test pins the *semantics* of every
-// (predicted, observed) cell so the classifier can be reorganized,
-// split, or moved without silently changing what "drift" means.
-func computeDrift(
+// Internal for independent scenario controls. This compares recorded outcomes
+// within submitted scope; temporal equivalence and sandbox cause remain separate.
+func computeComparison(
     sandboxCheck: PWRunnerSandboxCheckResult,
-    attempt: PWRunnerAttemptResult
-) -> Bool? {
-    // drift is the validator-vs-attempt disagreement about *sandbox
-    // enforcement* — not just any allow/deny disagreement.
-    //
-    // An ENOENT file open or a BOOTSTRAP_UNKNOWN_SERVICE mach lookup
-    // is a failure but NOT a sandbox denial — the file doesn't exist,
-    // the service doesn't exist. Treating those as "kernel denied" when
-    // the validator predicted allow would flood the envelope with
-    // false libsandbox-drift signals.
-    //
-    // Asymmetric: EPERM/EACCES on a file op or spawn is AMBIGUOUS — the kernel
-    // sandbox produces those errnos, but so does ordinary Unix DAC
-    // (chmod 000, owner mismatch, etc). Without a deny-event-log
-    // cross-reference we can't tell the two apart from rc/errno alone.
-    // So:
-    //   - (validator=allow, observation=ambiguous-deny) → nil
-    //     ("we observed a failure but can't attribute it to libsandbox")
-    //   - (validator=deny,  observation=ambiguous-deny) → false
-    //     ("agreement on direction — small risk of crediting libsandbox
-    //      for a DAC denial, accepted because the signal is mostly right")
-    // Mach kr=1100 is unambiguous (no DAC analogue) so it always
-    // counts as strong sandbox evidence.
-    let observation = observationFromAttempt(attempt)
-    switch (sandboxCheck.outcome, observation) {
-    case (SandboxCheckOutcome.allow, .allowed):                return false
-    case (SandboxCheckOutcome.allow, .deniedStrongEvidence):   return true   // libsandbox drift
-    case (SandboxCheckOutcome.allow, .deniedAmbiguous):        return nil    // could be DAC, not sandbox
-    case (SandboxCheckOutcome.deny,  .allowed):                return true   // libsandbox drift
-    case (SandboxCheckOutcome.deny,  .deniedStrongEvidence):   return false
-    case (SandboxCheckOutcome.deny,  .deniedAmbiguous):        return false  // directional agreement
-    default:                                                    return nil
+    attempt: PWRunnerAttemptResult,
+    queryExclusionReason: String? = nil
+) -> PWRunnerComparison {
+    var limits = ["query_attempt_order_unestablished", "state_stability_unestablished"]
+    if let reason = queryExclusionReason { limits.append("query_plan:" + reason) }
+    let prediction = sandboxCheck.result_source == "validator"
+        && [SandboxCheckOutcome.allow, SandboxCheckOutcome.deny].contains(sandboxCheck.outcome)
+        ? sandboxCheck.outcome : "unavailable"
+    if prediction == "unavailable" {
+        limits.append("prediction:" + (sandboxCheck.missing_reason ?? "no_usable_verdict"))
     }
-}
 
-private enum AttemptObservation {
-    case allowed                 // attempt.outcome == ok
-    case deniedStrongEvidence    // mach kr=1100 or sysctl errno that has no
-                                 //   known non-policy analogue here
-    case deniedAmbiguous         // permission failures (sandbox OR DAC; can't
-                                 //   tell from rc/errno alone)
-    case undefined               // ENOENT, missing service, unsupported,
-                                 //   worker died — failures that aren't
-                                 //   themselves sandbox verdicts
-}
-
-private func observationFromAttempt(_ attempt: PWRunnerAttemptResult) -> AttemptObservation {
-    if attempt.outcome == AttemptOutcome.ok {
-        return .allowed
+    var observation = "unavailable"
+    var basis = "no_completed_worker_result"
+    if attempt.result_source == "worker" {
+        if attempt.requested_kind == "exec", (attempt.child_pid ?? 0) > 0 {
+            observation = "succeeded"
+            basis = "spawned_child"
+            if attempt.rc != 0 {
+                limits.append("exec_result_failed_after_spawn")
+                limits.append("sandbox_attribution_unestablished")
+            }
+        } else if attempt.outcome == AttemptOutcome.ok && attempt.rc == 0 {
+            observation = "succeeded"
+            basis = "completed_worker_status"
+        } else if attempt.rc != 0 {
+            observation = "other_failure"
+            basis = "completed_worker_status"
+            if [AttemptOutcome.openFailed, AttemptOutcome.unlinkFailed,
+                AttemptOutcome.accessFailed, AttemptOutcome.sysctlFailed,
+                AttemptOutcome.execFailed].contains(attempt.outcome),
+               [Int(EPERM), Int(EACCES)].contains(attempt.errno ?? -1) {
+                observation = "permission_failure"
+                basis = "permission_errno"
+            } else if attempt.outcome == AttemptOutcome.lookupFailed,
+                      attempt.error == "bootstrap_look_up: kr=1100" {
+                observation = "permission_failure"
+                basis = "bootstrap_permission_result"
+            }
+        }
     }
-    switch attempt.outcome {
-    case AttemptOutcome.openFailed,
-         AttemptOutcome.unlinkFailed,
-         AttemptOutcome.accessFailed:
-        // POSIX file ops: EPERM (1) and EACCES (13) are the kernel's
-        // sandbox-deny signals — but they're also ordinary Unix DAC
-        // signals (mode bits, owner mismatch, immutable flag, etc.).
-        // Classify as deniedAmbiguous so the drift logic above can
-        // suppress false libsandbox-drift attribution when the
-        // validator's prediction is allow.
-        switch attempt.errno {
-        case Int(EPERM), Int(EACCES): return .deniedAmbiguous
-        default:                       return .undefined
-        }
-    case AttemptOutcome.lookupFailed:
-        // bootstrap_look_up returns BOOTSTRAP_NOT_PRIVILEGED (1100)
-        // when the kernel sandbox denies the lookup, and
-        // BOOTSTRAP_UNKNOWN_SERVICE (1102) when the service simply
-        // isn't registered. Only the former is a sandbox verdict.
-        // The worker writes the kr verbatim into attempt.error as
-        // "bootstrap_look_up: kr=<N>"; parse that substring.
-        if let msg = attempt.error, msg.contains("kr=1100") {
-            return .deniedStrongEvidence
-        }
-        return .undefined
-    case AttemptOutcome.sysctlFailed:
-        switch attempt.errno {
-        case Int(EPERM), Int(EACCES):
-            return .deniedAmbiguous
-        case Int(ENOENT), Int(ENOMEM):
-            return .undefined
-        case .some(_):
-            return .deniedStrongEvidence
-        case .none:
-            return .undefined
-        }
-    case AttemptOutcome.execFailed:
-        // Exec drift attribution keys on child_pid:
-        //   child_pid > 0  → spawn succeeded; rc carries the helper's
-        //                    own exit code, which is not a sandbox
-        //                    verdict. Treat as non-policy failure.
-        //   child_pid == 0 → spawn never produced a child. errno carries
-        //                    the posix_spawn errno. EPERM / EACCES do
-        //                    not identify the cause: ordinary execute
-        //                    permissions can also block spawning. Without
-        //                    independent deny evidence, classify these as
-        //                    ambiguous just like file permission failures.
-        //                    Other errnos (ENOENT, etc.) are non-policy
-        //                    failures, not sandbox verdicts.
-        let childPid = attempt.child_pid ?? 0
-        if childPid > 0 {
-            return .undefined
-        }
-        switch attempt.errno {
-        case Int(EPERM), Int(EACCES):
-            return .deniedAmbiguous
-        default:
-            return .undefined
-        }
-    case AttemptOutcome.bootstrapPortFailed,
-         AttemptOutcome.unsupported,
-         AttemptOutcome.notRunWorkerDied:
-        // Setup or shape failures — the syscall the policy would
-        // gate never ran. No verdict to surface.
-        return .undefined
+    if observation == "unavailable" {
+        limits.append("attempt:" + (attempt.missing_reason ?? "no_completed_worker_result"))
+    } else if observation != "succeeded" {
+        limits.append("sandbox_attribution_unestablished")
+    }
+
+    let operation: String?
+    let filter: String?
+    switch (attempt.requested_kind, attempt.requested_action) {
+    case ("file", "open_read"), ("file", "access"):
+        operation = "file-read-data"; filter = "path"
+    case ("file", "open_write"):
+        operation = "file-write-data"; filter = "path"
+    case ("file", "unlink"):
+        operation = "file-write-unlink"; filter = "path"
+    case ("mach_lookup", "bootstrap_look_up"):
+        operation = "mach-lookup"; filter = "global_name"
+    case ("sysctl", "read"):
+        operation = "sysctl-read"; filter = "sysctl_name"
+    case ("exec", "spawn"):
+        operation = "process-exec"; filter = "path"
+    case ("file", "create"):
+        operation = nil; filter = "path"
+        limits.append("compound_attempt")
     default:
-        return .undefined
+        operation = nil; filter = nil
+        limits.append("attempt_operation_unestablished")
     }
+    let operationRelation: String
+    if sandboxCheck.operation.contains("*") { limits.append("broad_query_operation") }
+    if operation == nil || sandboxCheck.operation.contains("*") {
+        operationRelation = "unresolved"
+    } else {
+        operationRelation = operation == sandboxCheck.operation ? "matched" : "different"
+    }
+    if operationRelation != "matched" { limits.append("operation:" + operationRelation) }
+
+    let targetRelation: String
+    if filter != nil && sandboxCheck.filter_kind != filter {
+        limits.append("query_filter_scope_unestablished")
+    }
+    if sandboxCheck.filter_value == nil || attempt.requested_path == nil {
+        limits.append("submitted_target_unavailable")
+    }
+    if filter == nil || sandboxCheck.filter_kind != filter
+        || sandboxCheck.filter_value == nil || attempt.requested_path == nil {
+        targetRelation = "unresolved"
+    } else {
+        targetRelation = sandboxCheck.filter_value == attempt.requested_path
+            ? "same_submitted" : "different_submitted"
+    }
+    if targetRelation != "same_submitted" { limits.append("target:" + targetRelation) }
+    if sandboxCheck.filter_kind == "path" || filter == "path" {
+        limits.append("runtime_target_identity_unestablished")
+    }
+
+    var conclusion = "unavailable"
+    if operationRelation == "matched", targetRelation == "same_submitted" {
+        if observation == "succeeded" {
+            if prediction == "allow" { conclusion = "agreement" }
+            if prediction == "deny" { conclusion = "disagreement" }
+        } else if observation == "permission_failure", prediction == "deny" {
+            conclusion = "directional_consistency"
+        }
+    }
+    return PWRunnerComparison(scope: "submitted_operation_and_target",
+        prediction: prediction, observation: observation, observation_basis: basis,
+        operation_relation: operationRelation, target_relation: targetRelation,
+        conclusion: conclusion, limitations: limits)
 }
 
 // Internal for driver-to-JSON controls. Preserve the host's observations in the
@@ -802,7 +800,7 @@ struct ClassifiedRun {
 
 // `internal` (not `private`) so HostOutcomeClassifierTests can drive the
 // worker/validator → NormalizedOutcome decision directly. This is the
-// host's counterpart to computeDrift — the test pins each run shape to
+// host's counterpart to computeComparison — the test pins each run shape to
 // its outcome so the branch ladder can be reorganized without silently
 // changing what the controller reports (and reaches outcomes no e2e
 // specimen can reliably produce, including validator_no_reply).

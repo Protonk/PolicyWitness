@@ -10,11 +10,12 @@ All controls must complete before the drift assertion:
 - With mode 0644, direct execution fails with EACCES; PW predicts allow but
   reports `exec_failed`, errno EACCES, and no spawned child.
 - With mode 0755, direct execution and PW both succeed; PW reports a child
-  that exited zero and `drift=false`.
+  that exited zero. The broad `process-exec*` query retains unresolved operation
+  scope and `drift=null`, separately from observed spawn success.
 - A third run denies a separate prediction target while allowing the attempted
   helper under SBPL. Direct and PW execution both observe DAC EACCES; the deny
-  prediction yields directional `drift=false`. This is agreement of outcomes,
-  not evidence that the sandbox caused the attempted helper's failure.
+  prediction and different submitted target remain visible with `drift=null`.
+  Neither that pairing nor EACCES establishes sandbox attribution.
 - The first run must have `drift=null`: an ordinary filesystem permission
   error cannot substantiate a disagreement about sandbox enforcement.
 

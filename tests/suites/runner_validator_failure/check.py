@@ -137,7 +137,8 @@ def check_cli(case, out, pw):
             for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 1))):
                 prediction = step['sandbox_check']
                 assert (prediction['outcome'], prediction['rc'], prediction['errno']) == expected, step
-                assert step['drift'] is False, step
+                assert step['drift'] is (False if expected[0] == 'allow' else None), step
+                assert step['comparison']['conclusion'] == ('agreement' if expected[0] == 'allow' else 'directional_consistency'), step
             gap = steps[2]
             assert gap['sandbox_check']['outcome'] == 'error', gap
             assert 'no validator verdict' in gap['sandbox_check']['error'], gap

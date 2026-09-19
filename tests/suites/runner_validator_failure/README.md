@@ -26,7 +26,8 @@ paths, error evidence, and permission errno values attached to the right steps.
 
 The validator returns deny for the second step before allow for the first.
 Results must retain probe-plan order while associating these accepted verdicts
-by step ID. Their drift is false. The unanswered third step must have the current
+by step ID. Allow/success has drift=false; deny/permission failure has
+directional consistency and drift=null. The unanswered third step must have the current
 missing-verdict representation: `sandbox_check.outcome="error"`, a missing-verdict
 diagnostic, and an explicitly present `drift:null`. All three queries must appear
 in the fixture's received transcript, ruling out an upstream prediction skip.

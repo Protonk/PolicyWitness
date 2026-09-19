@@ -84,7 +84,7 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    assert runner['schema_version'] == 6, runner
+    assert runner['schema_version'] == 7, runner
     steps = runner['steps']
     assert [s['step_id'] for s in steps] == [s['step_id'] for s in specimen['probe_plan']], steps
     if failure:
@@ -116,7 +116,7 @@ def common_evidence(envelope, rc, specimen, failure):
         for i, (step, submitted) in enumerate(zip(steps, specimen['probe_plan'])):
             expectation = {'step_id': submitted['step_id'],
                            'sandbox_outcome': 'allow' if i == 0 else 'deny',
-                           'attempt_ok': i == 0, 'drift': False}
+                           'attempt_ok': i == 0, 'drift': False if i == 0 else None}
             failures.extend(validate_step(step, expectation))
             prediction, attempt = step['sandbox_check'], step['attempt']
             target = submitted['attempt']['target']
@@ -124,7 +124,7 @@ def common_evidence(envelope, rc, specimen, failure):
             assert prediction['operation'] == 'file-write-data', prediction
             assert prediction['filter_value'] == target, prediction
             assert type(prediction['rc']) is int and prediction['rc'] == i, prediction
-            assert step['drift'] is False, step
+            assert step['drift'] is (False if i == 0 else None), step
             assert attempt['requested_path'] == target, attempt
             if i == 0:
                 assert attempt['outcome'] == 'ok' and attempt['observed_path'] == target, attempt

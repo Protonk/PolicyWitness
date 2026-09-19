@@ -69,7 +69,7 @@ def check_envelope(envelope, rc, specimen, expected):
         assert type(prediction['rc']) is int, prediction
         assert prediction['rc'] == (0 if expectation['attempt_ok'] else 1), prediction
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction
-        assert step['drift'] is False, step
+        assert step['drift'] is (False if expectation['attempt_ok'] else None), step
         assert attempt['requested_path'] == target, attempt
         # Normalization is optional; the successful open's observed path is
         # independent worker evidence and must be present below.
@@ -105,7 +105,7 @@ def check_cli(variant, pw, out):
                 'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(path)},
             })
             expected.append({'step_id': step_id, 'sandbox_outcome': 'allow' if i == 0 else 'deny',
-                             'attempt_ok': i == 0, 'drift': False})
+                             'attempt_ok': i == 0, 'drift': False if i == 0 else None})
         if expected:
             expected[0]['errno'] = None
         policy = {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'}

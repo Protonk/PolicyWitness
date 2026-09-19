@@ -67,7 +67,7 @@ def check_envelope(envelope, rc, specimen, expected):
         assert type(prediction['rc']) is int, prediction
         assert prediction['rc'] == (0 if expectation['attempt_ok'] else 1), prediction
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction
-        assert step['drift'] is False, step
+        assert step['drift'] is None, step
         assert attempt['requested_path'] == target, attempt
         if expectation['attempt_ok']:
             assert attempt['outcome'] == 'ok' and attempt['observed_path'] == target, attempt
@@ -109,9 +109,9 @@ def main():
         }
         expected = [
             {'step_id': step_ids[0], 'sandbox_outcome': 'allow',
-             'attempt_ok': True, 'errno': None, 'drift': False},
+             'attempt_ok': True, 'errno': None, 'drift': None},
             {'step_id': step_ids[1], 'sandbox_outcome': 'deny',
-             'attempt_ok': False, 'drift': False},
+             'attempt_ok': False, 'drift': None},
         ]
         (out / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
         with RunCapture(pw, out, specimen,
@@ -122,7 +122,7 @@ def main():
             check_files(before, after, identities_before, identities_after)
             print('both existing files retain every seed byte and their identities', flush=True)
             check_envelope(run.load_json(), rc, specimen, expected)
-        print('existing-file create succeeds when allowed and fails when writes are denied; drift=false')
+        print('existing-file create succeeds when allowed and fails when writes are denied; compound-attempt scope remains unresolved')
 
 
 if __name__ == '__main__':

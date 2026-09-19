@@ -202,4 +202,40 @@ retained results and restored sources against the current signed app, with only
 documentation differences from the tested snapshot. Its corrected coverage
 claims separate fixture-supplied fields from observed host/receiver/process facts
 and real-worker effects. All seven step-3 requirements are complete; interpretation
-of joined observations and consumer recovery remain in steps 4–5.
+of joined observations is recorded below; step 5 retains final design acceptance
+and permanent consumer-recovery review.
+
+## Derived comparison dependencies
+
+The response-7 contract and C1–C6 baseline are recorded in the
+[claim/evidence review](FAILURE-PROPAGATION-CONTRACT.md#claimevidence-review).
+Before implementation, the [concrete inventory](out/failure-propagation-4/dependencies-before.json)
+records 77 discovered executable artifacts, all canonical IDs, prerequisites,
+default/opt-in membership and runner contexts. The
+[required ID list](out/failure-propagation-4/required-case-ids.txt) contains all
+130 registered cases: acceptance deliberately covers the entire catalog, including
+indirect helper consumers. No search candidate is excluded from execution.
+Bundle-integrity `drift` and validator/request/fixture schema numbers are different
+contracts and are not mechanically renamed. Extend/reconcile against the final diff.
+
+| Exact artifacts / consumers | Update or verification obligation |
+| --- | --- |
+| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift`, `PWRunnerAPI.swift`, `PWRunnerService.swift` | C1–C5 derivation, submitted provenance, post-orchestration path ownership, response 7; preserve worker ABI 6 and independent observations |
+| `runner/Clients/PWRunnerClient/main.swift` | Shared response default covers local failures; verify actual client-generated replies |
+| `controller/src/sandbox_log.rs`, `run_flow.rs`, `runner_client.rs`, `utils.rs`, `bin/sandbox-log-observer.rs` | C6 candidate matching evidence, raw event retention, independent capture/PW status, opaque runner forwarding |
+| `runner/Tests/PWRunnerCoreTests/DriftClassifierTests.swift`, `AttemptOutcomeMappingTests.swift`, `PredictionUnavailableTests.swift`, `WorkerEvidenceTests.swift`, `CWorkerTests.swift`, `EnvelopeInvariantTests.swift`, `DiagnosticTransportTests.swift`, `ValidatorEvidenceTests.swift` | Independent comparison scenarios, simultaneous limits, legacy decoding, unchanged native/absence/transport protections; entire runner_unit batch with inspected signed app |
+| `tests/suites/witness_contract/`, `runner_exec_dac/`, `runner_exec_lifecycle/`, `runner_exec_inheritance/`, `runner_use_c_worker/`, `failure_boundaries/`, `runner_specimen_isolation/`, `runner_filter_sysctl_name/`, `runner_validator_failure/` | Reconcile direct drift expectations with new semantics; test differing query operation/target, permission attribution, native effects, incomplete evidence and CLI forwarding |
+| `tests/lib/blackbox.py`, `tests/fixtures/blackbox_e2e/`, `blackbox_menagerie/`, both blackbox suite checkers and controls | Version-aware comparison shape; revise only expectations justified by the reviewed scenarios; retain explicit legacy fixtures |
+| `tests/suites/runner_byoxpc/run.sh`, `smoke/` and shared blackbox wrappers | Execute both BBX cases and every affected specimen in standard and BYOXPC contexts; owned installation and cleanup remain required |
+| `tests/catalog.json`, `tests/suites/source_drift/check.py`, `tests/README.md`, `tests/COVERAGE.md`, `tests/OPT_IN_TESTS.md` | Reconcile registrations, descriptions and actual scope; mandatory source_drift plus complete case-result accounting |
+| `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, suite/fixture READMEs, failure contract and plan pins | Publish response-7 meanings and limits consistently; distinguish historical accepted expectations from new response obligations |
+
+The [final dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
+covers all 44 changed artifacts and all 130 required cases. The
+[review](out/failure-propagation-4/review.json) credits 108 cases on the final build
+plus 22 unchanged offline controls, with no missing/skipped requirement. All 51
+recorded production sources and eight executables match; signed app integrity
+and owned BYOXPC cleanup pass. The [handoff](out/failure-propagation-4/README.md)
+maps every original C1–C6 question to delivered guarantees, acceptance evidence
+and deliberate limits. No required reporting addition remains pending. Step 5
+retains design acceptance and permanent consumer-recovery enforcement.

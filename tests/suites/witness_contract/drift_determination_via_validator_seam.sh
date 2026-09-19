@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="witness_contract"
 PW_TEST_ID="drift_determination_via_validator_seam"
@@ -146,4 +146,6 @@ if [[ "${ASSERT_RC}" -ne 0 ]]; then
   test_fail "${MSG}" "{\"log\":\"${ASSERT_LOG}\"}"
 fi
 
+test_check_python "${PW_TEST_ARTIFACTS}/comparison-assertions.log" "comparison evidence contract failed" \
+  "${ROOT_DIR}/tests/suites/witness_contract/check_comparison.py" "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
 test_pass "drift determined e2e via steered prediction: deny-vs-success→true, allow-vs-ambiguous→null" "{}"

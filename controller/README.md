@@ -4,7 +4,7 @@ This is developer documentation for the Rust code in `controller/`. It builds th
 
 - `dist/PolicyWitness.app/Contents/MacOS/policy-witness`
 
-PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run. The runner is an unsandboxed XPC host plus two sandboxed children (`pw-probe-runner` for attempts, `sb_api_validator --batch` for `sandbox_check` verdicts) joined into one envelope. The controller treats that as an implementation detail of the runner — it only consumes the host's reply.
+PolicyWitness is **specimen-first**. The launcher’s job is to drive the embedded runner service (`PWRunner.xpc`) and to print a stable, machine-readable JSON witness for each run. The runner is an unsandboxed XPC host with two short-lived children: `pw-probe-runner` applies the policy and attempts operations; `sb_api_validator --batch` queries that worker PID. Their observations are joined into one envelope. The controller treats that as an implementation detail of the runner — it only consumes the host's reply.
 
 For the Swift runner implementation details, see `runner/README.md`.
 
@@ -106,12 +106,17 @@ Exit codes:
 
 ### Output contract
 
-Runner responses use version 6: every step contains `deny_signal: null` because
+Runner responses use version 7: every step contains `deny_signal: null` because
 that channel is unobserved. Legacy signal objects remain readable by the Swift
 decoder; external typed readers requiring an object must support null. The Rust
 controller forwards the runner object without version coercion. Optional
 subprocess objects may be omitted/null; per-step signal/errno/drift nulls require
 key presence. Worker ABI 6 and request schema 1 are separate contracts.
+Response 7 adds an explicit per-step comparison and submitted attempt provenance;
+`drift` projects limited recorded-outcome agreement/disagreement, while uncertain
+attribution or scope retains null. Older replies preserve their original semantics.
+See the [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning).
+
 
 The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
@@ -154,7 +159,10 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   is `candidate`, repeated matching attempts are `ambiguous`. Matching requires
   worker PID, exact attempt-relevant operation and exact target/path evidence.
   Attempt kind/action come from the request joined by unique step ID, never the
-  independent sandbox-check query. Unmatched events remain in `deny_events`.
+  independent sandbox-check query. `matching_evidence` records each candidate's
+  mapped operation, submitted kind/action, matched path and path sources.
+  Unowned `normalized_path` alone is not a match source. Unmatched events remain
+  in `deny_events`.
   [Operation mapping and correlation limits](../PolicyWitness.md#denial-log-correlation).
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)

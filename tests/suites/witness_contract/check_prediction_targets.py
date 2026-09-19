@@ -47,8 +47,8 @@ def main():
         # Literal expectations belong to this test, never to PW's response or
         # classifier. Only the query values change between these specimens.
         for name, query_indices, predictions, drifts in (
-            ('matching', (0, 1), ('allow', 'deny'), (False, False)),
-            ('swapped', (1, 0), ('deny', 'allow'), (True, None)),
+            ('matching', (0, 1), ('allow', 'deny'), (False, None)),
+            ('swapped', (1, 0), ('deny', 'allow'), (None, None)),
         ):
             artifacts = out / name
             artifacts.mkdir()

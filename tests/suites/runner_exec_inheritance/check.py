@@ -41,7 +41,7 @@ def run_cli(pw, helper, out):
         attempt = step['attempt']
         assert attempt['outcome'] == 'ok' and attempt['rc'] == 0, attempt
         assert attempt['child_exit_code'] == 0 and attempt['child_term_signal'] == 0, attempt
-        assert step['sandbox_check']['outcome'] == 'allow' and step['drift'] is False, step
+        assert step['sandbox_check']['outcome'] == 'allow' and step['drift'] is None, step
         assert attempt['stderr'] == f'inspect:{nonce}-{i}\n', attempt
         report = parse_report(attempt['stdout'], f'{nonce}-{i}', canary_fd)
         assert report['pid'] == attempt['child_pid'], (report, attempt)

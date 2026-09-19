@@ -366,16 +366,12 @@ public struct PWRunnerProbeStep: Codable {
     }
 }
 
-// Candidate kernel-side forms of a path-filter argument. Diagnostic only —
-// the runner passes the raw filter_value to sandbox_check; this block lets a
-// caller see which other forms of the same path libsandbox could have been
-// comparing against when matching a `(subpath ...)` rule.
-//
-// Introduced in PWRunnerRunResult.schema_version = 2. Old controllers reading
-// new runner output ignore this field gracefully; new controllers reading old
-// runner output see nil and should branch on schema_version to know whether
-// the absence is "unsupported" or "no path-filter steps".
+// Path forms observed by the unsandboxed runner host after orchestration.
+// They are not historical validator/worker resolutions or comparison inputs.
+// Legacy decoding preserves absent provenance as unknown.
 public struct PWRunnerPathDiagnostics: Codable {
+    public var observer: String?
+    public var phase: String?
     public var input: String
     public var realpath_resolved: String?
     public var firmlink_resolved: String?
@@ -385,8 +381,12 @@ public struct PWRunnerPathDiagnostics: Codable {
         input: String,
         realpath_resolved: String? = nil,
         firmlink_resolved: String? = nil,
-        data_volume_form: String? = nil
+        data_volume_form: String? = nil,
+        observer: String? = nil,
+        phase: String? = nil
     ) {
+        self.observer = observer
+        self.phase = phase
         self.input = input
         self.realpath_resolved = realpath_resolved
         self.firmlink_resolved = firmlink_resolved
@@ -394,6 +394,7 @@ public struct PWRunnerPathDiagnostics: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case observer, phase
         case input
         case realpath_resolved
         case firmlink_resolved
@@ -406,6 +407,8 @@ public struct PWRunnerPathDiagnostics: Codable {
     // are nil, conflating both states.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(observer, forKey: .observer)
+        try container.encodeIfPresent(phase, forKey: .phase)
         try container.encode(input, forKey: .input)
         if let realpath_resolved {
             try container.encode(realpath_resolved, forKey: .realpath_resolved)
@@ -426,6 +429,8 @@ public struct PWRunnerPathDiagnostics: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        observer = try container.decodeIfPresent(String.self, forKey: .observer)
+        phase = try container.decodeIfPresent(String.self, forKey: .phase)
         input = try container.decode(String.self, forKey: .input)
         realpath_resolved = try container.decodeIfPresent(String.self, forKey: .realpath_resolved)
         firmlink_resolved = try container.decodeIfPresent(String.self, forKey: .firmlink_resolved)
@@ -563,6 +568,9 @@ public struct PWRunnerSandboxCheckResult: Codable {
 public struct PWRunnerAttemptResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
     /// step-1 contract for native returns versus PW status and missing reasons.
+    /// Submitted intent, not proof that the named native operation ran.
+    public var requested_kind: String? = nil
+    public var requested_action: String? = nil
     public var result_source: String? = nil
     public var native_rc: Int? = nil
     public var missing_reason: String? = nil
@@ -626,6 +634,7 @@ public struct PWRunnerAttemptResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case requested_kind, requested_action
         case result_source, native_rc, missing_reason
         case rc
         case exit_code
@@ -645,6 +654,8 @@ public struct PWRunnerAttemptResult: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(requested_kind, forKey: .requested_kind)
+        try container.encodeIfPresent(requested_action, forKey: .requested_action)
         try container.encodeIfPresent(result_source, forKey: .result_source)
         if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
@@ -693,6 +704,8 @@ public struct PWRunnerAttemptResult: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        requested_kind = try container.decodeIfPresent(String.self, forKey: .requested_kind)
+        requested_action = try container.decodeIfPresent(String.self, forKey: .requested_action)
         result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
         native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
@@ -727,6 +740,27 @@ public struct PWRunnerSignalResult: Codable {
     }
 }
 
+/// A bounded comparison of recorded outcomes, with independently reported limits.
+/// Unknown future strings remain decodable; no field implies synchronized state.
+public struct PWRunnerComparison: Codable {
+    public var scope: String
+    public var prediction: String
+    public var observation: String
+    public var observation_basis: String
+    public var operation_relation: String
+    public var target_relation: String
+    public var conclusion: String
+    public var limitations: [String]
+
+    public var drift: Bool? {
+        switch conclusion {
+        case "agreement": return false
+        case "disagreement": return true
+        default: return nil
+        }
+    }
+}
+
 public struct PWRunnerStepResult: Codable {
     public var step_id: String
     public var sandbox_check: PWRunnerSandboxCheckResult
@@ -735,23 +769,11 @@ public struct PWRunnerStepResult: Codable {
     /// Legacy objects remain decodable; their counts are not new observations.
     public var deny_signal: PWRunnerSignalResult?
 
-    /// Drift between the validator's predicted verdict and the attempt's
-    /// observed verdict. Introduced in PWRunnerRunResult.schema_version=4.
-    ///
-    /// Semantics:
-    ///   - `true`  — validator predicted allow but attempt observed deny
-    ///               (or vice versa). The libsandbox-drift design property
-    ///               PolicyWitness exists to surface.
-    ///   - `false` — validator predicted X and attempt observed X.
-    ///   - `nil`   — no comparison possible: validator was skipped
-    ///               (e.g. `prediction_unavailable` filter pair), validator
-    ///               wasn't run (Swift-worker code path), validator failed
-    ///               to produce a verdict for this step, or the attempt
-    ///               has no completed result.
-    ///
-    /// `nil` is the default and is encoded as explicit JSON null so
-    /// consumers can distinguish "field absent on v3" from "field present
-    /// but no comparison possible on v4".
+    /// Response 7: agreement/disagreement of recorded outcomes for matched
+    /// submitted scope. No synchronized-state or sandbox-cause guarantee.
+    /// Directional consistency and unavailable comparisons project to null.
+    /// Older decoded values retain their original version's meaning.
+    public var comparison: PWRunnerComparison?
     public var drift: Bool?
 
     public init(
@@ -759,13 +781,15 @@ public struct PWRunnerStepResult: Codable {
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
         deny_signal: PWRunnerSignalResult? = nil,
-        drift: Bool? = nil
+        drift: Bool? = nil,
+        comparison: PWRunnerComparison? = nil
     ) {
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
         self.deny_signal = deny_signal
         self.drift = drift
+        self.comparison = comparison
     }
 
     enum CodingKeys: String, CodingKey {
@@ -774,6 +798,7 @@ public struct PWRunnerStepResult: Codable {
         case attempt
         case deny_signal
         case drift
+        case comparison
     }
 
     // Custom encode so `drift` is emitted as explicit JSON null when
@@ -781,6 +806,7 @@ public struct PWRunnerStepResult: Codable {
     // present (bool or null); v3 producers never write the key at all.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(comparison, forKey: .comparison)
         try container.encode(step_id, forKey: .step_id)
         try container.encode(sandbox_check, forKey: .sandbox_check)
         try container.encode(attempt, forKey: .attempt)
@@ -807,6 +833,7 @@ public struct PWRunnerStepResult: Codable {
         // both land as Bool? = nil on the reader side. That's the
         // intended behaviour.
         drift = try container.decodeIfPresent(Bool.self, forKey: .drift)
+        comparison = try container.decodeIfPresent(PWRunnerComparison.self, forKey: .comparison)
     }
 }
 
@@ -1075,6 +1102,9 @@ public struct PWRunnerRunResult: Codable {
     //       inference. Legacy signal objects remain decodable. Readers that
     //       require an object must migrate; ABI and request versions are separate.
     //   6 — sandbox_check.pid is nullable when no worker was spawned.
+    //   7 — comparison scopes drift to recorded outcomes and exposes independent
+    //       limits; submitted attempt intent and later host path provenance are
+    //       explicit. Old replies retain old drift and absent derivations.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -1095,7 +1125,7 @@ public struct PWRunnerRunResult: Codable {
     public var test_overrides: PWRunnerTestOverrides?
 
     public init(
-        schema_version: Int = 6,
+        schema_version: Int = 7,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,

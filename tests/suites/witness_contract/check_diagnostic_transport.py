@@ -18,7 +18,7 @@ def run(pw, output, request):
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] == 6, runner
+    assert runner['schema_version'] == 7, runner
     assert runner.get('test_overrides') == request['_test_overrides'], runner
     return rc, runner
 

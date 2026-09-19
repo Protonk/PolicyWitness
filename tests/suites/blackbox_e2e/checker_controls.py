@@ -39,6 +39,33 @@ def main():
 
     check("valid", baseline)
 
+    current = copy.deepcopy(baseline)
+    current["data"]["runner_result"]["schema_version"] = 7
+    for i, step in enumerate(current["data"]["runner_result"]["steps"]):
+        step["attempt"].update(requested_kind="mach_lookup" if i == 2 else "file",
+                               requested_action="bootstrap_look_up" if i == 2 else "open_write")
+        step["drift"] = False if i == 0 else None
+        step["comparison"] = dict(scope="submitted_operation_and_target",
+            prediction="allow" if i == 0 else "deny",
+            observation="succeeded" if i == 0 else "permission_failure",
+            observation_basis="completed_worker_status" if i == 0 else "permission_errno",
+            operation_relation="matched", target_relation="same_submitted",
+            conclusion="agreement" if i == 0 else "directional_consistency",
+            limitations=["query_attempt_order_unestablished", "state_stability_unestablished"])
+        paths = step["sandbox_check"].get("path_diagnostics")
+        if paths is not None:
+            paths.update(observer="runner_host", phase="after_orchestration")
+    check("response7", current)
+    missing = copy.deepcopy(current)
+    del missing["data"]["runner_result"]["steps"][0]["comparison"]
+    check("response7_missing_comparison", missing, ("fs_write_allowed: missing comparison",))
+    broken_current = copy.deepcopy(current)
+    first, _, last = broken_current["data"]["runner_result"]["steps"]
+    first["sandbox_check"] = None
+    last["attempt"] = None
+    check("response7_malformed_independent_channels", broken_current,
+          ("missing sandbox_check for fs_write_allowed", "missing attempt for mach_lookup_denied"))
+
     broken = copy.deepcopy(baseline)
     attempt = broken["data"]["runner_result"]["steps"][2]["attempt"]
     attempt.update(outcome="ok", rc=0, exit_code=0)

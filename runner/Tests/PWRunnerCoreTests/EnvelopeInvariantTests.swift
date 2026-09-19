@@ -83,6 +83,30 @@ private func postSpawnFailureResult(outcome: String, signal: Int?) -> PWRunnerRu
 }
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
+    tk.group("response 7 preserves legacy uncertainty") {
+        tk.run("stored versions 4 through 6 retain drift without invented comparison or intent") {
+            for version in 4...6 {
+                for value: Bool? in [true, false, nil] {
+                    var old = okResult(stepCount: 1)
+                    old.schema_version = version
+                    old.steps[0].drift = value
+                    let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(old))
+                    try expectEqual(decoded.schema_version, version)
+                    try expectEqual(decoded.steps[0].drift, value)
+                    try expectNil(decoded.steps[0].comparison)
+                    try expectNil(decoded.steps[0].attempt.requested_kind)
+                    try expectNil(decoded.steps[0].attempt.requested_action)
+                }
+            }
+        }
+        tk.run("stored path forms do not acquire a host observation phase") {
+            let bytes = Data("{\"input\":\"/tmp/old\",\"realpath_resolved\":\"/private/tmp/old\"}".utf8)
+            let decoded = try pwRunnerDecodeJSON(PWRunnerPathDiagnostics.self, from: bytes)
+            try expectEqual(decoded.realpath_resolved, "/private/tmp/old")
+            try expectNil(decoded.observer)
+            try expectNil(decoded.phase)
+        }
+    }
     tk.group("PWRunnerSubprocess: additive host observations") {
         tk.run("legacy absent or null observations remain unknown") {
             for suffix in ["", ",\"ready_byte_received\":null,\"done_observed\":null,\"poll_stop_reason\":null,\"exit_requested\":null,\"termination_request\":null,\"reaped\":null,\"wait_errors\":null"] {
@@ -161,9 +185,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
     tk.group("PWRunnerRunResult: production-shaped success result") {
 
-        tk.run("schema_version is 6, test_overrides is nil, runner_subprocess is present") {
+        tk.run("schema_version is 7, test_overrides is nil, runner_subprocess is present") {
             let result = okResult(pid: 7777, stepCount: 2)
-            try expectEqual(result.schema_version, 6)
+            try expectEqual(result.schema_version, 7)
             try expectNil(result.test_overrides)
             try expectNotNil(result.runner_subprocess)
             // validator_subprocess is nil when the host didn't spawn
@@ -203,7 +227,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
 
             let data = try pwRunnerEncodeJSON(result)
             let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
-            try expectEqual(decoded.schema_version, 6)
+            try expectEqual(decoded.schema_version, 7)
             try expectNotNil(decoded.validator_subprocess)
             try expectEqual(decoded.validator_subprocess?.pid, 9002)
             try expectEqual(decoded.validator_subprocess?.exit_code, 0)
@@ -254,7 +278,7 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                 result.rc = outcome == NormalizedOutcome.ok ? 0 : 1
                 let bytes = try pwRunnerEncodeJSON(result)
                 let raw = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-                try expectEqual(raw["schema_version"] as? Int, 6)
+                try expectEqual(raw["schema_version"] as? Int, 7)
                 let step = (raw["steps"] as! [[String: Any]])[0]
                 try expectTrue(step["deny_signal"] is NSNull)
                 try expectTrue(step["drift"] is NSNull)
@@ -270,12 +294,12 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.steps[0].deny_signal?.delta, 0)
             try expectEqual(decoded.steps[0].deny_signal?.signal, "SIGUSR1")
         }
-        tk.run("client XPC failure emitters share response 6 default") {
+        tk.run("client XPC failure emitters share response 7 default") {
             for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
                             NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
                 let result = hostShortCircuitResult(outcome: outcome)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
-                try expectEqual(decoded.schema_version, 6)
+                try expectEqual(decoded.schema_version, 7)
                 try expectNil(decoded.runner_subprocess)
                 try expectTrue(decoded.steps.isEmpty)
             }
