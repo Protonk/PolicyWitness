@@ -1,15 +1,24 @@
 # Failure evidence through the worker, runner, and controller
 
-## Status: steps 0–2 complete; step 3 pending
+## Status: steps 0–2 complete; step 3 acceptance pending; steps 4–5 planned
 
-Batches 0A–0C, 1A–1C and step 2 are complete. Worker ABI 6 reports atomic progress,
-precise failures and bounded diagnostics. Host admission, both child lifecycles,
-validator byte/record/ID handling, and controller capture now retain their own
-observations. Response schema 5, request schema 1, capacities and production
-budgets are unchanged. [Routing inventory](FAILURE-PROPAGATION-INVENTORY.md) records
-accepted boundaries and explicit limitations; [step-2 evidence](out/failure-propagation-2/README.md)
-identifies signed builds, controls and remaining coverage gaps. Step 3's expanded
-unfamiliar-code and mutation experiment has not begun.
+Batches 0A–0C, 1A–1C, step 2 and their audit corrections are complete. Worker
+ABI 6 retains atomic progress, precise failures and bounded diagnostics. Host
+admission, child lifecycles, validator decoding/association and all controller
+receivers retain their own observations. Response schema 6 and request schema 1
+are separate contracts; capacities and production budgets remain unchanged.
+The unfamiliar-code experiment preserves two distinct worker and JSON diagnostic
+payloads, rejects structural invalidity, and detects temporary code filtering or
+detail loss. It required no production behavior change or code registration.
+Those step-3 controls remain credited; the limited acceptance review and handoff
+specified below are pending. Step 4 attempts to reconcile derived claims with
+their evidence, including the plan's own conflicting drift acceptance criteria.
+It does not promise to resolve every causal or comparison question. Finish the
+step-4 handoff, commit and pause before step 5's plan acceptance, permanent
+consumer-recovery checks and final closeout commit.
+[Routing inventory](FAILURE-PROPAGATION-INVENTORY.md) and
+[step-3 evidence](out/failure-propagation-3/README.md) identify the accepted routes,
+mutation failures, restored signed app and remaining coverage limits.
 
 ## Goal and scope
 
@@ -842,7 +851,7 @@ or classification-dependent serialization preserves them. Use structurally valid
 records in the supported format; malformed records and incompatible ABI versions
 still require their defined rejection or fallback behavior.
 
-- [ ] Choose a bounded test arrangement after the record format exists: direct
+- [x] Choose a bounded test arrangement after the record format exists: direct
   decoder/forwarding controls and, if practical, a test-only producer exercising
   the worker-to-CLI route. Use at least two unfamiliar codes and distinct payloads
   without registering them in production outcome mappings. Extend the basic
@@ -851,20 +860,20 @@ still require their defined rejection or fallback behavior.
   payloads in test equipment, its executable outside the inspected app, and the
   override mirrored in the final reply. It must obey the supported ABI's real
   publication protocol; it does not establish production failure attribution.
-- [ ] Carry each record through the applicable C/Swift decoding, runner encoding,
+- [x] Carry each record through the applicable C/Swift decoding, runner encoding,
   client forwarding, and controller parsing boundaries. Check the final record's
   producer, operation, code/domain, and diagnostic detail against the independently
   supplied input. If a layer cannot be exercised, state that coverage gap.
-- [ ] Require an unsuccessful/incomplete run to remain so. Do not infer a sandbox
+- [x] Require an unsuccessful/incomplete run to remain so. Do not infer a sandbox
   denial or compiler/apply failure merely from an unfamiliar code; preserve any
   independently established operation result. A generic summary is acceptable
   when the original record remains available. A known failure reported alongside
   it must retain its own evidence.
-- [ ] Include controls for absent, unpublished, malformed, and incompatible
+- [x] Include controls for absent, unpublished, malformed, and incompatible
   records. Confirm that structural validation remains effective while an
   unfamiliar but valid code is preserved. Exercise declared diagnostic truncation
   separately from code recognition.
-- [ ] Demonstrate that a temporary known-code-only forwarding path, or one that
+- [x] Demonstrate that a temporary known-code-only forwarding path, or one that
   drops/relabels unfamiliar details, fails the preservation controls. Keep such
   mutations out of production commits and retain their failure evidence.
 
@@ -874,6 +883,293 @@ or normalized outcome. Real-failure cases from steps 1 and 2 must continue to
 establish correct attribution at the producer. If the experiment reveals another
 recognition-dependent boundary, fix that boundary and rerun the same controls
 instead of adding the unfamiliar code to an allowlist.
+
+The completed controls above remain credited. The following acceptance work is
+still undone within step 3; this does not reopen implementation of the transport
+experiment or move the interpretation work from step 4 into it.
+
+- [ ] Review the step-3 acceptance claims against the retained inputs, outputs
+  and mutation failures. Distinguish preservation of supplied diagnostic fields,
+  independently observed host/process facts, and producer attribution established
+  by real-failure controls. An unfamiliar fixture code does not establish its
+  real-world meaning, and co-preserved records do not establish causation between
+  them. Qualify any broader claims in the contract, inventory and evidence index.
+  Repair a demonstrated transport/structural-validation gap within this step;
+  leave comparison, drift and evidence-join semantics to step 4.
+- [ ] Complete the step-3 handoff with the reviewed scope, remaining coverage
+  limits and an exact account of the uncommitted changes and tested build. Retain
+  the existing successful controls and failed mutations; rerun only checks
+  affected by a correction or an unresolved verification concern. Distinguish
+  later documentation edits from the source snapshot used for the signed build.
+  Report step 3 complete only after these two acceptance items are discharged;
+  completion establishes diagnostic transport, not the correctness of every
+  derived policy claim.
+
+### 4. Attempt to reconcile derived claims with their supporting observations
+
+Two valid records can support an unjustified comparison. This step examines the
+relationships used to derive claims from independently owned observations, then
+attempts bounded corrections to the public contract and its implementation.
+Record validity, association with a request, comparability with another
+observation, and support for a causal conclusion require separate justification.
+A common envelope, step ID or artifact directory does not establish all four.
+
+The audit identifies a real ambiguity in `drift=false`: established outcome
+agreement and consistency with an unattributed permission failure share one
+value. Its broader claims need qualification. The raw prediction and attempt
+evidence survives; identifying the classifier's interpretation currently requires
+consumer knowledge of its rules. Direct execution controls belong to the test
+harness, and denial-log candidates do not automatically resolve attribution.
+The step-0 positive-control requirements in this plan explicitly pin
+deny + permission failure to `drift=false`. Treat that as the current baseline
+whose justification must be reconciled with the observer principles, not as an
+exemption from them or proof that execution drifted from the plan.
+
+#### Establish what each join supports
+
+- [ ] Write a bounded claim/evidence table in the durable failure contract and
+  reference it from the routing inventory. For each relationship, identify the observation
+  owners, association rule, relevant phase/order guarantees, assumptions,
+  counterexample and strongest supported conclusion. Distinguish demonstrated
+  defects from source-established limitations and hypotheses needing a control.
+  Cover these relationships:
+
+  | Relationship | Question to establish before drawing a stronger conclusion |
+  | --- | --- |
+  | Submitted query to validator reply | Does the unique record answer the actual query? Preserve step 2's tuple validation; it does not establish comparability with the attempt. |
+  | Prediction to attempted operation | What connects their operation, target and relevant conditions? A shared step ID can pair intentionally different queries and attempts. Deny for A plus successful allowed attempt on B must not, by itself, establish sandbox drift. |
+  | Query time to attempt time | Application publication precedes host validator invocation, while the worker proceeds with attempts. What ordering or state stability is actually established? Frozen query planning does not freeze filesystem state. |
+  | Host path enrichment to validator/worker evidence | Post-run host resolution is a separate observation. Its placement under `sandbox_check` must not imply the validator or worker observed that resolution earlier. |
+  | Denial event to attempt or process termination | PID/operation/path matches identify candidates within a limited capture window; repeated attempts and missing temporal identity can prevent a unique association or causal conclusion. |
+  | Test control to runtime conclusion | An independent control can test a claim without being an observation available to the running app. Identify the actual runtime evidence supporting any emitted conclusion. |
+
+#### Choose a bounded public contract
+
+- [ ] State what `drift=true`, `false` and `null` promise before choosing fields.
+  Reconcile the observer principles, step-0 positive-control expectations,
+  directional DAC control, API comments and public documentation. If false means
+  established agreement about sandbox enforcement, ambiguous permission failure
+  alone cannot establish it. Retaining directional consistency as useful
+  information requires an explicit limited meaning. Avoiding false positives
+  does not alone justify false, because null also avoids them.
+- [ ] Make the derivation and its known limits inspectable in the envelope, so a
+  consumer can distinguish the supported meanings without copying the private
+  classifier truth table. Choose the smallest useful representation after the
+  claim/evidence review; do not preselect `drift_basis` or an exhaustive two-value
+  taxonomy. Attribution uncertainty, uncertain comparability, unavailable
+  evidence and uncertain event association can coexist. Preserve known reasons
+  and supporting observations while allowing unresolved interpretation; a generic
+  unknown must not erase a more specific known limit. An `observed` label alone
+  cannot establish that two observations are comparable.
+
+#### Compatibility decision and dependency gate
+
+Complete this gate after choosing the public contract and before changing
+production emitters, field meanings or their expected values in tests.
+
+- [ ] Record the compatibility decision in the durable contract: old and new
+  field meanings/shapes, emitted response version, treatment of older stored
+  replies and consequences for existing readers. Decide explicitly whether
+  response schema 6 advances. A change to an existing field's promised meaning
+  or required shape requires a response-version advance even when its JSON type
+  is unchanged. If the change only adds compatible evidence while preserving
+  existing meanings, justify retaining the version. Keep request schema and
+  worker ABI decisions separate; do not bump either merely because the response
+  changes. Apply the decision consistently to every response emitter, including
+  client-generated failures, and preserve supported legacy decoding without
+  inventing observations absent from stored replies.
+- [ ] Expand the dependency table below into a concrete inventory before editing
+  assertions. Start with references to `drift`, the response version and the
+  chosen new fields, then trace shared helpers, fixture readers, wrapper scripts
+  and runner contexts. Inspect `tests/run.sh --all --list` and map each executable
+  dependency to canonical catalog case IDs, prerequisites and default/opt-in
+  status. Record each required update or verification, and the reason for any
+  search candidate excluded as unrelated. Plain-text references are discovery
+  hints: `tests/lib/artifact.py` uses "drift" for bundle changes, while indirect
+  consumers of `tests/lib/blackbox.py` may never name the result field.
+
+The following are required starting points, not an exhaustive or fixed case
+count. Extend the inventory when the chosen representation or final diff reveals
+another dependency; do not shrink it merely by removing an old assertion.
+
+| Artifacts | Required update or verification |
+| --- | --- |
+| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift`, `PWRunnerService.swift`, `runner/Clients/PWRunnerClient/main.swift`; `tests/suites/runner_use_c_worker/run.sh` and stored envelope fixtures | Apply the response-version and field contract to normal and failure emitters, explicit nulls, encoding/decoding and exact-version assertions. Verify supported older replies separately from newly emitted evidence. |
+| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift`; `runner/Tests/PWRunnerCoreTests/DriftClassifierTests.swift`, `AttemptOutcomeMappingTests.swift`, `PredictionUnavailableTests.swift`, `WorkerEvidenceTests.swift`, `CWorkerTests.swift`, `EnvelopeInvariantTests.swift` | Reconcile comparison semantics, missing evidence and Codable guarantees while retaining native observations, process status and partial-result assertions. Run the registered `runner_unit` batch with the required signed-worker equipment. |
+| `controller/src/runner_client.rs`, `utils.rs`, `run_flow.rs`, `sandbox_log.rs`, `bin/sandbox-log-observer.rs`; `tests/suites/unit/`, `integration/` | Verify forwarding, any changed JSON interpretation, log associations and host-owned enrichment through their Rust unit/CLI boundaries. Identify affected tests even where the controller forwards the field without naming it. |
+| `tests/suites/witness_contract/`, `failure_boundaries/`, `runner_use_c_worker/`, `runner_exec_dac/`, `runner_exec_lifecycle/`, `runner_exec_inheritance/`, `runner_specimen_isolation/`, `runner_filter_sysctl_name/`, `runner_validator_failure/`, `runner_outcome_runner_timeout/` | Map direct drift, absence, version and provenance assertions to all affected catalog cases, including opt-in members and shared validator-failure aliases. Preserve effects, attribution and lifecycle checks while changing summary expectations. |
+| `tests/lib/blackbox.py`; `tests/suites/blackbox_e2e/validate_run.py`, `checker_controls.py`; `tests/suites/blackbox_menagerie/validate_run.py`, `checker_controls.py`; `tests/fixtures/blackbox_e2e/`, `blackbox_menagerie/` | Update shared validation and independent checker controls, fixture expectations and legacy examples. Trace all consumers of the helpers and fixtures; a helper change affects callers that do not spell out `drift`. |
+| `tests/suites/runner_byoxpc/run.sh`, `tests/suites/smoke/pw_specimen_smoke.sh`, and their smoke/black-box fixtures and checkers | Include affected standard and BYOXPC catalog IDs separately, with installation dependencies, required equipment and cleanup. Standard-context success does not verify BYOXPC wrappers. Explicitly account for `runner_byoxpc/BBX-001` and `runner_byoxpc/BBX-002` when the shared checker or contract changes. |
+| `tests/catalog.json`, `tests/suites/source_drift/check.py`, `tests/README.md`, `tests/COVERAGE.md`, `tests/OPT_IN_TESTS.md` | Update case descriptions, registrations and coverage claims. Run `source_drift` as a mandatory step-4 gate; it verifies registry/source consistency and does not substitute for executing affected cases. Check dispatcher/shared-equipment controls when their actual dependencies change. |
+| `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, affected suite/fixture READMEs, `tests/FAILURE-PROPAGATION-CONTRACT.md`, `tests/FAILURE-PROPAGATION-INVENTORY.md`, and earlier acceptance pins in this plan | State the accepted meanings, provenance, limitations and compatibility consistently. Preserve the original absence, lifecycle and no-cause obligations when replacing drift expectations. |
+
+#### Implement bounded corrections
+
+- [ ] Implement justified corrections at the layer that owns the derivation or
+  enrichment. Keep native observations and their provenance independent of the
+  summary. Continue accepting independently specified queries and attempts;
+  admission or string equality alone cannot certify a meaningful comparison.
+  Identify later host path diagnostics as host observations at their actual
+  phase, without presenting them as historical validator/worker facts.
+- [ ] Retain candidate log associations and capture limitations. Stronger joins
+  require additional supporting evidence; a log match is not a general remedy
+  for ambiguous errno, and no match is not proof of no sandbox involvement.
+  Do not infer a total timeline from collection/array order or require a unified
+  log stream to complete this step. Optional logs must not change PW execution
+  status merely by becoming available. Keep fallback-helper and test-harness
+  observations within their own scope.
+
+This is an attempt to improve the contract within the existing architecture.
+It does not authorize a lifecycle redesign, global event-ordering system,
+per-step synchronization protocol, new logging requirement, larger budgets, or
+a search for native compiler drift. Where stronger evidence would require such
+work, expose the limitation and constrain the claim. A useful result can leave
+interpretation unresolved. Merely documenting an unsupported public claim as
+accepted does not discharge it; if no bounded correction is established, leave
+that item pending and explain the required follow-up.
+
+#### Establish acceptance and stop at a reviewable boundary
+
+- [ ] Add focused controls with an oracle independent of the classifier's
+  current outputs. Cover ambiguous permission failures under allow and deny
+  predictions, a deny query for A paired with successful allowed attempt B,
+  justified comparisons, and missing/unusable observations. Assert both retained
+  evidence and the limited conclusion/derivation, not only a revised boolean.
+  For temporal or path-enrichment concerns, first establish a deterministic
+  control or the precise source-level guarantee; do not depend on a
+  nondeterministic race to pass acceptance. Credit constructed
+  interpretation tests separately from real-worker and CLI evidence.
+- [ ] Check the relevant joins with absent, unavailable and candidate log
+  evidence, including repeated-attempt ambiguity. A combination of individually
+  valid records must not silently gain stronger identity, ordering or causal
+  meaning when assembled. Preserve valid observations when a comparison is
+  unavailable. Retain step 3's unfamiliar-diagnostic controls and the existing
+  success, timeout and partial-evidence protections; exercise changed forwarding
+  boundaries through the CLI when public fields change.
+- [ ] Reconcile the completed compatibility/dependency inventory with the final
+  diff and full catalog. Update every affected emitter, reader, fixture, assertion
+  and public contract identified by the inventory. Keep each changed expectation
+  tied to the chosen semantics; a passing old or mechanically replaced assertion
+  cannot settle a conflict with the meaning now promised.
+- [ ] Execute every affected canonical catalog case identified by that inventory,
+  including indirect helper/fixture consumers, applicable opt-ins, both runner
+  contexts and their dependencies. Run `source_drift` unconditionally for step 4.
+  A convenient selector or the default battery alone is not the acceptance scope.
+  Retain the exact required case set, expanded dispatcher selections, commands,
+  results and signed-build/source provenance. Reconcile required IDs against
+  completed results; missing equipment, skipped or unrun required cases remain
+  unverified and prevent acceptance. Use separate output directories for batches.
+  Credit results only for the accepted implementation; after a later correction,
+  rerun affected cases and explain why any retained results still apply. Include
+  Swift/Rust batch results and their internal required controls in this accounting.
+- [ ] Produce a handoff mapping each reviewed claim to its implemented guarantee,
+  acceptance evidence and remaining limits. Account for unresolved questions in
+  durable documentation and, where relevant to interpreting a result, in the
+  envelope. Identify any unfinished correction separately from an intentionally
+  unknown answer. Completion requires this disposition of every reviewed item,
+  not a claim that every pair of streams can be unified or every cause resolved.
+
+Commit the reviewed implementation, tests and supporting documentation from
+steps 3–4 with their verification and remaining limitations, then pause. Keep
+that work uncommitted until this checkpoint. The plan/audit planning commit is
+separate. This checkpoint does not dissolve the plan or settle all interpretation
+questions; resume step 5 as a separate task and make its final commit separately.
+
+### 5. Accept the plan and transfer consumer obligations into permanent tests
+
+This step follows the step-4 commit and review. Its primary task is to settle
+plan acceptance: which reported distinctions are justified by the observations
+and assumptions the product actually has, and which limitations remain part of
+the accepted contract. That is a design judgment made for this plan. The lasting
+executable obligation is that a consumer can recover the accepted distinctions
+from the envelope using the public contract, without reconstructing private
+classifier rules. Tests pin the chosen guarantees; they do not establish a
+universal theory of policy causation.
+
+#### Settle the design judgments and expected consumer answers
+
+- [ ] Review step 4's claim/evidence table against the observer principles,
+  controlled scenarios, retained observations and implemented contract. Resolve
+  conflicts between principles and acceptance criteria explicitly. Record the
+  conclusions accepted for each scenario, their supporting observations and
+  assumptions, prohibited stronger conclusions, and intentionally unresolved
+  questions in the durable failure contract. Preserve the distinction between
+  test-owned controls and information available to PW at runtime. An unfinished
+  correction remains pending; calling it a limitation does not accept an
+  unsupported emitted claim.
+- [ ] Settle a bounded set of consumer questions and their expected answers from
+  that review before writing the recovery checks. Use the questions below as
+  starting points, refining their wording to the contract actually accepted.
+  Answers may include "not established" or "not reported". Do not require a
+  definitive answer where the evidence cannot support one, or a single reason
+  where several known limits coexist.
+
+  | Consumer question | Acceptance distinction to preserve |
+  | --- | --- |
+  | Which steps report established agreement, and what comparison does that claim cover? | Established agreement must remain distinguishable from directional consistency and an unavailable comparison. |
+  | Which steps observed a failure whose cause PW could not attribute to the sandbox? | An observed failure with uncertain attribution differs from an absent attempt observation. |
+  | What relationship between each query and attempt was established, known to differ, or left unresolved? | A shared step ID or equal target spelling cannot silently certify comparability. |
+  | Which steps produced no comparison, and what known reasons limit it? | Preserve distinct and simultaneous known reasons without inventing explanations for absent evidence. |
+  | Which path resolutions were later host observations? | Host enrichment must remain distinguishable from submitted query values and validator/worker observations. |
+  | Which denial events are candidates for a step, and what association or capture limits remain? | Candidate association, unique occurrence, missing capture and capture without a match remain distinct. |
+
+- [ ] Associate the expected answers with controlled inputs and observations,
+  using applicable existing cases and a small number of focused additions where
+  coverage is missing. Record each case's scope: constructed interpretation,
+  real-worker observation, CLI forwarding or legacy decoding. Do not derive
+  expected answers from the emitted summary labels or copy the classifier into
+  the oracle. Changes to an accepted answer require an explicit design reason;
+  making a failing filter pass is insufficient. Older stored replies need their
+  own version-aware expectations, without retroactively inventing new evidence.
+
+#### Demonstrate recovery and distribute permanent enforcement
+
+- [ ] Implement JSON-only recovery checks using the documented public contract.
+  For each question, obtain the answer from a single envelope and compare it
+  with the reviewed scenario expectation. Reading public field meanings is
+  allowed; consulting `computeDrift`, applying private errno classifications, or
+  inspecting external artifacts to construct the consumer's answer is not.
+  External scenario evidence can establish the expected answer for the test,
+  but it is not an extra input available to the JSON consumer. Demonstrate
+  recovery through actual CLI output for the applicable live controls.
+- [ ] Place permanent checks at the boundaries that own the obligation. Extend
+  the relevant CLI/witness cases for consumer recovery, Swift tests for encoding
+  and absence guarantees, and controller tests for preservation or correlation
+  behavior that the controller owns. Put universally shared invariants in shared
+  checkers and reuse recovery helpers where appropriate. Reuse step-4 coverage;
+  do not copy the full decision procedure into every suite or create a permanent
+  plan-specific audit framework. The durable tests and their fixtures must work
+  without reading this plan or the audit document.
+- [ ] Demonstrate that the permanent checks reject representative losses of
+  meaning: dropping a required distinction or provenance, removing one of several
+  known limitations, or presenting later host evidence as a validator observation.
+  Include a case where blanket unknown would discard a conclusion the reviewed
+  evidence supports. Use existing checker controls or bounded temporary mutations
+  at the relevant boundary, preserving their failure evidence and restoring the
+  source/app afterward. These controls establish enforcement of the accepted
+  contract, not independent proof of every causal judgment behind it.
+
+#### Close out the plan and make the final commit
+
+- [ ] Publish an ownership map from each accepted consumer question to its
+  durable contract location and permanent registered tests. Record the design
+  rationale and residual limits where future maintainers can find them without
+  the plan or audit conversation. Every reviewed promise must have a supported
+  guarantee or an explicit accepted limit; unresolved implementation work still
+  prevents completion. Readability of an unsupported label cannot substitute for
+  the design judgment settled above.
+- [ ] Reconcile the final diff with step 4's compatibility and dependency gate.
+  Apply that gate to any implementation/contract correction discovered during
+  acceptance, and run the new recovery controls plus all affected cases. Keep
+  exact build/source and case-result provenance, retaining prior evidence only
+  where it still applies. Update registry and coverage documentation and run
+  `source_drift`; no required unrun or skipped check receives acceptance credit.
+- [ ] Complete the final handoff with the accepted contract, design decisions,
+  permanent enforcement map, verification results and remaining limitations.
+  Mark the plan complete only when these obligations are satisfied. Make the
+  final step-5 commit separately from the step-4 checkpoint; any later archival
+  or removal of planning documents must leave the permanent contract and tests
+  sufficient on their own.
 
 ## Verification and handoff
 
@@ -893,9 +1189,9 @@ together with an app-dependent case in the same public dispatcher invocation
 (for example, `--suite runner_unit --suite runner_c_worker_harness`) so the
 selected app is inspected. Record the actual worker and validator paths used by
 the credited cases and retain `pwrunner_core_tests.log`. Inspect that log for
-internal `SKIP` messages as well as failures: `TestKit` counts a missing-binary
-early return as passed, and the suite wrapper only checks exit status and the
-summary. A skipped required case remains unverified even if the batch reports
+internal `SKIP` messages as well as failures. Required live controls throw a
+normal TestFailure when equipment is missing, and the wrapper rejects internal
+SKIP/FAIL before accepting the summary. A skipped required case remains unverified even if the batch reports
 all tests passed. Supply the matching signed build and rerun before accepting
 that row; newly added required live controls must fail clearly when their test
 equipment is absent. Pure classifier/encoding controls may still be credited
@@ -904,7 +1200,7 @@ independently. This requirement does not call for a general test-harness redesig
 Select verification according to the changed boundary: C harness and ABI layout,
 Swift classifier/envelope tests, validator transport tests, controller parsing
 tests, and real CLI cases. Include `source_drift` when outcome constants or
-coverage registrations change; it is required for step 0. Register new cases and
+coverage registrations change; it is required for steps 0, 4 and 5. Register new cases and
 update `tests/README.md`, `tests/COVERAGE.md`, suite documentation, and public JSON
 documentation as needed.
 Run relevant existing success, timeout, and partial-evidence cases alongside new
@@ -925,13 +1221,13 @@ A check that was not run remains unverified, with its reason recorded.
 
 | Item | Current state |
 | --- | --- |
-| Completed implementation batch | 0A–0C, 1A–1C, step 2 and the [audit corrections](FAILURE-PROPAGATION-AUDIT.md). The inventory covers host/worker evidence, immutable query planning and tuple association, independent validator collection, strict capture in all three controller receivers and required test equipment. |
-| Next batch | Step 3: expanded unfamiliar-code transport and mutation controls. Not started. |
+| Completed implementation batch | 0A–0C, 1A–1C, step 2 and audit corrections. Step-3 transport implementation and its five checked requirements remain credited; its two acceptance/handoff items are pending. Steps 4–5 have not begun. |
+| Next batch | Finish the bounded step-3 acceptance review and handoff, then carry out step 4. Implementation, tests and supporting docs remain uncommitted through step 3. The separate planning commit contains the plan and peer-review audit; step 4 ends with the implementation commit and pause. Step 5 resumes acceptance and permanent enforcement, then makes the final commit. |
 | ABI revision state | Worker ABI 6; response schema 6 (nullable query PID); request schema 1. No revision under construction and no capacity/budget increase. |
 | Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h`, `PWRunnerAPI.swift`, and `ValidatorClient.swift`. Admission belongs to the host; worker publications/transfer observations to `runner_subprocess`; validator records/receiver/process observations to `validator_subprocess`; controller byte counts/local loss to runner-client, policy-check and log-observer capture objects. |
-| Inventory entries closed / remaining limitations | Each row has an owner and acceptance or an explicit limitation. Query tuples and pre-attempt exclusions govern joining; input failure no longer abandons stdout. All controller JSON receivers count original bytes and distinguish local loss. Early/dependency stderr remains uncollected; an open undrained policy pipe has no transfer deadline. Successful kill still uses blocking wait; failed cleanup may leave a child unreaped. No streaming allocation bound. Native setup exhaustion, destructive XPC/reply faults, a forced client timer and worker exec stderr truncation remain stated coverage gaps. Log-observer upstream lossy conversion leaves raw pathname fidelity unresolved. Existing TCC entries are unchanged. |
-| Verified source and signed app | Base `0670db1` plus steps 1–2 and audit corrections; the commit is recorded in the [correction index](out/failure-propagation-corrections/README.md). Normal `YOLO=1 ./build.sh` outside the automation sandbox, app `/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app`. [Build/source/executable hashes](out/failure-propagation-corrections/accepted-build.json), [build log](out/failure-propagation-corrections/build.accepted.log), [final source snapshot](out/failure-propagation-corrections/final-source.json). Fixtures remain outside the inspected app. |
-| Checks, results, and evidence paths | [Correction acceptance](out/failure-propagation-corrections/README.md): 93 distinct latest passing catalog cases, Swift 256/256 without internal SKIP/FAIL, Rust 106/106 plus 10 CLI integration tests. Broad run: 87 pass and one new nullable-PID decoder control failed; the fallback was corrected and all 14 final focused cases pass. Both BYOXPC BBX cases and all 13 selected BYOXPC cases pass. All inspected builds valid/unchanged. Missing-equipment negative control yields 51 normal failures, no crash/skip. Prior [step 1](out/failure-propagation-1c/README.md) and [step 2](out/failure-propagation-2/README.md) evidence is retained. Syntax and git diff --check pass. |
+| Inventory entries closed / remaining limitations | Existing transport rows retain their acceptance or stated limitation. Their closure does not establish the derived comparisons reviewed in step 4: drift meaning/basis, query-attempt comparability, temporal assumptions, and later host enrichment provenance. Early/dependency stderr remains uncollected; an open undrained policy pipe has no transfer deadline. Successful kill still uses blocking wait; failed cleanup may leave a child unreaped. No streaming allocation bound. Native setup exhaustion, destructive XPC/reply faults, a forced client timer and worker exec stderr truncation remain stated coverage gaps. Log-observer upstream lossy conversion leaves raw pathname fidelity unresolved. Existing TCC entries are unchanged. |
+| Verified source and signed app | Retained step-3 evidence: base `6885cb4` plus the snapshotted uncommitted step-3 tests/docs, with no production behavior changes or diagnostic registrations. Normal `YOLO=1 ./build.sh` after restoring all mutations. [Build/source/executable hashes](out/failure-propagation-3/accepted-build.json), [build log](out/failure-propagation-3/build.final.log), [source snapshot](out/failure-propagation-3/final-source.json). Later plan/audit text is outside that snapshot; this plan revision runs no new build or acceptance checks. Fixtures remain outside the inspected app. |
+| Checks, results, and evidence paths | [Step-3 index](out/failure-propagation-3/README.md): all 49 selected catalog cases pass with no skips; Swift 258/258, Rust 109/109 plus 10 CLI integration tests. Eleven new CLI controls pass. Worker/validator mutations fail both direct and signed CLI controls; shared-receiver mutation fails all three receiver controls. Exact restored source hashes and final app integrity are checked. Initial selector/prose/assertion failures and all negative evidence are retained. Prior [step 1](out/failure-propagation-1c/README.md), [step 2](out/failure-propagation-2/README.md), and [audit corrections](out/failure-propagation-corrections/README.md) remain retained. |
 
 ## Decisions to resolve within implementation batches
 
@@ -964,6 +1260,12 @@ A check that was not run remains unverified, with its reason recorded.
   the full route without introducing result-forcing production seams.
 - Where groups genuinely share reporting code, and where separate paths better
   preserve the meaning of the evidence.
+- Step 4's supported meanings of drift, representation of derivation and
+  simultaneous unresolved limits, justification of cross-observer joins, host
+  enrichment provenance, and the explicit response-version/reader compatibility
+  decision and complete affected-case inventory required before implementation.
+- Step 5's accepted design judgments and consumer questions, scenario-derived
+  expected answers, permanent test ownership and residual limits at closeout.
 
 Resolve these questions within the relevant step. This plan does not authorize
 raising limits or replacing the existing test-equipment plan.
