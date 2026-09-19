@@ -12,6 +12,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
 from blackbox import validate_run_shape, validate_step
+from consumer import recover_evidence
 
 
 def main():
@@ -107,6 +108,39 @@ for line in sys.stdin:
                 if step['step_id'] == 'unsupported':
                     assert 'attempt:attempt_not_supported' in comparison['limitations'], step
             assert not errors, errors
+            answers = recover_evidence(envelope)
+            (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            assert answers['comparison_groups'] == {
+                'agreement': ['agreement'], 'disagreement': ['disagreement'],
+                'directional_consistency': ['deny_permission'],
+                'unavailable': ['allow_permission', 'different_target', 'different_operation',
+                                'absent', 'missing_query_success', 'compound_create', 'unsupported'],
+                'not_reported': []}, answers
+            assert answers['failure_groups'] == {
+                'unattributed_failure': ['allow_permission', 'deny_permission', 'absent'],
+                'missing_result': ['unsupported'], 'not_reported': []}, answers
+            for answer, exp, submitted in zip(answers['steps'], expected, steps):
+                for key, value in exp['comparison'].items():
+                    assert answer['comparison'][key] == value, answer
+                assert answer['comparison']['scope'] == 'submitted_operation_and_target'
+                assert answer['attempt']['requested_kind'] == submitted['attempt']['kind']
+                assert answer['attempt']['requested_action'] == submitted['attempt']['action']
+                assert answer['attempt']['requested_path'] == submitted['attempt']['target']
+                assert answer['query']['filter_value'] == submitted['sandbox_check']['filter']['value']
+                assert answer['path_reporting'] == 'reported', answer
+                assert answer['path_diagnostics']['observer'] == 'runner_host'
+                assert answer['path_diagnostics']['phase'] == 'after_orchestration'
+                if answer['step_id'] in ('absent', 'missing_query_success'):
+                    assert answer['prediction_missing_reason'] == 'query_not_requested'
+                    limits = answer['comparison']['limitations']
+                    assert {'prediction:query_not_requested', 'query_plan:path_unresolved_at_planning'} <= set(limits)
+                    assert ('sandbox_attribution_unestablished' if answer['step_id'] == 'absent'
+                            else 'target:different_submitted') in limits
+                if answer['step_id'] in ('allow_permission', 'deny_permission', 'absent'):
+                    assert answer['attempt']['errno'] == (2 if answer['step_id'] == 'absent' else errno.EACCES)
+                if answer['step_id'] == 'unsupported':
+                    assert answer['attempt_missing_reason'] == 'attempt_not_supported'
+                    assert {'attempt:attempt_not_supported', 'operation:unresolved', 'target:unresolved'} <= set(answer['comparison']['limitations'])
             for path, content in before.items():
                 assert Path(path).read_bytes() == content
             (out / 'file-witness.json').write_text(json.dumps({'unchanged': list(before), 'absent_exists': absent.exists()}, indent=2) + '\n')

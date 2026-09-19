@@ -1,6 +1,6 @@
 # Failure evidence through the worker, runner, and controller
 
-## Status: steps 0–4 complete; step 5 planned
+## Status: steps 0–5 complete
 
 Batches 0A–0C, 1A–1C, step 2 and their audit corrections are complete. Worker
 ABI 6 retains atomic progress, precise failures and bounded diagnostics. Host
@@ -22,8 +22,13 @@ controller log candidates retain their matching evidence. The
 exec mapping, compatibility, case/build provenance and remaining limits. All 130
 required cases have passing coverage. The
 [original checkpoint](out/failure-propagation-4/README.md) remains available with
-its retained-result correction explicitly linked. Step 5 has not begun; its design
-acceptance, permanent consumer-recovery review and final closeout remain separate.
+its retained-result correction explicitly linked. Step 5 is complete: the accepted
+C1–C6 answers have permanent consumer-recovery enforcement, representative losses
+are rejected, and all 130 registered cases pass on the final signed build with no
+skips or unrun obligations. The [closeout handoff](out/failure-propagation-5/closeout/README.md)
+records ownership, compatibility, build/source provenance, runner cleanup and
+remaining limits. Maintained files outside plan/audit documents no longer refer
+to this plan; permanent tests and the durable contract stand on their own.
 [Routing inventory](FAILURE-PROPAGATION-INVENTORY.md) and
 [step-3 evidence](out/failure-propagation-3/README.md) identify the accepted routes,
 mutation failures, restored signed app and remaining coverage limits.
@@ -48,7 +53,7 @@ unused CLI branch. That applicability judgment is recorded separately from hash
 verification. Current acceptance credits a fresh passing run of that case and
 does not depend on the original retained result. The verification procedure below
 requires dependency checks or an explicit reviewed exception before result reuse.
-Step 5 has not begun.
+Step 5's completed acceptance and permanent enforcement are recorded below.
 
 ## Goal and scope
 
@@ -1199,7 +1204,7 @@ limit are implemented without changing schema-7 conclusion meanings. Final
 credits all 130 required IDs, with prior failures retained and corrective runs
 identified individually. The [question-2 correction](out/failure-propagation-4/retention-review/README.md)
 supersedes the original blanket retention claim without rewriting historical
-results. Both step-4 audit findings are closed; step 5 has not begun.
+results. Both step-4 audit findings are closed; step 5 follows below.
 
 ### 5. Accept the plan and transfer consumer obligations into permanent tests
 
@@ -1214,7 +1219,7 @@ universal theory of policy causation.
 
 #### Settle the design judgments and expected consumer answers
 
-- [ ] Review step 4's claim/evidence table against the observer principles,
+- [x] Review step 4's claim/evidence table against the observer principles,
   controlled scenarios, retained observations and implemented contract. Resolve
   conflicts between principles and acceptance criteria explicitly. Record the
   conclusions accepted for each scenario, their supporting observations and
@@ -1223,7 +1228,7 @@ universal theory of policy causation.
   test-owned controls and information available to PW at runtime. An unfinished
   correction remains pending; calling it a limitation does not accept an
   unsupported emitted claim.
-- [ ] Review the inherited consumer questions C1–C6 and their step-4 dispositions,
+- [x] Review the inherited consumer questions C1–C6 and their step-4 dispositions,
   then settle their expected answers before writing recovery checks. Preserve
   the baseline's meaning and scope; wording improvements must not quietly remove
   a distinction. Apply step 4's explicit design-reason requirement to any dropped,
@@ -1235,7 +1240,7 @@ universal theory of policy causation.
   Do not require certainty unsupported by the evidence, or a single reason where
   several known limits coexist.
 
-- [ ] Associate the expected answers with controlled inputs and observations,
+- [x] Associate the expected answers with controlled inputs and observations,
   using applicable existing cases and a small number of focused additions where
   coverage is missing. Record each case's scope: constructed interpretation,
   real-worker observation, CLI forwarding or legacy decoding. Do not derive
@@ -1246,7 +1251,7 @@ universal theory of policy causation.
 
 #### Demonstrate recovery and distribute permanent enforcement
 
-- [ ] Implement JSON-only recovery checks using the documented public contract.
+- [x] Implement JSON-only recovery checks using the documented public contract.
   For each question's accepted recoverable distinctions and reportable limits,
   obtain the answer from a single envelope and compare it with the reviewed
   scenario expectation. Keep deliberately unanswerable portions in the design
@@ -1257,7 +1262,7 @@ universal theory of policy causation.
   External scenario evidence can establish the expected answer for the test,
   but it is not an extra input available to the JSON consumer. Demonstrate
   recovery through actual CLI output for the applicable live controls.
-- [ ] Place permanent checks at the boundaries that own the obligation. Extend
+- [x] Place permanent checks at the boundaries that own the obligation. Extend
   the relevant CLI/witness cases for consumer recovery, Swift tests for encoding
   and absence guarantees, and controller tests for preservation or correlation
   behavior that the controller owns. Put universally shared invariants in shared
@@ -1265,7 +1270,7 @@ universal theory of policy causation.
   do not copy the full decision procedure into every suite or create a permanent
   plan-specific audit framework. The durable tests and their fixtures must work
   without reading this plan or the audit document.
-- [ ] Demonstrate that the permanent checks reject representative losses of
+- [x] Demonstrate that the permanent checks reject representative losses of
   meaning: dropping a required distinction or provenance, removing one of several
   known limitations, or presenting later host evidence as a validator observation.
   Include a case where blanket unknown would discard a conclusion the reviewed
@@ -1276,7 +1281,7 @@ universal theory of policy causation.
 
 #### Close out the plan and make the final commit
 
-- [ ] Publish an ownership map from each accepted consumer question to its
+- [x] Publish an ownership map from each accepted consumer question to its
   durable contract location and permanent registered tests. Account for every
   original baseline ID, including explicitly limited or revised questions and
   their design rationale, so none disappears between design and enforcement.
@@ -1287,18 +1292,58 @@ universal theory of policy causation.
   guarantee or an explicit accepted limit; unresolved implementation work still
   prevents completion. Readability of an unsupported label cannot substitute for
   the design judgment settled above.
-- [ ] Reconcile the final diff with step 4's compatibility and dependency gate.
+- [x] Reconcile the final diff with step 4's compatibility and dependency gate.
   Apply that gate to any implementation/contract correction discovered during
   acceptance, and run the new recovery controls plus all affected cases. Keep
   exact build/source and case-result provenance, retaining prior evidence only
   where it still applies. Update registry and coverage documentation and run
   `source_drift`; no required unrun or skipped check receives acceptance credit.
-- [ ] Complete the final handoff with the accepted contract, design decisions,
+- [x] Complete the final handoff with the accepted contract, design decisions,
   permanent enforcement map, verification results and remaining limitations.
   Mark the plan complete only when these obligations are satisfied. Make the
   final step-5 commit separately from the step-4 checkpoint; any later archival
   or removal of planning documents must leave the permanent contract and tests
   sufficient on their own.
+
+#### Completed acceptance and permanent enforcement
+
+Every original C1–C6 obligation is accounted for in the
+[accepted answers and evidence](FAILURE-PROPAGATION-CONTRACT.md#accepted-consumer-answers-and-their-evidence)
+and [permanent ownership map](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement).
+No question was dropped, merged or narrowed. Native causation, synchronized state,
+runtime identity and unique log occurrence remain deliberately unestablished where
+PW lacks the observations to answer them. Known submitted relations, native failures
+and simultaneous limits remain recoverable; unsupported claims were not accepted
+merely by labeling them limitations.
+
+The [initial acceptance experiment](out/failure-propagation-5/acceptance/README.md)
+froze scenario expectations before the JSON-only filter: 25 envelopes and 38
+reviewed step answers. The permanent helper reproduces those C1–C6 answers across
+all 25 inputs (88 total steps). Its lasting expectations live in existing
+CLI/witness cases, Swift encoding/absence tests and Rust receiver/correlation tests;
+shared blackbox checks enforce universal response guarantees. No permanent test
+reads this plan, the audit or temporary acceptance output. The final controls reject
+nine representative losses, including one dropped concurrent limitation, failed
+exec evidence after spawning, false host provenance and blanket unknown.
+
+The [closeout review](out/failure-propagation-5/closeout/review.json) credits every
+required canonical ID from the fresh full-catalog run: 130 passed, zero failed or
+skipped, including all 13 BYOXPC cases. Swift passes 267/267, Rust unit batches
+112/112 and CLI integration 10/10. App integrity is valid/unchanged; the runner
+registry is restored. Both live capture controls retain two candidate events,
+each with both repeated attempts and matching provenance. Source/build verification
+matches 50 actual build inputs and eight signed executables. The generated worker
+output formerly included in the build-input count is explicitly excluded and its
+tracked copy restored; the app is untouched. Subsequent edits are documentation only.
+
+Response 7, request 1 and ABI 6 are unchanged. Controller edits are confined to
+`cfg(test)` modules; the app was rebuilt normally for exact source/build provenance.
+The full catalog includes indirect shared-helper consumers and both runner contexts;
+no earlier result or changed-file exception supplies final case credit. Maintained
+non-plan/audit files have no remaining references to the dissolved execution plan.
+Historical evidence remains immutable and is distinguished from live dependencies.
+The separate step-5 commit records this completed state; its ID is retained in the
+closeout handoff. No implementation or acceptance obligation remains open.
 
 ## Verification and handoff
 
@@ -1360,16 +1405,16 @@ A check that was not run remains unverified, with its reason recorded.
 
 | Item | Current state |
 | --- | --- |
-| Completed implementation batch | Steps 0–4, including the native exec mapping correction and the retained-result accounting correction. Both audit findings are closed. The audit closeout commit contains the implementation, controls and corrected acceptance account; step 5 has not begun. |
-| Next batch | Step 5: settle the inherited C1–C6 design dispositions, establish independent expected answers, distribute permanent consumer-recovery enforcement, and make the final plan-closeout commit. |
-| ABI revision state | Worker ABI 6; response schema 7 (scoped comparisons, submitted intent and host provenance); request schema 1. No capacity/budget increase. Older replies retain their original version and absent new evidence. |
-| Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h`, `PWRunnerAPI.swift`, and `ValidatorClient.swift`. Admission belongs to the host; worker publications/transfer observations to `runner_subprocess`; validator records/receiver/process observations to `validator_subprocess`; controller byte counts/local loss to runner-client, policy-check and log-observer capture objects. |
-| Inventory entries closed / remaining limitations | Step-4 claim/evidence and compatibility/dependency inventories are closed; C1–C6 guarantees and deliberate limits are recorded in the failure contract and handoff. Query/attempt order, state stability and runtime target identity remain unestablished; broad/compound scope and sandbox attribution can remain unresolved. Earlier stderr, policy-pipe deadline, blocking reap, buffering and raw log-pathname fidelity limits are unchanged. Step 5 owns final design acceptance and consumer-recovery enforcement. |
-| Verified source and signed app | [Native exec signed build](out/failure-propagation-4/exec-review/accepted-build.json), [build log](out/failure-propagation-4/exec-review/build.log), [final tested source](out/failure-propagation-4/exec-review/final-tested-source.json) and [review](out/failure-propagation-4/exec-review/review.json): 51 production-source hashes and eight executables match. All app-inspected batches report valid/unchanged integrity; fixtures remain outside the app. Earlier checkpoint hashes describe that earlier implementation. |
-| Checks, results, and evidence paths | [Native exec handoff](out/failure-propagation-4/exec-review/README.md): 130/130 required cases credited with no skips/unrun. The full battery passed 129 and failed one mutation case before worker launch because its helper path reached 128 bytes; the unchanged case passed under a shorter output root. The final native checker and source_drift also pass their separate rerun. Swift 265/265, Rust 110/110, CLI integration 10/10; native exec 12 policies/80 pairs/11 comparison scenarios. BYOXPC cases pass and the registry is restored. No pre-correction build result is credited. |
+| Completed implementation batch | Steps 0–5, including both step-4 audit corrections, reviewed C1–C6 answers, permanent recovery enforcement, loss controls and final verification. |
+| Next batch | Independent audit of completion and plan dissolution; no implementation work remains within this plan. |
+| ABI revision state | Worker ABI 6; response schema 7; request schema 1. No capacity/budget increase. Older replies retain their original version and absent new evidence. |
+| Chosen field contract locations | [Failure contract](FAILURE-PROPAGATION-CONTRACT.md), [permanent consumer ownership](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement), [routing inventory](FAILURE-PROPAGATION-INVENTORY.md), `pw_probe_runner_abi.h` and `PWRunnerAPI.swift`. |
+| Inventory entries closed / remaining limitations | Every original C1–C6 obligation has an enforced guarantee or explicit design limit. Query/attempt order, stable state, runtime identity, complete spawn prediction and individual failure/log causation remain limited. Earlier stderr, policy-pipe deadline, blocking reap, buffering and raw log-pathname fidelity limits remain documented. |
+| Signed app/source relationship | [Final build](out/failure-propagation-5/closeout/accepted-build.json), [tested source](out/failure-propagation-5/closeout/tested-source.json) and [review](out/failure-propagation-5/closeout/review.json): 50 actual build inputs and eight executable hashes match. App integrity is valid/unchanged; post-test edits are documentation only. |
+| Checks, results, and evidence paths | [Final handoff](out/failure-propagation-5/closeout/README.md): 130/130 required cases, no failures/skips/unrun; Swift 267, Rust unit 112, CLI integration 10. Nine representative meaning losses rejected. Native exec retains 12 policies/80 pairs/11 scenarios. All 13 BYOXPC cases pass and the registry is restored. No earlier case result is reused. |
 
 
-## Decisions to resolve within implementation batches
+## Design decisions resolved by implementation
 
 - Exact milestone meanings, the state table needed before consolidating fields,
   publication protocol, and final host observation points; then the shared-memory
@@ -1409,5 +1454,5 @@ A check that was not run remains unverified, with its reason recorded.
   dispositions, scenario-derived expected answers, permanent test ownership and
   residual limits at closeout.
 
-Resolve these questions within the relevant step. This plan does not authorize
-raising limits or replacing the existing test-equipment plan.
+The durable failure contract records the resolved choices and accepted limits.
+This plan did not authorize raising limits or replacing the existing test-equipment plan.

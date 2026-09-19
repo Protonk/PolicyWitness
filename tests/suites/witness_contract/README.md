@@ -139,15 +139,16 @@ groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
-enforces the response-6 contract; acceptance status and retained before/after
-evidence live in
-[`FAILURE-PROPAGATION-PLAN.md`](../../FAILURE-PROPAGATION-PLAN.md).
+enforces the response-7 [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
+Consumer checks distinguish missing results from observed failures, retaining
+both missing reasons and all simultaneous comparison limits.
 
 Artifacts include `pre_apply/` and `positive_control/` requests, raw envelopes,
 stderr, CLI capture metadata and before/after file bytes. The checker also
-records `prediction_observations.json` without asserting a distinction between
-a never-invoked validator and one that replied short; that distinction belongs
-to step 1A. Run with:
+records `prediction_observations.json`. The consumer checks require
+`validator_not_invoked` beside `slot_incomplete`; the validator-failure cases
+separately require `validator_no_verdict` beside completed worker observations.
+Run with:
 
 ```sh
 tests/run.sh --case witness_contract/pre_apply_failure_reports_no_policy_verdict

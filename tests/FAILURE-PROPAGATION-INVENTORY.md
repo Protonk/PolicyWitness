@@ -202,8 +202,7 @@ retained results and restored sources against the current signed app, with only
 documentation differences from the tested snapshot. Its corrected coverage
 claims separate fixture-supplied fields from observed host/receiver/process facts
 and real-worker effects. All seven step-3 requirements are complete; interpretation
-of joined observations is recorded below; step 5 retains final design acceptance
-and permanent consumer-recovery review.
+of joined observations and permanent consumer enforcement is recorded below.
 
 ## Derived comparison dependencies
 
@@ -242,8 +241,7 @@ mechanically establish applicability. At that checkpoint all 51 production-sourc
 and eight executable hashes matched; app integrity and owned BYOXPC cleanup passed.
 The [handoff](out/failure-propagation-4/README.md)
 maps every original C1–C6 question to delivered guarantees, acceptance evidence
-and deliberate limits. No required reporting addition remains pending. Step 5
-retains design acceptance and permanent consumer-recovery enforcement.
+and deliberate limits. No required reporting addition remains pending. Final design acceptance and permanent consumer enforcement are recorded below.
 
 ### Native exec relationship review
 
@@ -272,3 +270,42 @@ Result reuse follows the [per-case dependency procedure](README.md#reusing-verif
 The current `runner_validator_failure/transcript_controls` credit is its passing
 run in the exec correction's full battery, using the accepted checker. The
 historical exception therefore does not carry a current coverage obligation.
+
+## Consumer acceptance and permanent enforcement
+
+The [accepted answers](FAILURE-PROPAGATION-CONTRACT.md#accepted-consumer-answers-and-their-evidence)
+settle C1–C6 without dropping, merging or narrowing a question. Their
+[permanent ownership map](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement)
+assigns recovery to existing CLI/witness, Swift encoding/absence, Rust
+receiver/correlation and shared blackbox checks. Native observations, supplied
+verdicts, constructed interpretation and legacy decoding retain distinct scopes.
+The single-envelope helper reads no external oracle, classifier, plan or audit.
+
+The [initial acceptance experiment](out/failure-propagation-5/acceptance/README.md)
+freezes the reviewed expectations before the filter (25 envelopes, 38 reviewed
+step answers). The permanent helper recovers those answers from all 25 inputs,
+containing 88 total steps. Registered controls reject nine representative losses,
+including a single missing concurrent limit, false host provenance, erased failed
+exec evidence after spawning, lost candidate provenance and blanket unknown.
+
+The [final closeout](out/failure-propagation-5/closeout/README.md) and
+[review](out/failure-propagation-5/closeout/review.json) reconcile every changed
+artifact with the existing all-catalog dependency gate. All 130 cases pass on the
+fresh signed build, with no failures, skips or unrun obligations: 267 Swift tests,
+112 Rust unit tests, 10 CLI integration tests and all 13 BYOXPC cases. The registry
+is restored and app integrity is valid/unchanged. Both live capture controls retain
+two candidate events, each with both repeated attempts and matching provenance.
+No older case result or changed-file exception supplies final credit.
+
+The final build record checks 50 actual build inputs and eight signed executables.
+Its explicit exclusion identifies the generated worker output previously counted
+with inputs; the tracked generated copy is restored without touching the app.
+Controller source changes are confined to test modules. Response 7, request 1,
+ABI 6, capacities, budgets and production semantics remain unchanged. The final
+source reconciliation permits only documented Markdown edits after testing.
+
+All implementation and acceptance obligations are closed. The durable contract
+retains the design rationale and remaining observational limits; permanent tests
+enforce recoverability. Maintained non-plan/audit files have no references to the
+retired execution plan. Historical evidence is retained separately, and the
+closeout records the separate final commit.

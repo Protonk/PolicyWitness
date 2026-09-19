@@ -100,6 +100,36 @@ mod tests {
     }
 
     #[test]
+    fn consumer_distinctions_and_legacy_absences_survive_receiver_transport() {
+        for version in 4..=7 {
+            let mut original = serde_json::json!({"schema_version": version, "steps": [{
+                "step_id": "spawn", "drift": false,
+                "sandbox_check": {"outcome": "allow", "native_rc": 0},
+                "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123,
+                            "child_exit_code": 37, "stdout": "controlled marker"}
+            }]});
+            if version == 7 {
+                original["steps"][0]["comparison"] = serde_json::json!({
+                    "scope": "submitted_operation_and_target", "prediction": "allow",
+                    "observation": "succeeded", "observation_basis": "spawned_child",
+                    "operation_relation": "matched", "target_relation": "same_submitted",
+                    "conclusion": "agreement", "limitations": [
+                        "query_attempt_order_unestablished", "state_stability_unestablished",
+                        "exec_result_failed_after_spawn", "sandbox_attribution_unestablished",
+                        "future_evidence_limit"]});
+                original["steps"][0]["attempt"]["requested_kind"] = serde_json::json!("exec");
+                original["steps"][0]["attempt"]["requested_action"] = serde_json::json!("spawn");
+                original["steps"][0]["sandbox_check"]["path_diagnostics"] = serde_json::json!({
+                    "input": "/submitted", "observer": "runner_host", "phase": "after_orchestration"});
+            }
+            let output = crate::utils::receiver_fixture(&original.to_string(), "valid");
+            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
+            assert!(capture.output.stdout_capture_error.is_none());
+            assert_eq!(received, Some(original));
+        }
+    }
+
+    #[test]
     fn unfamiliar_diagnostics_survive_runner_capture() {
         let records = crate::utils::transport_diagnostics();
         let original = serde_json::json!({"data": {"diagnostics": records},

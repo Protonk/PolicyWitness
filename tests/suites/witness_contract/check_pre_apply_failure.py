@@ -15,6 +15,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from blackbox import validate_step
 from run_capture import RunCapture
+from consumer import recover_evidence, validate_evidence_shape
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
 FORBIDDEN_OUTCOMES = {'ok', 'sandbox_apply_failed', 'bad_policy', 'runner_sandbox_denied'}
@@ -73,6 +74,21 @@ def no_cause_claim(envelope):
 
 
 def common_evidence(envelope, rc, specimen, failure):
+    assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
+    answers = recover_evidence(envelope)
+    ids = [s['step_id'] for s in specimen['probe_plan']]
+    assert answers['failure_groups']['missing_result'] == (ids if failure else [])
+    assert answers['failure_groups']['unattributed_failure'] == ([] if failure else ids[1:])
+    assert answers['comparison_groups']['unavailable'] == (ids if failure else [])
+    assert answers['comparison_groups']['agreement'] == ([] if failure else ids[:1])
+    assert answers['comparison_groups']['directional_consistency'] == ([] if failure else ids[1:])
+    if failure:
+        for answer in answers['steps']:
+            assert answer['prediction_missing_reason'] == 'validator_not_invoked', answer
+            assert answer['attempt_missing_reason'] == 'slot_incomplete', answer
+            assert {'prediction:validator_not_invoked', 'attempt:slot_incomplete'} <= set(answer['comparison']['limitations'])
+            assert answer['attempt']['native_rc'] is None and answer['attempt']['errno'] is None
+            assert answer['query']['native_rc'] is None and answer['query']['errno'] is None
     assert rc == (1 if failure else 0), f'CLI exit: {rc}'
     assert envelope['kind'] == 'run', envelope
     assert envelope['result']['ok'] is (not failure), envelope['result']

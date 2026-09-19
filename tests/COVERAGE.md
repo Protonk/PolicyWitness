@@ -41,10 +41,12 @@ real CLI with a populated plan and pre-ready delay/deadline overrides, then
 runs an un-overridden positive control. It excludes unsupported apply/compile
 and sandbox-cause claims without fixing a replacement outcome name; classifier
 tests own that mapping. Its grouped attribution and signal-null checks remain
-independent. The [interim contract and coverage audit](FAILURE-PROPAGATION-CONTRACT.md)
-assign publication, host-driver and CLI acceptance separately; the
-[execution plan](FAILURE-PROPAGATION-PLAN.md#current-execution-state) records which
-checks are accepted or still pending.
+independent. The [failure contract](FAILURE-PROPAGATION-CONTRACT.md) assigns
+publication, host-driver and CLI coverage separately. Its
+[consumer enforcement map](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement)
+maps C1–C6 to registered tests, independent controls, legacy behavior and deliberate
+limits. Consumer recovery uses only one envelope; tests keep their scenario
+expectations separate from the reported summaries.
 
 ## Attempt outcome coverage matrix
 

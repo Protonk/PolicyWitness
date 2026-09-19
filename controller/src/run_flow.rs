@@ -575,6 +575,59 @@ mod tests {
                 "exit_code": if signal.is_none() { Some(0) } else { None }, "termination_request": null}})
     }
     #[test]
+    fn serialized_candidates_remain_inspectable_beside_a_legacy_runner_reply() {
+        let mut runner = worker("runner_failed", Some(9));
+        runner["schema_version"] = json!(5);
+        runner["steps"] = json!([{"step_id":"s", "drift":false,
+            "attempt":{"requested_path":"/attempt"}}]);
+        let original = runner.clone();
+        let plan = [json!({"step_id":"s", "attempt":{
+            "kind":"file", "action":"open_write", "target":"/attempt"}})];
+        let mut cap = capture_with("captured", vec![event(Some(99)), event(Some(42))]);
+        cap.step_denies = Some(match_step_denies(
+            runner["steps"].as_array().unwrap(),
+            &plan,
+            cap.deny_events.as_ref().unwrap(),
+            Some(42),
+        ));
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        let envelope = json!({"data":{"runner_result":runner,
+            "sandbox_log_capture":cap, "runner_sandbox_diagnostics":diag}});
+        let data = &envelope["data"];
+        assert_eq!(data["runner_result"], original);
+        assert!(data["runner_result"]["steps"][0]
+            .get("comparison")
+            .is_none());
+        let capture = &data["sandbox_log_capture"];
+        assert_eq!(capture["deny_events"].as_array().unwrap().len(), 2);
+        let candidate = &capture["step_denies"][0];
+        let index = candidate["event_index"].as_u64().unwrap() as usize;
+        assert_eq!(index, 1);
+        assert_eq!(capture["deny_events"][index]["pid"], 42);
+        assert_eq!(candidate["candidate_step_ids"], json!(["s"]));
+        assert_eq!(candidate["association"], "candidate");
+        assert_eq!(
+            candidate["matching_evidence"],
+            json!([{
+            "step_id":"s", "operation":"file-write-data", "operation_source":"submitted_attempt",
+            "requested_kind":"file", "requested_action":"open_write", "path":"/attempt",
+            "path_sources":["submitted_attempt.target", "attempt.requested_path"]}])
+        );
+        for key in [
+            "event_timestamps_available",
+            "exact_run_membership",
+            "step_ordering",
+            "pid_reuse_protection",
+        ] {
+            assert_eq!(capture["window"][key], false);
+        }
+        assert_eq!(
+            data["runner_sandbox_diagnostics"]["termination_cause"],
+            "unknown"
+        );
+    }
+
+    #[test]
     fn incomplete_attempt_retains_independent_prediction_and_event_without_cause() {
         let mut runner = worker("runner_failed", Some(9));
         runner["runner_subprocess"]["done_observed"] = json!(false);

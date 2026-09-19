@@ -11,6 +11,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
+from consumer import recover_evidence, validate_evidence_shape
 
 FIXTURE = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
 
@@ -95,6 +96,22 @@ def check_cli(case, out, pw):
             assert after[0] and after[0] != seeds[0], 'allowed write did not change the target'
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
+            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
+            answers = recover_evidence(envelope)
+            (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            ids = [s['step_id'] for s in plan]
+            assert answers['comparison_groups']['agreement'] == ids[:1]
+            assert answers['comparison_groups']['directional_consistency'] == ids[1:2]
+            assert answers['comparison_groups']['unavailable'] == ids[2:]
+            assert answers['failure_groups']['unattributed_failure'] == ids[1:]
+            assert answers['failure_groups']['missing_result'] == []
+            absent = answers['steps'][2]
+            assert absent['prediction_missing_reason'] == 'validator_no_verdict'
+            assert absent['attempt_missing_reason'] is None
+            assert {'prediction:validator_no_verdict', 'sandbox_attribution_unestablished'} <= set(absent['comparison']['limitations'])
+            assert absent['query']['native_rc'] is None
+            assert absent['attempt']['outcome'] == 'access_failed'
+            assert absent['attempt']['errno'] in (errno.EPERM, errno.EACCES)
             runner = envelope['data']['runner_result']
             assert rc == 1 and envelope['result']['ok'] is False, envelope
             expected = 'validator_unavailable' if case == 'eof' else 'validator_decode_failure'

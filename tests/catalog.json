@@ -722,6 +722,7 @@
             "bash",
             "tests/suites/blackbox_e2e/checker_controls.sh"
           ],
+          "description": "Checker and consumer controls reject lost distinctions, limits and provenance while preserving legacy absence",
           "requires": []
         },
         {
@@ -867,7 +868,7 @@
             "bash",
             "tests/suites/witness_contract/worker_termination_and_log_correlation.sh"
           ],
-          "description": "Ordinary denied writes and unrelated self-signal retain independent disposition, optional capture and ambiguous attempt associations"
+          "description": "Consumer recovery preserves denied writes, independent disposition, capture limits and ambiguous matching provenance"
         },
         {
           "id": "instrumentation_field_rejected",
@@ -914,7 +915,7 @@
             "bash",
             "tests/suites/witness_contract/drift_determination_via_validator_seam.sh"
           ],
-          "description": "Controlled verdicts and real attempts retain scoped comparisons, provenance and simultaneous limits"
+          "description": "Controlled verdicts and real attempts support JSON-only recovery of scoped comparisons, failures, provenance and simultaneous limits"
         },
         {
           "id": "prediction_target_is_independent_of_attempt_target",

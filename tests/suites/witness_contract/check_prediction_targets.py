@@ -17,6 +17,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from blackbox import validate_run_shape, validate_step
+from consumer import recover_evidence
 from run_capture import RunCapture
 
 
@@ -99,6 +100,15 @@ def main():
             assert validator['exit_code'] == 0 and validator.get('term_signal') is None, validator
 
             planned = {step['step_id']: step for step in specimen['probe_plan']}
+            answers = recover_evidence(envelope)
+            (artifacts / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            conclusions = ('agreement', 'directional_consistency') if name == 'matching' else ('unavailable', 'unavailable')
+            for answer, conclusion in zip(answers['steps'], conclusions):
+                assert answer['comparison']['conclusion'] == conclusion, answer
+                assert answer['comparison']['target_relation'] == ('same_submitted' if name == 'matching' else 'different_submitted')
+                assert answer['comparison']['operation_relation'] == 'matched'
+                assert answer['attempt']['requested_path'] == planned[answer['step_id']]['attempt']['target']
+            assert answers['failure_groups']['unattributed_failure'] == [step_ids[1]]
             for step, expectation in pairs:
                 failures.extend(validate_step(step, expectation))
                 request = planned[step['step_id']]

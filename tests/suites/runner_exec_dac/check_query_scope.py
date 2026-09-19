@@ -13,6 +13,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
+from consumer import recover_evidence, validate_evidence_shape
 
 
 def main():
@@ -21,6 +22,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     rows = []
     evidence = {}
+    consumer_evidence = {}
     with tempfile.TemporaryDirectory(prefix='pw-exec-scope-', dir='/private/tmp') as work:
         helper = Path(work) / 'helper'
         other = Path(work) / 'other'
@@ -93,6 +95,10 @@ def main():
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
+            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
+            answers = recover_evidence(envelope)
+            consumer_evidence[name] = answers
+            (out / name / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
             assert rc == 0 and envelope['result']['ok'] is True, (name, envelope)
             assert runner['normalized_outcome'] == 'ok'
             assert runner.get('test_overrides') is None
@@ -180,7 +186,10 @@ def main():
             ('deny_script_exec', 'script', 'deny', 'permission_failure', 'directional_consistency', None),
         ]
         for name, step_id, prediction, observation, conclusion, drift in comparisons:
-            step = evidence[name][step_id]
+            answers = consumer_evidence[name]
+            step = next(s for s in answers['steps'] if s['step_id'] == step_id)
+            assert step_id in answers['comparison_groups'][conclusion]
+            assert (step_id in answers['failure_groups']['unattributed_failure']) == (observation == 'permission_failure' or step_id == 'child_37')
             comparison = step['comparison']
             assert comparison['prediction'] == prediction
             assert comparison['observation'] == observation
@@ -196,6 +205,11 @@ def main():
                 assert 'sandbox_attribution_unestablished' in comparison['limitations']
 
         child = evidence['allow']['child_37']
+        recovered_child = next(s for s in consumer_evidence['allow']['steps'] if s['step_id'] == 'child_37')
+        assert recovered_child['failed_after_spawn'] is True
+        assert recovered_child['attempt'] == child['attempt']
+        assert recovered_child['comparison']['observation_basis'] == 'spawned_child'
+        assert {'exec_result_failed_after_spawn', 'sandbox_attribution_unestablished'} <= set(recovered_child['comparison']['limitations'])
         assert child['attempt']['child_exit_code'] == 37 and child['attempt']['child_pid'] > 0
         assert child['attempt']['outcome'] == 'exec_failed' and child['attempt']['rc'] == 37
         assert child['attempt']['stdout'] == 'exec_fixture: hello from helper\n'
@@ -211,6 +225,9 @@ def main():
         assert blocked_script['attempt']['child_pid'] == 0
         assert blocked_script['attempt']['errno'] in (1, 13)
         swapped = evidence['deny_exec']['denied_query_allowed_attempt']
+        recovered_swap = next(s for s in consumer_evidence['deny_exec']['steps'] if s['step_id'] == 'denied_query_allowed_attempt')
+        assert recovered_swap['comparison']['target_relation'] == 'different_submitted'
+        assert recovered_swap['comparison']['conclusion'] == 'unavailable'
         assert swapped['sandbox_check']['outcome'] == 'deny'
         assert swapped['attempt']['child_pid'] > 0 and swapped['attempt']['child_exit_code'] == 0
         assert swapped['attempt']['stdout'] == 'exec_fixture: hello from helper\n'

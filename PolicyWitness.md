@@ -437,7 +437,7 @@ meaning no completed result; it may have started. Completed attempts use source
 `worker`, but their rc is PW attempt status, not a raw syscall return, so their
 `native_rc` is also null. Received predictions use source `validator`; native rc
 is retained only for native-call result records. See the
-[field contract](tests/FAILURE-PROPAGATION-CONTRACT.md#step-1-contract-abi-6-accepted)
+[field contract](tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-6)
 for publication, absence and numeric-code definitions.
 
 The request schema also accepts an optional `_test_overrides`

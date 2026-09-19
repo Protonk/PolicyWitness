@@ -299,7 +299,7 @@ If you suspect you are running under a sandboxed automation harness, re-run from
 
 Worker ABI 6 appends a pre-touched progress/failure header and a 4,096-byte text
 region after capture, leaving existing capacities intact. The release/acquire
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#step-1-contract-abi-6-accepted)
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-6)
 defines milestones, native results, open numeric codes, and text availability.
 `runner_subprocess.worker_evidence` carries these publications through the normal
 reply. Policy-write errors retain partial output and host byte/errno evidence in

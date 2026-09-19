@@ -17,6 +17,16 @@ Related docs:
 - Fixtures catalog: `tests/fixtures/README.md`
 - Opt-in registry: `tests/OPT_IN_TESTS.md`
 
+Consumer evidence tests follow the
+[C1–C6 ownership map](FAILURE-PROPAGATION-CONTRACT.md#permanent-consumer-enforcement).
+`tests/lib/consumer.py` recovers reported distinctions from one envelope without
+consulting policies, native errno rules or the runner classifier. Controlled
+scenario expectations stay in the CLI/witness cases; Swift tests enforce
+encoding and absence, and Rust tests enforce receiver/correlation preservation.
+Shared blackbox checks enforce universal version/shape guarantees. The blackbox
+checker controls retain rejected meaning-loss fixtures beside passing controls;
+no acceptance document or generated test output is required to run them.
+
 ## How to run
 
 Build first (signed pipeline):
@@ -167,7 +177,7 @@ prerequisites should fail, not skip.
 | `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3 | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No app or toolchain; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | — | `tests/out/suites/unit/.../cargo-test-bins.log` |
-| `runner_unit` | Baseline | Swift runner internals: `CWorkerOrchestrator` envelope invariants, `computeDrift` truth table, `classify` worker/validator→normalized-outcome table, `buildAttemptResult` (kind, action, slot)→attempt-outcome table, prediction_unavailable host-mirror, and CWorker + ValidatorClient drivers. Lifecycle controls retain independent polling, termination and confirmed-reap observations through the driver and JSON assembler. `WorkerEvidenceTests` covers ABI 6 publication, native call failures, diagnostic availability, cleanup-time snapshots, missing steps and EPIPE partial output. `HostOutcomeClassifierTests` exercises the production classifier with constructed results. Separate `SandboxApplyTests` checks exercise the unused Swift apply helper; they do not establish C-worker or CLI coverage. | Swift + clang; signed app for required live controls | — | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Wrapper builds `worker_lifecycle`; select with an app-dependent suite for integrity evidence and inspect the Swift log for internal SKIP. |
+| `runner_unit` | Baseline | Swift runner internals: `CWorkerOrchestrator` envelope invariants, scoped comparison and consumer-encoding guarantees, `classify` worker/validator→normalized-outcome table, `buildAttemptResult` (kind, action, slot)→attempt-outcome table, prediction_unavailable host-mirror, and CWorker + ValidatorClient drivers. Lifecycle controls retain independent polling, termination and confirmed-reap observations through the driver and JSON assembler. `WorkerEvidenceTests` covers ABI 6 publication, native call failures, diagnostic availability, cleanup-time snapshots, missing steps and EPIPE partial output. `HostOutcomeClassifierTests` exercises the production classifier with constructed results. Separate `SandboxApplyTests` checks exercise the unused Swift apply helper; they do not establish C-worker or CLI coverage. | Swift + clang; signed app for required live controls | — | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Wrapper builds `worker_lifecycle`; select with an app-dependent suite for integrity evidence and inspect the Swift log for internal SKIP. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | — | Uses fixtures under `tests/fixtures/pw_runner/` |
 | `runner_apply_isolation_v2` | Baseline | v2 deny-default specimens complete cleanly: the unsandboxed XPC host posix_spawns the C worker, the worker applies the policy and writes its slot results to shared memory, and the host replies with a full envelope | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |
 | `runner_apply_isolation_v3` | Baseline | Same shape as `runner_apply_isolation_v2` but with SBPL v3 grammar, which has stricter validation | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |

@@ -30,6 +30,10 @@ successful permission control remain visible.
 transcript or request override supplies a verdict. Direct helper runs pin its
 marker and exit statuses; hashes verify that the executable and script targets
 remain unchanged. Each run retains the exact request and raw envelope.
+Each also writes `consumer-answers.json` using only that envelope. The consumer
+checks retain scoped agreement, directional consistency, unavailable comparisons
+and unattributed failure after successful spawning against the independently
+specified native controls.
 
 The controls distinguish target exec admission from fork, file access and
 interpreter conditions. Denying fork blocks spawn while the exec query still

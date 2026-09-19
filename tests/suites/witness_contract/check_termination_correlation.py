@@ -12,6 +12,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
+from consumer import recover_evidence, validate_evidence_shape
 
 
 def main():
@@ -89,7 +90,19 @@ def main():
             assert diag['process_disposition'] == ('signaled' if signaled else 'clean_exit'), diag
             assert diag['termination_cause'] == ('unknown' if signaled else None), diag
             capture = data['sandbox_log_capture']
+            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
+            answers = recover_evidence(envelope)
+            (run.out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            assert answers['failure_groups']['unattributed_failure'] == ids
+            assert answers['comparison_groups']['unavailable'] == ids
+            recovered = answers['denials']
+            assert recovered['capture_status'] == diag['capture_status']
+            assert recovered['correlation_status'] == diag['correlation_status']
+            assert recovered['diagnostics']['termination_cause'] == ('unknown' if signaled else None)
             if not capture_enabled:
+                assert recovered['capture_status'] == 'disabled'
+                assert recovered['association_reporting'] == 'not_reported'
+                assert recovered['candidates'] is None
                 assert capture is None, capture
                 assert diag['capture_status'] == 'disabled' and diag['correlation_status'] == 'not_attempted', diag
                 assert diag['first_deny'] is None, diag
@@ -97,6 +110,7 @@ def main():
                 assert isinstance(capture, dict), 'observer must be invoked for both failure and success'
                 assert diag['capture_status'] == capture['capture_status'], diag
                 window = capture['window']
+                assert recovered['window'] == window
                 assert window['kind'] == 'trailing' and window['last'] == '10s', window
                 for key in ('event_timestamps_available', 'exact_run_membership', 'step_ordering', 'pid_reuse_protection'):
                     assert window[key] is False, window
@@ -110,6 +124,20 @@ def main():
                     assert diag['correlation_status'] == ('pid_match' if matches else 'no_match'), diag
                     assert diag['first_deny'] == ({'event_index': matches[0]} if matches else None), diag
                     associations = capture['step_denies']
+                    assert recovered['events'] == events
+                    assert recovered['association_reporting'] == 'reported'
+                    assert len(recovered['candidates']) == len(associations)
+                    for candidate in recovered['candidates']:
+                        assert candidate['event'] == events[candidate['event_index']]
+                        assert candidate['candidate_step_ids'] == ids
+                        assert candidate['association'] == 'ambiguous'
+                        assert len(candidate['matching_evidence']) == 2
+                        for match in candidate['matching_evidence']:
+                            assert match['operation'] == 'file-write-data'
+                            assert match['operation_source'] == 'submitted_attempt'
+                            assert match['requested_kind'] == 'file' and match['requested_action'] == 'open_write'
+                            assert match['path'] == str(target)
+                            assert set(match['path_sources']) == {'submitted_attempt.target', 'attempt.requested_path'}
                     assert isinstance(associations, list), capture
                     assert len({a['event_index'] for a in associations}) == len(associations), associations
                     for association in associations:

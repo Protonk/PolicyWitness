@@ -83,6 +83,77 @@ private func postSpawnFailureResult(outcome: String, signal: Int?) -> PWRunnerRu
 }
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
+    tk.group("consumer evidence survives encoding without reclassification") {
+        tk.run("spawn agreement retains failed child result and every independent limit") {
+            var result = okResult(stepCount: 1)
+            var step = result.steps[0]
+            let limits = ["query_attempt_order_unestablished", "state_stability_unestablished",
+                "runtime_target_identity_unestablished", "exec_query_not_full_spawn_prediction",
+                "exec_result_failed_after_spawn", "sandbox_attribution_unestablished"]
+            step.comparison = PWRunnerComparison(scope: "submitted_operation_and_target",
+                prediction: "allow", observation: "succeeded", observation_basis: "spawned_child",
+                operation_relation: "matched", target_relation: "same_submitted",
+                conclusion: "agreement", limitations: limits)
+            step.drift = false
+            step.attempt.requested_kind = "exec"
+            step.attempt.requested_action = "spawn"
+            step.attempt.requested_path = "/submitted"
+            step.attempt.outcome = "exec_failed"
+            step.attempt.rc = 37
+            step.attempt.child_pid = 123
+            step.attempt.child_exit_code = 37
+            step.attempt.stdout = "controlled marker"
+            var path = PWRunnerPathDiagnostics(input: "/submitted", realpath_resolved: "/host-later")
+            path.observer = "runner_host"
+            path.phase = "after_orchestration"
+            step.sandbox_check.path_diagnostics = path
+            result.steps = [step]
+            let encoded = try pwRunnerEncodeJSON(result)
+            let raw = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+            let wire = (raw["steps"] as! [[String: Any]])[0]
+            let comparison = wire["comparison"] as! [String: Any]
+            let attempt = wire["attempt"] as! [String: Any]
+            let query = wire["sandbox_check"] as! [String: Any]
+            let provenance = query["path_diagnostics"] as! [String: Any]
+            try expectEqual(wire["drift"] as? Bool, false)
+            try expectEqual(comparison["conclusion"] as? String, "agreement")
+            try expectEqual(comparison["observation_basis"] as? String, "spawned_child")
+            try expectEqual(comparison["limitations"] as? [String], limits)
+            try expectEqual(attempt["requested_kind"] as? String, "exec")
+            try expectEqual(attempt["requested_action"] as? String, "spawn")
+            try expectEqual(attempt["requested_path"] as? String, "/submitted")
+            try expectEqual(attempt["outcome"] as? String, "exec_failed")
+            try expectEqual(attempt["rc"] as? Int, 37)
+            try expectEqual(attempt["child_exit_code"] as? Int, 37)
+            try expectEqual(attempt["child_pid"] as? Int, 123)
+            try expectEqual(attempt["stdout"] as? String, "controlled marker")
+            try expectEqual(provenance["observer"] as? String, "runner_host")
+            try expectEqual(provenance["phase"] as? String, "after_orchestration")
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
+            try expectEqual(decoded.steps[0].comparison?.limitations, limits)
+            try expectEqual(decoded.steps[0].attempt.child_exit_code, 37)
+        }
+        tk.run("missing channels and scope differences survive together including unfamiliar limits") {
+            var result = okResult(stepCount: 1)
+            let limits = ["prediction:validator_no_verdict", "attempt:slot_incomplete",
+                "operation:different", "target:different_submitted", "future_evidence_limit"]
+            result.steps[0].comparison = PWRunnerComparison(scope: "submitted_operation_and_target",
+                prediction: "unavailable", observation: "unavailable", observation_basis: "no_completed_worker_result",
+                operation_relation: "different", target_relation: "different_submitted",
+                conclusion: "unavailable", limitations: limits)
+            result.steps[0].sandbox_check.missing_reason = "validator_no_verdict"
+            result.steps[0].attempt.missing_reason = "slot_incomplete"
+            let data = try pwRunnerEncodeJSON(result)
+            let raw = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            let wire = (raw["steps"] as! [[String: Any]])[0]
+            try expectTrue(wire["drift"] is NSNull)
+            try expectEqual((wire["comparison"] as? [String: Any])?["limitations"] as? [String], limits)
+            try expectEqual((wire["sandbox_check"] as? [String: Any])?["missing_reason"] as? String, "validator_no_verdict")
+            try expectEqual((wire["attempt"] as? [String: Any])?["missing_reason"] as? String, "slot_incomplete")
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data)
+            try expectEqual(decoded.steps[0].comparison?.limitations, limits)
+        }
+    }
     tk.group("response 7 preserves legacy uncertainty") {
         tk.run("stored versions 4 through 6 retain drift without invented comparison or intent") {
             for version in 4...6 {
@@ -96,6 +167,11 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
                     try expectNil(decoded.steps[0].comparison)
                     try expectNil(decoded.steps[0].attempt.requested_kind)
                     try expectNil(decoded.steps[0].attempt.requested_action)
+                    let raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(decoded)) as! [String: Any]
+                    let step = (raw["steps"] as! [[String: Any]])[0]
+                    try expectNil(step["comparison"])
+                    try expectNil((step["attempt"] as? [String: Any])?["requested_kind"])
+                    try expectNil((step["attempt"] as? [String: Any])?["requested_action"])
                 }
             }
         }
@@ -105,6 +181,9 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.realpath_resolved, "/private/tmp/old")
             try expectNil(decoded.observer)
             try expectNil(decoded.phase)
+            let raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(decoded)) as! [String: Any]
+            try expectNil(raw["observer"])
+            try expectNil(raw["phase"])
         }
     }
     tk.group("PWRunnerSubprocess: additive host observations") {

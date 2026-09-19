@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from blackbox import validate_run_shape, validate_step
+from consumer import recover_evidence
 
 
 def validate_run(run, step_id, operation, filter_value, attempt_contract):
@@ -43,6 +44,21 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract):
             errno = attempt.get("errno")
             if type(errno) is not int or errno not in (1, 13):
                 errors.append(f"{step_id}: expected attempt.errno=EPERM/EACCES (got {errno!r})")
+    if errors:
+        return errors
+    version = ((run.get('data') or {}).get('runner_result') or {}).get('schema_version', 0)
+    if type(version) is int and version >= 7 and attempt_contract == 'sysctl_denied':
+        answers = recover_evidence(run)
+        answer = answers['steps'][0]
+        if answers['comparison_groups']['unavailable'] != [step_id] or answers['failure_groups']['unattributed_failure'] != [step_id]:
+            errors.append(f'{step_id}: cannot recover independent unavailable prediction and unattributed failure')
+        required = {'prediction:query_not_requested', 'query_plan:prediction_unavailable_pair', 'sandbox_attribution_unestablished'}
+        if not required <= set(answer['comparison']['limitations']):
+            errors.append(f'{step_id}: cannot recover simultaneous planning, prediction and attribution limits')
+        if answer['prediction_missing_reason'] != 'query_not_requested' or answer['attempt_missing_reason'] is not None:
+            errors.append(f'{step_id}: unavailable prediction erased channel missing reasons')
+        if answer['path_reporting'] != 'not_reported':
+            errors.append(f'{step_id}: non-path query acquired path provenance')
     return errors
 
 
