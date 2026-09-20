@@ -43,3 +43,7 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 ## Is evidence from runs comparable across macOS versions?
 
 Yes, as observations tied to each macOS version: comparing them is useful for regression analysis. That does not establish equivalent behavior across releases, because libsandbox, the imported profiles and enforcement can differ. Keep the macOS version, policy/imports, probe inputs and response schema with the evidence. In particular, response 7's meaning of `drift` must not be applied to older stored replies.
+
+## Can PolicyWitness test sandbox-extension behavior?
+
+No. PolicyWitness does not issue, consume, release, or otherwise track sandbox extensions, and it does not model changes in access caused by extension state. Policies containing extension predicates may compile and run, but PolicyWitness does not provide first-class probes or comparison semantics for extension lifecycle behavior.
