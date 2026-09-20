@@ -8,19 +8,15 @@ PolicyWitness compares `sandbox_check` predictions with the observed results of 
 
 ## Who needs to use PolicyWitness?
 
-Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
+Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. 
 
 ## Why might I want to use PolicyWitness even if I don't need to?
 
-Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call.
-
-## If a wrapper around `sandbox_check` and `sandbox-exec` can obtain a prediction and an attempt result, why does PolicyWitness have a controller, a runner, and a worker?
-
-The separation keeps reporting outside the policy being tested, so a worker failure need not prevent a useful report. PolicyWitness can preserve that failure alongside the available predictions and attempt results, and describe what is missing. Its summaries make limited claims from those observations; failure alone is not treated as proof that the sandbox denied an operation.
+Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
 
 ## Beyond observing drift, what does PolicyWitness's attempt channel record?
 
-The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are not necessarily raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports. A missing result does not establish that the operation never started.
+The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are not necessarily raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
