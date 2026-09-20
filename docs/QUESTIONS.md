@@ -4,7 +4,7 @@ The following questions are answered briefly with exhaustive detail remanded to 
 
 ## When should I use PolicyWitness?
 
-PolicyWitness compares `sandbox_check` predictions with the observed results of operations attempted under a sandbox policy. Use it when developing a policy or investigating disagreement for particular operations, filters and targets. A failed attempt does not by itself establish sandbox denial, and a reported disagreement does not by itself identify a libsandbox bug. You can also use it as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
+PolicyWitness compares `sandbox_check` predictions with the observed results of operations attempted under a sandbox policy. Use it when developing a policy or investigating disagreement for particular operations, filters and targets. You can also use it as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
 
 ## Who needs to use PolicyWitness?
 
@@ -39,10 +39,6 @@ No. PolicyWitness has its own limits, documented in [PolicyWitness limits](LIMIT
 ## How do I use imports with PolicyWitness?
 
 PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
-
-## Is evidence from runs comparable across macOS versions?
-
-Yes, as observations tied to each macOS version: comparing them is useful for regression analysis. That does not establish equivalent behavior across releases, because libsandbox, the imported profiles and enforcement can differ. Keep the macOS version, policy/imports, probe inputs and response schema with the evidence. In particular, response 7's meaning of `drift` must not be applied to older stored replies.
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
