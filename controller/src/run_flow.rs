@@ -527,6 +527,35 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn documented_controller_limits() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let owned: std::collections::BTreeMap<&str, u64> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/run_flow.rs" && check["kind"] == "value"
+                })
+            })
+            .map(|row| (row["id"].as_str().unwrap(), row["value"].as_u64().unwrap()))
+            .collect();
+        let actual = std::collections::BTreeMap::from([
+            ("client_rpc_wait", DEFAULT_TIMEOUT_MS),
+            ("controller_output", crate::utils::MAX_CAPTURE_BYTES as u64),
+        ]);
+        assert_eq!(owned, actual);
+        // The behavioral oracle is independent of the documented value.
+        for len in [1_048_575, 1_048_576, 1_048_577] {
+            let bytes = vec![b'x'; len];
+            let (text, truncated) = crate::utils::truncate_output(&bytes);
+            assert_eq!(text.len(), len.min(1_048_576));
+            assert_eq!(truncated, len > 1_048_576);
+        }
+    }
+
+    #[test]
     fn fallback_admission_and_compile_results_remain_distinct() {
         for (status, compiled, expected) in [
             (

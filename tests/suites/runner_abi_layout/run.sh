@@ -248,5 +248,17 @@ fi
 if ! "${PW_TEST_ARTIFACTS}/capture"; then
   test_fail "bounded compiled-object capture controls failed" "{}"
 fi
+test_step limits "compare compiled implementation values and exercise native query boundary"
+for helper in worker_limits validator_limits; do
+  if ! /usr/bin/xcrun --sdk macosx clang -Wall -Wextra -Wno-deprecated-declarations -O2 -std=c11 \
+      -lsandbox "${SUITE_DIR}/${helper}.c" -o "${PW_TEST_ARTIFACTS}/${helper}" \
+      2>"${PW_TEST_ARTIFACTS}/${helper}.err"; then
+    test_fail "${helper}.c failed to compile" "{}"
+  fi
+done
+if ! /usr/bin/python3 "${SUITE_DIR}/limits.py" "${PW_TEST_ARTIFACTS}" \
+    >"${PW_TEST_ARTIFACTS}/limits.log" 2>&1; then
+  test_fail "documented C limits or native query controls disagree" "{\"log\":\"${PW_TEST_ARTIFACTS}/limits.log\"}"
+fi
 test_pass "C and Swift layout agree; bounded compiled-object capture controls pass" \
   "{\"diff_report\":\"${DIFF_REPORT}\"}"

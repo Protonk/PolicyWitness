@@ -909,6 +909,33 @@ mod tests {
     use super::{parse_sandbox_deny_line, sandbox_predicate};
 
     #[test]
+    fn documented_observer_limits() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../docs/limits.json")).unwrap();
+        let owned: std::collections::BTreeMap<&str, usize> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/bin/sandbox-log-observer.rs"
+                        && check["kind"] == "value"
+                })
+            })
+            .map(|row| {
+                (
+                    row["id"].as_str().unwrap(),
+                    row["value"].as_u64().unwrap() as usize,
+                )
+            })
+            .collect();
+        assert_eq!(
+            owned,
+            std::collections::BTreeMap::from([("observer_stream_text", super::MAX_CAPTURE_BYTES)])
+        );
+    }
+
+    #[test]
     fn parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims() {
         let line =
             "2026-09-17 12:00:00 Sandbox: pw-probe-runner(42) deny(1) file-write-data /tmp/attempt";

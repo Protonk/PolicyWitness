@@ -48,4 +48,9 @@ Public-command controls separately verify selection and actual execution.
 ./tests/run.sh --suite source_drift
 ```
 
-No build required — runs in <100ms.
+No build required. The `limits_documentation` case checks
+[`docs/limits.json`](../../../docs/limits.json), generated tables and local links
+in the moved/routing documents, and exercises stale and invalid inputs. It does
+not compare production constants: those checks belong to `runner_abi_layout`,
+`runner_unit` and the Rust unit tests. See the maintenance instructions in
+[`docs/LIMITS.md`](../../../docs/LIMITS.md).

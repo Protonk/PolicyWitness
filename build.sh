@@ -479,7 +479,7 @@ DONE:
   - ${ZIP_NAME}
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
-Next (see SIGNING.md; make notarize builds again):
+Next (see docs/SIGNING.md; make notarize builds again):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
   # Or submit this existing ZIP once and wait for explicit acceptance:
   /usr/bin/python3 -B notarize.py "${ZIP_NAME}" entitlement-jail

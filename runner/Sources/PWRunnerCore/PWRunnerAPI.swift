@@ -14,6 +14,7 @@ import Foundation
 
 // Wire string constants used across runner/client code. Keep these stable.
 enum PWRunnerWire {
+    static let defaultClientTimeoutMs = 240_000
     static let policyFormatSbpl = "sbpl"
 
     static let attemptKindFile = "file"

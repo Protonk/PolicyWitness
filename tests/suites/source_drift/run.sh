@@ -7,21 +7,34 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 PW_TEST_SUITE="source_drift"
 PW_TEST_ID="runner_source_manifests_agree"
 
-test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "diff" "compare runner/ on-disk source set against build.sh and Package.swift"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step "diff" "compare runner/ on-disk source set against build.sh and Package.swift"
 
-CHECK_PY="${ROOT_DIR}/tests/suites/source_drift/check.py"
-RUN_LOG="${PW_TEST_ARTIFACTS}/check.log"
+  CHECK_PY="${ROOT_DIR}/tests/suites/source_drift/check.py"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/check.log"
 
-set +e
-/usr/bin/python3 "${CHECK_PY}" >"${RUN_LOG}" 2>&1
-RC=$?
-set -e
+  set +e
+  /usr/bin/python3 "${CHECK_PY}" >"${RUN_LOG}" 2>&1
+  RC=$?
+  set -e
 
-if [[ "${RC}" -ne 0 ]]; then
-  TAIL="$(tail -n 20 "${RUN_LOG}" | sed 's/"/\\"/g')"
-  test_fail "manifests disagree: ${TAIL}" "{\"log\":\"${RUN_LOG}\"}"
+  if [[ "${RC}" -ne 0 ]]; then
+    TAIL="$(tail -n 20 "${RUN_LOG}" | sed 's/"/\\"/g')"
+    test_fail "manifests disagree: ${TAIL}" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+
+  SUMMARY="$(tail -n 1 "${RUN_LOG}")"
+  test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
-SUMMARY="$(tail -n 1 "${RUN_LOG}")"
-test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"
+PW_TEST_ID="limits_documentation"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step limits "check inventory, generated document, negative controls and local links"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/limits.log"
+  if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/source_drift/limits.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "limits documentation controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "limits manifest, generated tables and local documentation links agree" "{\"log\":\"${RUN_LOG}\"}"
+fi

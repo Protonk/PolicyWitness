@@ -369,6 +369,8 @@ static void emit_failure(const char *step_id,
  * Returns 0 on clean EOF (the validator always exits zero in batch
  * mode; per-probe failures are surfaced in the verdict stream, not in
  * the exit code). */
+enum { LINE_MAX_BYTES = 65536 };
+
 static int run_batch(int pid) {
     /* Cap at 64 KiB per line. Probe filter_values are typically
      * short strings; this is comfortably above anything the host
@@ -377,7 +379,6 @@ static int run_batch(int pid) {
      * the rest of the physical line is drained before the next
      * iteration — preserving the "one verdict per probe in input
      * order" contract under malformed input. */
-    enum { LINE_MAX_BYTES = 65536 };
     char *line = (char *)malloc(LINE_MAX_BYTES);
     if (!line) return 2;
 

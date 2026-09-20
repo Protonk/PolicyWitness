@@ -1,0 +1,925 @@
+{
+  "schema_version": 1,
+  "limits": [
+    {
+      "id": "policy_source",
+      "section": "admission",
+      "title": "Policy source",
+      "value": 262143,
+      "unit": "UTF-8 bytes",
+      "counting": "Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_POLICY_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "probe_steps",
+      "section": "admission",
+      "title": "Probe steps",
+      "value": 256,
+      "unit": "items",
+      "counting": "Entries in probe_plan.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_MAX_STEPS"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "policy_parameters",
+      "section": "admission",
+      "title": "Policy parameters",
+      "value": 1024,
+      "unit": "items",
+      "counting": "Entries in the policy parameter dictionary.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_MAX_PARAMS"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "step_id",
+      "section": "admission",
+      "title": "Step ID",
+      "value": 63,
+      "unit": "UTF-8 bytes",
+      "counting": "Each step_id, excluding terminating NUL.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_STEP_ID_MAX"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "attempt_target",
+      "section": "admission",
+      "title": "Attempt target",
+      "value": 511,
+      "unit": "UTF-8 bytes",
+      "counting": "Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0].",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_TARGET_MAX"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "exec_arguments",
+      "section": "admission",
+      "title": "Supplied exec arguments",
+      "value": 15,
+      "unit": "items",
+      "counting": "Arguments supplied in attempt.args; the target occupies the additional argv[0] slot.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_MAX_ARGV"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "exec_argument",
+      "section": "admission",
+      "title": "Each supplied exec argument",
+      "value": 127,
+      "unit": "UTF-8 bytes",
+      "counting": "Each supplied argument, excluding terminating NUL; the target has its own larger limit.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_ARGV_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "parameter_key",
+      "section": "admission",
+      "title": "Parameter key",
+      "value": 127,
+      "unit": "UTF-8 bytes",
+      "counting": "Each key, excluding terminating NUL.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_PARAM_KEY_MAX"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "parameter_value",
+      "section": "admission",
+      "title": "Parameter value",
+      "value": 383,
+      "unit": "UTF-8 bytes",
+      "counting": "Each value, excluding terminating NUL.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_PARAM_VALUE_MAX"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "workerAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+    },
+    {
+      "id": "worker_ready_wait",
+      "section": "execution",
+      "title": "Worker readiness hint wait",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Initial ready-byte polling budget.",
+      "effect": "Expiry alone does not abort: the host still checks shared-memory publication.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "CWorkerInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "symbol": "runCWorkerTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Normal readiness is tested; expiry without aborting is source-inspected."
+    },
+    {
+      "id": "worker_sentinel_wait",
+      "section": "execution",
+      "title": "Worker publication wait",
+      "value": 60000,
+      "unit": "milliseconds",
+      "counting": "Nominal polling budget for worker sentinels. Synchronous validator work is outside this budget.",
+      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "timeoutMsForCWorker"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "symbol": "runCWorkerTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Deadline and partial-publication paths use shortened test budgets; the production duration is source-inspected."
+    },
+    {
+      "id": "worker_exit_grace",
+      "section": "execution",
+      "title": "Worker exit grace",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Polling grace after the host requests exit.",
+      "effect": "Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "CWorkerInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerLifecycleTests.swift",
+          "symbol": "runCWorkerLifecycleTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Deadline/cleanup paths use controlled children; the production duration is source-inspected."
+    },
+    {
+      "id": "validator_io_wait",
+      "section": "execution",
+      "title": "Validator I/O deadline",
+      "value": 30000,
+      "unit": "milliseconds",
+      "counting": "Elapsed deadline for nonblocking probe writes and verdict reads.",
+      "effect": "Retains received verdicts and records an I/O timeout; cleanup follows.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorClientInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "I/O deadline and partial-evidence paths use shortened budgets; the production duration is source-inspected."
+    },
+    {
+      "id": "validator_exit_grace",
+      "section": "execution",
+      "title": "Validator exit grace",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Polling grace after closing validator pipes.",
+      "effect": "Expiry triggers a SIGKILL attempt, then reaping; failures remain reported.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "ValidatorClientInput"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift",
+          "symbol": "runValidatorEvidenceTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Cleanup paths use controlled children; the production duration is source-inspected."
+    },
+    {
+      "id": "exec_child_wait",
+      "section": "execution",
+      "title": "Exec child deadline",
+      "value": 10000,
+      "unit": "milliseconds",
+      "counting": "Per-exec child observation deadline after successful spawn.",
+      "effect": "Worker attempts to kill/reap the child; the step records that the deadline fired.",
+      "control": "Production default; test-only controls are not a public tuning interface.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "PW_EXEC_CHILD_DEADLINE_MS_DEFAULT"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "NATIVE_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "symbol": "runCWorkerTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Shortened deadline and cleanup controls; the production duration is source-inspected."
+    },
+    {
+      "id": "client_rpc_wait",
+      "section": "execution",
+      "title": "Runner RPC wait",
+      "value": 240000,
+      "unit": "milliseconds",
+      "counting": "Client wait for the runner reply.",
+      "effect": "An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets.",
+      "control": "Default; --timeout-ms changes only this wait and floors its value at 1 ms.",
+      "sources": [
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "DEFAULT_TIMEOUT_MS"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "defaultClientTimeoutMs"
+        },
+        {
+          "path": "runner/Clients/PWRunnerClient/main.swift",
+          "symbol": "defaultClientTimeoutMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "documented_controller_limits",
+          "kind": "value"
+        }
+      ],
+      "behavior": "The production wait and timeout response are source-inspected; compiled default agreement is tested."
+    },
+    {
+      "id": "validator_query_payload",
+      "section": "transport",
+      "title": "Validator query payload",
+      "value": 65534,
+      "unit": "bytes",
+      "counting": "Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL.",
+      "effect": "An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/sb_api_validator/sb_api_validator.c",
+          "symbol": "LINE_MAX_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "runValidator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "NATIVE_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "query_boundary",
+          "kind": "boundary"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "validator_overlong_request",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Exact payload boundary and over-limit drain/recovery controls in the native validator; overlong input also goes through the CLI."
+    },
+    {
+      "id": "controller_output",
+      "section": "transport",
+      "title": "Controller subprocess output",
+      "value": 1048576,
+      "unit": "bytes",
+      "counting": "Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap.",
+      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "MAX_CAPTURE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "documented_controller_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/runner_client.rs",
+          "symbol": "mod tests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit."
+    },
+    {
+      "id": "validator_fault_context",
+      "section": "transport",
+      "title": "Rejected validator frame context",
+      "value": 256,
+      "unit": "bytes",
+      "counting": "Raw prefix of the first rejected frame, before base64 encoding.",
+      "effect": "The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
+          "symbol": "decodeValidatorFrames"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Exact and over-limit invalid-frame context controls; no rejected bytes become verdicts."
+    },
+    {
+      "id": "exec_stream",
+      "section": "evidence",
+      "title": "Exec child output per stream",
+      "value": 1023,
+      "unit": "bytes",
+      "counting": "Retained bytes in each stdout/stderr text buffer, excluding NUL. A truncation marker occupies part of this space on overflow.",
+      "effect": "Additional output is drained but not retained.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_CHILD_OUTPUT_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/CWorkerTests.swift",
+          "symbol": "runCWorkerTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Small stdout/stderr capture is tested. Overflow truncation and the exact retained-prefix/marker split are source-inspected."
+    },
+    {
+      "id": "worker_diagnostic",
+      "section": "evidence",
+      "title": "Primary worker diagnostic",
+      "value": 4095,
+      "unit": "bytes",
+      "counting": "Diagnostic payload bytes, excluding NUL.",
+      "effect": "The primary diagnostic is bounded and reports retained length and truncation state; it is not a transcript.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_DIAGNOSTIC_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift",
+          "symbol": "runWorkerEvidenceTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Bounded diagnostic/truncation controls in the Swift worker evidence tests."
+    },
+    {
+      "id": "applied_profile",
+      "section": "evidence",
+      "title": "Optional compiled-object capture",
+      "value": 1048576,
+      "unit": "bytes",
+      "counting": "Raw bytecode bytes for a nonempty supported single-profile (type 0) object, before base64 encoding.",
+      "effect": "Oversize or unsupported objects leave capture unavailable without preventing policy application.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_CAPTURE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/capture.c",
+          "symbol": "main",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Independently constructed object controls cover exact, excessive and unsupported captures."
+    },
+    {
+      "id": "observed_path",
+      "section": "evidence",
+      "title": "Worker observed path",
+      "value": 1023,
+      "unit": "bytes",
+      "counting": "Per-step C path-buffer payload bytes, excluding NUL.",
+      "effect": "Path observation can be absent or bounded; a host-side path diagnostic is a separate observation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_OBSERVED_PATH_MAX"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        }
+      ],
+      "behavior": "Source-inspected buffer use; no exact path-length behavior claim is tested."
+    },
+    {
+      "id": "attempt_error",
+      "section": "evidence",
+      "title": "Worker attempt error text",
+      "value": 255,
+      "unit": "bytes",
+      "counting": "Per-step error-buffer payload bytes, excluding NUL.",
+      "effect": "Error prose is bounded; structured result/status fields remain separate.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
+          "symbol": "PW_SHM_ERROR_MAX"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "ABI_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        }
+      ],
+      "behavior": "Source-inspected bounded formatting; no exact error-text boundary claim is tested."
+    },
+    {
+      "id": "helper_source",
+      "section": "helper",
+      "title": "sbpl-check source admission",
+      "value": 4194304,
+      "unit": "bytes",
+      "counting": "Top-level source bytes read by the diagnostic helper; not the runner policy cap.",
+      "effect": "policy_too_large without a compile verdict.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "MAX_SBPL_SOURCE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "documented_helper_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "mod tests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Oversized input is tested through the shipped helper and fallback CLI; exact boundary behavior is source-inspected."
+    },
+    {
+      "id": "helper_import_depth",
+      "section": "helper",
+      "title": "sbpl-check import inventory depth",
+      "value": 8,
+      "unit": "levels",
+      "counting": "Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file.",
+      "effect": "Stops inventory expansion on that branch and marks imports_truncated. Does not impose this depth on libsandbox compilation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "IMPORT_MAX_DEPTH"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "documented_helper_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "mod tests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Deep import-chain control in the helper unit tests."
+    },
+    {
+      "id": "helper_import_count",
+      "section": "helper",
+      "title": "sbpl-check import inventory count",
+      "value": 64,
+      "unit": "records",
+      "counting": "Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated.",
+      "effect": "Stops further inventory traversal and marks imports_truncated. Does not impose this count on libsandbox compilation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "IMPORT_MAX_COUNT"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "documented_helper_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/bin/sbpl-check.rs",
+          "symbol": "mod tests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Import-count exhaustion control in the helper unit tests."
+    },
+    {
+      "id": "observer_stream_text",
+      "section": "helper",
+      "title": "Log observer stream text",
+      "value": 1048576,
+      "unit": "bytes",
+      "counting": "Streaming helper mode only (--duration or --follow): retained nonempty, non-prelude log lines with one LF per line. Only whole lines that fit are retained.",
+      "effect": "The first overflowing line sets log_truncated and stops text accumulation. Deny-event arrays and JSONL emission continue separately; this is not a memory or total-report cap. The normal CLI log-show path does not use this inner cap.",
+      "control": "Fixed byte cap; --no-log-capture disables normal CLI log collection, not this helper capability.",
+      "sources": [
+        {
+          "path": "controller/src/bin/sandbox-log-observer.rs",
+          "symbol": "MAX_CAPTURE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/bin/sandbox-log-observer.rs",
+          "symbol": "documented_observer_limits",
+          "kind": "value"
+        }
+      ],
+      "behavior": "Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected."
+    }
+  ]
+}

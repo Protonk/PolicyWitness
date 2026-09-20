@@ -36,7 +36,7 @@ private func nsErrorDetails(_ error: Error) -> XpcErrorDetails {
 }
 
 private func run(args: [String]) -> Never {
-    var timeoutMs = 240_000
+    var timeoutMs = PWRunnerWire.defaultClientTimeoutMs
     var useMachService = false
     var privileged = false
 

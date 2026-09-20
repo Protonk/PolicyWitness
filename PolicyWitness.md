@@ -31,7 +31,7 @@ the nonce and worker identity to their own request and compare actual decoded
 bytecode with any independently retained expected object. A source hash alone
 does not establish that equality.
 
-PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md); for the project-level pitch see [README.md](README.md).
+PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [docs/QUESTIONS.md](docs/QUESTIONS.md); for the project-level pitch see [README.md](README.md).
 
 Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
 

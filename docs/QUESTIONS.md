@@ -1,6 +1,6 @@
 # PolicyWitness — FAQ
 
-The following questions are answered briefly with exhaustive detail remanded to the [user guide](PolicyWitness.md).
+The following questions are answered briefly with exhaustive detail remanded to the [user guide](../PolicyWitness.md).
 
 ## When should I use PolicyWitness?
 

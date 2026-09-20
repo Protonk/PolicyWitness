@@ -210,7 +210,7 @@ public enum CWorkerOrchestrator {
 /// smaller deadline fires before any real worker can complete its
 /// post-apply work. nil/absent → CWorkerInput default (60s — long
 /// enough for any real specimen).
-private func timeoutMsForCWorker(override: Int?) -> Int {
+func timeoutMsForCWorker(override: Int?) -> Int {
     let cWorkerDefault = 60_000
     guard let v = override else { return cWorkerDefault }
     return max(50, v)

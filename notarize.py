@@ -73,7 +73,7 @@ def submit(archive, profile, out, *, invoke=command):
         report['state'] = 'accepted'
     except (OSError, ValueError, RuntimeError, KeyboardInterrupt) as exc:
         report['error'] = str(exc) or 'interrupted'
-        print(f'STOP: {report["error"]}\nRetained submission: {out}\nSee SIGNING.md before continuing.', file=sys.stderr)
+        print(f'STOP: {report["error"]}\nRetained submission: {out}\nSee docs/SIGNING.md before continuing.', file=sys.stderr)
     finally:
         save(out / 'result.json', report)
     return 0 if report['state'] == 'accepted' else 1

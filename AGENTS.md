@@ -13,10 +13,11 @@ Pick what you’re changing:
 - **Runner test machinery (unit tests, `_test_overrides`)** → `runner/AGENTS.md`
 - **Runner API types** → `runner/Sources/PWRunnerCore/PWRunnerAPI.swift`
 - **Runner client (NSXPCConnection wrapper)** → `runner/Clients/PWRunnerClient/`
-- **Build + signing** → `build.sh`, `SIGNING.md`
+- **Build + signing** → `build.sh`, `docs/SIGNING.md`
 - **Evidence generation / manifests** → `tests/build-evidence.py`
 - **Tests** → `tests/README.md`, `tests/run.sh`
 - **Opt-in tests registry** → `tests/OPT_IN_TESTS.md`
+- **Limits and their documentation** → `docs/LIMITS.md`, `docs/limits.json`, `docs/generate_limits.py`
 - **User guide** → `PolicyWitness.md`
 
 ## Vocabulary (repo-anchored)
@@ -63,7 +64,7 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 ## Dev Workflow (fast path)
 
 - Build: `make build` (or `./build.sh`)
-  - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see `SIGNING.md`).
+  - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see `docs/SIGNING.md`).
   - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun.
 - If you add a helper under the app or XPC bundle `Contents/MacOS`, update the `build.sh` signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`

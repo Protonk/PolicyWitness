@@ -85,3 +85,13 @@ in Python).
 - `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer` — compiled printer binary
 - `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out` — KEY=VALUE harvest
 - `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json` — per-key comparison report
+
+## Documented limits
+
+The compiled printer also supplies the ABI-derived public limits to `limits.py`.
+`worker_limits.c` includes the production worker implementation without running
+it, exposing its exec-child deadline. `validator_limits.c` exposes the production
+batch-line capacity and runs that same parser for exact/over-limit and recovery
+controls. Values are compared with `docs/limits.json`; the behavioral inputs are
+independent of that manifest. A changed manifest value is a required negative
+control, even when its generated Markdown would be self-consistent.

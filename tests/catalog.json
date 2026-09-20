@@ -44,7 +44,11 @@
       "cases": [
         {
           "id": "runner_source_manifests_agree",
-          "description": "all drift checks pass: 11 swift, 2 c, 37 suites, 18 normalized outcomes, 10 attempt outcomes, 3 prediction_unavailable pairs."
+          "description": "Runner sources, test registry and shared outcome vocabularies agree"
+        },
+        {
+          "id": "limits_documentation",
+          "description": "Limits manifest, generated tables, invalid-input controls and local documentation links agree"
         }
       ]
     },

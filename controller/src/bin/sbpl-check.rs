@@ -742,6 +742,36 @@ fn main() {
 mod tests {
     use super::*;
 
+    #[test]
+    fn documented_helper_limits() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../docs/limits.json")).unwrap();
+        let owned: BTreeMap<&str, usize> = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| {
+                row["checks"].as_array().unwrap().iter().any(|check| {
+                    check["path"] == "controller/src/bin/sbpl-check.rs" && check["kind"] == "value"
+                })
+            })
+            .map(|row| {
+                (
+                    row["id"].as_str().unwrap(),
+                    row["value"].as_u64().unwrap() as usize,
+                )
+            })
+            .collect();
+        assert_eq!(
+            owned,
+            BTreeMap::from([
+                ("helper_source", MAX_SBPL_SOURCE_BYTES),
+                ("helper_import_depth", IMPORT_MAX_DEPTH),
+                ("helper_import_count", IMPORT_MAX_COUNT),
+            ])
+        );
+    }
+
     fn record(name: &str, path: &str, sha: &str) -> ImportRecord {
         ImportRecord {
             name: name.to_string(),

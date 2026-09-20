@@ -41,7 +41,7 @@ This repo builds a single distributable app bundle:
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
-Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [SIGNING.md](SIGNING.md)).
+Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [docs/SIGNING.md](docs/SIGNING.md)).
 
 ## How this is built
 
@@ -51,8 +51,9 @@ All of the code here was written by AI coding agents (Claude and GPT 5.x), inclu
 
 - Using the app:
   - User guide: [PolicyWitness.md](PolicyWitness.md)
-  - FAQ: [QUESTIONS.md](QUESTIONS.md)
-  - Signing/distribution: [SIGNING.md](SIGNING.md)
+  - Limits: [LIMITS.md](docs/LIMITS.md)
+  - FAQ: [docs/QUESTIONS.md](docs/QUESTIONS.md)
+  - Signing/distribution: [docs/SIGNING.md](docs/SIGNING.md)
 - Implementation details:
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
