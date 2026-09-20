@@ -317,11 +317,8 @@ Example:
 
 A profile accepted by `libsandbox` can still exceed PolicyWitness's input
 capacities, exhaust an execution budget, or produce more evidence than a reply
-can carry. These are PolicyWitness limits, not claims about the sandbox language
-or proof that the sandbox denied an operation. This inventory covers specimen
-admission, execution, comparison transport and retained evidence; it does not
-enumerate every input-format rule, OS resource limit, runner-management budget
-or release-tool deadline.
+can carry. This inventory covers specimen admission, execution, comparison 
+transport and retained evidence.
 
 Counts of UTF-8 bytes are not counts of characters. Admission limits apply before
 worker launch. Capture limits usually reduce evidence after work has happened.
@@ -343,9 +340,6 @@ import resolution or compilation.
 - Probe query JSON has a wire-size limit independent of attempt-target admission.
   A long operation or filter value can lose its prediction while the attempted
   operation still runs. JSON escaping contributes to the query size.
-- Applying a policy does not establish that it permits the worker's reporting
-  or probe operations. Unsupported attempt kinds, invalid request shapes, native
-  library availability and OS failures can also prevent useful results.
 
 <!-- BEGIN GENERATED LIMITS -->
 
