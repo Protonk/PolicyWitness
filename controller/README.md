@@ -82,7 +82,7 @@ Runs a **single runner evaluation** against the selected runner service:
     `filter_value: null` / `filter_type_id: 0` in the verdict.
   - **Skipped — prediction unavailable** (verified-unreliable op+filter
     pairs the runner accepts but deliberately does not predict for; see
-    `PolicyWitness.md` "Filter kinds where prediction is unavailable"):
+    `docs/PolicyWitness.md` "Filter kinds where prediction is unavailable"):
     `(iokit-open-service, iokit_registry_entry_class)`,
     `(iokit-open-user-client, iokit_user_client_class)`,
     `(sysctl-read, sysctl_name)`. The runner short-circuits to
@@ -133,7 +133,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   independently. The controller retains `runner_subprocess.worker_evidence` and
   `policy_transfer_error` without interpreting their diagnostic codes.
 - `data.policy_augmentation`: present only when `policy.augments` (see
-  PolicyWitness.md → Augments) was non-empty. Records
+  docs/PolicyWitness.md → Augments) was non-empty. Records
   `{ applied: [name, ...], original_sha256, applied_sha256 }` so
   downstream readers can distinguish the caller's submitted source
   from the spliced source the runner actually compiled. Absent on
@@ -163,7 +163,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   mapped operation, submitted kind/action, matched path and path sources.
   Unowned `normalized_path` alone is not a match source. Unmatched events remain
   in `deny_events`.
-  [Operation mapping and correlation limits](../PolicyWitness.md#denial-log-correlation).
+  [Operation mapping and correlation limits](../docs/PolicyWitness.md#denial-log-correlation).
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 
@@ -221,7 +221,7 @@ Notes:
   bundle's `CFBundleIdentifier`. The executable is derived from
   `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
-- A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See PolicyWitness.md → "Caller authentication and ad-hoc signing".
+- A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See docs/PolicyWitness.md → "Caller authentication and ad-hoc signing".
 - `runner verify` defaults to a 5-second timeout (override with `--timeout-ms`).
 - `runner remove` always persists the registry change. `launchctl bootout` or plist-removal failures are surfaced in the envelope's `data.warnings` rather than aborting the call, so dirty launchd state cannot strand a registry entry.
 - `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.

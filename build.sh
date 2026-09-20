@@ -13,6 +13,7 @@ set -euo pipefail
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
+#   dist/PolicyWitness.md (checked standalone user guide)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="PolicyWitness"
@@ -95,6 +96,10 @@ if [[ $# -gt 0 ]]; then
       ;;
   esac
 fi
+
+# Check documentation before any build/signing work; staging checks again.
+echo "==> Checking limits documentation"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
 
 # Select and verify the signing identity.
 IDENTITY="${IDENTITY:-}"
@@ -468,6 +473,10 @@ sign_macho "${SANDBOX_LOG_OBSERVER_BIN}"
 
 # ---- Package ---------------------------------------------------------------
 
+echo "==> Staging checked user guide"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" \
+  --stage-guide "${DIST_DIR}/PolicyWitness.md"
+
 echo "==> Creating zip (for notarization): ${ZIP_NAME}"
 rm -f "${ZIP_NAME}"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
@@ -477,6 +486,7 @@ cat <<EOF
 DONE:
   - ${APP_BUNDLE}
   - ${ZIP_NAME}
+  - ${DIST_DIR}/PolicyWitness.md
   - ${SANDBOX_LOG_OBSERVER_BIN}
 
 Next (see docs/SIGNING.md; make notarize builds again):

@@ -61,7 +61,7 @@ PROBE_RUNNER = CORE_DIR / "ProbeRunner.swift"
 CWORKER_ORCHESTRATOR = CORE_DIR / "CWorkerOrchestrator.swift"
 CWORKER_SWIFT = CORE_DIR / "CWorker.swift"
 PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "pw_probe_runner_abi.h"
-POLICYWITNESS_MD = REPO_ROOT / "PolicyWitness.md"
+POLICYWITNESS_MD = REPO_ROOT / "docs/PolicyWitness.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 # The suite-coverage table lives in tests/README.md; the per-outcome
 # coverage matrices live in tests/COVERAGE.md. (Both were formerly one
@@ -436,7 +436,7 @@ def check_attempt_kind_enum_agreement() -> list[str]:
 # Three sources of truth must list the same set of pairs:
 #   - runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
 #   - runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror
-#   - PolicyWitness.md "Filter kinds where prediction is unavailable"
+#   - docs/PolicyWitness.md "Filter kinds where prediction is unavailable"
 #
 # A pair added to one but not the other means a request that should skip
 # in the runner only skips in one path, or that the documented contract
@@ -545,7 +545,7 @@ def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
 
 
 def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
-    """Extract (op, filter) pairs from PolicyWitness.md "Currently in
+    """Extract (op, filter) pairs from docs/PolicyWitness.md "Currently in
     this category:" bullets, formatted as
     `(operation, filter_kind)` at the start of each bullet."""
     text = POLICYWITNESS_MD.read_text(encoding="utf-8")
@@ -557,7 +557,7 @@ def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     if match is None:
         fail(
             "could not locate 'Filter kinds where prediction is unavailable' "
-            "section in PolicyWitness.md (or its 'Currently in this category:' marker)"
+            "section in docs/PolicyWitness.md (or its 'Currently in this category:' marker)"
         )
         sys.exit(2)
     body = match.group(1)
@@ -576,7 +576,7 @@ def check_prediction_unavailable_agreement() -> list[str]:
     # messages name the disagreeing source clearly.
     canonical = swift_pairs
     others = [
-        ("docs (PolicyWitness.md)", docs_pairs),
+        ("docs (docs/PolicyWitness.md)", docs_pairs),
         ("orchestrator host-mirror (CWorkerOrchestrator.swift)", orch_pairs),
     ]
     for label, other in others:

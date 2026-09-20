@@ -22,7 +22,7 @@ SBPL policies can opt into a compiled-object receipt with
 apply into a bounded shared-memory region; the host joins successful application,
 completion, PID, nonce and checksums before exposing `applied_profile`. The API
 type lives in `PWRunnerAPI.swift` so the service and client share its wire shape.
-See [Opt-in compiled-object receipt](../PolicyWitness.md#opt-in-compiled-object-receipt)
+See [Opt-in compiled-object receipt](../docs/PolicyWitness.md#opt-in-compiled-object-receipt)
 for the sensitive-output contract and unavailable cases. The ABI layout suite
 also constructs independent bounded objects for the C capture helper; Swift unit
 controls pair selected-byte/input changes with ignored-padding/order changes.
@@ -152,7 +152,7 @@ The runner consumes a `PWRunnerRunSpec` which contains:
 itself is augment-agnostic — by the time a request reaches
 `PWRunnerService.runSpecimen`, the field has been stripped and any
 named augment contents have been spliced onto `policy.sbpl_source`).
-See PolicyWitness.md → Augments for the wire surface and the
+See docs/PolicyWitness.md → Augments for the wire surface and the
 single shipped augment (`exec_baseline` — three allows that let a
 libSystem-dynamic helper spawn under `(deny default)`).
 

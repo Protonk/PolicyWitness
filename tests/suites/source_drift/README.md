@@ -36,11 +36,13 @@ Public-command controls separately verify selection and actual execution.
 
 ## Fixtures
 
-- None. The check parses live source on disk.
+- Source-set checks read live files. Limits controls create disposable checkouts
+  containing the actual generator, documents and referenced source files.
 
 ## Artifacts
 
-- `tests/out/suites/source_drift/<test_id>/artifacts/check.log`
+- `tests/out/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
+- `tests/out/suites/source_drift/limits_documentation/artifacts/limits.log`
 
 ## Run
 
@@ -49,8 +51,14 @@ Public-command controls separately verify selection and actual execution.
 ```
 
 No build required. The `limits_documentation` case checks
-[`docs/limits.json`](../../../docs/limits.json), generated tables and local links
-in the moved/routing documents, and exercises stale and invalid inputs. It does
+[`docs/limits.json`](../../../docs/limits.json), generated tables, the user guide's
+copied limits, and local documentation links. Controls exercise the real
+generator command with stale, missing and altered content; preserve both source
+files and an existing staged guide on rejection; and validate a staged guide
+after removing its source checkout. Internal-anchor and companion-file checks
+also reject defects introduced into the shared source, even when generation
+would otherwise copy them consistently. A build control proves stale guide
+content stops before signing or output creation. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
 `runner_unit` and the Rust unit tests. See the maintenance instructions in
 [`docs/LIMITS.md`](../../../docs/LIMITS.md).

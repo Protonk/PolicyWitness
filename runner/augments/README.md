@@ -9,7 +9,7 @@ The worker therefore compiles exactly the spliced bytes (as does
 `sbpl-check` on the xpc_error path); the runner has no augment-aware
 code path.
 
-See PolicyWitness.md → Augments for the wire-side contract,
+See docs/PolicyWitness.md → Augments for the wire-side contract,
 sha256 reporting, override semantics, and consumer-visible
 behavior.
 
@@ -249,5 +249,5 @@ recommended loop:
 4. Document the augment in this README under "Shipped augments"
    and add a "derivation transcript" section.
 5. Add an e2e case under `tests/suites/runner_use_c_worker/` that
-   exercises it. PolicyWitness.md → Augments should also list the
+   exercises it. docs/PolicyWitness.md → Augments should also list the
    new augment's intent in a sentence.

@@ -47,7 +47,7 @@ expressed as a specific per-step expectation with supporting evidence, and
 must preserve the remaining attempt and correlation assertions.
 
 BBX-002's missing-file step explicitly expects `prediction_unavailable` and
-an attempted read that fails with ENOENT. As specified in `PolicyWitness.md`,
+an attempted read that fails with ENOENT. As specified in `docs/PolicyWitness.md`,
 an unavailable prediction requires `rc=-1`, null `errno` and `filter_type_id`,
 and an explicit `drift:null`. Real allow/deny verdicts still require an integer
 filter type. This step is validated normally and does not skip the case.

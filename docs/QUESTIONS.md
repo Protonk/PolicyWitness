@@ -1,6 +1,6 @@
 # PolicyWitness — FAQ
 
-The following questions are answered briefly with exhaustive detail remanded to the [user guide](../PolicyWitness.md).
+The following questions are answered briefly with exhaustive detail remanded to the [user guide](PolicyWitness.md).
 
 ## When should I use PolicyWitness?
 
@@ -31,6 +31,10 @@ Yes — via the `exec` attempt kind plus the named-augment interface. Callers sh
 PolicyWitness keeps the prediction (`sandbox_check`) and attempt observations (`attempt`) separate from the comparison it derives. In response schema 7, `comparison` records the conclusion, its operation and target scope, and known limitations. `drift` is a compact summary: `false` for agreement, `true` for disagreement, and `null` for either directional consistency or an unavailable comparison.
 
 For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
+
+## Can PolicyWitness run every profile that `libsandbox` accepts?
+
+No. PolicyWitness has its own limits, documented in [PolicyWitness limits](LIMITS.md).
 
 ## What versions of SBPL are supported?
 

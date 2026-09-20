@@ -155,7 +155,7 @@ public enum PWShmLayout {
 ///
 /// `execSpawn` is the C worker's `posix_spawn` attempt kind, dispatched
 /// from wire requests with `kind="exec", action="spawn"` via
-/// `CWorkerOrchestrator.mapAttemptKindOrNil`. See PolicyWitness.md →
+/// `CWorkerOrchestrator.mapAttemptKindOrNil`. See docs/PolicyWitness.md →
 /// Attempt kinds for the wire contract.
 public enum PWAttemptKind: UInt32 {
     case none           = 0

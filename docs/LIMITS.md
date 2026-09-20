@@ -1,5 +1,6 @@
 # PolicyWitness limits
 
+<!-- BEGIN SHARED LIMITS -->
 A profile accepted by `libsandbox` can still exceed PolicyWitness's input
 capacities, exhaust an execution budget, or produce more evidence than a reply
 can carry. These are PolicyWitness limits, not claims about the sandbox language
@@ -30,12 +31,11 @@ import resolution or compilation.
   operation still runs. JSON escaping contributes to the query size.
 - Applying a policy does not establish that it permits the worker's reporting
   or probe operations. Unsupported attempt kinds, invalid request shapes, native
-  library availability and OS failures can also prevent useful results. See the
-  [user guide](../PolicyWitness.md) for the request and response contracts.
+  library availability and OS failures can also prevent useful results.
 
 <!-- BEGIN GENERATED LIMITS -->
 
-Generated from [limits.json](limits.json). Values are maxima unless labelled as defaults.
+Values are maxima unless labelled as defaults.
 
 ## Specimen admission
 
@@ -90,6 +90,14 @@ Generated from [limits.json](limits.json). Values are maxima unless labelled as 
 | sbpl-check import inventory count (`helper_import_count`) | 64 records | Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated. Stops further inventory traversal and marks imports_truncated. Does not impose this count on libsandbox compilation. | Fixed; no public override. |
 | Log observer stream text (`observer_stream_text`) | 1,048,576 bytes | Streaming helper mode only (--duration or --follow): retained nonempty, non-prelude log lines with one LF per line. Only whole lines that fit are retained. The first overflowing line sets log_truncated and stops text accumulation. Deny-event arrays and JSONL emission continue separately; this is not a memory or total-report cap. The normal CLI log-show path does not use this inner cap. | Fixed byte cap; --no-log-capture disables normal CLI log collection, not this helper capability. |
 
+<!-- END GENERATED LIMITS -->
+<!-- END SHARED LIMITS -->
+
+See the [user guide](PolicyWitness.md) for the request and response contracts.
+Tables are generated from [limits.json](limits.json).
+
+<!-- BEGIN GENERATED LIMIT COVERAGE -->
+
 ## Grounding and coverage
 
 Value checks compare the inventory with compiled constants, constructed defaults or actual returned bytes. Boundary checks exercise a limit and its consequence; path checks cover related behavior without proving the exact boundary. A source reference alone is not a value check. Coverage notes below identify where behavior remains source-inspected.
@@ -125,18 +133,27 @@ Value checks compare the inventory with compiled constants, constructed defaults
 | `helper_import_count` | [`IMPORT_MAX_COUNT`](../controller/src/bin/sbpl-check.rs) | value: [`documented_helper_limits`](../controller/src/bin/sbpl-check.rs); path: [`mod tests`](../controller/src/bin/sbpl-check.rs) | Import-count exhaustion control in the helper unit tests. |
 | `observer_stream_text` | [`MAX_CAPTURE_BYTES`](../controller/src/bin/sandbox-log-observer.rs) | value: [`documented_observer_limits`](../controller/src/bin/sandbox-log-observer.rs) | Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected. |
 
-<!-- END GENERATED LIMITS -->
+<!-- END GENERATED LIMIT COVERAGE -->
 
 ## Maintaining this document
 
 Edit [limits.json](limits.json), then run `python3 docs/generate_limits.py` from
-the repository root. Review the handwritten explanations as well as the tables.
+the repository root. The same command copies the marked shared section into
+[PolicyWitness.md](PolicyWitness.md); edit its explanations here. Review the
+handwritten explanations as well as the tables.
 The JSON is a reviewed description; production code does not load it.
 
 `python3 docs/generate_limits.py --check` verifies the manifest's shape, source
-and check references, and generated text. It cannot establish implementation
-agreement by itself. `source_drift` also exercises the checker with invalid and
-stale inputs and checks local documentation links. `runner_abi_layout` compares
+and check references, generated text in both documents, and the guide's internal
+links. The copied section must contain every limit and require no companion
+files or web pages. `--stage-guide PATH` performs the same checks before copying
+the guide; it refuses stale documents without regenerating them. The build
+checks freshness before compilation and stages the guide before packaging.
+
+These checks cannot establish implementation agreement by themselves.
+`source_drift` exercises invalid and stale inputs, copying and staging, a
+standalone guide, and refusal to build with stale documentation.
+`runner_abi_layout` compares
 compiled C values and exercises native query boundaries; `runner_unit` checks
 compiled Swift values/defaults and rejected-frame capture. Rust unit tests check
 controller and helper constants. Existing behavioral suites remain independent

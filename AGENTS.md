@@ -18,7 +18,7 @@ Pick what you’re changing:
 - **Tests** → `tests/README.md`, `tests/run.sh`
 - **Opt-in tests registry** → `tests/OPT_IN_TESTS.md`
 - **Limits and their documentation** → `docs/LIMITS.md`, `docs/limits.json`, `docs/generate_limits.py`
-- **User guide** → `PolicyWitness.md`
+- **User guide** → `docs/PolicyWitness.md`
 
 ## Vocabulary (repo-anchored)
 
@@ -79,7 +79,7 @@ Build knobs worth knowing (debugging/iteration):
 
 Use this when you are asked to install, verify, or clean up BYOXPC runners.
 
-The `runner` subcommands (install/list/status/verify/remove/validate) and the manual launchctl/plist cleanup recipes for both user and system scope live in `controller/README.md` and `PolicyWitness.md`. Agent-specific guidance:
+The `runner` subcommands (install/list/status/verify/remove/validate) and the manual launchctl/plist cleanup recipes for both user and system scope live in `controller/README.md` and `docs/PolicyWitness.md`. Agent-specific guidance:
 
 - Inspect first: `policy-witness runner list` and note `service_name`, `scope`, and `bundle_path` before acting.
 - User-scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed.

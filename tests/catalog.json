@@ -48,7 +48,7 @@
         },
         {
           "id": "limits_documentation",
-          "description": "Limits manifest, generated tables, invalid-input controls and local documentation links agree"
+          "description": "Limits inventory and copied guide agree; standalone, staging, stale-input and link controls pass"
         }
       ]
     },

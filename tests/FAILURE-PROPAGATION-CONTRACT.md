@@ -160,7 +160,7 @@ evidence. Queries are independently routed and never supply that provenance.
 Unknown/missing operations and unusable duplicate-ID joins stay unmatched. No
 wildcard/prefix aliases are used; create accepts both `file-write-create` and
 `file-write-data` because it may open an existing file for writing. The complete
-[operation mapping](../PolicyWitness.md#denial-log-correlation) is part of the
+[operation mapping](../docs/PolicyWitness.md#denial-log-correlation) is part of the
 public contract. An incomplete attempt can still be a candidate: a kernel event
 can precede interrupted publication.
 

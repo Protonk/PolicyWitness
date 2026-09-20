@@ -49,7 +49,7 @@ enum PWRunnerWire {
 //
 // Adding an outcome: declare it here, then teach the matching test suite
 // (tests/suites/runner_outcome_*/ or witness_contract/) to assert
-// against it. PolicyWitness.md should also list it in the "Run output"
+// against it. docs/PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 public enum NormalizedOutcome {
     // Successful execution and a reserved precise apply-failure spelling.
@@ -135,7 +135,7 @@ public enum AttemptOutcome {
 //
 // When emitted, the result's `rc` field is the sentinel -1 (NOT 0) so
 // any consumer that keys on `rc == 0` for "allow" cannot misread the
-// absent prediction as an allow verdict. See PolicyWitness.md
+// absent prediction as an allow verdict. See docs/PolicyWitness.md
 // "Filter kinds where prediction is unavailable" for the full
 // contract.
 public enum SandboxCheckOutcome {

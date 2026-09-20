@@ -243,7 +243,7 @@ contracts and are not mechanically renamed. Extend/reconcile against the final d
 | `tests/lib/blackbox.py`, `tests/fixtures/blackbox_e2e/`, `blackbox_menagerie/`, both blackbox suite checkers and controls | Version-aware comparison shape; revise only expectations justified by the reviewed scenarios; retain explicit legacy fixtures |
 | `tests/suites/runner_byoxpc/run.sh`, `smoke/` and shared blackbox wrappers | Execute both BBX cases and every affected specimen in standard and BYOXPC contexts; owned installation and cleanup remain required |
 | `tests/catalog.json`, `tests/suites/source_drift/check.py`, `tests/README.md`, `tests/COVERAGE.md`, `tests/OPT_IN_TESTS.md` | Reconcile registrations, descriptions and actual scope; mandatory source_drift plus complete case-result accounting |
-| `PolicyWitness.md`, `controller/README.md`, `runner/README.md`, suite/fixture READMEs, failure contract and plan pins | Publish response-7 meanings and limits consistently; distinguish historical accepted expectations from new response obligations |
+| `docs/PolicyWitness.md`, `controller/README.md`, `runner/README.md`, suite/fixture READMEs, failure contract and plan pins | Publish response-7 meanings and limits consistently; distinguish historical accepted expectations from new response obligations |
 
 The original [local receipt: dependency reconciliation](out/failure-propagation-4/dependencies-final.json)
 covered all 44 changed artifacts and all 130 required cases. Its

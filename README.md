@@ -1,6 +1,6 @@
 # PolicyWitness
 
->Read the [user guide](PolicyWitness.md) for more detail.
+>Read the [user guide](docs/PolicyWitness.md) for more detail.
 
 PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy applied to a sandboxed worker plus a probe plan, exercising both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
 
@@ -24,7 +24,7 @@ Unified-log evidence for kernel denies is attached out-of-band (best-effort).
 
 macOS sandboxing isn't just SBPL: a process's effective sandbox is its SBPL profile applied on top of the entitlements its binary was codesigned with. The same SBPL can yield different kernel behavior depending on which entitlements are granted, so a specimen has to describe both halves to be a faithful witness.
 
-By default SBPL is applied to a process holding no entitlements. To observe a different combination, copy the bundled XPC service, sign it with your own entitlements plist, and install it via `policy-witness runner install --kind byoxpc`. The copied bundle inherits the runner's signed-caller check, so sign it with a Developer ID whose team matches the app (an ad-hoc/local runner must first have the caller-auth keys removed — see the guide). Specimens then select it via `runner.id` or `runner.service`. See the user guide ([PolicyWitness.md](PolicyWitness.md)) for the install recipe.
+By default SBPL is applied to a process holding no entitlements. To observe a different combination, copy the bundled XPC service, sign it with your own entitlements plist, and install it via `policy-witness runner install --kind byoxpc`. The copied bundle inherits the runner's signed-caller check, so sign it with a Developer ID whose team matches the app (an ad-hoc/local runner must first have the caller-auth keys removed — see the guide). Specimens then select it via `runner.id` or `runner.service`. See the user guide ([docs/PolicyWitness.md](docs/PolicyWitness.md)) for the install recipe.
 
 ## What ships
 
@@ -50,7 +50,7 @@ All of the code here was written by AI coding agents (Claude and GPT 5.x), inclu
 ## Documentation
 
 - Using the app:
-  - User guide: [PolicyWitness.md](PolicyWitness.md)
+  - User guide: [docs/PolicyWitness.md](docs/PolicyWitness.md)
   - Limits: [LIMITS.md](docs/LIMITS.md)
   - FAQ: [docs/QUESTIONS.md](docs/QUESTIONS.md)
   - Signing/distribution: [docs/SIGNING.md](docs/SIGNING.md)

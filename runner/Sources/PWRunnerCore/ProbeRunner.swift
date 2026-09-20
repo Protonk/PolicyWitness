@@ -179,7 +179,7 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         // consumer that keys on rc==0 ("allow" by long-standing
         // convention) doesn't misread the absent prediction as allow.
         // The (rc=-1, outcome=prediction_unavailable, errno=nil)
-        // triple is unambiguous and documented in PolicyWitness.md.
+        // triple is unambiguous and documented in docs/PolicyWitness.md.
         return PWRunnerSandboxCheckResult(
             rc: predictionUnavailableRC,
             outcome: SandboxCheckOutcome.predictionUnavailable,
@@ -209,7 +209,7 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         // PWRunnerService.runSpecimen — the host is unsandboxed, so
         // realpath(3) is reliable there even under a worker (deny
         // default) policy that would block the stat. See
-        // PolicyWitness.md "path_diagnostics" for the producer change
+        // docs/PolicyWitness.md "path_diagnostics" for the producer change
         // and the more-reliable realpath_resolved semantics.
     }
 

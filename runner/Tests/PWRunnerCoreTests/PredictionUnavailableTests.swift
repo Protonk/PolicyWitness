@@ -87,7 +87,7 @@ func runPredictionUnavailableTests(_ tk: TestKit) {
             try expectTrue(result.rc != 0,
                            "rc must not be 0 (rc==0 is the 'allow' convention)")
             try expectEqual(result.rc, -1,
-                            "rc sentinel value is documented in PolicyWitness.md")
+                            "rc sentinel value is documented in docs/PolicyWitness.md")
         }
     }
 }
