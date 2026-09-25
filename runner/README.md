@@ -127,15 +127,20 @@ Every honored override is mirrored back into
 `data.runner_result.test_overrides`; production runs leave that field
 unset.
 
-| Key | Default | Re-routed boundary | Outcome it lets you reach |
-| --- | --- | --- | --- |
-| `libsandbox_path` | `/usr/lib/libsandbox.dylib` | `dlopen` in `SandboxLib.load(path:)` (host pre-spawn check) | `libsandbox_unavailable` |
-| `worker_executable_path` | bundle-local `pw-probe-runner` | `posix_spawn` path in `CWorker.spawn` | `worker_spawn_failed` |
-| `worker_timeout_ms` | 60000 (floored at 50) | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
-| `validator_executable_path` | bundle-local `sb_api_validator` | `posix_spawn` path in `ValidatorClient.runValidator` | `validator_spawn_failed` |
-| `worker_post_apply_hang_ms` | 0 (disabled) | `--post-apply-hang-ms` argv to `pw-probe-runner` | `runner_timeout` |
-| `worker_post_apply_kill_signal` | 0 (disabled) | `--post-apply-kill-signal` argv to `pw-probe-runner` (worker self-signals after `applied`, before `done`) | `runner_failed` |
-| `worker_pre_ready_hang_ms` | 0 (disabled) | Sleep after compilation/capture and before readiness; may outlast the ready-byte wait | `ok` with sufficient sentinel budget; `runner_timeout` with a short budget |
+| Key | Type | Default | Re-routed boundary | Outcome it lets you reach |
+| --- | --- | --- | --- | --- |
+| `libsandbox_path` | string | `/usr/lib/libsandbox.dylib` | `SandboxLib.load(path:)` → `dlopen(path)` in the host's pre-spawn check | `libsandbox_unavailable` |
+| `worker_executable_path` | string | bundle-local `pw-probe-runner` | `posix_spawn(path, ...)` inside `CWorker.spawn` | `worker_spawn_failed` |
+| `worker_timeout_ms` | integer (ms, floored at 50) | 60000 | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
+| `validator_executable_path` | string | bundle-local `sb_api_validator` | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` | `validator_spawn_failed` |
+| `worker_post_apply_hang_ms` | integer (ms, 0..60000) | 0 (disabled) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |
+| `worker_post_apply_kill_signal` | integer (signal, 0..31) | 0 (disabled) | Passed as `--post-apply-kill-signal` to `pw-probe-runner`; the C worker `kill(getpid(), N)`s itself after `applied` but before `done`, so the host observes a signal with `done` unset; no policy cause follows | `runner_failed` |
+| `worker_pre_ready_hang_ms` | integer (ms, 0..60000) | 0 (disabled) | Passed as `--pre-ready-hang-ms` to `pw-probe-runner`; the C worker sleeps after compilation/optional capture and before the ready byte. A sufficient sentinel budget lets it survive the closed ready pipe; a shorter budget expires before publication | `ok` with sufficient budget; `runner_timeout` with the pre-apply witness budget |
+
+This table is the only documented list of keys. The `source_drift` suite
+checks it against the fields of `PWRunnerTestOverrides` in
+`Sources/PWRunnerCore/PWRunnerAPI.swift`, so a key added to one without the
+other fails the default battery.
 
 See `runner/AGENTS.md` → "Testing `normalized_outcome` failure paths via
 `_test_overrides`" for the full contract, the four-assertion test

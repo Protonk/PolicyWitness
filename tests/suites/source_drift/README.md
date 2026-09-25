@@ -25,6 +25,9 @@ signal.
 
 The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
+They also lock the `_test_overrides` key table in `runner/README.md` to the
+stored properties of `PWRunnerTestOverrides`, since that table is the only
+documented key list.
 Public-command controls separately verify selection and actual execution.
 
 ## Success criteria

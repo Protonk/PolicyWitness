@@ -29,6 +29,10 @@ The check has two halves:
         coverage matrix.
      g. The C and Swift C-worker attempt-kind enums agree by raw value
         and name.
+     h. Every stored property of PWRunnerTestOverrides in PWRunnerAPI.swift
+        has a row in the `_test_overrides` table in runner/README.md, and
+        every row names a property. That table is the only documented
+        key list; runner/AGENTS.md points at it rather than carrying one.
 
 Exit codes:
   0 — everything agrees
@@ -62,6 +66,7 @@ CWORKER_ORCHESTRATOR = CORE_DIR / "CWorkerOrchestrator.swift"
 CWORKER_SWIFT = CORE_DIR / "CWorker.swift"
 PW_PROBE_RUNNER_ABI = REPO_ROOT / "controller" / "tools" / "pw_probe_runner" / "pw_probe_runner_abi.h"
 POLICYWITNESS_MD = REPO_ROOT / "docs/PolicyWitness.md"
+RUNNER_README = RUNNER_DIR / "README.md"
 SUITES_DIR = REPO_ROOT / "tests" / "suites"
 # The suite-coverage table lives in tests/README.md; the per-outcome
 # coverage matrices live in tests/COVERAGE.md. (Both were formerly one
@@ -592,6 +597,68 @@ def check_prediction_unavailable_agreement() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# `_test_overrides` key table agreement.
+#
+# runner/README.md's test-seam table is the only documented list of override
+# keys; runner/AGENTS.md points at it instead of carrying a copy. Lock the
+# table to the Codable struct so a key added to one cannot ship without the
+# other.
+# ---------------------------------------------------------------------------
+
+def parse_test_override_fields() -> set[str]:
+    text = PWRUNNER_API.read_text(encoding="utf-8")
+    struct_re = re.compile(
+        r'public struct PWRunnerTestOverrides\s*:\s*Codable\s*\{(.*?)\n\}',
+        re.DOTALL,
+    )
+    match = struct_re.search(text)
+    if match is None:
+        fail("could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerAPI.swift")
+        sys.exit(2)
+    field_re = re.compile(r'^\s*public var ([a-z_][a-z0-9_]*)\s*:', re.MULTILINE)
+    fields = {m.group(1) for m in field_re.finditer(match.group(1))}
+    if not fields:
+        fail("PWRunnerTestOverrides contains no parseable stored properties")
+        sys.exit(2)
+    return fields
+
+
+def parse_readme_test_override_rows() -> set[str]:
+    """Return the keys tabulated under runner/README.md's
+    "## Test seam: `_test_overrides`" heading. Parsing stops at the next
+    "## " heading so other tables in the README can't leak in."""
+    text = RUNNER_README.read_text(encoding="utf-8")
+    heading = "## Test seam: `_test_overrides`"
+    parts = text.split(heading, 1)
+    if len(parts) != 2:
+        fail(f"runner/README.md is missing the {heading!r} section")
+        sys.exit(2)
+    section = parts[1]
+    next_heading = re.search(r'^##\s', section, re.MULTILINE)
+    if next_heading:
+        section = section[: next_heading.start()]
+    row_re = re.compile(r'^\|\s*`([a-z_][a-z0-9_]*)`\s*\|', re.MULTILINE)
+    return {m.group(1) for m in row_re.finditer(section)}
+
+
+def check_test_overrides_table_agreement() -> list[str]:
+    problems: list[str] = []
+    fields = parse_test_override_fields()
+    rows = parse_readme_test_override_rows()
+    for name in sorted(fields - rows):
+        problems.append(
+            f"  test_overrides: PWRunnerTestOverrides.{name} has no row in "
+            f"runner/README.md's test-seam table"
+        )
+    for name in sorted(rows - fields):
+        problems.append(
+            f"  test_overrides: runner/README.md's test-seam table lists {name!r} "
+            f"but PWRunnerTestOverrides has no such property"
+        )
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -620,6 +687,7 @@ def main() -> int:
     problems.extend(check_attempt_outcomes_have_matrix_rows())
     problems.extend(check_attempt_kind_enum_agreement())
     problems.extend(check_prediction_unavailable_agreement())
+    problems.extend(check_test_overrides_table_agreement())
 
     if problems:
         fail("source/test-registry drift detected:")
@@ -643,7 +711,8 @@ def main() -> int:
         f"{suite_count} suites, "
         f"{outcome_count} normalized outcomes, "
         f"{attempt_outcome_count} attempt outcomes, "
-        f"{len(pu_pairs)} prediction_unavailable pairs."
+        f"{len(pu_pairs)} prediction_unavailable pairs, "
+        f"{len(parse_test_override_fields())} test override keys."
     )
     return 0
 

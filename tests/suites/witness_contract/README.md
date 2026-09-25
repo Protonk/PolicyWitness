@@ -133,6 +133,17 @@ every step. Missing attempts use the current compatibility spelling
 `not_run_worker_died`, meaning no completed result, without proving that the
 operation never started.
 
+This is the one override-driven case exempt from the exact-outcome assertion in
+the `_test_overrides` recipe in [`runner/AGENTS.md`](../../../runner/AGENTS.md).
+It checks that `normalized_outcome` excludes `ok`, `sandbox_apply_failed`,
+`bad_policy`, and `runner_sandbox_denied` rather than pinning one replacement
+outcome, so it protects the absence of library/policy claims across outcome
+renames; classifier tests pin the mapping. It keeps the recipe's other
+assertions: a real failure artifact in the error, both mirrored overrides,
+subprocess and missing-step evidence checks, and the un-overridden positive
+control. Optional subprocess objects may be omitted or null; explicit per-step
+signal/errno/drift nulls require key presence.
+
 `check_pre_apply_failure.py` collects separate attribution, step/process evidence,
 file-effect, lifecycle, cause and signal assertion groups in `assertions.json`. Lifecycle
 groups check polling reason, ready/done observations, termination-call results,

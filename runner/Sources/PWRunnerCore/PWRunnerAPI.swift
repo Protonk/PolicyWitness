@@ -218,7 +218,7 @@ public struct PWRunnerRunSpec: Codable {
 // | `worker_post_apply_kill_signal` | self-signal after applied/slots, before done               | runner_failed              |
 // |                             | Signal establishes disposition, not a sandbox cause.          |                            |
 //
-// See AGENTS.md → "Testing `normalized_outcome` failure paths via
+// See runner/AGENTS.md → "Testing `normalized_outcome` failure paths via
 // `_test_overrides`" for the full contract, the four-assertion test
 // recipe, and the rules for adding a new key.
 public struct PWRunnerTestOverrides: Codable {

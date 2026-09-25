@@ -248,7 +248,7 @@ class LimitsDocumentationTests(unittest.TestCase):
 
     def test_links_in_moved_and_routing_documents(self):
         paths = list((ROOT / 'docs').glob('*.md')) + [ROOT / name for name in
-            ['README.md', 'AGENTS.md', 'tests/README.md']]
+            ['README.md', 'AGENTS.md', 'runner/AGENTS.md', 'tests/README.md']]
         self.assertEqual(broken_links(paths), [])
         with tempfile.TemporaryDirectory(prefix='pw-link-') as directory:
             path = Path(directory) / 'doc.md'
