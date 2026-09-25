@@ -12,10 +12,11 @@ sketch at the end is deliberately thin; a separate action plan will own it.
 `run_effects/file_actions_have_exact_effects` runs an allowed `unlink` under
 `(version 1) (allow default)`. The attempt succeeds and the target is gone. The
 prediction for the same operation and path is `deny`, five runs out of five,
-and the envelope reports `drift: true`. Two controls locate the cause: querying
-`file-write-unlink` on a file that persists returns `allow`; querying
-`file-write-data` on the file that gets unlinked returns `deny`. The query is
-evaluated after the attempt has removed its subject.
+and the envelope reports `drift: true`. Two controls support a timing explanation:
+querying `file-write-unlink` on a file that persists returns `allow`; querying
+`file-write-data` on the file that gets unlinked returns `deny`. A query after
+removal explains these observations; the envelope does not establish the order
+in an individual run. Five repetitions do not make the race deterministic.
 
 The mechanism is in two places. `pw-probe-runner` publishes the `applied`
 sentinel and immediately begins its attempt loop. `CWorker.run` fires the
@@ -27,42 +28,88 @@ comparison unconditionally, and `tests/lib/consumer.py` requires both on every
 response-7 step. A limitation present on every step cannot tell a reader which
 step is the one where the state actually changed.
 
-`drift: true` is therefore a claim about the sandbox that the evidence does not
-support: the two channels were asked about different worlds. The FAQ, the README
-and the user guide describe `true` as disagreement. Under "no dishonest
-attribution", this row must project to `null` today, and the durable fix is to
-make the order a fact rather than a disclaimer.
+The removal supplies another explanation for the difference. Under "no dishonest
+attribution", this row must project to `null` today. Establishing order removes
+one possible explanation; it does not by itself establish sandbox drift.
+
+## Protecting the meaning of drift
+
+`drift: true` is reserved for a difference between `sandbox_check` and observed
+kernel enforcement for which no other explanation remains supported or materially
+unresolved by the run's evidence. It must not mean merely that two recorded
+outcome labels differ. The existing response-7 contract permits that weaker
+reading; this plan requires the classifier, consumer rules and public descriptions
+to enforce the stronger meaning for newly produced comparisons.
+
+A positive drift claim requires a usable native verdict, an observed attempt,
+established query order and worker policy context, corresponding operation and
+runtime target, and evidence sufficient to exclude relevant state changes,
+incomplete query coverage and other enforcement mechanisms as explanations.
+Missing evidence is not evidence that an alternative did not occur. In
+particular, identical path strings, absence of a captured denial event and
+`query_first` do not discharge those obligations.
+
+For differing outcomes, unresolved material explanations yield
+`conclusion: "unavailable"` and `drift: null`, with all raw observations and
+applicable limitations retained.
+Permission-shaped failure alone still cannot establish sandbox enforcement.
+`directional_consistency` continues to project to `null`. An allow verdict and
+successful corresponding attempt may retain `agreement` / `drift: false` as
+agreement of those observations; it does not certify identical state or the
+absence of every possible policy defect.
+
+This ordering change adds no target-identity or state-equivalence evidence.
+Consequently, deny/success path rows that retain material
+`runtime_target_identity_unestablished` or `state_stability_unestablished`
+limitations cannot become `drift: true`, even with `query_first`. No positive
+drift claim is required to demonstrate success of this plan. Future evidence
+that discharges those limits must have its own reviewed contract and controls;
+an empty limitations array or an unknown limitation is not a substitute.
 
 ## The promise
 
 After this work, PolicyWitness promises, for every run in which the worker
 applied its policy:
 
-1. The worker attempts nothing until the host has released it, and the host
-   releases it only after the validator has finished, whether by clean exit,
-   partial output, decode failure, I/O deadline, spawn failure or kill.
-2. Every prediction that appears in the envelope was obtained from
-   `sandbox_check` against the sandboxed worker PID, under the applied policy,
-   before the worker's first attempt of the plan began.
-3. The envelope carries the evidence for 1 and 2 as observations of the worker
-   and the host, not as a host assertion, and a consumer can check those
-   observations against each other within one envelope.
+1. The worker attempts nothing until it observes host release. The host releases
+   only after query collection is closed and the validator phase returns,
+   including no planned queries, partial output, decode failure, I/O deadline
+   and pre-spawn failure.
+   No record received after release can enter a step prediction.
+2. `comparison.order: "query_first"` means an eligible native allow/deny record
+   was received against this worker's applied policy before the worker observed
+   release, and that observation precedes every attempt in the plan. Eligibility
+   and the worker-lifetime evidence required for this claim are defined below.
+   Other records survive without acquiring that claim.
+3. The envelope exposes the host's collection/release observations, the worker's
+   release acknowledgement and the associated verdicts. Consumers can check the
+   evidence chain within one envelope. These are observations from cooperating,
+   tested protocol participants, not independent attestation against a lying host
+   or worker.
+
+Collection closure is the chosen barrier; confirmed validator termination is a
+separate fact. `runValidator` can return after failed kill/reap with disposition
+unconfirmed. The host still releases the worker after collection closes, preserving
+the attempt channel and cleanup diagnostics. A surviving validator might continue
+making queries, but none of those later records is collected or used. This plan
+does not promise that no validator process is alive during attempts.
 
 The promise is about PolicyWitness's own actions. It does not promise:
 
-- that the target's state is unchanged between the query and the attempt by
-  anything other than the worker (`state_stability_unestablished` remains a
-  blanket limit, honestly);
+- that the target's state is unchanged between a query and its corresponding
+  attempt: external activity or earlier worker steps may change it
+  (`state_stability_unestablished` remains);
 - that the path spelling names the same runtime object at both times
   (`runtime_target_identity_unestablished` remains);
 - that a query was requested: planning exclusions (a target that does not
   resolve on the host, unrecognized filter kinds, prediction-unavailable pairs)
   keep their existing `missing_reason` and the step keeps `drift: null`;
-- anything about attempts whose prediction was excluded or never returned;
-- per-step interleaving. All queries of the plan complete before any attempt
-  of the plan begins. A later step's prediction is about the state before the
-  plan ran, not the state its earlier siblings produced. This is a design
-  decision recorded in "Open decisions" and pinned by tests below.
+- a comparison for attempts whose prediction was excluded or never returned;
+  these attempts still obey the same release barrier;
+- per-step interleaving or one shared snapshot. Each eligible query occurs in
+  an interval before the first attempt. External state can change within that
+  interval; earlier attempts can then change the state faced by later attempts.
+  A later step's prediction does not incorporate its siblings' effects.
 
 ## Starting points
 
@@ -89,6 +136,14 @@ The promise is about PolicyWitness's own actions. It does not promise:
 - `tests/suites/witness_contract/`, `tests/suites/run_effects/`,
   `tests/suites/runner_live_worker_identity/`: the CLI witnesses and the
   external-observer pattern.
+- `tests/fixtures/validator/`: the transcript validator and its checked-in
+  transcripts; the gated bridge below is built beside it, not from it.
+- `tests/suites/runner_exec_inheritance/opt_in/mutations.sh` and its entry in
+  `tests/OPT_IN_TESTS.md`: the existing opt-in mutation machinery that section
+  G's controls register under.
+- `runner/AGENTS.md` § "Adding a new override": the recipe the
+  `validator_io_timeout_ms` seam must follow, including the README table row
+  that `source_drift` checks.
 - `tests/lib/consumer.py`, `tests/lib/blackbox.py`,
   `tests/FAILURE-PROPAGATION-CONTRACT.md` § "Public representation and meaning"
   and § "Permanent consumer enforcement": what consumers currently require.
@@ -97,58 +152,164 @@ The promise is about PolicyWitness's own actions. It does not promise:
 ## Evidence design, briefly
 
 No wall clocks. Order is a happens-before chain through the shared-memory
-protocol PolicyWitness already uses, and each link is an observation owned by
-one party:
+protocol PolicyWitness already uses, and each link names the party or parties
+whose observations establish it:
 
 | Link | Owner | Observation |
 | --- | --- | --- |
-| Validator finished before release | Host | The host stores the release sentinel only after `runValidator` returns; it records that the store happened and the validator disposition it saw at that moment. |
-| Release before first attempt | Worker | The worker publishes that it observed the release sentinel, and does so before its first `PW_OP_ATTEMPT` started record. A worker that never observes release publishes a proceed failure and attempts nothing. |
-| Verdict belongs to the ordered set | Host | A verdict record counts as ordered only if it was received before the release store. Under the design above that is every received verdict, and the envelope says so per step. |
+| Collection closed before release | Host | The host closes collection before storing release, after the validator driver returns or a terminal decision needs no validator. It records the store and the independently observed child disposition. |
+| Release before first attempt | Worker | The worker publishes that it observed the release sentinel before its first `PW_OP_ATTEMPT` started record. Without release it attempts nothing; expiry publishes a proceed failure if the worker survives to observe it. |
+| Verdict belongs to the ordered set | Host and worker | A uniquely associated eligible verdict was received before release; successful application and the worker's subsequent release acknowledgement anchor it to this worker's policy lifetime. |
 
 Provisional names, to be settled by the action plan: header sentinels
 `proceed` (host to worker) and `proceed_observed` (worker to host); worker
 operation `PW_OP_PROCEED`; failure `PW_FAILURE_PROCEED_TIMEOUT`; a worker wait
 budget `worker_proceed_wait`; a worker argv seam `--proceed-wait-ms`; run-level
-`runner_subprocess.ordering` with the three observations; per-step
+`runner_subprocess.ordering` with `collection_closed_before_proceed`,
+`proceed_set`, `proceed_observed` and `validator_disposition`; per-step
 `comparison.order` in `{"query_first", "unestablished"}`, with the limitation
 `query_attempt_order_unestablished` present exactly when `order` is not
 `query_first`. ABI 6 becomes 7. Response 7 becomes 8. Request schema stays 1.
 
+`validator_disposition` records the disposition at release, or `not_invoked` if
+the collection phase never began: `not_needed` for no planned queries,
+`not_spawned` for setup or spawn failure, `reaped` for confirmed child exit, or
+`unconfirmed` for a spawned child whose disposition is unknown. Existing transport, decode, exit, signal,
+kill and wait observations remain separate; this field cannot erase any of them.
+Collection closure includes a terminal no-query or pre-spawn decision and does
+not imply that a stream or child ever existed. A false observation boolean means
+the corresponding observation was not established, not proof of nonoccurrence.
+
+### Eligibility and policy lifetime
+
+`query_first` requires all three ordering booleans, confirmed successful policy
+application, unbroken ownership of the worker through its release acknowledgement,
+and a structurally valid allow/deny record with coherent native rc/errno, uniquely
+associated by step ID and the exact planned query tuple.
+`result_source: "validator"` alone is insufficient.
+Synthetic results, pre-query errors, unsupported-operation diagnostics, unfamiliar
+outcomes and rejected or ambiguous associations remain `unestablished`. Raw
+records and association faults survive independently. A native error may report
+a real call without supplying the usable prediction this field promises.
+
+A worker that acknowledges release after collection closed was alive through the
+query interval under the protocol's one-way policy application. A worker that dies
+before that acknowledgement supplies no such evidence: retain received records,
+but report `unestablished` order and no certified live policy context for them.
+Death after acknowledgement does not erase already established order; it can
+still leave attempts unavailable. A later cleanup fault likewise does not erase
+earlier established observations. No query is launched against a reaped worker.
+
+Transcript validators and lifecycle fixtures test interpretation and transport.
+Their verdict-shaped records can exercise these joins, but cannot establish
+native sandbox behavior or justify a positive drift claim. Live prediction
+controls use the real validator; test provenance remains visible.
+
+### Evidence states and field presence
+
+Response 8 includes `comparison.order` on every emitted step. `ordering` is
+required exactly when `runner_subprocess` is an object; it is absent when that
+object is null/absent. Older responses gain neither field on decode. In the
+table, C/S/O are collection closed before release, release stored, and release
+observed. The rows describe the final observations for the stated scenario.
+
+| Scenario | C/S/O | Validator disposition | Per-step order |
+| --- | --- | --- | --- |
+| No worker spawned | No ordering object | No snapshot | `unestablished` on any emitted step |
+| Worker exists, application not confirmed | false/false/false | `not_invoked` | `unestablished` |
+| Applied, no planned queries, release acknowledged | true/true/true | `not_needed` | `unestablished`; no prediction exists |
+| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; retain the actual failure |
+| Eligible records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` for eligible records only |
+| Partial/diagnostic/rejected records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` only for eligible associated records; all others `unestablished` |
+| Proceed expired or worker died before acknowledgement; hook later returned | true/true/false | Actual terminal disposition | `unestablished`; received records survive |
+| Worker died or hung after acknowledgement | true/true/true | Actual terminal disposition | Eligible records retain `query_first`; missing attempts remain unavailable |
+
+Consumers reject a `query_first` claim without every eligibility prerequisite,
+with the order limitation still present, or with a synthetic/diagnostic record.
+They also reject `unestablished` for an eligible record whose full chain is
+established. Claimed release without collection closure, acknowledgement without
+release, and release before successful application violate the protocol. If a
+faulty fixture publishes contradictory sentinels, preserve the raw diagnostic
+evidence, mark the protocol violation, and derive no established order; do not
+repair the evidence by inventing missing observations. An observed proceed
+timeout and a later release store are compatible, but cannot resurrect attempts.
+
 ## Interim classification, independent of ordering
 
-Before any ABI change, the raced row must stop projecting to `true`. The host
-already holds the evidence: the attempt is an `unlink` that reported success,
-the query was planned (so the path resolved before the run), and the
-post-orchestration path diagnostics show it no longer resolves. That triple is
-step-specific.
+Before any ABI change, a deny/success difference with unestablished ordering must
+stop projecting to `true`; this rule is not limited to unlink. The unlink row
+also has a specific explanation: a worker-reported successful mutation of the
+submitted target could precede the query. Record `attempt_mutation_order_unestablished`
+(provisional name) without claiming that the envelope proves removal preceded
+the query. Planned resolution and later host resolution failure supply a separate
+`host_path_resolution_changed` observation, not a query-time observation.
+
+Successful unlink does not require later nonresolution to be relevant: recreation
+can make the path resolve again. Known earlier-step mutations remain relevant
+after batch ordering too. Distinct submitted targets retain their existing scope
+limits; never attribute mutation of B to query A merely because they share a
+step. Unknown aliasing is not repaired by host canonicalization.
 
 - [ ] `runner_unit` / `DriftClassifierTests`: constructed rows for
-  (`unlink`, `ok`, planned query, path unresolved after) yield
-  `conclusion: "unavailable"`, a specific limitation
-  (`target_removed_by_attempt`, name provisional), `drift: null`, and the
-  `deny` prediction retained as recorded. Rows with the same attempt but a
-  path that still resolves keep `disagreement`. Rows where the attempt failed
-  keep their existing conclusions. A row with the limitation but no
-  supporting triple is rejected by the encoder controls.
+  successful same-target unlink with unknown order yield `unavailable`,
+  `attempt_mutation_order_unestablished` and `drift: null`, retaining either
+  native prediction. Cover later absence, later resolution/recreation, different
+  query/attempt targets, failed unlink and earlier-step mutation separately.
+  Later resolution must never restore `disagreement`. Other deny/success rows
+  with unknown order also yield `null`. Reject limitations without their own
+  supporting observations; later host nonresolution is a separate observation,
+  not a precondition for the mutation limitation.
+  Update existing current-build deny/success expectations, including supplied
+  verdict interpretation controls, at this interim gate; response 8 later adds
+  the established-order variants rather than postponing protection of `true`.
 - [ ] `witness_contract/removed_target_prediction_is_not_drift`: the
   `run_effects` unlink row through the CLI, asserting `drift: null`, the
-  specific limitation, the retained `deny`, and independent absence of the
-  file. This case is expected to change again when ordering lands (below);
-  say so in its README.
+  mutation limitation, the retained native `allow` or `deny`, and independent
+  absence of the file. No particular race outcome is required. The ordered
+  unlink case below supersedes this interim live case; the classifier controls
+  for unestablished order remain.
 - [ ] `run_effects/file_actions_have_exact_effects`: the `raced` expectation
   becomes `drift: null` with the specific limitation. Recording continues.
 - [ ] `blackbox_e2e/checker_controls` and `tests/lib/consumer.py`: a fabricated
-  envelope with `disagreement` and the removed-target triple is rejected; one
-  with `unavailable` plus the limitation is accepted; legacy response-7
-  fixtures are unchanged.
+  current-build response with `disagreement` and a material ordering/state
+  explanation is rejected; one with `unavailable` plus supported limitations is
+  accepted. During the schema-7 interim, these are explicit current-build
+  conformance controls, not a schema-only rule imposed on historical replies.
+  Generic legacy decoding and stored response-7 fixtures remain unchanged;
+  consumers must not silently reinterpret their historical `drift` values.
 
 ## Tests that enforce the promise
 
 Every case names what would make it fail and what it does not establish. Live
 cases run through the public CLI unless a boundary is not reachable that way,
 in which case the harness or the driver tests own it and the coverage row says
-so. No override may fake a result; every seam re-routes a real boundary.
+so. No override may fake a result; every seam re-routes a real boundary. Existing
+transcript fixtures remain interpretation controls, explicitly distinguished from
+native prediction witnesses. Test-owned gates acknowledge readiness and completion;
+fixed sleeps are not evidence that a query or mutation has occurred. Bounded waits
+are test failure deadlines, not a claimed order between processes.
+
+### Test equipment the cases assume
+
+Each item is test-only, built outside the inspected app, and gets direct
+controls of its own before any case credits it.
+
+- Gated validator bridge: a test-owned executable selected through the existing
+  `validator_executable_path` override. It speaks the batch NDJSON protocol,
+  makes real `sandbox_check` calls against the worker PID, and holds each
+  verdict, and collection closure, on a test-owned socket gate that acknowledges
+  readiness. Direct controls: gate acknowledgement before any verdict, exact
+  forwarding of native results, holding collection open without exiting, and
+  refusal to emit after the gate is closed. It lives beside
+  `tests/fixtures/validator/` with its own README.
+- Lifecycle fixture tokens (`tests/fixtures/worker_lifecycle/`): release wait,
+  release acknowledgement, expiry under a short budget, self-signal while
+  waiting, ignoring release, and signal after acknowledgement. Direct controls
+  extend the fixture's existing ones.
+- A `.clock-failure` companion from the lifecycle builder, in the style of
+  `.apply-failure`: production C main with the deadline clock substituted.
+- Harness release-timing knobs in `harness.c`: withhold release, delay it, set
+  it early, set it after expiry, withhold exit request.
 
 ### A. The worker alone (`runner_c_worker_harness`)
 
@@ -171,17 +332,36 @@ never. New scenarios:
   a slot succeeds. Does not establish that the host ever sets release early.
 - [ ] `proceed_delayed_observed_quiescence`: harness observes `applied`, then
   for 500 ms polls every slot's `completed` flag and the evidence record,
-  asserting nothing changes, then sets `proceed` and expects normal completion.
+  allowing the initial `PW_OP_PROCEED` publication but no attempt activity, then
+  sets `proceed` and expects normal completion.
   Fails if any slot completes, or any `PW_OP_ATTEMPT` started record appears,
-  before release. This is the direct witness of link 2.
+  before release. This witnesses the "release before first attempt" link in
+  the worker harness.
 - [ ] `proceed_under_bare_deny_default`: `SCEN_DENY_DEFAULT_POLICY` with a
   delayed release. Pins that the wait loop needs nothing the policy can deny:
-  CPU-only spin with a `clock_gettime` deadline, like `spin_for_exit`. Fails
-  if the worker dies or times out while waiting.
+  CPU polling with a monotonic deadline and no sleep or I/O dependency. The
+  existing `spin_for_exit` has no clock deadline, so its safety alone does not
+  establish the new clock path. Fails if the worker dies or unexpectedly expires
+  before the harness releases within budget.
+- [ ] `proceed_clock_failure`: a controlled native-clock failure must publish
+  a wait failure and attempt nothing. An unusable clock must not authorize
+  release or turn the deadline into an unbounded proceed wait. This is an
+  isolated C boundary control, not a policy-attribution test. The harness
+  drives the shipped worker and cannot substitute a native call, so this runs
+  against the `.clock-failure` companion and is credited under `runner_unit`
+  beside `WorkerEvidenceTests`, in the same way `.apply-failure` is.
 - [ ] `proceed_wait_budget_short`: pass `--proceed-wait-ms 100`, delay release
   500 ms. Expect the timeout failure record. Then pass `--proceed-wait-ms
   2000` with the same delay and expect success. Boundary control for the
   budget; the production value is inventoried separately.
+- [ ] `proceed_expiry_release_boundary`: a release seen before the deadline
+  permits attempts; expiry already published forbids them even after release.
+  At an unresolved scheduling boundary either terminal branch is acceptable,
+  but timeout evidence and subsequent attempts may never coexist.
+- [ ] `host_lost_while_waiting`: the harness withholds both release and exit
+  request. Expect a proceed failure and zero attempts, not worker self-exit.
+  The test owns eventual termination and reaping. This pins the limited lifetime
+  claim: the existing post-done exit spin can outlive the host.
 - [ ] `max_slots_proceed`: `PW_SHM_MAX_STEPS` slots, delayed release. Expect
   every slot completes after release and none before. Fails on any early
   completion at scale.
@@ -196,15 +376,11 @@ never. New scenarios:
 
 The fixture plays worker. New stdin tokens:
 
-- [ ] `proceed_wait_then_report`: the fixture waits for release, publishes
-  `proceed_observed`, records `mach_absolute_time()` at that instant in its
-  diagnostic text, then reports. The driver test supplies a hook that sleeps
-  300 ms and records its own return instant. Expect the fixture's instant to
-  be at or after the hook's return, `ordering.proceed_set` true,
-  `ordering.validator_completed_before_proceed` true, `proceed_observed` true.
-  Fails if the driver stores release before the hook returns. Same-machine
-  monotonic instants are acceptable inside a unit test; the CLI witnesses use
-  no clocks.
+- [ ] `proceed_wait_then_report`: a test-owned gate holds the hook after
+  readiness is acknowledged. While held, the fixture must neither observe
+  release nor report attempts. Open the gate, let the hook return, then expect
+  release acknowledgement and completion, with all three ordering observations
+  true. Fails if the driver stores release while the hook is still held.
 - [ ] `proceed_wait_expire`: the fixture's own short budget expires while the
   test's hook blocks on a test-owned gate. Expect the fixture to publish the
   proceed failure and `done`; after the gate opens and the hook returns, the
@@ -213,27 +389,40 @@ The fixture plays worker. New stdin tokens:
   proceed failure as the reported failure. The predictions the hook returned
   survive in the result. Fails if the driver reports a policy cause, drops the
   verdicts, or reports order as established for any step.
-- [ ] `hook_throws_before_release`: the hook returns a validator spawn
+- [ ] `hook_spawn_failure_before_release`: the hook returns a validator spawn
   failure. Expect release stored, fixture proceeds, attempts complete,
-  `ordering.validator_completed_before_proceed` true with disposition
-  `spawn_failed`, every step `order: unestablished` because no verdict exists,
+  `ordering.collection_closed_before_proceed` true with disposition
+  `not_spawned` and the actual spawn error retained; every step
+  `order: unestablished` because no verdict exists,
   `drift: null` everywhere. Fails if attempts do not run.
 - [ ] `signal_while_waiting`: the fixture self-signals after `applied` and
   before observing release (token `signal_awaiting_proceed`). Expect
   `applied` 1, `proceed_observed` 0, `done` 0, confirmed signal status,
-  `runner_failed`, no attempt evidence, retained verdicts, no policy cause.
+  `runner_failed`, no attempt evidence, retained records, no policy cause.
+  Gate validation so death occurs before a subsequent query: records before
+  and after death cannot acquire certified live policy context or `query_first`
+  without release acknowledgement. Do not require any particular native answer
+  for a dead PID. Also cover worker ownership loss before acknowledgement.
   Complements the existing post-attempt self-signal seam.
 - [ ] `hang_while_waiting`: the fixture ignores release (token
   `ignore_proceed`) and never reports. Expect the sentinel deadline,
   termination request, reaping, `runner_timeout`, `proceed_set` true and
   `proceed_observed` false. Fails if the classifier calls it a worker
   attempt hang.
+- [ ] `signal_after_release_before_attempt`: acknowledge release, then signal
+  before publishing an attempt. Eligible predictions retain `query_first` while
+  attempts are unavailable and `drift` remains null. Post-release death does not
+  retroactively erase the query interval's lifetime evidence.
 - [ ] `legacy_worker_abi6`: an ABI 6 fixture binary against the ABI 7 host is
   refused before spawn or at header check, with the existing mismatch
   evidence. Pins that an old worker cannot run unordered under a new host.
-- [ ] `EnvelopeInvariantTests`: `ordering` encodes exactly its three booleans
-  plus disposition; per-step `order` is present on every step of a new
-  response; legacy decodes keep their blanket limitations and gain no `order`.
+- [ ] `EnvelopeInvariantTests`: exercise every row of the evidence-state table,
+  including all queries excluded, setup failure, no worker and failed application.
+  Pin field presence, record eligibility and the distinction between protocol
+  faults and established order. Synthetic results, pre-query errors, native-error
+  diagnostics, incoherent native fields, unknown outcomes, duplicate IDs and
+  mismatched query tuples never acquire `query_first`. Legacy decodes gain no
+  ordering fields.
 
 ### C. The validator's failures (`runner_validator_failure`, `witness_contract`)
 
@@ -241,9 +430,9 @@ Each existing validator-failure case gains ordering assertions, because the
 promise is only interesting when the validator misbehaves.
 
 - [ ] `validator_spawn_failed_reports_degraded`: attempts still run;
-  `ordering.validator_completed_before_proceed` true with disposition
-  `spawn_failed`; every step `order: unestablished`; `drift: null` on every
-  step; independent file effects present.
+  `ordering.collection_closed_before_proceed` true with disposition
+  `not_spawned` and the spawn error retained; every step `order: unestablished`
+  and `drift: null`; independent file effects present.
 - [ ] `validator_unavailable_reports_degraded` (2 of 3 verdicts, clean EOF):
   the two received verdicts are `order: query_first`; the third is
   `unestablished` with its existing missing reason; all three attempts ran
@@ -253,14 +442,26 @@ promise is only interesting when the validator misbehaves.
 - [ ] `validator_io_deadline_releases_worker` (new): a checked-in transcript
   validator that emits one verdict then hangs. Expect the I/O deadline, kill,
   reaping, release stored afterwards, the one verdict `query_first`, the rest
-  `unestablished`, attempts completed, `runner_subprocess` normal. This case
-  takes the full validator deadline unless a `validator_io_timeout_ms`
-  override is added; see "Open decisions". Fails if the worker's own proceed
-  budget expires first: pin the documented relation `worker_proceed_wait >
-  validator_io_wait + validator_exit_grace` as a value check in
-  `LimitsContractTests`.
+  `unestablished`, attempts completed, `runner_subprocess` normal. Add the
+  mirrored `validator_io_timeout_ms` request override at the real I/O boundary
+  so this case uses a short deadline, following `runner/AGENTS.md` § "Adding a
+  new override". Value checks pin the production budget
+  relationship described below; this healthy-cleanup fixture must release before
+  worker expiry. The relationship is not a bound on every cleanup path.
 - [ ] `validator_killed_mid_stream` (new, transcript fixture that dies by
   signal after one verdict): as above with a signaled disposition.
+- [ ] `validator_cleanup_unconfirmed_releases_worker` (`runner_unit`): extend
+  the real driver controls for failed kill, failed reap and ECHILD ownership
+  loss, including EOF from a child that remains alive. Once the driver returns,
+  expect collection closure and release, disposition `unconfirmed`, retained
+  errors and eligible partial records, and independent attempt effects. No later
+  output can join a step. Do not infer validator exit from EOF, a kill request or
+  function return. The test owns cleanup of any child left alive or unreaped.
+- [ ] `validator_collection_does_not_return_before_worker_expiry`
+  (`runner_unit`): hold a real lifecycle boundary beyond the worker's short
+  proceed budget. Expect no attempts and durable proceed failure; release after
+  the gate opens cannot revive the plan. This complements the healthy-cleanup
+  deadline case and does not claim to bound a stuck production reap.
 
 ### D. The promise end to end (`witness_contract`)
 
@@ -269,63 +470,88 @@ promise is only interesting when the validator misbehaves.
   three ordering observations true, and the target independently absent
   afterwards. This is the regression sentinel for the whole effort; the
   interim case from the section above is retired into it.
-- [ ] `plan_order_is_pre_plan_state`: two plans. Plan 1: step 1 `create` A
+- [ ] `queries_use_a_pre_attempt_interval`: two plans. Plan 1: step 1 `create` A
   (absent at planning), step 2 `unlink` A. Expect both predictions
   `prediction_unavailable` with `query_not_requested`, both attempts succeed,
-  both `drift: null`, and independent observation that A is absent at the end
-  and existed in between (the harness cannot see "in between"; use the
-  attempt evidence plus a third step `open_read` A after the unlink that fails
-  ENOENT). Plan 2: step 1 `unlink` A (exists at planning), step 2 `open_read`
-  A. Expect step 1 `allow`/`drift: false`; step 2 prediction `allow`, attempt
+  both `drift: null`, and independent observation that A is absent at the end.
+  Intermediate existence is worker-reported evidence only; final absence or a
+  third failed read cannot independently prove it. Plan 2: step 1 `unlink` A
+  (exists at planning), step 2 `open_read` A. Expect step 1 `allow`/`drift: false`;
+  step 2 prediction `allow`, attempt
   `open_failed` with ENOENT, observation `other_failure`, conclusion
-  `unavailable`, `drift: null`, and no `disagreement` anywhere. Fails if the
-  system reports step 2 as drift in either direction. Pins the batch decision.
-- [ ] `exec_attempt_after_all_queries`: plan = [`unlink` A (allow), `exec`
-  helper in `--tree` socket mode]. The test-owned observer, on the helper's
-  connection, (a) confirms A is already gone, (b) walks ancestry to the
-  worker and host, and (c) asserts via libproc that the host has no live
-  `sb_api_validator` child. PW's step 1 prediction must be `allow`. This is an
-  external witness of ordering that reads none of PW's ordering fields until
-  after the fact. Fails if a validator child is alive while an attempt runs.
+  `unavailable`, `drift: null`, and the known earlier-step mutation retained
+  beside the blanket state limit. Fails if the system reports step 2 as drift
+  in either direction. Add unlink/recreate/read coverage: later resolution must
+  not erase the earlier mutation or certify runtime identity.
+- [ ] `attempt_effects_wait_for_collection`: a test validator bridge forwards
+  real native queries and gates their completion using a test-owned side
+  channel. Plan = [`unlink` A, `exec` helper in `--tree` socket mode]. After
+  the bridge acknowledges its gate, keep collection active and independently
+  observe that A remains intact and no helper has connected. Then release the
+  gate and expect unlink followed by the helper's connection, ancestry and file
+  observations. Inspect PW's ordering fields only afterward. A late snapshot
+  showing no validator child is insufficient: it could miss overlap with unlink.
+  The required bypass controls in section G must produce an early observable
+  effect while this gate is held. This test establishes the barrier for these
+  effects, not absence of every possible syscall or validator process.
+- [ ] `query_interval_is_not_a_snapshot`: use the bridge to pause between two
+  real queries, and independently change a test-owned target before permitting
+  the second query. Both queries still precede attempts; their input state need
+  not be equal. Assert retained native observations, `query_first` where eligible
+  and the state/identity limits, without crediting test-only mutation knowledge
+  as an observation in a production envelope or requiring an unsupported native
+  verdict for a missing target.
 - [ ] `max_steps_ordered`: 256 file steps on distinct existing targets, half
-  allowed, half denied by literal. Every step `query_first`; predictions and
-  attempts agree per policy; file effects independently observed. Fails on
-  any `unestablished` order or any prediction taken from a mutated state.
+  allowed, half denied by literal. Every step `query_first`; allowed successes
+  report `agreement` / false, while deny/permission-failure pairs report
+  `directional_consistency` / null, not established sandbox denial. File effects
+  are independently observed. Fails on any `unestablished` order or any prediction
+  taken from a state already changed by the worker's attempts.
 - [ ] `ready_byte_interplay` (extend `runner_ready_byte_resilience`): with
   `worker_pre_ready_hang_ms` past the ready-byte wait, the worker still
   waits for release after `applied`; expect `order: query_first` and
-  `ordering` true.
+  all three ordering observations true.
 - [ ] `post_apply_seams_still_after_attempts`: `worker_post_apply_hang_ms`
   and `worker_post_apply_kill_signal` fire after attempts, therefore after
   release; expect `proceed_observed` true in both, and unchanged outcomes
   (`runner_timeout`, `runner_failed`).
-- [ ] `deny_default_ordered`: `(deny default)` with one allowed read; expect
+- [ ] `deny_default_ordered`: `(deny default)` with one allowed and one denied read; expect
   `query_first` on both steps and the usual verdicts. Pins that a hostile
   policy cannot break the wait.
-- [ ] `external_mutation_between_query_and_attempt` (adversarial, needs a
-  seam `worker_post_proceed_hang_ms` that sleeps after observing release and
-  before the first attempt): the test removes A during the sleep. Expect
+- [ ] `external_mutation_between_query_and_attempt`: the bridge acknowledges
+  receipt of the real verdict for A, then holds collection open. The test removes
+  A and confirms absence before allowing collection to close and release the
+  worker. No worker sleep seam or timing guess is needed. Expect
   prediction `allow` (queried while A existed), attempt `open_failed` ENOENT,
   `order: query_first`, `state_stability_unestablished` still present,
   conclusion `unavailable`, `drift: null`. This pins what the promise does
   not cover, so a future reader cannot read `query_first` as "same state".
 - [ ] `pre_apply_failure_reports_no_policy_verdict` (existing): unchanged
-  expectations plus `ordering` absent or all-false, no `order: query_first`
-  on any step. Fails if a run that never applied claims order.
+  expectations plus the exact field-presence rule from the evidence-state table:
+  no ordering object without a worker subprocess, otherwise all-false with
+  `not_invoked`. No step is `query_first`.
+- [ ] `ordered_difference_does_not_imply_drift`: retain the existing supplied
+  deny/success interpretation controls, now expecting `unavailable` / null when
+  runtime identity, state stability or fixture provenance leaves another
+  explanation. Constructed classifier controls remove each prerequisite in turn
+  and must never yield true. An all-true ordering object is insufficient, and
+  deleting limitation strings cannot manufacture the missing evidence.
 
 ### E. Consumers and offline controls
 
-- [ ] `tests/lib/consumer.py`: on response 8, require per-step `order` and
-  run-level `ordering`; require `query_attempt_order_unestablished` exactly
-  when `order` is not `query_first`; require that no step is `query_first`
-  unless all three run-level observations are true; keep the response-7 rule
-  for stored fixtures. Controls in `blackbox_e2e/checker_controls`: a
-  fabricated 8 with `query_first` but `proceed_observed` false is rejected; a
-  step with `query_first` and the blanket limitation both present is
-  rejected; a legacy 7 with blanket limitations is accepted; an 8 missing
-  `order` is rejected; an 8 with `order: unestablished` on a step that has a
-  validator verdict while `ordering` is all true is rejected (a verdict that
-  arrived before release is ordered by construction).
+- [ ] `tests/lib/consumer.py`: response 8 enforces the evidence-state table,
+  native-record eligibility and conditional object presence; require
+  `query_attempt_order_unestablished` exactly when `order` is not `query_first`.
+  Controls in `blackbox_e2e/checker_controls` reject `query_first` with missing
+  acknowledgement, failed application, lost worker ownership during the interval,
+  a synthetic/diagnostic record, an ambiguous association or the order limitation
+  still present. Reject `unestablished` only when every eligibility prerequisite
+  is established, not merely because the booleans are true. Cover contradictory
+  sentinel diagnostics without upgrading their claims. Valid no-worker replies
+  are accepted; replies with a worker but no ordering object are rejected.
+  Reject `drift: true` with a material alternative explanation or missing required
+  evidence, even if order is established. A legacy 7 retains its historical
+  projection and blanket limitations without inventing new evidence.
 - [ ] `tests/lib/blackbox.py`: same version gate; the three live filter
   callers pass `--expected-schema-version 8`.
 - [ ] `unit/rust.unit` (`runner_client`): response versions 4 through 8
@@ -335,49 +561,96 @@ promise is only interesting when the validator misbehaves.
 
 ### F. Budgets, registry and documentation obligations
 
+The worker's proceed budget starts after successful application and measures
+elapsed monotonic time until release is observed or expiry is published. The
+validator I/O deadline covers only its I/O phase. Document the nominal relation
+`worker_proceed_wait > validator_io_wait + validator_exit_grace + release_margin`,
+with a positive, inventoried margin for observation, setup, decoding and scheduling.
+The action plan owns the numeric value and its measured justification. Inventory
+the effective test override as well as the production defaults. Align elapsed
+deadline clock semantics; wall-clock adjustment must not silently extend the
+validator I/O phase relative to the worker's monotonic budget.
+
+This inequality is a configuration guard, not a worst-case lifecycle bound.
+Host scheduling and setup can overrun the margin, and the existing final blocking
+reap has no total-duration bound. In those cases the safety obligation is no
+attempts without release, followed by a durable failure if the worker remains
+able to run its deadline check. Successful progress, prompt host reply and eventual
+orphan cleanup are not guaranteed by that obligation. After proceed expiry the
+worker uses the existing unbounded exit-request spin; a dead host can leave it
+alive. Bounding that lifetime would require a separate lifecycle change.
+
 - [ ] `docs/limits.json`: `worker_proceed_wait` with value checks in
-  `ABI_LIMITS` and `LimitsContractTests`, a boundary note pointing at
-  `proceed_wait_budget_short`, and the documented relation to
-  `validator_io_wait`. `docs/LIMITS.md` and the guide regenerate.
+  `ABI_LIMITS` and `LimitsContractTests`, the release margin, clock/counting
+  semantics and the nominal relation above. Boundary notes point at the short
+  budget, release/expiry, clock-failure and delayed-cleanup controls. Explicitly
+  exclude final-reap latency and post-done lifetime from the claimed bound.
+  `docs/LIMITS.md` and the guide regenerate.
 - [ ] `tests/COVERAGE.md`: no new `NormalizedOutcome`. Proceed timeout and
-  death while waiting map to `runner_failed` with the worker's failure record
-  as evidence; add those rows to the ABI 7 evidence table in the contract, not
-  the outcome matrix. If the action plan decides a new outcome is warranted,
-  `source_drift` will demand the matrix row.
+  death while waiting map to `runner_failed`: timeout uses the published worker
+  failure, death uses observed process disposition and the last available
+  progress. Do not require a dead worker to publish a failure record. Add those
+  rows to the ABI 7 evidence table in the contract, not the outcome matrix.
 - [ ] `tests/README.md`, `tests/catalog.json`, per-suite READMEs: every case
   above registered; `source_drift` enforces.
 - [ ] `tests/FAILURE-PROPAGATION-CONTRACT.md` § "Public representation and
   meaning": replace "Every comparison reports
   `query_attempt_order_unestablished`" with the per-step rule; add the
-  ordering observations to the host row of the observer table.
-- [ ] `README.md` Flow: "with strong-evidence backing" becomes literally true
-  for `query_first` steps; say what backing means.
+  ordering observations with their separate owners, the record-eligibility and
+  lifetime requirements, and the stronger positive-drift rule. Update the C1/C3/C4
+  dispositions and supplied deny/success controls accordingly. Preserve the
+  historical response-7 contract as legacy semantics rather than silently
+  reclassifying stored replies.
+- [ ] `README.md` Flow: define the evidence required for `drift: true`, and
+  explicitly say that `query_first` establishes order only. No claim that the
+  new barrier alone supplies strong evidence of differing kernel enforcement.
 - [ ] `docs/PolicyWitness.md`: `steps[].comparison.order`,
   `runner_subprocess.ordering`, the batch semantics, response 8.
 - [ ] `docs/QUESTIONS.md`: the proposed "Which happens first" pair changes
-  its answer to "the prediction, always, and here is the evidence that says
-  so"; the deferred user-guide pass and this edit go together.
+  its answer to the qualified promise for eligible `query_first` records, with
+  missing predictions, death before acknowledgement and unconfirmed validator
+  cleanup explained. Describe an interval, not a common state snapshot.
 - [ ] `runner/README.md` "Run result highlights": the new fields.
+- [ ] `runner/README.md` test-seam table and `PWRunnerTestOverrides`:
+  `validator_io_timeout_ms` is mirrored and re-routes only the real I/O deadline.
+  Gate fixtures use the existing validator executable override; they do not add
+  a production flag that manufactures results or require hidden worker resources.
 
-### G. Optional, last
+### G. Required negative controls (opt-in execution)
 
-- [ ] Opt-in mutation control: a worker built from a patched source copy that
-  skips the release wait must fail `proceed_delayed_observed_quiescence` and
-  `queries_precede_attempts`. The same decision that excluded a lying-worker
-  control from `run_effects` may apply here; it is listed so the omission is
-  a choice.
+- [ ] A worker built from a patched source copy that bypasses the release wait
+  must fail `proceed_delayed_observed_quiescence` and
+  `attempt_effects_wait_for_collection` with an actual early effect. Preserve
+  ordinary attempt behavior so the failure demonstrates barrier sensitivity.
+- [ ] A host built from a patched source copy that releases while validation is
+  gated must fail the host-driver gate control and the external effect control.
+  Merely setting the expected JSON fields cannot satisfy the independent test.
+
+These controls are required for acceptance, registered under the existing opt-in
+mutation machinery (`runner_exec_inheritance/opt_in/mutations.sh` and its
+`tests/OPT_IN_TESTS.md` entry are the model). Build candidates outside the
+inspected app and record their
+own hashes; never patch the signed artifact during a dispatcher run. Each control
+must fail for its named ordering violation, not missing equipment, signing or
+transport failure. Neither the ungated unlink race nor a snapshot of child
+absence is a substitute. This tests ordinary synchronization regressions, not
+resistance to arbitrary malicious evidence forgery.
 
 ## Acceptance gates
 
 1. Interim classification: the four items in "Interim classification" pass on
    a signed build with no ABI or schema change, and the default battery is
-   green. `run_effects` records the `deny` prediction with `drift: null`.
+   green. `run_effects` retains whichever native prediction was observed with
+   `drift: null`; current-build conformance and legacy decoding are distinct.
 2. Worker and driver: sections A and B pass. The worker cannot attempt without
    release, cannot be resurrected by a late release, and survives a bare
    deny-default wait. The host cannot release before the hook returns.
 3. Validator failures and the end-to-end promise: sections C and D pass,
-   including the external observer case. `queries_precede_attempts` replaces
-   the interim case.
+   including the gated external observer and both required negative controls
+   from G. `queries_precede_attempts` replaces the interim live case. Eligible
+   predictions remain ordered through validator cleanup failures, and order alone
+   never upgrades a difference to `drift: true` while material alternatives remain
+   unresolved.
 4. Consumers and documentation: sections E and F pass; `source_drift`,
    `runner_abi_layout`, `runner_unit`, `runner_c_worker_harness`,
    `failure_boundaries` and the Rust unit tests pass; `--all` reports no
@@ -393,39 +666,45 @@ Thin by design.
 - ABI 7: two header sentinels, `proceed` and `proceed_observed`, in the
   reserved header space; one operation code and one failure code; a wait
   budget constant.
-- Worker: after storing `applied`, spin CPU-only until `proceed` or the
-  budget expires. On release, store `proceed_observed` (release ordering),
+- Worker: after storing `applied`, poll with a monotonic deadline until `proceed`
+  or the budget expires. On release, store `proceed_observed` (release ordering),
   then run the attempt loop unchanged. On expiry, publish the failure record,
-  store `done`, and spin for exit. The wait must precede any syscall the
-  policy could deny.
+  store `done`, and spin for exit. A deadline-clock failure also fails without
+  attempting. The wait must precede all attempt syscalls and need no resource
+  acquisition under the specimen policy.
 - Host: in `CWorker.run`, after the post-applied hook returns for any reason,
-  store `proceed` and record the validator disposition and the fact of the
-  store. Continue polling as today; the sentinel budget already excludes hook
-  time. Read `proceed_observed` into the subprocess evidence at cleanup with
-  the other sentinels.
+  record closed collection, store `proceed` and retain the separately observed
+  validator disposition. Continue polling as today; the sentinel budget already
+  excludes hook time. Read `proceed_observed` with the other sentinels. Late
+  release cannot restart an expired worker.
 - Orchestrator: derive per-step `order` from the run-level observations and
-  the verdict's `result_source`; drop the blanket order limitation for
-  `query_first` steps; keep `state_stability_unestablished` everywhere; add the
-  removed-target limitation from the interim step as a defense when order is
-  not established.
-- Response 8: the two new objects and the version bump; everything else is
-  additive.
+  the full eligibility/lifetime rule, not `result_source` alone. Drop only the
+  order limitation for `query_first` steps. Preserve state/identity limitations,
+  known mutation observations and partial evidence; enforce the stronger
+  `drift: true` prerequisites independently of ordering.
+- Response 8: the ordering object, per-step order field and version bump; other
+  changes are additive in shape. The positive-drift classification rule is stricter, with
+  historical response semantics preserved on decode.
 
-## Open decisions
+## Design decisions
 
-- Batch versus per-step ordering. This plan assumes batch: all queries, then
-  all attempts. Per-step interleaving would make later predictions reflect
-  earlier effects but would need a release per step and a validator that can
-  pause; it is not proposed here.
-- Bounded versus unbounded worker wait. This plan assumes bounded, so a dead
-  host leaves a worker that publishes a failure and waits for exit as it does
-  today after `done`. The budget must exceed the validator's deadline plus
-  grace by a stated margin.
-- Whether to add `validator_io_timeout_ms` as a request override so the
-  I/O-deadline case runs in seconds. It re-routes a real deadline and mirrors
-  back like the others; it is not a faked result.
-- Whether per-step `order` is a field or only a limitation's absence.
-  Consumers are easier to write against a field; the contract's style prefers
-  limitations. The tests above assume both, so either can be dropped.
-- Whether the removed-target limitation survives after ordering lands. It is
-  kept as a defense for `unestablished` steps in this plan.
+- Batch ordering of collected eligible predictions before all attempts; no
+  shared snapshot and no per-step interleaving.
+- Collection closure, not confirmed validator termination, is the release
+  condition. Child disposition remains independently reportable.
+- Bounded proceed wait with failure on expiry or unusable clock; no new bound
+  on the existing post-done spin or host's final reap.
+- Add `validator_io_timeout_ms` at the real deadline, with request mirroring.
+  Use acknowledged validator gates for controlled timing, not worker sleeps.
+- Keep both the explicit per-step `order` field and its consistent limitation.
+  Their derivation includes record eligibility and worker policy lifetime.
+- Keep supported mutation and resolution-change observations after ordering
+  lands. A same-step mutation ordered after its own query is not a pre-query
+  confound; earlier-step mutations can still explain a later comparison.
+- Preserve the strong meaning of `drift: true`. Ordering cannot discharge
+  material state, identity, scope or enforcement-attribution uncertainty.
+- Require the two barrier-bypass controls for acceptance; their opt-in registry
+  placement controls when mutation builds run, not whether they are necessary.
+
+Names, numeric budget selection and implementation sequencing remain the separate
+action plan's work. They must preserve these decisions and evidence obligations.
