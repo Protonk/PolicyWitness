@@ -365,7 +365,6 @@
         "tests/suites/runner_abi_layout/run.sh"
       ],
       "requires": [
-        "app",
         "clang"
       ],
       "cases": [
