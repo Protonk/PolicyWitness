@@ -5,7 +5,9 @@
 Nothing below is implemented. This document fixes the promise PolicyWitness will
 make about the order of its two channels, and lists the tests that would hold
 that promise to account before, during and after the change. The implementation
-sketch at the end is deliberately thin; a separate action plan will own it.
+section is sequenced in batches whose tests can be written before their
+production change; names and numbers in it stay provisional until the batch
+that lands them.
 
 ## The observation that started this
 
@@ -64,7 +66,11 @@ Consequently, deny/success path rows that retain material
 limitations cannot become `drift: true`, even with `query_first`. No positive
 drift claim is required to demonstrate success of this plan. Future evidence
 that discharges those limits must have its own reviewed contract and controls;
-an empty limitations array or an unknown limitation is not a substitute.
+an empty limitations array or an unknown limitation is not a substitute. The
+mechanism that makes this hold is typed evidence, not label absence: the
+conclusion is computed from evidence values, the limitations array is rendered
+from those same values afterwards, and the value that would permit
+`disagreement` has no constructible form in this schema. Batch 2 specifies it.
 
 ## The promise
 
@@ -242,7 +248,9 @@ also has a specific explanation: a worker-reported successful mutation of the
 submitted target could precede the query. Record `attempt_mutation_order_unestablished`
 (provisional name) without claiming that the envelope proves removal preceded
 the query. Planned resolution and later host resolution failure supply a separate
-`host_path_resolution_changed` observation, not a query-time observation.
+`host_path_resolution_changed` observation, not a query-time observation. It is
+emitted by the host's post-orchestration path enrichment, which runs after
+every conclusion is fixed; see batch 0 for the call chain.
 
 Successful unlink does not require later nonresolution to be relevant: recreation
 can make the path resolve again. Known earlier-step mutations remain relevant
@@ -253,9 +261,11 @@ step. Unknown aliasing is not repaired by host canonicalization.
 - [ ] `runner_unit` / `DriftClassifierTests`: constructed rows for
   successful same-target unlink with unknown order yield `unavailable`,
   `attempt_mutation_order_unestablished` and `drift: null`, retaining either
-  native prediction. Cover later absence, later resolution/recreation, different
-  query/attempt targets, failed unlink and earlier-step mutation separately.
-  Later resolution must never restore `disagreement`. Other deny/success rows
+  native prediction. Cover different query/attempt targets, failed unlink and
+  earlier-step mutation separately. Later absence and later resolution or
+  recreation are enrichment-time observations; their rows belong to the
+  enrichment tests named in batch 0 and must show the appended observation
+  never changes conclusion or drift. Other deny/success rows
   with unknown order also yield `null`. Reject limitations without their own
   supporting observations; later host nonresolution is a separate observation,
   not a precondition for the mutation limitation.
@@ -535,7 +545,12 @@ promise is only interesting when the validator misbehaves.
   runtime identity, state stability or fixture provenance leaves another
   explanation. Constructed classifier controls remove each prerequisite in turn
   and must never yield true. An all-true ordering object is insufficient, and
-  deleting limitation strings cannot manufacture the missing evidence.
+  deleting limitation strings cannot manufacture the missing evidence: one row
+  builds the comparison from evidence values and then empties the rendered
+  limitations array before asking for the conclusion, and one row hands the
+  public struct a `disagreement` with an empty array and requires the encoder
+  invariant to reject it. Both exist because the conclusion function must
+  never read the array; batch 2 states the mechanism.
 
 ### E. Consumers and offline controls
 
@@ -550,8 +565,13 @@ promise is only interesting when the validator misbehaves.
   sentinel diagnostics without upgrading their claims. Valid no-worker replies
   are accepted; replies with a worker but no ordering object are rejected.
   Reject `drift: true` with a material alternative explanation or missing required
-  evidence, even if order is established. A legacy 7 retains its historical
-  projection and blanket limitations without inventing new evidence.
+  evidence, even if order is established. On response 8 that means rejecting
+  `disagreement` outright: the schema defines no vocabulary for established
+  state or established runtime identity, so no envelope can carry the evidence
+  the claim requires, and a control that deletes every limitation string from a
+  `disagreement` step with `order: query_first` must still be rejected. A legacy
+  7 retains its historical projection and blanket limitations without inventing
+  new evidence.
 - [ ] `tests/lib/blackbox.py`: same version gate; the three live filter
   callers pass `--expected-schema-version 8`.
 - [ ] `unit/rust.unit` (`runner_client`): response versions 4 through 8
@@ -659,32 +679,338 @@ resistance to arbitrary malicious evidence forgery.
 Each gate records its signed build hash and the exact case list, following the
 reuse rules in `tests/README.md` § "Reusing verification results".
 
-## Sketch of the fix
+## Implementation
 
-Thin by design.
+Four batches. Each names the production change, the exact anchors in the tree,
+the tests from the sections above that it must make pass, and which of those
+tests can be written before the change and are expected to fail until it lands.
+A batch is complete only when its gate in "Acceptance gates" is recorded with a
+signed build hash. Batch 0 changes no ABI and no schema. Batches 1 and 2 may be
+developed in either order for the worker and the host, but the gate for batch 2
+requires batch 1's worker.
 
-- ABI 7: two header sentinels, `proceed` and `proceed_observed`, in the
-  reserved header space; one operation code and one failure code; a wait
-  budget constant.
-- Worker: after storing `applied`, poll with a monotonic deadline until `proceed`
-  or the budget expires. On release, store `proceed_observed` (release ordering),
-  then run the attempt loop unchanged. On expiry, publish the failure record,
-  store `done`, and spin for exit. A deadline-clock failure also fails without
-  attempting. The wait must precede all attempt syscalls and need no resource
-  acquisition under the specimen policy.
-- Host: in `CWorker.run`, after the post-applied hook returns for any reason,
-  record closed collection, store `proceed` and retain the separately observed
-  validator disposition. Continue polling as today; the sentinel budget already
-  excludes hook time. Read `proceed_observed` with the other sentinels. Late
-  release cannot restart an expired worker.
-- Orchestrator: derive per-step `order` from the run-level observations and
-  the full eligibility/lifetime rule, not `result_source` alone. Drop only the
-  order limitation for `query_first` steps. Preserve state/identity limitations,
-  known mutation observations and partial evidence; enforce the stronger
-  `drift: true` prerequisites independently of ordering.
-- Response 8: the ordering object, per-step order field and version bump; other
-  changes are additive in shape. The positive-drift classification rule is stricter, with
-  historical response semantics preserved on decode.
+Where work can run. The harness, the driver tests, the classifier tests, the
+consumer controls and the Rust tests need no XPC service; they do apply real
+sandboxes and spawn real children, so an automation harness that sandboxes the
+session can still refuse them. Every case in sections C and D, and the
+`run_effects` flip, needs the built app and live XPC and must run unsandboxed.
+A session that cannot run live cases can still write them, run
+`tests/run.sh --list` to prove registration, and run `source_drift` to prove
+the registry agrees.
+
+### Batch 0: classification without new evidence
+
+The call chain today, in `runner/Sources/PWRunnerCore/`: `PWRunnerService.runSpecimen`
+calls the orchestrator, which runs `planValidatorQueries` (resolving each path
+filter on the host and excluding unresolved ones with the code
+`path_unresolved_at_planning`), then `runCWorker` with the validator hook, then
+`buildStepResults`, which calls `computeComparison` once per step with the
+step's planning decision as `queryExclusionReason`. The orchestrator returns
+the result; only then does the service call `enrichPathDiagnostics`, which
+resolves each path filter again and writes `path_diagnostics` with phase
+`after_orchestration`, and replies. Every conclusion is therefore fixed before
+the later resolution exists. Nothing in this batch moves that observation
+earlier, and nothing reads a field that has not been written yet.
+
+Production change, in two sites:
+
+- [ ] `computeComparison`: add an `orderEstablished: Bool` input, false for
+  every caller in this batch. `conclusion == "disagreement"` requires it. With
+  it false, every deny/success row yields `unavailable` and `drift: null`,
+  which is the interim rule. Keep `agreement` and `directional_consistency`
+  as they are.
+- [ ] `computeComparison`: the mutation observation, from inputs it already
+  receives. Define a small table of attempt (`requested_kind`,
+  `requested_action`, outcome) triples that remove or replace the submitted
+  target's object; today it holds one row, (`file`, `unlink`, `ok`). When the
+  row matches and the query's submitted target equals the attempt's, append
+  `attempt_mutation_order_unestablished`. Whether the query was planned is
+  already visible here: `queryExclusionReason` is nil exactly when a probe
+  existed. Do not condition the limitation on later host resolution.
+- [ ] `enrichPathDiagnostics`: the later-resolution observation, where the
+  later resolution actually happens. When the step's filter kind is path, the
+  query was planned (its limitations carry no `query_plan:` entry, so the
+  planner resolved it), and the fresh `realpath_resolved` is nil, append
+  `host_path_resolution_changed` to `comparison.limitations`. The function
+  never touches `conclusion` or `drift`; it appends an observation after the
+  fact. No new field is added in this batch.
+- [ ] Response schema stays 7. Existing supplied-verdict controls that
+  expected `disagreement` are updated to `unavailable`/null in the same
+  change, because the interim rule is a current-build rule.
+
+Tests, in the order to write them:
+
+- [ ] `runner_unit` / `DriftClassifierTests` rows from "Interim
+  classification" for the two `computeComparison` changes. Written first; the
+  rows for `unavailable` fail until the change lands, the rows for
+  `agreement` and failures pass before and after.
+- [ ] `runner_unit` / `DriftClassifierTests` "host path provenance" group and
+  `EnvelopeInvariantTests` "consumer evidence survives encoding without
+  reclassification": enrichment rows for later absence, later resolution and
+  recreation. Each feeds `enrichPathDiagnostics` a step whose conclusion is
+  already fixed and requires the observation to be appended, or not, with
+  `conclusion` and `drift` unchanged either way. Offline.
+- [ ] `witness_contract/removed_target_prediction_is_not_drift`, a copy of the
+  `run_effects` unlink row with `RunCapture`, log capture disabled, both
+  native predictions accepted, `drift: null` and the mutation limitation
+  required, independent absence of the file. Live.
+- [ ] `run_effects/check_file_actions.py`: the `raced` expectation asserts
+  `drift: null`, `comparison.conclusion == "unavailable"` and the mutation
+  limitation; keep recording the prediction. Live.
+- [ ] `blackbox_e2e/checker_controls` and `tests/lib/consumer.py`: the
+  projection rule already there stays; add the current-build conformance
+  control that rejects `disagreement` on a step carrying the mutation
+  limitation. Offline.
+- [ ] `drift_determination_via_validator_seam` and any other case that
+  supplied a deny verdict against a successful attempt and expected
+  `disagreement`: expect `unavailable`/null. Live.
+
+Gate 1 is the four interim items plus a green default battery.
+
+### Batch 1: ABI 7 and the worker
+
+`controller/tools/pw_probe_runner/pw_probe_runner_abi.h`:
+
+- [ ] `PW_PROBE_RUNNER_ABI_VERSION` 6 to 7.
+- [ ] The header has exactly two reserved words left, at offsets 56 and 60
+  (ten 32-bit fields plus the 16-byte nonce fill 56 bytes of the 64). Take
+  them: `_Atomic uint32_t proceed;` at 56 and `_Atomic uint32_t
+  proceed_observed;` at 60. Remove `reserved` rather than leave a zero-length
+  array, and add a static assertion that `sizeof(pw_shm_header_t) ==
+  PW_SHM_HEADER_BYTES`. No other offset moves; `PW_SHM_HEADER_BYTES` stays 64.
+- [ ] `PW_OP_PROCEED = 11` in the operation enum,
+  `PW_FAILURE_PROCEED_TIMEOUT = 8` in the failure enum, and a native kind for
+  the deadline clock so a `clock_gettime` failure is a `PW_FAILURE_NATIVE`
+  record with the real return and errno.
+- [ ] `PW_PROCEED_WAIT_MS_DEFAULT`, next to `PW_EXEC_CHILD_DEADLINE_MS_DEFAULT`
+  in `pw_probe_runner.c`, so `worker_limits.c` and `NATIVE_LIMITS` in
+  `tests/suites/runner_abi_layout/limits.py` can read it the way they read the
+  exec deadline. The value is the action plan's; it must satisfy the relation
+  in section F against the validator defaults in
+  `runner/Sources/PWRunnerCore/ValidatorClient.swift`.
+
+`controller/tools/pw_probe_runner/pw_probe_runner.c`, between the `applied`
+store and the attempt loop:
+
+- [ ] Publish `PW_OP_PROCEED` started. Take the deadline with
+  `clock_gettime(CLOCK_MONOTONIC)` exactly as the exec-child deadline does; on
+  a nonzero return publish the native failure, publish `done`, and
+  `spin_for_exit`. Do not fall back to a permissive deadline here, unlike the
+  exec path; an unusable clock forbids attempts.
+- [ ] Poll `proceed` with acquire ordering and the same `cpu_relax` backoff as
+  `spin_for_exit`, re-reading the clock each round. On release, store
+  `proceed_observed` with release ordering, publish `PW_OP_PROCEED` returned,
+  and fall through to the unchanged attempt loop. On expiry, publish
+  `PW_FAILURE_PROCEED_TIMEOUT` with the budget in `detail` and a diagnostic
+  naming the budget, store `done`, and `spin_for_exit`. Nothing in the wait
+  makes a system call; `clock_gettime` on macOS reads the commpage.
+- [ ] Argument `--proceed-wait-ms N`, parsed beside the three existing seams
+  with the same bounds style, overriding only the budget. It is harness
+  equipment; no request override plumbs it, because the host always releases
+  after its hook and a seam that stopped the host releasing would fake a
+  result.
+- [ ] Leave the pre-ready hang, the post-apply hang and the post-apply kill
+  seams where they are. Their positions relative to the new wait are what
+  `ready_byte_interplay` and `post_apply_seams_still_after_attempts` pin.
+
+Mirrors and equipment:
+
+- [ ] `PWShmLayout` in `runner/Sources/PWRunnerCore/CWorker.swift`:
+  `abiVersion` 7, `proceedOffset` 56, `proceedObservedOffset` 60.
+  `printer.c` in `runner_abi_layout` emits both offsets.
+- [ ] `tests/fixtures/worker_lifecycle/worker.c`: the `transport_incompatible`
+  mode sets `abi_version` to the literal 7 today, which becomes the real
+  version. Change it to the header constant plus one before bumping, or the
+  driver test that expects refusal will pass for the wrong reason.
+- [ ] `tests/suites/runner_c_worker_harness/harness.c`: after observing
+  `applied`, store `proceed` unless a knob says otherwise. New scenario knobs
+  beside the corruption knobs: `withhold_proceed`, `proceed_delay_ms`,
+  `proceed_at_prepare`, `proceed_after_expiry`, `withhold_exit_request`; a
+  quiescence poll that records any slot completion or attempt progress seen
+  before release; and the evidence record's operation and code in the
+  scenario's JSON so `run.sh`'s Python assertions can name
+  `PW_OP_PROCEED` and `PW_FAILURE_PROCEED_TIMEOUT`. The `.clock-failure`
+  companion is built by `tests/fixtures/worker_lifecycle/build.sh` next to
+  `.apply-failure`, substituting the clock call.
+- [ ] `docs/limits.json`: `worker_proceed_wait` in the execution section with
+  a source reference to the C default, value checks in `NATIVE_LIMITS` and
+  `runLimitsContractTests`, and a path check naming the harness budget
+  scenario. `python3 docs/generate_limits.py --check` must pass, which means
+  every referenced symbol must exist in the referenced file.
+
+Tests: all of section A, the `runner_abi_layout` agreement, the
+`LimitsContractTests` value row. The harness scenarios can be written before
+the worker change; every one of them fails against an ABI 6 worker at the
+version check, which is the wrong failure, so record the expected-failure
+state per scenario rather than crediting a red run.
+
+Gate 2 covers this batch together with batch 2.
+
+### Batch 2: host, orchestrator and response 8
+
+`runner/Sources/PWRunnerCore/CWorker.swift`:
+
+- [ ] `CWorkerOutput` gains `hookInvoked`, `proceedSet` and `proceedObserved`.
+- [ ] In `runCWorker`, immediately after the post-applied hook returns, and
+  also when no hook was supplied, store `proceed` with release ordering and
+  set `proceedSet`. The polling loop and the sentinel budget are otherwise
+  unchanged; the loop is iteration-counted, so hook time is still outside
+  the budget. Read `proceed_observed` in the same final acquire snapshot that
+  reads `done` and the slots, after cleanup.
+- [ ] No new `CWorkerInput` field. The worker budget seam is harness-only.
+
+`runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift`:
+
+- [ ] The hook closure records that collection closed when it returns, for
+  both the empty-probe early return and the `runValidator` return, and
+  records the validator disposition it can see at that moment:
+  `not_needed` when probes were empty, `not_spawned` for
+  `ValidatorClientError.spawnFailed` and any failure with no partial output,
+  `reaped` when the output's `reaped` is true, else `unconfirmed`. A worker
+  that never published `applied` never fires the hook and gets
+  `not_invoked`.
+- [ ] Build `runner_subprocess.ordering` from those two sources and attach it
+  to the subprocess object after `buildWorkerSubprocess`; present exactly
+  when the subprocess object is present.
+- [ ] Per-step `order` in `buildStepResults`: `query_first` when all three
+  ordering observations are true, `applied` is true with `applyRC == 0`, the
+  step's verdict is validator-sourced with outcome allow or deny and a
+  coherent native rc, and `associateValidatorVerdicts` reports no association
+  issue for the step. Otherwise `unestablished`. Pass the result into
+  `computeComparison` as typed evidence, below.
+- [ ] Conclusion from typed evidence, never from labels. Introduce an internal
+  `ComparisonEvidence` value with one enum per obligation: `order`
+  (`queryFirst` or `unestablished`, from the rule above), `state`, `identity`,
+  `attribution`, plus the existing relations and observation. In this schema
+  `state` has exactly one case, `unestablished`, and `identity` has
+  `unestablished` for path filters and `notApplicable` otherwise; the
+  `established` cases do not exist yet and are added only by the future
+  contract that defines their evidence. `conclusion` is a pure function of
+  this value: `disagreement` requires `order == .queryFirst`, `state ==
+  .established` and `identity != .unestablished`, so it cannot be constructed
+  today. The public `limitations` array is rendered from the same value after
+  the conclusion is fixed: `state_stability_unestablished` is emitted for
+  `.unestablished`, and so on. A refactor that drops a string from the
+  renderer changes what the array says; it cannot change the conclusion,
+  because the conclusion never reads the array and the case it needs is not
+  there to construct.
+- [ ] Negative controls for that mechanism. In `DriftClassifierTests`,
+  `ordered_difference_does_not_imply_drift` builds the evidence value with
+  every other prerequisite satisfied, empties the rendered array, and requires
+  `unavailable`; a derivation row requires `limitations == render(evidence)`
+  for every constructed comparison. In `EnvelopeInvariantTests`, a public
+  `PWRunnerComparison` carrying `disagreement` with an empty array, or with
+  `order: query_first` alone, fails the encoder invariant. In
+  `tests/lib/consumer.py`, `disagreement` on response 8 is rejected for want
+  of evidence the schema cannot express, and the control that deletes the
+  strings is still rejected. State this consequence in the contract and the
+  guide: no current producer path yields `drift: true` after this batch.
+- [ ] `classify`: add 11 to the operation-name table as "proceed wait" so the
+  timeout detail reads as such; death while waiting and a deadline that
+  expires with `proceedSet` true and `proceedObserved` false already reach
+  `runner_failed` and `runner_timeout` through the existing disposition and
+  deadline branches; extend their detail strings to say release was not
+  observed. No new `NormalizedOutcome`.
+- [ ] `validator_io_timeout_ms` in `PWRunnerTestOverrides`, plumbed from
+  `PWRunnerService.runSpecimen` to `ValidatorClientInput.verdictReadTimeoutMs`
+  where the real deadline is computed, floored like `worker_timeout_ms`,
+  mirrored back on every result path, with its row in `runner/README.md`'s
+  test-seam table. Follow `runner/AGENTS.md` § "Adding a new override";
+  `source_drift` fails until the table row exists.
+
+`runner/Sources/PWRunnerCore/PWRunnerAPI.swift`:
+
+- [ ] `PWRunnerComparison.order: String`; `PWRunnerOrdering` with the three
+  booleans and `validator_disposition`; `PWRunnerSubprocess.ordering:
+  PWRunnerOrdering?`; `PWRunnerRunResult.schema_version` default 8. Legacy
+  decoding needs nothing: both new fields are optional on decode and the
+  encoder controls pin that new responses always emit them where the table
+  requires.
+
+Fixtures and consumers:
+
+- [ ] `tests/fixtures/worker_lifecycle/worker.c` tokens: `proceed_wait`
+  (wait, acknowledge, report), `proceed_expire:<ms>` (short budget, publish
+  the timeout and `done`), `signal_awaiting_proceed`, `ignore_proceed`,
+  `signal_after_ack`. Each publishes through the same release/acquire
+  protocol as the worker. The fixture README documents them.
+- [ ] `tests/lib/consumer.py`: version-gated rules from section E. On 8,
+  require `order` on every step and `ordering` on every subprocess object,
+  require the order limitation exactly when `order` is not `query_first`,
+  reject `query_first` when any prerequisite the envelope carries is
+  missing, and keep the response-7 blanket rule for stored fixtures.
+- [ ] `tests/lib/blackbox.py` shape checks gain `order` when the version is
+  at least 8; the three live filter callers pass
+  `--expected-schema-version 8`.
+- [ ] `controller/src/runner_client.rs` tests: a version-8 round trip with
+  the new fields and with an unfamiliar `order` string.
+
+Tests: section B, the `runner_unit` items in section C, section E, the
+`EnvelopeInvariantTests` rows. The driver tests can be written before the
+host change against the new fixture tokens; `proceed_wait_then_report` fails
+until the driver stores release, `proceed_wait_expire` fails until it reads
+`proceed_observed`. The consumer controls are offline and can be written
+first against hand-written envelopes.
+
+Gate 2: sections A and B green on a signed build carrying ABI 7 and
+response 8, plus the batch-0 gate still green.
+
+### Batch 3: witnesses, equipment and negative controls
+
+- [ ] Gated validator bridge, beside `tests/fixtures/validator/`: a C program
+  linked against libsandbox that reads the batch probes, connects to
+  `--gate SOCKET`, announces readiness, and then emits each verdict only when
+  the gate sends one byte for it and closes collection only when the gate
+  says so. `control.py` in `tests/fixtures/exec/` is the socket and PID
+  pattern to copy. A `validator_bridge` suite, Baseline, requiring clang,
+  owns its direct controls: readiness before any verdict, exact native
+  forwarding compared with a direct `sandbox_check` call from the test,
+  holding collection open without exit, and no output after close.
+- [ ] Section C's CLI cases: the two new transcripts (`hang_after_one.json`,
+  `signal_after_one.json`) in `tests/fixtures/validator/` with the
+  transcript README updated; the existing three cases gain their ordering
+  assertions.
+- [ ] Section D, each registered in `witness_contract/run.sh`'s script list
+  and `tests/catalog.json` with its own script, `RunCapture`, log capture
+  disabled, external observation before decoding. `queries_precede_attempts`
+  retires `removed_target_prediction_is_not_drift`.
+- [ ] `run_effects/check_file_actions.py`: the `raced` expectation becomes
+  `allow`, `drift: false`, `order: query_first`; the README paragraph about
+  the race becomes a sentence pointing at the witness.
+- [ ] `runner_ready_byte_resilience` and the two post-apply seam cases gain
+  their ordering assertions.
+- [ ] Section G, under `witness_contract/opt_in/` following
+  `runner_exec_inheritance/opt_in/mutations.sh`: a patched worker with the
+  wait removed and a patched host driver with the release stored before the
+  hook, each built from a disposable source copy. The worker control runs the
+  harness quiescence scenario and, with the `identity` prerequisite, a signed
+  app copy under `/private/tmp` with the patched worker swapped in, against
+  `attempt_effects_wait_for_collection`. The host control runs the SwiftPM
+  driver gate test against the patched core; the CLI half needs a rebuilt,
+  re-signed service and is registered with `identity` as equipment. Both
+  must fail for the named violation and pass with the unpatched sources.
+  Entry in `tests/OPT_IN_TESTS.md`.
+- [ ] Section F documentation: contract, guide, README Flow sentence, runner
+  README, FAQ pair, `tests/README.md` rows, `tests/COVERAGE.md` untouched
+  except a note on the two `runner_failed` shapes.
+
+Gate 3 and gate 4 as written in "Acceptance gates".
+
+### Provisional names in one place
+
+| Thing | Name | Where |
+| --- | --- | --- |
+| Release sentinel | `proceed` | header offset 56 |
+| Acknowledgement sentinel | `proceed_observed` | header offset 60 |
+| Worker operation | `PW_OP_PROCEED` = 11 | ABI header |
+| Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8 | ABI header |
+| Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
+| Worker argv seam | `--proceed-wait-ms` | harness only |
+| Request override | `validator_io_timeout_ms` | `PWRunnerTestOverrides` |
+| Run-level evidence | `runner_subprocess.ordering` | response 8 |
+| Per-step evidence | `comparison.order` | response 8 |
+| Interim limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | response 7 and later |
+| Bridge fixture and suite | `tests/fixtures/validator/bridge.c`, `validator_bridge` | batch 3 |
 
 ## Design decisions
 
