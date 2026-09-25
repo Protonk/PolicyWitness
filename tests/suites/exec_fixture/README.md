@@ -5,6 +5,9 @@ Python 3, without an app dependency. Runs in the default test battery.
 
 - Verify default, empty, and oversized stdout, a fresh stderr marker, and
   exit statuses 0 and 37 through direct `subprocess` execution.
+- Write a marker file with `--write`: exact bytes at mode 0600, refusal to
+  overwrite an existing file, and failure in a missing directory, the latter
+  two with exit 3 and a diagnostic naming the flag.
 - Launch a tree in a new process group. Check the socket leader PID against
   the launched PID and both peers' groups through the OS.
 - Require the exit observer to reject a live tree, then accept normal

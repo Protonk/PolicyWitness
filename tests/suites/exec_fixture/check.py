@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import secrets
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -216,6 +217,26 @@ def exercise_independent_trees(helper, out):
                 child.communicate(timeout=2)
 
 
+def exercise_write(helper, out):
+    """The write mode's bytes, mode, exclusive create, and failure diagnostics."""
+    work = out / 'write'
+    work.mkdir()
+    target = work / 'marker'
+    expected = b'exec_fixture: wrote by helper\n'
+    result = subprocess.run([helper, '--write', str(target)], env={}, capture_output=True, timeout=5)
+    assert result.returncode == 0 and result.stderr == b'', result
+    assert result.stdout == b'exec_fixture: hello from helper\n', result.stdout
+    assert target.read_bytes() == expected, target.read_bytes()
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600, oct(target.stat().st_mode)
+    again = subprocess.run([helper, '--write', str(target)], env={}, capture_output=True, timeout=5)
+    assert again.returncode == 3 and b'--write' in again.stderr and b'File exists' in again.stderr, again
+    assert target.read_bytes() == expected, 'a refused exclusive create must not touch the file'
+    missing = subprocess.run([helper, '--write', str(work / 'absent-dir' / 'marker')],
+                             env={}, capture_output=True, timeout=5)
+    assert missing.returncode == 3 and b'--write' in missing.stderr and b'No such file' in missing.stderr, missing
+    print('write mode: exact bytes at 0600, exclusive-create refusal, missing-directory failure', flush=True)
+
+
 def main():
     helper, out_arg = sys.argv[1:]
     out = Path(out_arg)
@@ -232,6 +253,7 @@ def main():
         assert result.stdout == expected, result.stdout
         assert result.stderr == (marker + '\n').encode(), result.stderr
         print(f"output bytes={len(expected)}, stderr nonce, exit={status}: correct", flush=True)
+    exercise_write(helper, out)
     for mode in ('release', 'group_kill', 'leader_kill'):
         exercise_tree(helper, out, mode)
     exercise_independent_trees(helper, out)

@@ -9,6 +9,13 @@ default stdout with N `A` bytes; `--exit N` selects the exit status (0–255).
 These modes supply known input for output capture, truncation, and exit-status
 contracts in `runner_use_c_worker`.
 
+`--write PATH` creates PATH exclusively with mode 0600, writes the line
+`exec_fixture: wrote by helper`, and exits 3 with a diagnostic naming `--write`
+on stderr if the open or write fails. `run_effects` spawns the helper this way
+under a policy to observe the helper's own file effect. The direct control
+checks the exact bytes and mode, refusal to overwrite an existing file, and
+failure in a missing directory.
+
 `--tree SOCKET` adds a leader and forked child, both retaining the inherited
 process group and stdout/stderr. Output is flushed before the fork. Each
 process connects to the test-owned socket and announces `P` or `C`. Commands

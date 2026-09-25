@@ -613,6 +613,57 @@
         }
       ]
     },
+    "run_effects": {
+      "command": [
+        "bash",
+        "tests/suites/run_effects/run.sh"
+      ],
+      "requires": [
+        "app",
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "checker_controls",
+          "requires": [],
+          "description": "effect expectations accept the right fabricated observation and reject each wrong one",
+          "command": [
+            "bash",
+            "tests/suites/run_effects/checker_controls.sh"
+          ]
+        },
+        {
+          "id": "file_actions_have_exact_effects",
+          "requires": [
+            "app"
+          ],
+          "description": "each file attempt action has one exact externally observed effect; denied twins leave targets identical",
+          "command": [
+            "bash",
+            "tests/suites/run_effects/file_actions_have_exact_effects.sh"
+          ]
+        },
+        {
+          "id": "exec_helper_effect_is_real",
+          "description": "an allowed exec helper's own file write is real; a denied helper runs but leaves no file",
+          "command": [
+            "bash",
+            "tests/suites/run_effects/exec_helper_effect_is_real.sh"
+          ]
+        },
+        {
+          "id": "run_installs_nothing",
+          "requires": [
+            "app"
+          ],
+          "description": "a plain run adds no launchd plist and leaves the runner registry unchanged",
+          "command": [
+            "bash",
+            "tests/suites/run_effects/run_installs_nothing.sh"
+          ]
+        }
+      ]
+    },
     "runner_exec_lifecycle": {
       "command": [
         "bash",

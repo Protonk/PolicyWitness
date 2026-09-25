@@ -25,6 +25,11 @@
  *   --then-exec PATH ARGS...
  *                 after inspection, exec PATH preserving PID/env/FDs;
  *                 skip reading stdin so a worker's policy pipe is preserved.
+ *   --write PATH  create PATH exclusively with mode 0600 and write the
+ *                 line "exec_fixture: wrote by helper" to it. On any
+ *                 failure print a diagnostic naming --write to stderr and
+ *                 exit 3. Gives a policy something real to allow or deny
+ *                 inside the helper itself.
  *
  * Dynamic linkage against libSystem is intentional: it exercises
  * dyld + shared-cache resolution at exec time, which is what
@@ -37,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <libproc.h>
 #include <limits.h>
 #include <poll.h>
@@ -197,6 +203,7 @@ int main(int argc, char **argv) {
     const char *stderr_msg = NULL;
     const char *tree_socket = NULL;
     const char *inspect_nonce = NULL;
+    const char *write_path = NULL;
     const char *env_key = "PW_FIXTURE_CANARY";
     int canary_fd = -1;
     char **forward_argv = NULL;
@@ -210,6 +217,8 @@ int main(int argc, char **argv) {
             stderr_msg = argv[++i];
         } else if (strcmp(argv[i], "--tree") == 0 && i + 1 < argc) {
             tree_socket = argv[++i];
+        } else if (strcmp(argv[i], "--write") == 0 && i + 1 < argc) {
+            write_path = argv[++i];
         } else if (strcmp(argv[i], "--inspect") == 0 && i + 1 < argc) {
             inspect_nonce = argv[++i];
         } else if (strcmp(argv[i], "--env-key") == 0 && i + 1 < argc) {
@@ -226,7 +235,7 @@ int main(int argc, char **argv) {
     }
 
     if (inspect_nonce) {
-        if (tree_socket || stderr_msg || stdout_bytes >= 0 || exit_code) return 2;
+        if (tree_socket || stderr_msg || stdout_bytes >= 0 || exit_code || write_path) return 2;
         int result = inspect(inspect_nonce, env_key, canary_fd, forward_argv != NULL);
         if (result != 0 || !forward_argv) return result;
         /* The harness uses this to establish the real worker's launch state.
@@ -247,6 +256,22 @@ int main(int argc, char **argv) {
         fputs(stderr_msg, stderr);
         fputc('\n', stderr);
         fflush(stderr);
+    }
+    if (write_path) {
+        static const char line[] = "exec_fixture: wrote by helper\n";
+        int fd = open(write_path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0) {
+            fprintf(stderr, "exec_fixture: --write %s: %s\n", write_path, strerror(errno));
+            return 3;
+        }
+        ssize_t n = write(fd, line, sizeof(line) - 1);
+        int saved = errno;
+        close(fd);
+        if (n != (ssize_t)(sizeof(line) - 1)) {
+            fprintf(stderr, "exec_fixture: --write %s: %s\n", write_path,
+                    n < 0 ? strerror(saved) : "short write");
+            return 3;
+        }
     }
     if (tree_socket) {
         int result = run_tree(tree_socket);
