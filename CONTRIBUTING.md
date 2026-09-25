@@ -9,3 +9,5 @@ The more integrated the test, the less surface for the test itself to be wrong. 
 ## Read AGENTS.md, even if you're a human
 
 Guidance in this repository is aimed at human and non-human agents. Don't assume that the contents of layered agent guidance are for others to worry about; we put useful direction in there.
+
+`CLAUDE.md` at the repo root and under `runner/` are symlinks to the `AGENTS.md` beside them, so Claude Code loads the same guidance without a branded copy. Edit the `AGENTS.md` files; they are the source of truth.
