@@ -57,7 +57,7 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 
 - Build: `make build` (or `./build.sh`)
   - Requires `IDENTITY` to be set to a **Developer ID Application** identity in your keychain (see [docs/SIGNING.md](docs/SIGNING.md)).
-  - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun.
+  - If you are in a sandboxed automation harness, signing/keychain access may fail; ask for approval/escalation and rerun (see the harness note below).
 - If you add a helper under the app or XPC bundle `Contents/MacOS`, update the [build.sh](build.sh) signing list; notarization fails if any embedded tool is left ad hoc-signed.
 - Run: `dist/PolicyWitness.app/Contents/MacOS/policy-witness run tests/fixtures/pw_runner/<request>.json > result.json`
 
@@ -74,7 +74,7 @@ Use this when you are asked to install, verify, or clean up BYOXPC runners.
 The `runner` subcommands (install/list/status/verify/remove/validate) and the manual launchctl/plist cleanup recipes for both user and system scope live in [controller/README.md](controller/README.md) and [docs/PolicyWitness.md](docs/PolicyWitness.md). Agent-specific guidance:
 
 - Inspect first: `policy-witness runner list` and note `service_name`, `scope`, and `bundle_path` before acting.
-- User-scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed.
+- User-scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed (see the harness note below).
 
 ## Testing
 
@@ -89,11 +89,11 @@ The `runner` subcommands (install/list/status/verify/remove/validate) and the ma
 
 Two runner-specific testing contracts live in [runner/AGENTS.md](runner/AGENTS.md): the **Swift runner unit tests (SwiftPM)** layout (when to add a `runner_unit` test vs an e2e suite, stubbing `@convention(c)` pointers, adding a test file) and **`normalized_outcome` failure paths via `_test_overrides`** (the four-assertion recipe, where the supported keys are tabulated, and the rules for adding a new override). Read that file before touching either.
 
-## Note: sandboxed automation harnesses
+## Sandboxed automation harnesses
 
-Some automation/agent harnesses run commands under a macOS sandbox. In that context, PolicyWitness runs can fail before any runner code executes (for example XPC lookup `NSCocoaErrorDomain=4099` / error `159` “Sandbox restriction”), and unified logging capture can be unavailable (`log: Cannot run while sandboxed`).
+Some automation and agent harnesses run commands under a macOS sandbox. Inside one, two things fail for reasons that have nothing to do with the specimen: XPC lookup of the runner is refused (`NSCocoaErrorDomain` code 4099, or error 159 “Sandbox restriction”), so no runner launches; and the unified log tool will not run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured. These are environment constraints, not PolicyWitness regressions. Request escalation, rerun the same command once from an unsandboxed Terminal, and debug only what still fails there.
 
-Treat these as environment constraints, not PolicyWitness regressions. If you see them, request escalation and rerun the same command once from an unsandboxed Terminal context to confirm behavior before debugging the project.
+From here, the constraint touches three workflows in this file: building (keychain access for signing), external runners (launchctl and a GUI session), and testing (live XPC and log capture). The copy of this note in [runner/README.md](runner/README.md#sandboxed-automation-harnesses) says what the refusal looks like in the envelope. The copy in [tests/README.md](tests/README.md#sandboxed-automation-harnesses) says what the dispatcher can detect and which suites never launch the XPC service.
 
 ## Maintenance checklist (when changing things)
 

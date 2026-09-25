@@ -33,6 +33,10 @@ The check has two halves:
         has a row in the `_test_overrides` table in runner/README.md, and
         every row names a property. That table is the only documented
         key list; runner/AGENTS.md points at it rather than carrying one.
+     i. The first paragraph under the "Sandboxed automation harnesses"
+        heading is identical in AGENTS.md, runner/README.md and
+        tests/README.md. The note is carried in three places on purpose;
+        each copy adds its own local paragraph after the shared one.
 
 Exit codes:
   0 — everything agrees
@@ -659,6 +663,51 @@ def check_test_overrides_table_agreement() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Sandboxed-harness note agreement.
+#
+# The note under "Sandboxed automation harnesses" is carried in three files on
+# purpose: AGENTS.md (orientation), runner/README.md (what the refusal looks
+# like in the envelope) and tests/README.md (what the dispatcher can detect).
+# Each copy adds a local paragraph; the first paragraph is shared and must stay
+# identical so the copies read as one maintained note rather than drift.
+# Whitespace is normalized because the READMEs hard-wrap and AGENTS.md does not.
+# ---------------------------------------------------------------------------
+
+HARNESS_NOTE_HEADING = "Sandboxed automation harnesses"
+HARNESS_NOTE_FILES = [REPO_ROOT / "AGENTS.md", RUNNER_README, TESTS_README]
+
+
+def parse_harness_note_paragraph(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    heading_re = re.compile(
+        r'^#{2,6}\s+' + re.escape(HARNESS_NOTE_HEADING) + r'\s*$', re.MULTILINE
+    )
+    match = heading_re.search(text)
+    if match is None:
+        fail(f"{path.relative_to(REPO_ROOT)} has no '{HARNESS_NOTE_HEADING}' heading")
+        sys.exit(2)
+    paragraphs = [p for p in re.split(r'\n\s*\n', text[match.end():]) if p.strip()]
+    if not paragraphs:
+        fail(f"{path.relative_to(REPO_ROOT)}: '{HARNESS_NOTE_HEADING}' has no paragraph")
+        sys.exit(2)
+    return " ".join(paragraphs[0].split())
+
+
+def check_harness_note_agreement() -> list[str]:
+    problems: list[str] = []
+    canonical_path = HARNESS_NOTE_FILES[0]
+    canonical = parse_harness_note_paragraph(canonical_path)
+    for path in HARNESS_NOTE_FILES[1:]:
+        if parse_harness_note_paragraph(path) != canonical:
+            problems.append(
+                f"  harness note: the shared first paragraph differs between "
+                f"{canonical_path.relative_to(REPO_ROOT)} and {path.relative_to(REPO_ROOT)}. "
+                f"This note is triplicated on purpose; edit all three copies together or none."
+            )
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -688,6 +737,7 @@ def main() -> int:
     problems.extend(check_attempt_kind_enum_agreement())
     problems.extend(check_prediction_unavailable_agreement())
     problems.extend(check_test_overrides_table_agreement())
+    problems.extend(check_harness_note_agreement())
 
     if problems:
         fail("source/test-registry drift detected:")

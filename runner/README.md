@@ -291,16 +291,32 @@ Invariants:
 The controller provides a `policy-witness runner` manager to install/register
 these services and to enforce entitlements supersets before dispatch.
 
-## Agent note: “nested sandbox” harnesses
+## Sandboxed automation harnesses
 
-Some development harnesses run tools inside an OS sandbox. In those environments:
+Some automation and agent harnesses run commands under a macOS sandbox. Inside
+one, two things fail for reasons that have nothing to do with the specimen: XPC
+lookup of the runner is refused (`NSCocoaErrorDomain` code 4099, or error 159
+“Sandbox restriction”), so no runner launches; and the unified log tool will not
+run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured.
+These are environment constraints, not PolicyWitness regressions. Request
+escalation, rerun the same command once from an unsandboxed Terminal, and debug
+only what still fails there.
 
-- XPC lookup can fail early with `NSCocoaErrorDomain` 4099 / error 159 `"Sandbox restriction"` (before the service launches).
-- Unified Logging access can also be restricted, making deny-evidence capture impossible from inside the harness.
+The name “nested sandbox” fits: the harness's sandbox sits outside the one the
+worker would apply to itself, and it wins first, at XPC lookup, before any code
+in this directory runs. In the envelope the refusal is `normalized_outcome:
+"xpc_error"` with `error` carrying the domain, code and message, empty `steps`,
+and no `runner_subprocess`, because no host ran. The controller then fills
+`runner_startup_diagnostics` and runs `sbpl-check` as a fallback, so a
+`policy_check_status` of `ok` there says only that the policy compiles; it says
+nothing about the worker. Nothing here produced that outcome and nothing here
+can fix it. The other symptom is the controller's, not the runner's: if the
+runner does launch but `sandbox_log_capture.capture_status` is `blocked` with
+`blocked_reason: "Cannot run while sandboxed"`, the run's execution status and
+cause are unchanged and only log correlation is unavailable. Pass
+`--no-log-capture` to take that variable out while you work on the runner.
 
-Treat this as an environment constraint, not a PolicyWitness regression.
-
-If you suspect you are running under a sandboxed automation harness, re-run from a normal Terminal (or with escalation) before debugging PolicyWitness itself.
+## Evidence contract pointers
 
 Worker ABI 6 appends a pre-touched progress/failure header and a 4,096-byte text
 region after capture, leaving existing capacities intact. The release/acquire

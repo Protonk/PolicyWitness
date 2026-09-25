@@ -174,7 +174,7 @@ prerequisites should fail, not skip.
 | Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
 | --- | --- | --- | --- | --- | --- |
 | `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; release continuation and real deadline controls | Built app for inspection; signing controls also need matching Developer ID; release controls need no app, with macOS socket/process observation for deadlines | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
-| `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), and the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`. | Python 3 | — | `tests/out/suites/source_drift/.../check.log` |
+| `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`, and the shared paragraph of the sandboxed-harness note across its three copies. | Python 3 | — | `tests/out/suites/source_drift/.../check.log` |
 | `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3 | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No app or toolchain; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |
 | `unit` | Baseline | Controller logic is correct at the unit level | Cargo toolchain | — | `tests/out/suites/unit/.../cargo-test-bins.log` |
@@ -271,9 +271,29 @@ recorded as evidence. An absent annotated mismatch can skip only after all
 evidence checks pass. See `tests/suites/blackbox_menagerie/README.md` for
 suite invariants and fixtures.
 
-### Harness note: sandboxed automation environments
+### Sandboxed automation harnesses
 
-Some automation harnesses run commands inside an OS sandbox. In that situation, specimen execution and unified-log based evidence capture can fail for reasons unrelated to PolicyWitness; re-run from a normal Terminal (or with escalation) before diagnosing PolicyWitness itself.
+Some automation and agent harnesses run commands under a macOS sandbox. Inside
+one, two things fail for reasons that have nothing to do with the specimen: XPC
+lookup of the runner is refused (`NSCocoaErrorDomain` code 4099, or error 159
+“Sandbox restriction”), so no runner launches; and the unified log tool will not
+run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured.
+These are environment constraints, not PolicyWitness regressions. Request
+escalation, rerun the same command once from an unsandboxed Terminal, and debug
+only what still fails there.
+
+The dispatcher checks the equipment it can see: the built app and worker
+binaries, toolchains, a GUI session, a signing identity. XPC reachability and
+log access are not prerequisites, so inside a harness a live case runs and fails
+as an ordinary failure, with the `xpc_error` envelope in its artifacts, while a
+`gui` prerequisite that cannot be confirmed is reported as missing equipment
+with the case unrun. Neither is a PolicyWitness defect. Suites that declare no
+`app` or `worker` requirement (`source_drift`, `shell_helpers`, `dispatcher`,
+`run_capture`, `unit`, `exec_fixture`, and `runner_unit` against its own
+fixture) never launch the XPC service, though the cancellation and
+process-observation controls among them may still need escalation for local
+sockets and exit events. Run everything that declares `app` or `worker` from an
+unsandboxed Terminal; `--all --list` shows each case's requirements.
 
 ## Output contract (`tests/out/`)
 
