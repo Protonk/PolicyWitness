@@ -58,7 +58,11 @@ Permission-shaped failure alone still cannot establish sandbox enforcement.
 `directional_consistency` continues to project to `null`. An allow verdict and
 successful corresponding attempt may retain `agreement` / `drift: false` as
 agreement of those observations; it does not certify identical state or the
-absence of every possible policy defect.
+absence of every possible policy defect. One known confound overrides even
+that weaker claim: a worker-reported mutation of the submitted target whose
+order against the query is unestablished yields `unavailable` / `drift: null`
+under either verdict, because the two channels may not have been asked about
+the same object. Established order lifts it; see the interim rule and batch 2.
 
 This ordering change adds no target-identity or state-equivalence evidence.
 Consequently, deny/success path rows that retain material
@@ -247,7 +251,13 @@ stop projecting to `true`; this rule is not limited to unlink. The unlink row
 also has a specific explanation: a worker-reported successful mutation of the
 submitted target could precede the query. Record `attempt_mutation_order_unestablished`
 (provisional name) without claiming that the envelope proves removal preceded
-the query. Planned resolution and later host resolution failure supply a separate
+the query. While order is unestablished the limitation is material to
+agreement as well as disagreement: an `allow` verdict beside a successful
+same-target unlink yields `unavailable` / `drift: null` just as a `deny` does,
+so the live unlink cases assert one outcome whichever side of the race the
+validator landed on, and record which verdict it was. Once order is
+established, a same-target mutation that follows its own query is no
+confound and `agreement` returns; `queries_precede_attempts` pins that. Planned resolution and later host resolution failure supply a separate
 `host_path_resolution_changed` observation, not a query-time observation. It is
 emitted by the host's post-orchestration path enrichment, which runs after
 every conclusion is fixed; see batch 0 for the call chain.
@@ -260,8 +270,12 @@ step. Unknown aliasing is not repaired by host canonicalization.
 
 - [ ] `runner_unit` / `DriftClassifierTests`: constructed rows for
   successful same-target unlink with unknown order yield `unavailable`,
-  `attempt_mutation_order_unestablished` and `drift: null`, retaining either
-  native prediction. Cover different query/attempt targets, failed unlink and
+  `attempt_mutation_order_unestablished` and `drift: null`, one row per
+  native prediction so the choice is pinned deterministically:
+  `same_target_unlink_allow_unordered_is_unavailable` and
+  `same_target_unlink_deny_unordered_is_unavailable`. Beside them,
+  `open_write_allow_unordered_keeps_agreement` shows the rule is specific to
+  the mutation table, not to allow/success in general. Cover different query/attempt targets, failed unlink and
   earlier-step mutation separately. Later absence and later resolution or
   recreation are enrichment-time observations; their rows belong to the
   enrichment tests named in batch 0 and must show the appended observation
@@ -717,8 +731,8 @@ Production change, in two sites:
 - [ ] `computeComparison`: add an `orderEstablished: Bool` input, false for
   every caller in this batch. `conclusion == "disagreement"` requires it. With
   it false, every deny/success row yields `unavailable` and `drift: null`,
-  which is the interim rule. Keep `agreement` and `directional_consistency`
-  as they are.
+  which is the interim rule. Keep `directional_consistency` as it is, and
+  keep `agreement` except where the next bullet's limitation applies.
 - [ ] `computeComparison`: the mutation observation, from inputs it already
   receives. Define a small table of attempt (`requested_kind`,
   `requested_action`, outcome) triples that remove or replace the submitted
@@ -726,7 +740,14 @@ Production change, in two sites:
   row matches and the query's submitted target equals the attempt's, append
   `attempt_mutation_order_unestablished`. Whether the query was planned is
   already visible here: `queryExclusionReason` is nil exactly when a probe
-  existed. Do not condition the limitation on later host resolution.
+  existed. Do not condition the limitation on later host resolution. In this
+  batch the limitation is material to both conclusions: when it applies, an
+  `allow` verdict beside the successful attempt yields `unavailable` /
+  `drift: null` exactly as a `deny` does. This is what makes the two live
+  unlink cases independent of which side won the race; they assert
+  `unavailable`, null and the limitation, and record the verdict. The
+  deterministic pin is the pair of classifier rows named in "Interim
+  classification".
 - [ ] `enrichPathDiagnostics`: the later-resolution observation, where the
   later resolution actually happens. When the step's filter kind is path, the
   query was planned (its limitations carry no `query_plan:` entry, so the
@@ -881,7 +902,11 @@ Gate 2 covers this batch together with batch 2.
 - [ ] Conclusion from typed evidence, never from labels. Introduce an internal
   `ComparisonEvidence` value with one enum per obligation: `order`
   (`queryFirst` or `unestablished`, from the rule above), `state`, `identity`,
-  `attribution`, plus the existing relations and observation. In this schema
+  `attribution`, `mutation` (`none`, `sameTargetUnordered`,
+  `sameTargetAfterQuery`), plus the existing relations and observation.
+  `agreement` requires `mutation != .sameTargetUnordered`; with `order ==
+  .queryFirst` the same-target case becomes `.sameTargetAfterQuery`, the
+  limitation is not rendered, and agreement returns. In this schema
   `state` has exactly one case, `unestablished`, and `identity` has
   `unestablished` for path filters and `notApplicable` otherwise; the
   `established` cases do not exist yet and are added only by the future
@@ -898,7 +923,10 @@ Gate 2 covers this batch together with batch 2.
   `ordered_difference_does_not_imply_drift` builds the evidence value with
   every other prerequisite satisfied, empties the rendered array, and requires
   `unavailable`; a derivation row requires `limitations == render(evidence)`
-  for every constructed comparison. In `EnvelopeInvariantTests`, a public
+  for every constructed comparison; and
+  `same_target_unlink_allow_ordered_is_agreement` is the counterpart of the
+  batch-0 pair, showing that established order, not a changed verdict, is
+  what restores agreement. In `EnvelopeInvariantTests`, a public
   `PWRunnerComparison` carrying `disagreement` with an empty array, or with
   `order: query_first` alone, fails the encoder invariant. In
   `tests/lib/consumer.py`, `disagreement` on response 8 is rejected for want
@@ -1026,7 +1054,9 @@ Gate 3 and gate 4 as written in "Acceptance gates".
   Their derivation includes record eligibility and worker policy lifetime.
 - Keep supported mutation and resolution-change observations after ordering
   lands. A same-step mutation ordered after its own query is not a pre-query
-  confound; earlier-step mutations can still explain a later comparison.
+  confound; while its order is unestablished it is a confound for agreement
+  and disagreement alike; earlier-step mutations can still explain a later
+  comparison.
 - Preserve the strong meaning of `drift: true`. Ordering cannot discharge
   material state, identity, scope or enforcement-attribution uncertainty.
 - Require the two barrier-bypass controls for acceptance; their opt-in registry
