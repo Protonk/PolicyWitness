@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
+if test_selected "rust.fmt"; then
+  bash "${ROOT_DIR}/tests/suites/unit/fmt.sh" || true
+fi
+test_selected "rust.unit" || exit 0
+
 test_begin "unit" "rust.unit"
 
 LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-bins.log"

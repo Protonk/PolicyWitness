@@ -57,7 +57,10 @@ pub fn param_scan(source: &str) -> ParamScanResult {
             _ => i += 1,
         }
     }
-    ParamScanResult { refs, scan_complete }
+    ParamScanResult {
+        refs,
+        scan_complete,
+    }
 }
 
 /// Scan an SBPL source for `(import "NAME")` references and return the
@@ -175,11 +178,7 @@ fn skip_string(bytes: &[u8], start: usize) -> usize {
 
 /// Try to match `(KEYWORD "NAME")` starting at `start` (which points at the
 /// opening `(`). On success returns `(name, index just past the closing ')')`.
-fn try_match_keyword_form(
-    bytes: &[u8],
-    start: usize,
-    keyword: &[u8],
-) -> Option<(String, usize)> {
+fn try_match_keyword_form(bytes: &[u8], start: usize, keyword: &[u8]) -> Option<(String, usize)> {
     debug_assert_eq!(bytes[start], b'(');
     let mut i = start + 1;
     i = skip_ws(bytes, i);
@@ -352,10 +351,7 @@ mod tests {
     #[test]
     fn import_refs_dedupes() {
         let src = "(import \"a.sb\") (import \"a.sb\") (import \"b.sb\")";
-        assert_eq!(
-            imports(src),
-            vec!["a.sb".to_string(), "b.sb".to_string()]
-        );
+        assert_eq!(imports(src), vec!["a.sb".to_string(), "b.sb".to_string()]);
     }
 
     #[test]
@@ -392,7 +388,10 @@ mod tests {
         let src = "(define (helper pn) (subpath (param pn)))\n\
                    (allow file-read-data (helper \"FOO\"))\n";
         let r = param_scan(src);
-        assert!(!r.scan_complete, "non-literal (param pn) must mark scan incomplete");
+        assert!(
+            !r.scan_complete,
+            "non-literal (param pn) must mark scan incomplete"
+        );
         assert!(
             r.refs.is_empty(),
             "no literal names to capture in this profile"

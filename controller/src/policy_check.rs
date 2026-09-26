@@ -10,7 +10,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::utils::{capture_json_output, JsonOutputCapture};
+use crate::utils::{JsonOutputCapture, capture_json_output};
 
 #[derive(Serialize)]
 pub struct PolicyCheckCapture {
@@ -132,7 +132,7 @@ fn parse_policy_check_output(out: &std::process::Output) -> PolicyCheckCapture {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
+    use crate::utils::{MAX_CAPTURE_BYTES, receiver_fixture};
     #[test]
     fn unfamiliar_diagnostics_survive_helper_capture() {
         let records = crate::utils::transport_diagnostics();

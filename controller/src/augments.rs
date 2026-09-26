@@ -54,7 +54,10 @@ impl AugmentResolution {
     /// in which case the caller short-circuits and doesn't forward
     /// anything).
     pub fn request_was_mutated(&self) -> bool {
-        matches!(self, AugmentResolution::StrippedNoOp | AugmentResolution::Applied(_))
+        matches!(
+            self,
+            AugmentResolution::StrippedNoOp | AugmentResolution::Applied(_)
+        )
     }
 }
 
@@ -62,10 +65,7 @@ fn is_valid_augment_name(name: &str) -> bool {
     // Restricted to ASCII alphanumeric + underscore so the name maps
     // unambiguously to a filename component and resists traversal via
     // `..`, `/`, or shell metacharacters.
-    !name.is_empty()
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 fn sha256_hex_of(s: &str) -> String {
@@ -136,10 +136,7 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         }
     }
 
-    let augments_dir = app_root
-        .join("Contents")
-        .join("Resources")
-        .join("Augments");
+    let augments_dir = app_root.join("Contents").join("Resources").join("Augments");
 
     let mut appended = String::new();
     for name in &names {
@@ -169,10 +166,7 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
     applied_source.push_str(&appended);
     let applied_sha256 = sha256_hex_of(&applied_source);
 
-    policy.insert(
-        "sbpl_source".to_string(),
-        Value::String(applied_source),
-    );
+    policy.insert("sbpl_source".to_string(), Value::String(applied_source));
 
     AugmentResolution::Applied(PolicyAugmentation {
         applied: names,
@@ -215,10 +209,7 @@ mod tests {
         assert!(matches!(resolution, AugmentResolution::NotPresent));
         assert!(!resolution.request_was_mutated());
         // Request must remain untouched.
-        assert_eq!(
-            req["policy"]["sbpl_source"].as_str(),
-            Some("(version 1)\n")
-        );
+        assert_eq!(req["policy"]["sbpl_source"].as_str(), Some("(version 1)\n"));
     }
 
     #[test]
@@ -307,7 +298,13 @@ mod tests {
     #[test]
     fn invalid_name_rejected() {
         let app = tempdir("invalid");
-        for bad in ["", "../etc/passwd", "has space", "with/slash", "dotted.name"] {
+        for bad in [
+            "",
+            "../etc/passwd",
+            "has space",
+            "with/slash",
+            "dotted.name",
+        ] {
             let mut req = json!({
                 "policy": {
                     "format": "sbpl",

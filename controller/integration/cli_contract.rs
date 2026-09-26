@@ -49,10 +49,7 @@ fn require_pw_bin() -> PathBuf {
 }
 
 fn sbpl_check_bin_path() -> PathBuf {
-    app_path()
-        .join("Contents")
-        .join("MacOS")
-        .join("sbpl-check")
+    app_path().join("Contents").join("MacOS").join("sbpl-check")
 }
 
 fn require_sbpl_check_bin() -> PathBuf {
@@ -88,13 +85,19 @@ fn specimen_smoke_file_read_deny() {
         .join("fixtures")
         .join("pw_runner")
         .join("specimen_file_read_deny.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+    assert!(
+        specimen.exists(),
+        "missing specimen fixture: {}",
+        specimen.display()
+    );
     let out = run_pw(
         &bin,
         &["run", specimen.to_str().expect("specimen path utf8")],
     );
 
-    assert!(out.status.success(), "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
+    assert!(
+        out.status.success(),
+        "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
         out.status.code(),
         String::from_utf8_lossy(&out.stderr),
         String::from_utf8_lossy(&out.stdout)
@@ -134,10 +137,8 @@ fn sbpl_check_missing_params_returns_clean_outcome() {
     }
     let bin = require_sbpl_check_bin();
 
-    let tmp = std::env::temp_dir().join(format!(
-        "pw-sbpl-check-missing-{}.json",
-        std::process::id()
-    ));
+    let tmp =
+        std::env::temp_dir().join(format!("pw-sbpl-check-missing-{}.json", std::process::id()));
     let request = r#"{
         "policy": {
             "format": "sbpl",
@@ -221,9 +222,16 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
         .join("fixtures")
         .join("pw_runner")
         .join("specimen_file_read_deny.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+    assert!(
+        specimen.exists(),
+        "missing specimen fixture: {}",
+        specimen.display()
+    );
 
-    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    let out = run_pw(
+        &bin,
+        &["run", specimen.to_str().expect("specimen path utf8")],
+    );
     assert!(
         out.status.success(),
         "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
@@ -233,8 +241,7 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
     );
 
     let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse run envelope");
+    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
 
     let runner = envelope
         .get("data")
@@ -298,9 +305,16 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
         .join("fixtures")
         .join("pw_runner")
         .join("specimen_path_diagnostics_strict.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+    assert!(
+        specimen.exists(),
+        "missing specimen fixture: {}",
+        specimen.display()
+    );
 
-    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    let out = run_pw(
+        &bin,
+        &["run", specimen.to_str().expect("specimen path utf8")],
+    );
     assert!(
         out.status.success(),
         "specimen failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
@@ -310,8 +324,7 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
     );
 
     let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse run envelope");
+    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
     let sb = envelope
         .get("data")
         .and_then(|v| v.get("runner_result"))
@@ -330,7 +343,12 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
     // All four documented keys must be present (string or explicit null) so
     // consumers can distinguish "computed and the result was null" from
     // "field was not emitted at all".
-    for key in ["input", "realpath_resolved", "firmlink_resolved", "data_volume_form"] {
+    for key in [
+        "input",
+        "realpath_resolved",
+        "firmlink_resolved",
+        "data_volume_form",
+    ] {
         assert!(
             diag.contains_key(key),
             "path_diagnostics missing key {key:?}; got {diag:?}"
@@ -382,24 +400,32 @@ fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() 
         .join("fixtures")
         .join("pw_runner")
         .join("specimen_path_diagnostics_strict.json");
-    assert!(specimen.exists(), "missing specimen fixture: {}", specimen.display());
+    assert!(
+        specimen.exists(),
+        "missing specimen fixture: {}",
+        specimen.display()
+    );
 
-    let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen path utf8")]);
+    let out = run_pw(
+        &bin,
+        &["run", specimen.to_str().expect("specimen path utf8")],
+    );
     assert!(out.status.success(), "specimen failed");
 
-    let envelope: serde_json::Value = serde_json::from_str(
-        &String::from_utf8_lossy(&out.stdout)
-    ).expect("parse run envelope");
+    let envelope: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
 
     let realpath = envelope
         .pointer("/data/runner_result/steps/0/sandbox_check/path_diagnostics/realpath_resolved")
         .and_then(|v| v.as_str())
-        .unwrap_or_else(|| panic!(
-            "expected realpath_resolved to be a populated string under \
+        .unwrap_or_else(|| {
+            panic!(
+                "expected realpath_resolved to be a populated string under \
              (deny default) — the host should compute it without the \
              worker's sandbox restriction. Did path_diagnostics move \
              back into the worker?"
-        ));
+            )
+        });
 
     // /etc/hosts resolves to /private/etc/hosts on every shipped macOS
     // since the /etc symlink is canonical. If the host's realpath
@@ -424,10 +450,7 @@ fn augment_applied_emits_policy_augmentation_block() {
     // populate data.policy_augmentation with distinct original/applied
     // hashes; the hash difference proves the controller actually
     // appended bytes regardless of what those bytes grant.
-    let tmp = std::env::temp_dir().join(format!(
-        "pw-augment-applied-{}.json",
-        std::process::id()
-    ));
+    let tmp = std::env::temp_dir().join(format!("pw-augment-applied-{}.json", std::process::id()));
     let request = r#"{
         "schema_version": 1,
         "specimen_id": "augment_applied",
@@ -457,8 +480,7 @@ fn augment_applied_emits_policy_augmentation_block() {
         String::from_utf8_lossy(&out.stdout)
     );
     let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse run envelope");
+    let envelope: serde_json::Value = serde_json::from_str(&stdout).expect("parse run envelope");
     assert_eq!(
         envelope
             .pointer("/result/normalized_outcome")
@@ -517,7 +539,9 @@ fn augment_applied_emits_policy_augmentation_block() {
     // The sbpl-check compile does not run on a healthy run — it is reserved for the
     // xpc_error disambiguation path — so the field is null here.
     assert!(
-        envelope.pointer("/data/policy_check").map_or(true, |v| v.is_null()),
+        envelope
+            .pointer("/data/policy_check")
+            .map_or(true, |v| v.is_null()),
         "policy_check must be null on a successful run (sbpl-check is xpc_error-only): {envelope}"
     );
 }
@@ -529,10 +553,7 @@ fn unknown_augment_short_circuits_to_bad_request() {
     }
     let bin = require_pw_bin();
 
-    let tmp = std::env::temp_dir().join(format!(
-        "pw-augment-unknown-{}.json",
-        std::process::id()
-    ));
+    let tmp = std::env::temp_dir().join(format!("pw-augment-unknown-{}.json", std::process::id()));
     let request = r#"{
         "schema_version": 1,
         "specimen_id": "augment_unknown",
@@ -556,8 +577,8 @@ fn unknown_augment_short_circuits_to_bad_request() {
         String::from_utf8_lossy(&out.stdout)
     );
 
-    let envelope: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
-        .expect("parse run envelope");
+    let envelope: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
     assert_eq!(
         envelope
             .pointer("/result/normalized_outcome")
@@ -615,10 +636,7 @@ fn invalid_augment_name_rejected_as_bad_request() {
     }
     let bin = require_pw_bin();
 
-    let tmp = std::env::temp_dir().join(format!(
-        "pw-augment-invalid-{}.json",
-        std::process::id()
-    ));
+    let tmp = std::env::temp_dir().join(format!("pw-augment-invalid-{}.json", std::process::id()));
     // "../etc/passwd" is the canonical traversal attempt; the resolver
     // must reject it for shape, not for whether the file exists.
     let request = r#"{
@@ -637,8 +655,8 @@ fn invalid_augment_name_rejected_as_bad_request() {
     let _ = std::fs::remove_file(&tmp);
 
     assert_eq!(out.status.code(), Some(1));
-    let envelope: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
-        .expect("parse run envelope");
+    let envelope: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
     assert_eq!(
         envelope
             .pointer("/result/normalized_outcome")
@@ -661,8 +679,7 @@ fn absent_augments_omits_policy_augmentation_block() {
         .join("specimen_file_read_deny.json");
     let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen utf8")]);
     let envelope: serde_json::Value =
-        serde_json::from_str(&String::from_utf8_lossy(&out.stdout))
-            .expect("parse run envelope");
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
     let aug = envelope.pointer("/data/policy_augmentation");
     assert!(
         aug.map(|v| v.is_null()).unwrap_or(true),
@@ -678,10 +695,8 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
     }
     let bin = require_sbpl_check_bin();
 
-    let tmp = std::env::temp_dir().join(format!(
-        "pw-sbpl-check-imports-{}.json",
-        std::process::id()
-    ));
+    let tmp =
+        std::env::temp_dir().join(format!("pw-sbpl-check-imports-{}.json", std::process::id()));
     let request = r#"{
         "policy": {
             "format": "sbpl",
@@ -744,9 +759,7 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         .find(|imp| imp.get("name").and_then(|v| v.as_str()) == Some("system.sb"))
         .expect("system.sb should be in imports");
     assert_eq!(
-        system_sb
-            .get("resolved_path")
-            .and_then(|v| v.as_str()),
+        system_sb.get("resolved_path").and_then(|v| v.as_str()),
         Some("/System/Library/Sandbox/Profiles/system.sb"),
         "system.sb should resolve from the Profiles directory"
     );

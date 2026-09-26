@@ -67,12 +67,14 @@ pub fn capture_json_output(
     let (stderr, stderr_truncated) = truncate_output(&out.stderr);
     // Command::output collected all bytes: this is a retention cap, not a
     // streaming memory limit. A truncated prefix is never parsed as evidence.
-    let stdout_capture_error =
-        stdout_truncated.then(|| {
-            format!(
-        "controller truncated {producer} stdout: received {} bytes, retained {} bytes (cap {})",
-        out.stdout.len(), out.stdout.len().min(MAX_CAPTURE_BYTES), MAX_CAPTURE_BYTES)
-        });
+    let stdout_capture_error = stdout_truncated.then(|| {
+        format!(
+            "controller truncated {producer} stdout: received {} bytes, retained {} bytes (cap {})",
+            out.stdout.len(),
+            out.stdout.len().min(MAX_CAPTURE_BYTES),
+            MAX_CAPTURE_BYTES
+        )
+    });
     let mut parsed = None;
     let mut stdout_parse_error = None;
     if !stdout_truncated && !out.stdout.is_empty() {

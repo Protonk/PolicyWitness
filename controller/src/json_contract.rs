@@ -69,8 +69,7 @@ pub fn render_envelope<T: Serialize>(
     data: &T,
 ) -> Result<String, String> {
     let value = envelope_value(kind, result, data)?;
-    serde_json::to_string_pretty(&value)
-        .map_err(|e| format!("failed to encode JSON: {e}"))
+    serde_json::to_string_pretty(&value).map_err(|e| format!("failed to encode JSON: {e}"))
 }
 
 #[allow(dead_code)]
@@ -122,8 +121,7 @@ mod tests {
         let payload = Dummy {
             label: "ok".to_string(),
         };
-        let text = render_envelope_compact("dummy", result_ok(), &payload)
-            .expect("render");
+        let text = render_envelope_compact("dummy", result_ok(), &payload).expect("render");
         assert!(!text.contains('\n'));
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
         assert_eq!(parsed["kind"], "dummy");

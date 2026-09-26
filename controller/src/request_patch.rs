@@ -9,15 +9,13 @@ use std::path::{Path, PathBuf};
 use crate::utils::now_unix_ms;
 
 pub fn read_json_file(path: &Path, label: &str) -> Result<Value, String> {
-    let text = std::fs::read_to_string(path)
-        .map_err(|e| format!("failed to read {label}: {e}"))?;
+    let text = std::fs::read_to_string(path).map_err(|e| format!("failed to read {label}: {e}"))?;
     serde_json::from_str(&text).map_err(|e| format!("failed to parse {label}: {e}"))
 }
 
 pub fn write_temp_request(value: &Value) -> Result<PathBuf, String> {
     let temp_dir = std::env::temp_dir().join("policy-witness");
-    std::fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("failed to create temp dir: {e}"))?;
+    std::fs::create_dir_all(&temp_dir).map_err(|e| format!("failed to create temp dir: {e}"))?;
     let pid = std::process::id();
     let encoded = serde_json::to_string_pretty(value)
         .map_err(|e| format!("failed to encode request JSON: {e}"))?;

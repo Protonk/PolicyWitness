@@ -9,7 +9,7 @@ use std::ffi::OsString;
 use std::process::{Command, Stdio};
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::utils::{capture_json_output, JsonOutputCapture};
+use crate::utils::{JsonOutputCapture, capture_json_output};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SandboxDenyEvent {
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn observer_receiver_uses_original_bytes_and_reports_local_loss() {
-        use crate::utils::{receiver_fixture, MAX_CAPTURE_BYTES};
+        use crate::utils::{MAX_CAPTURE_BYTES, receiver_fixture};
         for (mode, expected) in [
             ("valid", "captured"),
             ("oversized", "capture_error"),
@@ -434,22 +434,26 @@ mod tests {
         let steps = [reply("s")];
         let plan = [request("s", "open_read", "/attempt")];
         for pid in [None, Some(7)] {
-            assert!(match_step_denies(
-                &steps,
-                &plan,
-                &[deny(pid, "file-read-data", "/attempt")],
-                Some(42)
-            )
-            .is_empty());
+            assert!(
+                match_step_denies(
+                    &steps,
+                    &plan,
+                    &[deny(pid, "file-read-data", "/attempt")],
+                    Some(42)
+                )
+                .is_empty()
+            );
         }
         for pid in [None, Some(0), Some(-1)] {
-            assert!(match_step_denies(
-                &steps,
-                &plan,
-                &[deny(Some(42), "file-read-data", "/attempt")],
-                pid
-            )
-            .is_empty());
+            assert!(
+                match_step_denies(
+                    &steps,
+                    &plan,
+                    &[deny(Some(42), "file-read-data", "/attempt")],
+                    pid
+                )
+                .is_empty()
+            );
         }
         for op in ["file-write-data", "file-read-metadata", "file-read*"] {
             assert!(
@@ -490,10 +494,12 @@ mod tests {
             "file-write-data"
         );
         assert_eq!(raw[0]["matching_evidence"][0]["path"], "/attempt");
-        assert!(raw[0]["matching_evidence"][0]["path_sources"]
-            .as_array()
-            .unwrap()
-            .contains(&serde_json::json!("submitted_attempt.target")));
+        assert!(
+            raw[0]["matching_evidence"][0]["path_sources"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::json!("submitted_attempt.target"))
+        );
     }
     #[test]
     fn unowned_normalization_alone_does_not_supply_path_identity() {
@@ -514,22 +520,26 @@ mod tests {
     fn unknown_or_duplicate_step_provenance_is_not_correlated() {
         let event = [deny(Some(42), "file-read-data", "/attempt")];
         assert!(match_step_denies(&[reply("s")], &[], &event, Some(42)).is_empty());
-        assert!(match_step_denies(
-            &[reply("s")],
-            &[request("other", "open_read", "/attempt")],
-            &event,
-            Some(42)
-        )
-        .is_empty());
+        assert!(
+            match_step_denies(
+                &[reply("s")],
+                &[request("other", "open_read", "/attempt")],
+                &event,
+                Some(42)
+            )
+            .is_empty()
+        );
         let plan = [request("s", "open_read", "/attempt")];
         assert!(match_step_denies(&[reply("s"), reply("s")], &plan, &event, Some(42)).is_empty());
-        assert!(match_step_denies(
-            &[reply("s")],
-            &[plan[0].clone(), plan[0].clone()],
-            &event,
-            Some(42)
-        )
-        .is_empty());
+        assert!(
+            match_step_denies(
+                &[reply("s")],
+                &[plan[0].clone(), plan[0].clone()],
+                &event,
+                Some(42)
+            )
+            .is_empty()
+        );
     }
     #[test]
     fn create_supports_only_explicit_create_and_write_operations() {
@@ -541,13 +551,15 @@ mod tests {
                 1
             );
         }
-        assert!(match_step_denies(
-            &steps,
-            &plan,
-            &[deny(Some(42), "file-write-unlink", "/attempt")],
-            Some(42)
-        )
-        .is_empty());
+        assert!(
+            match_step_denies(
+                &steps,
+                &plan,
+                &[deny(Some(42), "file-write-unlink", "/attempt")],
+                Some(42)
+            )
+            .is_empty()
+        );
     }
     #[test]
     fn trailing_window_reports_missing_temporal_evidence() {

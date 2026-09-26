@@ -141,8 +141,8 @@ pub fn load_registry(path: &Path) -> Result<RunnerRegistry, String> {
     }
     let text =
         fs::read_to_string(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-    let registry: RunnerRegistry =
-        serde_json::from_str(&text).map_err(|e| format!("failed to parse {}: {e}", path.display()))?;
+    let registry: RunnerRegistry = serde_json::from_str(&text)
+        .map_err(|e| format!("failed to parse {}: {e}", path.display()))?;
     if registry.schema_version != RUNNER_REGISTRY_SCHEMA_VERSION {
         return Err(format!(
             "unsupported runner registry schema_version {} (expected {})",
@@ -164,8 +164,8 @@ pub fn save_registry(path: &Path, registry: &RunnerRegistry) -> Result<(), Strin
 
 pub fn random_id() -> Result<String, String> {
     let mut buf = [0u8; 16];
-    let mut file = fs::File::open("/dev/urandom")
-        .map_err(|e| format!("failed to open /dev/urandom: {e}"))?;
+    let mut file =
+        fs::File::open("/dev/urandom").map_err(|e| format!("failed to open /dev/urandom: {e}"))?;
     file.read_exact(&mut buf)
         .map_err(|e| format!("failed to read /dev/urandom: {e}"))?;
     let mut out = String::from("runner-");
@@ -264,8 +264,8 @@ pub fn write_launchd_plist(path: &Path, content: &str) -> Result<(), String> {
         fs::create_dir_all(parent)
             .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
     }
-    let mut file = fs::File::create(path)
-        .map_err(|e| format!("failed to create {}: {e}", path.display()))?;
+    let mut file =
+        fs::File::create(path).map_err(|e| format!("failed to create {}: {e}", path.display()))?;
     file.write_all(content.as_bytes())
         .map_err(|e| format!("failed to write {}: {e}", path.display()))
 }
@@ -295,7 +295,12 @@ fn plutil_json_from_bytes(bytes: &[u8]) -> Result<Value, String> {
 
 pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
     let out = Command::new("/usr/bin/codesign")
-        .args(["-d", "--entitlements", ":-", target.to_string_lossy().as_ref()])
+        .args([
+            "-d",
+            "--entitlements",
+            ":-",
+            target.to_string_lossy().as_ref(),
+        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output();
@@ -529,8 +534,8 @@ mod tests {
         // Byoxpc so upgraded integrators don't have a stranded
         // registry. Re-serializing produces "byoxpc" — same one-shot
         // migration shape as the machme alias.
-        let kind: RunnerKind = serde_json::from_str("\"debuggable\"")
-            .expect("legacy debuggable should deserialize");
+        let kind: RunnerKind =
+            serde_json::from_str("\"debuggable\"").expect("legacy debuggable should deserialize");
         assert_eq!(kind, RunnerKind::Byoxpc);
         let round_trip = serde_json::to_string(&kind).unwrap();
         assert_eq!(round_trip, "\"byoxpc\"");

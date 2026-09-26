@@ -130,6 +130,17 @@
         {
           "id": "rust.unit",
           "description": "Rust controller and helper unit-test batch"
+        },
+        {
+          "id": "rust.fmt",
+          "description": "Controller crate is rustfmt-clean",
+          "command": [
+            "bash",
+            "tests/suites/unit/fmt.sh"
+          ],
+          "requires": [
+            "cargo"
+          ]
         }
       ]
     },

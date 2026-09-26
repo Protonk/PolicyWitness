@@ -13,7 +13,7 @@ use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::run_pw_runner_client;
 use crate::runner_manager::{self, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope};
-use crate::runner_select::{infer_record_kind, RunnerConnectionKind};
+use crate::runner_select::{RunnerConnectionKind, infer_record_kind};
 use crate::utils::now_unix_ms;
 
 #[derive(Serialize)]
@@ -125,44 +125,60 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--bundle" => {
-                let path = args.get(idx + 1).ok_or_else(|| "missing value for --bundle".to_string())?;
+                let path = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --bundle".to_string())?;
                 bundle_path = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--service-name" => {
-                let name = args.get(idx + 1).ok_or_else(|| "missing value for --service-name".to_string())?;
+                let name = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --service-name".to_string())?;
                 service_name = Some(name.to_string_lossy().to_string());
                 idx += 2;
             }
             "--scope" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --scope".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --scope".to_string())?;
                 let scope_str = value.to_string_lossy();
                 scope = RunnerScope::parse(scope_str.as_ref())
                     .ok_or_else(|| "invalid value for --scope".to_string())?;
                 idx += 2;
             }
             "--identity" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --identity".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --identity".to_string())?;
                 identity = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--entitlements" => {
-                let path = args.get(idx + 1).ok_or_else(|| "missing value for --entitlements".to_string())?;
+                let path = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --entitlements".to_string())?;
                 entitlements_path = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--executable" => {
-                let path = args.get(idx + 1).ok_or_else(|| "missing value for --executable".to_string())?;
+                let path = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --executable".to_string())?;
                 executable_override = Some(PathBuf::from(path));
                 idx += 2;
             }
             "--bundle-id" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --bundle-id".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --bundle-id".to_string())?;
                 bundle_id_override = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--kind" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --kind".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --kind".to_string())?;
                 let raw = value.to_string_lossy();
                 if raw == "machme" {
                     return Err("--kind machme is not supported; use --kind byoxpc".to_string());
@@ -183,7 +199,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 idx += 1;
             }
             "--env" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --env".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --env".to_string())?;
                 let raw = value.to_string_lossy();
                 let (key, val) = raw
                     .split_once('=')
@@ -220,16 +238,12 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     }
 
     if bundle_id_override.is_some() {
-        return Err(
-            "external runners use CFBundleIdentifier; remove --bundle-id".to_string()
-        );
+        return Err("external runners use CFBundleIdentifier; remove --bundle-id".to_string());
     }
     if executable_override.is_some() {
-        return Err(
-            "external runners do not accept --executable; \
+        return Err("external runners do not accept --executable; \
              the binary is derived from <bundle>/Contents/MacOS/<CFBundleExecutable>"
-                .to_string(),
-        );
+            .to_string());
     }
 
     if !bundle_path.is_dir() {
@@ -307,11 +321,7 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     // Passing --entitlements without either flag silently used to leave the
     // existing signature untouched; that footgun is now rejected.
     if let Some(identity) = identity.as_ref() {
-        runner_manager::codesign_sign(
-            &sign_target,
-            identity,
-            entitlements_path.as_deref(),
-        )?;
+        runner_manager::codesign_sign(&sign_target, identity, entitlements_path.as_deref())?;
     } else if allow_adhoc && entitlements_path.is_some() {
         runner_manager::codesign_sign(&sign_target, "-", entitlements_path.as_deref())?;
     } else if entitlements_path.is_some() {
@@ -348,8 +358,8 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     runner_manager::write_launchd_plist(&plist_path, &plist_contents)?;
     if !skip_bootstrap {
         if let Err(err) = runner_manager::launchctl_bootstrap(scope, &plist_path) {
-            let present = runner_manager::launchctl_service_present(scope, &service_name)
-                .unwrap_or(false);
+            let present =
+                runner_manager::launchctl_service_present(scope, &service_name).unwrap_or(false);
             if !present {
                 return Err(err);
             }
@@ -418,12 +428,16 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --id".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --id".to_string())?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --service-name".to_string())?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -482,12 +496,16 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --id".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --id".to_string())?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --service-name".to_string())?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -524,8 +542,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     };
 
     let temp_dir = std::env::temp_dir().join("pw-runner-verify");
-    std::fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("failed to create temp dir: {e}"))?;
+    std::fs::create_dir_all(&temp_dir).map_err(|e| format!("failed to create temp dir: {e}"))?;
     let request_path = temp_dir.join(format!("verify-{}.json", now_unix_ms()));
 
     let spec = json!({
@@ -594,12 +611,16 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
             "--id" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --id".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --id".to_string())?;
                 runner_id = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
             "--service-name" => {
-                let value = args.get(idx + 1).ok_or_else(|| "missing value for --service-name".to_string())?;
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --service-name".to_string())?;
                 service_name = Some(value.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -615,7 +636,10 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
     let idx = if let Some(id) = runner_id.as_ref() {
         registry.runners.iter().position(|r| &r.id == id)
     } else if let Some(service) = service_name.as_ref() {
-        registry.runners.iter().position(|r| &r.service_name == service)
+        registry
+            .runners
+            .iter()
+            .position(|r| &r.service_name == service)
     } else {
         return Err("runner remove requires --id or --service-name".to_string());
     };
@@ -743,6 +767,9 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
             println!("{}", runner_usage());
             Ok(0)
         }
-        _ => Err(format!("unknown runner command: {sub}\n\n{}", runner_usage())),
+        _ => Err(format!(
+            "unknown runner command: {sub}\n\n{}",
+            runner_usage()
+        )),
     }
 }

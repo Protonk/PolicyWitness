@@ -70,8 +70,8 @@ pub fn load_manifest(path: &Path) -> Result<EvidenceManifest, String> {
 }
 
 pub fn sha256_hex(path: &Path) -> Result<String, String> {
-    let mut file = File::open(path)
-        .map_err(|e| format!("failed to open {}: {e}", path.display()))?;
+    let mut file =
+        File::open(path).map_err(|e| format!("failed to open {}: {e}", path.display()))?;
     let mut hasher = Sha256::new();
     // Stream the file to avoid loading large binaries in memory.
     let mut buf = [0u8; 8192];
@@ -92,7 +92,11 @@ pub fn sha256_hex(path: &Path) -> Result<String, String> {
     Ok(out)
 }
 
-pub fn verify_manifest(manifest: &EvidenceManifest, app_root: &Path, manifest_path: &Path) -> VerifyReport {
+pub fn verify_manifest(
+    manifest: &EvidenceManifest,
+    app_root: &Path,
+    manifest_path: &Path,
+) -> VerifyReport {
     let mut mismatches = Vec::new();
     let mut checked = 0usize;
 
@@ -148,17 +152,24 @@ pub fn verify_manifest(manifest: &EvidenceManifest, app_root: &Path, manifest_pa
     }
 }
 
-pub fn find_entry_by_id<'a>(manifest: &'a EvidenceManifest, selector: &str) -> Option<&'a EvidenceEntry> {
-    manifest.entries.iter().find(|entry| {
-        entry.id == selector || entry.bundle_id.as_deref() == Some(selector)
-    })
+pub fn find_entry_by_id<'a>(
+    manifest: &'a EvidenceManifest,
+    selector: &str,
+) -> Option<&'a EvidenceEntry> {
+    manifest
+        .entries
+        .iter()
+        .find(|entry| entry.id == selector || entry.bundle_id.as_deref() == Some(selector))
 }
 
 pub fn find_entry_by_rel_path<'a>(
     manifest: &'a EvidenceManifest,
     rel_path: &str,
 ) -> Option<&'a EvidenceEntry> {
-    manifest.entries.iter().find(|entry| entry.rel_path == rel_path)
+    manifest
+        .entries
+        .iter()
+        .find(|entry| entry.rel_path == rel_path)
 }
 
 pub fn rel_path_from_absolute(app_root: &Path, abs: &Path) -> Option<String> {
@@ -168,7 +179,11 @@ pub fn rel_path_from_absolute(app_root: &Path, abs: &Path) -> Option<String> {
 }
 
 pub fn manifest_path_from_app_root(app_root: &Path) -> PathBuf {
-    app_root.join("Contents").join("Resources").join("Evidence").join("manifest.json")
+    app_root
+        .join("Contents")
+        .join("Resources")
+        .join("Evidence")
+        .join("manifest.json")
 }
 
 #[cfg(test)]
@@ -326,6 +341,10 @@ mod tests {
         let parsed: SymbolsManifest = serde_json::from_str(symbols).unwrap();
         assert_eq!(parsed.entries.len(), 1);
         assert_eq!(parsed.entries[0].id, "com.example.service");
-        assert!(parsed.entries[0].symbols.contains(&"pw_probe_fs_op".to_string()));
+        assert!(
+            parsed.entries[0]
+                .symbols
+                .contains(&"pw_probe_fs_op".to_string())
+        );
     }
 }

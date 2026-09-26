@@ -37,10 +37,7 @@ use std::time::UNIX_EPOCH;
 // - Search-order between the two directories could not be confirmed by
 //   collision on this host (no overlapping filenames); the Profiles directory
 //   is tried first by convention (modern signed-by-Apple location).
-const IMPORT_SEARCH_PATHS: &[&str] = &[
-    "/System/Library/Sandbox/Profiles",
-    "/usr/share/sandbox",
-];
+const IMPORT_SEARCH_PATHS: &[&str] = &["/System/Library/Sandbox/Profiles", "/usr/share/sandbox"];
 
 const IMPORT_MAX_DEPTH: usize = 8;
 const IMPORT_MAX_COUNT: usize = 64;
@@ -69,8 +66,7 @@ unsafe extern "C" {
     fn sandbox_free_error(errorbuf: *mut c_char);
     fn sandbox_free_profile(profile: *mut c_void);
     fn sandbox_create_params() -> *mut c_void;
-    fn sandbox_set_param(params: *mut c_void, key: *const c_char, value: *const c_char)
-        -> c_int;
+    fn sandbox_set_param(params: *mut c_void, key: *const c_char, value: *const c_char) -> c_int;
     fn sandbox_free_params(params: *mut c_void);
 }
 
@@ -134,10 +130,7 @@ struct ParamDiff {
     scan_complete: bool,
 }
 
-fn compute_param_diff(
-    source: &str,
-    supplied: Option<&BTreeMap<String, String>>,
-) -> ParamDiff {
+fn compute_param_diff(source: &str, supplied: Option<&BTreeMap<String, String>>) -> ParamDiff {
     let scan = sbpl_lex::param_scan(source);
     let supplied_set: BTreeSet<String> = supplied
         .map(|p| p.keys().cloned().collect())
@@ -211,7 +204,10 @@ fn build_import_record(name: String, resolved: PathBuf) -> ImportRecord {
         }
     };
     let digest = Sha256::digest(&bytes);
-    let sha = digest.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let sha = digest
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
     let metadata = std::fs::metadata(&resolved).ok();
     let size_bytes = metadata.as_ref().map(|m| m.len());
     let mtime_unix = metadata
@@ -293,9 +289,7 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
                     sha256: None,
                     size_bytes: None,
                     mtime_unix: None,
-                    error: Some(format!(
-                        "depth limit exceeded ({IMPORT_MAX_DEPTH})"
-                    )),
+                    error: Some(format!("depth limit exceeded ({IMPORT_MAX_DEPTH})")),
                 });
                 return;
             }
@@ -457,9 +451,7 @@ fn compile_sbpl(source: &str, params: Option<&BTreeMap<String, String>>) -> Resu
                     .map_err(|_| format!("invalid param key (NUL): {key}"))?;
                 let value_c = CString::new(value.as_str())
                     .map_err(|_| format!("invalid param value for {key} (NUL)"))?;
-                let rc = unsafe {
-                    sandbox_set_param(obj, key_c.as_ptr(), value_c.as_ptr())
-                };
+                let rc = unsafe { sandbox_set_param(obj, key_c.as_ptr(), value_c.as_ptr()) };
                 if rc != 0 {
                     unsafe { sandbox_free_params(obj) };
                     return Err(format!("sandbox_set_param failed for {key}: rc={rc}"));
@@ -699,11 +691,7 @@ fn main() {
     } else if compiled {
         ("ok".to_string(), None, 0)
     } else {
-        (
-            "compile_error".to_string(),
-            compile_error.clone(),
-            1,
-        )
+        ("compile_error".to_string(), compile_error.clone(), 1)
     };
 
     let data = CheckData {

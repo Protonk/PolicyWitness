@@ -8,11 +8,12 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{
-    resolve_pw_runner_bundle_info, PW_RUNNER_STANDARD_SERVICE_DIR,
-};
+use crate::app_layout::{PW_RUNNER_STANDARD_SERVICE_DIR, resolve_pw_runner_bundle_info};
 use crate::evidence;
-use crate::runner_manager::{self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature};
+use crate::runner_manager::{
+    self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope,
+    RunnerSignature,
+};
 
 #[derive(Default)]
 pub struct RunnerSelector {
@@ -63,7 +64,10 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
         if let Some(v) = runner.get("service").and_then(|v| v.as_str()) {
             selector.runner_service = Some(v.to_string());
         }
-        if let Some(list) = runner.get("required_entitlements").and_then(|v| v.as_array()) {
+        if let Some(list) = runner
+            .get("required_entitlements")
+            .and_then(|v| v.as_array())
+        {
             selector.required_entitlements = list
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
@@ -86,7 +90,10 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
         }
     }
     if selector.required_entitlements.is_empty() {
-        if let Some(list) = value.get("required_entitlements").and_then(|v| v.as_array()) {
+        if let Some(list) = value
+            .get("required_entitlements")
+            .and_then(|v| v.as_array())
+        {
             selector.required_entitlements = list
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
@@ -115,16 +122,16 @@ fn entitlements_from_manifest_value(
     value: Option<&Value>,
     error: Option<&String>,
 ) -> RunnerEntitlements {
-    let mut entitlements = value
-        .map(runner_manager::entitlements_from_json)
-        .unwrap_or(RunnerEntitlements {
-            raw_plist: None,
-            keys: Vec::new(),
-            error: None,
-        });
+    let mut entitlements =
+        value
+            .map(runner_manager::entitlements_from_json)
+            .unwrap_or(RunnerEntitlements {
+                raw_plist: None,
+                keys: Vec::new(),
+                error: None,
+            });
     if entitlements.raw_plist.is_none() {
-        entitlements.raw_plist = value
-            .and_then(|v| serde_json::to_string_pretty(v).ok());
+        entitlements.raw_plist = value.and_then(|v| serde_json::to_string_pretty(v).ok());
     }
     if let Some(err) = error {
         entitlements.error = Some(err.to_string());
@@ -152,15 +159,11 @@ fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarg
     let manifest_path = evidence::manifest_path_from_app_root(app_root);
     let manifest = evidence::load_manifest(&manifest_path)
         .map_err(|e| format!("failed to read evidence manifest: {e}"))?;
-    let rel_path =
-        evidence::rel_path_from_absolute(app_root, &executable_path).unwrap_or_default();
+    let rel_path = evidence::rel_path_from_absolute(app_root, &executable_path).unwrap_or_default();
     let entry = evidence::find_entry_by_rel_path(&manifest, &rel_path)
         .or_else(|| evidence::find_entry_by_id(&manifest, &runner_info.bundle_id));
     let entitlements = entry.map(|e| {
-        entitlements_from_manifest_value(
-            e.entitlements.as_ref(),
-            e.entitlements_error.as_ref(),
-        )
+        entitlements_from_manifest_value(e.entitlements.as_ref(), e.entitlements_error.as_ref())
     });
 
     Ok(RunnerTarget {
@@ -224,17 +227,20 @@ pub fn resolve_runner_target_with_registry(
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
     if matches!(selector.mode, Some(RunnerKind::Standard)) && needs_external {
         return Err(
-            "runner.mode=standard cannot be combined with an external runner selection"
-                .to_string(),
+            "runner.mode=standard cannot be combined with an external runner selection".to_string(),
         );
     }
     if matches!(selector.mode, Some(RunnerKind::Byoxpc)) && !needs_external {
-        return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
+        return Err(
+            "runner.mode requires runner.id or runner.service for external runners".to_string(),
+        );
     }
     if !needs_external {
         let kind = selector.mode.unwrap_or(RunnerKind::Standard);
         if matches!(kind, RunnerKind::Byoxpc) {
-            return Err("runner.mode requires runner.id or runner.service for external runners".to_string());
+            return Err(
+                "runner.mode requires runner.id or runner.service for external runners".to_string(),
+            );
         }
         let target = builtin_runner_target(app_root, kind)?;
         enforce_required_entitlements(
@@ -332,10 +338,7 @@ pub fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance 
         runner_registry_id: target.registry_id.clone(),
         runner_service_name: target.service_name.clone(),
         runner_bundle_id: target.bundle_id.clone(),
-        runner_bundle_path: target
-            .bundle_path
-            .as_ref()
-            .map(|p| p.display().to_string()),
+        runner_bundle_path: target.bundle_path.as_ref().map(|p| p.display().to_string()),
         runner_executable_path: target
             .executable_path
             .as_ref()
@@ -348,7 +351,7 @@ pub fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -380,7 +383,10 @@ mod tests {
         let value: Value = serde_json::from_str(&text).expect("parse request");
         let selector = parse_runner_selector_value(&value).expect("parse selector");
         assert_eq!(selector.runner_id.as_deref(), Some("runner-abc"));
-        assert_eq!(selector.runner_service.as_deref(), Some("com.example.runner"));
+        assert_eq!(
+            selector.runner_service.as_deref(),
+            Some("com.example.runner")
+        );
         assert_eq!(selector.required_entitlements.len(), 1);
         assert_eq!(selector.mode, Some(RunnerKind::Byoxpc));
         let _ = fs::remove_file(&path);
@@ -422,7 +428,11 @@ mod tests {
         }
     }
 
-    fn selector_with(mode: Option<RunnerKind>, required: &[&str], external: bool) -> RunnerSelector {
+    fn selector_with(
+        mode: Option<RunnerKind>,
+        required: &[&str],
+        external: bool,
+    ) -> RunnerSelector {
         RunnerSelector {
             runner_id: external.then(|| "runner-ext".to_string()),
             required_entitlements: required.iter().map(|s| s.to_string()).collect(),
@@ -486,8 +496,14 @@ mod tests {
     #[test]
     fn parse_runner_mode_rejects_machme_with_byoxpc_hint() {
         let err = parse_runner_mode("machme", "runner.mode").unwrap_err();
-        assert!(err.contains("byoxpc"), "message should steer to byoxpc: {err}");
-        assert!(err.contains("runner.mode"), "message should name the field: {err}");
+        assert!(
+            err.contains("byoxpc"),
+            "message should steer to byoxpc: {err}"
+        );
+        assert!(
+            err.contains("runner.mode"),
+            "message should name the field: {err}"
+        );
     }
 
     #[test]
@@ -549,7 +565,10 @@ mod tests {
             "external runner",
         )
         .unwrap_err();
-        assert_eq!(err, "external runner does not satisfy required entitlements");
+        assert_eq!(
+            err,
+            "external runner does not satisfy required entitlements"
+        );
     }
 
     #[test]
@@ -604,7 +623,10 @@ mod tests {
         let record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &["A"]);
         let selector = selector_with(Some(RunnerKind::Byoxpc), &["A", "B"], true);
         let err = err_of(resolve_external_target(&record, &selector));
-        assert_eq!(err, "external runner does not satisfy required entitlements");
+        assert_eq!(
+            err,
+            "external runner does not satisfy required entitlements"
+        );
     }
 
     #[test]
@@ -698,8 +720,11 @@ mod tests {
 
     fn registry_fixture(reg: &RunnerRegistry) -> PathBuf {
         let path = temp_path();
-        fs::write(&path, serde_json::to_string(reg).expect("serialize registry"))
-            .expect("write registry fixture");
+        fs::write(
+            &path,
+            serde_json::to_string(reg).expect("serialize registry"),
+        )
+        .expect("write registry fixture");
         path
     }
 
@@ -720,7 +745,10 @@ mod tests {
             &selector,
             Some(&path),
         ));
-        assert_eq!(err, "external runner does not satisfy required entitlements");
+        assert_eq!(
+            err,
+            "external runner does not satisfy required entitlements"
+        );
         let _ = fs::remove_file(&path);
     }
 
@@ -737,12 +765,9 @@ mod tests {
         )]);
         let path = registry_fixture(&reg);
         let selector = selector_with(Some(RunnerKind::Byoxpc), &["A"], true);
-        let target = resolve_runner_target_with_registry(
-            Path::new("/unused"),
-            &selector,
-            Some(&path),
-        )
-        .expect("resolve");
+        let target =
+            resolve_runner_target_with_registry(Path::new("/unused"), &selector, Some(&path))
+                .expect("resolve");
         assert_eq!(target.kind, RunnerKind::Byoxpc);
         assert_eq!(target.registry_id.as_deref(), Some("runner-ext"));
         match target.connection {

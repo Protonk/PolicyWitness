@@ -14,20 +14,20 @@ use std::ffi::OsString;
 use std::path::Path;
 
 use crate::app_layout::app_root_from_current_exe;
-use crate::augments::{resolve_augments, AugmentResolution, PolicyAugmentation};
+use crate::augments::{AugmentResolution, PolicyAugmentation, resolve_augments};
 use crate::cli;
 use crate::evidence;
 use crate::json_contract;
-use crate::policy_check::{run_policy_check, PolicyCheckCapture};
+use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::request_patch::{read_json_file, write_temp_request};
-use crate::runner_client::{run_pw_runner_client, RunnerClientRun};
+use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
-    parse_runner_selector_value, resolve_runner_target, runner_provenance_from_target,
-    RunnerProvenance,
+    RunnerProvenance, parse_runner_selector_value, resolve_runner_target,
+    runner_provenance_from_target,
 };
 use crate::sandbox_log::{
-    capture_sandbox_logs_last, match_step_denies, worker_pid, SandboxLogCapture, SandboxLogWindow,
+    SandboxLogCapture, SandboxLogWindow, capture_sandbox_logs_last, match_step_denies, worker_pid,
 };
 use crate::utils::now_unix_ms;
 
@@ -121,7 +121,9 @@ fn fallback_policy_note(check: &PolicyCheckCapture) -> String {
             None => "sbpl-check compilation unavailable",
         }
     };
-    format!("runner did not reply; worker progress and cause unavailable; sbpl-check describes only the fallback helper ({detail})")
+    format!(
+        "runner did not reply; worker progress and cause unavailable; sbpl-check describes only the fallback helper ({detail})"
+    )
 }
 
 fn synthetic_runner_client(note: &str) -> RunnerClientRun {
@@ -624,9 +626,11 @@ mod tests {
             "sandbox_log_capture":cap, "runner_sandbox_diagnostics":diag}});
         let data = &envelope["data"];
         assert_eq!(data["runner_result"], original);
-        assert!(data["runner_result"]["steps"][0]
-            .get("comparison")
-            .is_none());
+        assert!(
+            data["runner_result"]["steps"][0]
+                .get("comparison")
+                .is_none()
+        );
         let capture = &data["sandbox_log_capture"];
         assert_eq!(capture["deny_events"].as_array().unwrap().len(), 2);
         let candidate = &capture["step_denies"][0];

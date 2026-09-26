@@ -12,7 +12,7 @@ use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
 #[cfg(test)]
 use crate::utils::MAX_CAPTURE_BYTES;
-use crate::utils::{capture_json_output, now_unix_ms, JsonOutputCapture};
+use crate::utils::{JsonOutputCapture, capture_json_output, now_unix_ms};
 
 #[derive(Serialize)]
 pub struct RunnerClientRun {
@@ -128,6 +128,10 @@ mod tests {
                     "collection_closed_before_proceed": true, "proceed_set": true,
                     "proceed_observed": true, "validator_disposition": "unconfirmed",
                     "worker_lifetime_established": true, "protocol_violations": []}});
+                original["validator_spawn_failure"] = serde_json::json!({
+                    "origin": "runner_host", "operation": "posix_spawn",
+                    "executable_path": "/unknown/validator-\"é\"", "return_code": 2147483647,
+                    "diagnostic": "unfamiliar native launch diagnostic"});
             }
             let output = crate::utils::receiver_fixture(&original.to_string(), "valid");
             let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
@@ -168,10 +172,12 @@ mod tests {
         let wire = serde_json::to_value(&capture).unwrap();
         assert_eq!(wire["stdout_bytes_received"], MAX_CAPTURE_BYTES + 12);
         assert_eq!(wire["stdout_bytes_retained"], MAX_CAPTURE_BYTES);
-        assert!(wire["stdout_capture_error"]
-            .as_str()
-            .unwrap()
-            .contains("controller truncated"));
+        assert!(
+            wire["stdout_capture_error"]
+                .as_str()
+                .unwrap()
+                .contains("controller truncated")
+        );
         assert_eq!(
             capture.output.stdout_bytes_received,
             Some(MAX_CAPTURE_BYTES + 12)
@@ -183,11 +189,13 @@ mod tests {
         assert_eq!(capture.output.capture_limit_bytes, 1048576);
         assert!(capture.output.stdout_truncated);
         assert!(capture.output.stdout_parse_error.is_none());
-        assert!(capture
-            .output
-            .stdout_capture_error
-            .unwrap()
-            .contains("controller truncated"));
+        assert!(
+            capture
+                .output
+                .stdout_capture_error
+                .unwrap()
+                .contains("controller truncated")
+        );
     }
 
     #[test]
@@ -216,7 +224,9 @@ mod tests {
 
     #[test]
     fn multibyte_cut_counts_bytes_before_lossy_conversion() {
-        let (capture, parsed, full) = producer("import sys; sys.stdout.buffer.write(b'{\"v\":\"' + b'x'*(1048576-7) + bytes([0xe2,0x82,0xac]) + b'\"}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*349526)");
+        let (capture, parsed, full) = producer(
+            "import sys; sys.stdout.buffer.write(b'{\"v\":\"' + b'x'*(1048576-7) + bytes([0xe2,0x82,0xac]) + b'\"}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*349526)",
+        );
         assert!(serde_json::from_slice::<Value>(&full).is_ok());
         assert!(parsed.is_none());
         assert_eq!(
