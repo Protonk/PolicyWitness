@@ -77,7 +77,10 @@ def main():
         # Current live output must not take the compatibility path used by stored
         # fixtures. These reports are authored here, independent of PW output.
         current, step = mutate()
-        current["data"]["runner_result"]["schema_version"] = 7
+        current["data"]["runner_result"].update(schema_version=8, sandboxed_after_apply=True,
+            runner_subprocess=dict(pid=1234, ordering=dict(
+                collection_closed_before_proceed=True, proceed_set=True, proceed_observed=True,
+                worker_lifetime_established=True, protocol_violations=[], validator_disposition="not_needed")))
         step["attempt"].update(requested_kind="sysctl" if sysctl else "file",
                                requested_action="read" if sysctl else "open_read",
                                missing_reason=None)
@@ -87,25 +90,34 @@ def main():
             "observation": "permission_failure" if sysctl else "succeeded",
             "observation_basis": "permission_errno" if sysctl else "completed_worker_status",
             "operation_relation": "unresolved", "target_relation": "unresolved",
-            "conclusion": "unavailable", "limitations": [
+            "conclusion": "unavailable", "order": "unestablished", "limitations": [
                 "query_attempt_order_unestablished", "state_stability_unestablished",
                 "prediction:query_not_requested", "query_plan:prediction_unavailable_pair",
             ] + (["sandbox_attribution_unestablished"] if sysctl else []),
         }
-        check("current_live_evidence", current, status=0, expected_schema_version=7)
-        for label, version in (("v4", 4), ("v5", 5), ("v6", 6), ("absent", None)):
-            legacy = copy.deepcopy(baseline)
+        check("current_live_evidence", current, status=0, expected_schema_version=8)
+        for label, version in (("v4", 4), ("v5", 5), ("v6", 6), ("v7", 7), ("absent", None)):
+            legacy = copy.deepcopy(current if version == 7 else baseline)
+            if version == 7:
+                del legacy["data"]["runner_result"]["steps"][0]["comparison"]["order"]
+                del legacy["data"]["runner_result"]["runner_subprocess"]["ordering"]
             if version is not None:
                 legacy["data"]["runner_result"]["schema_version"] = version
             check("legacy_fixture_" + label, legacy, status=0)
             check("legacy_cannot_replace_live_" + label, legacy,
-                  ("expected runner schema_version=7",), expected_schema_version=7)
-        for label, version in (("old", 6), ("null", None), ("string", "7"),
-                               ("float", 7.0), ("boolean", True), ("future", 8)):
+                  ("expected runner schema_version=8",), expected_schema_version=8)
+        for label, version in (("old", 7), ("null", None), ("string", "8"),
+                               ("float", 8.0), ("boolean", True), ("future", 9)):
             changed = copy.deepcopy(current)
             changed["data"]["runner_result"]["schema_version"] = version
             check("wrong_live_version_" + label, changed,
-                  ("expected runner schema_version=7",), expected_schema_version=7)
+                  ("expected runner schema_version=8",), expected_schema_version=8)
+        changed = copy.deepcopy(current)
+        del changed["data"]["runner_result"]["steps"][0]["comparison"]["order"]
+        check("missing_current_order", changed, ("missing comparison.order",), expected_schema_version=8)
+        changed = copy.deepcopy(current)
+        del changed["data"]["runner_result"]["runner_subprocess"]["ordering"]
+        check("missing_current_ordering", changed, ("requires runner_subprocess.ordering",), expected_schema_version=8)
         changed = copy.deepcopy(current)
         current_step = changed["data"]["runner_result"]["steps"][0]
         del current_step["comparison"]
@@ -113,7 +125,7 @@ def main():
         del current_step["attempt"]["requested_action"]
         check("missing_current_evidence", changed,
               ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"),
-              expected_schema_version=7)
+              expected_schema_version=8)
         changed, step = mutate()
         if sysctl:
             step["attempt"].update(errno=13, syscall_errno=13)

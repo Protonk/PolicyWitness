@@ -22,6 +22,10 @@ runFilterKindValidationTests(tk)
 // Constructed drift/comparison interpretation controls from the public scope
 // and attribution promises; they establish no native causes.
 runDriftClassifierTests(tk)
+// Release barrier, eligible-record lifetime and response-8 encoding controls.
+runOrderingTests(tk)
+// Service reply degradation preserves observations, withholds claims and covers every wire field.
+runReplyFailureTests(tk)
 // Production host classifier fed constructed worker/validator results; the
 // evidence → normalized_outcome table. Real driver controls live below.
 runHostOutcomeClassifierTests(tk)

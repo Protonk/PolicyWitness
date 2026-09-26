@@ -38,6 +38,19 @@ private func workerExists() -> Bool {
 
 func runCWorkerTests(_ tk: TestKit) {
     tk.group("CWorker driver") {
+        tk.run("proceed wait argv rejects out-of-range budgets with an explanation") {
+            for value in [0, 60001] {
+                let process = Process(), errors = Pipe()
+                process.executableURL = URL(fileURLWithPath: workerPath())
+                process.arguments = ["--proceed-wait-ms", String(value)]
+                process.standardError = errors
+                try process.run()
+                let text = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                process.waitUntilExit()
+                try expectTrue(process.terminationStatus != 0)
+                try expectContains(text, "--proceed-wait-ms \(value) out of range (1..60000)")
+            }
+        }
         // ---- happy default-allow: file_open_read /etc/hosts ----------------
         tk.run("happy default-allow: /etc/hosts read succeeds with observed_path") {
             guard workerExists() else {
@@ -385,6 +398,8 @@ func runCWorkerTests(_ tk: TestKit) {
                 throw TestFailure(message: "runCWorker reported setup failure: \(result)")
             }
             try expectTrue(out.applied, "applied should still flip — hang is post-apply")
+            try expectTrue(out.proceedSet && out.proceedObserved && out.slots.allSatisfy { $0.completed },
+                           "post_apply_seams_still_after_attempts: release and slots precede the hang")
             try expectTrue(out.done,
                             "final snapshot must preserve done published during grace")
             // The worker eventually completes — slot was filled — but the
@@ -432,6 +447,8 @@ func runCWorkerTests(_ tk: TestKit) {
                 throw TestFailure(message: "runCWorker reported setup failure: \(result)")
             }
             try expectTrue(out.applied, "applied should flip — the kill is post-apply")
+            try expectTrue(out.proceedSet && out.proceedObserved && out.slots.allSatisfy { $0.completed },
+                           "post_apply_seams_still_after_attempts: release and slots precede the signal")
             try expectFalse(out.done, "done must not flip — the worker is killed before writing it")
             try expectFalse(out.sentSigkill,
                             "worker self-signals; no host termination request")

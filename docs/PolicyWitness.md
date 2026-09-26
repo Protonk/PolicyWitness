@@ -135,7 +135,7 @@ references is supported by the compiler.
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
-policy itself; its ABI 6 failure record identifies the failed operation and
+policy itself; its ABI 7 failure record identifies the failed operation and
 available native result, summarized as `runner_failed`. The controller runs
 `sbpl-check` only after `xpc_error`, retaining its independent result under
 `data.policy_check`. That fallback says nothing about how far a missing worker
@@ -366,7 +366,10 @@ Values are maxima unless labelled as defaults.
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Initial ready-byte polling budget. Expiry alone does not abort: the host still checks shared-memory publication. | Production default; test-only controls are not a public tuning interface. |
 | Worker publication wait (`worker_sentinel_wait`) | 60,000 milliseconds | Nominal polling budget for worker sentinels. Synchronous validator work is outside this budget. Expiry can trigger worker cleanup and runner_timeout with partial evidence. | Production default; test-only controls are not a public tuning interface. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Polling grace after the host requests exit. Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported. | Production default; test-only controls are not a public tuning interface. |
-| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed deadline for nonblocking probe writes and verdict reads. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; test-only controls are not a public tuning interface. |
+| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement. Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host. | Production default and internal test equipment; not a public CLI tuning interface. |
+| Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. | Production default and internal test equipment; not a public CLI tuning interface. |
+| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective _test_overrides.validator_io_timeout_ms; request schema remains 1. Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply. | Production default and internal test equipment; not a public CLI tuning interface. |
+| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Polling grace after closing validator pipes. Expiry triggers a SIGKILL attempt, then reaping; failures remain reported. | Production default; test-only controls are not a public tuning interface. |
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Per-exec child observation deadline after successful spawn. Worker attempts to kill/reap the child; the step records that the deadline fired. | Production default; test-only controls are not a public tuning interface. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
@@ -406,8 +409,8 @@ Values are maxima unless labelled as defaults.
 
 ### Shape and schema_version
 
-Runner responses use `schema_version = 7`, separately from request schema 1,
-the controller envelope and worker ABI 6. The XPC host stays unsandboxed and
+Runner responses use `schema_version = 8`, separately from request schema 1,
+the controller envelope and worker ABI 7. The XPC host stays unsandboxed and
 spawns a sandboxed attempt worker plus a batch validator. Worker identity for
 correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
 the host or client when no worker metadata exists.
@@ -421,6 +424,16 @@ successful reap; both are absent/null when disposition is unconfirmed. Wait
 errors retain their phase and native return/errno, including recovered EINTR.
 Old replies missing these fields contain unknown observations, not false values.
 Application remains independently reported by `sandboxed_after_apply`.
+
+A host reply-construction failure reports `runner_reporting_failed`, `rc: 1`
+and `reporting_failure` with the diagnostic and original execution summary.
+When `reporting_failure.evidence_retained` is true, queries, attempts and child
+observations survive, but every `comparison` is omitted and every `drift` is
+null. Retained ordering observations are diagnostic; this reply certifies no
+per-step order. If serialization also fails for that degraded reply,
+`evidence_retained` is false and steps and subprocess evidence are absent.
+See the [reply failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure)
+for the narrow exception to normal response-8 comparison requirements.
 
 Every new step contains `deny_signal: null`: the C worker does not measure this
 channel. This is distinct from a measured count of zero. Stored legacy signal
@@ -463,12 +476,15 @@ Top-level fields beyond `pid` / `runner_subprocess`:
     2. The validator failed to spawn before any metadata could be
        captured (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
-- `steps[].drift: bool | null` — a limited comparison of recorded outcomes
-  within matching submitted operation/target scope. `false` means allow prediction
-  plus a successful attempt; `true` means deny prediction plus a successful
-  attempt. Neither proves equal state at query/attempt time or a libsandbox bug.
-  Permission failures have unestablished sandbox attribution under either
-  prediction and therefore retain `drift:null`.
+- `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before the entire attempt batch, not state stability or runtime identity.
+- `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it.
+- `steps[].drift: bool | null` — `false` means a supported allow/success
+  agreement within matching submitted operation/target scope. It does not prove
+  equal state or runtime identity. `true` requires evidence of differing kernel
+  enforcement with material alternative explanations excluded. The current
+  runner cannot establish state stability or runtime target identity, so deny/success yields `unavailable` and
+  `drift:null`; no current producer path yields `true`. Permission failures
+  also retain `drift:null` because their sandbox attribution is unestablished.
 - `steps[].comparison` — records `scope`, `prediction`, `observation`,
   `observation_basis`, `operation_relation`, `target_relation`, `conclusion` and
   `limitations`. Agreement, disagreement, directional consistency and unavailable
@@ -477,6 +493,15 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   or targets prevent a comparison; equal path spelling does not establish runtime
   object identity. Timing and state stability remain explicit limits even when a
   useful outcome comparison is available. Several limitations can coexist.
+  A worker-reported successful unlink of a planned query's submitted target,
+  in any step of the run, adds `attempt_mutation_order_unestablished` when query order is unestablished. Step
+  position does not bound uncertainty when the chain is incomplete. With `query_first`, all eligible queries precede the attempt batch, so the mutation limitation is absent and allow/success agreement is restored.
+  While query order is unestablished, a successful corresponding attempt yields
+  `unavailable`/null under either prediction; later recreation does not erase
+  that mutation evidence.
+  `host_path_resolution_changed` separately records that a planned path no
+  longer resolves in the host after orchestration. This later observation
+  appends a limitation without changing the conclusion or drift.
 - `steps[].attempt.requested_kind` / `requested_action` — submitted intent,
   alongside the existing `requested_path` target; these do not prove execution.
   Compound create attempts, unscoped filters and broad queries without a supported
@@ -521,7 +546,7 @@ meaning no completed result; it may have started. Completed attempts use source
 `worker`, but their rc is PW attempt status, not a raw syscall return, so their
 `native_rc` is also null. Received predictions use source `validator`; native rc
 is retained only for native-call result records. See the
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-6)
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-7)
 for publication, absence and numeric-code definitions.
 
 The request schema also accepts an optional `_test_overrides`
@@ -716,6 +741,9 @@ are documented under SBPL check above):
   report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
   The cause may be unknown; this label does not prove a host defect. A completed
   report survives an abnormal exit, but cannot establish clean run completion.
+- `runner_reporting_failed` — the host could not encode its assembled result.
+  `reporting_failure` preserves the original summary separately; this outcome
+  attributes no failure to the worker, validator or specimen policy.
 - `worker_spawn_failed` — host could not `posix_spawn` the worker
   (filesystem/codesign/quota error). Worker never ran.
 - `validator_spawn_failed` — host could not `posix_spawn` the
@@ -1203,7 +1231,7 @@ Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
 PID, or explicit null when no worker exists. It never substitutes the host PID.
 Typed readers must accept null; stored integer-PID replies remain decodable.
 The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 6 remain separate.
+ABI 7 remain separate.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`

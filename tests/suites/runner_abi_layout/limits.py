@@ -23,7 +23,7 @@ ABI_LIMITS = {
     'observed_path': ('PW_SHM_OBSERVED_PATH_MAX', 1),
     'attempt_error': ('PW_SHM_ERROR_MAX', 1),
 }
-NATIVE_LIMITS = {'exec_child_wait', 'validator_query_payload'}
+NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'validator_query_payload'}
 
 
 def values(text):

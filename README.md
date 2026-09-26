@@ -12,11 +12,13 @@ Measuring `sandbox_check`'s prediction about a process against policy enforcemen
 
 PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner`, a sandboxed C worker that applies the specimen policy to itself and runs the probe plan and `sb_api_validator --batch` which queries `sandbox_check` for each probe against the worker's sandboxed PID. The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
 
-Each step records two parallel verdicts plus the cross-channel comparison:
+After application, the worker waits for host release. The host closes validator collection before releasing the entire attempt batch. Eligible `query_first` records establish this ordering; they do not establish a shared state snapshot.
+
+Each step records two evidence channels plus their comparison:
 
 - **Attempt** (`steps[].attempt`): in-band kernel response — `rc`, `errno`, mach `kr` — from actually performing the operation inside the sandboxed worker.
 - **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` verdict for the same operation + filter against the same PID, supplied by the validator.
-- **Drift** (`steps[].drift`): the validator-vs-attempt comparison. `true` when they disagree about allow/deny with strong-evidence backing; `false` when they agree; `null` when no comparison is possible (validator skipped, attempt didn't produce a verdict, DAC/sandbox ambiguity, etc.).
+- **Drift** (`steps[].drift`): `false` for a supported allow/success agreement and `null` when the evidence leaves the comparison unavailable or merely directionally consistent. `true` is reserved for a difference from kernel enforcement with material alternative explanations excluded. The current runner establishes query order for eligible records but cannot establish state stability or runtime target identity, so it produces no `true` claims. Successful same-target unlink also makes agreement unavailable while its order against the query is unknown.
 
 Unified-log evidence for kernel denies is attached out-of-band (best-effort).
 

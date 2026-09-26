@@ -64,6 +64,8 @@ int main(void) {
     printf("offsetof.pw_shm_header_t.param_count=%zu\n",    offsetof(pw_shm_header_t, param_count));
     printf("offsetof.pw_shm_header_t.apply_errno=%zu\n",    offsetof(pw_shm_header_t, apply_errno));
     printf("offsetof.pw_shm_header_t.capture_requested=%zu\n", offsetof(pw_shm_header_t, capture_requested));
+    printf("offsetof.pw_shm_header_t.proceed=%zu\n", offsetof(pw_shm_header_t, proceed));
+    printf("offsetof.pw_shm_header_t.proceed_observed=%zu\n", offsetof(pw_shm_header_t, proceed_observed));
     printf("offsetof.pw_shm_header_t.capture_nonce=%zu\n", offsetof(pw_shm_header_t, capture_nonce));
 
     printf("offsetof.pw_shm_capture_t.completed=%zu\n", offsetof(pw_shm_capture_t, completed));

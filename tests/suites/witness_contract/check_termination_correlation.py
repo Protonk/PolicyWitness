@@ -59,7 +59,7 @@ def main():
             data = envelope['data']
             runner = data['runner_result']
             expected = 'runner_failed' if signaled else 'ok'
-            assert runner['schema_version'] == 7, runner
+            assert runner['schema_version'] == 8, runner
             assert runner['normalized_outcome'] == expected, runner
             assert envelope['result']['normalized_outcome'] == expected, envelope['result']
             assert envelope['result']['ok'] is (not signaled), envelope['result']

@@ -132,6 +132,7 @@ unset.
 | `libsandbox_path` | string | `/usr/lib/libsandbox.dylib` | `SandboxLib.load(path:)` → `dlopen(path)` in the host's pre-spawn check | `libsandbox_unavailable` |
 | `worker_executable_path` | string | bundle-local `pw-probe-runner` | `posix_spawn(path, ...)` inside `CWorker.spawn` | `worker_spawn_failed` |
 | `worker_timeout_ms` | integer (ms, floored at 50) | 60000 | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
+| `validator_io_timeout_ms` | integer (ms, floored at 50; no ceiling) | 30000 | Monotonic I/O deadline in `ValidatorClient.runValidator`; may intentionally exceed the worker release budget | `validator_no_reply` or earlier worker failure |
 | `validator_executable_path` | string | bundle-local `sb_api_validator` | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | integer (ms, 0..60000) | 0 (disabled) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |
 | `worker_post_apply_kill_signal` | integer (signal, 0..31) | 0 (disabled) | Passed as `--post-apply-kill-signal` to `pw-probe-runner`; the C worker `kill(getpid(), N)`s itself after `applied` but before `done`, so the host observes a signal with `done` unset; no policy cause follows | `runner_failed` |
@@ -204,9 +205,17 @@ Readiness, sentinel and exit-grace budgets are unchanged. Authoritative field
 validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
-Response schema is 7; request schema 1 and worker ABI 6 are independent. Legacy
+Response schema is 8; request schema 1 and worker ABI 7 are independent. Legacy
 replies remain decodable. Typed readers that require a signal object must migrate
 to a nullable field. Optional subprocess objects retain omitted-or-null absence.
+
+The reply boundary converts encoding failures to `runner_reporting_failed`
+with a `reporting_failure` diagnostic and the original execution summary.
+It retains queries, attempts and subprocess observations, omits all comparisons
+and emits drift nulls. If that degraded response also cannot be encoded,
+`evidence_retained: false` explicitly marks a minimal reply without child
+evidence. The [reply failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure)
+defines this exception; ordinary result encoding still rejects invalid claims.
 
 Per-step fields under `steps[]`:
 
@@ -226,10 +235,19 @@ Per-step fields under `steps[]`:
   are file-path diagnostics and are `null` for non-file attempts. The
   `rc` and `errno` fields are retained for compatibility.
 - `attempt.requested_kind` and `requested_action` retain submitted intent.
-- `comparison` distinguishes recorded-outcome agreement/disagreement, directional
+- `comparison.order` reports `query_first` only for eligible native records with a complete collection/release/acknowledgement chain and worker lifetime evidence; all others are `unestablished`.
+- `runner_subprocess.ordering` retains host collection/release, worker acknowledgement, `worker_lifetime_established`, validator disposition and protocol violations. Collection closure releases attempts after every validator terminal path, including unconfirmed cleanup. No later record joins predictions.
+- `comparison` distinguishes supported agreement, disagreement, directional
   consistency and unavailable comparison, with explicit operation/target relations
   and simultaneous limits. `drift` projects only agreement/disagreement to bool;
-  unattributed failures and unresolved scope retain null. Exec/spawn maps specifically
+  unattributed failures and unresolved scope retain null. The current runner
+  cannot establish state stability or runtime target identity and therefore emits no disagreement/true claims, even for `query_first`.
+  With unestablished query order, a successful unlink of the planned query target in any step of the run
+  records `attempt_mutation_order_unestablished` and prevents allow/success
+  agreement too; step position does not bound the confound while order is
+  unknown. Later host nonresolution adds `host_path_resolution_changed`
+  without reclassifying the result. Historical response-7 values remain intact
+  on decode. Exec/spawn maps specifically
   to the native `process-exec*` query for target execution admission, with
   `exec_query_not_full_spawn_prediction` preserving its limited scope. A spawned
   child's later failure does not erase the successful spawn. See the
@@ -272,8 +290,8 @@ Sandbox policy variation is driven by the specimen itself:
 - the controller supplies SBPL,
 - `pw-probe-runner` applies it once to itself before running probes,
 - the runner's witness pairs the attempt result with the validator's
-  `sandbox_check` verdict for each probe and surfaces disagreement
-  as `steps[].drift`.
+  `sandbox_check` verdict for each probe and records its supported comparison
+  and uncertainty in `steps[].comparison` and `steps[].drift`.
 
 ## External runner services
 
@@ -318,9 +336,9 @@ cause are unchanged and only log correlation is unavailable. Pass
 
 ## Evidence contract pointers
 
-Worker ABI 6 appends a pre-touched progress/failure header and a 4,096-byte text
+Worker ABI 7 appends a pre-touched progress/failure header and a 4,096-byte text
 region after capture, leaving existing capacities intact. The release/acquire
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-6)
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-7)
 defines milestones, native results, open numeric codes, and text availability.
 `runner_subprocess.worker_evidence` carries these publications through the normal
 reply. Policy-write errors retain partial output and host byte/errno evidence in
@@ -344,7 +362,7 @@ Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
 PID, or explicit null when no worker exists. It never substitutes the host PID.
 Typed readers must accept null; stored integer-PID replies remain decodable.
 The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 6 remain separate.
+ABI 7 remain separate.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`

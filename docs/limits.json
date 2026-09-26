@@ -431,14 +431,101 @@
       "behavior": "Deadline/cleanup paths use controlled children; the production duration is source-inspected."
     },
     {
+      "id": "worker_proceed_wait",
+      "section": "execution",
+      "title": "Worker release wait",
+      "value": 60000,
+      "unit": "milliseconds",
+      "counting": "Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement.",
+      "effect": "Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host.",
+      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "PW_PROCEED_WAIT_MS_DEFAULT"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "NATIVE_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/harness.c",
+          "symbol": "proceed_wait_budget_short",
+          "kind": "path"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/OrderingTests.swift",
+          "symbol": "runOrderingTests",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+    },
+    {
+      "id": "validator_release_margin",
+      "section": "execution",
+      "title": "Nominal release margin",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer.",
+      "effect": "Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup.",
+      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "validatorReleaseMarginMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        }
+      ],
+      "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+    },
+    {
+      "id": "validator_io_override_floor",
+      "section": "execution",
+      "title": "Validator I/O test override floor",
+      "value": 50,
+      "unit": "milliseconds",
+      "counting": "Minimum effective _test_overrides.validator_io_timeout_ms; request schema remains 1.",
+      "effect": "Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply.",
+      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "timeoutMsForValidator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        }
+      ],
+      "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+    },
+    {
       "id": "validator_io_wait",
       "section": "execution",
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Elapsed deadline for nonblocking probe writes and verdict reads.",
+      "counting": "Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it.",
       "effect": "Retains received verdicts and records an I/O timeout; cleanup follows.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "control": "Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",

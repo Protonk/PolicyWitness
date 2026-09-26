@@ -9,7 +9,7 @@ and EPERM or EACCES in both `errno` and `syscall_errno`.
 
 The three `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
 with their expected step ID, operation, filter value, attempt contract and
-`--expected-schema-version 7` for live output. The
+`--expected-schema-version 8` for live output. The
 adapter uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
 policy format, exact step identity/count, and evidence fields with their documented types.
 An unavailable prediction has integer `rc=-1`, explicitly null `filter_type_id`

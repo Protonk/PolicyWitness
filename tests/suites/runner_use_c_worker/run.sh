@@ -38,7 +38,7 @@ run_happy_default_allow() {
   local test_id="happy_default_allow"
   test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full response-7 envelope"
+  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full response-8 envelope"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
@@ -80,7 +80,7 @@ env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
 # Envelope shape: v4 + both subprocess records + override mirrored back.
-assert r["schema_version"] == 7, "schema {0}".format(r["schema_version"])
+assert r["schema_version"] == 8, "schema {0}".format(r["schema_version"])
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["validator_subprocess"] is not None, "validator_subprocess missing"
@@ -101,7 +101,7 @@ assert s["sandbox_check"]["outcome"] == "allow"
 assert s["attempt"]["outcome"] == "ok"
 assert s["attempt"]["observed_path"] == "/private/etc/hosts"
 assert s["drift"] is False, "drift expected False got {0}".format(s["drift"])
-print("ok: response-7 envelope, validator+worker subprocesses present, drift=false")
+print("ok: response-8 envelope, validator+worker subprocesses present, drift=false")
 PY
   local arc=$?
   set -e
@@ -111,7 +111,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "C-worker path produces complete response-7 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "C-worker path produces complete response-8 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: bare_deny_default ------------------------------------------

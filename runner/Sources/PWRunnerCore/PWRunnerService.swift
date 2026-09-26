@@ -103,12 +103,62 @@ private func authorizedCaller(_ connection: NSXPCConnection) -> Bool {
     return true
 }
 
+/// The XPC reply boundary owns degradation, not the general-purpose encoder.
+/// The encoder parameter is an internal test seam; no request selects it.
+func pwRunnerReplyData(_ result: PWRunnerRunResult,
+                       encode: (PWRunnerRunResult) throws -> Data = { try pwRunnerEncodeJSON($0) }) -> Data {
+    do { return try encode(result) }
+    catch {
+        let diagnostic: String
+        if case EncodingError.invalidValue(_, let context) = error {
+            diagnostic = context.debugDescription
+        } else {
+            diagnostic = String(describing: error)
+        }
+        var failed = result
+        failed.schema_version = 8
+        failed.rc = 1
+        failed.normalized_outcome = NormalizedOutcome.runnerReportingFailed
+        failed.error = "runner host could not encode its result: \(diagnostic)"
+        failed.reporting_failure = PWRunnerReportingFailure(diagnostic: diagnostic,
+            original_rc: result.rc, original_normalized_outcome: result.normalized_outcome,
+            original_error: result.error, evidence_retained: true)
+        for index in failed.steps.indices {
+            failed.steps[index].comparison = nil
+            failed.steps[index].drift = nil
+        }
+        do { return try encode(failed) }
+        catch {
+            // A failure even after removing derived claims must be explicit.
+            // This backstop uses only JSON-native scalars/containers, independent
+            // of every result encoder and its invariants. There are no floats,
+            // custom objects or non-string keys that JSONSerialization can reject.
+            let finalDiagnostic = "\(diagnostic); evidence-preserving encoding also failed: \(error)"
+            let minimal: [String: Any] = [
+                "schema_version": 8, "specimen_id": result.specimen_id,
+                "run_kind": result.run_kind as Any? ?? NSNull(),
+                "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
+                "error": finalDiagnostic, "pid": result.pid,
+                "bundle_id": result.bundle_id as Any? ?? NSNull(),
+                "policy_format": result.policy_format,
+                "policy_sha256": result.policy_sha256 as Any? ?? NSNull(), "steps": [],
+                "reporting_failure": [
+                    "origin": "runner_host", "diagnostic": finalDiagnostic,
+                    "original_rc": result.rc, "original_normalized_outcome": result.normalized_outcome,
+                    "original_error": result.error as Any? ?? NSNull(), "evidence_retained": false
+                ]
+            ]
+            return try! JSONSerialization.data(withJSONObject: minimal, options: [.sortedKeys])
+        }
+    }
+}
+
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
     private var didRun = false
 
     public func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
         func replyAndExit(_ result: PWRunnerRunResult) {
-            reply((try? pwRunnerEncodeJSON(result)) ?? Data("{}".utf8))
+            reply(pwRunnerReplyData(result))
             // Allow the XPC reply to flush before exiting the process.
             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
         }
@@ -323,6 +373,18 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
             observer: "runner_host",
             phase: "after_orchestration"
         )
+        // The planner's own sentinel says whether it resolved this path: a
+        // planning exclusion is recorded as outcome prediction_unavailable, and
+        // only planning produces that outcome for a path filter. Read the
+        // sentinel, not a limitation label. This later host observation cannot
+        // reclassify the fixed comparison or establish the state at query time.
+        // Legacy absent comparisons stay absent.
+        if canonical.resolved == nil, var comparison = updated.comparison,
+           updated.sandbox_check.outcome != SandboxCheckOutcome.predictionUnavailable,
+           !comparison.limitations.contains("host_path_resolution_changed") {
+            comparison.limitations.append("host_path_resolution_changed")
+            updated.comparison = comparison
+        }
         return updated
     }
 }

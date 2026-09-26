@@ -34,7 +34,7 @@ private func okResult(pid: Int = 4242, stepCount: Int = 0) -> PWRunnerRunResult 
         )
     }
     return PWRunnerRunResult(
-        specimen_id: "envelope_invariant_ok",
+        schema_version: 7, specimen_id: "envelope_invariant_ok",
         rc: 0,
         normalized_outcome: NormalizedOutcome.ok,
         pid: pid,
@@ -71,7 +71,7 @@ private func postSpawnFailureResult(outcome: String, signal: Int?) -> PWRunnerRu
         partial_steps: false
     )
     return PWRunnerRunResult(
-        specimen_id: "envelope_invariant_post_spawn",
+        schema_version: 7, specimen_id: "envelope_invariant_post_spawn",
         rc: 1,
         normalized_outcome: outcome,
         error: "synthesized for envelope-shape test",
@@ -84,6 +84,43 @@ private func postSpawnFailureResult(outcome: String, signal: Int?) -> PWRunnerRu
 
 func runEnvelopeInvariantTests(_ tk: TestKit) {
     tk.group("consumer evidence survives encoding without reclassification") {
+        for state in ["absent", "present", "recreated"] {
+            tk.run("fixed mutation comparison survives \(state) path enrichment and encoding") {
+                let path = "/private/tmp/pw-mutation-wire-" + UUID().uuidString
+                FileManager.default.createFile(atPath: path, contents: Data("old".utf8))
+                defer { try? FileManager.default.removeItem(atPath: path) }
+                var result = okResult(stepCount: 1)
+                var step = result.steps[0]
+                step.sandbox_check.filter_kind = "path"
+                step.sandbox_check.filter_value = path
+                step.sandbox_check.operation = "file-write-unlink"
+                step.sandbox_check.result_source = "validator"
+                step.sandbox_check.native_rc = 0
+                step.attempt.requested_kind = "file"
+                step.attempt.requested_action = "unlink"
+                step.attempt.requested_path = path
+                step.attempt.result_source = "worker"
+                let limits = ["query_attempt_order_unestablished", "state_stability_unestablished",
+                    "runtime_target_identity_unestablished", "attempt_mutation_order_unestablished"]
+                step.comparison = PWRunnerComparison(scope: "submitted_operation_and_target",
+                    prediction: "allow", observation: "succeeded", observation_basis: "completed_worker_status",
+                    operation_relation: "matched", target_relation: "same_submitted",
+                    conclusion: "unavailable", limitations: limits)
+                if state != "present" { try FileManager.default.removeItem(atPath: path) }
+                if state == "recreated" { FileManager.default.createFile(atPath: path, contents: Data("new".utf8)) }
+                result.steps = enrichPathDiagnostics(steps: [step])
+                let data = try pwRunnerEncodeJSON(result)
+                let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: data).steps[0]
+                try expectEqual(decoded.comparison?.conclusion, "unavailable")
+                try expectNil(decoded.drift)
+                try expectEqual(decoded.comparison?.limitations,
+                    limits + (state == "absent" ? ["host_path_resolution_changed"] : []))
+                try expectEqual(decoded.sandbox_check.outcome, "allow")
+                try expectEqual(decoded.sandbox_check.path_diagnostics?.phase, "after_orchestration")
+                let wire = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+                try expectTrue((wire["steps"] as! [[String: Any]])[0]["drift"] is NSNull)
+            }
+        }
         tk.run("spawn agreement retains failed child result and every independent limit") {
             var result = okResult(stepCount: 1)
             var step = result.steps[0]
@@ -155,6 +192,21 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
         }
     }
     tk.group("response 7 preserves legacy uncertainty") {
+        tk.run("stored response 7 disagreement retains its historical projection and limits") {
+            var old = okResult(stepCount: 1)
+            old.schema_version = 7
+            let limits = ["query_attempt_order_unestablished", "state_stability_unestablished",
+                          "runtime_target_identity_unestablished"]
+            old.steps[0].comparison = PWRunnerComparison(scope: "submitted_operation_and_target",
+                prediction: "deny", observation: "succeeded", observation_basis: "completed_worker_status",
+                operation_relation: "matched", target_relation: "same_submitted",
+                conclusion: "disagreement", limitations: limits)
+            old.steps[0].drift = true
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(old))
+            try expectEqual(decoded.steps[0].comparison?.conclusion, "disagreement")
+            try expectEqual(decoded.steps[0].comparison?.limitations, limits)
+            try expectEqual(decoded.steps[0].drift, true)
+        }
         tk.run("stored versions 4 through 6 retain drift without invented comparison or intent") {
             for version in 4...6 {
                 for value: Bool? in [true, false, nil] {
@@ -373,12 +425,12 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.steps[0].deny_signal?.delta, 0)
             try expectEqual(decoded.steps[0].deny_signal?.signal, "SIGUSR1")
         }
-        tk.run("client XPC failure emitters share response 7 default") {
+        tk.run("client XPC failure emitters share response 8 default") {
             for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
                             NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
                 let result = hostShortCircuitResult(outcome: outcome)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
-                try expectEqual(decoded.schema_version, 7)
+                try expectEqual(decoded.schema_version, 8)
                 try expectNil(decoded.runner_subprocess)
                 try expectTrue(decoded.steps.isEmpty)
             }

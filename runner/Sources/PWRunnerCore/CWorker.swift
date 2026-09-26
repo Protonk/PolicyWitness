@@ -24,7 +24,8 @@ import CryptoKit
  *   6. posix_spawn pw-probe-runner with FDs dup'd to 0/3/4.
  *   7. Write the policy text to the policy pipe and close.
  *   8. Read the pre-apply ready byte (deadline).
- *   9. Acquire-poll `applied`, then `done`, with bounded timeouts.
+ *   9. Acquire applied, run the synchronous collection hook, release proceed;
+ *      acquire acknowledgement and done with bounded sentinel polling.
  *  10. Release-store `exit_requested = 1`; waitpid with grace timer;
  *      SIGKILL fallback if the worker hangs.
  *  11. Reconstruct CWorkerStepResult per slot by reading the shm
@@ -46,7 +47,7 @@ import CryptoKit
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
-    public static let abiVersion: UInt32   = 6
+    public static let abiVersion: UInt32   = 7
 
     public static let headerBytes: Int     = 64
     public static let slotBytes: Int       = 8192
@@ -85,6 +86,8 @@ public enum PWShmLayout {
     public static let applyErrnoOffset: Int    = 32
     public static let captureRequestedOffset: Int = 36
     public static let captureNonceOffset: Int = 40
+    public static let proceedOffset: Int = 56
+    public static let proceedObservedOffset: Int = 60
 
     public static let slotsOffset: Int    = headerBytes
     public static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
@@ -325,6 +328,11 @@ public struct CWorkerOutput {
     public var waitErrors: [PWRunnerWaitError]? = nil
     public var workerEvidence: PWWorkerEvidence? = nil
     public var policyTransferError: PWWorkerPolicyTransferError? = nil
+    public var hookInvoked: Bool = false
+    public var proceedSet: Bool = false
+    public var proceedObserved: Bool = false
+    public var proceedOwnershipEstablished: Bool = false
+    public var orderingProtocolViolations: [String] = []
 }
 
 
@@ -511,9 +519,9 @@ func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? 
 /// PID — that's the moment the validator child (or any other observer
 /// that wants to inspect the sandboxed worker) can be spawned. The
 /// callback runs synchronously; the driver does NOT poll `done` while
-/// it's executing, so a hook that blocks for longer than the per-attempt
-/// deadline will push the overall worker wait out by the same margin.
-/// The hook should complete in well under sentinelTimeoutMs.
+/// it's executing. Hook time is outside the host sentinel budget, but the
+/// worker's monotonic proceed budget continues independently. Returning closes
+/// collection and releases attempts, including after validator failure.
 public typealias CWorkerPostAppliedHook = (pid_t) -> Void
 
 public func runCWorker(_ input: CWorkerInput,
@@ -831,6 +839,27 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // the full sentinel deadline over a corpse.
     var sawApplied = false
     var sawDone = false
+    var hookFired = false
+    var proceedSet = false
+    var ownershipUnbroken = true
+    var acknowledgedWhileOwned = false
+    var orderingFaults: [String] = []
+    func observeAcknowledgement() {
+        if ownershipUnbroken && loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset) == 1 {
+            acknowledgedWhileOwned = true
+        }
+    }
+    func checkPrematurePublication() {
+        let ack = loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset)
+        let progress = loadAcquire(rawBase.advanced(by: PWShmLayout.evidenceOffset),
+                                   offset: PWShmLayout.evidenceProgressOffset)
+        let completed = input.slots.indices.contains { i in
+            loadAcquire(rawBase.advanced(by: PWShmLayout.slotsOffset + i * PWShmLayout.slotBytes),
+                        offset: PWShmLayout.slotCompletedOffset) == 1
+        }
+        if ack != 0 { orderingFaults.append("acknowledgement_before_release") }
+        if completed || progress >> 24 == 9 { orderingFaults.append("attempt_before_release") }
+    }
     var pollStopReason = transferError == nil ? "sentinel_deadline" : "policy_write_error"
     if transferError == nil {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
@@ -842,9 +871,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         // negligible against the seconds-scale sentinel and is far better
         // than spinning the whole deadline over a corpse.
         let exitCheckEvery = max(1, 50_000_000 / Int(pollIntervalNs))   // 25 iters
-        var hookFired = false
         polling: for iter in 0..<deadlineIters {
-            if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) != 0 {
+            if !sawApplied && loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1 {
                 sawApplied = true
             }
             // Fire the post-applied hook the first iteration after we
@@ -852,10 +880,19 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // anything the hook does sees the sandboxed worker_pid.
             // We fire BEFORE checking `done` so a short-running worker
             // can't finish before the hook starts.
-            if sawApplied && !hookFired {
+            if sawApplied && !hookFired
+                && readI32(rawBase, offset: PWShmLayout.applyRcOffset) == 0
+                && UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.abiVersionOffset)) == PWShmLayout.abiVersion {
+                checkPrematurePublication()
                 hookFired = true
                 if let hook = postApplied { hook(pid) }
+                // Synchronous collection is closed. No record can enter this
+                // run's predictions after the release store, including on error.
+                checkPrematurePublication()
+                storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 1)
+                proceedSet = true
             }
+            observeAcknowledgement()
             if loadAcquire(rawBase, offset: PWShmLayout.doneOffset) != 0 {
                 sawDone = true
                 pollStopReason = "done"
@@ -873,6 +910,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
                     pollStopReason = "child_reaped"
                     break polling
                 case .failed:
+                    ownershipUnbroken = false
                     pollStopReason = "wait_error"
                     break polling
                 case .pending:
@@ -892,14 +930,21 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         let pollIntervalNs: UInt64 = 10_000_000
         let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
         grace: for _ in 0..<graceIters {
+            observeAcknowledgement()
             switch process.wait(options: WNOHANG, phase: "exit_grace") {
-            case .reaped, .failed:
+            case .reaped:
+                break grace
+            case .failed:
+                ownershipUnbroken = false
                 break grace
             case .pending:
                 sleepNs(pollIntervalNs)
             }
         }
+        observeAcknowledgement()
+        let errorsBeforeTermination = process.waitErrors.count
         process.terminate()
+        if process.waitErrors.count > errorsBeforeTermination { ownershipUnbroken = false }
     }
 
     // Final acquire snapshot after cleanup. Publications are immutable, so this
@@ -907,6 +952,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     // Never rewrite pollStopReason or run the validator against a reaped child.
     sawApplied = loadAcquire(rawBase, offset: PWShmLayout.appliedOffset) == 1
     sawDone = loadAcquire(rawBase, offset: PWShmLayout.doneOffset) == 1
+    let finalProceedObserved = loadAcquire(rawBase, offset: PWShmLayout.proceedObservedOffset) == 1
     let applyRC = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyRcOffset) : 0
     let applyErrno = (sawApplied || sawDone) ? readI32(rawBase, offset: PWShmLayout.applyErrnoOffset) : 0
 
@@ -994,7 +1040,12 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         reaped: process.status != nil,
         waitErrors: process.waitErrors,
         workerEvidence: decodeWorkerEvidence(rawBase),
-        policyTransferError: transferError
+        policyTransferError: transferError,
+        hookInvoked: hookFired,
+        proceedSet: proceedSet,
+        proceedObserved: finalProceedObserved,
+        proceedOwnershipEstablished: finalProceedObserved && (acknowledgedWhileOwned || ownershipUnbroken),
+        orderingProtocolViolations: Array(Set(orderingFaults)).sorted()
     )
     if let error = transferError {
         return .failure(.policyWriteFailed("errno=\(error.errno) (\(String(cString: strerror(error.errno)))); "

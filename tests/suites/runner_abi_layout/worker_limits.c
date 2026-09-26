@@ -10,5 +10,6 @@
 
 int main(void) {
     printf("exec_child_wait=%ld\n", PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
+    printf("worker_proceed_wait=%ld\n", PW_PROCEED_WAIT_MS_DEFAULT);
     return 0;
 }

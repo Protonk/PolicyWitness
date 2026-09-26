@@ -21,7 +21,7 @@ guards for the request-validation and drift-classification rules:
 
 1. **happy_default_allow** — `(allow default)` + one file read.
    Asserts:
-   - `schema_version == 7`
+   - `schema_version == 8`
    - `validator_subprocess` populated with clean exit
    - `runner_subprocess` populated, `pid` mirrors back at top level
    - `steps[0].sandbox_check.outcome == "allow"` (validator)

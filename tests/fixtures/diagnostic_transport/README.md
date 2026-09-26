@@ -12,7 +12,7 @@ oracle, not to a reconstructed production classification.
 
 These inputs report controlled payloads. They do not establish that native
 operations ran. Worker producer identity and code domain are the containing
-`runner_subprocess.pid` and ABI-6 `worker_evidence` channel; there is no invented
+`runner_subprocess.pid` and ABI-7 `worker_evidence` channel; there is no invented
 worker `producer` or `domain` field. The JSON diagnostic inputs have explicit
 producer/domain/operation/code/detail fields and different payloads. Their values
 are test data, never production registrations or outcome mappings.

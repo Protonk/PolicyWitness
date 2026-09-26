@@ -78,6 +78,9 @@ public enum NormalizedOutcome {
     public static let runnerSandboxDenied = "runner_sandbox_denied"
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
+    // Host reply construction failed; the original execution summary is retained
+    // in reporting_failure, independently of child or policy observations.
+    public static let runnerReportingFailed = "runner_reporting_failed"
 
     // ----- emitted by the host classifier on the validator child
     // failure modes. Default top-level semantics: any validator_*
@@ -226,6 +229,7 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_executable_path: String?
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
+    public var validator_io_timeout_ms: Int?
     public var worker_post_apply_hang_ms: Int?
     public var worker_post_apply_kill_signal: Int?
     public var worker_pre_ready_hang_ms: Int?
@@ -235,6 +239,7 @@ public struct PWRunnerTestOverrides: Codable {
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
+        validator_io_timeout_ms: Int? = nil,
         worker_post_apply_hang_ms: Int? = nil,
         worker_post_apply_kill_signal: Int? = nil,
         worker_pre_ready_hang_ms: Int? = nil
@@ -243,6 +248,7 @@ public struct PWRunnerTestOverrides: Codable {
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
+        self.validator_io_timeout_ms = validator_io_timeout_ms
         self.worker_post_apply_hang_ms = worker_post_apply_hang_ms
         self.worker_post_apply_kill_signal = worker_post_apply_kill_signal
         self.worker_pre_ready_hang_ms = worker_pre_ready_hang_ms
@@ -441,7 +447,7 @@ public struct PWRunnerPathDiagnostics: Codable {
 
 public struct PWRunnerSandboxCheckResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract (ABI 6)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// "Worker evidence contract (ABI 7)" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for native returns versus PW status and missing reasons.
     public var result_source: String? = nil
     public var native_rc: Int? = nil
@@ -569,7 +575,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
 
 public struct PWRunnerAttemptResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract (ABI 6)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// "Worker evidence contract (ABI 7)" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for native returns versus PW status and missing reasons.
     /// Submitted intent, not proof that the named native operation ran.
     public var requested_kind: String? = nil
@@ -745,6 +751,27 @@ public struct PWRunnerSignalResult: Codable {
 
 /// A bounded comparison of recorded outcomes, with independently reported limits.
 /// Unknown future strings remain decodable; no field implies synchronized state.
+func eligibleOrderedPrediction(_ query: PWRunnerSandboxCheckResult) -> Bool {
+    guard query.result_source == "validator", let rc = query.native_rc,
+          let err = query.errno, query.rc == rc else { return false }
+    return (query.outcome == "allow" && rc == 0) || (query.outcome == "deny" && rc == 1 && err == 0)
+}
+
+// Shared by construction and encoding: a native record must be uniquely
+// associated with this query and target the worker whose lifetime was observed.
+// NONE has no native filter value, even if the request supplies an unused value.
+func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
+                         records: [ValidatorVerdict], ordering: PWRunnerOrdering?,
+                         sandboxedAfterApply: Bool?, workerPid: Int?) -> Bool {
+    guard ordering?.chainEstablished == true, sandboxedAfterApply == true,
+          let workerPid, query.pid == workerPid, eligibleOrderedPrediction(query) else { return false }
+    let matches = records.filter { $0.stepId == stepId }
+    guard matches.count == 1, let record = matches.first else { return false }
+    return record.operation == query.operation && record.filterType == query.filter_kind.uppercased()
+        && record.filterValue == (query.filter_kind == "none" ? nil : query.filter_value) && record.outcome == query.outcome
+        && record.rc == query.native_rc && record.errnoVal == query.errno
+}
+
 public struct PWRunnerComparison: Codable {
     public var scope: String
     public var prediction: String
@@ -754,6 +781,8 @@ public struct PWRunnerComparison: Codable {
     public var target_relation: String
     public var conclusion: String
     public var limitations: [String]
+    /// Absent in legacy replies; every response-8 producer supplies a value.
+    public var order: String? = nil
 
     public var drift: Bool? {
         switch conclusion {
@@ -772,8 +801,9 @@ public struct PWRunnerStepResult: Codable {
     /// Legacy objects remain decodable; their counts are not new observations.
     public var deny_signal: PWRunnerSignalResult?
 
-    /// Response 7: agreement/disagreement of recorded outcomes for matched
-    /// submitted scope. No synchronized-state or sandbox-cause guarantee.
+    /// Current evidence cannot establish state stability/runtime identity,
+    /// so no response-8 producer supplies disagreement. Agreement is limited to supported observations
+    /// within matched submitted scope, without an unordered target mutation.
     /// Directional consistency and unavailable comparisons project to null.
     /// Older decoded values retain their original version's meaning.
     public var comparison: PWRunnerComparison?
@@ -884,7 +914,7 @@ public struct PWWorkerPolicyTransferError: Codable {
     public var bytes_written: Int
     public var bytes_expected: Int
 }
-/// ABI 6 worker publications. Numeric codes are open, never Codable enums.
+/// ABI 7 worker publications. Numeric codes are open, never Codable enums.
 public struct PWWorkerProgress: Codable {
     public var raw: UInt32
     public var operation: UInt32
@@ -922,11 +952,27 @@ public struct PWWorkerEvidence: Codable {
 }
 
 /// Authoritative worker process metadata, produced by the unsandboxed host.
-/// Lifecycle observations are host-owned; worker_evidence uses worker ABI 6.
+/// Lifecycle observations are host-owned; worker_evidence uses worker ABI 7.
 /// All live CWorkerOutput paths populate the optional observation fields below;
 /// optionality preserves decoding of older stored replies as unknown, not false.
 /// Policy-write failures retain partial child observations.
+public struct PWRunnerOrdering: Codable {
+    public var collection_closed_before_proceed: Bool
+    public var proceed_set: Bool
+    public var proceed_observed: Bool
+    public var validator_disposition: String
+    /// Ownership through acknowledgement, not the eventual cleanup outcome.
+    public var worker_lifetime_established: Bool
+    public var protocol_violations: [String]
+
+    var chainEstablished: Bool {
+        collection_closed_before_proceed && proceed_set && proceed_observed
+            && worker_lifetime_established && protocol_violations.isEmpty
+    }
+}
+
 public struct PWRunnerSubprocess: Codable {
+    public var ordering: PWRunnerOrdering? = nil
     public var pid: Int
     /// JSON integers, meaningful only after waitpid returned this child's PID.
     /// Both may be absent/null when status was not obtained; zero is a real exit.
@@ -1076,6 +1122,20 @@ public struct PWRunnerAdmissionFailure: Codable {
     public var index: Int?
 }
 
+/// Host reply failure, separate from execution classification. Retained evidence
+/// has no per-step comparison claims; original_* fields are diagnostic only.
+public struct PWRunnerReportingFailure: Codable {
+    public var origin: String = "runner_host"
+    public var diagnostic: String
+    public var original_rc: Int
+    public var original_normalized_outcome: String
+    public var original_error: String?
+    public var evidence_retained: Bool
+}
+
+// Encoding is explicit to enforce response invariants. When adding a stored
+// field, update CodingKeys and encode(to:), and populate the field-coverage
+// round-trip fixture in ReplyFailureTests. Reflection stays in that test.
 public struct PWRunnerRunResult: Codable {
     // Response wire version.
     //   1 — initial shape.
@@ -1108,6 +1168,8 @@ public struct PWRunnerRunResult: Codable {
     //   7 — comparison scopes drift to recorded outcomes and exposes independent
     //       limits; submitted attempt intent and later host path provenance are
     //       explicit. Old replies retain old drift and absent derivations.
+    //   8 — ordered comparisons and host ordering evidence. A reporting_failure
+    //       reply withholds all comparisons while retaining diagnostic evidence.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -1126,9 +1188,10 @@ public struct PWRunnerRunResult: Codable {
     public var admission_failure: PWRunnerAdmissionFailure?
     public var validator_subprocess: PWRunnerValidatorSubprocess?
     public var test_overrides: PWRunnerTestOverrides?
+    public var reporting_failure: PWRunnerReportingFailure?
 
     public init(
-        schema_version: Int = 7,
+        schema_version: Int = 8,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -1145,7 +1208,8 @@ public struct PWRunnerRunResult: Codable {
         validator_subprocess: PWRunnerValidatorSubprocess? = nil,
         test_overrides: PWRunnerTestOverrides? = nil,
         applied_profile: AppliedProfileCapture? = nil,
-        admission_failure: PWRunnerAdmissionFailure? = nil
+        admission_failure: PWRunnerAdmissionFailure? = nil,
+        reporting_failure: PWRunnerReportingFailure? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -1165,7 +1229,67 @@ public struct PWRunnerRunResult: Codable {
         self.runner_subprocess = runner_subprocess
         self.validator_subprocess = validator_subprocess
         self.test_overrides = test_overrides
+        self.reporting_failure = reporting_failure
     }
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, test_overrides, reporting_failure
+    }
+    public func encode(to encoder: Encoder) throws {
+        if let failure = reporting_failure {
+            guard schema_version == 8, normalized_outcome == NormalizedOutcome.runnerReportingFailed,
+                  rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
+                  !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
+                  steps.allSatisfy({ $0.comparison == nil && $0.drift == nil }),
+                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && validator_subprocess == nil) else {
+                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                    debugDescription: "reporting failure requires a failed summary and no comparison claims"))
+            }
+        } else if schema_version == 8 {
+            if normalized_outcome == NormalizedOutcome.runnerReportingFailed {
+                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                    debugDescription: "runner_reporting_failed requires reporting_failure diagnostics"))
+            }
+            if runner_subprocess != nil && runner_subprocess?.ordering == nil {
+                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                    debugDescription: "response 8 requires runner ordering"))
+            }
+            for step in steps {
+                guard let comparison = step.comparison, let order = comparison.order,
+                      comparison.conclusion != "disagreement", step.drift != true,
+                      comparison.limitations.contains("query_attempt_order_unestablished") == (order != "query_first") else {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
+                        debugDescription: "response 8 requires order and cannot establish disagreement"))
+                }
+                if order == "query_first" && !eligibleOrderedStep(stepId: step.step_id, query: step.sandbox_check,
+                    records: validator_subprocess?.records ?? [], ordering: runner_subprocess?.ordering,
+                    sandboxedAfterApply: sandboxed_after_apply, workerPid: runner_subprocess?.pid) {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
+                        debugDescription: "query_first requires eligible prediction and complete ordering chain"))
+                }
+            }
+        }
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schema_version, forKey: .schema_version)
+        try c.encode(specimen_id, forKey: .specimen_id)
+        try c.encodeIfPresent(run_kind, forKey: .run_kind)
+        try c.encode(rc, forKey: .rc)
+        try c.encode(normalized_outcome, forKey: .normalized_outcome)
+        try c.encodeIfPresent(error, forKey: .error)
+        try c.encode(pid, forKey: .pid)
+        try c.encodeIfPresent(bundle_id, forKey: .bundle_id)
+        try c.encode(policy_format, forKey: .policy_format)
+        try c.encodeIfPresent(policy_sha256, forKey: .policy_sha256)
+        try c.encodeIfPresent(applied_profile, forKey: .applied_profile)
+        try c.encodeIfPresent(sandboxed_after_apply, forKey: .sandboxed_after_apply)
+        try c.encodeIfPresent(deny_signal_total, forKey: .deny_signal_total)
+        try c.encode(steps, forKey: .steps)
+        try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
+        try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
+        try c.encodeIfPresent(validator_subprocess, forKey: .validator_subprocess)
+        try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
+        try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
+    }
+
 }
 
 public func pwRunnerEncodeJSON<T: Encodable>(_ value: T) throws -> Data {

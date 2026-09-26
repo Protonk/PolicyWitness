@@ -188,7 +188,7 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
             func word(_ offset: Int, _ value: UInt32) { raw.storeBytes(of: value, toByteOffset: offset, as: UInt32.self) }
             let base = raw.assumingMemoryBound(to: UInt8.self)
             let e = PWShmLayout.evidenceOffset
-            word(0, 6)
+            word(0, 7)
             word(e + PWShmLayout.evidenceOperationOffset, 8)
             word(e + PWShmLayout.evidenceCodeOffset, 123)
             for (pub, state): (UInt32, String) in [(0,"absent"), (2,"incomplete"), (9,"invalid")] {

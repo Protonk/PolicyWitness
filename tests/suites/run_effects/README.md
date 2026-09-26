@@ -20,13 +20,10 @@ PolicyWitness, before the envelope is decoded.
 - Predictions are checked where they are stable: allow or deny from the
   validator for targets that exist throughout, and `prediction_unavailable`
   with `query_not_requested` for a target that does not exist when the query
-  is planned. For an allowed `unlink` the worker usually removes the target
-  before the validator's query runs, because attempts start as soon as the
-  worker publishes `applied` and the validator is spawned only after the host
-  observes that; the query then sees no path and PW reports deny with
-  `query_attempt_order_unestablished` and `state_stability_unestablished`.
-  That prediction and PW's comparison limitations are recorded in `rows.json`
-  and not asserted.
+  is planned. For an allowed `unlink`, the native allow query precedes the
+  attempt: `query_first`, agreement and `drift:false` are required. The separate
+  `witness_contract/removed_target_prediction_is_not_drift` case also checks an
+  earlier read of the same target and independent absence after removal.
 - A helper spawned under `(deny default)` plus `exec_baseline` with one
   `file-write*` allow creates its marker with the fixture's exact bytes at
   mode 0600. Without the allow the helper still runs (a child PID is reported)

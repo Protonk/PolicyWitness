@@ -95,7 +95,7 @@ def main():
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 7, runner
+            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 8, runner
             assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
             answers = recover_evidence(envelope)
             consumer_evidence[name] = answers
@@ -198,7 +198,9 @@ def main():
             assert comparison['operation_relation'] == 'matched'
             assert comparison['target_relation'] == 'same_submitted'
             assert step['drift'] is drift
-            for limit in ('query_attempt_order_unestablished', 'state_stability_unestablished',
+            assert comparison['order'] == 'query_first', (name, step_id, comparison)
+            assert 'query_attempt_order_unestablished' not in comparison['limitations']
+            for limit in ('state_stability_unestablished',
                           'runtime_target_identity_unestablished', 'exec_query_not_full_spawn_prediction'):
                 assert limit in comparison['limitations'], (name, step_id, comparison)
             assert 'broad_query_operation' not in comparison['limitations']

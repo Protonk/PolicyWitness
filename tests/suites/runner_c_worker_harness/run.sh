@@ -435,3 +435,19 @@ run_refusal_case "policy_overflow_refused"     "policy_overflow"     7 \
   "policy exceeds the 256 KiB cap → exit 7"
 run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
+
+run_proceed_control() {
+  local scenario="$1"
+  run_harness_case "${scenario}" "${scenario}" "Exercise release, acknowledgement and attempt exclusion: ${scenario}" || return 0
+  set +e
+  /usr/bin/python3 "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_proceed.py" "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+for scenario in proceed_never_set proceed_late_after_expiry proceed_before_applied \
+  proceed_delayed_observed_quiescence proceed_under_bare_deny_default \
+  proceed_wait_budget_short proceed_wait_budget_long proceed_expiry_release_boundary \
+  host_lost_while_waiting max_slots_proceed; do
+  run_proceed_control "$scenario"
+done

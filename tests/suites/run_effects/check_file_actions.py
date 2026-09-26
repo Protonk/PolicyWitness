@@ -72,13 +72,6 @@ def expected_prediction(before, denied_operation, expectation):
         # PW does not query sandbox_check for a path that does not resolve
         # when the query is planned; the attempt still runs.
         return 'unavailable'
-    if expectation == 'absent' and denied_operation is None:
-        # The worker starts its attempts as soon as it publishes `applied`, and
-        # the host spawns the validator only after observing that, so an
-        # allowed unlink usually removes the target before the query runs.
-        # PW then reports deny with order/state limitations. This suite pins
-        # the effect and records the prediction rather than asserting it.
-        return 'raced'
     return 'allow' if denied_operation is None else 'deny'
 
 
@@ -87,12 +80,13 @@ def check_step(step, target, prediction_expectation, expected_outcome):
     if prediction_expectation == 'unavailable':
         assert prediction['outcome'] == 'prediction_unavailable', prediction
         assert prediction['missing_reason'] == 'query_not_requested', prediction
-    elif prediction_expectation == 'raced':
-        assert prediction['result_source'] == 'validator', prediction
-        assert prediction['outcome'] in ('allow', 'deny'), prediction
     else:
         assert prediction['result_source'] == 'validator', prediction
         assert prediction['outcome'] == prediction_expectation, prediction
+    assert step['comparison']['order'] == ('unestablished' if prediction_expectation == 'unavailable' else 'query_first'), step
+    if attempt['requested_action'] == 'unlink' and prediction_expectation == 'allow':
+        assert step['drift'] is False and step['comparison']['conclusion'] == 'agreement', step
+        assert 'attempt_mutation_order_unestablished' not in step['comparison']['limitations'], step
     assert attempt['requested_path'] == str(target), attempt
     assert attempt['outcome'] == expected_outcome, attempt
     if expected_outcome == 'ok':

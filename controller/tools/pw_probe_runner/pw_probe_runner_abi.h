@@ -35,15 +35,15 @@
 #include <stdint.h>
 
 /*
- * ABI version 6 adds observer-owned progress, failure and diagnostic records
- * after the existing capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
+ * ABI version 7 uses the two reserved header words for host release and worker
+ * acknowledgement. Observer-owned evidence follows the capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
  * boundary, defended by the
  * abi_version check at worker entry. In practice host + worker ship
  * together (the worker binary is bundle-local inside each XPC service),
  * so the check is a defense-in-depth tripwire rather than a live
  * compatibility boundary.
  */
-#define PW_PROBE_RUNNER_ABI_VERSION 6u
+#define PW_PROBE_RUNNER_ABI_VERSION 7u
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
  * 8 KiB + 1024 params × 512 B + bounded capture = about 3.5 MiB per run.
@@ -179,25 +179,29 @@ typedef struct {
     int32_t apply_errno;             /* failed-apply errno, valid with done; otherwise see above */
     uint32_t capture_requested;      /* host input; exactly 1 opts into sensitive capture */
     uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
-    uint32_t reserved[(PW_SHM_HEADER_BYTES / 4u) - 14u];
+    _Atomic uint32_t proceed;          /* host: collection closed, release attempts */
+    _Atomic uint32_t proceed_observed; /* worker: acquired release before attempts */
 } pw_shm_header_t;
 
 /* Open numeric values: unknown operation/code values remain transportable. */
 enum {
     PW_OP_HEADER = 1, PW_OP_POLICY_READ = 2, PW_OP_PARAMS_CREATE = 3,
     PW_OP_PARAM_SET = 4, PW_OP_COMPILE = 5, PW_OP_CAPTURE = 6,
-    PW_OP_READY = 7, PW_OP_APPLY = 8, PW_OP_ATTEMPT = 9, PW_OP_FINISHED = 10
+    PW_OP_READY = 7, PW_OP_APPLY = 8, PW_OP_ATTEMPT = 9, PW_OP_FINISHED = 10,
+    PW_OP_PROCEED = 11
 };
 enum { PW_PROGRESS_STARTED = 1, PW_PROGRESS_RETURNED = 2 };
 enum {
     PW_FAILURE_NATIVE = 1, PW_FAILURE_SOURCE_LIMIT = 2, PW_FAILURE_POLICY_READ = 3,
     PW_FAILURE_STEP_LIMIT = 4, PW_FAILURE_PARAM_LIMIT = 5,
-    PW_FAILURE_PARAM_ENCODING = 6, PW_FAILURE_UNPREPARED = 7
+    PW_FAILURE_PARAM_ENCODING = 6, PW_FAILURE_UNPREPARED = 7,
+    PW_FAILURE_PROCEED_TIMEOUT = 8
 };
-enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2 };
+enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
+       PW_NATIVE_CLOCK = 3 };
 
-/* ABI 6. Worker-owned publication contract is specified in
- * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract (ABI 6)".
+/* ABI 7. Worker-owned publication contract is specified in
+ * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract (ABI 7)".
  * All payloads immutable after
  * their publication word reaches 1 (diagnostic also accepts 2=truncated).
  * Progress is a single atomic value, never a gate for reading other storage. */

@@ -28,7 +28,7 @@ def install_fixture(out, case):
 def assert_transcript(raw, probes, case):
     lines = raw.splitlines()
     assert len(lines) == (3 if case == 'malformed' else 2), lines
-    for line, index, outcome, rc, error in zip(lines[:2], (1, 0), ('deny', 'allow'), (1, 0), (1, 0)):
+    for line, index, outcome, rc, error in zip(lines[:2], (1, 0), ('deny', 'allow'), (1, 0), (0, 0)):
         verdict = json.loads(line)
         for key, value in probes[index].items():
             assert verdict[key] == value, (key, verdict, probes[index])
@@ -97,7 +97,7 @@ def check_cli(case, out, pw):
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 7, runner
+            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 8, runner
             assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
             answers = recover_evidence(envelope)
             (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
@@ -136,6 +136,10 @@ def check_cli(case, out, pw):
                 assert validator_status['decode_fault']['kind'] == 'json', validator_status
                 import base64
                 assert base64.b64decode(validator_status['decode_fault']['context_b64']).decode() == 'invalid-verdict:' + plan[-1]['step_id']
+            ordering = worker['ordering']
+            assert ordering['collection_closed_before_proceed'] and ordering['proceed_set'] and ordering['proceed_observed'], ordering
+            assert ordering['validator_disposition'] == 'reaped', ordering
+            assert [s['comparison']['order'] for s in runner['steps']] == ['query_first', 'query_first', 'unestablished']
             steps = runner['steps']
             assert [s['step_id'] for s in steps] == [s['step_id'] for s in plan], steps
             for i, (step, outcome) in enumerate(zip(steps, ('ok', 'open_failed', 'access_failed'))):
@@ -152,7 +156,7 @@ def check_cli(case, out, pw):
                 assert prediction['pid'] == worker['pid'], prediction
                 assert prediction['operation'] == probes[i]['operation'], prediction
                 assert prediction['filter_value'] == str(paths[i]), prediction
-            for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 1))):
+            for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 0))):
                 prediction = step['sandbox_check']
                 assert (prediction['outcome'], prediction['rc'], prediction['errno']) == expected, step
                 assert step['drift'] is (False if expected[0] == 'allow' else None), step

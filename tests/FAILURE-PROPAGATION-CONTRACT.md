@@ -1,7 +1,7 @@
 # Failure evidence contract
 
 This contract specifies host observations, diagnostic preservation and derived
-comparisons: worker ABI 6 publications, response 7 and independent log correlation.
+comparisons: worker ABI 7 publications, response 8 and independent log correlation.
 Worker records, diagnostic text, late publications and policy-transfer partial
 outputs preserve independently observed facts through to the CLI.
 
@@ -25,7 +25,7 @@ reliably reachable specimen failure.
 
 For a published legacy failure, retain R and any nonzero legacy errno in the
 runner's `error` diagnostic as published status values, without calling R an
-observed apply/compile return. ABI 6 records identify the failed operation and
+observed apply/compile return. ABI 7 records identify the failed operation and
 its native result independently of this legacy storage. The controller retains this diagnostic unchanged; subprocess fields below
 separately preserve cleanup observations. For an unpublished payload, neither
 the diagnostic nor a structured object may expose its storage as a call result.
@@ -37,8 +37,10 @@ which the child stopped.
 
 | Observations | Required account | Summary |
 | --- | --- | --- |
-| Valid ABI 6 failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
-| Incomplete or malformed ABI 6 failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
+| Proceed wait expiry (operation 11, code 8) or native clock failure (kind 3) | Preserve budget detail/diagnostic and zero attempts; late release cannot revive | `runner_failed` |
+| Death awaiting release | Preserve disposition/progress without inventing a failure record or policy cause | `runner_failed` |
+| Valid ABI 7 failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
+| Incomplete or malformed ABI 7 failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
 | No worker spawned | Retain the host admission/setup/spawn error; no worker report or subprocess object | Existing applicable host outcome |
 | A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never `sandbox_apply_failed` |
 | A=false, D=true, R nonzero | Worker published a legacy preparation/application failure; precise failed operation and native return unavailable | `runner_failed`; describe a published legacy failure, without saying an apply or compile call returned R |
@@ -57,7 +59,7 @@ which the child stopped.
 | A=true, D=true, R=0; disposition unconfirmed or unrecovered wait error | Completed report/slots survive; exit/signal absent unless reaped | `runner_failed` |
 | A=true, D=true, R=0; reaped exit 0, no unresolved host fault or termination request | Worker completion confirmed; evaluate validator observations | Existing validator mapping, or `ok` when required evidence is complete |
 
-Summary precedence is: host rejection before spawn; published ABI 6 failure;
+Summary precedence is: host rejection before spawn; published ABI 7 failure;
 host transfer failure; incomplete/malformed failure publication; inconsistent published
 worker state; published legacy worker failure; observed sentinel expiry; other
 worker incompletion/abnormal disposition/unresolved host error; validator
@@ -65,6 +67,40 @@ failure; `ok`. A recovered EINTR alone is not a failed run. A cleanup request
 without an observed sentinel expiry is not a timeout. This ordering selects
 the summary only; it does not discard another observer's evidence. The validator
 lifecycle and record-association requirements below also apply before `ok`.
+
+## Reply construction failure
+
+Response 8 distinguishes a host reporting failure from the execution summary.
+If the assembled result cannot be encoded, the reply uses
+`normalized_outcome: "runner_reporting_failed"`, `rc: 1` and an explanatory
+`error`. The controller consequently reports `ok: false`. This supplies no new
+worker, validator or policy failure claim.
+
+The `reporting_failure` object has `origin: "runner_host"`, a `diagnostic`,
+`original_rc`, `original_normalized_outcome`, optional `original_error`, and
+`evidence_retained`. For an invariant rejection, `evidence_retained` is true:
+all step IDs, queries, attempts, path diagnostics, application observations,
+subprocess objects (including raw validator records and ordering observations),
+policy capture and test overrides survive unchanged. Every step's `comparison`
+is omitted and `drift` is explicit null. The original summary is diagnostic,
+not a second authoritative outcome. Retained ordering fields are diagnostic
+observations; no per-step order is certified by this reply.
+
+This is the sole response-8 exception to mandatory comparisons and complete
+ordering objects. Consumers require the failure outcome, nonempty diagnostic,
+original summary and the absence of **all** comparisons and drift claims before
+accepting that exception. A failure marker cannot excuse a surviving agreement,
+disagreement or `query_first` claim. Ordinary response-8 invariants still reject
+an invalid assembled result when encoded directly; the service reply boundary
+alone constructs the degraded response.
+
+If even the evidence-preserving response cannot be serialized, a minimal
+reporting-failure reply retains run identity and the original summary, sets
+`evidence_retained: false`, and explicitly diagnoses the additional encoding
+failure. It contains no steps or subprocess objects. This final path does not
+claim evidence preservation and never substitutes `{}`. These are host coding
+failure paths tested with constructed results and an internal encoder fault;
+there is no specimen override that fabricates them.
 
 ## Host observations
 
@@ -117,8 +153,8 @@ child descriptors survive.
 
 ## Public compatibility and correlation
 
-Responses use schema 7, distinct from request schema 1, the outer controller
-envelope and worker ABI 6. Every new step explicitly encodes `deny_signal: null`;
+Responses use schema 8, distinct from request schema 1, the outer controller
+envelope and worker ABI 7. Every new step explicitly encodes `deny_signal: null`;
 old signal objects remain decodable as stored legacy evidence. This is a wire
 change for typed readers requiring a signal object. Explicit errno/drift nulls
 remain required. No signal collection is added.
@@ -130,7 +166,7 @@ not an alias to which new unknown terminations are assigned.
 ambiguous legacy status does not justify it. Both constants and coverage rows
 remain as legacy/reserved entries. `runner_failed` covers execution/reporting failure with cause possibly
 unknown; it does not mean a proven host defect. `bad_policy` keeps its existing
-structural-policy admission meaning. Published ABI 6 failures also use `runner_failed`; the operation/code record
+structural-policy admission meaning. Published ABI 7 failures also use `runner_failed`; the operation/code record
 provides the precise account without adding outcome strings.
 
 The pre-apply CLI witness asserts excluded claims, not one exact summary;
@@ -181,13 +217,14 @@ reporting obligations and registered test owners.
 | Test entry | Production reach and current assertions | Acceptance owner / remaining obligation |
 | --- | --- | --- |
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
-| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` | Constructed Codable results; response 7 explicit signal null, legacy response-4 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; response 8 ordering/eligibility and explicit signal null, legacy response-4/7 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply serializer with constructed invariant faults and internal encoder failure; every stored field has encoding coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
-| `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 6 layout and exact-version rejection |
-| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce response 7; missing channels remain distinct from observed failures |
+| `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 7 layout and exact-version rejection |
+| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce response 8; missing channels remain distinct from observed failures |
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published legacy failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
@@ -210,12 +247,11 @@ Credit live rows only after inspecting bundle-integrity evidence and the retaine
 missing. Constructed classifier/encoding cases have separate credit.
 `source_drift` protects registry/outcome matrices.
 
-## Worker evidence contract (ABI 6)
+## Worker evidence contract (ABI 7)
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
 following the existing capture bytes. Existing input/output capacities and
-budgets do not change. Host and worker require exactly ABI 6; there is no ABI 5
-fallback. Response schema 7 supports nullable query PIDs and additive evidence fields; request schema stays 1.
+other offsets do not change. Host and worker require exactly ABI 7, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header remains 64 bytes. Response schema 8 includes ordering evidence; request schema stays 1.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
 Legacy stored replies may omit it. Its `abi_version` is the host-selected UInt32
 layout encoded as a JSON integer, not proof the child reached ABI validation.
@@ -233,7 +269,7 @@ payload is read through progress. This is the latest milestone, not a history.
 
 Operations: 1 compatible header validation, 2 policy read, 3 parameter allocation,
 4 parameter assignment, 5 compilation, 6 optional profile capture, 7 readiness
-write, 8 application, 9 indexed attempt, 10 terminal completion. Started means
+write, 8 application, 9 indexed attempt, 10 terminal completion, 11 proceed wait. Started means
 control reached the call boundary; returned means control returned, regardless
 of success. Application is established only by `applied == 1`. Completed attempt
 outputs are established only by that slot's `completed == 1`.
@@ -247,6 +283,9 @@ outputs are established only by that slot's `completed == 1`.
 | assignment i returns and i+1 starts | Atomic progress identifies exactly one boundary; no torn index/phase |
 | readiness write fails | Its own immutable rc/errno record remains; execution may proceed to apply and done |
 | optional capture omitted | Transition compile → readiness is valid |
+| proceed wait starts; budget expires | Operation 11/code 8, budget milliseconds in detail, done; no acknowledgement or attempt, even after late release |
+| proceed clock fails | Operation 11/code 1/native kind 3, actual return and errno; done, no attempts |
+| release acknowledged; worker dies | Lifetime and eligible query order remain established; attempt evidence may be missing |
 | attempt i starts but never completes | Progress may identify the started slot; no completed result or claim that it never ran |
 | failure published; diagnostic incomplete; cleanup fails | Failure status, diagnostic availability and host observations survive independently |
 | done published during exit grace | Final acquired payload/slots survive; earlier poll stop/deadline stays unchanged |
@@ -321,7 +360,7 @@ missing-result spelling; it means no completed result, never proof of non-start.
 They use result_source=synthetic, native_rc=null, and missing_reason=slot_absent
 or slot_incomplete. Completed supported slots use result_source=worker. Their rc is PW
 attempt status (often 0/1, or aggregated exec disposition), not a native syscall
-return such as an open FD. ABI 6 does not carry that raw return: native_rc is
+return such as an open FD. ABI 7 does not carry that raw return: native_rc is
 null for attempts, including completed ones. Unsupported/skipped attempts use synthetic and
 attempt_not_supported. Step errno/drift/signal absence retains its existing form.
 
@@ -438,7 +477,7 @@ Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
 PID, or explicit null when no worker exists. It never substitutes the host PID.
 Typed readers must accept null; stored integer-PID replies remain decodable.
 The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 6 remain separate.
+ABI 7 remain separate.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`
@@ -484,7 +523,7 @@ not a runtime observation used to assign the cause.
 Open values do not require a production code registration. Two distinct worker
 payloads are checked against independent fixture inputs through C publication,
 Swift decoding and encoding, XPC client forwarding and Rust reception. The worker
-producer/domain is the containing worker PID and ABI-6 channel; JSON diagnostic
+producer/domain is the containing worker PID and ABI-7 channel; JSON diagnostic
 records additionally exercise explicit producer/domain/operation/code/detail.
 Known operation/native-result fields survive an unfamiliar diagnostic code. The
 fixture supplies these values, including errno; it does not establish that the
@@ -515,7 +554,7 @@ See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture
 code-filtering and detail-dropping mutations are test experiments only; source
 and the signed app must be restored before acceptance.
 
-## Derived comparisons and evidence joins (response 7)
+## Derived comparisons and evidence joins (response 8)
 
 ### Claim/evidence review
 
@@ -523,7 +562,7 @@ and the signed app must be restored before acceptance.
 | --- | --- | --- | --- |
 | Submitted query → validator record; host and validator | Unique step ID plus exact submitted operation/filter tuple; host invokes validator after observing worker application | A correctly associated query for A need not concern attempted B; a late validator can query changed state | The record answers the submitted query, not necessarily the attempt |
 | Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from an outcome comparison |
-| Query time → attempt time; two children | Worker application publication precedes validator invocation; attempts proceed independently | Attempts may change files or finish before the validator observes them | No guaranteed query/attempt order, stable state or synchronized enforcement comparison |
+| Query time → attempt time; host and two children | Application → closed query collection → host release → worker acknowledgement → attempts; eligible uniquely associated native records acquire query_first | External state can change during the interval; earlier attempts can affect later attempts | Established order for eligible records, without stable state or runtime identity claims |
 | Path enrichment → query/attempt; runner host | Host resolves submitted query path after the orchestrator returns | Worker unlinks the path before host resolution; host and sandboxed worker can resolve differently | Later host diagnostic, never an earlier validator/worker observation |
 | Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates | Repeated attempts, PID reuse, trailing capture and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
 | Test control → runtime interpretation; test harness and PW | Controls can establish expected meanings independently of the classifier | Direct unsandboxed execution or a fixture oracle is not an observation available in a normal PW envelope | Credit controlled interpretation separately from native observation; no test knowledge silently becomes runtime attribution |
@@ -537,7 +576,7 @@ ignorance. Submitted kind/action describes intent; it does not prove execution.
 
 | ID | Original consumer question | Required disposition under the chosen contract |
 | --- | --- | --- |
-| C1 | Which steps report established agreement, and what comparison does that claim cover? | Recover agreement/disagreement of recorded outcomes for matching submitted scope, separately from directional consistency and unavailable comparison. No claim of synchronized sandbox enforcement agreement. |
+| C1 | Which steps report established agreement, and what comparison does that claim cover? | Recover supported allow/success agreement for matching submitted scope, separately from directional consistency and unavailable comparison. Disagreement requires evidence excluding material alternative explanations; order alone cannot supply state or runtime identity evidence. Agreement does not certify synchronized state. |
 | C2 | Which steps observed a failure whose cause PW could not attribute to the sandbox? | Recover observed permission/other failures with unestablished sandbox attribution separately from missing worker results. Native numbers and errors survive. |
 | C3 | What relationship between each query and attempt was established, known to differ, or left unresolved? | Report submitted operation and target relations, with submitted kind/action retained. Runtime object identity, complete check coverage and temporal equivalence remain limited where unobserved. |
 | C4 | Which steps produced no comparison, and what known reasons limit it? | Recover all known missing/unusable, scope and attribution limits, allowing simultaneous reasons; retain underlying missing_reason and native observations. |
@@ -560,7 +599,8 @@ available to a JSON consumer.
 
 | Controlled scenario | Accepted answer / questions | Evidence and assumption | Stronger conclusion excluded |
 | --- | --- | --- | --- |
-| Same submitted file scope, supplied allow or deny verdict, successful read | Agreement or disagreement respectively; retain scope and all temporal/identity limits (C1/C3/C4) | Fixture verdict plus real worker read and independently retained file contents; interpretation control, not native prediction validation | Synchronized enforcement agreement, causal contradiction, or a libsandbox bug |
+| Same submitted file scope, supplied allow or deny verdict, successful read | Agreement or unavailable respectively; even established query order cannot discharge the state/identity obligations, and scope and state/identity limits survive (C1/C3/C4) | Fixture verdict plus real worker read and independently retained file contents; interpretation control, not native prediction validation | Synchronized enforcement agreement, causal contradiction, or a libsandbox bug |
+| Planned path query and worker-reported successful unlink of that submitted target, in any step of the run, with unestablished query order | Retain mutation uncertainty; successful corresponding attempts yield unavailable/null under either prediction (C1/C3/C4) | Completed worker unlink status and submitted target equality, independently of later host resolution | Removal is proved to precede the query, or recreation restores runtime identity |
 | Allow or deny verdict, same locked file, failed read | Unavailable or directional consistency respectively; permission failure with unestablished cause (C1/C2/C4) | Direct unsandboxed EACCES control and real worker failure; the test knows DAC prevented access | Runtime proof that DAC or the sandbox caused this particular failure; directional consistency is not agreement |
 | Different submitted target or operation, including denied query A and successful spawn B | Preserve the known difference and successful observation; comparison unavailable (C1/C3/C4) | Independently supplied query/attempt inputs and actual worker effects | Host canonicalization repairs the relation, or two different strings prove different runtime objects |
 | Compound create or unsupported attempt | Preserve unresolved operation/scope; distinguish completed create from absent supported attempt result (C2/C3/C4) | Submitted action and worker publication/missing reason | A single query covers the compound operation; missing result proves no operation started |
@@ -606,6 +646,40 @@ enforce that reporting obligation, not a general proof of causal correctness.
 
 ### Public representation and meaning
 
+`comparison.order` is `query_first` only when the host closed collection before
+storing release, the worker acknowledged release after successful application,
+worker ownership was retained through acknowledgement, and a unique native
+allow/deny record matches the exact planned query tuple with coherent rc/errno.
+All other records retain `unestablished`. Death before acknowledgement cannot
+certify policy lifetime; death or cleanup failure afterwards does not erase
+established order. Queries are never launched against a reaped worker.
+
+`runner_subprocess.ordering` is present exactly when the worker subprocess object
+is present. It records `collection_closed_before_proceed`, `proceed_set`,
+`proceed_observed`, `worker_lifetime_established`, `validator_disposition` and
+`protocol_violations`. The first two observations belong to the host; acknowledgement
+is a worker publication acquired by the host. False means not established,
+not proof of nonoccurrence. Contradictory observations remain visible, carry
+protocol violations, and establish no order.
+
+Validator disposition is `not_invoked`, `not_needed` (empty query plan),
+`not_spawned` (setup/spawn failure), `reaped`, or `unconfirmed`. Collection closes
+when the synchronous driver returns, even after partial output, decode failure,
+I/O expiry or failed cleanup. The host then releases attempts. No later record
+can enter predictions; `unconfirmed` does not mean the validator has exited.
+Eligible partial records can therefore retain `query_first`. Every emitted step
+has order even when predictions are excluded or missing; those steps still obey
+the release barrier. Legacy decodes gain neither field.
+
+Queries form an interval before the first attempt, not per-step interleaving or
+a shared snapshot. External activity may change targets during that interval;
+earlier attempts may affect later attempts. State stability and path identity
+remain unestablished. No response-8 producer path can yield `disagreement` or
+`drift: true`: the typed evidence model has no established state/identity cases,
+and the encoder and consumers reject that unsupported claim even with empty
+limitations.
+
+
 Each new step contains `comparison` with `scope="submitted_operation_and_target"`,
 `prediction` (allow/deny/unavailable), `observation`
 (succeeded/permission_failure/other_failure/unavailable), `observation_basis`,
@@ -650,10 +724,16 @@ The source-level worker observation remains the successful `posix_spawn` return
 that publishes `child_pid`; it is not inferred from the helper's exit code.
 
 `drift=false` projects `comparison.conclusion=agreement`: an allow prediction and
-completed successful attempt within that submitted scope. `drift=true` projects
-`disagreement`: a deny prediction and successful attempt within that scope.
-Both compare recorded outcomes; neither proves a libsandbox bug, causal attribution,
-runtime identity or equal state at the two observations. An exec child that ran
+completed successful attempt within that submitted scope, without a supported
+unordered target mutation. This agreement does not certify runtime identity or
+equal state. `drift=true` projects `disagreement` and is reserved for differing
+kernel enforcement with no supported or materially unresolved alternative
+explanation. It requires usable native prediction and attempt evidence, query
+order and worker policy context, corresponding operation and runtime target,
+and sufficient evidence about state, query coverage and other enforcement
+mechanisms. Identical submitted paths and absent captured denies are insufficient.
+Established query order alone cannot exclude state changes or runtime target ambiguity, so every deny/success difference yields `unavailable`/null. No current producer path yields `drift=true`.
+An exec child that ran
 and then failed supplies spawn success independently of its later exit outcome.
 It also retains `exec_result_failed_after_spawn` and `sandbox_attribution_unestablished`: a
 useful spawn comparison cannot erase a failed exec result. That result may
@@ -665,8 +745,7 @@ Permission numbers (including Mach permission failure) do not alone establish a
 sandbox cause. Unrecognized sysctl errors never become strong denial evidence.
 No current failed-attempt path establishes attributable sandbox denial.
 
-Every comparison reports `query_attempt_order_unestablished` and
-`state_stability_unestablished`; path comparisons also report
+Every comparison reports `state_stability_unestablished`; `query_attempt_order_unestablished` appears exactly when `comparison.order` is not `query_first`. Path comparisons also report
 `runtime_target_identity_unestablished`. Additional limits report unresolved or
 different operations/targets, unavailable predictions/attempts, unusable verdicts
 broad query operations, unsupported filter scope, absent submitted targets
@@ -677,6 +756,20 @@ known reason. A `query_plan:` limitation retains the host's known exclusion:
 `prediction:query_not_requested`, native errors and later host path enrichment.
 The documented derivation permits recovery without reimplementing
 the classifier. A synthetic record cannot acquire a native observation by its label.
+
+`attempt_mutation_order_unestablished` requires a planned path query and a
+worker-reported successful (`rc=0`, `outcome=ok`) file/unlink of that submitted
+target in any step of the run whose query order is unestablished. Established query order removes this confound and restores allow/success agreement; it does not establish drift. Step position does not bound it: with order
+unestablished the worker can finish every attempt before the first query, so a
+later step's unlink can precede an earlier step's query. Unknown order makes
+this a material confound for both allow/success agreement and deny/success
+disagreement. Other
+targets, failed/synthetic unlink results, content writes and create-if-absent
+do not supply that observation. Later recreation does not erase it.
+`host_path_resolution_changed` separately records planned host resolution
+followed by failed host resolution after orchestration. Enrichment appends it
+only to an existing comparison with no planning exclusion; it never changes
+conclusion or drift and never supplies query-time state.
 
 | Observation basis | Supporting fields and limited meaning |
 | --- | --- |
@@ -712,24 +805,36 @@ remain in the tests that own the controlled inputs and independent observations.
 | --- | --- | --- |
 | C1 | `witness_contract/drift_determination_via_validator_seam`: all four conclusion groups from supplied verdicts and real file controls; `runner_exec_dac/execute_permission_is_not_sandbox_drift`: native admission/spawn comparisons; `blackbox_e2e/checker_controls`: reject blanket unknown that erases supported agreement | Recorded submitted-scope comparison, without synchronized-state or causal proof |
 | C2 | Comparison witness: permission/other failures versus absent result; native exec case: failed child result remains beside successful spawn; pre-apply and both validator-failure CLI cases: missing channel never erases the other; `runner_unit/pwrunner_core_unit_executable`: `EnvelopeInvariantTests` retains native fields through Codable | Cause of a failed result remains unestablished, even where the test controls a known cause |
-| C3 | Comparison witness and `witness_contract/prediction_target_is_independent_of_attempt_target`: independent target/operation relations and submitted intent; native exec counterexamples; shared checker requires response-7 intent fields | Submitted relation does not establish runtime object identity or full operation coverage |
+| C3 | Comparison witness and `witness_contract/prediction_target_is_independent_of_attempt_target`: independent target/operation relations and submitted intent; native exec counterexamples; shared checker requires intent fields on response 7 and later | Submitted relation does not establish runtime object identity or full operation coverage |
 | C4 | Comparison witness, `witness_contract/pre_apply_failure_reports_no_policy_verdict`, both `runner_validator_failure` CLI cases and `runner_filter_sysctl_name/prediction_unavailable_attempt_observed`: simultaneous limits and distinct missing reasons survive alongside raw observations; Swift encoding retains the whole limitations array including unfamiliar values | Several limits can coexist; no principal cause is inferred |
 | C5 | Comparison witness and `runner_unit`'s `DriftClassifierTests`/`EnvelopeInvariantTests`: later host enrichment and old-record absence survive encoding; shared blackbox checker rejects validator ownership or wrong phase on new host diagnostics | No earlier validator/worker observation or reaping guarantee follows from later host resolution |
 | C6 | `witness_contract/worker_termination_and_log_correlation`: live repeated candidates and matching provenance; `unit/rust.unit`'s `run_flow`/`sandbox_log` tests: serialized event indices, candidate multiplicity, capture limits and old-runner/new-controller independence; blackbox controls recover populated, unmatched, unavailable and disabled captures | Candidates are not unique occurrences or causes; absent/no-match capture supplies no negative proof |
 
 `unit/rust.unit` also exercises `runner_client` transport with response versions
-4–7, preserving complete received JSON, native child failure and unfamiliar limits.
+4–8, preserving complete received JSON, native child failure and unfamiliar limits.
 Swift legacy controls preserve original drift and do not invent comparison, intent
 or path provenance. `blackbox_e2e/checker_controls` exercises JSON recovery for
 versions 4–6, independent newer controller evidence, no admitted steps and no reply.
-The shared blackbox checker enforces universal response-7 shape, required temporal
-and attribution limits, explicit drift projection and host-path ownership; it does
-not reconstruct the prediction/attempt decision procedure. Indirect blackbox and
+The shared blackbox checker enforces the response-7 shape and blanket temporal
+limits on legacy replies. On response 8 it checks conditional ordering evidence,
+native-record eligibility and the prohibition on disagreement. A validated
+`reporting_failure` reply instead requires absent comparisons and explicit null
+drift, and retains unvalidated ordering observations for diagnosis. Both versions
+require attribution limits, explicit drift projection and host-path ownership;
+the checker does not reconstruct the full prediction/attempt decision procedure. Indirect blackbox and
 filter consumers, including BYOXPC cases, exercise the same guarantees.
 
+`validate_current_build_evidence` is an explicit producer-conformance check:
+it rejects current disagreement claims, unsupported or missing mutation and
+resolution-change limitations, and agreement in the presence of a reported
+unordered target mutation anywhere in the run. The new unlink witness and supplied-verdict controls use it; offline
+checker controls retain accepted and rejected envelopes. It is separate from
+`validate_evidence_shape` and `recover_evidence`, which preserve historical
+response-7 disagreements without silently applying current-build rules.
+
 Live comparison, native-exec, pre-apply, validator-failure and log-correlation
-witnesses require response version 7 before relying on version-gated checks.
-The three live filter callers pass `--expected-schema-version 7` to their
+witnesses require response version 8 before relying on version-gated checks.
+The three live filter callers pass `--expected-schema-version 8` to their
 adapter. Its offline controls accept legacy fixtures without that requirement,
 reject older/missing/invalid versions when it is supplied, and reject missing
 comparison/intent evidence on current replies. Compatibility with stored replies
@@ -746,23 +851,18 @@ No permanent test reads an execution plan, audit document or acceptance output.
 
 ### Compatibility and acceptance gate
 
-Response schema advances **6 → 7** because `drift` changes meaning and comparison
-and provenance become required on newly produced steps. The default shared response
-type also versions client-generated failures. Request schema **1** and worker ABI
-**6** remain unchanged: no new C publication, capacities or time budgets are needed.
-Swift accepts older stored replies with absent new fields and preserves their
-original drift value; it never fabricates the new derivation. The Rust controller
-forwards the original runner response version. Consumers must interpret versions
-4–6 using their older semantics; bool/null shape compatibility is not semantic
-compatibility. Fixtures explicitly exercising old decoding keep their old versions.
+Response schema is **8**, request schema **1**, and worker ABI **7**. Current
+responses require per-step order and worker ordering observations. The ABI adds
+release and acknowledgement in the two reserved header words; capacities and
+other offsets are unchanged. The worker release wait is inventoried in
+[Limits](../docs/LIMITS.md).
 
-The native exec mapping uses schema 7's existing meanings and shape: agreement
-and disagreement still compare recorded outcomes within the documented submitted
-scope, and null still represents an unavailable or merely directional comparison.
-Supporting the usable exec spelling changes which rows have an established
-mapping, not what those conclusions promise. The additional exec limitation is
-an independent string in the existing open limitations list. No new required
-field or conclusion is introduced; request schema and worker ABI are unchanged.
+Stored versions 4–7 preserve their original drift values and absence of new
+fields. Historical response-7 disagreement means deny/success despite unresolved
+order, state and identity. That legacy projection remains decodable; response 8
+rejects disagreement outright because no vocabulary for established state or
+runtime identity exists. Dropping limitation strings cannot manufacture evidence.
+The Rust controller preserves response versions and unfamiliar order strings.
 
 The [dependency inventory](FAILURE-PROPAGATION-INVENTORY.md#derived-comparison-dependencies)
 maps the source/test/public-contract changes before implementation. Acceptance

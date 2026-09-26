@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import signal
 import sys
+import time
 
 
 def main():
@@ -46,12 +47,14 @@ def main():
         if tail == 'unexpected': verdict['step_id'] = 'never-requested'
         lines.append(json.dumps(verdict, sort_keys=True))
     else:
-        assert tail in ('eof', 'invalid_utf8'), 'unknown transcript tail'
+        assert tail in ('eof', 'invalid_utf8', 'deadline'), 'unknown transcript tail'
     output = ('\n'.join(lines) + '\n').encode()
     if tail == 'invalid_utf8': output += b'\xff\n'
     here.with_suffix('.emitted.ndjson').write_bytes(output)
     sys.stdout.buffer.write(output)
     sys.stdout.buffer.flush()
+    if tail == "deadline":
+        time.sleep(8)  # open stdout forces the real driver deadline; alarm bounds leaks
 
 
 

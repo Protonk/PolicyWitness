@@ -94,6 +94,17 @@ capture metadata, and assertion log. Run with:
 tests/run.sh --case witness_contract/create_existing_file_preserves_contents
 ```
 
+## Removed target uncertainty
+
+`removed_target_prediction_is_not_drift` runs an allowed read and unlink of
+one file with the real validator and no overrides. Both native predictions must
+be allow with `query_first` and allow/success agreement. The test observes file
+absence before decoding, and retains later host nonresolution separately as
+`host_path_resolution_changed`. Unordered same-target mutation uncertainty,
+including later-step unlink, remains pinned by Swift and offline consumer
+controls. The stronger gated observer and deliberate barrier-bypass controls are
+separate tests; this ordinary run alone does not replace them.
+
 ## Completed observations after a worker timeout
 
 `worker_post_apply_hang_seam` attempts an allowed write and a denied write,
@@ -150,7 +161,7 @@ groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
-enforces the response-7 [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
+enforces the response-8 [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
 Consumer checks distinguish missing results from observed failures, retaining
 both missing reasons and all simultaneous comparison limits.
 
@@ -235,7 +246,8 @@ requires no retained mutation experiment or acceptance output.
 
 The steered-validator case also runs ten bounded comparison scenarios through the
 CLI. `check_comparison.py` records independent expectations, direct DAC EACCES and
-file witnesses. It covers outcome agreement/disagreement, both permission-failure
+file witnesses. It covers supported agreement and unavailable ordered
+deny/success differences, both permission-failure
 predictions, different target and operation, missing queries, successful attempts
 without predictions, compound create and unsupported attempts. It checks comparison
 scope, provenance and simultaneous limits. The transcript supplies verdicts; the
@@ -243,3 +255,8 @@ worker attempts and direct OS/file witnesses are real. These are interpretation
 controls, not native compiler-drift discoveries. Swift controls separately cover
 legacy absence, unusual errors, exec child evidence and deterministic later host
 path disappearance.
+
+The removed-target control now expects both native queries to precede read/unlink:
+`query_first`, allow/success agreement, and independent host nonresolution after
+unlink. Unordered same-target mutation protections remain covered by classifier
+and offline consumer controls. Ordered deny/success remains unavailable.

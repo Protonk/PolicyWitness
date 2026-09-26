@@ -22,7 +22,7 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 raw.initializeMemory(as: UInt8.self, repeating: 0, count: PWShmLayout.regionBytes)
                 func word(_ offset: Int, _ value: UInt32) { raw.storeBytes(of: value, toByteOffset: offset, as: UInt32.self) }
                 let e = PWShmLayout.evidenceOffset
-                word(0, 6)
+                word(0, 7)
                 for (key, offset) in [("operation", PWShmLayout.evidenceOperationOffset),
                     ("code", PWShmLayout.evidenceCodeOffset), ("native_kind", PWShmLayout.evidenceNativeKindOffset),
                     ("detail", PWShmLayout.evidenceDetailOffset)] {
@@ -64,7 +64,7 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 word(e + PWShmLayout.evidenceErrnoPresentOffset, 2)
                 try expectEqual(decodeWorkerEvidence(base)?.failure_state, "invalid")
                 word(e + PWShmLayout.evidenceErrnoPresentOffset, 1)
-                word(0, 7)
+                word(0, 8)
                 try expectNil(decodeWorkerEvidence(base))
             }
         }

@@ -22,7 +22,8 @@ import Foundation
  *          prediction_unavailable result for skipped pairs
  *        - attempt from CWorker slot result
  *        - comparison records submitted scope, derivation and known limits;
- *          drift projects only established outcome agreement/disagreement
+ *          drift projects supported agreement to false; current evidence
+ *          cannot establish disagreement even when query order is known
  *   4. Classifier:
  *        - normalized_outcome from C-worker disposition +
  *          validator disposition + per-slot completed/done state
@@ -83,7 +84,8 @@ public enum CWorkerOrchestrator {
             let vInput = ValidatorClientInput(
                 executablePath: validatorExecutablePath,
                 targetPid: workerPid,
-                probes: validatorProbes
+                probes: validatorProbes,
+                verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
             )
             validatorResult = runValidator(vInput)
         }
@@ -98,18 +100,22 @@ public enum CWorkerOrchestrator {
         let workerOutput = unwrapWorkerOutput(workerResult)
         let validatorOutput = unwrapValidatorOutput(validatorResult)
 
+        let ordering = workerOutput.map {
+            buildOrdering($0, validatorOutput: validatorOutput, hasQueries: !validatorProbes.isEmpty)
+        }
         let stepResults = buildStepResults(
             probePlan: parsed.probe_plan,
             queryPlan: queryPlan,
             workerOutput: workerOutput,
-            validatorOutput: validatorOutput
+            validatorOutput: validatorOutput, ordering: ordering
         )
 
         let admissionFailure: PWRunnerAdmissionFailure?
         if case .failure(.admissionFailed(let record), _) = workerResult { admissionFailure = record }
         else { admissionFailure = nil }
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
-        let runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
+        var runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
+        runnerSubprocess?.ordering = ordering
         let validatorSubprocess = validatorOutput.map(buildValidatorSubprocess)
 
         _ = stepCount  // referenced for future partial-step logic; silence unused warning
@@ -214,6 +220,15 @@ func timeoutMsForCWorker(override: Int?) -> Int {
     let cWorkerDefault = 60_000
     guard let v = override else { return cWorkerDefault }
     return max(50, v)
+}
+
+// Configuration allowance for observation, setup, decode and scheduling;
+// the nominal relation covers defaults, not fault-injection overrides. It is
+// not an enforced bound on final reap or host descheduling.
+let validatorReleaseMarginMs = 5_000
+func timeoutMsForValidator(override: Int?) -> Int {
+    // Intentionally uncapped: tests may hold collection beyond worker expiry.
+    override.map { max(50, $0) } ?? 30_000
 }
 
 // MARK: - Translation: request → driver inputs
@@ -389,7 +404,8 @@ func buildStepResults(
     probePlan: [PWRunnerProbeStep],
     queryPlan: [ValidatorQueryDecision],
     workerOutput: CWorkerOutput?,
-    validatorOutput: ValidatorOutput?
+    validatorOutput: ValidatorOutput?,
+    ordering: PWRunnerOrdering? = nil
 ) -> [PWRunnerStepResult] {
     // Index outputs by step_id for the join.
     let workerSlotsByStep: [String: CWorkerSlotResult] = Dictionary(
@@ -401,8 +417,12 @@ func buildStepResults(
     // No worker means no PID for a worker-targeted sandbox query.
     let sbCheckPid = workerOutput.map { Int($0.workerPid) }
 
-    var results: [PWRunnerStepResult] = []
-    results.reserveCapacity(probePlan.count)
+    // Join both channels for every step before any comparison. With order
+    // unestablished, any attempt in the run may precede any query, so the
+    // classifier must see the whole run's attempts, not a prefix of them.
+    var channels: [(step: PWRunnerProbeStep, sandboxCheck: PWRunnerSandboxCheckResult,
+                    attempt: PWRunnerAttemptResult)] = []
+    channels.reserveCapacity(probePlan.count)
     for step in probePlan {
         var sandboxCheck = buildSandboxCheckResult(
             step: step,
@@ -432,24 +452,31 @@ func buildStepResults(
         attempt.requested_action = step.attempt.action
         attempt.result_source = slot?.completed == true && supported ? "worker" : "synthetic"
         // Slot rc is PW's attempt status (often 0/1), not the raw syscall
-        // return (e.g. an open FD). ABI 6 does not carry that native return.
+        // return (e.g. an open FD). ABI 7 does not carry that native return.
         attempt.native_rc = nil
         if attempt.result_source == "synthetic" {
             attempt.missing_reason = !supported ? "attempt_not_supported" : slot == nil ? "slot_absent" : "slot_incomplete"
         }
-        let comparison = computeComparison(sandboxCheck: sandboxCheck, attempt: attempt,
-            queryExclusionReason: decisions[step.step_id]?.exclusionCode)
-        let stepResult = PWRunnerStepResult(
-            step_id: step.step_id,
-            sandbox_check: sandboxCheck,
-            attempt: attempt,
+        channels.append((step: step, sandboxCheck: sandboxCheck, attempt: attempt))
+    }
+    let runAttempts = channels.map { $0.attempt }
+    return channels.map { channel in
+        let comparison = computeComparison(sandboxCheck: channel.sandboxCheck, attempt: channel.attempt,
+            queryExclusionReason: decisions[channel.step.step_id]?.exclusionCode,
+            order: eligibleOrderedStep(stepId: channel.step.step_id, query: channel.sandboxCheck,
+                records: validatorOutput?.verdicts ?? [], ordering: ordering,
+                sandboxedAfterApply: workerOutput?.applied == true && workerOutput?.applyRC == 0,
+                workerPid: workerOutput.map { Int($0.workerPid) })
+                ? .queryFirst : .unestablished, runAttempts: runAttempts)
+        return PWRunnerStepResult(
+            step_id: channel.step.step_id,
+            sandbox_check: channel.sandboxCheck,
+            attempt: channel.attempt,
             deny_signal: nil,
             drift: comparison.drift,
             comparison: comparison
         )
-        results.append(stepResult)
     }
-    return results
 }
 
 private func buildSandboxCheckResult(
@@ -628,14 +655,104 @@ func buildAttemptResult(
     )
 }
 
-// Internal for independent scenario controls. This compares recorded outcomes
-// within submitted scope; temporal equivalence and sandbox cause remain separate.
-func computeComparison(
+// Only a completed worker observation supports mutation of the submitted object.
+// Content writes and create-if-absent do not establish object removal/replacement.
+private func reportsTargetRemoval(_ attempt: PWRunnerAttemptResult) -> Bool {
+    guard attempt.result_source == "worker", attempt.rc == 0 else { return false }
+    switch (attempt.requested_kind, attempt.requested_action, attempt.outcome) {
+    case ("file", "unlink", AttemptOutcome.ok): return true
+    default: return false
+    }
+}
+
+enum ComparisonOrder: String { case queryFirst = "query_first", unestablished }
+enum ComparisonState { case unestablished }
+enum ComparisonIdentity { case unestablished, notApplicable }
+enum ComparisonAttribution { case unestablished, notRequired }
+enum ComparisonMutation { case none, sameTargetUnordered, sameTargetAfterQuery }
+
+struct ComparisonEvidence {
+    var order: ComparisonOrder
+    var state: ComparisonState = .unestablished
+    var identity: ComparisonIdentity
+    var attribution: ComparisonAttribution
+    var mutation: ComparisonMutation
+    var prediction: String
+    var observation: String
+    var basis: String
+    var operationRelation: String
+    var targetRelation: String
+    var otherLimitations: [String]
+
+    // No evidence for established state or runtime identity is expressible in
+    // response 8. In particular there is no constructible disagreement branch.
+    var conclusion: String {
+        guard operationRelation == "matched", targetRelation == "same_submitted" else { return "unavailable" }
+        if mutation == .sameTargetUnordered { return "unavailable" }
+        if observation == "succeeded", prediction == "allow" { return "agreement" }
+        if observation == "permission_failure", prediction == "deny" { return "directional_consistency" }
+        return "unavailable"
+    }
+    func renderLimitations() -> [String] {
+        var result: [String] = []
+        if order == .unestablished { result.append("query_attempt_order_unestablished") }
+        switch state { case .unestablished: result.append("state_stability_unestablished") }
+        if identity == .unestablished { result.append("runtime_target_identity_unestablished") }
+        if attribution == .unestablished { result.append("sandbox_attribution_unestablished") }
+        if mutation == .sameTargetUnordered { result.append("attempt_mutation_order_unestablished") }
+        return result + otherLimitations
+    }
+    var comparison: PWRunnerComparison {
+        PWRunnerComparison(scope: "submitted_operation_and_target", prediction: prediction,
+            observation: observation, observation_basis: basis, operation_relation: operationRelation,
+            target_relation: targetRelation, conclusion: conclusion, limitations: renderLimitations(), order: order.rawValue)
+    }
+}
+
+func buildOrdering(_ worker: CWorkerOutput, validatorOutput: ValidatorOutput?, hasQueries: Bool) -> PWRunnerOrdering {
+    let disposition = !worker.hookInvoked ? "not_invoked" : !hasQueries ? "not_needed"
+        : validatorOutput == nil ? "not_spawned" : validatorOutput?.reaped == true ? "reaped" : "unconfirmed"
+    var violations = worker.orderingProtocolViolations
+    if worker.proceedObserved && !worker.proceedSet { violations.append("acknowledgement_without_release") }
+    if worker.proceedSet && !worker.hookInvoked { violations.append("release_without_collection_closure") }
+    if (worker.proceedSet || worker.proceedObserved) && (!worker.applied || worker.applyRC != 0) {
+        violations.append("release_without_successful_application")
+    }
+    if worker.slots.contains(where: { $0.completed }) && !worker.proceedObserved {
+        violations.append("attempt_without_acknowledgement")
+    }
+    if worker.workerEvidence?.failure?.operation == 11 &&
+        (worker.proceedObserved || worker.slots.contains(where: { $0.completed })) {
+        violations.append("attempt_or_acknowledgement_after_proceed_failure")
+    }
+    return PWRunnerOrdering(collection_closed_before_proceed: worker.hookInvoked,
+        proceed_set: worker.proceedSet, proceed_observed: worker.proceedObserved,
+        validator_disposition: disposition, worker_lifetime_established: worker.proceedOwnershipEstablished,
+        protocol_violations: Array(Set(violations)).sorted())
+}
+
+func computeComparison(sandboxCheck: PWRunnerSandboxCheckResult, attempt: PWRunnerAttemptResult,
+                       queryExclusionReason: String? = nil, order: ComparisonOrder = .unestablished,
+                       runAttempts: [PWRunnerAttemptResult] = []) -> PWRunnerComparison {
+    comparisonEvidence(sandboxCheck: sandboxCheck, attempt: attempt, queryExclusionReason: queryExclusionReason,
+                       order: order, runAttempts: runAttempts).comparison
+}
+
+// Internal for independent scenario controls. Query order alone cannot
+// discharge state/identity obligations or establish drift.
+// `runAttempts` is every worker-reported attempt in the run, in plan order.
+// While order is unestablished the worker's attempt loop can finish before the
+// validator's first query, so a same-target unlink in any step, earlier or
+// later, may precede this query. The current attempt is always considered.
+func comparisonEvidence(
     sandboxCheck: PWRunnerSandboxCheckResult,
     attempt: PWRunnerAttemptResult,
-    queryExclusionReason: String? = nil
-) -> PWRunnerComparison {
-    var limits = ["query_attempt_order_unestablished", "state_stability_unestablished"]
+    queryExclusionReason: String? = nil,
+    order: ComparisonOrder = .unestablished,
+    runAttempts: [PWRunnerAttemptResult] = []
+) -> ComparisonEvidence {
+    var limits: [String] = []
+    var attribution: ComparisonAttribution = .notRequired
     if let reason = queryExclusionReason { limits.append("query_plan:" + reason) }
     let prediction = sandboxCheck.result_source == "validator"
         && [SandboxCheckOutcome.allow, SandboxCheckOutcome.deny].contains(sandboxCheck.outcome)
@@ -652,7 +769,7 @@ func computeComparison(
             basis = "spawned_child"
             if attempt.rc != 0 {
                 limits.append("exec_result_failed_after_spawn")
-                limits.append("sandbox_attribution_unestablished")
+                attribution = .unestablished
             }
         } else if attempt.outcome == AttemptOutcome.ok && attempt.rc == 0 {
             observation = "succeeded"
@@ -676,7 +793,7 @@ func computeComparison(
     if observation == "unavailable" {
         limits.append("attempt:" + (attempt.missing_reason ?? "no_completed_worker_result"))
     } else if observation != "succeeded" {
-        limits.append("sandbox_attribution_unestablished")
+        attribution = .unestablished
     }
 
     let operation: String?
@@ -732,23 +849,22 @@ func computeComparison(
             ? "same_submitted" : "different_submitted"
     }
     if targetRelation != "same_submitted" { limits.append("target:" + targetRelation) }
-    if sandboxCheck.filter_kind == "path" || filter == "path" {
-        limits.append("runtime_target_identity_unestablished")
-    }
+    let identity: ComparisonIdentity = sandboxCheck.filter_kind == "path" || filter == "path"
+        ? .unestablished : .notApplicable
 
-    var conclusion = "unavailable"
-    if operationRelation == "matched", targetRelation == "same_submitted" {
-        if observation == "succeeded" {
-            if prediction == "allow" { conclusion = "agreement" }
-            if prediction == "deny" { conclusion = "disagreement" }
-        } else if observation == "permission_failure", prediction == "deny" {
-            conclusion = "directional_consistency"
+    // Compare submitted paths only. Host resolution happens later and cannot
+    // establish which object a query saw. Recreation does not erase a removal,
+    // and step position does not bound the confound while order is unknown.
+    let sameTargetMutation = queryExclusionReason == nil
+        && sandboxCheck.filter_kind == "path" && sandboxCheck.filter_value != nil
+        && ([attempt] + runAttempts).contains {
+            reportsTargetRemoval($0) && $0.requested_path == sandboxCheck.filter_value
         }
-    }
-    return PWRunnerComparison(scope: "submitted_operation_and_target",
-        prediction: prediction, observation: observation, observation_basis: basis,
-        operation_relation: operationRelation, target_relation: targetRelation,
-        conclusion: conclusion, limitations: limits)
+    let mutation: ComparisonMutation = !sameTargetMutation ? .none
+        : order == .queryFirst ? .sameTargetAfterQuery : .sameTargetUnordered
+    return ComparisonEvidence(order: order, identity: identity, attribution: attribution, mutation: mutation,
+        prediction: prediction, observation: observation, basis: basis, operationRelation: operationRelation,
+        targetRelation: targetRelation, otherLimitations: limits)
 }
 
 // Internal for driver-to-JSON controls. Preserve the host's observations in the
@@ -845,9 +961,10 @@ func classify(
         if let evidence = out.workerEvidence {
             if let failure = evidence.failure {
                 let names: [UInt32: String] = [1: "header validation", 2: "policy read", 3: "sandbox_create_params",
-                    4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply"]
+                    4: "sandbox_set_param", 5: "sandbox_compile_string", 8: "sandbox_apply", 11: "proceed wait"]
                 let operation = names[failure.operation] ?? "operation \(failure.operation)"
                 var detail = "pw-probe-runner reported \(operation) failure (code=\(failure.code))"
+                if failure.operation == 11 { detail += "; budget=\(failure.detail) ms; release not observed" }
                 if let rc = failure.native_result { detail += "; native_kind=\(failure.native_kind), result=\(rc)" }
                 if let error = failure.errno { detail += "; errno=\(error)" }
                 if let text = evidence.diagnostic.text, !text.isEmpty { detail += ": " + text }
@@ -871,9 +988,11 @@ func classify(
         if out.pollStopReason == "sentinel_deadline" {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1,
                 error: "pw-probe-runner sentinel deadline expired; "
+                    + (out.proceedSet && !out.proceedObserved ? "release not observed; " : "")
                     + (out.terminationRequest != nil ? "host requested SIGKILL during cleanup" : "no termination requested"))
         }
         var problems: [String] = []
+        if out.proceedSet && !out.proceedObserved { problems.append("release not observed") }
         if !out.applied { problems.append("no published application") }
         if !out.done { problems.append("no completed report") }
         if out.done && anySlotNotCompleted(out.slots) { problems.append("incomplete slot publication") }

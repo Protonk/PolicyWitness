@@ -98,7 +98,7 @@ typedef struct {
      * corrupted shm header. E2e the host always populates that header
      * correctly, so the harness — which pipes policy straight to the
      * worker — is the only vehicle that can reach them. */
-    int corrupt_abi;               /* set hdr->abi_version = ABI+1 → worker exits 4 */
+    int corrupt_abi;               /* set hdr->abi_version = 6 → worker exits 4 */
     int skip_prepared;             /* leave hdr->prepared = 0     → worker exits 5 */
     uint32_t override_step_count;  /* if !=0, force hdr->step_count after populate (overflow → exit 6) */
     uint32_t override_param_count; /* if !=0, force hdr->param_count after populate (overflow → exit 8) */
@@ -106,6 +106,9 @@ typedef struct {
 
     /* On-disk target lifecycle for the file unlink/create scenarios. */
     temp_target_mode_t temp_target;
+    int withhold_proceed, proceed_delay_ms, proceed_at_prepare, proceed_after_expiry;
+    int proceed_wait_ms;
+
 } scenario_t;
 
 static void populate_happy(pw_shm_slot_t *slots) {
@@ -217,29 +220,40 @@ static const char SCEN_POLICY_OVERFLOW_PLACEHOLDER[] =
     "(version 1)\n(allow default)\n";
 
 static scenario_t SCENARIOS[] = {
+    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 },
+    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 },
+    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 },
+    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 },
+    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 },
+    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 },
+    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 },
+    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 },
+    { "host_lost_while_waiting", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 },
+    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 },
+
     /* name, policy, step_count, request_exit, populate_slots, populate_params,
      * corrupt_abi, skip_prepared, override_step_count, override_param_count,
      * oversize_policy, temp_target */
-    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE },
-    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE },
+    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
 
     /* #1 — file attempt kinds with no other execution coverage. */
-    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE },
-    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE },
-    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT },
+    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 },
+    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 },
+    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 },
 
     /* #2 — pre-apply self-defense / refusal branches. */
-    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE },
-    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE },
-    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE },
-    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE },
-    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE },
-    { "policy_overflow",        SCEN_POLICY_OVERFLOW_PLACEHOLDER, 1,         1, populate_happy,        NULL,                   0, 0, 0, 0, 1, TEMP_NONE },
+    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 },
+    { "policy_overflow",        SCEN_POLICY_OVERFLOW_PLACEHOLDER, 1,         1, populate_happy,        NULL,                   0, 0, 0, 0, 1, TEMP_NONE, 0, 0, 0, 0, 0 },
 };
 static const size_t SCENARIO_COUNT = sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
 
@@ -395,7 +409,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
      * overwrite a valid header field with the value the worker must
      * reject (drives the pre-apply self-defense branches). */
     if (scen->corrupt_abi) {
-        hdr->abi_version = PW_PROBE_RUNNER_ABI_VERSION + 1u;
+        hdr->abi_version = 6u;
     }
     if (scen->override_step_count != 0u) {
         hdr->step_count = scen->override_step_count;
@@ -443,11 +457,15 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
 
     char step_count_str[16];
     snprintf(step_count_str, sizeof(step_count_str), "%u", scen->step_count);
+    char proceed_budget[16];
+    snprintf(proceed_budget, sizeof(proceed_budget), "%d", scen->proceed_wait_ms ? scen->proceed_wait_ms : 60000);
+    if (scen->proceed_at_prepare) atomic_store_explicit(&hdr->proceed, 1, memory_order_release);
     char *worker_argv[] = {
         (char *)"pw-probe-runner",
         (char *)"--shm-fd",     (char *)"3",
         (char *)"--ready-fd",   (char *)"4",
         (char *)"--step-count", step_count_str,
+        (char *)"--proceed-wait-ms", proceed_budget,
         NULL,
     };
     pid_t pid;
@@ -518,6 +536,12 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
      * overflow) exits immediately without flipping either sentinel, so
      * we also watch for an early worker exit and capture its status here
      * rather than polling the full 2 s. */
+    int release_set = scen->proceed_at_prepare;
+    int early_completion = 0, early_attempt = 0, quiescence_polls = 0;
+    long held_ms = 0;
+    struct timespec applied_time = {0};
+    pw_shm_evidence_t *order_e = (void *)((char *)base + PW_SHM_REGION_BYTES
+        - PW_SHM_DIAGNOSTIC_BYTES - PW_SHM_EVIDENCE_HEADER_BYTES);
     int saw_applied = 0;
     int saw_done = 0;
     int status = 0;
@@ -528,8 +552,29 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
         for (int i = 0; i < 1000; i++) {
             uint32_t applied = atomic_load_explicit(&hdr->applied, memory_order_acquire);
             uint32_t done = atomic_load_explicit(&hdr->done, memory_order_acquire);
-            if (applied) saw_applied = 1;
-            if (done) { saw_done = 1; break; }
+            if (applied && !saw_applied) { saw_applied = 1; clock_gettime(CLOCK_MONOTONIC, &applied_time); }
+            if (applied && !release_set) {
+                quiescence_polls++;
+                for (uint32_t slot = 0; slot < scen->step_count; slot++) {
+                    if (atomic_load_explicit(&slots[slot].completed, memory_order_acquire)) early_completion = 1;
+                }
+                uint32_t progress = atomic_load_explicit(&order_e->progress, memory_order_acquire);
+                if ((progress >> 24) == PW_OP_ATTEMPT) early_attempt = 1;
+                struct timespec now; clock_gettime(CLOCK_MONOTONIC, &now);
+                long elapsed = (now.tv_sec - applied_time.tv_sec) * 1000
+                    + (now.tv_nsec - applied_time.tv_nsec) / 1000000;
+                if ((!scen->withhold_proceed && elapsed >= scen->proceed_delay_ms)
+                    || (done && scen->proceed_after_expiry && elapsed >= scen->proceed_delay_ms)) {
+                    atomic_store_explicit(&hdr->proceed, 1, memory_order_release);
+                    release_set = 1;
+                    held_ms = elapsed;
+                }
+            }
+            if (done && (!scen->proceed_after_expiry || release_set)) {
+                saw_done = 1;
+                if (scen->proceed_after_expiry) usleep(50000); /* late release cannot revive */
+                break;
+            }
             pid_t w = waitpid(pid, &status, WNOHANG);
             if (w == pid) { worker_reaped = 1; reaped = pid; break; }
             nanosleep(&ts, NULL);
@@ -568,6 +613,12 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     printf(",\"ready_byte_received\":%s", ready_received ? "true" : "false");
     printf(",\"applied\":%s", saw_applied ? "true" : "false");
     printf(",\"apply_rc\":%d", hdr->apply_rc);
+    printf(",\"proceed_set\":%s,\"proceed_observed\":%u", release_set ? "true" : "false",
+        atomic_load_explicit(&hdr->proceed_observed, memory_order_acquire));
+    printf(",\"early_completion\":%d,\"early_attempt\":%d,\"quiescence_polls\":%d",
+           early_completion, early_attempt, quiescence_polls);
+    printf(",\"held_ms\":%ld", held_ms);
+    printf(",\"progress\":%u", atomic_load_explicit(&order_e->progress, memory_order_acquire));
     printf(",\"done\":%s", saw_done ? "true" : "false");
     printf(",\"sent_sigkill\":%s", sent_sigkill ? "true" : "false");
     if (WIFEXITED(status)) {

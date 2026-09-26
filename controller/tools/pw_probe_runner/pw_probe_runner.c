@@ -70,6 +70,10 @@
 #define PW_EXEC_CHILD_DEADLINE_MS_DEFAULT 10000L
 #define PW_EXEC_CHILD_DEADLINE_MS_MAX     60000L
 
+/* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
+ * This is a worker observation deadline, not a bound on host scheduling/reap. */
+#define PW_PROCEED_WAIT_MS_DEFAULT 60000L
+
 static long g_exec_child_deadline_ms = PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
@@ -125,6 +129,7 @@ typedef struct {
     /* Per-exec wall-clock budget. Test seam — production callers
      * leave this at 0 to use PW_EXEC_CHILD_DEADLINE_MS_DEFAULT. */
     long exec_child_deadline_ms;
+    long proceed_wait_ms;
 } pw_args_t;
 
 static void print_usage(FILE *to) {
@@ -160,6 +165,7 @@ static void print_usage(FILE *to) {
         "                         SIGKILL'd (process group) and the slot\n"
         "                         reports the deadline in error.\n"
         "\n"
+        "  --proceed-wait-ms N     Harness-only release deadline (1..60000 ms).\n"
         "  --version              Print ABI version and exit.\n",
         PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
 }
@@ -183,6 +189,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->post_apply_kill_signal = 0;
     args->pre_ready_hang_ms      = 0;
     args->exec_child_deadline_ms = 0;
+    args->proceed_wait_ms = PW_PROCEED_WAIT_MS_DEFAULT;
 
     int i = 1;
     while (i < argc) {
@@ -192,7 +199,8 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
             strcmp(flag, "--post-apply-hang-ms") == 0 ||
             strcmp(flag, "--post-apply-kill-signal") == 0 ||
             strcmp(flag, "--pre-ready-hang-ms") == 0 ||
-            strcmp(flag, "--exec-child-deadline-ms") == 0) {
+            strcmp(flag, "--exec-child-deadline-ms") == 0 ||
+            strcmp(flag, "--proceed-wait-ms") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
                 return -1;
@@ -246,6 +254,12 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->pre_ready_hang_ms = v;
+            } else if (strcmp(flag, "--proceed-wait-ms") == 0) {
+                if (v <= 0 || v > 60000) {
+                    fprintf(stderr, "pw-probe-runner: --proceed-wait-ms %ld out of range (1..60000)\n", v);
+                    return -1;
+                }
+                args->proceed_wait_ms = v;
             } else if (strcmp(flag, "--exec-child-deadline-ms") == 0) {
                 if (v <= 0 || v > PW_EXEC_CHILD_DEADLINE_MS_MAX) {
                     fprintf(stderr,
@@ -1024,6 +1038,42 @@ static void spin_for_exit(pw_shm_header_t *hdr) {
     }
 }
 
+/* No allocation, sleep or I/O after apply. CLOCK_MONOTONIC reads the macOS
+ * commpage. An unusable clock fails closed even if release is already visible. */
+static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long budget_ms) {
+    pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, UINT32_MAX);
+    struct timespec start, now;
+    int rc = clock_gettime(CLOCK_MONOTONIC, &start);
+    int clock_errno = errno;
+    for (;;) {
+        if (rc != 0) {
+            pw_failure(e, PW_OP_PROCEED, PW_FAILURE_NATIVE, PW_NATIVE_CLOCK,
+                       rc, 1, clock_errno, UINT32_MAX, (uint32_t)budget_ms);
+            pw_diagnostic(e, "proceed wait: CLOCK_MONOTONIC failed");
+            break;
+        }
+        rc = clock_gettime(CLOCK_MONOTONIC, &now);
+        clock_errno = errno;
+        if (rc != 0) continue;
+        int64_t elapsed_ns = (int64_t)(now.tv_sec - start.tv_sec) * 1000000000LL
+            + now.tv_nsec - start.tv_nsec;
+        if (elapsed_ns >= (int64_t)budget_ms * 1000000LL) {
+            pw_failure(e, PW_OP_PROCEED, PW_FAILURE_PROCEED_TIMEOUT, PW_NATIVE_NONE,
+                       0, 0, 0, UINT32_MAX, (uint32_t)budget_ms);
+            pw_diagnostic(e, "proceed wait: worker_proceed_wait budget expired (milliseconds in detail)");
+            break;
+        }
+        if (atomic_load_explicit(&hdr->proceed, memory_order_acquire) == 1u) {
+            atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);
+            pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, UINT32_MAX);
+            return;
+        }
+        for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
+    }
+    atomic_store_explicit(&hdr->done, 1u, memory_order_release);
+    spin_for_exit(hdr);
+}
+
 /* ---- main ---------------------------------------------------------------- */
 
 int main(int argc, char **argv) {
@@ -1303,6 +1353,8 @@ int main(int argc, char **argv) {
         spin_for_exit(hdr);
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
+
+    wait_for_proceed(hdr, evidence, args.proceed_wait_ms);
 
     /* Run attempts. Dispatch by attempt_kind; each helper writes
      * outputs before the slot's `completed` flag is released. */

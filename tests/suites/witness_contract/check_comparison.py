@@ -12,7 +12,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
 from blackbox import validate_run_shape, validate_step
-from consumer import recover_evidence
+from consumer import recover_evidence, validate_current_build_evidence
 
 
 def main():
@@ -46,7 +46,7 @@ def main():
                     'operation_relation': operation_relation, 'target_relation': target_relation}})
 
         add('agreement')
-        add('disagreement', prediction='deny', conclusion='disagreement', drift=True)
+        add('ordered_deny_with_success', prediction='deny', conclusion='unavailable', drift=None)
         add('allow_permission', query=locked, target=locked, observation='permission_failure',
             conclusion='unavailable', drift=None, attempt_ok=False)
         add('deny_permission', prediction='deny', query=locked, target=locked, observation='permission_failure',
@@ -84,7 +84,7 @@ for line in sys.stdin:
                 assert run.wait(timeout=30) == 0
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert runner['schema_version'] == 7
+            assert runner['schema_version'] == 8
             assert runner['test_overrides']['validator_executable_path'] == str(validator)
             assert runner['runner_subprocess']['exit_code'] == 0
             assert runner['validator_subprocess']['exit_code'] == 0
@@ -93,7 +93,8 @@ for line in sys.stdin:
                 errors.extend(validate_step(step, exp))
                 comparison = step['comparison']
                 assert comparison['scope'] == 'submitted_operation_and_target'
-                for limit in ('query_attempt_order_unestablished', 'state_stability_unestablished',
+                assert comparison['order'] == ('query_first' if step['sandbox_check']['outcome'] in ('allow', 'deny') else 'unestablished'), step
+                for limit in ('state_stability_unestablished',
                               'runtime_target_identity_unestablished'):
                     assert limit in comparison['limitations'], step
                 assert step['attempt']['requested_kind'] == next(s for s in steps if s['step_id'] == step['step_id'])['attempt']['kind']
@@ -108,12 +109,13 @@ for line in sys.stdin:
                 if step['step_id'] == 'unsupported':
                     assert 'attempt:attempt_not_supported' in comparison['limitations'], step
             assert not errors, errors
+            assert not validate_current_build_evidence(envelope), validate_current_build_evidence(envelope)
             answers = recover_evidence(envelope)
             (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
             assert answers['comparison_groups'] == {
-                'agreement': ['agreement'], 'disagreement': ['disagreement'],
+                'agreement': ['agreement'], 'disagreement': [],
                 'directional_consistency': ['deny_permission'],
-                'unavailable': ['allow_permission', 'different_target', 'different_operation',
+                'unavailable': ['ordered_deny_with_success', 'allow_permission', 'different_target', 'different_operation',
                                 'absent', 'missing_query_success', 'compound_create', 'unsupported'],
                 'not_reported': []}, answers
             assert answers['failure_groups'] == {

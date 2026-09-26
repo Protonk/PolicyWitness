@@ -444,6 +444,46 @@
         {
           "id": "unlink_deny",
           "description": "unlink denied (errno=1); target survived under (deny default)"
+        },
+        {
+          "id": "proceed_never_set",
+          "description": "Worker release barrier: proceed never set"
+        },
+        {
+          "id": "proceed_late_after_expiry",
+          "description": "Worker release barrier: proceed late after expiry"
+        },
+        {
+          "id": "proceed_before_applied",
+          "description": "Worker release barrier: proceed before applied"
+        },
+        {
+          "id": "proceed_delayed_observed_quiescence",
+          "description": "Worker release barrier: proceed delayed observed quiescence"
+        },
+        {
+          "id": "proceed_under_bare_deny_default",
+          "description": "Worker release barrier: proceed under bare deny default"
+        },
+        {
+          "id": "proceed_wait_budget_short",
+          "description": "Worker release barrier: proceed wait budget short"
+        },
+        {
+          "id": "proceed_wait_budget_long",
+          "description": "Worker release barrier: proceed wait budget long"
+        },
+        {
+          "id": "proceed_expiry_release_boundary",
+          "description": "Worker release barrier: proceed expiry release boundary"
+        },
+        {
+          "id": "host_lost_while_waiting",
+          "description": "Worker release barrier: host lost while waiting"
+        },
+        {
+          "id": "max_slots_proceed",
+          "description": "Worker release barrier: max slots proceed"
         }
       ]
     },
@@ -495,7 +535,7 @@
         },
         {
           "id": "happy_default_allow",
-          "description": "C-worker path produces complete response-7 envelope; drift=false for matching allow/ok"
+          "description": "C-worker path produces complete response-8 envelope; drift=false for matching allow/ok"
         },
         {
           "id": "prediction_unavailable_pair",
@@ -917,6 +957,14 @@
           ]
         },
         {
+          "id": "removed_target_prediction_is_not_drift",
+          "description": "Native queries precede read/unlink of one target, retaining allow/success agreement and independent host nonresolution",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/removed_target_prediction_is_not_drift.sh"
+          ]
+        },
+        {
           "id": "worker_termination_and_log_correlation",
           "command": [
             "bash",
@@ -1206,6 +1254,21 @@
         {
           "id": "validator_removed_target",
           "description": "Received prediction survives completed unlink; step association uses submitted IDs"
+        }
+      ]
+    },
+    "runner_outcome_validator_no_reply": {
+      "command": [
+        "bash",
+        "tests/suites/runner_outcome_validator_no_reply/run.sh"
+      ],
+      "requires": [
+        "app"
+      ],
+      "cases": [
+        {
+          "id": "validator_io_deadline_releases_worker",
+          "description": "Real validator I/O timeout releases attempts, retains one ordered prediction and independent file effects"
         }
       ]
     }

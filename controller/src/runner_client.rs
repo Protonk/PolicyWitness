@@ -101,14 +101,14 @@ mod tests {
 
     #[test]
     fn consumer_distinctions_and_legacy_absences_survive_receiver_transport() {
-        for version in 4..=7 {
+        for version in 4..=8 {
             let mut original = serde_json::json!({"schema_version": version, "steps": [{
                 "step_id": "spawn", "drift": false,
                 "sandbox_check": {"outcome": "allow", "native_rc": 0},
                 "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123,
                             "child_exit_code": 37, "stdout": "controlled marker"}
             }]});
-            if version == 7 {
+            if version >= 7 {
                 original["steps"][0]["comparison"] = serde_json::json!({
                     "scope": "submitted_operation_and_target", "prediction": "allow",
                     "observation": "succeeded", "observation_basis": "spawned_child",
@@ -121,6 +121,13 @@ mod tests {
                 original["steps"][0]["attempt"]["requested_action"] = serde_json::json!("spawn");
                 original["steps"][0]["sandbox_check"]["path_diagnostics"] = serde_json::json!({
                     "input": "/submitted", "observer": "runner_host", "phase": "after_orchestration"});
+            }
+            if version == 8 {
+                original["steps"][0]["comparison"]["order"] = serde_json::json!("future_order");
+                original["runner_subprocess"] = serde_json::json!({"ordering": {
+                    "collection_closed_before_proceed": true, "proceed_set": true,
+                    "proceed_observed": true, "validator_disposition": "unconfirmed",
+                    "worker_lifetime_established": true, "protocol_violations": []}});
             }
             let output = crate::utils::receiver_fixture(&original.to_string(), "valid");
             let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);

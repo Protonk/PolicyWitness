@@ -106,15 +106,21 @@ Exit codes:
 
 ### Output contract
 
-Runner responses use version 7: every step contains `deny_signal: null` because
+Runner responses use version 8: every step contains `deny_signal: null` because
 that channel is unobserved. Legacy signal objects remain readable by the Swift
 decoder; external typed readers requiring an object must support null. The Rust
 controller forwards the runner object without version coercion. Optional
 subprocess objects may be omitted/null; per-step signal/errno/drift nulls require
-key presence. Worker ABI 6 and request schema 1 are separate contracts.
+key presence. Worker ABI 7 and request schema 1 are separate contracts.
 Response 7 adds an explicit per-step comparison and submitted attempt provenance;
-`drift` projects limited recorded-outcome agreement/disagreement, while uncertain
-attribution or scope retains null. Older replies preserve their original semantics.
+`drift` projects supported allow/success agreement to `false`. `true` requires
+established query order plus state, identity and attribution evidence that response 8 cannot express. Every current deny/success difference therefore retains null, including `query_first` rows. Older replies
+preserve their original semantics.
+A response-8 `runner_reporting_failed` result makes `result.ok` false and
+forwards the host's `reporting_failure` diagnostic unchanged. Retained queries,
+attempts and subprocess observations have no per-step comparisons; drift stays
+null. `evidence_retained: false` explicitly identifies the minimal reply when
+even evidence-preserving serialization failed.
 See the [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning).
 
 
@@ -129,7 +135,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.policy_check`: independent `sbpl-check` report, requested only on
   `xpc_error`. It describes that helper's compilation, not the missing worker's
   progress or the cause of a lost reply. Worker failures use `runner_failed`;
-  ABI 6 operation/result evidence identifies compilation, setup and application
+  ABI 7 operation/result evidence identifies compilation, setup and application
   independently. The controller retains `runner_subprocess.worker_evidence` and
   `policy_transfer_error` without interpreting their diagnostic codes.
 - `data.policy_augmentation`: present only when `policy.augments` (see
@@ -240,7 +246,7 @@ Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
 PID, or explicit null when no worker exists. It never substitutes the host PID.
 Typed readers must accept null; stored integer-PID replies remain decodable.
 The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 6 remain separate.
+ABI 7 remain separate.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`

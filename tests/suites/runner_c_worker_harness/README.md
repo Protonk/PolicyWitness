@@ -13,9 +13,8 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Fifteen scenarios, each driven by `harness.c`. The first six are the
-core lifecycle; the rest cover individual attempt kinds and the worker's
-pre-apply self-defense branches.
+Twenty-five scenarios, each driven by `harness.c`: six core lifecycle cases,
+nine attempt and pre-apply cases, and ten release controls listed below.
 
 ### Core lifecycle
 
@@ -153,3 +152,13 @@ Each test_id writes:
 - `assert.log`: stdout/stderr of the Python assertion block.
 
 The first case that compiles the harness also retains `build.log`.
+
+The release controls exercise `proceed_never_set`, `proceed_late_after_expiry`,
+`proceed_before_applied`, `proceed_delayed_observed_quiescence`,
+`proceed_under_bare_deny_default`, `proceed_wait_budget_short`,
+`proceed_wait_budget_long`, `proceed_expiry_release_boundary`,
+`host_lost_while_waiting`, and `max_slots_proceed`. They poll every slot and
+attempt progress before release. Expiry forbids later attempts; the host-loss
+case owns final termination and establishes no worker self-exit guarantee.
+The native-clock substitution controls run in `runner_unit` against the real C
+producer companions. ABI mismatch remains a pre-application refusal.

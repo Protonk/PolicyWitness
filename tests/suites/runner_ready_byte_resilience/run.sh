@@ -121,6 +121,11 @@ assert sub["ready_byte_received"] is False, sub
 assert sub["worker_evidence"]["readiness"] == {"rc": -1, "errno": errno.EPIPE}, sub
 assert sub["worker_evidence"]["failure_state"] == "absent", sub
 assert runner["sandboxed_after_apply"] is True, runner
+assert runner["schema_version"] == 8, runner
+ordering = sub["ordering"]
+assert all(ordering[k] is True for k in ("collection_closed_before_proceed", "proceed_set", "proceed_observed", "worker_lifetime_established")), ordering
+assert ordering["validator_disposition"] == "reaped" and not ordering["protocol_violations"], ordering
+assert runner["steps"][0]["comparison"]["order"] == "query_first", runner["steps"]
 
 # Worker survived → applied → the validator child ran and scored the probe.
 if "validator_subprocess" not in runner:

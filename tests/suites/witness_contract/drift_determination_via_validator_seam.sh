@@ -10,7 +10,7 @@ PW_TEST_ID="drift_determination_via_validator_seam"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "stub validator forces a verdict that disagrees with a real attempt; assert the harness's drift determination (no live libsandbox bug needed)"
+test_step "run" "supplied verdict differences retain real attempts and unavailable comparisons when state, identity or attribution is unestablished"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -21,8 +21,8 @@ fi
 # live example of; surfacing one is a PolicyWitness design goal, not a fixture
 # we can rely on. To test how the harness *determines* drift without depending
 # on such an example, we steer the validator's prediction (an INPUT to
-# computeDrift) via `_test_overrides.validator_executable_path` and let the real
-# C worker run the real attempt and the real computeDrift. Per the
+# computeComparison) via `_test_overrides.validator_executable_path` and let the real
+# C worker run the real attempt and the real computeComparison. Per the
 # `_test_overrides` rule this is input-steering, not result-faking: the
 # classifier and envelope assembly still run for real, and the run is
 # self-describing (test_overrides is echoed).
@@ -44,7 +44,7 @@ for line in sys.stdin:
         "kind": "sb_api_validator_verdict", "schema_version": 1,
         "step_id": p.get("step_id"), "operation": p.get("operation"),
         "filter_type": p.get("filter_type"), "filter_type_id": 1,
-        "filter_value": p.get("filter_value"), "rc": 0, "errno": 0,
+        "filter_value": p.get("filter_value"), "rc": 0 if "$1" == "allow" else 1, "errno": 0,
         "outcome": "$1",
     }))
     sys.stdout.flush()
@@ -82,12 +82,12 @@ run_case() {  # $1=specimen  $2=stdout
 
 # Case A — prediction=deny vs a real SUCCESS. The read of /etc/hosts under
 # (allow default) succeeds (observation=allow); the stub forces predict=deny.
-# The disagreement is UNAMBIGUOUS (a success cannot be a DAC/missing-file
-# artifact), so the harness must surface drift=true.
-SPEC_TRUE="${PW_TEST_ARTIFACTS}/spec_drift_true.json"
-RUN_TRUE="${PW_TEST_ARTIFACTS}/run_drift_true.json"
-write_spec "${SPEC_TRUE}" "$(printf '(version 1)\n(allow default)\n')" "${STUB_DENY}"
-run_case "${SPEC_TRUE}" "${RUN_TRUE}"
+# Ordering, runtime identity and state remain unestablished. Supplied predictions
+# test interpretation; this difference cannot establish sandbox drift.
+SPEC_DIFFERENCE="${PW_TEST_ARTIFACTS}/spec_unordered_difference.json"
+RUN_DIFFERENCE="${PW_TEST_ARTIFACTS}/run_unordered_difference.json"
+write_spec "${SPEC_DIFFERENCE}" "$(printf '(version 1)\n(allow default)\n')" "${STUB_DENY}"
+run_case "${SPEC_DIFFERENCE}" "${RUN_DIFFERENCE}"
 
 # Case B — prediction=allow vs a real DENY. The read is denied with EPERM under
 # (deny file-read-data); the stub forces predict=allow. A predicted-allow that
@@ -100,7 +100,7 @@ run_case "${SPEC_NULL}" "${RUN_NULL}"
 
 ASSERT_LOG="${PW_TEST_ARTIFACTS}/assertions.log"
 set +e
-PW_RUN_TRUE="${RUN_TRUE}" PW_RUN_NULL="${RUN_NULL}" /usr/bin/python3 - >"${ASSERT_LOG}" 2>&1 <<'PY'
+PW_RUN_DIFFERENCE="${RUN_DIFFERENCE}" PW_RUN_NULL="${RUN_NULL}" /usr/bin/python3 - >"${ASSERT_LOG}" 2>&1 <<'PY'
 import json, os
 from pathlib import Path
 
@@ -121,14 +121,19 @@ def load_step(path):
         raise SystemExit(f"expected 1 step (got {len(steps)})")
     return steps[0]
 
-# Case A: deny prediction vs real success -> drift True.
-a = load_step(os.environ["PW_RUN_TRUE"])
+# Case A: deny prediction vs real success -> unavailable/null despite established order.
+a = load_step(os.environ["PW_RUN_DIFFERENCE"])
 if (a.get("sandbox_check") or {}).get("outcome") != "deny":
     raise SystemExit(f"A: expected steered prediction deny (got {(a.get('sandbox_check') or {}).get('outcome')!r})")
 if (a.get("attempt") or {}).get("rc") != 0:
     raise SystemExit(f"A: expected the real read to succeed rc=0 (got {(a.get('attempt') or {}).get('rc')!r})")
-if a.get("drift") is not True:
-    raise SystemExit(f"A: expected drift=true (deny predicted, success observed) — got {a.get('drift')!r}")
+if a.get("drift") is not None or a["comparison"]["conclusion"] != "unavailable":
+    raise SystemExit(f"A: expected unavailable/null for ordered deny/success — got {a!r}")
+if a["comparison"].get("order") != "query_first" or "query_attempt_order_unestablished" in a["comparison"]["limitations"]:
+    raise SystemExit("A: eligible steered verdict must retain established order")
+for limit in ("state_stability_unestablished", "runtime_target_identity_unestablished"):
+    if limit not in a["comparison"]["limitations"]:
+        raise SystemExit(f"A: ordered difference retains {limit}")
 
 # Case B: allow prediction vs ambiguous deny -> drift null (no false positive).
 b = load_step(os.environ["PW_RUN_NULL"])
@@ -148,4 +153,4 @@ fi
 
 test_check_python "${PW_TEST_ARTIFACTS}/comparison-assertions.log" "comparison evidence contract failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_comparison.py" "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
-test_pass "drift determined e2e via steered prediction: deny-vs-success→true, allow-vs-ambiguous→null" "{}"
+test_pass "steered deny/success and allow/permission-failure retain their observations with unavailable/null comparisons" "{}"

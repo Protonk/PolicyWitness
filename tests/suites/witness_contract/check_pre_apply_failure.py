@@ -100,7 +100,7 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    assert runner['schema_version'] == 7, runner
+    assert runner['schema_version'] == 8, runner
     steps = runner['steps']
     assert [s['step_id'] for s in steps] == [s['step_id'] for s in specimen['probe_plan']], steps
     if failure:

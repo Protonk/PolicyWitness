@@ -64,7 +64,7 @@ their manifests and inventories. Real signing controls use disposable copies
 through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 
-`worker_lifecycle` includes ABI 6 progress/failure/diagnostic and closed-input
+`worker_lifecycle` includes ABI 7 progress/failure/diagnostic and closed-input
 controls plus production C-main native-call/mapping companions. See its README
 for the attribution and cleanup boundaries.
 

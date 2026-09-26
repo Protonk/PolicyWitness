@@ -249,14 +249,27 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     var ioError: ValidatorClientError? = nil
     var readError: ValidatorClientError? = nil
     var collectionStop = "eof"
-    let deadline = Date().addingTimeInterval(TimeInterval(input.verdictReadTimeoutMs) / 1000.0)
+    func monotonicNanoseconds() -> UInt64? {
+        var ts = timespec()
+        guard clock_gettime(CLOCK_MONOTONIC, &ts) == 0 else { return nil }
+        return UInt64(ts.tv_sec) * 1_000_000_000 + UInt64(ts.tv_nsec)
+    }
+    let started = monotonicNanoseconds()
+    // Very large test overrides must not trap during unit conversion.
+    let milliseconds = UInt64(max(0, input.verdictReadTimeoutMs))
+    let budget = min(milliseconds, UInt64.max / 1_000_000) * 1_000_000
 
     // Interleave writes (payload → validator stdin) with reads
     // (validator stdout → stdoutBytes). poll() returns when either FD
     // is ready or the 100 ms tick fires (whichever first) so the
     // deadline check stays sharp.
     while stdinOpen || stdoutOpen {
-        if Date() > deadline {
+        guard let start = started, let now = monotonicNanoseconds() else {
+            collectionStop = "clock_error"
+            readError = .verdictReadFailed("CLOCK_MONOTONIC unavailable; collection closed")
+            break
+        }
+        if now - start >= budget {
             collectionStop = stdoutOpen ? "deadline" : "eof"
             readError = .verdictReadFailed(
                 "exceeded \(input.verdictReadTimeoutMs) ms I/O deadline; "

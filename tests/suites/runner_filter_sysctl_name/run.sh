@@ -66,7 +66,7 @@ fi
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "filter prediction/attempt contract failed" \
   "${ROOT_DIR}/tests/lib/unavailable_prediction.py" "${RUN_STDOUT}" \
   --step-id kern_osrelease --operation sysctl-read --filter-value kern.osrelease --attempt sysctl_denied \
-  --expected-schema-version 7
+  --expected-schema-version 8
 
 test_pass "sysctl_name: prediction_unavailable surfaced; sysctl attempt observed" "{}"
 fi

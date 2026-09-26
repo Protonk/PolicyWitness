@@ -18,6 +18,25 @@ func runLimitsContractTests(_ tk: TestKit) {
                 from: Data(contentsOf: root.appendingPathComponent("docs/limits.json")))
             let worker = CWorkerInput(workerExecutablePath: "unused", policy: "", slots: [])
             let validator = ValidatorClientInput(executablePath: "unused", targetPid: 1, probes: [])
+            guard let fixture = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else {
+                throw TestFailure(message: "compiled C limit probe missing; run runner_unit")
+            }
+            let probe = Process(), pipe = Pipe()
+            probe.executableURL = URL(fileURLWithPath: fixture + ".worker-limits")
+            probe.standardOutput = pipe
+            try probe.run()
+            let output = pipe.fileHandleForReading.readDataToEndOfFile()
+            probe.waitUntilExit()
+            try expectEqual(probe.terminationStatus, 0)
+            let native = Dictionary(uniqueKeysWithValues: String(decoding: output, as: UTF8.self)
+                .split(separator: "\n").compactMap { line -> (String, Int)? in
+                    let pair = line.split(separator: "=", maxSplits: 1)
+                    guard pair.count == 2, let value = Int(pair[1]) else { return nil }
+                    return (String(pair[0]), value)
+                })
+            guard let proceedWait = native["worker_proceed_wait"] else {
+                throw TestFailure(message: "compiled C probe omitted worker_proceed_wait")
+            }
             let rejected = decodeValidatorFrames(Data(repeating: 0xff, count: 1024))
             guard let fault = rejected.fault else { throw TestFailure(message: "invalid frame accepted") }
             let observed: [String: Int] = [
@@ -34,6 +53,9 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "worker_sentinel_wait": worker.sentinelTimeoutMs,
                 "worker_exit_grace": worker.exitGraceMs,
                 "validator_io_wait": validator.verdictReadTimeoutMs,
+                "worker_proceed_wait": proceedWait,
+                "validator_release_margin": validatorReleaseMarginMs,
+                "validator_io_override_floor": timeoutMsForValidator(override: 0),
                 "validator_exit_grace": validator.exitGraceMs,
                 "client_rpc_wait": PWRunnerWire.defaultClientTimeoutMs,
                 "validator_fault_context": fault.retained_bytes,
@@ -43,6 +65,12 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "observed_path": PWShmLayout.observedPathMax - 1,
                 "attempt_error": PWShmLayout.errorMax - 1,
             ]
+            try expectTrue(observed["worker_proceed_wait"]! > validator.verdictReadTimeoutMs
+                + validator.exitGraceMs + validatorReleaseMarginMs)
+            try expectEqual(timeoutMsForValidator(override: nil), validator.verdictReadTimeoutMs)
+            try expectEqual(timeoutMsForValidator(override: -100), 50)
+            try expectEqual(timeoutMsForValidator(override: 70), 70)
+            try expectEqual(timeoutMsForValidator(override: Int.max), Int.max, "fault-injection override has no ceiling")
             let owned = manifest.limits.filter { row in
                 row.checks.contains { $0.kind == "value" && $0.path.hasSuffix("/LimitsContractTests.swift") }
             }
