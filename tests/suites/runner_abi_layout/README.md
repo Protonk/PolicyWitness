@@ -32,7 +32,7 @@ cannot model.
   printer line.
 
 The failure report (under
-`tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json`)
+`<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json`)
 names which keys disagree and the two values, so the fix is
 mechanical.
 
@@ -82,9 +82,13 @@ in Python).
 
 ## Artifacts
 
-- `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer` — compiled printer binary
-- `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out` — KEY=VALUE harvest
-- `tests/out/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json` — per-key comparison report
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer` — compiled printer binary
+- `<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/printer.out` — KEY=VALUE harvest
+- `<run>/suites/runner_abi_layout/c_swift_layout_agreement/artifacts/diff.json` — per-key comparison report
 
 ## Documented limits
 

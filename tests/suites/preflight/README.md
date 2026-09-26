@@ -54,7 +54,11 @@ Offline release controls also exercise the release procedure's decision points.
 
 ## Artifacts
 
-- `tests/out/suites/preflight/codesign.preflight/artifacts/preflight.json`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/preflight/codesign.preflight/artifacts/preflight.json`
 
 Run:
 

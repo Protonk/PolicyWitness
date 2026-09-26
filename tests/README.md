@@ -196,6 +196,13 @@ keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
 suggested index entry. Record source provenance only when established; the
 commit that adds an index entry is not the source of an earlier build.
 
+For a console transcript, capture to a temporary file outside `tests/out/runs/`
+and attach it to the completed run under the checkout lock after verifying the
+run ID. Do not create or redirect into the selected output directory before
+startup: a preexisting transcript makes fresh output unmanaged, and replacement
+of an eligible old run would unlink an already-open transcript. If execution
+never creates owned output, keep the temporary transcript for diagnosis.
+
 ## Pruning disposable output
 
 ```sh
@@ -211,6 +218,12 @@ Preview prints a read-only JSON snapshot with `delete`, `keep: retained`,
 It does not create a lock file or hold the checkout lock while classifying. If
 execution holds the lock, `checkout_busy` is true and runs without a terminal
 record are labeled `keep: active or interrupted`.
+
+Preview briefly takes and releases the same nonblocking lock to observe
+contention. An execution starting during that probe can receive checkout-busy
+and exit 2; retry it after preview finishes. This safe refusal is an accepted
+tradeoff of the probe. The reported busy state is a snapshot and can change
+before classification or a later apply operation.
 
 Apply takes the checkout lock and re-evaluates eligibility. It removes only
 completed, unretained managed directories directly under `tests/out/runs/`.
@@ -357,13 +370,15 @@ suite invariants and fixtures.
 ### Sandboxed automation harnesses
 
 Some automation and agent harnesses run commands under a macOS sandbox. Inside
-one, two things fail for reasons that have nothing to do with the specimen: XPC
-lookup of the runner is refused (`NSCocoaErrorDomain` code 4099, or error 159
-“Sandbox restriction”), so no runner launches; and the unified log tool will not
-run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured.
-These are environment constraints, not PolicyWitness regressions. Request
-escalation, rerun the same command once from an unsandboxed Terminal, and debug
-only what still fails there.
+one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
+or error 159 “Sandbox restriction”), so no runner launches; the unified log
+tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
+cannot be captured; and `codesign --verify` can report “invalid signature (code
+or signature have been modified)” for an unchanged, validly signed app. These
+refusals can be environment constraints. Request escalation and rerun the same
+command once outside the automation sandbox against unchanged artifact bytes.
+Treat a signature failure as environmental only after the unsandboxed check
+passes; debug any failure that remains.
 
 The dispatcher checks the equipment it can see: the built app and worker
 binaries, toolchains, a GUI session, a signing identity. XPC reachability and

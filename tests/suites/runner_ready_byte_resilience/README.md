@@ -41,7 +41,11 @@ scores a one-step probe plan.
 
 ## Artifacts
 
-- `tests/out/suites/runner_ready_byte_resilience/<test_id>/artifacts/*`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/runner_ready_byte_resilience/<test_id>/artifacts/*`
 
 ## Run
 

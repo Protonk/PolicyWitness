@@ -448,7 +448,75 @@ def check_attempt_kind_enum_agreement() -> list[str]:
 #
 # A pair added to one but not the other means a request that should skip
 # in the runner disagrees with the documented runtime contract.
+# The host planner must consume the shared set without another literal table.
 # ---------------------------------------------------------------------------
+
+def swift_code(text: str) -> str:
+    """Mask comments and string contents for the mechanical planner guard.
+
+    This is not a Swift parser. Preserve token separation, handle nested block
+    comments, and mask ordinary/multiline strings so prose cannot satisfy the
+    guard. The repository's planner structure is checked explicitly below.
+    """
+    strings = re.compile(r'""".*?"""|"(?:\\.|[^"\\])*"', re.DOTALL)
+    result = []
+    offset = 0
+    while offset < len(text):
+        if text.startswith('//', offset):
+            end = text.find('\n', offset)
+            offset = len(text) if end < 0 else end
+            result.append(' ')
+        elif text.startswith('/*', offset):
+            depth = 1
+            offset += 2
+            while offset < len(text) and depth:
+                if text.startswith('/*', offset):
+                    depth += 1
+                    offset += 2
+                elif text.startswith('*/', offset):
+                    depth -= 1
+                    offset += 2
+                else:
+                    offset += 1
+            result.append(' ')
+        elif text[offset] == '"':
+            match = strings.match(text, offset)
+            if match is None:
+                raise ValueError('unterminated Swift string in planner guard')
+            result.append('""')
+            offset = match.end()
+        else:
+            result.append(text[offset])
+            offset += 1
+    return ''.join(result)
+
+
+def check_prediction_unavailable_planner() -> list[str]:
+    prefix = '  prediction_unavailable planner: '
+    try:
+        code = swift_code(CWORKER_ORCHESTRATOR.read_text(encoding='utf-8'))
+    except ValueError as exc:
+        return [prefix + str(exc)]
+    problems = []
+    # No local pair collection, literal operation/filter entry, or shadow of
+    # the shared symbol. Dynamic construction of the current query pair stays
+    # valid. Check the whole host file so a table cannot move out of the function.
+    if (re.search(r'Set\s*<\s*PredictionUnavailablePair\s*>|\[\s*PredictionUnavailablePair\s*\]', code)
+            or re.search(r'(?:\.\s*init|\bPredictionUnavailablePair)\s*\(\s*operation\s*:\s*""\s*,\s*filterKind\s*:', code)
+            or re.search(r'\b(?:let|var)\s+predictionUnavailableOpFilters\b', code)):
+        problems.append(prefix + 'CWorkerOrchestrator.swift must not define a local exclusion table or shadow the shared set')
+    match = re.search(r'\bfunc\s+planValidatorQueries\b[^{}]*\{', code)
+    if match is None:
+        return problems + [prefix + 'could not locate planValidatorQueries']
+    start = end = match.end()
+    depth = 1
+    while end < len(code) and depth:
+        depth += (code[end] == '{') - (code[end] == '}')
+        end += 1
+    if depth or not re.search(r'\bif\s+predictionUnavailableOpFilters\s*\.\s*contains\s*\(', code[start:end - 1]):
+        problems.append(prefix + 'planValidatorQueries must use if predictionUnavailableOpFilters.contains(...)')
+    return problems
+
 
 def parse_swift_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     text = PROBE_RUNNER.read_text(encoding="utf-8")
@@ -691,6 +759,7 @@ def main() -> int:
     problems.extend(check_attempt_outcomes_have_matrix_rows())
     problems.extend(check_attempt_kind_enum_agreement())
     problems.extend(check_prediction_unavailable_agreement())
+    problems.extend(check_prediction_unavailable_planner())
     problems.extend(check_test_overrides_table_agreement())
     problems.extend(check_harness_note_agreement())
 

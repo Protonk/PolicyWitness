@@ -25,6 +25,11 @@ if test_selected "${PW_TEST_ID}"; then
   fi
 
   SUMMARY="$(tail -n 1 "${RUN_LOG}")"
+  test_step "planner" "reject host exclusion mirrors and missing shared membership checks"
+  if ! /usr/bin/python3 -B "${ROOT_DIR}/tests/suites/source_drift/check_planner.py" \
+      "${PW_TEST_ARTIFACTS}/planner-controls" >"${PW_TEST_ARTIFACTS}/planner-controls.log" 2>&1; then
+    test_fail "planner source controls failed" "{\"log\":\"${PW_TEST_ARTIFACTS}/planner-controls.log\"}"
+  fi
   test_pass "${SUMMARY}" "{\"log\":\"${RUN_LOG}\"}"
 fi
 

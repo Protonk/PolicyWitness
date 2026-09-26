@@ -19,8 +19,12 @@ Rust unit tests and formatting for the controller crate.
 
 ## Artifacts
 
-- `tests/out/suites/unit/rust.unit/artifacts/cargo-test-bins.log`
-- `tests/out/suites/unit/rust.fmt/artifacts/cargo-fmt-check.log`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/unit/rust.unit/artifacts/cargo-test-bins.log`
+- `<run>/suites/unit/rust.fmt/artifacts/cargo-fmt-check.log`
 
 Run:
 

@@ -137,6 +137,11 @@ cleanup path for one interrupted/ambiguous managed run after inspection.
 Selection/prune combinations and unfinished removal of retained, completed or
 unmanaged output are rejected. `make clean` delegates to the apply command.
 
+Preview briefly probes the same nonblocking lock before classification. A
+simultaneous execution can receive checkout-busy from that probe and must be
+retried after preview finishes. This safe contention window is intentional;
+preview's busy observation is a snapshot, not a reservation or readiness promise.
+
 Controls retain independent execution receipts and verify preview/apply changes,
 completed failed runs, all keep dispositions, preview under a held lock,
 `--unfinished` against each disposition, invalid indexes, retained ancestors and

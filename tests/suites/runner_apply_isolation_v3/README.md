@@ -29,7 +29,11 @@ grammar today; this suite proves the architecture survives it.
 
 ## Artifacts
 
-- `tests/out/suites/runner_apply_isolation_v3/<test_id>/artifacts/*`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/runner_apply_isolation_v3/<test_id>/artifacts/*`
 
 ## Run
 

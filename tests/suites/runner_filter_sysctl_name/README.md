@@ -1,5 +1,9 @@
 # runner_filter_sysctl_name
 
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
 Exercises `(sysctl-read, sysctl_name)` with a policy denying reads of
 `kern.osrelease`. The prediction is explicitly unavailable, while the real
 `sysctl` / `read` attempt must report `sysctl_failed`, a nonzero exit status,
@@ -51,7 +55,7 @@ suite. They can also be run directly:
 ## Fixtures and artifacts
 
 `run.sh` generates the live specimen inline. Artifacts under
-`tests/out/suites/runner_filter_sysctl_name/<test_id>/artifacts/` retain the
+`<run>/suites/runner_filter_sysctl_name/<test_id>/artifacts/` retain the
 specimen, raw `run.json`, `pw.stderr`, and assertion log. The control case retains
 each input envelope and the checker's arguments, status and diagnostics.
 

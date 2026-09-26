@@ -319,13 +319,15 @@ these services and to enforce entitlements supersets before dispatch.
 ## Sandboxed automation harnesses
 
 Some automation and agent harnesses run commands under a macOS sandbox. Inside
-one, two things fail for reasons that have nothing to do with the specimen: XPC
-lookup of the runner is refused (`NSCocoaErrorDomain` code 4099, or error 159
-“Sandbox restriction”), so no runner launches; and the unified log tool will not
-run (`log: Cannot run while sandboxed`), so deny evidence cannot be captured.
-These are environment constraints, not PolicyWitness regressions. Request
-escalation, rerun the same command once from an unsandboxed Terminal, and debug
-only what still fails there.
+one, XPC lookup of the runner can be refused (`NSCocoaErrorDomain` code 4099,
+or error 159 “Sandbox restriction”), so no runner launches; the unified log
+tool can refuse to run (`log: Cannot run while sandboxed`), so deny evidence
+cannot be captured; and `codesign --verify` can report “invalid signature (code
+or signature have been modified)” for an unchanged, validly signed app. These
+refusals can be environment constraints. Request escalation and rerun the same
+command once outside the automation sandbox against unchanged artifact bytes.
+Treat a signature failure as environmental only after the unsandboxed check
+passes; debug any failure that remains.
 
 The name “nested sandbox” fits: the harness's sandbox sits outside the one the
 worker would apply to itself, and it wins first, at XPC lookup, before any code

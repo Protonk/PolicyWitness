@@ -43,7 +43,11 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
 
 ## Artifacts
 
-- `tests/out/suites/runner_unit/<test_id>/artifacts/pwrunner_core_tests.log`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/runner_unit/<test_id>/artifacts/pwrunner_core_tests.log`
 - The same artifact directory retains `worker-lifecycle-fixture` and
   `lifecycle-fixture-build.log`; subprocess JSON is printed in the Swift log.
 

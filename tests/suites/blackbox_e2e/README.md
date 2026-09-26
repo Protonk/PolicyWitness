@@ -82,7 +82,11 @@ full transcript or its line order.
 
 ## Artifacts
 
-- `tests/out/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_e2e` when run directly).
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_e2e` when run directly).
 - Checker artifacts retain each synthetic envelope, exit status, and diagnostics.
 
 BBX file targets live in unique owned `/private/tmp/pw-bbx.*` directories,

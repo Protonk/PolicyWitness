@@ -1,5 +1,9 @@
 # runner_filter_iokit_registry_entry_class
 
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
 Exercises `(iokit-open-service, iokit_registry_entry_class)` with a policy denying
 `IOSurfaceRoot`. The response must contain exactly the requested `iosurface_open`
 step and report `prediction_unavailable` for that operation.
@@ -18,7 +22,7 @@ to succeed or assert internal prediction dispatch behavior.
 ## Fixtures and artifacts
 
 `run.sh` generates the specimen inline. Artifacts under
-`tests/out/suites/runner_filter_iokit_registry_entry_class/<test_id>/artifacts/`
+`<run>/suites/runner_filter_iokit_registry_entry_class/<test_id>/artifacts/`
 retain the specimen, raw `run.json`, `pw.stderr`, and assertion log.
 Independent checker controls for all three filter callers run in
 `runner_filter_sysctl_name`, including valid file failures and rejection of

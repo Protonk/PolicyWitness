@@ -246,7 +246,11 @@ and `observations.json`. No signed app is altered to steer observer output.
 
 ## Artifacts
 
-- `tests/out/suites/witness_contract/<test_id>/artifacts/*`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/witness_contract/<test_id>/artifacts/*`
 
 ## Run
 

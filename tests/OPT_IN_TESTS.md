@@ -1,5 +1,9 @@
 # Opt-in Tests (dev-only)
 
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
 Opt-in cases are excluded from the default `tests/run.sh` battery. They remain
 part of `--all`; explicit `--suite` selectors include every member of that suite,
 including non-default cases. `tests/catalog.json` defines membership and required
@@ -71,7 +75,7 @@ selection, deduplication, configuration validation, and complete accounting.
 - **When to run:** After changing BYOXPC install/verify behavior, runner-mode
   selection, or shared response/comparison contracts and blackbox helpers. Include
   both BBX cases and the applicable menagerie members, with owned cleanup.
-- **Artifacts:** `tests/out/suites/runner_byoxpc/*/artifacts/*`
+- **Artifacts:** `<run>/suites/runner_byoxpc/*/artifacts/*`
 
 ### runner_auth_external
 
@@ -87,7 +91,7 @@ selection, deduplication, configuration validation, and complete accounting.
 - **When to run:** After changing runner caller authorization or session cleanup.
   The shared session helper uses a unique service, treats installation failures
   as failures, and retains durable ownership until cleanup is verified.
-- **Artifacts:** `tests/out/suites/runner_byoxpc/runner_auth_external/artifacts/*`
+- **Artifacts:** `<run>/suites/runner_byoxpc/runner_auth_external/artifacts/*`
 
 ### Registry recovery
 
@@ -120,7 +124,7 @@ selection, deduplication, configuration validation, and complete accounting.
   No built app or signing identity required.
 - **When to run:** After changing exec spawning, process-state inspection, or
   the inheritance assertions; before retiring overlapping coverage.
-- **Artifacts:** `tests/out/suites/runner_exec_inheritance/mutation_controls/artifacts/`
+- **Artifacts:** `<run>/suites/runner_exec_inheritance/mutation_controls/artifacts/`
 - **Gating:** Explicit invocation; missing prerequisites fail rather than skip.
 
 ### Order barrier mutation controls
@@ -138,7 +142,7 @@ selection, deduplication, configuration validation, and complete accounting.
   `PW_BYOXPC_IDENTITY`, `IDENTITY`, then the app's team-matched keychain identity.
 - **When to run:** After release/barrier or observer changes, and for order-plan
   Gate 3 acceptance. Select with `tests/run.sh --case witness_contract/order_barrier_mutations`.
-- **Artifacts:** `tests/out/suites/witness_contract/order_barrier_mutations/artifacts/`:
+- **Artifacts:** `<run>/suites/witness_contract/order_barrier_mutations/artifacts/`:
   `mutations.json`, component logs, exact patched sources, per-candidate binary
   and manifest hashes, signature/evidence checks, raw envelopes, gate receipts,
   external effects and process ancestry. Disposable apps live under `/private/tmp`
@@ -156,7 +160,7 @@ selection, deduplication, configuration validation, and complete accounting.
 When you add an opt-in test, document it here with:
 
 - **Suite name:** use the runner suite name (for example `runner_byoxpc`)
-  so results group under `tests/out/suites/<suite>/`.
+  so results group under `<run>/suites/<suite>/`.
 - **Location:** the script path under `tests/suites/runner_*/opt_in/`.
 - **Purpose:** the behavior under test.
 - **Opt-in reason:** the resource or OS behavior that makes it non-default.

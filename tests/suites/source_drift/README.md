@@ -26,6 +26,12 @@ signal.
 The shared prediction-unavailable operation/filter set in `ProbeRunner.swift`
 must agree with the user guide. Both Swift callers use that single set;
 independent runner unit tests pin their exclusion behavior.
+The checker also requires `planValidatorQueries` to branch on the shared set's
+`contains` call and rejects host-local pair collections, literal operation/filter
+entries and shadowing of the shared symbol. Comments, string examples and uses
+outside the planner cannot satisfy the membership check. This is a mechanical
+source convention, not a Swift semantic analysis; a deliberate refactor of the
+condition requires reviewing the guard alongside the runtime unit tests.
 
 The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
@@ -47,11 +53,21 @@ Public-command controls separately verify selection and actual execution.
 
 - Source-set checks read live files. Limits controls create disposable checkouts
   containing the actual generator, documents and referenced source files.
+- Planner controls run the actual checker in a disposable checkout with a
+  three-pair mirror, an extra fourth pair, inferred literal entries, shadowing,
+  and missing/comment-only/string-only membership checks. Formatting and
+  commented/string examples remain accepted. Inputs and command receipts are
+  retained, and the restored fixture must pass.
 
 ## Artifacts
 
-- `tests/out/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
-- `tests/out/suites/source_drift/limits_documentation/artifacts/limits.log`
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
+- `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
+- `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 
 ## Run
 

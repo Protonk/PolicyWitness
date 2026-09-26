@@ -57,7 +57,11 @@ holds for launchd-spawned services and ordinary shells.
 
 ## Artifacts
 
-- `tests/out/suites/run_effects/<case>/artifacts/*`: per row, `before.*` and
+`<run>` is the selected output directory: `tests/out/runs/default` for the
+public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
+default to `tests/out/runs/direct`.
+
+- `<run>/suites/run_effects/<case>/artifacts/*`: per row, `before.*` and
   `after.*` snapshots (raw bytes and a JSON description with digest, size,
   mode, device, inode, links, mtime and ctime) beside the `RunCapture` files
   under `run/`; `rows.json` or `attempts.json` summaries; `inventory.*.json`
