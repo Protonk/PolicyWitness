@@ -8,16 +8,16 @@ tests/run.sh --suite runner_validator_failure
 ```
 
 This baseline suite needs the built app and Python 3, and must run outside an
-automation sandbox. Missing prerequisites fail. It has three cases:
+automation sandbox. Missing prerequisites fail. It has four cases:
 
 - `transcript_controls`: directly check the shared validator fixture's input
-  receipt, reversed reply order, distinct verdicts, and EOF/malformed tail.
+  receipt, reversed reply order, distinct verdicts, EOF/malformed tails and a real signal.
 - `validator_unavailable_reports_degraded`: two valid replies for three probes,
   followed by clean EOF. Require `validator_unavailable` and a 2-of-3 shortfall.
 - `validator_decode_failure_reports_degraded`: the same accepted replies followed
   by malformed JSON. Require `validator_decode_failure` naming that malformed line.
 
-Both CLI cases use `_test_overrides.validator_executable_path` and require that
+The EOF and malformed CLI cases use `_test_overrides.validator_executable_path` and require that
 exact override to be mirrored. They run three distinguishable operations against
 freshly seeded files: an allowed write, a denied write, and a denied access check.
 The first file must change to nonempty content; the others must retain their
@@ -50,3 +50,11 @@ name. This keeps their existing entry points while sharing the same assertions.
 The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
 Case IDs, checker arguments, and artifact paths remain defined by this suite.
 The `shell_helpers` controls verify failure propagation and report/log behavior.
+
+`validator_killed_mid_stream` emits and flushes one allow record, then dies by
+SIGKILL. The driver must retain that record with `query_first`, mark the other
+two predictions unestablished/missing, retain signal 9 and confirmed reaping,
+and close collection before releasing all three writes. Every file must change
+independently before the envelope is decoded. The exact degraded outcome is
+`validator_unavailable`; the signal diagnostic and executable override survive.
+SIGKILL makes the fixture independent of inherited signal masks/dispositions.

@@ -94,9 +94,9 @@ capture metadata, and assertion log. Run with:
 tests/run.sh --case witness_contract/create_existing_file_preserves_contents
 ```
 
-## Removed target uncertainty
+## Predictions before attempts
 
-`removed_target_prediction_is_not_drift` runs an allowed read and unlink of
+`queries_precede_attempts` runs an allowed read and unlink of
 one file with the real validator and no overrides. Both native predictions must
 be allow with `query_first` and allow/success agreement. The test observes file
 absence before decoding, and retains later host nonresolution separately as
@@ -104,6 +104,56 @@ absence before decoding, and retains later host nonresolution separately as
 including later-step unlink, remains pinned by Swift and offline consumer
 controls. The stronger gated observer and deliberate barrier-bypass controls are
 separate tests; this ordinary run alone does not replace them.
+
+`queries_use_a_pre_attempt_interval` covers absent/create/unlink,
+existing/unlink/read, and unlink/recreate/read plans. An absent planning target
+has no query; removing an existing target preserves the earlier native allow
+prediction beside ENOENT, state and identity limits. Recreating the path cannot
+erase the recorded unlink or certify runtime identity. Create remains a compound
+attempt with an unavailable comparison even when the native prediction is allow.
+
+`attempt_effects_wait_for_collection` uses the native bridge's acknowledged query
+and emission gates. While stdout collection stays open, independent file reads
+must retain the target bytes and the exec helper must have no connection. After
+closure, unlink and helper connections must occur; kernel peer PIDs, libproc
+ancestry and kqueue exit events identify the helper, worker and host. Only then
+does the checker inspect the envelope. This proves the barrier for the observed
+unlink and exec effects, not the absence of every possible syscall.
+
+`query_interval_is_not_a_snapshot` removes a target between two acknowledged
+native queries. `external_mutation_between_query_and_attempt` removes it after
+a native allow receipt while collection remains open. Both retain real native
+observations and state/identity limits; test-only mutation knowledge is not a
+production attribution. No specific native verdict is required for a missing
+target. The resulting ENOENT read is unavailable/null rather than drift.
+
+`max_steps_ordered` runs 256 distinct existing targets, half denied for writing
+by literal, and independently checks every file's bytes before decoding.
+`deny_default_ordered` checks an allowed and denied read under `(deny default)`.
+Both require eligible predictions to be `query_first`; allow/success is limited
+agreement, and deny/permission failure is directional consistency with null drift.
+
+The bridge is test equipment selected through the existing executable override;
+its direct protocol/native controls live in `validator_bridge`. The opt-in
+`order_barrier_mutations` case builds unmodified and patched workers and hosts
+outside the inspected app. Baseline component and CLI controls must pass. The
+worker wait bypass must fail the ordinary C quiescence assertion; the host early
+release must fail the same Swift gate control used by `runner_unit`. Both signed
+app copies must produce early unlink and exec effects under the unchanged CLI
+observer. Hashes, signatures, source patches, command logs and effect receipts
+are retained. See [opt-in prerequisites](../../OPT_IN_TESTS.md).
+
+The unmodified C scenario must complete its 500 ms hold before release. A bypass
+can complete before the first poll: `early_completion` then rejects it immediately,
+even with zero held milliseconds and no host release. That observation establishes
+premature completion; the baseline supplies the delayed-release coverage.
+
+`validator_spawn_failed_reports_degraded` requires real ENOENT from
+`posix_spawn(sb_api_validator)`: the structured native return code, executable
+path, operation and nonempty diagnostic, without requiring English wording.
+It also requires the mirrored hostile executable path, no validator
+subprocess, closed collection with `not_spawned`, unestablished step order/null
+drift, and an independently changed file after the released write.
 
 ## Completed observations after a worker timeout
 
@@ -260,3 +310,8 @@ The removed-target control now expects both native queries to precede read/unlin
 `query_first`, allow/success agreement, and independent host nonresolution after
 unlink. Unordered same-target mutation protections remain covered by classifier
 and offline consumer controls. Ordered deny/success remains unavailable.
+
+The pre-apply case also attempts a real spawn of a nonexistent worker and
+requires unchanged files, no worker or validator subprocess, and no ordering
+object. Once a worker exists but has not published application, ordering is
+all-false with `not_invoked`; no prediction is `query_first`.

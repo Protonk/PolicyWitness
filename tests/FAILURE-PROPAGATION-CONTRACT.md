@@ -416,6 +416,22 @@ but can omit native results; unfamiliar outcomes and extra raw JSON fields are
 preserved. Booleans, strings and fractional values cannot stand in for integers.
 Parsing never turns a missing native result into a prediction.
 
+When validator `posix_spawn` returns nonzero, `validator_spawn_failure` retains
+`origin: runner_host`, `operation: posix_spawn`, the exact `executable_path`,
+numeric `return_code`, and native `strerror` text as `diagnostic`. The return code
+is captured directly, independently of ambient errno, with no recognized-code
+allowlist or diagnostic-string classification. Unknown codes remain failures.
+No validator PID or subprocess is invented. Collection closes and releases the
+worker normally; missing predictions remain unestablished with null drift.
+The record survives worker-summary precedence and evidence-preserving reply
+degradation. The explicit `evidence_retained: false` backstop may omit it along
+with the other observations. This optional field is additive to response 8;
+absence in older replies is unknown. The controller forwards it unchanged.
+The live ENOENT witness checks the native code, path and call context without
+requiring English wording. Internal native-call controls exercise unfamiliar
+returns through orchestration and reply serialization; they are not policy
+evidence and no request override selects them.
+
 `validator_subprocess` retains all accepted `records` with original `raw_line`,
 including explicit null step IDs. Its `expected_step_ids` and `association_issues`
 record missing, duplicate, unexpected and unassociated IDs, plus query mismatches.

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """Test validator: replay a checked-in transcript against actual incoming probes."""
 import json
+import os
 from pathlib import Path
 import signal
 import sys
@@ -8,6 +9,8 @@ import time
 
 
 def main():
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGALRM})
     signal.alarm(10)
     here = Path(__file__).resolve()
     assert len(sys.argv) == 3 and sys.argv[1] == '--batch', 'expected --batch <worker PID>'
@@ -47,12 +50,14 @@ def main():
         if tail == 'unexpected': verdict['step_id'] = 'never-requested'
         lines.append(json.dumps(verdict, sort_keys=True))
     else:
-        assert tail in ('eof', 'invalid_utf8', 'deadline'), 'unknown transcript tail'
+        assert tail in ('eof', 'invalid_utf8', 'deadline', 'signal'), 'unknown transcript tail'
     output = ('\n'.join(lines) + '\n').encode()
     if tail == 'invalid_utf8': output += b'\xff\n'
     here.with_suffix('.emitted.ndjson').write_bytes(output)
     sys.stdout.buffer.write(output)
     sys.stdout.buffer.flush()
+    if tail == "signal":
+        os.kill(os.getpid(), signal.SIGKILL)
     if tail == "deadline":
         time.sleep(8)  # open stdout forces the real driver deadline; alarm bounds leaks
 

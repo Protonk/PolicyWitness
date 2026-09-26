@@ -20,4 +20,7 @@ for variant in eof malformed; do
   test_selected "$id" || continue
   if ! bash "${SUITE_DIR}/case.sh" "${variant}"; then failures=1; fi
 done
+if test_selected validator_killed_mid_stream; then
+  if ! bash "${SUITE_DIR}/signal.sh"; then failures=1; fi
+fi
 exit "${failures}"

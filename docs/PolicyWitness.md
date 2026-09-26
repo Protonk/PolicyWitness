@@ -473,9 +473,17 @@ Top-level fields beyond `pid` / `runner_subprocess`:
        host. The orchestrator synthesizes
        `sandbox_check.outcome = "prediction_unavailable"` for each
        skipped step locally.
-    2. The validator failed to spawn before any metadata could be
-       captured (surfaced as `normalized_outcome =
+    2. The validator failed to spawn before any child process existed
+       (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
+- `validator_spawn_failure` — optional host launch evidence with `origin`,
+  `operation`, `executable_path`, `return_code` and `diagnostic`. For a failed
+  validator launch, these are `runner_host`, `posix_spawn`, the executable path,
+  the direct native return code and native descriptive text. The code is not
+  ambient errno. Unfamiliar nonzero codes remain failures; wording is not a
+  classification rule. The record survives a higher-priority worker failure
+  and evidence-preserving reply degradation. Older replies may omit it, so
+  absence does not prove that a validator was spawned successfully.
 - `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before the entire attempt batch, not state stability or runtime identity.
 - `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it.
 - `steps[].drift: bool | null` — `false` means a supported allow/success

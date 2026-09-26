@@ -22,7 +22,8 @@ runFilterKindValidationTests(tk)
 // Constructed drift/comparison interpretation controls from the public scope
 // and attribution promises; they establish no native causes.
 runDriftClassifierTests(tk)
-// Release barrier, eligible-record lifetime and response-8 encoding controls.
+// Release barrier, eligible-record lifetime, native spawn failures through replies,
+// and response-8 encoding controls.
 runOrderingTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.
 runReplyFailureTests(tk)

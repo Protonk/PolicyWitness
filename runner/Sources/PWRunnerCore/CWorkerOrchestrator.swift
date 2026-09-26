@@ -45,6 +45,21 @@ public enum CWorkerOrchestrator {
         workerExecutablePath: String,
         validatorExecutablePath: String
     ) -> PWRunnerRunResult {
+        run(parsed: parsed, policyHash: policyHash, bundleId: bundleId,
+            workerExecutablePath: workerExecutablePath, validatorExecutablePath: validatorExecutablePath,
+            validatorSpawn: nativeValidatorSpawn)
+    }
+
+    // Tests substitute only the native validator launch; worker orchestration,
+    // classification, evidence assembly and reply encoding remain production.
+    static func run(
+        parsed: PWRunnerRunSpec,
+        policyHash: String,
+        bundleId: String?,
+        workerExecutablePath: String,
+        validatorExecutablePath: String,
+        validatorSpawn: @escaping ValidatorSpawnCall
+    ) -> PWRunnerRunResult {
         let stepCount = parsed.probe_plan.count
 
         // ---- translation: request → driver inputs ------------------------
@@ -87,7 +102,7 @@ public enum CWorkerOrchestrator {
                 probes: validatorProbes,
                 verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
             )
-            validatorResult = runValidator(vInput)
+            validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
         }
 
         // ---- assemble + classify -----------------------------------------
@@ -117,6 +132,9 @@ public enum CWorkerOrchestrator {
         var runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
         runnerSubprocess?.ordering = ordering
         let validatorSubprocess = validatorOutput.map(buildValidatorSubprocess)
+        let validatorSpawnFailure: PWRunnerSpawnFailure?
+        if case .failure(.spawnFailed(let failure), _) = validatorResult { validatorSpawnFailure = failure }
+        else { validatorSpawnFailure = nil }
 
         _ = stepCount  // referenced for future partial-step logic; silence unused warning
 
@@ -137,7 +155,8 @@ public enum CWorkerOrchestrator {
             validator_subprocess: validatorSubprocess,
             test_overrides: parsed._test_overrides,
             applied_profile: workerOutput?.profileCapture,
-            admission_failure: admissionFailure
+            admission_failure: admissionFailure,
+            validator_spawn_failure: validatorSpawnFailure
         )
     }
 

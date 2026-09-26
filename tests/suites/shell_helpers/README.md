@@ -9,6 +9,14 @@ This suite runs in the default battery:
 tests/run.sh --suite shell_helpers
 ```
 
+`mutation_prerequisites` also invokes macOS `codesign` to inspect an unsigned
+fixture app. It runs the actual required mutation wrapper and requires a failed
+report and exit before any builder runs when no signing identity resolves. The
+fixture has no team; the real resolver returns before consulting the keychain.
+Independent builder receipts detect continued work, and the isolated report and
+event stream must contain failure rather than skip. The signed mutation case
+separately exercises successful prerequisite resolution and actual builds.
+
 ## Helper contract
 
 Source `tests/lib/case.sh`, which loads `testlib.sh`, then call `test_begin`.

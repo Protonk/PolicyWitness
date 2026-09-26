@@ -54,27 +54,32 @@ private func waitForReceipt(_ path: String, _ text: String) -> Bool {
     return false
 }
 
+// Shared by runner_unit and the disposable host mutation control.
+func runOrderingGateControl(_ tk: TestKit) {
+    tk.run("proceed_wait_then_report: hook gate forbids acknowledgement and attempts") {
+        let receipt = "/tmp/pw-order-" + UUID().uuidString
+        defer { try? FileManager.default.removeItem(atPath: receipt) }
+        var heldReceipt = ""
+        var ready = false
+        let out = try orderingWorker("proceed_wait|" + receipt) { _ in
+            ready = waitForReceipt(receipt, "waiting")
+            let gate = DispatchSemaphore(value: 0)
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(100)) { gate.signal() }
+            gate.wait()
+            heldReceipt = (try? String(contentsOfFile: receipt)) ?? ""
+        }
+        try expectTrue(ready)
+        try expectEqual(heldReceipt, "waiting\n", "early worker publication while hook held")
+        try expectTrue(out.hookInvoked && out.proceedSet && out.proceedObserved && out.proceedOwnershipEstablished)
+        try expectTrue(out.done && out.slots[0].completed)
+        try expectEqual(try String(contentsOfFile: receipt), "waiting\nack\nattempt\n")
+        try expectTrue(out.orderingProtocolViolations.isEmpty)
+    }
+}
+
 func runOrderingTests(_ tk: TestKit) {
     tk.group("release barrier: real host driver and independent lifecycle fixture") {
-        tk.run("proceed_wait_then_report: hook gate forbids acknowledgement and attempts") {
-            let receipt = "/tmp/pw-order-" + UUID().uuidString
-            defer { try? FileManager.default.removeItem(atPath: receipt) }
-            var heldReceipt = ""
-            var ready = false
-            let out = try orderingWorker("proceed_wait|" + receipt) { _ in
-                ready = waitForReceipt(receipt, "waiting")
-                let gate = DispatchSemaphore(value: 0)
-                DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(100)) { gate.signal() }
-                gate.wait()
-                heldReceipt = (try? String(contentsOfFile: receipt)) ?? ""
-            }
-            try expectTrue(ready)
-            try expectEqual(heldReceipt, "waiting\n")
-            try expectTrue(out.hookInvoked && out.proceedSet && out.proceedObserved && out.proceedOwnershipEstablished)
-            try expectTrue(out.done && out.slots[0].completed)
-            try expectEqual(try String(contentsOfFile: receipt), "waiting\nack\nattempt\n")
-            try expectTrue(out.orderingProtocolViolations.isEmpty)
-        }
+        runOrderingGateControl(tk)
         tk.run("proceed_wait_expire: collection held beyond expiry, late release retains verdict and cannot revive") {
             let receipt = "/tmp/pw-order-" + UUID().uuidString
             defer { try? FileManager.default.removeItem(atPath: receipt) }
@@ -108,6 +113,75 @@ func runOrderingTests(_ tk: TestKit) {
             try expectNil(orderedSteps(out, nil)[0].drift)
             try expectEqual(classify(workerResult: .success(out), validatorResult: result, expectedVerdictCount: 1).outcome,
                             NormalizedOutcome.validatorSpawnFailed)
+        }
+        tk.run("unfamiliar native spawn errors survive orchestration and reply encoding") {
+            // Controlled native returns, not sandbox evidence. The real driver
+            // still owns its pipes, release, worker observation and assembly.
+            for (code, mode): (Int32, String) in [(123456, "proceed_wait"), (Int32.max, "proceed_wait"),
+                                                (123456, "signal_after_ack")] {
+                let workerFailed = mode == "signal_after_ack"
+                let receipt = "/tmp/pw-spawn-" + UUID().uuidString
+                defer { try? FileManager.default.removeItem(atPath: receipt) }
+                let path = "/unfamiliar/validator-\"é\""
+                let diagnostic = String(cString: strerror(code))
+                let parsed = PWRunnerRunSpec(specimen_id: "unfamiliar-spawn",
+                    policy: PWRunnerPolicySpec(format: "sbpl", sbpl_source: mode + "|" + receipt),
+                    probe_plan: [orderingStep()])
+                var calls = 0
+                var receivedPath = ""
+                var receivedArgv = [String]()
+                let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                    workerExecutablePath: try orderingFixturePath(), validatorExecutablePath: path,
+                    validatorSpawn: { _, executable, _, argv in
+                        calls += 1
+                        receivedPath = executable
+                        receivedArgv = (0..<3).map { String(cString: argv[$0]!) }
+                        errno = EACCES // posix_spawn's return, not errno, owns this evidence.
+                        return code
+                    })
+                try expectEqual(calls, 1)
+                try expectEqual(receivedPath, path)
+                try expectEqual(receivedArgv, ["sb_api_validator", "--batch", String(result.pid)])
+                try expectEqual(try String(contentsOfFile: receipt), workerFailed ? "waiting\nack\n" : "waiting\nack\nattempt\n")
+                let bytes = pwRunnerReplyData(result)
+                let reply = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
+                try expectEqual(reply.normalized_outcome, workerFailed ? NormalizedOutcome.runnerFailed : NormalizedOutcome.validatorSpawnFailed)
+                try expectEqual(reply.rc, 1)
+                try expectNil(reply.reporting_failure)
+                try expectNil(reply.validator_subprocess)
+                try expectEqual(reply.validator_spawn_failure?.origin, "runner_host")
+                try expectEqual(reply.validator_spawn_failure?.operation, "posix_spawn")
+                try expectEqual(reply.validator_spawn_failure?.executable_path, path)
+                try expectEqual(reply.validator_spawn_failure?.return_code, code)
+                try expectEqual(reply.validator_spawn_failure?.diagnostic, diagnostic)
+                if !workerFailed {
+                    try expectContains(reply.error ?? "", path)
+                    try expectContains(reply.error ?? "", String(code))
+                    try expectContains(reply.error ?? "", diagnostic)
+                }
+                try expectEqual(reply.runner_subprocess?.ordering?.validator_disposition, "not_spawned")
+                try expectEqual(reply.runner_subprocess?.ordering?.proceed_observed, true)
+                try expectEqual(reply.steps[0].attempt.outcome, workerFailed ? AttemptOutcome.notRunWorkerDied : AttemptOutcome.ok)
+                try expectEqual(reply.steps[0].sandbox_check.outcome, SandboxCheckOutcome.error)
+                try expectEqual(reply.steps[0].sandbox_check.missing_reason, "validator_not_invoked")
+                try expectEqual(reply.steps[0].comparison?.order, "unestablished")
+                try expectNil(reply.steps[0].drift)
+                // A later reply-invariant failure must retain the same native
+                // record, even though the summary becomes reporting_failed.
+                var invalid = result
+                invalid.steps[0].comparison = nil
+                let degraded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerReplyData(invalid))
+                try expectEqual(degraded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
+                try expectEqual(degraded.reporting_failure?.evidence_retained, true)
+                try expectEqual(try pwRunnerEncodeJSON(degraded.validator_spawn_failure),
+                                try pwRunnerEncodeJSON(reply.validator_spawn_failure))
+                // An absent optional record in an older reply stays unknown.
+                var legacy = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
+                legacy.removeValue(forKey: "validator_spawn_failure")
+                let older = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
+                    from: JSONSerialization.data(withJSONObject: legacy))
+                try expectNil(older.validator_spawn_failure)
+            }
         }
         tk.run("signal_while_waiting: records before and after death never acquire policy lifetime") {
             let receipt = "/tmp/pw-order-" + UUID().uuidString
@@ -165,11 +239,18 @@ func runOrderingTests(_ tk: TestKit) {
             let receipt = "/tmp/pw-order-" + UUID().uuidString
             defer { try? FileManager.default.removeItem(atPath: receipt) }
             var calls = ChildProcessCalls()
+            var interceptedReap = false
             calls.wait = { pid, status, options in
-                if (try? String(contentsOfFile: receipt))?.contains("attempt") == true { errno = ECHILD; return -1 }
-                return Darwin.waitpid(pid, status, options)
+                let rc = Darwin.waitpid(pid, status, options)
+                // This fixture exits only after exit_requested. Intercepting
+                // its reap places the fault after the host's acknowledgement
+                // observation; an attempt receipt alone can race that load.
+                if rc == pid { interceptedReap = true; errno = ECHILD; return -1 }
+                return rc
             }
             let out = try orderingWorker("proceed_wait|" + receipt, calls: calls)
+            try expectTrue(interceptedReap)
+            try expectEqual(out.waitErrors?.first?.phase, "exit_grace")
             try expectTrue(out.proceedObserved && out.proceedOwnershipEstablished)
             try expectEqual(out.reaped, false)
             let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true)

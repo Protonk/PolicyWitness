@@ -22,7 +22,7 @@ PolicyWitness, before the envelope is decoded.
   with `query_not_requested` for a target that does not exist when the query
   is planned. For an allowed `unlink`, the native allow query precedes the
   attempt: `query_first`, agreement and `drift:false` are required. The separate
-  `witness_contract/removed_target_prediction_is_not_drift` case also checks an
+  `witness_contract/queries_precede_attempts` case also checks an
   earlier read of the same target and independent absence after removal.
 - A helper spawned under `(deny default)` plus `exec_baseline` with one
   `file-write*` allow creates its marker with the fixture's exact bytes at

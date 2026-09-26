@@ -82,6 +82,10 @@
         {
           "id": "byoxpc_setup",
           "description": "BYOXPC staging preserves the source, owns partial installation, and verifies cleanup"
+        },
+        {
+          "id": "mutation_prerequisites",
+          "description": "The required barrier mutation wrapper fails without a signing identity before any builder executes"
         }
       ]
     },
@@ -356,6 +360,17 @@
         {
           "id": "validator_unavailable_reports_degraded",
           "description": "partial verdicts retain step identity; three completed attempts survive validator degradation"
+        },
+        {
+          "id": "validator_killed_mid_stream",
+          "description": "SIGKILL after one verdict preserves partial ordered evidence and independent writes",
+          "command": [
+            "bash",
+            "tests/suites/runner_validator_failure/signal.sh"
+          ],
+          "requires": [
+            "app"
+          ]
         }
       ]
     },
@@ -957,11 +972,11 @@
           ]
         },
         {
-          "id": "removed_target_prediction_is_not_drift",
+          "id": "queries_precede_attempts",
           "description": "Native queries precede read/unlink of one target, retaining allow/success agreement and independent host nonresolution",
           "command": [
             "bash",
-            "tests/suites/witness_contract/removed_target_prediction_is_not_drift.sh"
+            "tests/suites/witness_contract/queries_precede_attempts.sh"
           ]
         },
         {
@@ -1069,6 +1084,81 @@
           "requires": [
             "app",
             "clang"
+          ]
+        },
+        {
+          "id": "queries_use_a_pre_attempt_interval",
+          "description": "Planning exclusions and native predictions survive create/unlink/read/recreate plans without certifying later state or identity",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/queries_use_a_pre_attempt_interval.sh"
+          ]
+        },
+        {
+          "id": "attempt_effects_wait_for_collection",
+          "description": "Independent file bytes and helper connections show unlink and exec wait for acknowledged collection closure",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/attempt_effects_wait_for_collection.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
+        },
+        {
+          "id": "query_interval_is_not_a_snapshot",
+          "description": "Native queries straddle an independently observed removal while retaining order and state/identity limits",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/query_interval_is_not_a_snapshot.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
+        },
+        {
+          "id": "external_mutation_between_query_and_attempt",
+          "description": "Removal after a native allow receipt yields an ordered ENOENT read with unavailable comparison and null drift",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/external_mutation_between_query_and_attempt.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
+        },
+        {
+          "id": "max_steps_ordered",
+          "description": "All 256 distinct-target predictions precede attempts; independent bytes verify allowed writes and denied-write preservation",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/max_steps_ordered.sh"
+          ]
+        },
+        {
+          "id": "deny_default_ordered",
+          "description": "Allowed and denied reads retain ordered native predictions under a deny-default policy",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/deny_default_ordered.sh"
+          ]
+        },
+        {
+          "id": "order_barrier_mutations",
+          "default": false,
+          "description": "Disposable worker and host release bypasses cause early component and independent CLI effects",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/mutations.sh"
+          ],
+          "requires": [
+            "app",
+            "clang",
+            "swift",
+            "identity"
           ]
         }
       ],
@@ -1219,7 +1309,8 @@
         "runner_byoxpc/opt_metafilter_any",
         "runner_byoxpc/opt_bucket5_subpath",
         "runner_byoxpc/BBX-001",
-        "runner_byoxpc/BBX-002"
+        "runner_byoxpc/BBX-002",
+        "witness_contract/order_barrier_mutations"
       ]
     },
     "failure_boundaries": {
@@ -1269,6 +1360,21 @@
         {
           "id": "validator_io_deadline_releases_worker",
           "description": "Real validator I/O timeout releases attempts, retains one ordered prediction and independent file effects"
+        }
+      ]
+    },
+    "validator_bridge": {
+      "command": [
+        "bash",
+        "tests/suites/validator_bridge/run.sh"
+      ],
+      "requires": [
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "protocol_controls",
+          "description": "Independent native allow/deny/NONE oracle and acknowledged query, emission, closure and disconnect controls"
         }
       ]
     }

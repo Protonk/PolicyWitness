@@ -101,6 +101,13 @@ def common_evidence(envelope, rc, specimen, failure):
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
     assert runner['schema_version'] == 8, runner
+    ordering = worker['ordering']
+    assert ordering['collection_closed_before_proceed'] is (not failure), ordering
+    assert ordering['proceed_set'] is (not failure) and ordering['proceed_observed'] is (not failure), ordering
+    assert ordering['worker_lifetime_established'] is (not failure), ordering
+    assert ordering['protocol_violations'] == [], ordering
+    assert ordering['validator_disposition'] == ('not_invoked' if failure else 'reaped'), ordering
+    assert all(s['comparison']['order'] == ('unestablished' if failure else 'query_first') for s in runner['steps'])
     steps = runner['steps']
     assert [s['step_id'] for s in steps] == [s['step_id'] for s in specimen['probe_plan']], steps
     if failure:
@@ -262,6 +269,25 @@ def main():
                                   'validator_subprocess': runner.get('validator_subprocess'),
                                   'predictions': [s.get('sandbox_check') for s in runner.get('steps', [])]}
             (out / 'prediction_observations.json').write_text(json.dumps(observations, indent=2) + '\n')
+
+        # No subprocess means no ordering object at all. Exercise the real
+        # pre-spawn boundary as well as the published-worker pre-apply gap.
+        request = dict(specimen, _test_overrides={'worker_executable_path': '/nonexistent/pw-no-worker'})
+        for path, seed in zip(paths, seeds): path.write_bytes(seed)
+        with RunCapture(pw, out / 'no_worker', request, cli_args=['--no-log-capture']) as run:
+            rc = run.wait(timeout=15)
+            after = [path.read_bytes() for path in paths]
+            (run.out / 'effects.json').write_text(json.dumps({'unchanged': after == seeds}) + '\n')
+            assert after == seeds, 'failed spawn changed targets'
+            value = run.load_json()
+            runner = value['data']['runner_result']
+            assert rc == 1 and runner['normalized_outcome'] == 'worker_spawn_failed', runner
+            assert 'posix_spawn' in runner['error'], runner
+            assert runner['test_overrides'] == request['_test_overrides'], runner
+            assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+            assert 'ordering' not in runner, runner
+            assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
+            assert not validate_evidence_shape(value), validate_evidence_shape(value)
 
     assert all(result['passed'] for result in results), 'contract failures retained in assertions.json'
 

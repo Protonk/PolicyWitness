@@ -1133,6 +1133,17 @@ public struct PWRunnerReportingFailure: Codable {
     public var evidence_retained: Bool
 }
 
+/// Host observation of a failed validator launch; no child PID is implied.
+/// posix_spawn returns the error code directly, independently of ambient errno.
+/// Keep unfamiliar codes intact; diagnostic is descriptive, not a classifier.
+public struct PWRunnerSpawnFailure: Codable {
+    public var origin: String = "runner_host"
+    public var operation: String = "posix_spawn"
+    public var executable_path: String
+    public var return_code: Int32
+    public var diagnostic: String
+}
+
 // Encoding is explicit to enforce response invariants. When adding a stored
 // field, update CodingKeys and encode(to:), and populate the field-coverage
 // round-trip fixture in ReplyFailureTests. Reflection stays in that test.
@@ -1170,6 +1181,8 @@ public struct PWRunnerRunResult: Codable {
     //       explicit. Old replies retain old drift and absent derivations.
     //   8 — ordered comparisons and host ordering evidence. A reporting_failure
     //       reply withholds all comparisons while retaining diagnostic evidence.
+    //       Optional validator_spawn_failure retains host launch observations;
+    //       absence in older replies is unknown, not proof of a successful spawn.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -1187,6 +1200,7 @@ public struct PWRunnerRunResult: Codable {
     public var runner_subprocess: PWRunnerSubprocess?
     public var admission_failure: PWRunnerAdmissionFailure?
     public var validator_subprocess: PWRunnerValidatorSubprocess?
+    public var validator_spawn_failure: PWRunnerSpawnFailure?
     public var test_overrides: PWRunnerTestOverrides?
     public var reporting_failure: PWRunnerReportingFailure?
 
@@ -1209,7 +1223,8 @@ public struct PWRunnerRunResult: Codable {
         test_overrides: PWRunnerTestOverrides? = nil,
         applied_profile: AppliedProfileCapture? = nil,
         admission_failure: PWRunnerAdmissionFailure? = nil,
-        reporting_failure: PWRunnerReportingFailure? = nil
+        reporting_failure: PWRunnerReportingFailure? = nil,
+        validator_spawn_failure: PWRunnerSpawnFailure? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -1230,9 +1245,10 @@ public struct PWRunnerRunResult: Codable {
         self.validator_subprocess = validator_subprocess
         self.test_overrides = test_overrides
         self.reporting_failure = reporting_failure
+        self.validator_spawn_failure = validator_spawn_failure
     }
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }
     public func encode(to encoder: Encoder) throws {
         if let failure = reporting_failure {
@@ -1240,7 +1256,7 @@ public struct PWRunnerRunResult: Codable {
                   rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
                   steps.allSatisfy({ $0.comparison == nil && $0.drift == nil }),
-                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && validator_subprocess == nil) else {
+                  failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && validator_subprocess == nil && validator_spawn_failure == nil) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
@@ -1286,6 +1302,7 @@ public struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
         try c.encodeIfPresent(validator_subprocess, forKey: .validator_subprocess)
+        try c.encodeIfPresent(validator_spawn_failure, forKey: .validator_spawn_failure)
         try c.encodeIfPresent(test_overrides, forKey: .test_overrides)
         try c.encodeIfPresent(reporting_failure, forKey: .reporting_failure)
     }

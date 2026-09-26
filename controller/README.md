@@ -75,6 +75,10 @@ Runs a **single runner evaluation** against the selected runner service:
   `runner_result.steps[*].sandbox_check` block and surfaces process
   metadata as `runner_result.validator_subprocess`. See
   `tests/suites/validator_batch_mode/README.md` for the wire contract.
+  Failed launches retain `runner_result.validator_spawn_failure` with the
+  native return code, executable path, operation and diagnostic, forwarded
+  unchanged even for unfamiliar codes. This is host evidence, not a validator
+  verdict; no subprocess is invented when launch fails.
   Validator coverage rules:
   - **Predicted** filter kinds (the validator calls `sandbox_check`):
     `path`, `global_name`, `local_name`, `none`. `none`-filter probes

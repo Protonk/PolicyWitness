@@ -102,7 +102,7 @@ public struct ValidatorOutput {
 
 public enum ValidatorClientError: Error, CustomStringConvertible {
     case pipeFailed(String)
-    case spawnFailed(String)
+    case spawnFailed(PWRunnerSpawnFailure)
     case probeWriteFailed(String)
     case probeSerializationFailed(String)
     case verdictReadFailed(String)
@@ -112,7 +112,8 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
     public var description: String {
         switch self {
         case .pipeFailed(let why):                return "pipe: \(why)"
-        case .spawnFailed(let why):               return "posix_spawn(sb_api_validator): \(why)"
+        case .spawnFailed(let failure):
+            return "\(failure.operation)(sb_api_validator): path=\(failure.executable_path), return_code=\(failure.return_code): \(failure.diagnostic)"
         case .probeWriteFailed(let why):          return "write(probes): \(why)"
         case .probeSerializationFailed(let why):  return "serialize probes: \(why)"
         case .verdictReadFailed(let why):         return "read(verdicts): \(why)"
@@ -166,7 +167,20 @@ public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult
     runValidator(input, processCalls: ChildProcessCalls())
 }
 
-func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls) -> ValidatorClientResult {
+// Internal native-call seam for otherwise unreliable launch failures. No request
+// selects it, and production always invokes posix_spawn with these exact inputs.
+typealias ValidatorSpawnCall = (UnsafeMutablePointer<pid_t>, String,
+    UnsafePointer<posix_spawn_file_actions_t?>,
+    UnsafePointer<UnsafeMutablePointer<CChar>?>) -> Int32
+
+func nativeValidatorSpawn(_ pid: UnsafeMutablePointer<pid_t>, _ path: String,
+                          _ actions: UnsafePointer<posix_spawn_file_actions_t?>,
+                          _ argv: UnsafePointer<UnsafeMutablePointer<CChar>?>) -> Int32 {
+    posix_spawn(pid, path, actions, nil, argv, nil)
+}
+
+func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls,
+                  spawn: ValidatorSpawnCall = nativeValidatorSpawn) -> ValidatorClientResult {
     // ===== Phase 1: pre-spawn. Any failure here returns .failure with
     // partial=nil because no process or pipe state exists yet. =====
 
@@ -224,13 +238,14 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     ]
     var pid: pid_t = 0
     let spawnRC = withCStringArrayCopy(argv) { argvPtr in
-        posix_spawn(&pid, input.executablePath, &fa, nil, argvPtr, nil)
+        spawn(&pid, input.executablePath, &fa, argvPtr)
     }
     if spawnRC != 0 {
         close(stdinPipe[0]); close(stdinPipe[1])
         close(stdoutPipe[0]); close(stdoutPipe[1])
         return .failure(
-            error: .spawnFailed(String(cString: strerror(spawnRC))),
+            error: .spawnFailed(PWRunnerSpawnFailure(executable_path: input.executablePath,
+                return_code: spawnRC, diagnostic: String(cString: strerror(spawnRC)))),
             partial: nil
         )
     }

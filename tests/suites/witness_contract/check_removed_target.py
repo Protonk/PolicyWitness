@@ -49,6 +49,8 @@ def main():
     assert runner['runner_subprocess']['exit_code'] == 0
     assert runner['validator_subprocess']['exit_code'] == 0
     assert [step['step_id'] for step in runner['steps']] == ['read', 'unlink']
+    ordering = runner["runner_subprocess"]["ordering"]
+    assert all(ordering[key] is True for key in ("collection_closed_before_proceed", "proceed_set", "proceed_observed")), ordering
     recorded = {}
     for step, action in zip(runner['steps'], ('open_read', 'unlink')):
         prediction, attempt, comparison = step['sandbox_check'], step['attempt'], step['comparison']

@@ -185,6 +185,13 @@ Top-level fields:
   I/O/decode faults, or is `null` when no validator
   ran (every probe was in the prediction-unavailable set, or
   spawning the validator failed).
+- `validator_spawn_failure` retains a failed native validator launch independently
+  of the summary: `origin: runner_host`, `operation: posix_spawn`,
+  `executable_path`, the numeric `return_code`, and a descriptive `diagnostic`.
+  The code is the direct return, not ambient errno. Every nonzero return is a
+  failure, including unfamiliar codes; diagnostic wording never selects the
+  outcome. There is no validator subprocess on this path. Older replies may
+  omit this optional record; absence does not establish successful spawning.
 
 The host also writes `runner_subprocess.ready_byte_received`, `done_observed`,
 `poll_stop_reason`, `exit_requested`, `termination_request`, `reaped`, and

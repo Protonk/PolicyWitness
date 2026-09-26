@@ -22,8 +22,9 @@ deterministic, and checked into the repo so tests are hermetic.
   installation, and verified removal; independent fake OS/CLI tools exercise
   failures without signing or installing a real service.
 - `validator/`: checked-in NDJSON validator program and partial-reply
-  transcripts (EOF and malformed JSON), used by `runner_validator_failure`
-  and the corresponding `witness_contract` entry points.
+  transcripts (EOF, malformed JSON and signal), plus an independent native
+  bridge with acknowledged query/emission/closure gates. Used by
+  `runner_validator_failure`, `validator_bridge` and `witness_contract`.
 - `exec/`: shared C helper for controlled output, exit status, and process
   trees, plus OS identity/lifecycle and environment/descriptor inspection. Direct
   controls live in the `exec_fixture` suite.

@@ -27,6 +27,12 @@ def install_fixture(out, case):
 
 def assert_transcript(raw, probes, case):
     lines = raw.splitlines()
+    if case == "signal_after_one":
+        assert len(lines) == 1, lines
+        verdict = json.loads(lines[0])
+        assert all(verdict[k] == v for k, v in probes[0].items()), verdict
+        assert (verdict["outcome"], verdict["rc"], verdict["errno"]) == ("allow", 0, 0), verdict
+        return
     assert len(lines) == (3 if case == 'malformed' else 2), lines
     for line, index, outcome, rc, error in zip(lines[:2], (1, 0), ('deny', 'allow'), (1, 0), (0, 0)):
         verdict = json.loads(line)
@@ -44,7 +50,7 @@ def assert_transcript(raw, probes, case):
 
 
 def check_fixture(out):
-    for case in ('eof', 'malformed'):
+    for case in ('eof', 'malformed', 'signal_after_one'):
         validator = install_fixture(out / case, case)
         probes = [{'step_id': secrets.token_hex(16), 'operation': operation,
                    'filter_type': 'PATH', 'filter_value': f'/fixture/{secrets.token_hex(8)}'}
@@ -54,12 +60,12 @@ def check_fixture(out):
                                 capture_output=True, text=True, timeout=15)
         (out / case / 'direct.stdout').write_text(result.stdout)
         (out / case / 'direct.stderr').write_text(result.stderr)
-        assert result.returncode == 0 and not result.stderr, result
+        assert result.returncode == (-9 if case == "signal_after_one" else 0) and not result.stderr, result
         assert_transcript(result.stdout, probes, case)
         received = json.loads(validator.with_suffix('.received.json').read_text())
         assert received == {'target_pid': os.getpid(), 'probes': probes}, received
         assert validator.with_suffix('.emitted.ndjson').read_text() == result.stdout
-    print('fixture controls: two verdicts in reverse order, exact probe metadata, EOF or malformed tail')
+    print('fixture controls: exact probe metadata, reversed EOF/malformed replies, and one reply followed by SIGKILL')
 
 
 def check_cli(case, out, pw):

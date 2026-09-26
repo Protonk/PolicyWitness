@@ -105,6 +105,34 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Artifacts:** `tests/out/suites/runner_exec_inheritance/mutation_controls/artifacts/`
 - **Gating:** Explicit invocation; missing prerequisites fail rather than skip.
 
+### Order barrier mutation controls
+
+- **Suite name:** `witness_contract`, case `order_barrier_mutations`.
+- **Location:** `tests/suites/witness_contract/opt_in/mutations.sh`.
+- **Purpose:** Unmodified component and signed CLI controls pass; a worker that
+  bypasses the release wait and a host that releases before its hook must cause
+  early effects detected by the same observers. Both early unlink and exec
+  connections must be observed while native collection remains held.
+- **Opt-in reason:** Builds source mutations and signs disposable app copies;
+  exact mutation anchors deliberately require review when implementation changes.
+- **Resource dependency:** Built signed app, matching Developer ID Application
+  identity, clang, Swift and unsandboxed live XPC. Identity resolution follows
+  `PW_BYOXPC_IDENTITY`, `IDENTITY`, then the app's team-matched keychain identity.
+- **When to run:** After release/barrier or observer changes, and for order-plan
+  Gate 3 acceptance. Select with `tests/run.sh --case witness_contract/order_barrier_mutations`.
+- **Artifacts:** `tests/out/suites/witness_contract/order_barrier_mutations/artifacts/`:
+  `mutations.json`, component logs, exact patched sources, per-candidate binary
+  and manifest hashes, signature/evidence checks, raw envelopes, gate receipts,
+  external effects and process ancestry. Disposable apps live under `/private/tmp`
+  and are removed after fixture-owned process cleanup.
+- **Gating:** Required explicit acceptance control. Missing signing identity
+  fails both dispatcher selection and direct wrapper invocation before any build;
+  it is never an expected skip. `shell_helpers/mutation_prerequisites` checks the
+  direct wrapper with an unsigned fixture app and independent builder receipts.
+  A build, signing, transport,
+  invariant or equipment error never counts as detecting a mutation. The selected
+  production app is inventoried before/after and is never patched or re-signed.
+
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:

@@ -35,6 +35,8 @@ private func replyFixture() throws -> PWRunnerRunResult {
         "worker_evidence":{"abi_version":7,"failure_publication":0,"failure_state":"absent",
           "diagnostic":{"state":0,"status":"absent"}}},
       "admission_failure":{"origin":"runner_host","field":"constructed","actual":2,"maximum":1,"unit":"items"},
+      "validator_spawn_failure":{"origin":"runner_host","operation":"posix_spawn",
+        "executable_path":"/constructed/validator","return_code":123456,"diagnostic":"unfamiliar native failure"},
       "validator_subprocess":{"pid":43,"exit_code":0,"reaped":true,"stdout_collection_stop":"eof",
         "records":[{"step_id":"s","operation":"file-read-data","filter_type":"PATH","filter_value":"/owned",
           "rc":0,"errno":0,"outcome":"allow","raw_line":"native record bytes"}]},
@@ -144,6 +146,7 @@ func runReplyFailureTests(_ tk: TestKit) {
             try expectTrue(decoded.steps.isEmpty)
             try expectNil(decoded.runner_subprocess)
             try expectNil(decoded.validator_subprocess)
+            try expectNil(decoded.validator_spawn_failure)
             _ = try pwRunnerEncodeJSON(decoded)
         }
         tk.run("every stored result field has a coding key and survives a populated round trip") {

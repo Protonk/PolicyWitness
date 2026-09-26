@@ -73,3 +73,14 @@ if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_byoxpc_setup
 fi
 test_pass "BYOXPC staging preserves the source, owns partial installation, and verifies cleanup"
 fi
+
+if test_selected mutation_prerequisites; then
+test_begin shell_helpers mutation_prerequisites
+test_step controls "required mutation wrapper fails before building when no signing identity resolves"
+if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/shell_helpers/check_mutation_prerequisites.py" \
+    "${PW_TEST_ARTIFACTS}" >"${PW_TEST_ARTIFACTS}/assertions.log" 2>&1; then
+  cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+  test_fail "mutation prerequisite control failed; see artifacts/assertions.log"
+fi
+test_pass "missing signing identity is a failure, with no build or skip"
+fi

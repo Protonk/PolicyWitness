@@ -1,12 +1,23 @@
 # Ordering predictions before attempts
 
-## Status: gate 2 complete and remediated; gate 3 next
+## Status: gate 3 audit remediation complete; gate 4 pending
 
-The working tree now uses **request schema 1, response schema 8, worker ABI 7**.
-Batch 0 remains the audited baseline. The worker release barrier, host release and
-acknowledgement evidence, typed comparison model, consumers and initial controls
-are implemented and verified through **gate 2**. Gates 3–4 remain pending.
-This is the handoff point; no batch-3 bridge or bypass mutation build is credited.
+The working tree uses **request schema 1, response schema 8, worker ABI 7**.
+Gates 1–3 are implemented and verified. Gate 3 adds the native gated bridge,
+validator failure and interval witnesses, and both required barrier-bypass
+controls. The independent Gate 3 audit upheld acceptance; all five findings are
+now addressed. The latest fresh signed build passed **79/79 focused cases**
+(including both bypasses) and **140/140 default cases**. The completed audit was
+retired from `runner/GATE3-AUDIT.md` at the user's request; its content and hash
+remain with the local verification record. **Gate 4's full `--all` acceptance
+has not been run or credited**.
+
+The original Gate 3 work changed test equipment, witnesses, registry/documentation
+and extracted the existing Swift gate assertion for the host mutation control.
+Finding 5 additionally changes the production validator driver and reply assembly
+to retain structured native spawn evidence. The new optional response field is
+additive; request schema, response schema and worker ABI remain 1/8/7. All earlier
+evidence directories remain intact; acceptance for the current tree is below.
 
 An independent audit upheld gate 2 and raised five items; its report was
 reviewed and retired once remediation was verified. The remediation covers all
@@ -15,14 +26,14 @@ acknowledgement; manual encoder field coverage; documentation/parser/naming
 cleanup; and the compiled-C budget relation with uncapped validator fault
 injection. All five are implemented and verified on a fresh signed build, and
 the reply-failure contract and implementation were reviewed on 2026-09-26.
-Gate 3 work starts from here.
+Gate 3 proceeded from that reviewed state; its audit and remediation are below.
 
 | Batch | State | Acceptance |
 | --- | --- | --- |
 | 0: conservative classification | Complete | Audited gate 1 retained below |
 | 1: ABI 7 and worker wait | Complete | Gate 2 passed |
 | 2: host release and response 8 | Complete | Gate 2 passed |
-| 3: ordered witnesses and negative controls | Not complete; some prerequisite coverage brought forward | Gates 3 and 4 pending |
+| 3: ordered witnesses and negative controls | Audit passed; all five findings addressed and verified | Gate 3 passed; Gate 4 `--all` pending |
 
 ### Current implementation
 
@@ -51,6 +62,12 @@ Gate 3 work starts from here.
 - Enrichment still reads the planning sentinel and appends host nonresolution
   without changing conclusions. Consumers retain legacy response-7 semantics
   while enforcing the stronger response-8 chain and disagreement prohibition.
+- `validator_spawn_failure` retains the native `posix_spawn` return code,
+  executable path, operation, origin and diagnostic. All nonzero codes remain
+  failures, including unfamiliar ones; neither ambient errno nor diagnostic
+  wording selects the outcome. The record survives worker-summary precedence
+  and evidence-preserving reply degradation. No validator subprocess is invented;
+  older replies may omit this optional record without implying spawn success.
 - Budgets selected: 60,000 ms worker proceed wait, 30,000 ms validator I/O,
   1,000 ms validator exit grace, 5,000 ms nominal release margin. The relation is
   a configuration guard, not a bound on host scheduling, final reap or orphan
@@ -59,7 +76,207 @@ Gate 3 work starts from here.
   inequality consumes the compiled C probe directly. Short-budget controls cover
   collection outlasting worker expiry without reviving attempts.
 
-### Latest verification: gate 2 audit remediation
+### Latest verification: gate 3 audit remediation, finding 5 and final acceptance
+
+Completed on 2026-09-26 with `YOLO=1 ./build.sh` and unsandboxed test execution.
+
+- Signed ZIP SHA-256:
+  `cff0445e7b2c618d4d74bf157b13fdae81ece27c1e436b0f4a7857079c8b97a5`.
+- Embedded evidence-manifest SHA-256:
+  `8b8a0a5faf8dc3b20db455f6f88322d46571da0dcd1bf48483fbb1d7d92037fc`.
+- Focused acceptance: **79/79**, including both required signed barrier-bypass
+  controls and all seven shell-helper cases.
+- Default battery: **140/140**. Both runs have zero failures, skips or unrun
+  cases, valid initial artifact integrity and an unchanged app.
+- Both runs passed **334/334 Swift checks** and **25/25 C harness cases**;
+  the default run also passed **115 Rust unit tests**.
+
+The [remediation record](../tests/out/order-gate3-spawn-build/remediation.json)
+contains exact case IDs/configuration, build hashes, source applicability,
+mutation observations and the retired audit's hash. Retained evidence includes
+the [focused report](../tests/out/order-gate3-spawn-focused/run.json),
+[default report](../tests/out/order-gate3-spawn-default/run.json),
+[build log](../tests/out/order-gate3-spawn-build/build.log),
+[source snapshot](../tests/out/order-gate3-spawn-build/source-snapshot.json), and
+[build hashes](../tests/out/order-gate3-spawn-build/build-hashes.json).
+These runs replace earlier verification credits for the current implementation;
+the original records below remain historical evidence.
+
+The real ENOENT witness now requires the exact native return code and executable
+path, call context, retained diagnostic, mirrored override, absent validator
+subprocess, closed collection, null drift and an independent write. It does not
+require English error wording. An internal native-call seam drives unfamiliar
+returns `123456` and `Int32.max` through the actual validator driver, orchestrator
+and reply serializer with a conflicting ambient errno. The control also covers
+a worker failure after acknowledgement, reply degradation and legacy absence.
+These substituted returns establish handling and preservation, not kernel policy
+behavior. No request override fabricates a spawn result. The controller's generic
+JSON transport forwards the new record without a production parser change.
+
+The initial development run exposed a timing race in an existing cleanup test:
+an attempt receipt could trigger ECHILD before the host had observed the release
+acknowledgement. The test now intercepts the fixture's actual reap, which occurs
+only after the host requests exit, and requires the fault's `exit_grace` phase.
+It passed in both final runs. The failed development run is retained under
+`tests/out/order-gate3-spawn-development/` and is not acceptance evidence.
+
+All source hashes and modes matched the verified snapshot through both runs.
+The only subsequent changes are this plan's final handoff and retirement of the
+completed audit; both are recorded explicitly. The tracked worker binary remains
+as built, with no diff against HEAD. The original Gate 3 audit passed; no separate
+independent audit of this remediation is claimed. Gate 4 remains pending, and
+the user has requested a commit followed by standby.
+
+Reproduction (choose new output directories):
+
+```sh
+YOLO=1 ./build.sh
+PW_TEST_OUT_DIR=tests/out/order-gate3-spawn-focused-new tests/run.sh --suite source_drift --suite shell_helpers --suite runner_abi_layout --suite runner_unit --suite runner_c_worker_harness --suite runner_validator_failure --suite witness_contract --suite validator_bridge --suite runner_outcome_validator_no_reply --suite runner_ready_byte_resilience --suite failure_boundaries --suite run_effects --case witness_contract/order_barrier_mutations
+PW_TEST_OUT_DIR=tests/out/order-gate3-spawn-default-new tests/run.sh
+```
+
+### Gate 3 audit remediation, findings 1–4 (retained)
+
+Completed on 2026-09-26 against the original Gate 3 signed app. At that
+verification no production source or build input had changed, and all six
+original build hashes matched the app then in `dist/`.
+The [remediation record](../tests/out/order-gate3-remediation-build/remediation.json)
+records the source delta, exact selection, retained evidence and applicability
+review. At that handoff the original audit, gate record and source snapshot were
+unchanged. The audit was subsequently retired after finding 5 was verified above.
+
+1. The retired script was **already recorded as `{"absent": true}`** in the
+   original source snapshot. Its 419 entries include that absent path; they are
+   not 419 existing files. The audit's claimed later deletion is therefore not
+   a source delta. The [clarification record](../tests/out/order-gate3-remediation-build/audit-clarifications.json)
+   preserves the entry and the harness observations discussed below.
+2. The required mutation wrapper now fails explicitly when no matching signing
+   identity resolves. The public dispatcher already required that identity;
+   direct invocation now fails too. The new default
+   `shell_helpers/mutation_prerequisites` case runs the actual wrapper against
+   an unsigned fixture app and verifies failure before any builder runs, with
+   no skip. The real signed baseline and both bypass controls passed again.
+3. Six witness catalog descriptions now state the observations they test.
+   Existing case commands, prerequisites and membership are unchanged. Adding
+   the prerequisite control brings the registry to **140 default / 157 total**
+   cases; retained listings establish membership, not full execution.
+4. The original C baseline held for 500 ms and 199 polls before release. The
+   worker bypass completed before the first poll: `held_ms: 0`,
+   `quiescence_polls: 1`, `proceed_set: false`, `early_completion: 1`. Its named
+   early-completion rejection is valid; the baseline covers delayed release.
+   The suite documentation now makes that distinction explicit.
+
+The [focused report](../tests/out/order-gate3-remediation-focused/run.json) passed
+**10/10**, with zero failures, skips or unrun cases, valid initial artifact
+integrity and an unchanged app. It reruns both source-drift cases, all seven
+shell-helper cases and the required signed mutation case. The original default
+run remains **139/139**: eight of those cases were rerun here, the other 131
+retain their original evidence after dependency review, and the new default
+case passed here. This is not a new full default or `--all` run. The changes to
+shared shell-helper dispatch and the mutation wrapper are covered by the reruns;
+the other changes are documentation, descriptions and the new control.
+
+The [source snapshot](../tests/out/order-gate3-remediation-build/source-snapshot.json)
+was captured before the focused run. Only this plan's final handoff changed
+after it; the remediation record binds both plan hashes. Finding 5 and its
+existing spawn-failure assertion were left unchanged at that handoff for the
+subsequent contract discussion and implementation recorded above.
+
+Reproduction (choose a new output directory):
+
+```sh
+PW_TEST_OUT_DIR=tests/out/order-gate3-remediation-focused-new tests/run.sh --suite source_drift --suite shell_helpers --case witness_contract/order_barrier_mutations
+```
+
+### Original gate 3 verification (retained)
+
+Completed on 2026-09-26 with `YOLO=1 ./build.sh` and unsandboxed execution.
+
+- Signed ZIP SHA-256:
+  `6ac2435e7f0aabeab482226c1d02389404a2a0bd0d32b2d98fd5de51c6e713d2`.
+- Embedded evidence-manifest SHA-256:
+  `09d5bbfd4310aa25a3db791db30e1639088f7306297ae7dbc783f051320849c4`.
+- Focused acceptance: **72/72** canonical cases, including the complete C/D
+  obligations and `witness_contract/order_barrier_mutations` from G.
+- Default battery: **139/139** canonical cases. Both runs have zero failures,
+  skips or unrun cases, valid initial signatures/manifests and an unchanged app.
+- Both runs passed **333/333** Swift checks and **25/25** C harness cases;
+  the default run also passed **115** Rust tests.
+
+The [gate record](../tests/out/order-gate3-build/gate-3.json) contains exact case
+IDs, selection/configuration, hashes, source-snapshot applicability and the audit
+scope. Retained evidence: [focused report](../tests/out/order-gate3-focused/run.json),
+[default report](../tests/out/order-gate3-default/run.json),
+[build log](../tests/out/order-gate3-build/build1.log),
+[source snapshot](../tests/out/order-gate3-build/source-snapshot.json), and
+[build hashes](../tests/out/order-gate3-build/build-hashes.json).
+At the original Gate 3 handoff, only this plan's final handoff changed after the
+verified source snapshot. Later remediation changes are recorded above.
+The worker binary remains as built; it has no working-tree diff against HEAD.
+
+The native bridge is `tests/fixtures/validator/bridge.m`: Objective-C uses
+Foundation for NDJSON and calls C `sandbox_check` directly, without PW's parser,
+ABI or classifiers. This replaces the proposed `.c` filename while preserving
+an independent native oracle. `q`, `e` and `c` separately gate native query,
+stdout emission and collection closure. A sidecar carries the socket path for
+the existing executable override; direct controls also exercise `--gate`.
+`validator_bridge/protocol_controls` verifies native PATH allow/deny and NONE
+results against a separate ctypes call, silence until emission, held collection,
+closure while alive, rejected post-close output and disconnect behavior.
+
+The live witnesses now cover the complete section D set. File/process effects
+are checked before envelope decoding. The held-collection observer checks seed
+bytes and absence of helper connections while the bridge acknowledges an open
+collection; after release it checks unlink, kernel peer PIDs, libproc ancestry
+and exit events. Interval cases retain native records and state/identity limits
+through external removal, earlier unlink and recreation. Create remains a
+compound operation with unavailable/null comparison, even beside native allow.
+The renamed ordinary witness is `queries_precede_attempts`.
+
+`signal_after_one.json` flushes one supplied verdict and dies by **SIGKILL**;
+the CLI retains signal 9, confirmed reaping, one eligible ordered record and
+three independently observed writes. The unmaskable signal avoids inherited
+XPC signal state; an initial SIGTERM experiment exited normally and was not
+credited. Spawn failure now requires real ENOENT, override echo, `not_spawned`,
+missing predictions and an independent write. Pre-apply coverage includes both
+a spawned worker's all-false/not-invoked ordering and real failed worker spawn
+with no subprocess/ordering object.
+
+Both required mutations were executed against disposable, freshly signed app
+copies. The [mutation report](../tests/out/order-gate3-focused/suites/witness_contract/order_barrier_mutations/artifacts/mutations.json)
+and [observation summary](../tests/out/order-gate3-build/barrier-observations.json)
+retain the component results, candidate hashes and independent effects:
+
+- The unmodified C harness, reused Swift gate assertion and rebuilt/signed CLI
+  baseline all passed. Its 22 held-gate samples had no early unlink or exec.
+- The worker wait bypass produced early completion in the ordinary C quiescence
+  scenario and early unlink **and** exec connection in all 22 CLI samples.
+- The host release-before-hook bypass failed that same Swift gate assertion
+  with the independent `waiting/ack/attempt` receipt, and produced both early
+  effects in all 22 CLI samples.
+
+The CLI observer is unchanged between baseline and candidates. Only its named
+early-effect assertion can count as mutation detection; signing, transport,
+encoding or equipment failures cannot. Sources, command logs, signature/manifest
+inspection and candidate hashes are retained beside each variant. Candidate
+inventories and the selected production app remained unchanged during execution;
+disposable app copies were removed after owned-process cleanup.
+
+Earlier `order-gate3-equipment*`, `live*`, `failure1` and `mutations1` directories
+retain development diagnostics, not acceptance of the final build. Fixture JSON
+booleans, build-wrapper arguments and initial expectations were corrected before
+these final runs. The final focused run re-executed both mutations and all new
+controls; no earlier diagnostic result is reused as Gate 3 acceptance.
+
+Reproduction (choose new output directories to preserve this evidence):
+
+```sh
+YOLO=1 ./build.sh
+PW_TEST_OUT_DIR=tests/out/order-gate3-focused-new tests/run.sh --suite source_drift --suite runner_abi_layout --suite runner_unit --suite runner_c_worker_harness --suite runner_validator_failure --suite witness_contract --suite validator_bridge --suite runner_outcome_validator_no_reply --suite runner_ready_byte_resilience --suite failure_boundaries --suite run_effects --case witness_contract/order_barrier_mutations
+PW_TEST_OUT_DIR=tests/out/order-gate3-default-new tests/run.sh
+```
+
+### Gate 2 audit remediation verification (retained)
 
 Completed on 2026-09-26 using `YOLO=1 ./build.sh` and unsandboxed test execution.
 Request schema remains 1, response schema 8 and worker ABI 7.
@@ -78,7 +295,8 @@ The [remediation record](../tests/out/order-gate2-remediation-build/remediation.
 contains exact case IDs, commands, hashes, source/equipment snapshots, retained
 diagnostics and review scope. The [focused report](../tests/out/order-gate2-remediation-focused/run.json)
 and [default report](../tests/out/order-gate2-remediation-default/run.json) belong to
-this build. The original gate-2 acceptance and audit remain intact below/on disk.
+this build. The original gate-2 acceptance remains intact below; the reviewed
+audit report was retired in the user's subsequent commits.
 
 `ReplyFailureTests` adds twelve constructed serializer controls: ordinary and
 legacy preservation, eight invariant-fault variants, rejection of surviving
@@ -107,11 +325,11 @@ snapshots. Only this plan's final handoff changed after default verification.
 The tracked worker binary stays as built. No barrier-bypass mutation or gate-3
 bridge/witness coverage is credited by these passing runs.
 
-Review the [reply construction contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure),
+The [reply construction contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure),
 [service reply serializer](Sources/PWRunnerCore/PWRunnerService.swift),
 [wire invariants/shared eligibility](Sources/PWRunnerCore/PWRunnerAPI.swift), and
-[preservation controls](Tests/PWRunnerCoreTests/ReplyFailureTests.swift) before
-continuing. The evidence-loss backstop deliberately uses only JSON-native
+[preservation controls](Tests/PWRunnerCoreTests/ReplyFailureTests.swift) were reviewed
+before Gate 3. The evidence-loss backstop deliberately uses only JSON-native
 scalars/containers, independent of the result encoders.
 
 ### Original gate 2 verification
@@ -190,7 +408,8 @@ all 188 direct adapter controls pass. Default2 reruns all 131 cases on the final
 test snapshot. No production or embedded documentation changed after build5.
 [Expected semantic failure states](../tests/out/order-gate2-build/expected-failure-states.json)
 are recorded per scenario; an ABI-version refusal is not credited as a red
-ordering test. Actual barrier-bypass mutation tests remain pending.
+ordering test. These Gate 2 runs did not execute the barrier-bypass controls;
+the Gate 3 record above now supplies them.
 
 Reproduction commands (use fresh output directory names to retain this evidence):
 
@@ -266,23 +485,23 @@ the signed bundle-local worker hash, not that UUID claim.
 
 ### Next work
 
-The reply-failure contract and implementation were reviewed after remediation:
-host reporting failure is distinct from execution failure, raw evidence and the
-original summary are preserved, every comparison is withheld, the consumer
-exception is narrow, and the evidence-loss backstop for repeated serialization
-failure is explicit. Batch 3 begins here.
-The tracked worker binary is a build output; keep it as produced and use the
-signed bundle hashes when identifying evidence.
+**Stand by after committing this work, as the user requested.** All five Gate 3
+audit findings are addressed and verified on the latest signed build; the audit
+has been retired. No further finding-5 implementation is pending. The spawn
+failure contract retains the real artifact required by `runner/AGENTS.md` and
+preserves unfamiliar native codes through the reply.
 
-Then complete the unchecked C/D/G items: add the gated native validator bridge and
-its direct controls; add the held-collection external observer, pre-attempt interval,
-external mutation and maximum-step witnesses; finish the signaled-validator and
-CLI spawn-failure/pre-apply ordering assertions; retire the interim witness name
-into `queries_precede_attempts`; and run both disposable barrier-bypass builds.
-The ordinary read/unlink witness already expects ordered agreement, but its
-current name remains until that batch. Keep all unordered classifier and consumer
-controls. Finish registry/docs and `--all` acceptance at gate 4. Neither gate 3
-nor gate 4 is passed by the default battery recorded above.
+When the user resumes, the remaining work is **Gate 4**: review consumer and
+documentation coverage in E/F and run the full `tests/run.sh --all` acceptance,
+with every added case accounted for and no unrun work. Registry and per-suite
+documentation are updated, and `--all --list` succeeds; listing is not execution.
+Required Gate 3 opt-ins have run explicitly, but the other opt-ins have not been
+credited for Gate 4. Reuse results only under `tests/README.md`'s dependency rules;
+changes require affected reruns and updated source/build records.
+
+Preserve all previous output directories. Use fresh `PW_TEST_OUT_DIR` names and
+keep the build-produced worker binary. The Gate 2 reply-failure review is already
+complete, and its retired audit report should not be recreated as pending work.
 
 ## The observation that started this
 
@@ -544,7 +763,8 @@ so the gate-1 live unlink cases asserted one outcome whichever side of the race
 the validator landed on. Their gate-2 forms now require ordered agreement. Once order is
 established, a same-target mutation that follows its own query is no
 confound and `agreement` returns. The current read/unlink witness pins that;
-its rename to `queries_precede_attempts` remains in batch 3. Planned resolution and later host resolution failure supply a separate
+it is now named `queries_precede_attempts`. Planned resolution and later host
+resolution failure supply a separate
 `host_path_resolution_changed` observation, not a query-time observation. It is
 emitted by the host's post-orchestration path enrichment, which runs after
 every conclusion is fixed; see batch 0 for the call chain.
@@ -596,8 +816,8 @@ step. Unknown aliasing is not repaired by host canonicalization.
 
 ## Tests that enforce the promise
 
-Checked items are implemented and verified by the gate-2 or remediation records above. Unchecked
-items remain required for gates 3–4. The interim-classification and batch-0
+Checked items are implemented and verified by the gate records above.
+Gate 4's complete `--all` acceptance remains pending. The interim-classification and batch-0
 checklists describe their historical gate; current adaptations are stated above.
 
 Every case names what would make it fail and what it does not establish. Live
@@ -760,10 +980,14 @@ the existing `EnvelopeInvariantTests` retains legacy/enrichment coverage.
 Each existing validator-failure case gains ordering assertions, because the
 promise is only interesting when the validator misbehaves.
 
-- [ ] `validator_spawn_failed_reports_degraded`: attempts still run;
+- [x] `validator_spawn_failed_reports_degraded`: attempts still run;
   `ordering.collection_closed_before_proceed` true with disposition
   `not_spawned` and the spawn error retained; every step `order: unestablished`
   and `drift: null`; independent file effects present.
+  Structured `validator_spawn_failure` retains the direct native return code,
+  executable path, operation and diagnostic without an English-wording assertion.
+  Internal native-call controls preserve unfamiliar codes through orchestration,
+  worker-failure precedence, reply degradation and JSON encoding.
 - [x] `validator_unavailable_reports_degraded` (2 of 3 verdicts, clean EOF):
   the two received verdicts are `order: query_first`; the third is
   `unestablished` with its existing missing reason; all three attempts ran
@@ -780,8 +1004,9 @@ promise is only interesting when the validator misbehaves.
   new override". Value checks pin the production budget
   relationship described below; this healthy-cleanup fixture must release before
   worker expiry. The relationship is not a bound on every cleanup path.
-- [ ] `validator_killed_mid_stream` (new, transcript fixture that dies by
-  signal after one verdict): as above with a signaled disposition.
+- [x] `validator_killed_mid_stream` (new, transcript fixture that dies by
+  signal after one verdict): one flushed record, SIGKILL/term_signal 9, confirmed
+  reaping and `reaped` disposition; all three independent writes still complete.
 - [x] `validator_cleanup_unconfirmed_releases_worker` (`runner_unit`): extend
   the real driver controls for failed kill, failed reap and ECHILD ownership
   loss, including EOF from a child that remains alive. Once the driver returns,
@@ -798,12 +1023,12 @@ promise is only interesting when the validator misbehaves.
 
 ### D. The promise end to end (`witness_contract`)
 
-- [ ] `queries_precede_attempts`: the `run_effects` unlink row, now expected
+- [x] `queries_precede_attempts`: the `run_effects` unlink row, now expected
   to report prediction `allow`, `drift: false`, `order: query_first`, the
   three ordering observations true, and the target independently absent
   afterwards. This is the regression sentinel for the whole effort; the
   interim case from the section above is retired into it.
-- [ ] `queries_use_a_pre_attempt_interval`: two plans. Plan 1: step 1 `create` A
+- [x] `queries_use_a_pre_attempt_interval`: two plans. Plan 1: step 1 `create` A
   (absent at planning), step 2 `unlink` A. Expect both predictions
   `prediction_unavailable` with `query_not_requested`, both attempts succeed,
   both `drift: null`, and independent observation that A is absent at the end.
@@ -816,7 +1041,7 @@ promise is only interesting when the validator misbehaves.
   beside the blanket state limit. Fails if the system reports step 2 as drift
   in either direction. Add unlink/recreate/read coverage: later resolution must
   not erase the earlier mutation or certify runtime identity.
-- [ ] `attempt_effects_wait_for_collection`: a test validator bridge forwards
+- [x] `attempt_effects_wait_for_collection`: a test validator bridge forwards
   real native queries and gates their completion using a test-owned side
   channel. Plan = [`unlink` A, `exec` helper in `--tree` socket mode]. After
   the bridge acknowledges its gate, keep collection active and independently
@@ -827,14 +1052,14 @@ promise is only interesting when the validator misbehaves.
   The required bypass controls in section G must produce an early observable
   effect while this gate is held. This test establishes the barrier for these
   effects, not absence of every possible syscall or validator process.
-- [ ] `query_interval_is_not_a_snapshot`: use the bridge to pause between two
+- [x] `query_interval_is_not_a_snapshot`: use the bridge to pause between two
   real queries, and independently change a test-owned target before permitting
   the second query. Both queries still precede attempts; their input state need
   not be equal. Assert retained native observations, `query_first` where eligible
   and the state/identity limits, without crediting test-only mutation knowledge
   as an observation in a production envelope or requiring an unsupported native
   verdict for a missing target.
-- [ ] `max_steps_ordered`: 256 file steps on distinct existing targets, half
+- [x] `max_steps_ordered`: 256 file steps on distinct existing targets, half
   allowed, half denied by literal. Every step `query_first`; allowed successes
   report `agreement` / false, while deny/permission-failure pairs report
   `directional_consistency` / null, not established sandbox denial. File effects
@@ -849,10 +1074,10 @@ promise is only interesting when the validator misbehaves.
   release; expect `proceed_observed` true in both, and unchanged outcomes
   (`runner_timeout`, `runner_failed`). The release/complete-slot assertions
   are in the real-worker `CWorkerTests` cases.
-- [ ] `deny_default_ordered`: `(deny default)` with one allowed and one denied read; expect
+- [x] `deny_default_ordered`: `(deny default)` with one allowed and one denied read; expect
   `query_first` on both steps and the usual verdicts. Pins that a hostile
   policy cannot break the wait.
-- [ ] `external_mutation_between_query_and_attempt`: the bridge acknowledges
+- [x] `external_mutation_between_query_and_attempt`: the bridge acknowledges
   receipt of the real verdict for A, then holds collection open. The test removes
   A and confirms absence before allowing collection to close and release the
   worker. No worker sleep seam or timing guess is needed. Expect
@@ -860,7 +1085,7 @@ promise is only interesting when the validator misbehaves.
   `order: query_first`, `state_stability_unestablished` still present,
   conclusion `unavailable`, `drift: null`. This pins what the promise does
   not cover, so a future reader cannot read `query_first` as "same state".
-- [ ] `pre_apply_failure_reports_no_policy_verdict` (existing): unchanged
+- [x] `pre_apply_failure_reports_no_policy_verdict` (existing): unchanged
   expectations plus the exact field-presence rule from the evidence-state table:
   no ordering object without a worker subprocess, otherwise all-false with
   `not_invoked`. No step is `query_first`.
@@ -942,9 +1167,9 @@ alive. Bounding that lifetime would require a separate lifecycle change.
   rows to the ABI 7 evidence table in the contract. Audit remediation separately
   adds `runner_reporting_failed` for host reply construction, with its own outcome
   matrix row and preservation tests; it supplies no new worker-failure cause.
-- [ ] `tests/README.md`, `tests/catalog.json`, per-suite READMEs: every case
-  above registered; `source_drift` enforces. All implemented cases are registered;
-  the remaining batch-3 cases and opt-ins still need entries.
+- [x] `tests/README.md`, `tests/catalog.json`, per-suite READMEs: every case
+  above registered, including the bridge suite and required opt-in mutations;
+  `source_drift` and `--all --list` pass. Gate 4 still requires full execution.
 - [x] `tests/FAILURE-PROPAGATION-CONTRACT.md` § "Public representation and
   meaning": replace "Every comparison reports
   `query_attempt_order_unestablished`" with the per-step rule; add the
@@ -970,11 +1195,11 @@ alive. Bounding that lifetime would require a separate lifecycle change.
 
 ### G. Required negative controls (opt-in execution)
 
-- [ ] A worker built from a patched source copy that bypasses the release wait
+- [x] A worker built from a patched source copy that bypasses the release wait
   must fail `proceed_delayed_observed_quiescence` and
   `attempt_effects_wait_for_collection` with an actual early effect. Preserve
   ordinary attempt behavior so the failure demonstrates barrier sensitivity.
-- [ ] A host built from a patched source copy that releases while validation is
+- [x] A host built from a patched source copy that releases while validation is
   gated must fail the host-driver gate control and the external effect control.
   Merely setting the expected JSON fields cannot satisfy the independent test.
 
@@ -990,9 +1215,11 @@ resistance to arbitrary malicious evidence forgery.
 
 ## Acceptance gates
 
-Gates 1 and 2 are passed with the evidence recorded at the top of this document.
-Gates 3–4 remain pending; the default battery does not establish their new
-ordering obligations or replace the required opt-in barrier-bypass controls.
+Gates 1–3 are passed with the evidence recorded at the top of this document.
+Gate 3 includes explicit execution of both required barrier-bypass controls; the
+default battery alone would not satisfy it. The independent Gate 3 audit passed;
+all five findings are addressed and verified. Gate 4's full `--all`
+acceptance remains pending.
 
 1. Interim classification: the four items in "Interim classification" pass on
    a signed build with no ABI or schema change, and the default battery is
@@ -1308,8 +1535,8 @@ Gate 2 covers this batch together with batch 2.
 - [x] Audit remediation: `pwRunnerReplyData` replaces the silent `{}` fallback.
   It retains observations and the original summary, removes every derived step
   comparison, and reports host reply failure. Repeated encoding failure emits a
-  minimal diagnostic reply with explicit evidence loss. Review this contract and
-  implementation before batch 3.
+  minimal diagnostic reply with explicit evidence loss. The contract and
+  implementation review was completed before batch 3.
 
 Fixtures and consumers:
 
@@ -1343,21 +1570,21 @@ witnesses also green. Exact evidence is recorded at the top of this plan.
 
 ### Batch 3: witnesses, equipment and negative controls
 
-- [ ] Gated validator bridge, beside `tests/fixtures/validator/`: a C program
-  linked against libsandbox that reads the batch probes, connects to
-  `--gate SOCKET`, announces readiness, and then emits each verdict only when
-  the gate sends one byte for it and closes collection only when the gate
-  says so. `control.py` in `tests/fixtures/exec/` is the socket and PID
-  pattern to copy. A `validator_bridge` suite, Baseline, requiring clang,
+- [x] Gated validator bridge, `tests/fixtures/validator/bridge.m`: Objective-C
+  Foundation JSON and direct C libsandbox calls. It drains probes, connects to
+  the sidecar socket (or direct `--gate SOCKET`) and acknowledges readiness.
+  Separate one-byte commands make a query, emit its record and close collection.
+  `gate.py` reuses the exec fixture's kernel PID/exit observer. The
+  `validator_bridge` suite, Baseline, requiring clang,
   owns its direct controls: readiness before any verdict, exact native
   forwarding compared with a direct `sandbox_check` call from the test,
   holding collection open without exit, and no output after close.
-- [ ] Finish section C's CLI cases: add `signal_after_one.json` in
+- [x] Finish section C's CLI cases: add `signal_after_one.json` in
   `tests/fixtures/validator/` and its registered case, update the transcript
   README, and strengthen the existing spawn-failure case with exact ordering
   assertions and independent effects. The deadline case (`deadline.json`)
   and both partial-output ordering cases are already implemented and verified.
-- [ ] Section D, each registered in `witness_contract/run.sh`'s script list
+- [x] Section D, each registered in `witness_contract/run.sh`'s script list
   and `tests/catalog.json` with its own script, `RunCapture`, log capture
   disabled, external observation before decoding. `queries_precede_attempts`
   retires `removed_target_prediction_is_not_drift`.
@@ -1366,7 +1593,7 @@ witnesses also green. Exact evidence is recorded at the top of this plan.
   the race becomes a sentence pointing at the witness.
 - [x] `runner_ready_byte_resilience` and the two post-apply seam cases gain
   their ordering assertions.
-- [ ] Section G, under `witness_contract/opt_in/` following
+- [x] Section G, under `witness_contract/opt_in/` following
   `runner_exec_inheritance/opt_in/mutations.sh`: a patched worker with the
   wait removed and a patched host driver with the release stored before the
   hook, each built from a disposable source copy. The worker control runs the
@@ -1377,18 +1604,16 @@ witnesses also green. Exact evidence is recorded at the top of this plan.
   re-signed service and is registered with `identity` as equipment. Both
   must fail for the named violation and pass with the unpatched sources.
   Entry in `tests/OPT_IN_TESTS.md`.
-- [ ] Finish section F after the remaining witnesses and mutation controls land.
-  The current protocol, budget, guide, README and FAQ changes are already checked
-  above; remaining registry/per-suite documentation and final acceptance must
-  describe the completed batch-3 coverage. No additional normalized outcome is
-  needed for batch 3.
+- [x] Section F registry/per-suite documentation now describes all batch-3
+  coverage and opt-in prerequisites. Protocol, budget, guide, README and FAQ
+  changes remain as checked above. No additional normalized outcome was needed.
 
-Gate 3 and gate 4 as written in "Acceptance gates".
+Gate 3 passed audit; all five findings are addressed and verified.
+Gate 4's `--all` acceptance remains pending.
 
 ### Names in one place
 
-All protocol, budget and schema names below are implemented. Only the
-batch-3 bridge fixture and suite remain provisional.
+All protocol, budget, schema and fixture names below are implemented.
 
 | Thing | Name | Where |
 | --- | --- | --- |
@@ -1402,8 +1627,9 @@ batch-3 bridge fixture and suite remain provisional.
 | Run-level evidence | `runner_subprocess.ordering` | response 8 |
 | Per-step evidence | `comparison.order` | response 8 |
 | Host reply failure | `runner_reporting_failed`, `reporting_failure` | response 8; comparisons absent, drift null |
+| Validator launch failure | `validator_spawn_failure` | optional response-8 native return/path/diagnostic record |
 | Interim limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | response 7 and later |
-| Bridge fixture and suite | `tests/fixtures/validator/bridge.c`, `validator_bridge` | batch 3 |
+| Bridge fixture and suite | `tests/fixtures/validator/bridge.m`, `validator_bridge` | batch 3 |
 
 ## Design decisions
 
@@ -1431,6 +1657,7 @@ batch-3 bridge fixture and suite remain provisional.
 - Require the two barrier-bypass controls for acceptance; their opt-in registry
   placement controls when mutation builds run, not whether they are necessary.
 
-Numeric budgets and protocol names are settled and inventoried. Remaining
-batch-3 sequencing and fixture names must preserve these decisions. Gates 1–2
-and their retained evidence are recorded above; gates 3–4 remain pending.
+Numeric budgets, protocol names and batch-3 fixtures are settled. Gates 1–3
+and their retained evidence are recorded above. Gate 3 audit remediation is
+complete. Stand by after the requested commit; Gate 4's full `--all` acceptance
+remains pending.

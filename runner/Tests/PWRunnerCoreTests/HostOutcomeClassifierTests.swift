@@ -177,7 +177,8 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     expected: NormalizedOutcome.validatorDecodeFailure),
         ClassifyRow(label: "validator posix_spawn fails → validator_spawn_failed",
                     worker: .success(workerOut(done: true)),
-                    validator: .failure(error: .spawnFailed("posix_spawn(sb_api_validator)"), partial: nil),
+                    validator: .failure(error: .spawnFailed(PWRunnerSpawnFailure(executable_path: "/missing-validator",
+                        return_code: ENOENT, diagnostic: "constructed missing executable")), partial: nil),
                     expectedVerdictCount: 0,
                     expected: NormalizedOutcome.validatorSpawnFailed),
         ClassifyRow(label: "validator probe serialization fails → runner_failed",
@@ -243,7 +244,8 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
         }
         tk.run("worker failure precedence retains validator failure independently") {
             let worker = workerOut(applied: false, applyRC: -1, sentSigkill: true, exitCode: nil, reaped: false)
-            let validator = ValidatorClientResult.failure(error: .spawnFailed("fixture validator"), partial: nil)
+            let validator = ValidatorClientResult.failure(error: .spawnFailed(PWRunnerSpawnFailure(
+                executable_path: "/fixture-validator", return_code: EACCES, diagnostic: "constructed failure")), partial: nil)
             let got = classify(workerResult: .success(worker), validatorResult: validator, expectedVerdictCount: 1)
             try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
             try expectContains(got.error ?? "", "status=-1")
