@@ -17,9 +17,10 @@ def main():
              'malformed_entitlements', 'sign_failure', 'partial_install', 'unowned_plist',
              'malformed_install_reply', 'wrong_team', 'changed_entitlements', 'helper_changed',
              'connection_failure', 'remove_failure', 'remove_warning', 'remove_lies', 'launchctl_equipment',
-             'registered_unowned_plist', 'uncertain_install')
-    setup_ok = {'success', 'no_entitlements', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist'}
-    retained = {'unowned_plist', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'uncertain_install'}
+             'registered_unowned_plist', 'uncertain_install', 'uncertain_no_record',
+             'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup')
+    setup_ok = {'success', 'no_entitlements', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'adhoc_noauth', 'original_output_deleted', 'staging_delete_failure', 'repeated_cleanup'}
+    retained = {'unowned_plist', 'remove_failure', 'remove_warning', 'remove_lies', 'registered_unowned_plist', 'uncertain_no_record'}
     for mode in modes:
         work = out / mode
         app = work / 'Selected.app'
@@ -49,7 +50,7 @@ def main():
         def invoke(destination, argv, **kwargs):
             result = command(destination, ['/usr/bin/python3', ROOT / 'tests/fixtures/byoxpc/tools.py',
                                            config_path, *argv], **kwargs)
-            if mode == 'uncertain_install' and argv[1:3] == ['runner', 'install']:
+            if mode in ('uncertain_install', 'uncertain_no_record') and argv[1:3] == ['runner', 'install']:
                 # Preserve a tool observation of incomplete execution, as a
                 # real timeout/interruption does; cleanup must not infer absence.
                 result.update(returncode=None, harness_timeout=True)
@@ -63,19 +64,40 @@ def main():
         try:
             try:
                 install(config['pw'], app, artifacts, env, 'fixture identity', invoke=invoke,
-                        launch_agents=work / 'LaunchAgents')
+                        launch_agents=work / 'LaunchAgents',
+                        variant='adhoc_noauth' if mode == 'adhoc_noauth' else 'team')
             except Exception as exc:
                 errors['setup'] = str(exc)
             assert ('setup' not in errors) == (mode in setup_ok), (mode, errors)
+            state = json.loads(state_path.read_text())
+            durable = Path(state['state_path'])
+            staging = Path(state['staging'])
+            assert json.loads(durable.read_text()) == state, 'durable ownership differs from receipt'
+            if mode == 'original_output_deleted':
+                config['ownership'] = str(durable)
+                config_path.write_text(json.dumps(config))
+                shutil.rmtree(artifacts)
+                state_path = durable
+            if mode == 'staging_delete_failure':
+                def fail_delete(path):
+                    if path.name == 'PWRunner.xpc':
+                        raise OSError('controlled interrupted staging deletion')
+                    shutil.rmtree(path)
+                try:
+                    cleanup(config['pw'], state_path, invoke=invoke, remove_tree=fail_delete)
+                    raise AssertionError('injected deletion failure did not fail')
+                except RuntimeError:
+                    assert durable.exists() and json.loads(durable.read_text())['removed']
+                    assert not json.loads(Path(config['state']).read_text())['loaded']
             try:
                 cleanup(config['pw'], state_path, invoke=invoke)
+                if mode == 'repeated_cleanup':
+                    cleanup(config['pw'], state_path, invoke=invoke)
             except Exception as exc:
                 errors['cleanup'] = str(exc)
             assert ('cleanup' in errors) == (mode in retained), (mode, errors)
-            state = json.loads(state_path.read_text())
-            staging = Path(state['staging'])
             assert staging.exists() == (mode in retained), (mode, errors)
-            assert env.exists() == (mode in setup_ok), (mode, errors)
+            assert env.exists() == (mode in setup_ok and mode != 'original_output_deleted'), (mode, errors)
             actual_source = {str(p.relative_to(app)): p.read_bytes() for p in app.rglob('*') if p.is_file()}
             assert source_bytes == actual_source, 'selected app was changed'
             os_state = json.loads(Path(config['state']).read_text())
@@ -88,11 +110,11 @@ def main():
             removals = [r for r in receipts if r['argv'][1:3] == ['runner', 'remove']]
             assert all(r['argv'][3:] == ['--id', 'owned-id'] for r in removals)
             if mode == 'partial_install':
-                assert any(r['argv'][1] == 'bootout' for r in receipts), 'partial install was not booted out'
+                assert len(removals) == 1, 'pending partial install did not use public removal'
             if mode in ('unowned_plist', 'registered_unowned_plist'):
                 assert not any(r['argv'][1] == 'bootout' for r in receipts), 'unowned plist triggered bootout'
                 assert not removals, 'unowned plist triggered public removal'
-            if mode == 'malformed_install_reply':
+            if mode in ('malformed_install_reply', 'uncertain_install'):
                 assert len(removals) == 1, 'missing install output suppressed cleanup'
             (work / 'observations.json').write_text(json.dumps({'errors': errors, 'retained': staging.exists()}, indent=2))
             completed.append(mode)

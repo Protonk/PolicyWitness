@@ -9,8 +9,8 @@ config = json.loads(Path(sys.argv[1]).read_text())
 argv = sys.argv[2:]
 mode = config['mode']
 state_path = Path(config['state'])
-state = json.loads(state_path.read_text()) if state_path.exists() else {'loaded': False, 'runners': [config['unrelated']]}
-ownership = json.loads((Path(config['out']) / 'session.json').read_text())
+state = json.loads(state_path.read_text()) if state_path.exists() else {'loaded': False, 'runners': [config['unrelated']], 'pending_cleanup': []}
+ownership = json.loads(Path(config.get('ownership', str(Path(config['out']) / 'session.json'))).read_text())
 bundle = Path(ownership['bundle_path'])
 service = ownership['service_name']
 plist = Path(ownership['plist_path'])
@@ -57,7 +57,9 @@ if argv[0] == '/usr/bin/codesign':
             sys.stdout.buffer.flush()
         finish()
     identifier = service if staged else 'pw-runner-client' if target.name == 'pw-runner-client' else 'fixture.source'
-    team = 'WRONG' if mode == 'wrong_team' and staged else 'FIXTURETEAM'
+    team = 'not set' if mode == 'adhoc_noauth' and staged else 'WRONG' if mode == 'wrong_team' and staged else 'FIXTURETEAM'
+    if mode == 'adhoc_noauth' and staged:
+        print('Signature=adhoc', file=sys.stderr)
     print(f'Identifier={identifier}\nTeamIdentifier={team}\nCDHash=fixture\n'
           'CodeDirectory flags=0x10000(runtime)\nTimestamp=fixture timestamp', file=sys.stderr)
     finish()
@@ -76,21 +78,28 @@ if argv[0] == '/bin/launchctl':
     finish()
 assert argv[0] == config['pw'] and argv[1] == 'runner', argv
 if argv[2] == 'list':
-    reply({'runners': state['runners']})
+    reply({'runners': state['runners'], 'pending_cleanup': state['pending_cleanup']})
 if argv[2] == 'install':
     target = Path(argv[argv.index('--bundle') + 1])
     assert target == bundle and target.resolve() == target
     assert target != Path(config['source']) and target.parent.parent == Path('/private/tmp')
-    assert '--allow-adhoc' not in argv and argv[argv.index('--identity') + 1] == 'fixture identity'
+    if mode == 'adhoc_noauth':
+        assert '--allow-adhoc' in argv and argv[argv.index('--identity') + 1] == '-'
+        info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
+        assert 'PWRunnerRequireSignedCaller' not in info and 'PWRunnerAllowedIdentifiers' not in info
+    else:
+        assert '--allow-adhoc' not in argv and argv[argv.index('--identity') + 1] == 'fixture identity'
     if '--entitlements' in argv:
         receipt['entitlements'] = plistlib.loads(Path(argv[argv.index('--entitlements') + 1]).read_bytes())
     assert receipt.get('entitlements') == config['entitlements'], 'entitlements were not preserved'
-    if mode == 'sign_failure':
+    if mode in ('sign_failure', 'uncertain_no_record'):
         finish(17)
     executable = bundle / 'Contents/MacOS/PWRunner'
     executable.write_bytes(executable.read_bytes() + b' signed')
     if mode == 'helper_changed':
         (bundle / 'Contents/MacOS/pw-probe-runner').write_bytes(b'changed helper')
+    record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending'}
+    state['runners'].append(record)
     plist.parent.mkdir(parents=True, exist_ok=True)
     plist.write_bytes(plistlib.dumps({'Label': service, 'ProgramArguments': [str(executable), '--mach-service', service],
                                      'MachServices': {service: True}}))
@@ -100,8 +109,7 @@ if argv[2] == 'install':
     if mode == 'unowned_plist':
         plist.write_bytes(plistlib.dumps({'Label': 'someone.else'}))
         finish(17)
-    record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle)}
-    state['runners'].append(record)
+    record['state'] = 'installed'
     if mode == 'registered_unowned_plist':
         plist.write_bytes(plistlib.dumps({'Label': 'someone.else'}))
     if mode == 'malformed_install_reply':
@@ -113,8 +121,13 @@ if argv[2] == 'verify':
 assert argv[2:] == ['remove', '--id', 'owned-id'], 'removal did not target the owned registration'
 if mode == 'remove_failure':
     finish(17)
+owned = next(r for r in state['runners'] + state['pending_cleanup'] if r['id'] == 'owned-id')
 state['runners'] = [r for r in state['runners'] if r['id'] != 'owned-id']
+state['pending_cleanup'] = [owned] if mode == 'remove_warning' else []
 if mode not in ('remove_warning', 'remove_lies'):
     state['loaded'] = False
-    plist.unlink()
-reply({'warnings': ['bootout failed'] if mode == 'remove_warning' else []})
+    plist.unlink(missing_ok=True)
+if mode == 'remove_warning':
+    plist.unlink(missing_ok=True)
+reply({'warnings': ['bootout failed'] if mode == 'remove_warning' else [],
+       'cleanup_retained': mode == 'remove_warning'})

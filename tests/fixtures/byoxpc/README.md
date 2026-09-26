@@ -1,35 +1,46 @@
 # Disposable BYOXPC ownership
 
-`session.py` prepares a complete copy of the selected app's `PWRunner.xpc` under
-`/private/tmp`, with a unique service identifier and unchanged caller-auth keys.
-It inspects the registry before installation, verifies the source signature,
-records its metadata/entitlements, and checks the copy before changing its plist.
-Source aliases and paths escaping the bundle are rejected before signing.
+`session.py` copies the selected app's complete `PWRunner.xpc` to a unique
+`/private/tmp/pw-byoxpc-*` staging directory and assigns a unique
+`com.policywitness.test.byoxpc.*` service. It inspects the registry first and
+verifies source signatures, metadata, entitlements and copy identity. Source
+aliases and paths escaping the bundle are rejected before signing.
 
-Only the public `runner install --identity` command signs the copy. Nonempty or
-explicit empty entitlement dictionaries are passed from actual signature
-extraction; absent entitlement data stays absent. Extraction warnings and malformed
-data fail setup. After installation the copy must verify, retain its team,
-entitlements and runtime flag, and have unchanged embedded helpers. Connection
-verification must succeed before the wrapper receives its runner environment.
+The ordinary variant preserves caller-auth keys and uses a matching Developer
+ID. `install-noauth` removes those keys and requests ad-hoc signing through the
+public installer. Both preserve extracted entitlements and embedded helper bytes;
+only `runner install` signs the copy. Signature, runtime and connection checks
+must succeed before the wrapper receives its runner environment. Installation
+failure is a failed case.
 
-The wrapper installs its EXIT trap before setup. `session.json` records the unique
-service, staging directory, expected plist, and source app before installation.
-Cleanup can therefore find an owned registration even if install output was
-malformed or setup failed afterward. It uses public removal when registered;
-for a partial install with no registry entry, the exact plist must establish
-ownership before the documented bootout/plist-removal procedure is used.
+The wrapper arms cleanup before setup. Staging contains durable `session.json`
+with its service, bundle/plist paths, domain, source inventory, installation
+observations and removal state. The run-local `session.json` is a diagnostic
+receipt pointing to that durable path; cleanup follows the pointer. The
+registry record's `bundle_path`, shown by `runner reconcile`, locates staging
+when original output is gone. Cleanup can be resumed directly with:
 
-Deletion of staging requires confirmed absence from launchd, the registry, and
-the expected plist path. Warnings, ambiguous ownership, incomplete installer
-execution, and removal failures retain staging and fail the wrapper, with its
-service/path in the diagnostic. Cleanup does not retry signing, change identity,
-or delete unrelated registrations. Source inventory is checked again on exit.
-Direct invocation of `runner_install.sh` owns cleanup itself; suite invocation
-keeps the copy alive across its selected specimens.
+```sh
+python3 tests/fixtures/byoxpc/session.py cleanup /path/to/policy-witness /private/tmp/pw-byoxpc-<id>/session.json
+```
 
-`tools.py` is an independent fake-command executable used by
-`shell_helpers/byoxpc_setup`. It records requests and simulates signing,
-registry/plist/launchd state, and failures. No real keychain, signing, launchctl,
-or product execution occurs in those controls. Production fixture entrypoints
-have no environment switch for these fake tools.
+Cleanup searches both active and pending-cleanup registry collections and uses
+public `runner remove` after checking exact ownership. If installer completion
+is uncertain, a matching durable registry record permits recovery; without one,
+staging remains for inspection. No helper bootout is inferred from a prefix.
+
+Deletion requires verified service/plist absence and confirmed registry cleanup.
+Warnings, unknown observations and ownership disagreements retain staging and
+fail the wrapper. State survives interruption after machine cleanup, so a later
+attempt can finish bundle deletion. Cleanup command receipts live in staging
+and are copied to existing run output before successful removal. The source
+inventory is checked again before staged files are deleted. Direct installation
+owns cleanup itself; suite installation stays alive across selected specimens.
+
+`tools.py` supplies independent fake OS observations to
+`shell_helpers/byoxpc_setup`, including partial and uncertain installation,
+pending cleanup, and interrupted staging deletion. It creates no real service.
+`runner_byoxpc/registry_recovery` separately exercises real CLI filesystem and
+launchd behavior with fixture-child `HOME` and `PW_RUNNER_REGISTRY`, unique owned
+services and verified final cleanup. Production entrypoints have no switch for
+fake tools.

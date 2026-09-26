@@ -5,10 +5,12 @@
 //! system domain.
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{Read, Write};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -78,8 +80,37 @@ pub struct RunnerEntitlements {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RunnerState {
+    Pending,
+    #[default]
+    Installed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunnerOwnership {
+    pub plist_path: String,
+    pub launchd_domain: String,
+    pub owner_uid: u32,
+    pub plist_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingCleanup {
+    #[serde(flatten)]
+    pub runner: RunnerRecord,
+    pub cleanup_started_at_unix_ms: u64,
+    #[serde(default)]
+    pub observations: Vec<Value>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerRecord {
+    #[serde(default)]
+    pub state: RunnerState,
+    #[serde(default)]
+    pub ownership: Option<RunnerOwnership>,
     pub id: String,
     pub service_name: String,
     pub bundle_path: String,
@@ -98,6 +129,8 @@ pub struct RunnerRecord {
 pub struct RunnerRegistry {
     pub schema_version: u32,
     pub runners: Vec<RunnerRecord>,
+    #[serde(default)]
+    pub pending_cleanup: Vec<PendingCleanup>,
 }
 
 pub fn runner_registry_path() -> Result<PathBuf, String> {
@@ -137,6 +170,7 @@ pub fn load_registry(path: &Path) -> Result<RunnerRegistry, String> {
         return Ok(RunnerRegistry {
             schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
             runners: Vec::new(),
+            pending_cleanup: Vec::new(),
         });
     }
     let text =
@@ -152,14 +186,110 @@ pub fn load_registry(path: &Path) -> Result<RunnerRegistry, String> {
     Ok(registry)
 }
 
+/// The lock inode lives beside the registry and is never renamed or unlinked.
+/// Atomic replacement of the JSON file must not replace the held lock itself.
+pub fn lock_registry(path: &Path) -> Result<fs::File, String> {
+    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        fs::create_dir_all(parent).map_err(|e| format!("create registry directory: {e}"))?;
+    }
+    let lock_path = path.with_file_name(format!(
+        "{}.lock",
+        path.file_name()
+            .ok_or("registry has no filename")?
+            .to_string_lossy()
+    ));
+    if fs::symlink_metadata(&lock_path).is_ok_and(|m| !m.is_file()) {
+        return Err("registry lock is not a regular file".to_string());
+    }
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(&lock_path)
+        .map_err(|e| format!("open registry lock {}: {e}", lock_path.display()))?;
+    file.try_lock()
+        .map_err(|e| format!("runner registry busy or lock unavailable: {e}"))?;
+    Ok(file)
+}
+
 pub fn save_registry(path: &Path, registry: &RunnerRegistry) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         fs::create_dir_all(parent)
             .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
     }
-    let text = serde_json::to_string_pretty(registry)
+    let text = serde_json::to_vec_pretty(registry)
         .map_err(|e| format!("failed to encode registry JSON: {e}"))?;
-    fs::write(path, text).map_err(|e| format!("failed to write {}: {e}", path.display()))
+    let temporary = path.with_file_name(format!(
+        ".{}.{}.tmp",
+        path.file_name()
+            .ok_or("registry has no filename")?
+            .to_string_lossy(),
+        random_id()?
+    ));
+    let result = (|| -> std::io::Result<()> {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&temporary)?;
+        file.write_all(&text)?;
+        file.sync_all()?;
+        fs::rename(&temporary, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    result.map_err(|e| format!("failed to atomically save {}: {e}", path.display()))
+}
+
+/// Persist recovery identity before the caller performs installation actions.
+/// Tests supply observed action boundaries; the CLI closure uses real tools.
+pub fn install_record(
+    path: &Path,
+    registry: &mut RunnerRegistry,
+    mut record: RunnerRecord,
+    install: impl FnOnce() -> Result<(), String>,
+) -> Result<RunnerRecord, String> {
+    record.state = RunnerState::Pending;
+    registry.runners.push(record.clone());
+    save_registry(path, registry)?;
+    let completed = (|| -> Result<(), String> {
+        install()?;
+        record.state = RunnerState::Installed;
+        *registry.runners.last_mut().expect("pending record") = record.clone();
+        save_registry(path, registry)
+    })();
+    completed.map_err(|error| {
+        format!(
+            "{error}; pending runner {} ({}) retained in {}; retry runner remove --service-name {}",
+            record.id,
+            record.service_name,
+            path.display(),
+            record.service_name
+        )
+    })?;
+    Ok(record)
+}
+
+pub fn conflicting_record<'a>(
+    registry: &'a RunnerRegistry,
+    service: &str,
+    bundle: &str,
+    executable: &str,
+) -> Option<&'a RunnerRecord> {
+    registry
+        .runners
+        .iter()
+        .chain(registry.pending_cleanup.iter().map(|c| &c.runner))
+        .find(|r| {
+            r.service_name == service || r.bundle_path == bundle || r.executable_path == executable
+        })
+}
+
+pub fn content_hash(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
 }
 
 pub fn random_id() -> Result<String, String> {
@@ -264,8 +394,12 @@ pub fn write_launchd_plist(path: &Path, content: &str) -> Result<(), String> {
         fs::create_dir_all(parent)
             .map_err(|e| format!("failed to create {}: {e}", parent.display()))?;
     }
-    let mut file =
-        fs::File::create(path).map_err(|e| format!("failed to create {}: {e}", path.display()))?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o644)
+        .open(path)
+        .map_err(|e| format!("failed to create {}: {e}", path.display()))?;
     file.write_all(content.as_bytes())
         .map_err(|e| format!("failed to write {}: {e}", path.display()))
 }
@@ -415,14 +549,7 @@ pub fn codesign_sign(
     Err(format!("codesign sign failed: {stderr}"))
 }
 
-fn current_uid_string() -> Result<String, String> {
-    if let Ok(uid) = std::env::var("UID") {
-        let trimmed = uid.trim();
-        if !trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_digit()) {
-            return Ok(trimmed.to_string());
-        }
-    }
-    // Fall back to /usr/bin/id for environments that do not export UID.
+pub fn current_uid_string() -> Result<String, String> {
     let out = Command::new("/usr/bin/id")
         .args(["-u"])
         .stdout(Stdio::piped())
@@ -440,24 +567,12 @@ fn current_uid_string() -> Result<String, String> {
     Ok(uid)
 }
 
-fn launchctl_target(scope: RunnerScope) -> Result<String, String> {
+pub fn launchctl_target(scope: RunnerScope) -> Result<String, String> {
     match scope {
         // launchctl expects user services under the per-user GUI domain.
         RunnerScope::User => Ok(format!("gui/{}", current_uid_string()?)),
         RunnerScope::System => Ok("system".to_string()),
     }
-}
-
-pub fn launchctl_service_present(scope: RunnerScope, service_name: &str) -> Result<bool, String> {
-    let target = launchctl_target(scope)?;
-    let full = format!("{}/{}", target, service_name);
-    let out = Command::new("/bin/launchctl")
-        .args(["print", &full])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("failed to run launchctl: {e}"))?;
-    Ok(out.status.success())
 }
 
 pub fn launchctl_bootstrap(scope: RunnerScope, plist_path: &Path) -> Result<(), String> {
@@ -475,19 +590,423 @@ pub fn launchctl_bootstrap(scope: RunnerScope, plist_path: &Path) -> Result<(), 
     Err(format!("launchctl bootstrap failed: {stderr}"))
 }
 
-pub fn launchctl_bootout(scope: RunnerScope, plist_path: &Path) -> Result<(), String> {
-    let target = launchctl_target(scope)?;
-    let out = Command::new("/bin/launchctl")
-        .args(["bootout", &target, plist_path.to_string_lossy().as_ref()])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("failed to run launchctl: {e}"))?;
-    if out.status.success() {
-        return Ok(());
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Presence {
+    Present,
+    Absent,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Ownership {
+    Owned,
+    Unowned,
+    Ambiguous,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ServiceObservation {
+    pub presence: Presence,
+    pub executable_path: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PlistObservation {
+    pub presence: Presence,
+    pub config: Option<Value>,
+    pub sha256: Option<String>,
+    pub owner_uid: Option<u32>,
+    pub regular: bool,
+    pub error: Option<String>,
+}
+
+pub fn classify_service_output(
+    success: bool,
+    stdout: &str,
+    stderr: &str,
+    service: &str,
+) -> ServiceObservation {
+    if success {
+        let programs: Vec<_> = stdout
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("program = "))
+            .collect();
+        return ServiceObservation {
+            presence: Presence::Present,
+            executable_path: (programs.len() == 1).then(|| programs[0].to_string()),
+            error: None,
+        };
     }
-    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-    Err(format!("launchctl bootout failed: {stderr}"))
+    let absent = stderr.contains(&format!("Could not find service \"{service}\""));
+    ServiceObservation {
+        presence: if absent {
+            Presence::Absent
+        } else {
+            Presence::Unknown
+        },
+        executable_path: None,
+        error: (!absent).then(|| format!("launchctl print: {}", stderr.trim())),
+    }
+}
+
+pub fn inspect_service(domain: &str, service: &str) -> ServiceObservation {
+    match Command::new("/bin/launchctl")
+        .args(["print", &format!("{domain}/{service}")])
+        .output()
+    {
+        Ok(out) => classify_service_output(
+            out.status.success(),
+            &String::from_utf8_lossy(&out.stdout),
+            &String::from_utf8_lossy(&out.stderr),
+            service,
+        ),
+        Err(error) => ServiceObservation {
+            presence: Presence::Unknown,
+            executable_path: None,
+            error: Some(error.to_string()),
+        },
+    }
+}
+
+pub fn inspect_plist(path: &Path) -> PlistObservation {
+    let mut result = PlistObservation {
+        presence: Presence::Unknown,
+        config: None,
+        sha256: None,
+        owner_uid: None,
+        regular: false,
+        error: None,
+    };
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            result.presence = Presence::Absent;
+            return result;
+        }
+        Err(error) => {
+            result.error = Some(error.to_string());
+            return result;
+        }
+        Ok(meta) => {
+            result.presence = Presence::Present;
+            result.owner_uid = Some(meta.uid());
+            result.regular = meta.is_file();
+        }
+    }
+    if !result.regular {
+        result.error = Some("plist is not a regular file".into());
+        return result;
+    }
+    match fs::read(path) {
+        Ok(bytes) => {
+            result.sha256 = Some(content_hash(&bytes));
+            match plutil_json_from_bytes(&bytes) {
+                Ok(value) => result.config = Some(value),
+                Err(error) => result.error = Some(error),
+            }
+        }
+        Err(error) => {
+            result.presence = Presence::Unknown;
+            result.error = Some(error.to_string());
+        }
+    }
+    result
+}
+
+pub fn record_location(record: &RunnerRecord) -> Result<(PathBuf, String), String> {
+    if record.service_name.is_empty()
+        || !record
+            .service_name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+    {
+        return Err("invalid recorded service name".into());
+    }
+    let domain = launchctl_target(record.scope)?;
+    if let Some(ownership) = &record.ownership {
+        let plist = PathBuf::from(&ownership.plist_path);
+        let uid: u32 = current_uid_string()?.parse().map_err(|_| "invalid uid")?;
+        let expected_parent = match record.scope {
+            RunnerScope::User => "LaunchAgents",
+            RunnerScope::System => "LaunchDaemons",
+        };
+        if ownership.owner_uid != uid
+            || ownership.launchd_domain != domain
+            || !plist.is_absolute()
+            || plist
+                .components()
+                .any(|p| matches!(p, std::path::Component::ParentDir))
+            || plist.file_name().and_then(|n| n.to_str())
+                != Some(&format!("{}.plist", record.service_name))
+            || plist
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                != Some(expected_parent)
+            || Path::new(&record.executable_path).parent()
+                != Some(&Path::new(&record.bundle_path).join("Contents/MacOS"))
+        {
+            return Err(
+                "recorded cleanup ownership is inconsistent with this user, scope or paths".into(),
+            );
+        }
+        // Refuse redirected parents even if the final plist happens to be absent.
+        for parent in plist.ancestors().skip(1) {
+            match fs::symlink_metadata(parent) {
+                Ok(meta) if meta.file_type().is_symlink() => {
+                    return Err("recorded plist parent is a symlink".into());
+                }
+                Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                    return Err(error.to_string());
+                }
+                _ => (),
+            }
+        }
+        Ok((plist, domain))
+    } else {
+        Ok((
+            launchd_plist_path(&record.service_name, record.scope)?,
+            domain,
+        ))
+    }
+}
+
+pub fn plist_ownership(record: &RunnerRecord, observation: &PlistObservation) -> Ownership {
+    if observation.presence == Presence::Unknown {
+        return Ownership::Unknown;
+    }
+    if observation.presence == Presence::Absent {
+        return Ownership::Ambiguous;
+    }
+    if !observation.regular {
+        return Ownership::Unowned;
+    }
+    let Some(config) = &observation.config else {
+        return Ownership::Unknown;
+    };
+    let expected_args = serde_json::json!([
+        record.executable_path,
+        "--mach-service",
+        record.service_name
+    ]);
+    let expected_services = serde_json::json!({ &record.service_name: true });
+    if config.get("Label").and_then(Value::as_str) != Some(&record.service_name)
+        || config.get("ProgramArguments") != Some(&expected_args)
+        || config.get("MachServices") != Some(&expected_services)
+        || config
+            .pointer("/EnvironmentVariables/XPC_SERVICE_PATH")
+            .and_then(Value::as_str)
+            != Some(&record.bundle_path)
+    {
+        return Ownership::Unowned;
+    }
+    if let Some(owned) = &record.ownership {
+        if observation.owner_uid != Some(owned.owner_uid)
+            || observation.sha256.as_ref() != Some(&owned.plist_sha256)
+        {
+            return Ownership::Unowned;
+        }
+    }
+    Ownership::Owned
+}
+
+pub fn service_ownership(record: &RunnerRecord, observation: &ServiceObservation) -> Ownership {
+    match observation.presence {
+        Presence::Unknown => Ownership::Unknown,
+        Presence::Absent => Ownership::Ambiguous,
+        Presence::Present => match observation.executable_path.as_deref() {
+            Some(path) if path == record.executable_path => Ownership::Owned,
+            Some(_) => Ownership::Unowned,
+            None => Ownership::Ambiguous,
+        },
+    }
+}
+
+pub fn cleanup_complete(service: &ServiceObservation, plist: &PlistObservation) -> bool {
+    service.presence == Presence::Absent && plist.presence == Presence::Absent
+}
+
+pub fn bootout_service(domain: &str, service: &str) -> Result<(), String> {
+    let out = Command::new("/bin/launchctl")
+        .args(["bootout", &format!("{domain}/{service}")])
+        .output()
+        .map_err(|e| format!("launchctl bootout: {e}"))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "launchctl bootout: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ))
+    }
+}
+
+#[derive(Serialize)]
+pub struct CleanupReport {
+    runner_id: String,
+    service_name: String,
+    plist_path: String,
+    booted_out: bool,
+    plist_removed: bool,
+    cleanup_retained: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    retained_record: Option<PendingCleanup>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    warnings: Vec<String>,
+}
+
+/// Narrow system observations/actions for the removal transaction. Production
+/// always supplies NativeCleanup; unit controls supply independent observations.
+pub trait CleanupSystem {
+    fn location(&mut self, record: &RunnerRecord) -> Result<(PathBuf, String), String>;
+    fn service(&mut self, domain: &str, name: &str) -> ServiceObservation;
+    fn plist(&mut self, path: &Path) -> PlistObservation;
+    fn bootout(&mut self, domain: &str, name: &str) -> Result<(), String>;
+    fn remove_plist(&mut self, path: &Path) -> std::io::Result<()>;
+}
+
+pub struct NativeCleanup;
+impl CleanupSystem for NativeCleanup {
+    fn location(&mut self, record: &RunnerRecord) -> Result<(PathBuf, String), String> {
+        record_location(record)
+    }
+    fn service(&mut self, domain: &str, name: &str) -> ServiceObservation {
+        inspect_service(domain, name)
+    }
+    fn plist(&mut self, path: &Path) -> PlistObservation {
+        inspect_plist(path)
+    }
+    fn bootout(&mut self, domain: &str, name: &str) -> Result<(), String> {
+        bootout_service(domain, name)
+    }
+    fn remove_plist(&mut self, path: &Path) -> std::io::Result<()> {
+        fs::remove_file(path)
+    }
+}
+
+pub fn remove_record(
+    registry_path: &Path,
+    registry: &mut RunnerRegistry,
+    runner_id: Option<&str>,
+    service_name: Option<&str>,
+    skip_bootout: bool,
+    system: &mut impl CleanupSystem,
+) -> Result<Option<CleanupReport>, String> {
+    let matches = |record: &RunnerRecord| {
+        runner_id.map_or_else(
+            || service_name == Some(record.service_name.as_str()),
+            |id| id == record.id,
+        )
+    };
+    if let Some(index) = registry.runners.iter().position(&matches) {
+        let record = registry.runners.remove(index);
+        registry.pending_cleanup.push(PendingCleanup {
+            runner: record,
+            cleanup_started_at_unix_ms: crate::utils::now_unix_ms(),
+            observations: Vec::new(),
+        });
+        // This must succeed before any launchd or plist action.
+        save_registry(registry_path, registry)?;
+    }
+    let Some(index) = registry
+        .pending_cleanup
+        .iter()
+        .position(|c| matches(&c.runner))
+    else {
+        return Ok(None);
+    };
+    let mut cleanup = registry.pending_cleanup[index].clone();
+    let record = &cleanup.runner;
+    let mut warnings = Vec::new();
+    let mut booted_out = false;
+    let mut plist_removed = false;
+    let mut complete = false;
+    let mut plist_path_text = record
+        .ownership
+        .as_ref()
+        .map(|o| o.plist_path.clone())
+        .unwrap_or_default();
+    match system.location(record) {
+        Err(error) => warnings.push(error),
+        Ok((plist_path, domain)) => {
+            plist_path_text = plist_path.display().to_string();
+            let service = system.service(&domain, &record.service_name);
+            let plist = system.plist(&plist_path);
+            let service_owner = service_ownership(record, &service);
+            let plist_owner = plist_ownership(record, &plist);
+            cleanup
+                .observations
+                .push(json!({"phase":"before", "service":service, "plist":plist,
+                "service_ownership":service_owner, "plist_ownership":plist_owner}));
+            if service.presence != Presence::Absent && !skip_bootout {
+                if service_owner == Ownership::Owned {
+                    match system.bootout(&domain, &record.service_name) {
+                        Ok(()) => booted_out = true,
+                        Err(error) => warnings.push(error),
+                    }
+                } else {
+                    warnings.push(format!(
+                        "service ownership is {service_owner:?}; bootout refused"
+                    ));
+                }
+            }
+            if plist.presence != Presence::Absent {
+                if plist_owner == Ownership::Owned {
+                    // Reinspect immediately before unlinking; stale observations are not authority.
+                    let current = system.plist(&plist_path);
+                    if plist_ownership(record, &current) == Ownership::Owned {
+                        match system.remove_plist(&plist_path) {
+                            Ok(()) => plist_removed = true,
+                            Err(error) => warnings.push(format!(
+                                "failed to remove plist {}: {error}",
+                                plist_path.display()
+                            )),
+                        }
+                    } else {
+                        warnings.push("plist ownership changed; removal refused".into());
+                    }
+                } else {
+                    warnings.push(format!(
+                        "plist ownership is {plist_owner:?}; removal refused"
+                    ));
+                }
+            }
+            let service_after = system.service(&domain, &record.service_name);
+            let plist_after = system.plist(&plist_path);
+            complete = cleanup_complete(&service_after, &plist_after) && warnings.is_empty();
+            cleanup
+                .observations
+                .push(json!({"phase":"after", "service":service_after, "plist":plist_after}));
+            if !complete {
+                warnings
+                    .push("service/plist absence is not confirmed; cleanup record retained".into());
+            }
+        }
+    }
+    registry.pending_cleanup[index] = cleanup.clone();
+    if complete {
+        registry.pending_cleanup.remove(index);
+    }
+    if let Err(error) = save_registry(registry_path, registry) {
+        complete = false;
+        warnings.push(format!(
+            "cleanup persistence failed; prior recovery record retained: {error}"
+        ));
+    }
+    let data = CleanupReport {
+        runner_id: cleanup.runner.id.clone(),
+        service_name: cleanup.runner.service_name.clone(),
+        plist_path: plist_path_text,
+        booted_out,
+        plist_removed,
+        cleanup_retained: !complete,
+        retained_record: (!complete).then_some(cleanup),
+        warnings,
+    };
+    Ok(Some(data))
 }
 
 #[cfg(test)]
@@ -595,5 +1114,440 @@ mod tests {
             !plist.contains("--mach-service"),
             "standard plist must not pass --mach-service; got:\n{plist}"
         );
+    }
+    fn recovery_record() -> RunnerRecord {
+        serde_json::from_value(json!({"id":"runner-owned", "service_name":"com.policywitness.test.recovery",
+            "bundle_path":"/private/tmp/owned/PWRunner.xpc", "executable_path":"/private/tmp/owned/PWRunner.xpc/Contents/MacOS/PWRunner",
+            "bundle_id":"com.policywitness.test.recovery", "scope":"user", "protocol_version":1,
+            "signature":{"valid":true,"adhoc":true}, "entitlements":{"keys":[]}, "installed_at_unix_ms":1,
+            "kind":"byoxpc"})).unwrap()
+    }
+
+    struct RegistryFixture(PathBuf);
+    impl RegistryFixture {
+        fn new() -> Self {
+            let dir = std::env::temp_dir().join(format!("pw-registry-{}", random_id().unwrap()));
+            fs::create_dir(&dir).unwrap();
+            Self(dir)
+        }
+        fn path(&self) -> PathBuf {
+            self.0.join("runners.json")
+        }
+        fn writable(&self, writable: bool) {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(
+                &self.0,
+                fs::Permissions::from_mode(if writable { 0o700 } else { 0o500 }),
+            )
+            .unwrap();
+        }
+    }
+    impl Drop for RegistryFixture {
+        fn drop(&mut self) {
+            self.writable(true);
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn registry_additive_defaults_preserve_schema_one() {
+        let record = recovery_record();
+        assert_eq!(record.state, RunnerState::Installed);
+        assert!(record.ownership.is_none());
+        let registry: RunnerRegistry = serde_json::from_value(
+            json!({"schema_version":1,"runners":[record],"future_field":42}),
+        )
+        .unwrap();
+        assert!(registry.pending_cleanup.is_empty());
+        assert_eq!(registry.schema_version, 1);
+    }
+
+    #[test]
+    fn atomic_registry_replace_preserves_old_open_readers_and_failed_write() {
+        let fixture = RegistryFixture::new();
+        let path = fixture.path();
+        let mut registry = load_registry(&path).unwrap();
+        save_registry(&path, &registry).unwrap();
+        let before = fs::read(&path).unwrap();
+        let mut reader = fs::File::open(&path).unwrap();
+        registry.runners.push(recovery_record());
+        save_registry(&path, &registry).unwrap();
+        let mut old = Vec::new();
+        reader.read_to_end(&mut old).unwrap();
+        assert_eq!(old, before);
+        assert_eq!(load_registry(&path).unwrap().runners.len(), 1);
+        let current = fs::read(&path).unwrap();
+        fixture.writable(false);
+        assert!(save_registry(&path, &registry).is_err());
+        assert_eq!(fs::read(&path).unwrap(), current);
+    }
+
+    #[test]
+    fn registry_lock_serializes_writers_and_keeps_its_inode() {
+        let fixture = RegistryFixture::new();
+        let first = lock_registry(&fixture.path()).unwrap();
+        let inode = first.metadata().unwrap().ino();
+        assert!(lock_registry(&fixture.path()).is_err());
+        assert!(load_registry(&fixture.path()).unwrap().runners.is_empty());
+        drop(first);
+        let second = lock_registry(&fixture.path()).unwrap();
+        assert_eq!(second.metadata().unwrap().ino(), inode);
+        // Exercise the blocking standard-library primitive on an uncontended handle.
+        second.unlock().unwrap();
+        second.lock().unwrap();
+    }
+
+    #[test]
+    fn pending_cleanup_conflicts_with_service_bundle_and_executable() {
+        let mut registry = RunnerRegistry {
+            schema_version: 1,
+            runners: vec![],
+            pending_cleanup: vec![],
+        };
+        let record = recovery_record();
+        registry.pending_cleanup.push(PendingCleanup {
+            runner: record.clone(),
+            cleanup_started_at_unix_ms: 1,
+            observations: vec![],
+        });
+        assert!(conflicting_record(&registry, &record.service_name, "other", "other").is_some());
+        assert!(conflicting_record(&registry, "other", &record.bundle_path, "other").is_some());
+        assert!(conflicting_record(&registry, "other", "other", &record.executable_path).is_some());
+        assert!(conflicting_record(&registry, "other", "other", "other").is_none());
+    }
+
+    #[test]
+    fn install_failure_boundaries_preserve_observed_pending_state() {
+        use std::cell::Cell;
+        for boundary in [
+            "initial_save",
+            "plist",
+            "bootstrap",
+            "installed_save",
+            "success",
+        ] {
+            let fixture = RegistryFixture::new();
+            let path = fixture.path();
+            let plist = fixture.0.join("owned.plist");
+            let called = Cell::new(false);
+            let bootstrap_observed = Cell::new(false);
+            let mut registry = load_registry(&path).unwrap();
+            if boundary == "initial_save" {
+                fixture.writable(false);
+            }
+            let result = install_record(&path, &mut registry, recovery_record(), || {
+                called.set(true);
+                let pending = load_registry(&path)?;
+                assert_eq!(pending.runners[0].state, RunnerState::Pending);
+                if boundary == "plist" {
+                    return Err("controlled plist creation failure".into());
+                }
+                fs::write(&plist, "owned plist").unwrap();
+                if boundary == "bootstrap" {
+                    return Err("controlled bootstrap failure after plist creation".into());
+                }
+                bootstrap_observed.set(true);
+                if boundary == "installed_save" {
+                    fixture.writable(false);
+                }
+                Ok(())
+            });
+            fixture.writable(true);
+            assert_eq!(result.is_ok(), boundary == "success", "{boundary}");
+            assert_eq!(called.get(), boundary != "initial_save", "{boundary}");
+            assert_eq!(
+                plist.exists(),
+                matches!(boundary, "bootstrap" | "installed_save" | "success")
+            );
+            assert_eq!(
+                bootstrap_observed.get(),
+                matches!(boundary, "installed_save" | "success")
+            );
+            let disk = load_registry(&path).unwrap();
+            if boundary == "initial_save" {
+                assert!(disk.runners.is_empty());
+            } else {
+                assert_eq!(
+                    disk.runners[0].state,
+                    if boundary == "success" {
+                        RunnerState::Installed
+                    } else {
+                        RunnerState::Pending
+                    }
+                );
+                if let Err(error) = result {
+                    assert!(error.contains("pending runner") && error.contains("runner remove"));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn service_absence_requires_specific_observation_not_any_nonzero_exit() {
+        let unknown = classify_service_output(false, "", "Sandbox restriction", "owned");
+        assert_eq!(unknown.presence, Presence::Unknown);
+        assert_eq!(
+            classify_service_output(false, "", "Could not find service \"another\"", "owned")
+                .presence,
+            Presence::Unknown
+        );
+        assert_eq!(
+            classify_service_output(
+                false,
+                "",
+                "Could not find service \"owned\" in domain",
+                "owned"
+            )
+            .presence,
+            Presence::Absent
+        );
+        let record = recovery_record();
+        let own = classify_service_output(
+            true,
+            &format!("  program = {}\n", record.executable_path),
+            "",
+            &record.service_name,
+        );
+        assert_eq!(service_ownership(&record, &own), Ownership::Owned);
+        let foreign =
+            classify_service_output(true, "program = /unrelated\n", "", &record.service_name);
+        assert_eq!(service_ownership(&record, &foreign), Ownership::Unowned);
+        assert_eq!(
+            service_ownership(
+                &record,
+                &classify_service_output(true, "", "", &record.service_name)
+            ),
+            Ownership::Ambiguous
+        );
+    }
+
+    #[test]
+    fn plist_and_service_evidence_independently_gate_cleanup_retirement() {
+        let mut record = recovery_record();
+        let mut plist = PlistObservation {
+            presence: Presence::Present,
+            regular: true,
+            owner_uid: Some(501),
+            sha256: Some("sealed".into()),
+            error: None,
+            config: Some(
+                json!({"Label":record.service_name, "ProgramArguments":[record.executable_path,"--mach-service",record.service_name],
+                              "MachServices":{&record.service_name:true},"EnvironmentVariables":{"XPC_SERVICE_PATH":record.bundle_path}}),
+            ),
+        };
+        record.ownership = Some(RunnerOwnership {
+            plist_path: "/owned.plist".into(),
+            launchd_domain: "gui/501".into(),
+            owner_uid: 501,
+            plist_sha256: "sealed".into(),
+        });
+        assert_eq!(plist_ownership(&record, &plist), Ownership::Owned);
+        plist.sha256 = Some("changed".into());
+        assert_eq!(plist_ownership(&record, &plist), Ownership::Unowned);
+        plist.presence = Presence::Absent;
+        let mut service = ServiceObservation {
+            presence: Presence::Present,
+            executable_path: Some(record.executable_path.clone()),
+            error: None,
+        };
+        assert!(
+            !cleanup_complete(&service, &plist),
+            "failed bootout plus successful plist removal must retain recovery"
+        );
+        service.presence = Presence::Unknown;
+        assert!(!cleanup_complete(&service, &plist));
+        service.presence = Presence::Absent;
+        assert!(cleanup_complete(&service, &plist));
+        plist.presence = Presence::Unknown;
+        assert!(!cleanup_complete(&service, &plist));
+    }
+    struct SuppliedCleanup {
+        registry: PathBuf,
+        loaded: Presence,
+        plist_exists: bool,
+        owned: bool,
+        fail_bootout: bool,
+        fail_unlink: bool,
+        fail_retirement: bool,
+        crash_after_bootout: bool,
+        actions: Vec<&'static str>,
+    }
+    impl CleanupSystem for SuppliedCleanup {
+        fn location(&mut self, _: &RunnerRecord) -> Result<(PathBuf, String), String> {
+            let disk = load_registry(&self.registry)?;
+            assert!(
+                disk.runners.is_empty(),
+                "active record must be retired before machine inspection"
+            );
+            assert_eq!(disk.pending_cleanup.len(), 1);
+            Ok((
+                self.registry.with_file_name("owned.plist"),
+                "gui/fixture".into(),
+            ))
+        }
+        fn service(&mut self, _: &str, _: &str) -> ServiceObservation {
+            ServiceObservation {
+                presence: self.loaded,
+                error: None,
+                executable_path: Some(if self.owned {
+                    recovery_record().executable_path
+                } else {
+                    "/unrelated".into()
+                }),
+            }
+        }
+        fn plist(&mut self, _: &Path) -> PlistObservation {
+            use std::os::unix::fs::PermissionsExt;
+            if self.fail_retirement && !self.plist_exists && self.loaded == Presence::Absent {
+                fs::set_permissions(
+                    self.registry.parent().unwrap(),
+                    fs::Permissions::from_mode(0o500),
+                )
+                .unwrap();
+            }
+            let record = recovery_record();
+            PlistObservation {
+                presence: if self.plist_exists {
+                    Presence::Present
+                } else {
+                    Presence::Absent
+                },
+                regular: true,
+                sha256: None,
+                owner_uid: None,
+                error: None,
+                config: Some(json!({
+                    "Label":if self.owned {record.service_name.clone()} else {"unrelated".into()},
+                    "ProgramArguments":[record.executable_path,"--mach-service",record.service_name],
+                    "MachServices":{&record.service_name:true},"EnvironmentVariables":{"XPC_SERVICE_PATH":record.bundle_path}})),
+            }
+        }
+        fn bootout(&mut self, _: &str, _: &str) -> Result<(), String> {
+            self.actions.push("bootout");
+            if self.fail_bootout {
+                return Err("controlled bootout failure".into());
+            }
+            self.loaded = Presence::Absent;
+            assert!(
+                !self.crash_after_bootout,
+                "controlled process loss after bootout"
+            );
+            Ok(())
+        }
+        fn remove_plist(&mut self, _: &Path) -> std::io::Result<()> {
+            self.actions.push("unlink");
+            if self.fail_unlink {
+                return Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied));
+            }
+            self.plist_exists = false;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn removal_preserves_recovery_across_faults_and_repeated_cleanup() {
+        for mode in [
+            "initial_save",
+            "bootout",
+            "unlink",
+            "unknown",
+            "unowned",
+            "skip_bootout",
+            "crash",
+            "retirement",
+            "success",
+        ] {
+            let fixture = RegistryFixture::new();
+            let path = fixture.path();
+            let mut registry = load_registry(&path).unwrap();
+            registry.runners.push(recovery_record());
+            save_registry(&path, &registry).unwrap();
+            let mut system = SuppliedCleanup {
+                registry: path.clone(),
+                loaded: if mode == "unknown" {
+                    Presence::Unknown
+                } else {
+                    Presence::Present
+                },
+                plist_exists: true,
+                owned: mode != "unowned",
+                fail_bootout: mode == "bootout",
+                fail_unlink: mode == "unlink",
+                fail_retirement: mode == "retirement",
+                crash_after_bootout: mode == "crash",
+                actions: vec![],
+            };
+            if mode == "initial_save" {
+                fixture.writable(false);
+            }
+            let first = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                remove_record(
+                    &path,
+                    &mut registry,
+                    Some("runner-owned"),
+                    None,
+                    mode == "skip_bootout",
+                    &mut system,
+                )
+            }));
+            fixture.writable(true);
+            if mode == "initial_save" {
+                assert!(first.unwrap().is_err());
+                assert!(system.actions.is_empty());
+                assert_eq!(load_registry(&path).unwrap().runners.len(), 1);
+                continue;
+            }
+            let disk = load_registry(&path).unwrap();
+            assert!(disk.runners.is_empty());
+            assert_eq!(disk.pending_cleanup.is_empty(), mode == "success", "{mode}");
+            if mode == "crash" {
+                assert!(first.is_err());
+            } else {
+                let report = first.unwrap().unwrap().unwrap();
+                assert_eq!(report.cleanup_retained, mode != "success", "{mode}");
+                if mode != "success" {
+                    assert!(!report.warnings.is_empty());
+                }
+            }
+            if mode == "bootout" {
+                assert!(!system.plist_exists && system.loaded == Presence::Present);
+                assert_eq!(
+                    disk.pending_cleanup[0].runner.executable_path,
+                    recovery_record().executable_path
+                );
+                assert_eq!(
+                    disk.pending_cleanup[0].observations.last().unwrap()["service"]["presence"],
+                    "present"
+                );
+            }
+            if mode == "unowned" {
+                assert!(system.actions.is_empty());
+            }
+            system.fail_bootout = false;
+            system.fail_unlink = false;
+            system.owned = true;
+            system.fail_retirement = false;
+            system.crash_after_bootout = false;
+            if system.loaded == Presence::Unknown {
+                system.loaded = Presence::Present;
+            }
+            let mut disk = load_registry(&path).unwrap();
+            let retry = remove_record(
+                &path,
+                &mut disk,
+                None,
+                Some(&recovery_record().service_name),
+                false,
+                &mut system,
+            )
+            .unwrap();
+            if mode == "success" {
+                assert!(retry.is_none());
+            } else {
+                assert!(!retry.unwrap().cleanup_retained, "{mode}");
+            }
+            assert!(load_registry(&path).unwrap().pending_cleanup.is_empty());
+            assert!(!system.plist_exists && system.loaded == Presence::Absent);
+        }
     }
 }

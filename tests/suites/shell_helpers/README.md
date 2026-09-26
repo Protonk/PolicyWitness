@@ -172,3 +172,9 @@ installer completion. It checks the source bytes and an unrelated registration,
 and observes retained staging before test teardown removes simulated leftovers.
 The script-group controls also check that the wrapper cleans up after partial
 setup and propagates cleanup failure into its exit status.
+
+BYOXPC session controls also cover pending records after uncertain installation,
+uncertain installation without recovery identity, ad-hoc signing with auth keys
+removed, recovery after original output deletion, repeated cleanup, and interrupted
+staging deletion after verified machine cleanup. Durable state remains with the
+bundle; fake-command receipts distinguish each reached boundary.

@@ -1207,6 +1207,14 @@
           ]
         },
         {
+          "id": "registry_recovery",
+          "description": "Durable pending ownership, atomic registry changes and live cleanup recovery",
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh"
+          ]
+        },
+        {
           "id": "runner_install",
           "description": "Install and verify a team-matched external runner",
           "requires": [
@@ -1325,7 +1333,8 @@
         "runner_byoxpc/opt_bucket5_subpath",
         "runner_byoxpc/BBX-001",
         "runner_byoxpc/BBX-002",
-        "witness_contract/order_barrier_mutations"
+        "witness_contract/order_barrier_mutations",
+        "runner_byoxpc/registry_recovery"
       ]
     },
     "failure_boundaries": {

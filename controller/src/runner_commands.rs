@@ -12,30 +12,24 @@ use std::path::{Path, PathBuf};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::run_pw_runner_client;
-use crate::runner_manager::{self, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope};
+use crate::runner_manager::{
+    self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
+};
 use crate::runner_select::{RunnerConnectionKind, infer_record_kind};
 use crate::utils::now_unix_ms;
 
 #[derive(Serialize)]
 struct RunnerInstallData {
+    state: RunnerState,
+    loaded: runner_manager::ServiceObservation,
     runner: RunnerRecord,
     plist_path: String,
     bootstrapped: bool,
 }
 
 #[derive(Serialize)]
-struct RunnerRemoveData {
-    runner_id: String,
-    service_name: String,
-    plist_path: String,
-    booted_out: bool,
-    plist_removed: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    warnings: Vec<String>,
-}
-
-#[derive(Serialize)]
 struct RunnerVerifyData {
+    state: RunnerState,
     runner_id: Option<String>,
     service_name: String,
     runner_pid: Option<i64>,
@@ -97,6 +91,7 @@ usage:
   policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
   policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
   policy-witness runner validate
+  policy-witness runner reconcile
 "
     .to_string()
 }
@@ -221,6 +216,8 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     }
 
     let bundle_path = bundle_path.ok_or_else(|| "missing --bundle".to_string())?;
+    let bundle_path = std::fs::canonicalize(&bundle_path)
+        .map_err(|e| format!("bundle path not found: {}: {e}", bundle_path.display()))?;
     if !bundle_path.exists() {
         return Err(format!("bundle path not found: {}", bundle_path.display()));
     }
@@ -298,12 +295,15 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     let service_name = bundle_id.clone();
     let bundle_id = Some(bundle_id);
 
-    let (registry_path, mut registry) = load_registry_or_default()?;
-    if let Some(existing) = registry
-        .runners
-        .iter()
-        .find(|r| r.service_name == service_name)
-    {
+    let registry_path = runner_manager::runner_registry_path()?;
+    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
+    let mut registry = runner_manager::load_registry(&registry_path)?;
+    if let Some(existing) = runner_manager::conflicting_record(
+        &registry,
+        &service_name,
+        &bundle_path.to_string_lossy(),
+        &executable_path.to_string_lossy(),
+    ) {
         return Err(format!(
             "service name '{}' is already registered as runner '{}'; run \
              `policy-witness runner remove --service-name {}` to remove it first",
@@ -311,6 +311,17 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
+    let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
+    match std::fs::symlink_metadata(&plist_path) {
+        Ok(_) => {
+            return Err(format!(
+                "launchd plist already exists: {}; inspect runner reconcile",
+                plist_path.display()
+            ));
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        Err(e) => return Err(format!("cannot inspect launchd plist: {e}")),
+    }
     // Re-sign the bundle (or its inner binary) when the caller supplied a
     // signing flag. The two modes are:
     //   --identity <id>      : sign with the named identity, optionally
@@ -355,19 +366,16 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         if env.is_empty() { None } else { Some(&env) },
         kind,
     );
-    runner_manager::write_launchd_plist(&plist_path, &plist_contents)?;
-    if !skip_bootstrap {
-        if let Err(err) = runner_manager::launchctl_bootstrap(scope, &plist_path) {
-            let present =
-                runner_manager::launchctl_service_present(scope, &service_name).unwrap_or(false);
-            if !present {
-                return Err(err);
-            }
-            eprintln!("warning: {err} (service appears loaded; continuing)");
-        }
-    }
-
     let record = RunnerRecord {
+        state: RunnerState::Pending,
+        ownership: Some(RunnerOwnership {
+            plist_path: plist_path.to_string_lossy().into_owned(),
+            launchd_domain: runner_manager::launchctl_target(scope)?,
+            owner_uid: runner_manager::current_uid_string()?
+                .parse()
+                .map_err(|_| "invalid uid")?,
+            plist_sha256: runner_manager::content_hash(plist_contents.as_bytes()),
+        }),
         id: runner_id.clone(),
         service_name: service_name.clone(),
         bundle_path: bundle_path.display().to_string(),
@@ -381,10 +389,19 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         kind: Some(kind),
     };
 
-    registry.runners.push(record.clone());
-    runner_manager::save_registry(&registry_path, &registry)?;
+    let record = runner_manager::install_record(&registry_path, &mut registry, record, || {
+        runner_manager::write_launchd_plist(&plist_path, &plist_contents)?;
+        if !skip_bootstrap {
+            runner_manager::launchctl_bootstrap(scope, &plist_path)?;
+        }
+        Ok(())
+    })?;
+    let loaded =
+        runner_manager::inspect_service(&runner_manager::launchctl_target(scope)?, &service_name);
 
     let data = RunnerInstallData {
+        state: record.state,
+        loaded,
         runner: record,
         plist_path: plist_path.display().to_string(),
         bootstrapped: !skip_bootstrap,
@@ -582,6 +599,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
 
     let ok = outcome == "ok";
     let data = RunnerVerifyData {
+        state: record.state,
         runner_id: Some(record.id.clone()),
         service_name: record.service_name.clone(),
         runner_pid,
@@ -632,68 +650,26 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
         }
     }
 
-    let (registry_path, mut registry) = load_registry_or_default()?;
-    let idx = if let Some(id) = runner_id.as_ref() {
-        registry.runners.iter().position(|r| &r.id == id)
-    } else if let Some(service) = service_name.as_ref() {
-        registry
-            .runners
-            .iter()
-            .position(|r| &r.service_name == service)
-    } else {
+    let registry_path = runner_manager::runner_registry_path()?;
+    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
+    let mut registry = runner_manager::load_registry(&registry_path)?;
+    if runner_id.is_none() && service_name.is_none() {
         return Err("runner remove requires --id or --service-name".to_string());
-    };
-
-    let idx = match idx {
-        Some(idx) => idx,
-        None => {
-            return emit_runner_not_found(
-                "runner_remove",
-                runner_id.as_deref(),
-                service_name.as_deref(),
-            );
-        }
-    };
-
-    let record = registry.runners.remove(idx);
-    let plist_path = runner_manager::launchd_plist_path(&record.service_name, record.scope)?;
-
-    // Remove is the integrator's escape hatch for cleaning up dirty state, so
-    // launchctl and on-disk failures must not strand the registry entry.
-    // Surface them as warnings on a successful envelope instead.
-    let mut warnings: Vec<String> = Vec::new();
-    let mut booted_out = false;
-    if !skip_bootout {
-        match runner_manager::launchctl_bootout(record.scope, &plist_path) {
-            Ok(()) => booted_out = true,
-            Err(err) => warnings.push(format!("launchctl bootout: {err}")),
-        }
     }
-
-    let plist_removed = if plist_path.exists() {
-        match std::fs::remove_file(&plist_path) {
-            Ok(()) => true,
-            Err(err) => {
-                warnings.push(format!(
-                    "failed to remove plist {}: {err}",
-                    plist_path.display()
-                ));
-                false
-            }
-        }
-    } else {
-        false
-    };
-
-    runner_manager::save_registry(&registry_path, &registry)?;
-
-    let data = RunnerRemoveData {
-        runner_id: record.id,
-        service_name: record.service_name,
-        plist_path: plist_path.display().to_string(),
-        booted_out,
-        plist_removed,
-        warnings,
+    let Some(data) = runner_manager::remove_record(
+        &registry_path,
+        &mut registry,
+        runner_id.as_deref(),
+        service_name.as_deref(),
+        skip_bootout,
+        &mut runner_manager::NativeCleanup,
+    )?
+    else {
+        return emit_runner_not_found(
+            "runner_remove",
+            runner_id.as_deref(),
+            service_name.as_deref(),
+        );
     };
     let result = json_contract::JsonResult {
         ok: true,
@@ -712,9 +688,11 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
 /// Walk the registry and re-read each runner's on-disk signature and
 /// entitlements. This is *registry-internal* validation — it does not
 /// reconcile against launchctl or LaunchAgents/. Callers wanting that
-/// will need a separate gc/reconcile command.
+/// use the report-only reconcile command.
 fn cmd_runner_validate() -> Result<i32, String> {
-    let (registry_path, mut registry) = load_registry_or_default()?;
+    let registry_path = runner_manager::runner_registry_path()?;
+    let _registry_lock = runner_manager::lock_registry(&registry_path)?;
+    let mut registry = runner_manager::load_registry(&registry_path)?;
     let mut missing = 0usize;
     for record in registry.runners.iter_mut() {
         let exec_path = Path::new(&record.executable_path);
@@ -750,6 +728,136 @@ fn cmd_runner_validate() -> Result<i32, String> {
     Ok(0)
 }
 
+fn cmd_runner_reconcile() -> Result<i32, String> {
+    let (path, registry) = load_registry_or_default()?;
+    let mut records = Vec::new();
+    let mut candidates = Vec::new();
+    let mut inspection_errors = Vec::new();
+    for (state, record) in registry
+        .runners
+        .iter()
+        .map(|r| {
+            (
+                match r.state {
+                    RunnerState::Pending => "pending",
+                    RunnerState::Installed => "installed",
+                },
+                r,
+            )
+        })
+        .chain(
+            registry
+                .pending_cleanup
+                .iter()
+                .map(|r| ("pending_cleanup", &r.runner)),
+        )
+    {
+        let observation = match runner_manager::record_location(record) {
+            Ok((plist_path, domain)) => {
+                let service = runner_manager::inspect_service(&domain, &record.service_name);
+                let plist = runner_manager::inspect_plist(&plist_path);
+                json!({"recorded_state":state, "runner":record, "plist_path":plist_path, "launchd_domain":domain,
+                    "service_ownership":runner_manager::service_ownership(record, &service),
+                    "plist_ownership":runner_manager::plist_ownership(record, &plist),
+                    "service":service, "plist":plist})
+            }
+            Err(error) => {
+                json!({"recorded_state":state, "runner":record, "service":{"presence":"unknown"},
+                "plist":{"presence":"unknown"}, "ownership":"unknown", "error":error})
+            }
+        };
+        records.push(observation);
+    }
+    let mut directories = vec![(RunnerScope::System, PathBuf::from("/Library/LaunchDaemons"))];
+    match runner_manager::launchd_plist_path("placeholder", RunnerScope::User) {
+        Ok(path) => directories.push((
+            RunnerScope::User,
+            path.parent().expect("plist parent").to_path_buf(),
+        )),
+        Err(error) => inspection_errors.push(json!({"presence":"unknown", "error":error})),
+    }
+    for (scope, directory) in directories {
+        let entries = match std::fs::read_dir(&directory) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                inspection_errors.push(
+                    json!({"path":directory, "presence":"unknown", "error":error.to_string()}),
+                );
+                continue;
+            }
+        };
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    inspection_errors.push(
+                        json!({"path":directory, "presence":"unknown", "error":error.to_string()}),
+                    );
+                    continue;
+                }
+            };
+            let plist_path = entry.path();
+            if plist_path.extension().and_then(|v| v.to_str()) != Some("plist") {
+                continue;
+            }
+            let plist = runner_manager::inspect_plist(&plist_path);
+            if let Some(error) = &plist.error {
+                inspection_errors
+                    .push(json!({"path":plist_path,"presence":"unknown","error":error}));
+            }
+            let config = plist.config.as_ref();
+            let label = config.and_then(|c| c.get("Label")).and_then(|v| v.as_str());
+            let executable = config
+                .and_then(|c| {
+                    c.pointer("/ProgramArguments/0")
+                        .or_else(|| c.get("Program"))
+                })
+                .and_then(|v| v.as_str());
+            let candidate = label.is_some_and(|l| l.starts_with("com.policywitness."))
+                || executable.is_some_and(|p| {
+                    Path::new(p).file_name().and_then(|n| n.to_str()) == Some("PWRunner")
+                })
+                || (config.is_none()
+                    && plist_path
+                        .file_name()
+                        .is_some_and(|n| n.to_string_lossy().starts_with("com.policywitness.")));
+            if !candidate {
+                continue;
+            }
+            let registered = registry
+                .runners
+                .iter()
+                .chain(registry.pending_cleanup.iter().map(|c| &c.runner))
+                .any(|r| label == Some(r.service_name.as_str()) && r.scope == scope);
+            if registered {
+                continue;
+            }
+            let service = label.and_then(|label| {
+                runner_manager::launchctl_target(scope)
+                    .ok()
+                    .map(|domain| runner_manager::inspect_service(&domain, label))
+            });
+            candidates.push(json!({"recorded_state":"unregistered", "scope":scope, "service_name":label,
+                "executable_path":executable, "plist_path":plist_path, "service":service, "plist":plist,
+                "ownership":if config.is_none() {"unknown"} else if label.is_none() || executable.is_none() {"ambiguous"} else {"unowned"}}));
+        }
+    }
+    let data = json!({"registry_path":path, "records":records, "candidates":candidates, "inspection_errors":inspection_errors});
+    let result = json_contract::JsonResult {
+        ok: true,
+        rc: None,
+        exit_code: Some(0),
+        normalized_outcome: Some("ok".into()),
+        errno: None,
+        error: None,
+        stderr: None,
+        stdout: None,
+    };
+    json_contract::print_envelope("runner_reconcile", result, &data)?;
+    Ok(0)
+}
+
 pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
     if args.is_empty() {
         return Err(format!("missing runner command\n\n{}", runner_usage()));
@@ -763,6 +871,12 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
         "verify" => cmd_runner_verify(rest),
         "remove" => cmd_runner_remove(rest),
         "validate" => cmd_runner_validate(),
+        "reconcile" => {
+            if !rest.is_empty() {
+                return Err("runner reconcile accepts no arguments".into());
+            }
+            cmd_runner_reconcile()
+        }
         "-h" | "--help" | "help" => {
             println!("{}", runner_usage());
             Ok(0)

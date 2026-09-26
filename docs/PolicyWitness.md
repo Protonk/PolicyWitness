@@ -1079,8 +1079,11 @@ Notes:
   `--entitlements` without one of those is rejected — the registry would
   otherwise record entitlements that the kernel will not enforce.
 
-The install command writes a launchd plist, bootstraps the service, and records
-the runner in the local registry. The registry's `entitlements` field always
+The install command saves a `pending` registry record before writing its launchd
+plist, then bootstraps and marks the record `installed`. With `--skip-bootstrap`,
+plist creation completes installation; loaded state is reported separately.
+Errors after the pending save retain ownership for recovery. Pending runners
+can be listed, inspected and removed, but cannot be selected for specimens. The registry's `entitlements` field always
 reflects what's embedded in the binary (read back via `codesign -d --entitlements`),
 not what was supplied on the command line.
 
@@ -1173,16 +1176,31 @@ $PW run /tmp/pw_byoxpc_smoke.json --timeout-ms 20000
 ```sh
 $PW runner list
 $PW runner validate
+$PW runner reconcile
 $PW runner remove --id runner-<id>
 ```
 
-External runners install a launchd background item. `runner remove` is the
-preferred uninstall path and removes the launchd entry and registry record.
-It is also self-healing: if `launchctl bootout` fails (e.g. the service was
-already booted out) or the plist file is already gone, the registry entry is
-still removed and the failure is surfaced in the envelope's `data.warnings`
-array. This means `remove` is safe to call defensively before a fresh
-`install`.
+External runners install a launchd background item. `runner remove` first moves
+the record from `runners` to durable `pending_cleanup`, then checks ownership
+before bootout or plist removal. It retires recovery only after verifying both
+service and plist absence. Failed or uncertain cleanup reports `data.warnings`
+and `data.cleanup_retained: true`, with the retained record. Retrying the same
+remove command continues recovery, including when the plist has already gone.
+`--skip-bootout` keeps recovery until service absence is observed.
+
+`runner list` includes both collections. `runner reconcile` reports recorded
+state, observed service/plist presence and ownership, and scans LaunchAgents and
+readable LaunchDaemons for unregistered candidates. A label prefix is evidence
+for reporting only. Inspection failures remain unknown. Reconcile never removes
+anything. Use the recorded `bundle_path` to find a test runner's staging directory
+and durable `session.json`, even after its original test output is deleted.
+Test bundles remain staged until cleanup verifies service/plist absence and
+registry retirement; retry the session cleanup using its durable state path if
+bundle deletion was interrupted.
+
+Modifying commands use a stable advisory lock beside the registry and atomic
+JSON replacement. One registry admits one modifier at a time; read-only commands
+remain available. Never remove the lock file while a command might hold it.
 
 `runner validate` re-reads each registry entry's on-disk signature and
 entitlements (registry-internal only — it does not reconcile against launchctl
@@ -1193,7 +1211,8 @@ or `LaunchAgents/`).
 isn't present in the registry; the envelope `kind` still matches the operation
 so consumers can dispatch by `kind` and then branch on `normalized_outcome`.
 
-If you no longer have the registry entry, uninstall manually:
+For an unregistered candidate, inspect `runner reconcile` and verify its exact
+service, executable, scope and plist ownership before any manual cleanup:
 
 User scope:
 

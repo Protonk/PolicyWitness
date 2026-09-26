@@ -18,7 +18,7 @@ Core controller modules:
 - `controller/src/runner_select.rs` — runner selection + provenance
 - `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
 - `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
-- `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate
+- `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate/reconcile
 
 Support modules:
 
@@ -219,11 +219,16 @@ policy-witness runner status --id <runner-id> | --service-name <name>
 policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
 policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
 policy-witness runner validate
+policy-witness runner reconcile
 ```
 
-Install writes a launchd plist, bootstraps the service, and records runner
-metadata (entitlements + signature) in the local registry. The registry lives
-under `~/Library/Application Support/PolicyWitness/runners.json`.
+Install saves a `pending` registry record before creating the launchd plist.
+After bootstrap succeeds (or plist creation with `--skip-bootstrap`), it saves
+`installed`. The install envelope includes `data.state` and a separate `loaded`
+observation; installation state never substitutes for observed service presence.
+Errors after the pending save identify its recovery record on stderr.
+The registry lives under `~/Library/Application Support/PolicyWitness/runners.json`;
+`PW_RUNNER_REGISTRY` selects an alternate file.
 
 Notes:
 - BYOXPC is the only external runner kind. The bundle must be an XPC service
@@ -233,9 +238,41 @@ Notes:
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
 - A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See docs/PolicyWitness.md → "Caller authentication and ad-hoc signing".
 - `runner verify` defaults to a 5-second timeout (override with `--timeout-ms`).
-- `runner remove` always persists the registry change. `launchctl bootout` or plist-removal failures are surfaced in the envelope's `data.warnings` rather than aborting the call, so dirty launchd state cannot strand a registry entry.
+- `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved. `--skip-bootout` retains recovery while the service is present or unknown.
 - `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.
 - `runner validate` re-reads each registry entry's on-disk signature and entitlements. It does not reconcile against launchctl or `LaunchAgents/`.
+
+### Registry ownership and recovery
+
+Schema 1 accepts additive fields: `RunnerRecord.state` defaults to `installed`
+for older records, `ownership` is optional, and `pending_cleanup` defaults to an
+empty collection. Ownership records keep absolute bundle/executable/plist paths,
+launchd domain, installer UID and the expected plist hash. Cleanup records retain
+that identity plus before/after observations, so recovery does not depend on test
+output. Installation checks service, bundle and executable identities against
+both collections; conflicts direct callers to `runner remove --service-name`.
+
+Install, remove and validate hold an OS advisory lock beside the selected
+registry across the read/modify/write sequence and launchd actions. Competing
+modifiers fail with a registry-busy diagnostic. The stable `.lock` file remains
+in place; never unlink it while held. Updates write a new temporary file and
+atomically rename it, so unlocked list/status/verify/reconcile readers see a
+complete old or new registry. Rust 1.89 or newer provides the file lock API.
+
+List exposes both collections. Status and verify report pending installation
+state; specimen selection rejects it with `external runner is pending
+installation`. Remove accepts either collection through its existing selectors,
+including pending installations. It rechecks service executable and plist
+ownership before acting. Unknown inspection results preserve recovery; a
+permission error is never interpreted as service absence.
+
+`runner reconcile` is report-only. It reports recorded state, observed service
+and plist presence, and separate ownership classifications (`owned`, `unowned`,
+`ambiguous`, or `unknown` when inspection fails). It scans user LaunchAgents and
+readable system LaunchDaemons for `com.policywitness.*` labels or `PWRunner`
+executables missing from both collections. A prefix identifies a reporting
+candidate; it does not authorize cleanup. Reconcile creates no registry or lock
+file and performs no machine changes.
 
 ## Why the Rust launcher still shells out
 

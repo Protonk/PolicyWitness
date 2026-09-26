@@ -84,8 +84,26 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Opt-in reason:** Requires launchd service install/bootstrapping and an
   unsandboxed caller; can be blocked in sandboxed harnesses.
 - **Resource dependency:** `dist/PolicyWitness.app` built + GUI session.
-- **When to run:** After changing runner caller-authorization logic.
+- **When to run:** After changing runner caller authorization or session cleanup.
+  The shared session helper uses a unique service, treats installation failures
+  as failures, and retains durable ownership until cleanup is verified.
 - **Artifacts:** `tests/out/suites/runner_byoxpc/runner_auth_external/artifacts/*`
+
+### Registry recovery
+
+- **Suite/case:** `runner_byoxpc/registry_recovery`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
+- **Purpose:** Exercise actual registry locking and atomic persistence, pending
+  installation, ownership refusals, reconciliation, skipped-bootout recovery and
+  recovery after diagnostic output deletion. It uses child-process HOME/registry
+  overrides and uniquely owned user services; cleanup verifies service and plist
+  absence before deleting durable staging.
+- **Opt-in reason:** Creates and removes launchd services in the actual GUI domain.
+- **Resource dependency:** Signed app, GUI session, unsandboxed execution.
+- **When to run:** After changing runner registration, selection or cleanup.
+- **Artifacts:** `<run>/suites/runner_byoxpc/registry_recovery/artifacts/` contains
+  actual command receipts and final cleanup observations. Failed cleanup retains
+  staging with a recovery record outside run output.
 
 ### exec inheritance mutation controls
 

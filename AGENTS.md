@@ -73,9 +73,9 @@ Build knobs worth knowing (debugging/iteration):
 
 Use this when you are asked to install, verify, or clean up BYOXPC runners.
 
-The `runner` subcommands (install/list/status/verify/remove/validate) and the manual launchctl/plist cleanup recipes for both user and system scope live in [controller/README.md](controller/README.md) and [docs/PolicyWitness.md](docs/PolicyWitness.md). Agent-specific guidance:
+The `runner` subcommands (install/list/status/verify/remove/validate/reconcile) and the manual launchctl/plist cleanup recipes for both user and system scope live in [controller/README.md](controller/README.md) and [docs/PolicyWitness.md](docs/PolicyWitness.md). Agent-specific guidance:
 
-- Inspect first: `policy-witness runner list` and note `service_name`, `scope`, and `bundle_path` before acting.
+- Inspect first: `policy-witness runner list` and `runner reconcile`; note `service_name`, `scope`, `bundle_path` and pending-cleanup ownership before acting. Removal warnings or `cleanup_retained: true` require recovery; keep test staging and its durable session record until absence is verified. A label prefix alone never establishes cleanup ownership.
 - User-scope installs require a logged-in GUI session; sandboxed harnesses may block launchctl/log capture, so request escalation if needed (see the harness note below).
 
 ## Testing

@@ -269,14 +269,18 @@ fn find_external_record<'a>(
     registry: &'a RunnerRegistry,
     selector: &RunnerSelector,
 ) -> Result<&'a RunnerRecord, String> {
-    if let Some(id) = selector.runner_id.as_ref() {
+    let record = if let Some(id) = selector.runner_id.as_ref() {
         registry.runners.iter().find(|r| &r.id == id)
     } else if let Some(service) = selector.runner_service.as_ref() {
         registry.runners.iter().find(|r| &r.service_name == service)
     } else {
         None
     }
-    .ok_or_else(|| "external runner not found in registry".to_string())
+    .ok_or_else(|| "external runner not found in registry".to_string())?;
+    if record.state == runner_manager::RunnerState::Pending {
+        return Err("external runner is pending installation".into());
+    }
+    Ok(record)
 }
 
 /// Resolve a registry record + selector into a concrete external target.
@@ -408,6 +412,8 @@ mod tests {
         ent_keys: &[&str],
     ) -> RunnerRecord {
         RunnerRecord {
+            state: runner_manager::RunnerState::Installed,
+            ownership: None,
             id: "runner-ext".to_string(),
             service_name: "com.example.runner".to_string(),
             bundle_path: "/opt/pw/Runner.app".to_string(),
@@ -459,6 +465,7 @@ mod tests {
 
     fn registry_of(records: Vec<RunnerRecord>) -> RunnerRegistry {
         RunnerRegistry {
+            pending_cleanup: Vec::new(),
             schema_version: runner_manager::RUNNER_REGISTRY_SCHEMA_VERSION,
             runners: records,
         }
@@ -775,5 +782,26 @@ mod tests {
             other => panic!("expected unprivileged MachService, got {other:?}"),
         }
         let _ = fs::remove_file(&path);
+    }
+    #[test]
+    fn pending_external_record_is_not_selectable() {
+        let mut record = record_named("pending", "com.example.pending");
+        record.state = runner_manager::RunnerState::Pending;
+        let reg = registry_of(vec![record]);
+        for selector in [
+            RunnerSelector {
+                runner_id: Some("pending".into()),
+                ..Default::default()
+            },
+            RunnerSelector {
+                runner_service: Some("com.example.pending".into()),
+                ..Default::default()
+            },
+        ] {
+            assert_eq!(
+                find_external_record(&reg, &selector).unwrap_err(),
+                "external runner is pending installation"
+            );
+        }
     }
 }

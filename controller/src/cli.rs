@@ -16,6 +16,7 @@ pub fn print_usage() {
 usage:
   policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
+    commands: install, list, status, verify, remove, validate, reconcile
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout

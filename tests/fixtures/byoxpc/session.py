@@ -12,6 +12,7 @@ import secrets
 import shutil
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'caller_auth'))
 from bundle import CLIENT, SERVICE, command, inventory, save, signature
@@ -51,7 +52,8 @@ def service_present(state, out, label, invoke):
 
 
 def registry(pw, out, label, invoke):
-    return envelope(out, label, [pw, 'runner', 'list'], invoke)['runners']
+    data = envelope(out, label, [pw, 'runner', 'list'], invoke)
+    return data['runners'] + data.get('pending_cleanup', [])
 
 
 def owned_bundle(state):
@@ -64,9 +66,18 @@ def owned_bundle(state):
     return staging, bundle
 
 
-def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None):
-    state_path = out / 'session.json'
-    assert not state_path.exists(), f'ownership state already exists: {state_path}'
+def persist_state(state, receipt=None):
+    path = Path(state['state_path'])
+    temporary = path.with_suffix('.tmp')
+    save(temporary, state)
+    temporary.replace(path)
+    if receipt is not None and receipt.parent.exists():
+        save(receipt, state)
+
+
+def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team"):
+    receipt = out / 'session.json'
+    assert not receipt.exists(), f'ownership receipt already exists: {receipt}'
     app = app.resolve()
     save(out / 'source-before.json', inventory(app))
     staging = Path(tempfile.mkdtemp(prefix='pw-byoxpc-', dir='/private/tmp'))
@@ -75,8 +86,10 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     state = {'source_app': str(app), 'staging': str(staging),
              'bundle_path': str(staging / 'PWRunner.xpc'), 'service_name': service,
              'target': f'gui/{os.getuid()}/{service}', 'plist_path': str(launch_agents / (service + '.plist')),
-             'install_attempted': False, 'removed': False}
-    save(state_path, state)
+             'install_attempted': False, 'install_finished': False, 'removed': False,
+             'state_path': str(staging / 'session.json'), 'receipt_path': str(receipt),
+             'source_inventory': inventory(app), 'variant': variant}
+    persist_state(state, receipt)
     _, bundle = owned_bundle(state)
     existing = registry(pw, out, 'registry-before', invoke)
     assert not any(r['service_name'] == service for r in existing), 'test service already registered'
@@ -106,28 +119,41 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     assert info.get('PWRunnerRequireSignedCaller') is True, 'source caller authentication is disabled'
     assert client_sig['Identifier'] in info['PWRunnerAllowedIdentifiers'], info
     info['CFBundleIdentifier'] = service
+    if variant == 'adhoc_noauth':
+        info.pop('PWRunnerRequireSignedCaller', None)
+        info.pop('PWRunnerAllowedIdentifiers', None)
     info_path.write_bytes(plistlib.dumps(info))
     save(out / 'staged-info.json', info)
-    argv = [pw, 'runner', 'install', '--bundle', bundle, '--kind', 'byoxpc', '--scope', 'user', '--identity', identity]
+    argv = [pw, 'runner', 'install', '--bundle', bundle, '--kind', 'byoxpc', '--scope', 'user']
+    argv += ['--identity', '-', '--allow-adhoc'] if variant == 'adhoc_noauth' else ['--identity', identity]
     if source_entitlements is not None:
         entitlement_path = staging / 'entitlements.plist'
         entitlement_path.write_bytes(plistlib.dumps(source_entitlements))
         argv += ['--entitlements', entitlement_path]
     # The public installer owns the one signing operation. It may bootstrap
-    # before recording the runner, so cleanup must be armed before invoking it.
+    # after persisting pending ownership; arm cleanup before invoking it.
     state['install_attempted'] = True
-    save(state_path, state)
-    data = envelope(out, 'install', argv, invoke)
+    persist_state(state, receipt)
+    rc, raw, error = tool(out, 'install', argv, invoke=invoke, check=False, timeout=90)
+    state['install_finished'] = True
+    persist_state(state, receipt)
+    assert rc == 0, ('installation failed', rc, error)
+    installed = json.loads(raw)
+    assert installed['result']['ok'] is True, installed
+    data = installed['data']
     record = data['runner']
     assert record['service_name'] == service and record['scope'] == 'user', record
     assert Path(record['bundle_path']).resolve() == bundle and record['id'], record
     assert Path(data['plist_path']) == Path(state['plist_path']), data
     state['runner_id'] = record['id']
-    save(state_path, state)
+    persist_state(state, receipt)
     tool(out, 'verify-staged', ['/usr/bin/codesign', '--verify', '--deep', '--strict', bundle], invoke=invoke)
     sig = signature(bundle, out / 'staged-signature', invoke=invoke)
-    assert sig['Identifier'] == service and sig['TeamIdentifier'] == team, sig
-    assert sig['runtime'] and not sig['adhoc'] and sig.get('Timestamp'), sig
+    assert sig['Identifier'] == service and sig['runtime'], sig
+    if variant == 'adhoc_noauth':
+        assert sig['adhoc'] and sig['TeamIdentifier'] == 'not set', sig
+    else:
+        assert sig['TeamIdentifier'] == team and not sig['adhoc'] and sig.get('Timestamp'), sig
     assert entitlements(bundle, out, 'staged-entitlements', invoke) == source_entitlements, 'entitlements changed'
     current = inventory(bundle)
     for helper in ('pw-probe-runner', 'sb_api_validator'):
@@ -139,22 +165,29 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     save(env_path, {'runner_id': record['id'], 'service_name': service})
 
 
-def cleanup(pw, state_path, *, invoke=command):
+def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
     if not state_path.exists():
         return
-    out = state_path.parent
+    receipt = state_path
     state = json.loads(state_path.read_text())
+    durable = Path(state['state_path'])
+    if durable.exists():
+        state = json.loads(durable.read_text())
     staging, bundle = owned_bundle(state)
+    if not staging.exists():
+        assert state['removed'], 'staging disappeared before verified cleanup'
+        return
+    assert durable == staging / 'session.json', 'recovery record escaped staging'
+    # Cleanup receipts also survive deletion of the originating run output.
+    out = staging / ('cleanup-' + secrets.token_hex(8))
+    out.mkdir()
     try:
-        if state['install_attempted'] and not state['removed']:
-            capture_path = out / 'install/command.json'
-            capture = json.loads(capture_path.read_text()) if capture_path.exists() else {}
-            assert capture.get('returncode') is not None and not capture.get('harness_timeout'), \
-                'installer completion is uncertain; retain staging for inspection'
-            entries = registry(pw, out, 'cleanup-registry-before', invoke)
+        if state['install_attempted']:
+            entries = registry(pw, out, 'registry-before', invoke)
             matches = [r for r in entries if r['service_name'] == state['service_name']]
             assert len(matches) <= 1, 'ambiguous registry ownership'
-            present = service_present(state, out, 'cleanup-launchd-before', invoke)
+            assert matches or state['install_finished'] or state['removed'], \
+                'installer completion is uncertain and no recovery record exists; retain staging for inspection'
             plist = Path(state['plist_path'])
             if os.path.lexists(plist):
                 assert plist.is_file() and not plist.is_symlink(), 'launchd plist is not an owned regular file'
@@ -166,35 +199,38 @@ def cleanup(pw, state_path, *, invoke=command):
                 record = matches[0]
                 assert record['scope'] == 'user' and Path(record['bundle_path']).resolve() == bundle, 'registry ownership mismatch'
                 data = envelope(out, 'remove', [pw, 'runner', 'remove', '--id', record['id']], invoke)
-                assert not data.get('warnings'), ('runner removal warnings; retaining bundle', data)
-            elif present or os.path.lexists(plist):
-                # Partial install without a registry record: follow the documented
-                # manual recipe only after the exact plist proves ownership.
-                assert plist.is_file() and not plist.is_symlink(), 'partial install has no owned plist'
-                if present:
-                    tool(out, 'partial-bootout', ['/bin/launchctl', 'bootout', state['target']], invoke=invoke)
-                assert not service_present(state, out, 'partial-launchd-after', invoke), 'partial service still loaded'
-                plist.unlink()
-            assert not service_present(state, out, 'cleanup-launchd-after', invoke), 'service still loaded after removal'
+                assert not data.get('warnings') and not data.get('cleanup_retained'), ('runner cleanup incomplete; retaining bundle', data)
+            assert not service_present(state, out, 'launchd-after', invoke), 'service still loaded after removal'
             assert not os.path.lexists(plist), 'launchd plist remains after removal'
-            assert not any(r['service_name'] == state['service_name'] for r in registry(pw, out, 'cleanup-registry-after', invoke)), 'runner remains registered'
-        # Prove source preservation even when signing/setup failed.
-        state['removed'] = True
-        save(state_path, state)
-        shutil.rmtree(staging)
-    except BaseException as error:
-        state['cleanup_error'] = str(error)
-        save(state_path, state)
-        raise RuntimeError(f'cleanup failed; retained {bundle}; service {state["service_name"]}: {error}') from error
-    finally:
+            assert not any(r['service_name'] == state['service_name'] for r in registry(pw, out, 'registry-after', invoke)), 'runner remains registered'
         after = inventory(Path(state['source_app']))
         save(out / 'source-after.json', after)
-        assert after == json.loads((out / 'source-before.json').read_text()), 'test changed selected app'
+        assert after == state['source_inventory'], 'test changed selected app'
+        state['removed'] = True
+        state.pop('cleanup_error', None)
+        persist_state(state, receipt)
+        if receipt.parent != staging and receipt.parent.exists():
+            shutil.copytree(out, receipt.parent / out.name)
+        # Keep ownership through bundle deletion; a failure is safely retryable.
+        for child in staging.iterdir():
+            if child == durable:
+                continue
+            if child.is_dir() and not child.is_symlink():
+                remove_tree(child)
+            else:
+                child.unlink()
+        durable.unlink()
+        staging.rmdir()
+    except BaseException as error:
+        state['cleanup_error'] = str(error)
+        persist_state(state, receipt)
+        raise RuntimeError(f'cleanup failed; retained {bundle}; service {state["service_name"]}: {error}') from error
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'install':
-        install(sys.argv[2], Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5]), sys.argv[6])
+    if sys.argv[1] in ('install', 'install-noauth'):
+        install(sys.argv[2], Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5]), sys.argv[6],
+                variant='adhoc_noauth' if sys.argv[1] == 'install-noauth' else 'team')
     elif sys.argv[1] == 'cleanup':
         cleanup(sys.argv[2], Path(sys.argv[3]))
     else:
