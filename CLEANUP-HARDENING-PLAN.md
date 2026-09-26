@@ -12,7 +12,11 @@ Preserve `tests/out/ordering-final-all` unchanged. Before implementation, write
 relative path, entry type and permission mode; SHA-256 for regular files;
 literal target for symlinks; and directories, including empty ones. Walk without
 following symlinks. Final verification must detect added, removed and changed
-entries.
+entries. `artifact.inventory` in `tests/lib/artifact.py` already meets this
+specification (lstat modes, symlink targets, SHA-256 for regular files,
+directory entries); use it rather than writing a new walker, and reuse it in
+`retention_controls` to prove retained bytes unchanged. The record currently
+holds 20 symlinks and 111 empty directories.
 
 During implementation, give test runs fresh, explicit `PW_TEST_OUT_DIR` paths
 under `tests/out/runs/`. Exercise default-output replacement and `make clean`
@@ -66,21 +70,31 @@ provides no commit hash. Retention metadata stays outside retained directories.
 
 Set the default output to `tests/out/runs/default`. Named disposable runs use
 `tests/out/runs/<name>`. Explicit `PW_TEST_OUT_DIR` paths remain bounded within
-`tests/out` and separate from the selected app.
+`tests/out` and separate from the selected app. Direct script invocation falls
+back to `tests/out` in `tests/lib/testlib.sh` (line 47) and
+`tests/suites/runner_byoxpc/run.sh`; point both at `tests/out/runs/direct`.
+Neither path replaces output, but the old fallback would litter
+`tests/out/suites/` at the root.
 
-Recognize managed run roots through dispatcher-written ownership metadata tied
-to their run ID and output path. Write ownership before launching tests. A
-completed run has finalized execution and test-process teardown followed by a
-valid terminal run record. Completed runs with failed tests are disposable when
-unretained. Missing, malformed or inconsistent completion evidence leaves a
-managed run interrupted or ambiguous; placement under `runs/` alone does not
+Recognize managed run roots through `owner.json`, written by the dispatcher
+before anything else in the run directory, containing the run ID, the resolved
+output path and the start time. `plan.json` carries no run ID and
+`dispatch.json` is written after execution begins, so neither serves. A
+completed run has a valid terminal `run.json` whose run ID matches `owner.json`.
+Ctrl-C still writes `run.json` with interrupted invocations, so such a run is
+completed; only a missing or invalid terminal record (crash, SIGKILL) leaves a
+managed run interrupted. Completed runs with failed or interrupted cases are
+disposable when unretained. Malformed or inconsistent completion evidence
+leaves a managed run ambiguous; placement under `runs/` alone does not
 establish ownership.
 
 Before replacing output, validate the retention index and target. Refuse a
 target equal to, containing, or inside an indexed path, and refuse replacement
 of interrupted or ambiguous run output. Report the reason so the caller can
-choose a fresh output directory or inspect the existing one. Planning refusals
-use exit 2 and leave output unchanged.
+choose a fresh output directory or inspect the existing one. Deliberate removal
+of interrupted or ambiguous output is `--prune --apply --unfinished <name>`
+(step 6); do not document manual `rm -rf`, which bypasses the lock. Planning
+refusals use exit 2 and leave output unchanged.
 
 Index paths must remain within `tests/out`, with symlink redirects and path
 escapes rejected. A missing, malformed or unreadable index prevents destructive
@@ -89,13 +103,22 @@ their paths stay protected. Help, `--list` and invalid requests are read-only.
 
 ### Checkout-wide lock
 
-Use an OS-held advisory lock on a stable ignored file outside `tests/out`.
+Use an OS-held advisory lock (`fcntl.flock`) on `tests/.checkout.lock`, ignored
+through the root `.gitignore` (there is no `tests/.gitignore`). Derive the path
+from the repository root the dispatcher runs from, so fixture checkouts lock
+independently. Do not place it under `.tmp/`, which is slated for deletion:
+unlinking a held lock file silently disables the lock for every later process,
+because a new file is a new inode. Document that consequence.
+
 After read-only planning succeeds, acquire the lock, revalidate the index and
 output eligibility, then hold it through execution. A competing mutating
 operation receives a checkout-busy error even when it names a different output
 path. Keep the lock file in place between operations. PID/start information is
 diagnostic; lock release on process exit leaves completion to the run records.
 Help and `--list` remain available while execution holds the lock.
+
+Document the cost: one checkout runs one execution at a time. A quick smoke run
+waits for a long `--all`, and parallel work needs a second worktree.
 
 ### Integration and verification
 
@@ -125,19 +148,34 @@ Work in `controller/src/runner_commands.rs`, `runner_manager.rs`,
 ### Registry and installation
 
 Serialize modifying commands with a stable lock beside the selected registry.
-Hold it across each command's registry read-modify-write sequence and associated
-launchd actions. Write registry changes through a temporary file and atomic
-rename. Keep schema version 1, using serde defaults for additive fields. Add a
-default-empty `pending_cleanup` collection for removal records. Check new
-installation identities against both `runners` and `pending_cleanup`.
+Install, remove and validate take it; list, status, verify and reconcile do not,
+and the atomic rename below means they read the old or the new file, never a
+torn one. Hold the lock across each command's registry read-modify-write
+sequence and associated launchd actions. Implement it with
+`std::fs::File::lock` and `try_lock`, stable in the standard library since Rust
+1.89 (the checkout builds with 1.91); set `rust-version = "1.89"` in
+`controller/Cargo.toml`. Do not add `libc`, `fs2` or any other crate for this.
+
+Write registry changes through a temporary file and atomic rename. Keep schema
+version 1, using serde defaults for additive fields. This is safe because
+`RunnerRegistry` derives serde without `deny_unknown_fields`, and ordinary
+specimen runs never load the registry (only external selectors reach
+`load_registry`), so older binaries and release acceptance are unaffected. Add
+a default-empty `pending_cleanup` collection for removal records. Check new
+installation identities against both `runners` and `pending_cleanup`; a
+conflict with a cleanup record reports the same remedy as an active conflict,
+`runner remove` for that service name, which retries the cleanup.
 
 Add `RunnerRecord.state`, with `pending` and `installed`, defaulting to
 `installed` when absent. Save `pending` before writing the plist. Set
 `installed` when the requested installation completes: after bootstrap normally,
 or after plist creation with `--skip-bootstrap`. Report loaded status through
-its own observation. List the state, reject pending records for specimen
-selection, and allow their removal. Errors after the pending save leave the
-record available for recovery and report it on stderr.
+its own observation. List the state and allow removal of pending records.
+Reject pending records for specimen selection in `find_external_record`
+(`runner_select.rs`) with a distinct error text, `external runner is pending
+installation`, that tests pin; `status` and `verify` may read pending records
+and report the state. Errors after the pending save leave the record available
+for recovery and report it on stderr.
 
 ### Removal and reconciliation
 
@@ -162,6 +200,13 @@ ownership as owned, unowned or ambiguous; report inspection failures as unknown.
 A label-prefix match identifies a candidate for reporting. Cleanup requires
 validated ownership.
 
+Envelope changes are additive and named here so the contract documentation and
+tests agree: `runner install` reports `state`; `runner list` adds
+`pending_cleanup`; `runner remove` adds `cleanup_retained` (boolean) and, when
+true, the retained record. Current consumers are the session helper (reads
+`runners`), one `run_effects` check (reads the envelope kind) and the auth test
+being migrated, so nothing existing breaks.
+
 Update usage in `controller/src/cli.rs` and `runner_commands.rs`, the CLI and
 registry contracts in `controller/README.md`, and the external-runner cleanup
 section in `docs/PolicyWitness.md`.
@@ -178,7 +223,16 @@ Keep live recovery records in the durable registry and test-owned bundles in
 staging outside disposable run output. Keep the helper's ownership and recovery
 record with its staged bundle until that bundle is removed. These records must
 contain everything required for recovery; run-local copies serve as diagnostic
-receipts.
+receipts. The run-local receipt records the staging path and the wrapper's
+cleanup trap follows it, since the record no longer lives under the run output.
+The registry record's `bundle_path` is the recovery pointer a human follows from
+`runner reconcile` output to the staging directory.
+
+The `uncertain_install` scenario changes. Today the helper refuses cleanup when
+installer completion is uncertain and retains staging for inspection. With a
+pending record, the helper reads the registry: if a record for its service
+exists, it proceeds through `runner remove`; if none exists, it retains staging
+as today. Update the scenario and the helper together.
 
 Extend `check_byoxpc_setup.py` and registry tests for pending/installed transitions,
 `--skip-bootstrap`, pending-selection refusal, partial installation, removal
@@ -217,18 +271,30 @@ output remains available for deliberate cleanup after inspection.
 `tests/run.sh --prune --apply` acquires the checkout lock and evaluates current
 eligibility before deletion. Apply reports actual removals and each failure;
 its exit status reports failure if a deletion fails. Preview uses the same
-classification rules on a read-only snapshot. Reject combinations with case or
+classification rules on a read-only snapshot and does not hold the lock. It
+tries the lock non-blocking: when busy, it reports that an execution holds the
+checkout and labels runs without a terminal record `keep: active or
+interrupted` instead of `keep: interrupted`. Reject combinations with case or
 suite selection and reject `--apply` without `--prune`.
 
-Keep all pruning inside `tests/out/runs/`. Report output elsewhere under
-`tests/out`, including release acceptance, as unmanaged and preserve it. Refuse
-symlink redirects, path escapes and deletion of any candidate that overlaps an
-indexed path. Make `make clean` delegate to `tests/run.sh --prune --apply`.
+`tests/run.sh --prune --apply --unfinished <name>` deletes one named
+interrupted or ambiguous managed run under the lock, after the retained-overlap
+check. It is the only supported way to remove such output. Reject
+`--unfinished` without `--apply`, and reject a name that resolves to a
+completed, retained or unmanaged directory.
+
+Keep all pruning inside `tests/out/runs/`. Consider only directories directly
+under `runs/`; never touch files anywhere under `tests/out`, including
+`ordering-final-all.inventory.json`. Report output elsewhere under `tests/out`,
+including release acceptance, as unmanaged and preserve it. Refuse symlink
+redirects, path escapes and deletion of any candidate that overlaps an indexed
+path. Make `make clean` delegate to `tests/run.sh --prune --apply`; it no
+longer removes release acceptance output.
 
 Extend retention controls for successful and failed completed runs, interrupted
-and ambiguous runs, unmanaged directories, preview/apply state changes, invalid
-indexes, retained-path overlap, lock contention, deletion failures and
-`make clean`. Enforce an unlink/rmdir failure through fixture directory
+and ambiguous runs, unmanaged directories, preview/apply state changes, preview
+under a held lock, `--unfinished` against each disposition, invalid indexes,
+retained-path overlap, lock contention, deletion failures and `make clean`. Enforce an unlink/rmdir failure through fixture directory
 permissions and verify both the reported failure and remaining filesystem state.
 
 Run `dispatcher`, relevant `shell_helpers` and release controls. Document the
@@ -251,6 +317,8 @@ test-owned leftover or explain its ownership and recovery state. Recompute the
 `ordering-final-all` inventory and require an exact match.
 
 Add the passing final run to `tests/RETAINED.json` with its actual tested source
-and artifact provenance. Keep its execution receipts with the acceptance output.
+and artifact provenance. `source` is the implementation commit the build came
+from; the index commit necessarily follows it and is not the source. Keep its
+execution receipts with the acceptance output.
 Commit the index entry and this plan's deletion together once all acceptance
 obligations are satisfied.
