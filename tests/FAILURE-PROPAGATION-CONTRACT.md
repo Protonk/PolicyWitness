@@ -695,6 +695,56 @@ remain unestablished. No response-8 producer path can yield `disagreement` or
 and the encoder and consumers reject that unsupported claim even with empty
 limitations.
 
+The ordering promise covers PolicyWitness's own actions only. It does not
+promise that a target's state is unchanged between a query and its attempt,
+that a path spelling names the same runtime object at both times, that a query
+was requested for every step (planning exclusions keep their `missing_reason`),
+a comparison for attempts whose prediction was excluded or never returned, or
+any per-step interleaving. Collection closure, not confirmed validator
+termination, is the release condition: a validator that survives cleanup may
+keep querying, but none of its later records is collected or used.
+
+#### Ordering evidence states
+
+C/S/O are `collection_closed_before_proceed`, `proceed_set` and
+`proceed_observed`. Rows give the final observations for each scenario.
+
+| Scenario | C/S/O | Validator disposition | Per-step order |
+| --- | --- | --- | --- |
+| No worker spawned | No ordering object | No snapshot | `unestablished` on any emitted step |
+| Worker exists, application not confirmed | false/false/false | `not_invoked` | `unestablished` |
+| Applied, no planned queries, release acknowledged | true/true/true | `not_needed` | `unestablished`; no prediction exists |
+| Setup/spawn failed, release acknowledged | true/true/true | `not_spawned` | `unestablished`; the failure is retained in `validator_spawn_failure` |
+| Eligible records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` for eligible records only |
+| Partial, diagnostic or rejected records, release acknowledged | true/true/true | `reaped` or `unconfirmed` | `query_first` only for eligible associated records; all others `unestablished` |
+| Proceed expired or worker died before acknowledgement; hook later returned | true/true/false | actual terminal disposition | `unestablished`; received records survive |
+| Worker died or hung after acknowledgement | true/true/true | actual terminal disposition | eligible records retain `query_first`; missing attempts remain unavailable |
+
+Consumers reject `query_first` without every prerequisite, with the order
+limitation still present, or on a synthetic or diagnostic record, and reject
+`unestablished` for an eligible record whose full chain is established. Release
+without collection closure, acknowledgement without release, and release before
+successful application are protocol violations: the raw sentinels stay visible,
+`protocol_violations` names the contradiction, and no order is derived.
+
+#### Ordering protocol names
+
+| Thing | Name | Where |
+| --- | --- | --- |
+| Release sentinel | `proceed` | shared-memory header offset 56 |
+| Acknowledgement sentinel | `proceed_observed` | shared-memory header offset 60 |
+| Worker operation | `PW_OP_PROCEED` = 11 | `pw_probe_runner_abi.h` |
+| Worker failure | `PW_FAILURE_PROCEED_TIMEOUT` = 8; clock failure is `PW_FAILURE_NATIVE` with kind `PW_NATIVE_CLOCK` = 3 | `pw_probe_runner_abi.h` |
+| Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
+| Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
+| Request override | `validator_io_timeout_ms` | `PWRunnerTestOverrides` |
+| Run-level evidence | `runner_subprocess.ordering` | response 8 |
+| Per-step evidence | `comparison.order` | response 8 |
+| Host reply failure | `runner_reporting_failed`, `reporting_failure` | response 8; comparisons absent, drift null |
+| Failed validator launch | `validator_spawn_failure` | response 8; optional, additive |
+| Unordered limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | response 7 and later |
+| Native gated validator | `tests/fixtures/validator/bridge.m`, suite `validator_bridge` | test equipment |
+
 
 Each new step contains `comparison` with `scope="submitted_operation_and_target"`,
 `prediction` (allow/deny/unavailable), `observation`

@@ -331,6 +331,53 @@ def ordering_controls(artifacts):
         r['steps'] = []; r.pop('runner_subprocess'); r.pop('validator_subprocess')
     report_check('minimal', minimal)
 
+    # Preserve the host's raw launch evidence without an errno-name allowlist or
+    # interpreting its diagnostic. Older envelopes remain explicitly unreported.
+    spawn = dict(origin='runner_host', operation='posix_spawn',
+        executable_path='/unknown/validator-"é"', return_code=2147483647,
+        diagnostic='unfamiliar native launch diagnostic')
+    def spawn_failed(r):
+        unordered(r)
+        r.update(rc=1, normalized_outcome='validator_spawn_failed', error='native launch failure',
+                 validator_spawn_failure=copy.deepcopy(spawn))
+        r.pop('validator_subprocess')
+        r['runner_subprocess']['ordering']['validator_disposition'] = 'not_spawned'
+        r['steps'][0]['sandbox_check'].update(outcome='error', result_source='synthetic',
+            native_rc=None, errno=None, missing_reason='validator_not_invoked')
+        r['steps'][0]['comparison'].update(prediction='unavailable', conclusion='unavailable')
+        r['steps'][0]['drift'] = None
+    check('unfamiliar_spawn_failure', spawn_failed)
+    runner = copy.deepcopy(base); spawn_failed(runner)
+    envelope = dict(data=dict(runner_result=runner))
+    recovered = recover_evidence(envelope)
+    assert recovered['validator_spawn_failure'] == spawn
+    runner['validator_spawn_failure']['return_code'] = 2
+    assert recovered['validator_spawn_failure'] == spawn, 'recovery aliases its input'
+    runner.pop('validator_spawn_failure')
+    assert not validate_evidence_shape(envelope), 'older response-8 replies may omit spawn evidence'
+    assert recover_evidence(envelope)['validator_spawn_failure'] is None
+    def retained_spawn(r):
+        r.pop('validator_subprocess')
+        r['steps'][0]['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None)
+        r['reporting_failure'].update(original_rc=1, original_normalized_outcome='validator_spawn_failed',
+                                     original_error='native launch failure')
+        r['validator_spawn_failure'] = copy.deepcopy(spawn)
+    assert report_check('retained_spawn', retained_spawn)['validator_spawn_failure'] == spawn
+    def false_spawn_retention(r):
+        minimal(r); r['validator_spawn_failure'] = copy.deepcopy(spawn)
+    report_check('minimal_with_spawn_evidence', false_spawn_retention, True)
+    # The record's shape is checked, not its meaning: any nonzero code is a failure.
+    for name, change in [
+        ('zero_code', lambda r: r['validator_spawn_failure'].update(return_code=0)),
+        ('string_code', lambda r: r['validator_spawn_failure'].update(return_code='2')),
+        ('missing_path', lambda r: r['validator_spawn_failure'].pop('executable_path')),
+        ('foreign_origin', lambda r: r['validator_spawn_failure'].update(origin='validator')),
+        ('with_subprocess', lambda r: r.update(validator_subprocess=dict(reaped=True, records=[]))),
+    ]:
+        def malformed(r, change=change):
+            spawn_failed(r); change(r)
+        check('malformed_spawn_' + name, malformed, True)
+
 def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)

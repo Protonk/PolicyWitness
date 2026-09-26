@@ -12,6 +12,7 @@ Pick what you’re changing:
 - **Runner service (self-sandboxing witness)** → [runner/README.md](runner/README.md), [runner/Services/PWRunner/](runner/Services/PWRunner/)
 - **Runner test machinery (unit tests, `_test_overrides`)** → [runner/AGENTS.md](runner/AGENTS.md)
 - **Runner API types** → [runner/Sources/PWRunnerCore/PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift)
+- **Query/attempt ordering (release barrier, `comparison.order`)** → [tests/FAILURE-PROPAGATION-CONTRACT.md → Public representation and meaning](tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning), `wait_for_proceed` in [pw_probe_runner.c](controller/tools/pw_probe_runner/pw_probe_runner.c), the post-applied hook in [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), `ComparisonEvidence` in [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 - **Runner client (NSXPCConnection wrapper)** → [runner/Clients/PWRunnerClient/](runner/Clients/PWRunnerClient/)
 - **Build + signing** → [build.sh](build.sh), [docs/SIGNING.md](docs/SIGNING.md)
 - **Evidence generation / manifests** → [tests/build-evidence.py](tests/build-evidence.py)
@@ -50,6 +51,7 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 - **One-way sandbox per process**: the worker applies exactly one sandbox to itself and exits. A new specimen means a fresh XPC host plus a fresh worker.
 - **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
 - **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
+- **Predictions precede attempts**: the worker attempts nothing until the host has closed validator collection and stored `proceed`; `comparison.order: "query_first"` claims only that interval, never equal state or runtime identity, so `drift: true` is unreachable until a separate evidence contract exists. Changes to the wait, the release store or the eligibility rule must rerun the opt-in `witness_contract/order_barrier_mutations` control.
 - **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
 - **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift` and `CWorkerOrchestrator.swift`; post-apply work belongs in `pw-probe-runner` (the C worker).
 

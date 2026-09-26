@@ -13,6 +13,7 @@ def recover_evidence(envelope):
     answer = {
         'schema_version': (runner or {}).get('schema_version'),
         'reporting_failure': (runner or {}).get('reporting_failure'),
+        'validator_spawn_failure': (runner or {}).get('validator_spawn_failure'),
         'step_reporting': ('reporting_failed' if (runner or {}).get('reporting_failure') is not None else
                            'no_runner_reply' if runner is None else
                            'not_reported' if steps is None else
@@ -99,8 +100,19 @@ def validate_evidence_shape(envelope):
                 type(failure.get('evidence_retained')) is not bool:
             errors.append('invalid reporting_failure diagnostics')
         elif not failure['evidence_retained'] and (runner.get('steps') != [] or
-                runner.get('runner_subprocess') is not None or runner.get('validator_subprocess') is not None):
-            errors.append('reporting failure without evidence retention must omit steps and subprocesses')
+                runner.get('runner_subprocess') is not None or runner.get('validator_subprocess') is not None or
+                runner.get('validator_spawn_failure') is not None):
+            errors.append('reporting failure without evidence retention must omit steps, subprocesses and validator spawn evidence')
+    spawn = runner.get('validator_spawn_failure')
+    if spawn is not None:
+        if not isinstance(spawn, dict) or spawn.get('origin') != 'runner_host' or \
+                spawn.get('operation') != 'posix_spawn' or \
+                not isinstance(spawn.get('executable_path'), str) or not spawn['executable_path'] or \
+                type(spawn.get('return_code')) is not int or spawn['return_code'] == 0 or \
+                not isinstance(spawn.get('diagnostic'), str):
+            errors.append('invalid validator_spawn_failure record')
+        elif runner.get('validator_subprocess') is not None:
+            errors.append('validator_spawn_failure cannot coexist with a validator subprocess')
     values = {
         'scope': {'submitted_operation_and_target'},
         'prediction': {'allow', 'deny', 'unavailable'},
