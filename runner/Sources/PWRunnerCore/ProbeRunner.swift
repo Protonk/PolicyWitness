@@ -128,7 +128,7 @@ struct PredictionUnavailablePair: Hashable {
     let filterKind: String
 }
 
-private let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
+let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
     // iokit-open-service + iokit-registry-entry-class: verified
     // 2026-05-29 against IOSurfaceRoot; no filter ID in 1..200
     // produced a sandbox_check verdict matching kernel enforcement.

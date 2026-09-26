@@ -337,7 +337,7 @@ func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecisio
         let kind = check.filter.kind
         let reason: String?
         let code: String?
-        if predictionUnavailableOpFiltersHostMirror.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {
+        if predictionUnavailableOpFilters.contains(PredictionUnavailablePair(operation: check.operation, filterKind: kind)) {
             reason = "prediction unavailable for this operation and filter"
             code = "prediction_unavailable_pair"
         } else if !knownFilterKinds.contains(kind) {
@@ -368,19 +368,6 @@ private func pathFilterIsUnresolvable(_ kind: String, _ value: String?) -> Bool 
     guard let v = value, !v.isEmpty else { return false }
     return canonicalizePath(v).resolved == nil
 }
-
-/// Host-side mirror of ProbeRunner's predictionUnavailableOpFilters.
-/// The orchestrator skips validator probes for these pairs and
-/// synthesizes prediction_unavailable verdicts directly. source_drift
-/// already enforces three-way agreement on the underlying pair set.
-private let predictionUnavailableOpFiltersHostMirror: Set<PredictionUnavailablePair> = [
-    .init(operation: "iokit-open-service",
-          filterKind: PWRunnerWire.sandboxFilterIokitRegistryEntryClass),
-    .init(operation: "iokit-open-user-client",
-          filterKind: PWRunnerWire.sandboxFilterIokitUserClientClass),
-    .init(operation: "sysctl-read",
-          filterKind: PWRunnerWire.sandboxFilterSysctlName),
-]
 
 private func mapFilterKindToValidator(_ wireKind: String) -> String {
     switch wireKind {

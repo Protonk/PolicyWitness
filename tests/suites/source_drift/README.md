@@ -23,6 +23,10 @@ signal.
   `runner/augments/` are managed separately and are not part of the
   source-set check.
 
+The shared prediction-unavailable operation/filter set in `ProbeRunner.swift`
+must agree with the user guide. Both Swift callers use that single set;
+independent runner unit tests pin their exclusion behavior.
+
 The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
 They also lock the `_test_overrides` key table in `runner/README.md` to the

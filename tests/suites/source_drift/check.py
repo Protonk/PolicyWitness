@@ -442,19 +442,17 @@ def check_attempt_kind_enum_agreement() -> list[str]:
 # ---------------------------------------------------------------------------
 # Prediction-unavailable (op, filter) pair agreement.
 #
-# Three sources of truth must list the same set of pairs:
+# The shared Swift set and documentation must list the same pairs:
 #   - runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
-#   - runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror
 #   - docs/PolicyWitness.md "Filter kinds where prediction is unavailable"
 #
 # A pair added to one but not the other means a request that should skip
-# in the runner only skips in one path, or that the documented contract
-# diverges from the runtime — both bad.
+# in the runner disagrees with the documented runtime contract.
 # ---------------------------------------------------------------------------
 
 def parse_swift_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     text = PROBE_RUNNER.read_text(encoding="utf-8")
-    # private let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
+    # let predictionUnavailableOpFilters: Set<PredictionUnavailablePair> = [
     #     .init(operation: "iokit-open-service",
     #           filterKind: PWRunnerWire.sandboxFilterIokitRegistryEntryClass),
     #     ...
@@ -512,47 +510,6 @@ def parse_pwrunner_wire_filter_constants() -> dict[str, str]:
     return {m.group(1): m.group(2) for m in const_re.finditer(body)}
 
 
-def parse_orchestrator_prediction_unavailable_pairs() -> set[tuple[str, str]]:
-    """CWorkerOrchestrator carries its own host-side mirror of the
-    prediction_unavailable (op, filter) pair set. source_drift
-    enforces it against the Swift / docs sets so a future addition
-    to either doesn't leave the orchestrator silently routing the
-    new pair through the validator (producing bad_filter responses
-    instead of the synthesized prediction_unavailable verdict)."""
-    text = CWORKER_ORCHESTRATOR.read_text(encoding="utf-8")
-    block_re = re.compile(
-        r'predictionUnavailableOpFiltersHostMirror[^\[]*\[(.*?)\n\]',
-        re.DOTALL,
-    )
-    match = block_re.search(text)
-    if match is None:
-        fail("could not locate predictionUnavailableOpFiltersHostMirror in runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift")
-        sys.exit(2)
-    body = match.group(1)
-    wire = parse_pwrunner_wire_filter_constants()
-    pair_re = re.compile(
-        r'\.init\(operation:\s*"([^"]+)"\s*,\s*filterKind:\s*(?:PWRunnerWire\.([A-Za-z]+)|"([^"]+)")',
-    )
-    pairs: set[tuple[str, str]] = set()
-    for m in pair_re.finditer(body):
-        operation = m.group(1)
-        const_name = m.group(2)
-        literal = m.group(3)
-        if const_name:
-            kind = wire.get(const_name)
-            if kind is None:
-                fail(
-                    f"predictionUnavailableOpFiltersHostMirror references "
-                    f"PWRunnerWire.{const_name} but no such constant is "
-                    f"defined in runner/Sources/PWRunnerCore/PWRunnerAPI.swift"
-                )
-                sys.exit(2)
-        else:
-            kind = literal
-        pairs.add((operation, kind))
-    return pairs
-
-
 def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
     """Extract (op, filter) pairs from docs/PolicyWitness.md "Currently in
     this category:" bullets, formatted as
@@ -577,7 +534,6 @@ def parse_docs_prediction_unavailable_pairs() -> set[tuple[str, str]]:
 def check_prediction_unavailable_agreement() -> list[str]:
     swift_pairs = parse_swift_prediction_unavailable_pairs()
     docs_pairs = parse_docs_prediction_unavailable_pairs()
-    orch_pairs = parse_orchestrator_prediction_unavailable_pairs()
     problems: list[str] = []
     # Treat the Swift ProbeRunner set as the canonical source and
     # compare every other source against it. A single canonical
@@ -586,7 +542,6 @@ def check_prediction_unavailable_agreement() -> list[str]:
     canonical = swift_pairs
     others = [
         ("docs (docs/PolicyWitness.md)", docs_pairs),
-        ("orchestrator host-mirror (CWorkerOrchestrator.swift)", orch_pairs),
     ]
     for label, other in others:
         for pair in sorted(canonical - other):

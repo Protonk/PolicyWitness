@@ -14,7 +14,7 @@ runSandboxApplyTests(tk)
 // depends on (test_overrides echo, runner_subprocess present iff observed).
 runEnvelopeInvariantTests(tk)
 // runSandboxCheck short-circuit for (operation, filter_kind) pairs that skip
-// libsandbox; wire envelope of the synthesized prediction_unavailable verdict.
+// libsandbox; synthesized verdicts and independent host query-plan exclusions.
 runPredictionUnavailableTests(tk)
 // validateSandboxChecks tristate: value-required kinds, the no-value kind, and
 // unknown kinds that downgrade rather than reject.

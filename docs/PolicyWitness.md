@@ -846,10 +846,9 @@ Currently in this category:
 Adding a pair to this set requires empirical verification via
 `tests/suites/witness_contract/harness/verify_filter_id.sh`. The
 matching code lives in
-`runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters` and is
-mirrored host-side by
-`runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift::predictionUnavailableOpFiltersHostMirror`;
-both lists must agree (source_drift enforces).
+`runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters`.
+Both the Swift check helper and the host query planner use this shared set;
+source_drift checks its agreement with the documented pairs.
 
 ### Attempt kinds the runner implements
 

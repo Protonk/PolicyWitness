@@ -66,7 +66,7 @@ bundle scaffolding under `runner/Services/PWRunner/`.
 - `Sources/PWRunnerCore/CWorkerOrchestrator.swift`
   - Joins the C worker and the validator child into a single
     `PWRunnerRunResult`. Owns probe-plan validation,
-    `prediction_unavailable` host mirror, classification, and drift.
+    `prediction_unavailable` query planning, classification, and drift.
 - `Sources/PWRunnerCore/PWRunnerService.swift`
   - Orchestrates the host flow (decode → validate → drive C worker +
     validator → reply).

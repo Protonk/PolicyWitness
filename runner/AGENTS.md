@@ -14,7 +14,7 @@ SwiftPM is test-only here. Production builds still go through [build.sh](../buil
 
 1. The behavior is a small pure function that backs an outcome decision (e.g. the orchestrator's drift computation, `CWorker`'s sentinel-deadline math, `ValidatorClient`'s verdict-by-step-id join). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
 2. A required observation is unreliable from an ordinary specimen, such as a failed host kill/reap or completed publication followed by an abnormal exit. Use narrow driver controls; constructed classifier rows establish interpretation separately.
-3. You're testing a failure mode of a small helper (validator partial-evidence on EOF, prediction-unavailable host-mirror agreement) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
+3. You're testing a failure mode of a small helper (validator partial-evidence on EOF, prediction-unavailable query exclusions) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
 
 Don't reach for `runner_unit` when:
 
