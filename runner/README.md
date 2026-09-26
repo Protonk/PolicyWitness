@@ -360,8 +360,7 @@ failed cleanup. Validator replies are byte-framed, strictly decoded, structurall
 validated, then associated by unique requested ID. Allow/deny records require
 native integer results. Null-ID and unfamiliar valid diagnostics remain at run
 scope; missing/duplicate/unexpected replies cannot be hidden by record count.
-See [routing inventory](../tests/FAILURE-PROPAGATION-INVENTORY.md) and
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for capacities, acceptance
+See the [field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for capacities, acceptance
 rules and remaining observation/liveness limitations.
 
 

@@ -930,8 +930,6 @@ rejects disagreement outright because no vocabulary for established state or
 runtime identity exists. Dropping limitation strings cannot manufacture evidence.
 The Rust controller preserves response versions and unfamiliar order strings.
 
-The [dependency inventory](FAILURE-PROPAGATION-INVENTORY.md#derived-comparison-dependencies)
-maps the source/test/public-contract changes before implementation. Acceptance
-selects all 130 currently registered canonical cases, including opt-ins and both
-runner contexts, plus any subsequently registered additions. This is a conservative
-superset, not a fixed ceiling. Required skips/unrun cases prevent completion.
+Acceptance selects every registered canonical case in [the catalog](catalog.json),
+including opt-ins and both runner contexts. Required skips/unrun cases prevent
+completion.

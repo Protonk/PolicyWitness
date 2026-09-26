@@ -351,7 +351,7 @@ errors. Exit 2 means planning/configuration was rejected before execution.
 See `tests/suites/dispatcher/README.md` for the independent controls.
 
 `failure_boundaries` covers the admission and validator receiver routes in
-[the inventory](FAILURE-PROPAGATION-INVENTORY.md). Run it with `runner_unit`,
+[the receiver contract](FAILURE-PROPAGATION-CONTRACT.md#admission-and-validatorcontroller-receiver-contract). Run it with `runner_unit`,
 `runner_abi_layout`, `runner_c_worker_harness` and `unit` for driver/ABI/controller
 controls. Existing `runner_validator_failure` and `witness_contract` retain their
 partial evidence and attribution assertions.

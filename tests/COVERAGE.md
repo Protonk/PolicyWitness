@@ -115,5 +115,4 @@ controls. Rust `unfamiliar_diagnostics_survive_*_capture` tests cover runner,
 helper and observer JSON receivers. These are transport controls; real producer
 attribution remains covered by `witness_contract/worker_progress_and_failure`,
 `witness_contract/worker_sparse_failure`, and the `failure_boundaries` cases
-listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership)
-and [reporting inventory](FAILURE-PROPAGATION-INVENTORY.md#acceptance-evidence).
+listed in the [coverage ownership table](FAILURE-PROPAGATION-CONTRACT.md#coverage-audit-and-acceptance-ownership).
