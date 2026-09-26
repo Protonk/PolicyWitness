@@ -30,6 +30,10 @@ The current runner closes query collection before releasing attempts. Eligible n
 
 For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
 
+## Can PolicyWitness return a verdict of `drift: true`?
+
+No. `drift: true` would assert that `sandbox_check` and kernel enforcement disagreed with every other explanation excluded, and the envelope carries no evidence that the target's state was stable or that a path named the same object at query time and attempt time. Without that evidence the typed comparison has no disagreement case to construct, so the runner never emits one, its encoder rejects one, and the consumer checks reject one. A deny prediction beside a successful attempt is reported as `conclusion: unavailable` with `drift: null`, with the native prediction, the attempt result and the ordering evidence retained for the reader.
+
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
 No. PolicyWitness has its own limits, documented in [PolicyWitness limits](LIMITS.md).
