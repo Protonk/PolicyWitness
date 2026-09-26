@@ -56,13 +56,15 @@ def bounded_path(root, path):
 def load_index(root):
     try:
         index = read_object(root / 'tests/RETAINED.json')
-        if index.get('schema_version') != 1 or not isinstance(index.get('runs'), list):
+        if type(index.get('schema_version')) is not int or index['schema_version'] != 1 or not isinstance(index.get('runs'), list):
             raise ValueError('expected schema_version 1 and a runs array')
         paths = []
         for entry in index['runs']:
             if not isinstance(entry, dict) or set(entry) != {'path', 'run_id', 'reason', 'source', 'app_inventory'}:
                 raise ValueError('invalid retained entry fields')
             path = bounded_path(root, root / 'tests/out' / relative_path(entry['path']))
+            if path.exists() and not path.is_dir():
+                raise ValueError(f'retained path is not a directory: {path}')
             if path in paths:
                 raise ValueError(f'duplicate retained path: {path}')
             if not isinstance(entry['run_id'], str) or not RUN_ID.fullmatch(entry['run_id']):
@@ -94,18 +96,14 @@ def disposition(path):
     if not os.path.lexists(owner_path):
         return 'unmanaged'
     try:
-        owner = read_object(owner_path)
+        owner = valid_owner(path)
         started = owner['started_at_unix_ms']
-        if (owner.get('schema_version') != 1 or owner.get('out_dir') != str(path)
-                or not isinstance(owner.get('run_id'), str) or not RUN_ID.fullmatch(owner['run_id'])
-                or type(started) is not int or started < 0):
-            return 'ambiguous'
         if not os.path.lexists(path / 'run.json'):
             return 'interrupted'
         run = read_object(path / 'run.json')
         finished = run['finished_at_unix_ms']
         completion = run['completion']
-        if (run.get('schema_version') != 1 or run.get('terminal') is not True
+        if (type(run.get('schema_version')) is not int or run['schema_version'] != 1 or run.get('terminal') is not True
                 or run.get('run_id') != owner['run_id'] or run.get('started_at_unix_ms') != started
                 or type(finished) is not int or finished < started
                 or run.get('duration_ms') != finished - started or type(run.get('ok')) is not bool
@@ -174,3 +172,96 @@ def checkout_lock(root, *, preview=False):
         if acquired:
             fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
+
+
+def valid_owner(path):
+    owner = read_object(path / 'owner.json')
+    if (type(owner.get('schema_version')) is not int or owner['schema_version'] != 1 or owner.get('out_dir') != str(path)
+            or not isinstance(owner.get('run_id'), str) or not RUN_ID.fullmatch(owner['run_id'])
+            or type(owner.get('started_at_unix_ms')) is not int or owner['started_at_unix_ms'] < 0):
+        raise ValueError(f'no valid managed run ownership: {path}')
+    return owner
+
+
+def prune_rows(root, retained, *, busy=False):
+    base = bounded_path(root, root / 'tests/out')
+    runs = bounded_path(root, base / 'runs')
+    rows = []
+    if runs.exists():
+        if not runs.is_dir():
+            raise ValueError(f'managed runs root is not a directory: {runs}')
+        for path in sorted(runs.iterdir()):
+            # Files are outside the pruning interface. Links are reported but
+            # never traversed or removed, even when they point to a directory.
+            if path.is_symlink():
+                rows.append(dict(path=str(path.relative_to(base)), disposition='keep: unmanaged', reason='symlink redirect'))
+                continue
+            if not path.is_dir():
+                continue
+            protected = retained_overlap(path, retained)
+            state = disposition(path)
+            decision = ('keep: retained' if protected else 'delete' if state == 'completed'
+                        else 'keep: active or interrupted' if busy and state == 'interrupted'
+                        else 'keep: ' + state)
+            rows.append(dict(path=str(path.relative_to(base)), disposition=decision))
+    if base.exists():
+        for path in sorted(base.iterdir()):
+            if path == runs or not path.is_dir():
+                continue
+            rows.append(dict(path=str(path.relative_to(base)), disposition='keep: unmanaged',
+                             reason='outside tests/out/runs', retained=bool(retained_overlap(path, retained))))
+    return rows
+
+
+def unfinished_row(root, name, retained):
+    if not isinstance(name, str) or not RUN_ID.fullmatch(name) or name in ('.', '..'):
+        raise ValueError('--unfinished requires one direct run directory name')
+    path = bounded_path(root, root / 'tests/out/runs' / name)
+    if retained_overlap(path, retained):
+        raise ValueError(f'cannot remove retained output: {path}')
+    if not path.is_dir():
+        raise ValueError(f'no managed run directory: {path}')
+    valid_owner(path)
+    state = disposition(path)
+    if state not in ('interrupted', 'ambiguous'):
+        raise ValueError(f'--unfinished requires interrupted or ambiguous managed output; got {state}: {path}')
+    return dict(path='runs/' + name, disposition='delete', previous_disposition='keep: ' + state)
+
+
+def prune(root, *, apply=False, unfinished=None):
+    """Preview a read-only snapshot; apply re-evaluates under the checkout lock."""
+    import shutil
+    retained = load_index(root)
+    if unfinished is not None:
+        unfinished_row(root, unfinished, retained)
+    else:
+        prune_rows(root, retained)
+    if not apply:
+        with checkout_lock(root, preview=True) as busy:
+            pass
+        return {'schema_version': 1, 'apply': False, 'checkout_busy': busy,
+                'runs': prune_rows(root, retained, busy=busy), 'removed': [], 'failures': []}
+    with checkout_lock(root):
+        retained = load_index(root)
+        rows = ([unfinished_row(root, unfinished, retained)] if unfinished is not None
+                else prune_rows(root, retained))
+        result = {'schema_version': 1, 'apply': True, 'checkout_busy': False,
+                  'runs': rows, 'removed': [], 'failures': []}
+        for row in rows:
+            if row['disposition'] != 'delete':
+                continue
+            path = root / 'tests/out' / row['path']
+            try:
+                # Recheck directly before removing, including index edits.
+                retained = load_index(root)
+                if unfinished is not None:
+                    unfinished_row(root, unfinished, retained)
+                else:
+                    replacement_allowed(root, path, retained)
+                    if disposition(path) != 'completed':
+                        raise ValueError('run no longer has valid completion evidence')
+                shutil.rmtree(path)
+                result['removed'].append(row['path'])
+            except (OSError, ValueError) as exc:
+                result['failures'].append({'path': row['path'], 'error': str(exc)})
+        return result

@@ -84,6 +84,8 @@ The `runner` subcommands (install/list/status/verify/remove/validate/reconcile) 
 - Every registered case, including opt-ins: `tests/run.sh --all`
 - Inspect selection without execution: `tests/run.sh --all --list`
 - Smoke only: `tests/run.sh --suite smoke`
+- Preview cleanup: `tests/run.sh --prune`; apply: `tests/run.sh --prune --apply` (also `make clean`). Only completed, owned, unretained direct children of `tests/out/runs/` are disposable. Standalone files, release acceptance and unmanaged output are preserved.
+- After inspecting unfinished managed output, remove it explicitly with `tests/run.sh --prune --apply --unfinished <name>`. This command retains overlap checks and checkout locking; completed or retained targets are rejected.
 - Opt-in tests (signing, launchd, and implementation-mutation controls) live under `tests/suites/<suite>/opt_in/` with wrappers under [tests/suites/opt_in/](tests/suites/opt_in/), and are documented in [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md).
 - Execution defaults to `tests/out/runs/default`; use fresh explicit `PW_TEST_OUT_DIR=tests/out/runs/<name>` paths for separate evidence. `tests/RETAINED.json` protects indexed paths, including absent local copies. Only completed, owned, unretained output can be replaced; interrupted, ambiguous and unmanaged evidence is preserved.
 - Execution holds `tests/.checkout.lock` across revalidation, execution and finalization. Competing runs fail with checkout-busy even for another output path; use a second worktree for parallel execution. Never unlink the lock file: a new inode would bypass an existing holder. Help and `--list` remain read-only and available.

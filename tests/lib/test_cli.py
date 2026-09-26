@@ -168,7 +168,23 @@ def main():
                      'PW_TEST_OUT_DIR defaults to tests/out/runs/default; only completed, unretained output can be replaced. PW_TEST_RUN_ID labels evidence. '
                      'PW_TEST_QUIET=1 suppresses routine case messages. Relative paths are repository-relative. '
                      'Use --all --list to discover cases, suites, prerequisites, and skip contracts.')
+    parser.add_argument('--prune', action='store_true', help='preview dispositions of managed run output')
+    parser.add_argument('--apply', action='store_true', help='apply the prune plan under the checkout lock')
+    parser.add_argument('--unfinished', metavar='NAME', help='deliberately remove one interrupted or ambiguous managed run with --prune --apply')
     args = parser.parse_args()
+    if args.apply and not args.prune:
+        parser.error('--apply requires --prune')
+    if args.unfinished is not None and not args.apply:
+        parser.error('--unfinished requires --prune --apply')
+    if args.prune:
+        if args.suite or args.case or args.all or args.list:
+            parser.error('--prune cannot be combined with selection or --list')
+        try:
+            report = retention.prune(root, apply=args.apply, unfinished=args.unfinished)
+        except (ValueError, OSError) as exc:
+            parser.error(str(exc))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 1 if report['failures'] else 0
     try:
         cases, suites = catalog(root)
         selected = select(cases, suites, args)

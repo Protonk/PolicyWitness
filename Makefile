@@ -14,7 +14,7 @@ build:
 	DIST_DIR="$(DIST_DIR)" IDENTITY="$(IDENTITY)" YOLO="$(YOLO)" ./build.sh
 
 clean:
-	rm -rf tests/out/*
+	@./tests/run.sh --prune --apply
 
 test:
 	@echo "==> [test] run the default battery"

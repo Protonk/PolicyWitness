@@ -40,6 +40,8 @@ class Controls:
         (keep / 'bytes').write_bytes(b'retained\x00\xff')
         (keep / 'link').symlink_to('bytes')
         self.index(repo, 'kept')
+        shutil.copyfile(ROOT / 'Makefile', repo / 'Makefile')
+        (repo / 'tests/run.sh').chmod(0o755)
         return repo
 
     def index(self, repo, path):
@@ -52,9 +54,10 @@ class Controls:
                    RETENTION_RECEIPT=str(repo.parent / 'receipts.jsonl'), **values)
         return env
 
-    def call(self, repo, args=(), *, output='tests/out/runs/default', code=0, readonly=False, **values):
+    def call(self, repo, args=(), *, output='tests/out/runs/default', code=0, readonly=False, make=False, **values):
         before = artifact.inventory(repo) if readonly else None
-        result = subprocess.run(['bash', repo / 'tests/run.sh', *args], cwd=repo,
+        argv = ['make', 'clean'] if make else ['bash', repo / 'tests/run.sh', *args]
+        result = subprocess.run(argv, cwd=repo,
                                 env=self.env(repo, output, **values), capture_output=True, timeout=30)
         self.count += 1
         evidence = repo.parent / f'command-{self.count}'
@@ -87,6 +90,12 @@ class Controls:
                     self.call(repo, ['--help'], readonly=True)
                     self.call(repo, ['--list'], readonly=True)
                     self.call(repo, ['--bad-option'], code=2, readonly=True)
+                    preview = json.loads(self.call(repo, ['--prune'], readonly=True).stdout)
+                    require(preview['checkout_busy'] is True, 'preview did not report held lock')
+                    require(any(r['path'] == 'runs/default' and r['disposition'] == 'keep: active or interrupted'
+                                for r in preview['runs']), 'preview mislabeled active output')
+                    self.call(repo, ['--prune', '--apply'], code=2, readonly=True)
+                    self.call(repo, ['--prune', '--apply', '--unfinished', 'default'], code=2, readonly=True)
                     result = self.call(repo, output='tests/out/runs/competing', code=2, readonly=True)
                     require(b'checkout busy' in result.stderr, 'different output bypassed checkout lock')
                     other = self.fixture('independent-' + str(crash))
@@ -115,6 +124,82 @@ class Controls:
                     process.wait(timeout=5)
             self.completed.append('OS-held checkout lock; owner ' + ('crash' if crash else 'completion'))
 
+    def pruning(self):
+        fresh = self.fixture('prune-without-lock')
+        self.call(fresh, ['--prune'], readonly=True)
+        require(not (fresh / 'tests/.checkout.lock').exists(), 'preview created a lock file')
+        repo = self.fixture('pruning')
+        base = repo / 'tests/out'
+        for name in ('passed', 'failed', 'retained', 'interrupted', 'ambiguous', 'newly-retained', 'now-interrupted'):
+            self.call(repo, output='tests/out/runs/' + name, code=1 if name == 'failed' else 0,
+                      RETENTION_STATUS='fail' if name == 'failed' else 'pass')
+        (base / 'runs/interrupted/run.json').unlink()
+        (base / 'runs/ambiguous/run.json').write_text('{')
+        (base / 'runs/unmanaged').mkdir()
+        (base / 'runs/unmanaged/bytes').write_bytes(b'not owned')
+        (base / 'runs/bad-owner').mkdir()
+        (base / 'runs/bad-owner/owner.json').write_text('{}')
+        (base / 'runs/redirect').symlink_to(repo.parent)
+        for path in (base / 'runs/file', base / 'acceptance.inventory.json'):
+            path.write_bytes(b'never delete a file outside a candidate directory')
+        self.call(repo, output='tests/out/release-acceptance/run-fixture/tests')
+        self.index(repo, 'runs/retained')
+        retained = artifact.inventory(base / 'runs/retained')
+        outside = artifact.inventory(base / 'release-acceptance')
+        preview = json.loads(self.call(repo, ['--prune'], readonly=True).stdout)
+        rows = {r['path']: r['disposition'] for r in preview['runs']}
+        expected = {'passed':'delete', 'failed':'delete', 'retained':'keep: retained',
+                    'interrupted':'keep: interrupted', 'ambiguous':'keep: ambiguous',
+                    'unmanaged':'keep: unmanaged', 'bad-owner':'keep: ambiguous', 'redirect':'keep: unmanaged'}
+        require(all(rows['runs/' + name] == value for name, value in expected.items()), 'wrong prune dispositions')
+        require(rows['release-acceptance'] == 'keep: unmanaged', 'release acceptance is disposable')
+        # Eligibility changes between preview and apply must be honored.
+        index = json.loads((repo / 'tests/RETAINED.json').read_text())
+        index['runs'].append(dict(path='runs/newly-retained', run_id='fixture', reason='new retention', source=None, app_inventory=None))
+        (repo / 'tests/RETAINED.json').write_text(json.dumps(index))
+        (base / 'runs/now-interrupted/run.json').unlink()
+        applied = json.loads(self.call(repo, ['--prune', '--apply']).stdout)
+        require(set(applied['removed']) == {'runs/passed', 'runs/failed'} and not applied['failures'], 'apply used stale eligibility')
+        require(retained == artifact.inventory(base / 'runs/retained'), 'prune changed retained inventory')
+        require(outside == artifact.inventory(base / 'release-acceptance'), 'prune changed release acceptance')
+        require((base / 'runs/file').is_file() and (base / 'acceptance.inventory.json').is_file(), 'prune deleted a standalone file')
+        for name in ('interrupted', 'ambiguous'):
+            removed = json.loads(self.call(repo, ['--prune', '--apply', '--unfinished', name]).stdout)
+            require(removed['removed'] == ['runs/' + name] and not (base / 'runs' / name).exists(), 'explicit unfinished cleanup failed')
+        self.call(repo, output='tests/out/runs/completed')
+        for name in ('completed', 'retained', 'newly-retained', 'unmanaged', 'bad-owner', 'redirect', '../kept', '.', 'absent'):
+            self.call(repo, ['--prune', '--apply', '--unfinished', name], code=2, readonly=True)
+        for args in (['--apply'], ['--unfinished', 'x'], ['--prune', '--unfinished', 'x'],
+                     ['--prune', '--suite', 'probe'], ['--prune', '--case', 'probe/witness'],
+                     ['--prune', '--all'], ['--prune', '--list']):
+            self.call(repo, args, code=2, readonly=True)
+        # A candidate containing retained evidence is protected too.
+        self.call(repo, output='tests/out/runs/parent')
+        (base / 'runs/parent/child').mkdir()
+        index['runs'].append(dict(path='runs/parent/child', run_id='child', reason='nested evidence', source=None, app_inventory=None))
+        (repo / 'tests/RETAINED.json').write_text(json.dumps(index))
+        report = json.loads(self.call(repo, ['--prune', '--apply']).stdout)
+        require('runs/parent' not in report['removed'] and (base / 'runs/parent/child').is_dir(), 'retained descendant erased')
+        self.call(repo, output='tests/out/runs/undeletable')
+        candidate = base / 'runs/undeletable'
+        candidate.chmod(0o500)
+        before = artifact.inventory(candidate)
+        try:
+            result = json.loads(self.call(repo, ['--prune', '--apply'], code=1).stdout)
+            require(any(r['path'] == 'runs/undeletable' and r['error'] for r in result['failures']), 'deletion failure not reported')
+            require(before == artifact.inventory(candidate), 'failed unlink silently changed evidence')
+        finally:
+            candidate.chmod(0o700)
+        cleaned = json.loads(self.call(repo, make=True).stdout)
+        require('runs/undeletable' in cleaned['removed'] and not candidate.exists(), 'make clean did not delegate to prune')
+        require(retained == artifact.inventory(base / 'runs/retained') and outside == artifact.inventory(base / 'release-acceptance'),
+                'make clean changed retained/release inventories')
+        self.index(repo, 'runs')
+        all_runs = artifact.inventory(base / 'runs')
+        result = json.loads(self.call(repo, ['--prune', '--apply']).stdout)
+        require(not result['removed'] and all_runs == artifact.inventory(base / 'runs'), 'retained ancestor did not protect runs')
+        self.completed.append('prune dispositions, changed eligibility, unfinished, deletion failure and make clean')
+
     def run(self):
         repo = self.fixture('retained-and-completed')
         kept = artifact.inventory(repo / 'tests/out/kept')
@@ -137,7 +222,7 @@ class Controls:
         self.call(repo, output='tests/out/absent-retained/child', code=2, readonly=True)
         self.completed.append('retained overlap and absent local retention')
 
-        for mode in ('missing', 'malformed', 'unreadable', 'escape', 'absolute', 'symlink', 'inventory_escape'):
+        for mode in ('missing', 'malformed', 'unreadable', 'escape', 'absolute', 'symlink', 'inventory_escape', 'boolean_schema', 'duplicate_keys', 'file_path'):
             repo = self.fixture('index-' + mode)
             index = repo / 'tests/RETAINED.json'
             if mode == 'missing': index.unlink()
@@ -148,17 +233,24 @@ class Controls:
             elif mode == 'symlink':
                 (repo / 'tests/out/redirect').symlink_to(repo.parent)
                 self.index(repo, 'redirect/kept')
+            elif mode == 'boolean_schema':
+                index.write_text('{"schema_version":true,"runs":[]}')
+            elif mode == 'duplicate_keys':
+                index.write_text('{"schema_version":1,"runs":[],"runs":[]}')
+            elif mode == 'file_path': self.index(repo, 'kept/bytes')
             else:
                 data = json.loads(index.read_text())
                 data['runs'][0]['app_inventory'] = '../escape'
                 index.write_text(json.dumps(data))
             # An unreadable index cannot be hashed by the observer either.
-            before = (repo / 'tests/out/kept/bytes').read_bytes()
+            before = artifact.inventory(repo / 'tests/out/kept')
             self.call(repo, code=2, readonly=mode != 'unreadable')
+            self.call(repo, ['--prune'], code=2, readonly=mode != 'unreadable')
+            self.call(repo, ['--prune', '--apply'], code=2, readonly=mode != 'unreadable')
             self.call(repo, ['--help'], readonly=mode != 'unreadable')
             self.call(repo, ['--list'], readonly=mode != 'unreadable')
             self.call(repo, ['--bad-option'], code=2, readonly=mode != 'unreadable')
-            require((repo / 'tests/out/kept/bytes').read_bytes() == before, 'index failure changed retained bytes')
+            require(artifact.inventory(repo / 'tests/out/kept') == before, 'index failure changed retained inventory')
             require(not (repo.parent / 'receipts.jsonl').exists(), 'invalid index executed work')
             if mode == 'unreadable': index.chmod(0o644)
             self.completed.append('index-' + mode)
@@ -184,6 +276,7 @@ class Controls:
             self.call(repo, output=target, code=2, readonly=True)
         self.completed.append('symlink redirects and lexical path escapes')
         self.locking()
+        self.pruning()
         (self.out / 'controls.json').write_text(json.dumps(self.completed, indent=2) + '\n')
         print(f'{len(self.completed)} retention controls passed ({self.count} invocations)')
 

@@ -129,3 +129,18 @@ by cleanup: otherwise a second inode could admit a competing operation.
 See [the output contract](../../README.md#retention-ownership-and-execution-locking)
 for the committed index fields, terminal ownership checks, default
 `tests/out/runs/default`, direct-script fallback and release-acceptance output.
+
+Pruning uses these same retention and ownership checks. `--prune` previews a
+read-only snapshot; `--prune --apply` revalidates and deletes eligible completed
+runs under the lock. `--prune --apply --unfinished <name>` is the deliberate
+cleanup path for one interrupted/ambiguous managed run after inspection.
+Selection/prune combinations and unfinished removal of retained, completed or
+unmanaged output are rejected. `make clean` delegates to the apply command.
+
+Controls retain independent execution receipts and verify preview/apply changes,
+completed failed runs, all keep dispositions, preview under a held lock,
+`--unfinished` against each disposition, invalid indexes, retained ancestors and
+descendants, symlink redirects, lock contention, and make-clean preservation.
+An actual directory-permission restriction forces unlink failure; the test
+checks a nonzero apply exit, the reported error and the remaining inventory.
+Standalone files and release acceptance output survive every cleanup operation.

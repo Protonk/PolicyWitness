@@ -173,7 +173,8 @@ output. Failed cases and ordinary Ctrl-C cancellation still produce terminal
 records and are disposable when unretained. A missing terminal record leaves an
 interrupted run; malformed or inconsistent evidence leaves ambiguous output.
 Nonempty output without ownership is unmanaged. Replacement refuses all three;
-inspect the evidence and choose a fresh output directory. Placement under
+inspect the evidence and choose a fresh output directory or use the explicit
+unfinished-prune command below. Placement under
 `runs/` alone does not establish ownership. Planning refusals exit 2.
 
 After read-only planning, execution takes an OS-held advisory lock on
@@ -194,6 +195,42 @@ keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
 `tests` output passes the same dispatcher checks. Passing acceptance prints a
 suggested index entry. Record source provenance only when established; the
 commit that adds an index entry is not the source of an earlier build.
+
+## Pruning disposable output
+
+```sh
+tests/run.sh --prune
+tests/run.sh --prune --apply
+# After inspecting an interrupted or ambiguous managed run:
+tests/run.sh --prune --apply --unfinished <name>
+make clean
+```
+
+Preview prints a read-only JSON snapshot with `delete`, `keep: retained`,
+`keep: interrupted`, `keep: ambiguous`, and `keep: unmanaged` dispositions.
+It does not create a lock file or hold the checkout lock while classifying. If
+execution holds the lock, `checkout_busy` is true and runs without a terminal
+record are labeled `keep: active or interrupted`.
+
+Apply takes the checkout lock and re-evaluates eligibility. It removes only
+completed, unretained managed directories directly under `tests/out/runs/`.
+Failed cases and terminal Ctrl-C runs remain eligible; crashed runs lacking a
+terminal record remain available for inspection. `--unfinished <name>` explicitly
+removes one interrupted or ambiguous run with valid ownership after the same
+retained-overlap checks. It rejects completed, retained, unmanaged, redirected,
+or missing targets. This is the supported way to deliberately remove unfinished
+output; it preserves serialization with other mutating operations.
+
+Apply reports actual `removed` paths and `failures`; a failed deletion exits 1
+and reports the surviving path. Invalid requests, invalid indexes and checkout
+contention exit 2. `--apply` requires `--prune`, `--unfinished` also requires
+`--apply`, and pruning cannot be combined with selection or `--list`.
+
+Standalone files anywhere in `tests/out`, including inventory JSON files, are
+preserved. Output outside `runs/`, including release acceptance, is reported as
+unmanaged and kept. Symlink redirects are never traversed or deleted. `make
+clean` delegates to `tests/run.sh --prune --apply` and follows exactly these
+rules; it preserves release acceptance, retained and unfinished evidence.
 
 ## Tiers
 
