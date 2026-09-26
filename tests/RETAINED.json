@@ -28,6 +28,13 @@
       "reason": "Cleanup audit remediation: all 19 selected dispatcher, shell-helper, source-drift and preflight cases passed; includes 14 planner mutation controls. Existing notarized app build provenance is recorded with the run.",
       "source": "86a35be5ff62499b1ffbbc175f4e194d74a34e44",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "release-acceptance/run-008f78d74862421692933d025241c0bb",
+      "run_id": "20260926T224106Z_73925daf",
+      "reason": "PolicyWitness 0.2.3 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; published as GitHub release v0.2.3.",
+      "source": "4fb8b96eb86d085598690e90ddc50bc5fb2e8f38",
+      "app_inventory": "before.json"
     }
   ]
 }
