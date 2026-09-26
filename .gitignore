@@ -6,6 +6,8 @@ dist/
 
 # controller (Rust)
 controller/target
+/controller/tools/pw_probe_runner/pw-probe-runner
+/controller/tools/sb_api_validator/sb_api_validator
 
 # local scratch
 .tmp/
