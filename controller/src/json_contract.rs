@@ -7,7 +7,9 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 pub const SCHEMA_VERSION: u32 = 1;
+// END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]
 pub struct JsonResult {
@@ -19,6 +21,27 @@ pub struct JsonResult {
     pub error: Option<String>,
     pub stderr: Option<String>,
     pub stdout: Option<String>,
+}
+
+/// The build stamp says which code produced an envelope. build.sh derives it
+/// from git (nearest `v*` tag, commit count, `git describe --dirty`, commit
+/// hash) and passes it to cargo; a plain `cargo build` reads "unknown". It is a
+/// coordinate, not a contract: the contract numbers say how to read the JSON.
+pub fn build_stamp() -> Value {
+    serde_json::json!({
+        "version": option_env!("PW_BUILD_VERSION").unwrap_or("unknown"),
+        "number": option_env!("PW_BUILD_NUMBER").unwrap_or("unknown"),
+        "describe": option_env!("PW_BUILD_DESCRIBE").unwrap_or("unknown"),
+        "commit": option_env!("PW_BUILD_COMMIT").unwrap_or("unknown"),
+    })
+}
+
+/// The wire contract versions this build was made with, embedded from
+/// docs/contract.json at compile time for `policy-witness --version`.
+pub fn contract_versions() -> Value {
+    let manifest: Value =
+        serde_json::from_str(include_str!("../../docs/contract.json")).unwrap_or(Value::Null);
+    manifest.get("versions").cloned().unwrap_or(Value::Null)
 }
 
 fn now_unix_ms() -> u64 {
@@ -56,6 +79,7 @@ fn envelope_value<T: Serialize>(kind: &str, result: JsonResult, data: &T) -> Res
         "schema_version": SCHEMA_VERSION,
         "kind": kind,
         "generated_at_unix_ms": now_unix_ms(),
+        "build": build_stamp(),
         "result": result,
         "data": data,
     });
@@ -138,6 +162,7 @@ mod tests {
         let text = render_envelope_compact("dummy", result_ok(), &payload).expect("render");
 
         let keys = [
+            "\"build\"",
             "\"data\"",
             "\"generated_at_unix_ms\"",
             "\"kind\"",
@@ -166,5 +191,68 @@ mod tests {
 
         let parsed: serde_json::Value = serde_json::from_str(&text).expect("parse");
         assert_eq!(parsed["schema_version"], SCHEMA_VERSION);
+    }
+}
+
+#[cfg(test)]
+mod build_stamp_tests {
+    use super::*;
+
+    #[test]
+    fn every_envelope_carries_a_complete_build_stamp() {
+        let text = render_envelope_compact("dummy", tests_result_ok(), &serde_json::json!({}))
+            .expect("render");
+        let parsed: Value = serde_json::from_str(&text).expect("parse");
+        let build = parsed["build"].as_object().expect("build object");
+        for key in ["version", "number", "describe", "commit"] {
+            assert!(build[key].is_string(), "build.{key} must be a string");
+        }
+    }
+
+    #[test]
+    fn embedded_contract_versions_match_the_manifest_keys() {
+        let versions = contract_versions();
+        for key in [
+            "request_schema",
+            "response_schema",
+            "worker_abi",
+            "controller_envelope",
+        ] {
+            assert!(versions[key].is_u64(), "contract.{key} must be an integer");
+        }
+        assert_eq!(
+            versions["controller_envelope"].as_u64(),
+            Some(u64::from(SCHEMA_VERSION))
+        );
+    }
+
+    fn tests_result_ok() -> JsonResult {
+        JsonResult {
+            ok: true,
+            rc: None,
+            exit_code: Some(0),
+            normalized_outcome: None,
+            errno: None,
+            error: None,
+            stderr: None,
+            stdout: None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod contract_manifest {
+    // docs/contract.json owns the envelope version; the generated constant
+    // above is text, so compare the compiled value with the manifest.
+    #[test]
+    fn envelope_schema_version_matches_contract_manifest() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/contract.json"))
+                .expect("docs/contract.json parses");
+        assert_eq!(
+            manifest["versions"]["controller_envelope"].as_u64(),
+            Some(u64::from(super::SCHEMA_VERSION)),
+            "SCHEMA_VERSION disagrees with docs/contract.json controller_envelope"
+        );
     }
 }

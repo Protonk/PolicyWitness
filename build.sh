@@ -100,6 +100,31 @@ fi
 # Check documentation before any build/signing work; staging checks again.
 echo "==> Checking limits documentation"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
+echo "==> Checking contract versions"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_contract.py" --check
+
+# ---- Build stamp -------------------------------------------------------------
+# The app version is a coordinate derived from git, never edited by hand:
+# CFBundleShortVersionString is the nearest v* tag, CFBundleVersion the commit
+# count, and PWBuildDescribe/PWBuildCommit the exact source. PW_VERSION and
+# PW_BUILD_NUMBER override the git-derived values (for builds outside a checkout).
+PW_BUILD_DESCRIBE="$(git -C "${ROOT_DIR}" describe --tags --match 'v[0-9]*' --always --dirty 2>/dev/null || true)"
+PW_BUILD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
+PW_VERSION="${PW_VERSION:-$(printf '%s' "${PW_BUILD_DESCRIBE}" | /usr/bin/sed -nE 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')}"
+PW_BUILD_NUMBER="${PW_BUILD_NUMBER:-$(git -C "${ROOT_DIR}" rev-list --count HEAD 2>/dev/null || true)}"
+: "${PW_VERSION:=0.0.0}"
+: "${PW_BUILD_NUMBER:=0}"
+: "${PW_BUILD_DESCRIBE:=unknown}"
+: "${PW_BUILD_COMMIT:=unknown}"
+echo "==> Build stamp: ${PW_VERSION} (${PW_BUILD_NUMBER}) ${PW_BUILD_DESCRIBE}"
+
+stamp_info_plist() {
+  local plist="$1"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${PW_VERSION}" "${plist}"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${PW_BUILD_NUMBER}" "${plist}"
+  /usr/libexec/PlistBuddy -c "Add :PWBuildDescribe string ${PW_BUILD_DESCRIBE}" "${plist}"
+  /usr/libexec/PlistBuddy -c "Add :PWBuildCommit string ${PW_BUILD_COMMIT}" "${plist}"
+}
 
 # Select and verify the signing identity.
 IDENTITY="${IDENTITY:-}"
@@ -162,7 +187,9 @@ fi
 # ---- Build binaries --------------------------------------------------------
 
 echo "==> Building Rust controller + tools"
-cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
+PW_BUILD_VERSION="${PW_VERSION}" PW_BUILD_NUMBER="${PW_BUILD_NUMBER}" \
+  PW_BUILD_DESCRIBE="${PW_BUILD_DESCRIBE}" PW_BUILD_COMMIT="${PW_BUILD_COMMIT}" \
+  cargo build --manifest-path "${RUNNER_MANIFEST}" --release \
   --bin policy-witness \
   --bin sandbox-log-observer \
   --bin sbpl-check
@@ -229,6 +256,7 @@ if [[ ! -f "${INFO_PLIST_TEMPLATE}" ]]; then
   exit 2
 fi
 cp "${INFO_PLIST_TEMPLATE}" "${APP_BUNDLE}/Contents/Info.plist"
+stamp_info_plist "${APP_BUNDLE}/Contents/Info.plist"
 
 cp "${RUNNER_BIN}" "${APP_BUNDLE}/Contents/MacOS/policy-witness"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/policy-witness"
@@ -363,6 +391,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     fi
     mkdir -p "${svc_bundle}/Contents/MacOS"
     cp "${svc_info}" "${svc_bundle}/Contents/Info.plist"
+    stamp_info_plist "${svc_bundle}/Contents/Info.plist"
 
     /usr/bin/xcrun --sdk macosx swiftc \
       -module-cache-path "${SWIFT_MODULE_CACHE}" \

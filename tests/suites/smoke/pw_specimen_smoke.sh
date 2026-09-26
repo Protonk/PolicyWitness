@@ -41,16 +41,39 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+/usr/bin/python3 - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" "${PW_APP_DIR}/Contents/Info.plist" <<'PY'
 import json
+import plistlib
 import sys
 from pathlib import Path
 
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert env.get("kind") == "run"
+# The build stamp is a coordinate: it must name the bundle that produced it.
+build = env.get("build") or {}
+info = plistlib.loads(Path(sys.argv[3]).read_bytes())
+for key in ("version", "number", "describe", "commit"):
+    if not isinstance(build.get(key), str) or not build[key]:
+        raise SystemExit(f"envelope build.{key} missing (got {build.get(key)!r})")
+if build["version"] != info.get("CFBundleShortVersionString") or build["number"] != info.get("CFBundleVersion"):
+    raise SystemExit(f"envelope build stamp {build!r} disagrees with the app Info.plist "
+                     f"{info.get('CFBundleShortVersionString')!r}/{info.get('CFBundleVersion')!r}")
+if build["describe"] != info.get("PWBuildDescribe") or build["commit"] != info.get("PWBuildCommit"):
+    raise SystemExit(f"envelope build describe/commit disagree with the app Info.plist: {build!r}")
 assert env.get("result", {}).get("ok") is True
 
 runner = env.get("data", {}).get("runner_result") or {}
+# The one exact contract check: a built app must report the numbers in
+# docs/contract.json. Every other suite asserts the minimum it depends on.
+sys.path.insert(0, sys.argv[2])
+import contract
+if runner.get("schema_version") != contract.RESPONSE_SCHEMA:
+    raise SystemExit(f"built app reports response schema {runner.get('schema_version')!r}; "
+                     f"docs/contract.json says {contract.RESPONSE_SCHEMA}")
+evidence = (runner.get("runner_subprocess") or {}).get("worker_evidence") or {}
+if evidence.get("abi_version") != contract.WORKER_ABI:
+    raise SystemExit(f"built app reports worker ABI {evidence.get('abi_version')!r}; "
+                     f"docs/contract.json says {contract.WORKER_ABI}")
 steps = runner.get("steps") or []
 if len(steps) != 1:
     raise SystemExit(f"expected 1 step (got {len(steps)})")

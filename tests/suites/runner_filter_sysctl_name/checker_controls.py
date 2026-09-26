@@ -50,7 +50,7 @@ def main():
             }},
         }
 
-        def check(label, envelope, diagnostics=(), status=1, raw=None, expected_schema_version=None):
+        def check(label, envelope, diagnostics=(), status=1, raw=None, minimum_schema_version=None):
             nonlocal count
             count += 1
             stem = artifacts / f"{name}.{label}"
@@ -58,8 +58,8 @@ def main():
             run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
             argv = [sys.executable, str(CHECKER), str(run_path), "--step-id", step_id,
                     "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
-            if expected_schema_version is not None:
-                argv.extend(["--expected-schema-version", str(expected_schema_version)])
+            if minimum_schema_version is not None:
+                argv.extend(["--minimum-schema-version", str(minimum_schema_version)])
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
             output = result.stdout + result.stderr
             Path(f"{stem}.log").write_text(f"argv={argv!r}\nrc={result.returncode}\n{output}")
@@ -95,7 +95,7 @@ def main():
                 "prediction:query_not_requested", "query_plan:prediction_unavailable_pair",
             ] + (["sandbox_attribution_unestablished"] if sysctl else []),
         }
-        check("current_live_evidence", current, status=0, expected_schema_version=8)
+        check("current_live_evidence", current, status=0, minimum_schema_version=8)
         for label, version in (("v4", 4), ("v5", 5), ("v6", 6), ("v7", 7), ("absent", None)):
             legacy = copy.deepcopy(current if version == 7 else baseline)
             if version == 7:
@@ -105,19 +105,24 @@ def main():
                 legacy["data"]["runner_result"]["schema_version"] = version
             check("legacy_fixture_" + label, legacy, status=0)
             check("legacy_cannot_replace_live_" + label, legacy,
-                  ("expected runner schema_version=8",), expected_schema_version=8)
+                  ("schema_version below minimum 8",), minimum_schema_version=8)
         for label, version in (("old", 7), ("null", None), ("string", "8"),
-                               ("float", 8.0), ("boolean", True), ("future", 9)):
+                               ("float", 8.0), ("boolean", True)):
             changed = copy.deepcopy(current)
             changed["data"]["runner_result"]["schema_version"] = version
             check("wrong_live_version_" + label, changed,
-                  ("expected runner schema_version=8",), expected_schema_version=8)
+                  ("schema_version below minimum 8",), minimum_schema_version=8)
+        # The gate rejects stored-fixture leniency, not later versions: a reply
+        # that keeps the response-8 shape under a higher number meets the minimum.
+        changed = copy.deepcopy(current)
+        changed["data"]["runner_result"]["schema_version"] = 9
+        check("later_version_meets_minimum", changed, status=0, minimum_schema_version=8)
         changed = copy.deepcopy(current)
         del changed["data"]["runner_result"]["steps"][0]["comparison"]["order"]
-        check("missing_current_order", changed, ("missing comparison.order",), expected_schema_version=8)
+        check("missing_current_order", changed, ("missing comparison.order",), minimum_schema_version=8)
         changed = copy.deepcopy(current)
         del changed["data"]["runner_result"]["runner_subprocess"]["ordering"]
-        check("missing_current_ordering", changed, ("requires runner_subprocess.ordering",), expected_schema_version=8)
+        check("missing_current_ordering", changed, ("requires runner_subprocess.ordering",), minimum_schema_version=8)
         changed = copy.deepcopy(current)
         current_step = changed["data"]["runner_result"]["steps"][0]
         del current_step["comparison"]
@@ -125,7 +130,7 @@ def main():
         del current_step["attempt"]["requested_action"]
         check("missing_current_evidence", changed,
               ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"),
-              expected_schema_version=8)
+              minimum_schema_version=8)
         changed, step = mutate()
         if sysctl:
             step["attempt"].update(errno=13, syscall_errno=13)

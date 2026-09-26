@@ -1,0 +1,170 @@
+{
+  "response_schema" : 8,
+  "shape" : {
+    "reply" : {
+      "admission_failure" : "object",
+      "applied_profile" : "object",
+      "bundle_id" : "string",
+      "deny_signal_total" : "object",
+      "error" : "string",
+      "normalized_outcome" : "string",
+      "pid" : "number",
+      "policy_format" : "string",
+      "policy_sha256" : "string",
+      "rc" : "number",
+      "run_kind" : "string",
+      "runner_subprocess" : "object",
+      "sandboxed_after_apply" : "boolean",
+      "schema_version" : "number",
+      "specimen_id" : "string",
+      "steps" : "array",
+      "test_overrides" : "object",
+      "validator_spawn_failure" : "object",
+      "validator_subprocess" : "object"
+    },
+    "reply.admission_failure" : {
+      "actual" : "number",
+      "field" : "string",
+      "maximum" : "number",
+      "origin" : "string",
+      "unit" : "string"
+    },
+    "reply.applied_profile" : {
+      "reason" : "string",
+      "schema_version" : "number",
+      "status" : "string",
+      "worker_pid" : "number"
+    },
+    "reply.deny_signal_total" : {
+      "count_after" : "number",
+      "count_before" : "number",
+      "delta" : "number",
+      "signal" : "string"
+    },
+    "reply.runner_subprocess" : {
+      "done_observed" : "boolean",
+      "exit_requested" : "boolean",
+      "ordering" : "object",
+      "partial_steps" : "boolean",
+      "pid" : "number",
+      "poll_stop_reason" : "string",
+      "ready_byte_received" : "boolean",
+      "reaped" : "boolean",
+      "termination_request" : "object",
+      "wait_errors" : "array",
+      "worker_evidence" : "object"
+    },
+    "reply.runner_subprocess.ordering" : {
+      "collection_closed_before_proceed" : "boolean",
+      "proceed_observed" : "boolean",
+      "proceed_set" : "boolean",
+      "protocol_violations" : "array",
+      "validator_disposition" : "string",
+      "worker_lifetime_established" : "boolean"
+    },
+    "reply.runner_subprocess.termination_request" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
+    },
+    "reply.runner_subprocess.wait_errors[]" : {
+      "errno" : "number",
+      "phase" : "string",
+      "rc" : "number"
+    },
+    "reply.runner_subprocess.worker_evidence" : {
+      "abi_version" : "number",
+      "diagnostic" : "object",
+      "failure_publication" : "number",
+      "failure_state" : "string"
+    },
+    "reply.runner_subprocess.worker_evidence.diagnostic" : {
+      "state" : "number",
+      "status" : "string"
+    },
+    "reply.steps[]" : {
+      "attempt" : "object",
+      "comparison" : "object",
+      "deny_signal" : "null",
+      "drift" : "boolean",
+      "sandbox_check" : "object",
+      "step_id" : "string"
+    },
+    "reply.steps[].attempt" : {
+      "errno" : "null",
+      "exit_code" : "number",
+      "native_rc" : "null",
+      "normalized_path" : "null",
+      "observed_path" : "null",
+      "outcome" : "string",
+      "rc" : "number",
+      "requested_action" : "string",
+      "requested_kind" : "string",
+      "requested_path" : "string",
+      "result_source" : "string",
+      "syscall_errno" : "null"
+    },
+    "reply.steps[].comparison" : {
+      "conclusion" : "string",
+      "limitations" : "array",
+      "observation" : "string",
+      "observation_basis" : "string",
+      "operation_relation" : "string",
+      "order" : "string",
+      "prediction" : "string",
+      "scope" : "string",
+      "target_relation" : "string"
+    },
+    "reply.steps[].sandbox_check" : {
+      "effective_filter_value" : "null",
+      "errno" : "number",
+      "error" : "null",
+      "filter_kind" : "string",
+      "filter_type_id" : "null",
+      "filter_value" : "string",
+      "native_rc" : "number",
+      "operation" : "string",
+      "outcome" : "string",
+      "path_diagnostics" : "object",
+      "pid" : "number",
+      "rc" : "number",
+      "result_source" : "string",
+      "scope" : "string"
+    },
+    "reply.steps[].sandbox_check.path_diagnostics" : {
+      "data_volume_form" : "null",
+      "firmlink_resolved" : "null",
+      "input" : "string",
+      "observer" : "string",
+      "phase" : "string",
+      "realpath_resolved" : "string"
+    },
+    "reply.test_overrides" : {
+      "validator_io_timeout_ms" : "number"
+    },
+    "reply.validator_spawn_failure" : {
+      "diagnostic" : "string",
+      "executable_path" : "string",
+      "operation" : "string",
+      "origin" : "string",
+      "return_code" : "number"
+    },
+    "reply.validator_subprocess" : {
+      "exit_code" : "number",
+      "pid" : "number",
+      "reaped" : "boolean",
+      "records" : "array",
+      "stdout_collection_stop" : "string"
+    },
+    "reply.validator_subprocess.records[]" : {
+      "errno" : "number",
+      "filter_type" : "string",
+      "filter_value" : "string",
+      "operation" : "string",
+      "outcome" : "string",
+      "raw_line" : "string",
+      "rc" : "number",
+      "step_id" : "string"
+    }
+  }
+}

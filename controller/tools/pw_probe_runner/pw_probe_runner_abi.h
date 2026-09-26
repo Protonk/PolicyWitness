@@ -35,15 +35,17 @@
 #include <stdint.h>
 
 /*
- * ABI version 7 uses the two reserved header words for host release and worker
- * acknowledgement. Observer-owned evidence follows the capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
+ * The two reserved header words carry host release and worker acknowledgement
+ * (since ABI 7). Observer-owned evidence follows the capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
  * boundary, defended by the
  * abi_version check at worker entry. In practice host + worker ship
  * together (the worker binary is bundle-local inside each XPC service),
  * so the check is a defense-in-depth tripwire rather than a live
  * compatibility boundary.
  */
+/* BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) */
 #define PW_PROBE_RUNNER_ABI_VERSION 7u
+/* END GENERATED CONTRACT VERSIONS */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
  * 8 KiB + 1024 params × 512 B + bounded capture = about 3.5 MiB per run.
@@ -201,7 +203,7 @@ enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };
 
 /* ABI 7. Worker-owned publication contract is specified in
- * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract (ABI 7)".
+ * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract".
  * All payloads immutable after
  * their publication word reaches 1 (diagnostic also accepts 2=truncated).
  * Progress is a single atomic value, never a gate for reading other storage. */

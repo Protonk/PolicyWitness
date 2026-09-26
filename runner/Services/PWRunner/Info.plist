@@ -10,10 +10,11 @@
   <string>PWRunner</string>
   <key>CFBundlePackageType</key>
   <string>XPC!</string>
+  <!-- build.sh sets the two version keys from git, matching the app. -->
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>0.0.0</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>0</string>
   <key>PWRunnerRequireSignedCaller</key>
   <true/>
   <key>PWRunnerAllowedIdentifiers</key>

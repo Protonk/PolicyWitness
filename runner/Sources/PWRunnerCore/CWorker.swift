@@ -47,7 +47,9 @@ import CryptoKit
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
+    // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
     public static let abiVersion: UInt32   = 7
+    // END GENERATED CONTRACT VERSIONS
 
     public static let headerBytes: Int     = 64
     public static let slotBytes: Int       = 8192

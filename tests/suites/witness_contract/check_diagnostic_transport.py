@@ -18,7 +18,7 @@ def run(pw, output, request):
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] == 8, runner
+    assert runner['schema_version'] >= 6, runner  # worker_evidence: response 6
     assert runner.get('test_overrides') == request['_test_overrides'], runner
     return rc, runner
 
@@ -63,7 +63,7 @@ def check_worker(pw, output, fixture, mode):
         assert evidence is None, evidence
         assert 'native return unavailable' in runner['error'], runner
         return
-    assert evidence['abi_version'] == 7, evidence
+    assert evidence['abi_version'] >= 7, evidence  # progress/failure record codes: ABI 7
     progress = dict(evidence['progress']); progress.pop('raw')
     assert progress == oracle['progress'], progress
     if mode in ('transport_absent', 'transport_unpublished', 'transport_malformed'):

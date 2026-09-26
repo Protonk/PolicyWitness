@@ -324,7 +324,7 @@ func runOrderingTests(_ tk: TestKit) {
                 if missing == "fault" { w.orderingProtocolViolations = ["attempt_before_release"] }
                 let envelope = orderingEnvelope(missing == "worker" ? nil : w, validator)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
-                try expectEqual(decoded.schema_version, 8)
+                try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.steps[0].comparison?.order, missing == "none" ? "query_first" : "unestablished", missing)
                 try expectEqual(decoded.runner_subprocess?.ordering != nil, missing != "worker")
             }

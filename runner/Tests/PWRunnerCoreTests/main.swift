@@ -34,6 +34,8 @@ runHostOutcomeClassifierTests(tk)
 runAttemptOutcomeMappingTests(tk)
 // Documented limits in docs/limits.json against the Swift constants.
 runLimitsContractTests(tk)
+// Wire contract versions in docs/contract.json against the generated Swift copies.
+runContractVersionTests(tk)
 // CWorker driver with a real worker: shm setup, sentinel polling, publication.
 runCWorkerTests(tk)
 // Production host driver against the separately built ABI fixture with

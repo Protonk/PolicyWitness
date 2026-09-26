@@ -19,6 +19,7 @@ Pick what you’re changing:
 - **Tests** → [tests/README.md](tests/README.md), [tests/run.sh](tests/run.sh)
 - **Opt-in tests registry** → [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md)
 - **Limits and their documentation** → [docs/LIMITS.md](docs/LIMITS.md), [docs/limits.json](docs/limits.json), [docs/generate_limits.py](docs/generate_limits.py)
+- **Wire contract versions (request/response schema, worker ABI, envelope)** → [docs/CONTRACT.md](docs/CONTRACT.md), [docs/contract.json](docs/contract.json), [docs/generate_contract.py](docs/generate_contract.py)
 - **User guide** → [docs/PolicyWitness.md](docs/PolicyWitness.md)
 
 ## Vocabulary (repo-anchored)
@@ -66,6 +67,7 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 Build knobs worth knowing (debugging/iteration):
 
 - `BUILD_XPC=0` skips building/embedding `PWRunner.xpc` + `pw-runner-client` (Rust-only iteration).
+- The app version is derived from git (nearest `v*` tag, commit count); `PW_VERSION`/`PW_BUILD_NUMBER` override it. See [docs/CONTRACT.md → Build stamp](docs/CONTRACT.md#build-stamp).
 - `PW_INSPECTION=1` (default) keeps symbols/frame pointers; set `PW_INSPECTION=0` for a more optimized build.
 - Evidence is generated during build by [tests/build-evidence.py](tests/build-evidence.py) and embedded under `Contents/Resources/Evidence/`.
 
@@ -102,6 +104,7 @@ From here, the constraint touches three workflows in this file: building (keycha
 
 ## Maintenance checklist (when changing things)
 
+- If a wire contract version changes: edit [docs/contract.json](docs/contract.json) and run `python3 docs/generate_contract.py`; never edit a generated copy. Tests assert the minimum version they depend on, so only the tests for the change that caused the bump move with it (see [docs/CONTRACT.md](docs/CONTRACT.md)).
 - If you change the specimen schema: update [PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift), [PWRunnerService.swift](runner/Sources/PWRunnerCore/PWRunnerService.swift), the worker plumbing ([CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift), [ValidatorClient.swift](runner/Sources/PWRunnerCore/ValidatorClient.swift), plus [pw_probe_runner.c](controller/tools/pw_probe_runner/pw_probe_runner.c) and [sb_api_validator.c](controller/tools/sb_api_validator/sb_api_validator.c) if the C side is affected), fixtures under [tests/fixtures/](tests/fixtures/), and any controller parsing assumptions.
 - If you change shipped paths: update [build.sh](build.sh), [tests/build-evidence.py](tests/build-evidence.py), the `EXECUTABLES` list in [tests/lib/artifact.py](tests/lib/artifact.py), [README.md → What ships](README.md#what-ships), tests that locate binaries, and any docs that enumerate the bundle layout.
 - If you change evidence fields: update the envelope assembly in [controller/src/run_flow.rs](controller/src/run_flow.rs) and [controller/src/evidence.rs](controller/src/evidence.rs), any tests that validate output, and the docs that describe evidence channels.

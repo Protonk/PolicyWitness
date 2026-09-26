@@ -44,7 +44,7 @@ def main():
         elapsed_ms = round((time.monotonic() - started) * 1000)
     runner = envelope['data']['runner_result']
     assert rc == 1 and envelope['result']['ok'] is False, envelope['result']
-    assert runner['schema_version'] == 8 and runner['normalized_outcome'] == 'validator_no_reply', runner
+    assert runner['schema_version'] >= 6 and runner['normalized_outcome'] == 'validator_no_reply', runner  # worker_evidence: response 6
     assert '500 ms I/O deadline' in runner['error'], runner['error']
     assert runner['test_overrides'] == spec['_test_overrides'], runner
     worker, v = runner['runner_subprocess'], runner['validator_subprocess']

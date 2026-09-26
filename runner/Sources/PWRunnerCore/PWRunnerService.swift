@@ -116,7 +116,7 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
             diagnostic = String(describing: error)
         }
         var failed = result
-        failed.schema_version = 8
+        failed.schema_version = PWContract.responseSchema
         failed.rc = 1
         failed.normalized_outcome = NormalizedOutcome.runnerReportingFailed
         failed.error = "runner host could not encode its result: \(diagnostic)"
@@ -135,7 +135,7 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
             // custom objects or non-string keys that JSONSerialization can reject.
             let finalDiagnostic = "\(diagnostic); evidence-preserving encoding also failed: \(error)"
             let minimal: [String: Any] = [
-                "schema_version": 8, "specimen_id": result.specimen_id,
+                "schema_version": PWContract.responseSchema, "specimen_id": result.specimen_id,
                 "run_kind": result.run_kind as Any? ?? NSNull(),
                 "rc": 1, "normalized_outcome": NormalizedOutcome.runnerReportingFailed,
                 "error": finalDiagnostic, "pid": result.pid,

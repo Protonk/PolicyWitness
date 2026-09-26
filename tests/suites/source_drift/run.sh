@@ -43,3 +43,14 @@ if test_selected "${PW_TEST_ID}"; then
   fi
   test_pass "limits documents agree; standalone guide, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
+
+PW_TEST_ID="contract_versions"
+if test_selected "${PW_TEST_ID}"; then
+  test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
+  test_step contract "check generated contract copies, generator controls and manifest validation"
+  RUN_LOG="${PW_TEST_ARTIFACTS}/contract.log"
+  if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/source_drift/contract.py" >"${RUN_LOG}" 2>&1; then
+    test_fail "contract version controls failed" "{\"log\":\"${RUN_LOG}\"}"
+  fi
+  test_pass "contract manifest and every generated copy agree; generator and build controls pass" "{\"log\":\"${RUN_LOG}\"}"
+fi

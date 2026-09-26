@@ -212,8 +212,11 @@ Readiness, sentinel and exit-grace budgets are unchanged. Authoritative field
 validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
-Response schema is 8; request schema 1 and worker ABI 7 are independent. Legacy
-replies remain decodable. Typed readers that require a signal object must migrate
+<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
+Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 1. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+<!-- END GENERATED CONTRACT VERSIONS -->
+
+Legacy replies remain decodable. Typed readers that require a signal object must migrate
 to a nullable field. Optional subprocess objects retain omitted-or-null absence.
 
 The reply boundary converts encoding failures to `runner_reporting_failed`
@@ -345,9 +348,9 @@ cause are unchanged and only log correlation is unavailable. Pass
 
 ## Evidence contract pointers
 
-Worker ABI 7 appends a pre-touched progress/failure header and a 4,096-byte text
-region after capture, leaving existing capacities intact. The release/acquire
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-7)
+The worker ABI places a pre-touched progress/failure header and a 4,096-byte text
+region after the capture bytes. The release/acquire
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract)
 defines milestones, native results, open numeric codes, and text availability.
 `runner_subprocess.worker_evidence` carries these publications through the normal
 reply. Policy-write errors retain partial output and host byte/errno evidence in
@@ -366,11 +369,11 @@ See the [field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md) for capacitie
 rules and remaining observation/liveness limitations.
 
 
-Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
-PID, or explicit null when no worker exists. It never substitutes the host PID.
-Typed readers must accept null; stored integer-PID replies remain decodable.
-The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 7 remain separate.
+`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
+worker exists. It never substitutes the host PID. Typed readers must accept
+null; replies before schema 6 carry an integer PID and remain decodable. The
+top-level legacy PID convention is unchanged. Request schema and worker ABI are
+separate contracts.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`

@@ -71,6 +71,36 @@ fn run_pw(bin: &Path, args: &[&str]) -> Output {
 }
 
 #[test]
+fn version_flag_reports_build_stamp_and_contract_versions() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let out = run_pw(&bin, &["--version"]);
+    assert!(
+        out.status.success(),
+        "--version failed: {:?}",
+        out.status.code()
+    );
+    let envelope: serde_json::Value =
+        serde_json::from_slice(&out.stdout).expect("parse version envelope");
+    assert_eq!(envelope["kind"].as_str(), Some("version"));
+    assert_eq!(envelope["result"]["ok"].as_bool(), Some(true));
+    for key in ["version", "number", "describe", "commit"] {
+        let value = envelope["build"][key].as_str().unwrap_or_default();
+        assert!(
+            !value.is_empty() && value != "unknown",
+            "build.{key} = {value:?}"
+        );
+    }
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(repo_root().join("docs/contract.json")).expect("read manifest"),
+    )
+    .expect("parse manifest");
+    assert_eq!(envelope["data"]["contract"], manifest["versions"]);
+}
+
+#[test]
 fn specimen_smoke_file_read_deny() {
     if !integration_enabled() {
         return;

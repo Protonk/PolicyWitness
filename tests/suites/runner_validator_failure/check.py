@@ -103,7 +103,7 @@ def check_cli(case, out, pw):
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert type(runner.get('schema_version')) is int and runner['schema_version'] == 8, runner
+            assert type(runner.get('schema_version')) is int and runner['schema_version'] >= 7, runner  # comparison: response 7
             assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
             answers = recover_evidence(envelope)
             (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')

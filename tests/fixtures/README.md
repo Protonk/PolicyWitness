@@ -5,6 +5,12 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
+- `contract/`: goldens for the wire contracts: the field-complete reply shape
+  (`response_shape.json`, checked by `runner_unit`) and the compiled worker ABI
+  layout harvest (`abi_layout.txt`, checked by `runner_abi_layout`). A failing
+  comparison writes a candidate into the case artifacts; replace the golden
+  after review, and bump the number in `docs/contract.json` first when the
+  failure says so. See `docs/CONTRACT.md`.
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
 - `release/`: independent Apple/tool responses and execution receipts for release

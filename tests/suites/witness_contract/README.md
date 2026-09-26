@@ -211,7 +211,7 @@ groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
-enforces the response-8 [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
+enforces the [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
 Consumer checks distinguish missing results from observed failures, retaining
 both missing reasons and all simultaneous comparison limits.
 

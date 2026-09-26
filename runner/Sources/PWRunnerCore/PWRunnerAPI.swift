@@ -159,11 +159,16 @@ public enum SandboxCheckOutcome {
     public static let unsupportedOperation = "unsupported_operation"
 }
 
+// BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
+/// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
+public enum PWContract {
+    public static let requestSchema: Int = 1
+    public static let responseSchema: Int = 8
+}
+// END GENERATED CONTRACT VERSIONS
+
 public struct PWRunnerRunSpec: Codable {
-    //   5 — explicit steps[].deny_signal:null (channel unobserved), and
-    //       evidence-based execution classification without sandbox-cause
-    //       inference. Legacy signal objects remain decodable. Readers that
-    //       require an object must migrate; ABI and request versions are separate.
+    // Version meanings: docs/CONTRACT.md, "Reading older replies".
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -172,7 +177,7 @@ public struct PWRunnerRunSpec: Codable {
     public var _test_overrides: PWRunnerTestOverrides?
 
     public init(
-        schema_version: Int = 1,
+        schema_version: Int = PWContract.requestSchema,
         specimen_id: String,
         run_kind: String? = nil,
         policy: PWRunnerPolicySpec,
@@ -447,7 +452,7 @@ public struct PWRunnerPathDiagnostics: Codable {
 
 public struct PWRunnerSandboxCheckResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract (ABI 7)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for native returns versus PW status and missing reasons.
     public var result_source: String? = nil
     public var native_rc: Int? = nil
@@ -575,7 +580,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
 
 public struct PWRunnerAttemptResult: Codable {
     /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract (ABI 7)" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
     /// for native returns versus PW status and missing reasons.
     /// Submitted intent, not proof that the named native operation ran.
     public var requested_kind: String? = nil
@@ -1148,41 +1153,8 @@ public struct PWRunnerSpawnFailure: Codable {
 // field, update CodingKeys and encode(to:), and populate the field-coverage
 // round-trip fixture in ReplyFailureTests. Reflection stays in that test.
 public struct PWRunnerRunResult: Codable {
-    // Response wire version.
-    //   1 — initial shape.
-    //   2 — adds optional `steps[].sandbox_check.path_diagnostics` block
-    //       (kernel-side path candidate forms). Consumers that branch on
-    //       schema_version can rely on path_diagnostics being available on
-    //       any path-filter check when schema_version >= 2. The field is
-    //       additive: clients pinned to v1 ignore it transparently.
-    //   3 — splits the XPC service host from the sandboxed worker process.
-    //       `pid` is the sandboxed worker PID when `runner_subprocess` is
-    //       present. Correlation uses runner_subprocess.pid, never a fallback
-    //       top-level host/client PID. `runner_subprocess` carries the worker exit
-    //       status observed by the unsandboxed host.
-    //   4 — adds `validator_subprocess` (alongside `runner_subprocess`)
-    //       describing the sb_api_validator --batch child the host spawns
-    //       against the sandboxed worker_pid, and adds `steps[].drift`
-    //       (nullable bool) capturing validator-prediction vs
-    //       attempt-observation disagreement per step.
-    //       `validator_subprocess` is nil when no validator child ran
-    //       (every probe was in the prediction-unavailable set, or the
-    //       child failed to spawn). `drift` is nil when no comparison
-    //       is possible (validator wasn't run for the step, or the
-    //       (validator-allow, ambiguous-deny) asymmetry applies).
-    //       Top-level `pid` semantics from v3 are preserved.
-    //   5 — explicit steps[].deny_signal:null (channel unobserved), and
-    //       evidence-based execution classification without sandbox-cause
-    //       inference. Legacy signal objects remain decodable. Readers that
-    //       require an object must migrate; ABI and request versions are separate.
-    //   6 — sandbox_check.pid is nullable when no worker was spawned.
-    //   7 — comparison scopes drift to recorded outcomes and exposes independent
-    //       limits; submitted attempt intent and later host path provenance are
-    //       explicit. Old replies retain old drift and absent derivations.
-    //   8 — ordered comparisons and host ordering evidence. A reporting_failure
-    //       reply withholds all comparisons while retaining diagnostic evidence.
-    //       Optional validator_spawn_failure retains host launch observations;
-    //       absence in older replies is unknown, not proof of a successful spawn.
+    // Response wire version. What each older number lacked is tabulated in
+    // docs/CONTRACT.md, "Reading older replies".
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -1205,7 +1177,7 @@ public struct PWRunnerRunResult: Codable {
     public var reporting_failure: PWRunnerReportingFailure?
 
     public init(
-        schema_version: Int = 8,
+        schema_version: Int = PWContract.responseSchema,
         specimen_id: String,
         run_kind: String? = nil,
         rc: Int,
@@ -1251,8 +1223,10 @@ public struct PWRunnerRunResult: Codable {
         case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }
     public func encode(to encoder: Encoder) throws {
+        // Reporting-failure diagnostics and ordered comparisons are required from
+        // response 8 onward; a stored older reply re-encodes without them.
         if let failure = reporting_failure {
-            guard schema_version == 8, normalized_outcome == NormalizedOutcome.runnerReportingFailed,
+            guard schema_version >= 8, normalized_outcome == NormalizedOutcome.runnerReportingFailed,
                   rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
                   steps.allSatisfy({ $0.comparison == nil && $0.drift == nil }),
@@ -1260,7 +1234,7 @@ public struct PWRunnerRunResult: Codable {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
-        } else if schema_version == 8 {
+        } else if schema_version >= 8 {
             if normalized_outcome == NormalizedOutcome.runnerReportingFailed {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "runner_reporting_failed requires reporting_failure diagnostics"))

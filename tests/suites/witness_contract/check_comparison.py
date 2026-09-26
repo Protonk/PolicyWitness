@@ -84,7 +84,7 @@ for line in sys.stdin:
                 assert run.wait(timeout=30) == 0
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert runner['schema_version'] == 8
+            assert runner['schema_version'] >= 8, runner  # comparison.order: response 8
             assert runner['test_overrides']['validator_executable_path'] == str(validator)
             assert runner['runner_subprocess']['exit_code'] == 0
             assert runner['validator_subprocess']['exit_code'] == 0

@@ -58,7 +58,7 @@ fixture and internal OS-call controls; `CWorkerTests` uses the real worker for
 deadline followed by voluntary exit and polling-time reaping. `EnvelopeInvariantTests`
 protects absent legacy observations and additive encoding. The pre-apply CLI
 witness checks forwarding on both failure and success. The classifier tests and live driver controls agree on the
-response-6 mapping. Rust correlation tests and the signed CLI retain log
+outcome mapping. Rust correlation tests and the signed CLI retain log
 associations separately from execution status and cause.
 
 | outcome | emitted by | primary coverage | notes |
@@ -84,7 +84,7 @@ real file effects before self-signal. `runner_unit` / `WorkerEvidenceTests`
 exercises C production parameter-allocation/assignment/apply call boundaries,
 late publication, zero/unfamiliar records, malformed/unpublished payloads,
 missing predictions, post-apply memory-only text, and failed cleanup after a
-broken pipe. `runner_abi_layout` checks ABI 7 sizes/offsets; incompatible worker
+broken pipe. `runner_abi_layout` checks the worker ABI sizes/offsets; incompatible worker
 rejection remains in `runner_c_worker_harness`. These controls do not establish
 kernel policy attribution from a signal or synthesize a native call from text.
 

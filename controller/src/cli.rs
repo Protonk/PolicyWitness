@@ -17,11 +17,13 @@ usage:
   policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
     commands: install, list, status, verify, remove, validate, reconcile
+  policy-witness --version
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is passed through to the runner client (or copied with runner mode injected)
-  - --no-log-capture skips the unified-log (`log show`) deny scan; use it when you don't consume the deny evidence and want the per-run cost back"
+  - --no-log-capture skips the unified-log (`log show`) deny scan; use it when you don't consume the deny evidence and want the per-run cost back
+  - --version prints a JSON envelope (kind=version) with the build stamp and the wire contract versions this build speaks; every envelope also carries the stamp under `build`"
     );
 }
 
@@ -37,6 +39,24 @@ pub fn run(argv: Vec<OsString>) -> i32 {
     if sub == "-h" || sub == "--help" || sub == "help" {
         print_usage();
         return 0;
+    }
+
+    if sub == "--version" || sub == "version" {
+        let result = json_contract::JsonResult {
+            ok: true,
+            rc: None,
+            exit_code: Some(0),
+            normalized_outcome: None,
+            errno: None,
+            error: None,
+            stderr: None,
+            stdout: None,
+        };
+        let data = json!({"contract": json_contract::contract_versions()});
+        return match json_contract::print_envelope("version", result, &data) {
+            Ok(()) => 0,
+            Err(_) => 2,
+        };
     }
 
     match sub.as_str() {

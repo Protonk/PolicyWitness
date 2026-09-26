@@ -425,12 +425,12 @@ func runEnvelopeInvariantTests(_ tk: TestKit) {
             try expectEqual(decoded.steps[0].deny_signal?.delta, 0)
             try expectEqual(decoded.steps[0].deny_signal?.signal, "SIGUSR1")
         }
-        tk.run("client XPC failure emitters share response 8 default") {
+        tk.run("client XPC failure emitters share the current response default") {
             for outcome in [NormalizedOutcome.xpcError, NormalizedOutcome.xpcTimeout,
                             NormalizedOutcome.xpcProxyTypeMismatch, NormalizedOutcome.xpcNoReply] {
                 let result = hostShortCircuitResult(outcome: outcome)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(result))
-                try expectEqual(decoded.schema_version, 8)
+                try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectNil(decoded.runner_subprocess)
                 try expectTrue(decoded.steps.isEmpty)
             }

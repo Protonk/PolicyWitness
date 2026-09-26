@@ -68,6 +68,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/check.log`
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
+- `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
 
 ## Run
 
@@ -87,3 +88,10 @@ content stops before signing or output creation. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
 `runner_unit` and the Rust unit tests. See the maintenance instructions in
 [`docs/LIMITS.md`](../../../docs/LIMITS.md).
+
+The `contract_versions` case checks [`docs/contract.json`](../../../docs/contract.json)
+against every generated copy in code and documents, exercises the real generator in
+a disposable checkout with changed, stale, broken-marker and malformed inputs, and
+proves a stale copy stops the build before signing. Compiled values are compared
+elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
+See [`docs/CONTRACT.md`](../../../docs/CONTRACT.md).

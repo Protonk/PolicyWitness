@@ -59,7 +59,11 @@ DIFF_REPORT="${PW_TEST_ARTIFACTS}/diff.json"
 if ! PW_PRINTER_OUT="${PRINTER_OUT}" \
      PW_SWIFT_LAYOUT_FILE="${SWIFT_LAYOUT_FILE}" \
      PW_DIFF_REPORT="${DIFF_REPORT}" \
-     /usr/bin/python3 - <<'PY'
+     PW_CONTRACT_JSON="${ROOT_DIR}/docs/contract.json" \
+     PW_ABI_GOLDEN="${ROOT_DIR}/tests/fixtures/contract/abi_layout.txt" \
+     PW_ABI_GOLDEN_CANDIDATE="${PW_TEST_ARTIFACTS}/abi_layout.candidate.txt" \
+     PW_TESTS_LIB="${ROOT_DIR}/tests/lib" \
+     /usr/bin/python3 - 2>"${PW_TEST_ARTIFACTS}/layout-check.err" <<'PY'
 import json
 import os
 import re
@@ -140,6 +144,32 @@ for line in printer_out.splitlines():
         printer_values[key] = int(value)
     except ValueError as e:
         raise SystemExit(f"non-integer printer value: {line!r} ({e})")
+
+# The compiled ABI number must be the one docs/contract.json declares; the
+# generated header region is text, and this is the compiled ground truth.
+contract = json.loads(Path(os.environ["PW_CONTRACT_JSON"]).read_text(encoding="utf-8"))
+declared_abi = contract["versions"]["worker_abi"]
+if printer_values.get("PW_PROBE_RUNNER_ABI_VERSION") != declared_abi:
+    raise SystemExit(
+        f"compiled PW_PROBE_RUNNER_ABI_VERSION={printer_values.get('PW_PROBE_RUNNER_ABI_VERSION')!r} "
+        f"disagrees with docs/contract.json worker_abi={declared_abi}"
+    )
+
+# The layout golden records the last accepted harvest. Any change fails until
+# the golden is replaced; a change that keeps the ABI number also needs a bump,
+# because host and worker rely on that number to refuse a mismatched layout.
+sys.path.insert(0, os.environ["PW_TESTS_LIB"])
+from abi_golden import compare
+golden_path = Path(os.environ["PW_ABI_GOLDEN"])
+golden_text = golden_path.read_text(encoding="utf-8") if golden_path.exists() else ""
+status, detail = compare(printer_out, golden_text)
+if status != "ok":
+    candidate = Path(os.environ["PW_ABI_GOLDEN_CANDIDATE"])
+    candidate.write_text(printer_out, encoding="utf-8")
+    advice = f"review the diff, then replace {golden_path} with {candidate}"
+    if status == "needs_bump":
+        advice = "bump worker_abi in docs/contract.json, regenerate, then " + advice
+    raise SystemExit(f"{detail}; {advice}")
 
 # Parse PWShmLayout constants out of CWorker.swift. The regex
 # tolerates Int / UInt32 (and any future numeric type) since the
@@ -236,7 +266,8 @@ if problems:
 print(f"ok: {len(printer_values)} C↔Swift layout values agree")
 PY
 then
-  test_fail "C↔Swift layout values disagree" "{\"diff_report\":\"${DIFF_REPORT}\"}"
+  LAYOUT_ERR="$(tail -n 1 "${PW_TEST_ARTIFACTS}/layout-check.err" | sed 's/"/\\"/g')"
+  test_fail "layout check failed: ${LAYOUT_ERR}" "{\"diff_report\":\"${DIFF_REPORT}\",\"stderr_log\":\"${PW_TEST_ARTIFACTS}/layout-check.err\"}"
 fi
 
 test_step "capture" "exercise bounded profile reads against independently constructed objects"

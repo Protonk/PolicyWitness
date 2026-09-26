@@ -99,3 +99,13 @@ batch-line capacity and runs that same parser for exact/over-limit and recovery
 controls. Values are compared with `docs/limits.json`; the behavioral inputs are
 independent of that manifest. A changed manifest value is a required negative
 control, even when its generated Markdown would be self-consistent.
+
+## Contract versions
+
+The harvested `PW_PROBE_RUNNER_ABI_VERSION` must equal `worker_abi` in
+`docs/contract.json`. The header's generated region is text; this is the
+compiled value. The whole harvest must also equal the golden
+`tests/fixtures/contract/abi_layout.txt`. A layout change under an unchanged ABI
+number fails with an instruction to bump first; any change writes
+`abi_layout.candidate.txt` into the artifacts to replace the golden after review.
+See `docs/CONTRACT.md`.

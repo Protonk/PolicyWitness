@@ -49,6 +49,10 @@
         {
           "id": "limits_documentation",
           "description": "Limits inventory and copied guide agree; standalone, staging, stale-input and link controls pass"
+        },
+        {
+          "id": "contract_versions",
+          "description": "Contract version manifest and every generated copy agree; generator, stale-copy and build-refusal controls pass"
         }
       ]
     },

@@ -85,7 +85,7 @@ Run:
 ./tests/run.sh --suite blackbox_menagerie
 ```
 
-Current expectations use response-7 comparison semantics: a failed attempt cannot
+Expectations use the comparison semantics introduced in response 7: a failed attempt cannot
 establish outcome agreement solely because its query predicted deny. Those rows
 retain `drift:null`, with native observations and policy/attempt expectations
 unchanged. The shared checker enforces new comparison/provenance shape while

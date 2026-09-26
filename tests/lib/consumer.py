@@ -88,7 +88,7 @@ def validate_evidence_shape(envelope):
     failure = runner.get('reporting_failure')
     failed_reporting = failure is not None
     if failed_reporting or runner.get('normalized_outcome') == 'runner_reporting_failed':
-        if runner['schema_version'] != 8 or runner.get('normalized_outcome') != 'runner_reporting_failed' or \
+        if runner['schema_version'] < 8 or runner.get('normalized_outcome') != 'runner_reporting_failed' or \
                 type(runner.get('rc')) is not int or runner['rc'] != 1 or \
                 not isinstance(runner.get('error'), str) or not runner['error']:
             errors.append('reporting failure requires a failed summary and diagnostic')
@@ -168,9 +168,9 @@ def validate_evidence_shape(envelope):
 def validate_current_build_evidence(envelope):
     """Explicit producer conformance, separate from historical response decoding.
 
-    Current response-7 producers establish no query order. The unchanged wire
-    version alone cannot distinguish them from stored replies that report the
-    weaker historical disagreement. Call this only for a known current build.
+    A wire version alone cannot prove which build produced a reply, so stored
+    replies sharing the current version are not evidence of current producer
+    behavior. Call this only for a known current build.
 
     Removal evidence is gathered from every step before any step is judged:
     with order unestablished, an attempt in any step may precede any query, so

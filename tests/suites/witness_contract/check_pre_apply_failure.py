@@ -100,7 +100,7 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    assert runner['schema_version'] == 8, runner
+    assert runner['schema_version'] >= 8, runner  # runner_subprocess.ordering: response 8
     ordering = worker['ordering']
     assert ordering['collection_closed_before_proceed'] is (not failure), ordering
     assert ordering['proceed_set'] is (not failure) and ordering['proceed_observed'] is (not failure), ordering

@@ -10,10 +10,12 @@
   <string>PolicyWitness</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <!-- build.sh sets the two version keys from git (nearest v* tag and commit
+       count) and adds PWBuildDescribe/PWBuildCommit; these are placeholders. -->
   <key>CFBundleShortVersionString</key>
-  <string>2.3.0</string>
+  <string>0.0.0</string>
   <key>CFBundleVersion</key>
-  <string>5</string>
+  <string>0</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
 </dict>

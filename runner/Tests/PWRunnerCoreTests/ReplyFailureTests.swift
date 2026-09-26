@@ -3,7 +3,7 @@ import Foundation
 
 // Field-complete constructed encoding input, not a claim that an admitted run
 // also has an admission failure. Keep every top-level optional populated here.
-private func replyFixture() throws -> PWRunnerRunResult {
+func replyFixture() throws -> PWRunnerRunResult {
     let json = #"""
     {
       "schema_version":8,"specimen_id":"reply-\"é\"","run_kind":"unit",
@@ -53,7 +53,7 @@ private func replyObject(_ data: Data) throws -> [String: Any] {
 func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
         tk.run("valid and legacy replies use the normal encoder unchanged") {
-            for version in [4, 7, 8] {
+            for version in [4, 7, PWContract.responseSchema] {
                 var result = try replyFixture(); result.schema_version = version
                 try expectEqual(pwRunnerReplyData(result), try pwRunnerEncodeJSON(result))
             }
@@ -84,7 +84,7 @@ func runReplyFailureTests(_ tk: TestKit) {
                 catch is EncodingError { }
                 let bytes = pwRunnerReplyData(result)
                 let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
-                try expectEqual(decoded.schema_version, 8)
+                try expectEqual(decoded.schema_version, PWContract.responseSchema)
                 try expectEqual(decoded.normalized_outcome, NormalizedOutcome.runnerReportingFailed)
                 try expectEqual(decoded.rc, 1)
                 try expectContains(decoded.error ?? "", "runner host could not encode")

@@ -43,7 +43,7 @@ def main():
         envelope = run.load_json()
     assert envelope['result']['ok'] is True
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] == 8
+    assert runner['schema_version'] >= 8, runner  # runner_subprocess.ordering: response 8
     assert runner['normalized_outcome'] == 'ok'
     assert runner.get('test_overrides') is None
     assert runner['runner_subprocess']['exit_code'] == 0

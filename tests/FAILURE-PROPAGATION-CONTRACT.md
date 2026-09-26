@@ -1,7 +1,7 @@
 # Failure evidence contract
 
 This contract specifies host observations, diagnostic preservation and derived
-comparisons: worker ABI 7 publications, response 8 and independent log correlation.
+comparisons: worker ABI publications, the runner reply and independent log correlation.
 Worker records, diagnostic text, late publications and policy-transfer partial
 outputs preserve independently observed facts through to the CLI.
 
@@ -25,7 +25,7 @@ reliably reachable specimen failure.
 
 For a published legacy failure, retain R and any nonzero legacy errno in the
 runner's `error` diagnostic as published status values, without calling R an
-observed apply/compile return. ABI 7 records identify the failed operation and
+observed apply/compile return. Worker failure records identify the failed operation and
 its native result independently of this legacy storage. The controller retains this diagnostic unchanged; subprocess fields below
 separately preserve cleanup observations. For an unpublished payload, neither
 the diagnostic nor a structured object may expose its storage as a call result.
@@ -39,8 +39,8 @@ which the child stopped.
 | --- | --- | --- |
 | Proceed wait expiry (operation 11, code 8) or native clock failure (kind 3) | Preserve budget detail/diagnostic and zero attempts; late release cannot revive | `runner_failed` |
 | Death awaiting release | Preserve disposition/progress without inventing a failure record or policy cause | `runner_failed` |
-| Valid ABI 7 failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
-| Incomplete or malformed ABI 7 failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
+| Valid worker failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
+| Incomplete or malformed worker failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
 | No worker spawned | Retain the host admission/setup/spawn error; no worker report or subprocess object | Existing applicable host outcome |
 | A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never `sandbox_apply_failed` |
 | A=false, D=true, R nonzero | Worker published a legacy preparation/application failure; precise failed operation and native return unavailable | `runner_failed`; describe a published legacy failure, without saying an apply or compile call returned R |
@@ -59,7 +59,7 @@ which the child stopped.
 | A=true, D=true, R=0; disposition unconfirmed or unrecovered wait error | Completed report/slots survive; exit/signal absent unless reaped | `runner_failed` |
 | A=true, D=true, R=0; reaped exit 0, no unresolved host fault or termination request | Worker completion confirmed; evaluate validator observations | Existing validator mapping, or `ok` when required evidence is complete |
 
-Summary precedence is: host rejection before spawn; published ABI 7 failure;
+Summary precedence is: host rejection before spawn; published worker failure;
 host transfer failure; incomplete/malformed failure publication; inconsistent published
 worker state; published legacy worker failure; observed sentinel expiry; other
 worker incompletion/abnormal disposition/unresolved host error; validator
@@ -86,11 +86,11 @@ is omitted and `drift` is explicit null. The original summary is diagnostic,
 not a second authoritative outcome. Retained ordering fields are diagnostic
 observations; no per-step order is certified by this reply.
 
-This is the sole response-8 exception to mandatory comparisons and complete
+This is the sole exception to mandatory comparisons and complete
 ordering objects. Consumers require the failure outcome, nonempty diagnostic,
 original summary and the absence of **all** comparisons and drift claims before
 accepting that exception. A failure marker cannot excuse a surviving agreement,
-disagreement or `query_first` claim. Ordinary response-8 invariants still reject
+disagreement or `query_first` claim. The ordinary reply invariants still reject
 an invalid assembled result when encoded directly; the service reply boundary
 alone constructs the degraded response.
 
@@ -153,8 +153,8 @@ child descriptors survive.
 
 ## Public compatibility and correlation
 
-Responses use schema 8, distinct from request schema 1, the outer controller
-envelope and worker ABI 7. Every new step explicitly encodes `deny_signal: null`;
+The response, request, controller envelope and worker ABI are separate
+contracts, owned by [docs/contract.json](../docs/CONTRACT.md). Every new step explicitly encodes `deny_signal: null`;
 old signal objects remain decodable as stored legacy evidence. This is a wire
 change for typed readers requiring a signal object. Explicit errno/drift nulls
 remain required. No signal collection is added.
@@ -166,7 +166,7 @@ not an alias to which new unknown terminations are assigned.
 ambiguous legacy status does not justify it. Both constants and coverage rows
 remain as legacy/reserved entries. `runner_failed` covers execution/reporting failure with cause possibly
 unknown; it does not mean a proven host defect. `bad_policy` keeps its existing
-structural-policy admission meaning. Published ABI 7 failures also use `runner_failed`; the operation/code record
+structural-policy admission meaning. Published worker failures also use `runner_failed`; the operation/code record
 provides the precise account without adding outcome strings.
 
 The pre-apply CLI witness asserts excluded claims, not one exact summary;
@@ -217,14 +217,14 @@ reporting obligations and registered test owners.
 | Test entry | Production reach and current assertions | Acceptance owner / remaining obligation |
 | --- | --- | --- |
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
-| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; response 8 ordering/eligibility and explicit signal null, legacy response-4/7 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; current ordering/eligibility and explicit signal null, stored response-4/7 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
 | Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply serializer with constructed invariant faults and internal encoder failure; every stored field has encoding coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
 | `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 7 layout and exact-version rejection |
-| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce response 8; missing channels remain distinct from observed failures |
+| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce at least response 8; missing channels remain distinct from observed failures |
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published legacy failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
@@ -247,11 +247,10 @@ Credit live rows only after inspecting bundle-integrity evidence and the retaine
 missing. Constructed classifier/encoding cases have separate credit.
 `source_drift` protects registry/outcome matrices.
 
-## Worker evidence contract (ABI 7)
+## Worker evidence contract
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
-following the existing capture bytes. Existing input/output capacities and
-other offsets do not change. Host and worker require exactly ABI 7, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header remains 64 bytes. Response schema 8 includes ordering evidence; request schema stays 1.
+following the capture bytes. Host and worker require exactly the same ABI number, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header is 64 bytes. The reply carries the ordering evidence described below; replies before schema 8 have none.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
 Legacy stored replies may omit it. Its `abi_version` is the host-selected UInt32
 layout encoded as a JSON integer, not proof the child reached ABI validation.
@@ -360,7 +359,7 @@ missing-result spelling; it means no completed result, never proof of non-start.
 They use result_source=synthetic, native_rc=null, and missing_reason=slot_absent
 or slot_incomplete. Completed supported slots use result_source=worker. Their rc is PW
 attempt status (often 0/1, or aggregated exec disposition), not a native syscall
-return such as an open FD. ABI 7 does not carry that raw return: native_rc is
+return such as an open FD. The worker ABI does not carry that raw return: native_rc is
 null for attempts, including completed ones. Unsupported/skipped attempts use synthetic and
 attempt_not_supported. Step errno/drift/signal absence retains its existing form.
 
@@ -425,7 +424,7 @@ No validator PID or subprocess is invented. Collection closes and releases the
 worker normally; missing predictions remain unestablished with null drift.
 The record survives worker-summary precedence and evidence-preserving reply
 degradation. The explicit `evidence_retained: false` backstop may omit it along
-with the other observations. This optional field is additive to response 8;
+with the other observations. This optional field is additive;
 absence in older replies is unknown. The controller forwards it unchanged.
 The live ENOENT witness checks the native code, path and call context without
 requiring English wording. Internal native-call controls exercise unfamiliar
@@ -489,11 +488,11 @@ incomplete post-apply attempt proves a policy cause or instrumentation defect.
 
 ## Query and receiver evidence
 
-Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
-PID, or explicit null when no worker exists. It never substitutes the host PID.
-Typed readers must accept null; stored integer-PID replies remain decodable.
-The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 7 remain separate.
+`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
+worker exists. It never substitutes the host PID. Typed readers must accept
+null; replies before schema 6 carry an integer PID and remain decodable. The
+top-level legacy PID convention is unchanged. Request schema and worker ABI are
+separate contracts.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`
@@ -539,7 +538,7 @@ not a runtime observation used to assign the cause.
 Open values do not require a production code registration. Two distinct worker
 payloads are checked against independent fixture inputs through C publication,
 Swift decoding and encoding, XPC client forwarding and Rust reception. The worker
-producer/domain is the containing worker PID and ABI-7 channel; JSON diagnostic
+producer/domain is the containing worker PID and worker ABI channel; JSON diagnostic
 records additionally exercise explicit producer/domain/operation/code/detail.
 Known operation/native-result fields survive an unfamiliar diagnostic code. The
 fixture supplies these values, including errno; it does not establish that the
@@ -570,7 +569,7 @@ See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture
 code-filtering and detail-dropping mutations are test experiments only; source
 and the signed app must be restored before acceptance.
 
-## Derived comparisons and evidence joins (response 8)
+## Derived comparisons and evidence joins
 
 ### Claim/evidence review
 
@@ -690,7 +689,7 @@ the release barrier. Legacy decodes gain neither field.
 Queries form an interval before the first attempt, not per-step interleaving or
 a shared snapshot. External activity may change targets during that interval;
 earlier attempts may affect later attempts. State stability and path identity
-remain unestablished. No response-8 producer path can yield `disagreement` or
+remain unestablished. No current producer path can yield `disagreement` or
 `drift: true`: the typed evidence model has no established state/identity cases,
 and the encoder and consumers reject that unsupported claim even with empty
 limitations.
@@ -738,11 +737,11 @@ successful application are protocol violations: the raw sentinels stay visible,
 | Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
 | Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
 | Request override | `validator_io_timeout_ms` | `PWRunnerTestOverrides` |
-| Run-level evidence | `runner_subprocess.ordering` | response 8 |
-| Per-step evidence | `comparison.order` | response 8 |
-| Host reply failure | `runner_reporting_failed`, `reporting_failure` | response 8; comparisons absent, drift null |
-| Failed validator launch | `validator_spawn_failure` | response 8; optional, additive |
-| Unordered limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | response 7 and later |
+| Run-level evidence | `runner_subprocess.ordering` | reply; absent before schema 8 |
+| Per-step evidence | `comparison.order` | reply; absent before schema 8 |
+| Host reply failure | `runner_reporting_failed`, `reporting_failure` | reply, absent before schema 8; comparisons absent, drift null |
+| Failed validator launch | `validator_spawn_failure` | reply; optional and additive |
+| Unordered limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | reply; absent before schema 7 |
 | Native gated validator | `tests/fixtures/validator/bridge.m`, suite `validator_bridge` | test equipment |
 
 
@@ -871,7 +870,7 @@ remain in the tests that own the controlled inputs and independent observations.
 | --- | --- | --- |
 | C1 | `witness_contract/drift_determination_via_validator_seam`: all four conclusion groups from supplied verdicts and real file controls; `runner_exec_dac/execute_permission_is_not_sandbox_drift`: native admission/spawn comparisons; `blackbox_e2e/checker_controls`: reject blanket unknown that erases supported agreement | Recorded submitted-scope comparison, without synchronized-state or causal proof |
 | C2 | Comparison witness: permission/other failures versus absent result; native exec case: failed child result remains beside successful spawn; pre-apply and both validator-failure CLI cases: missing channel never erases the other; `runner_unit/pwrunner_core_unit_executable`: `EnvelopeInvariantTests` retains native fields through Codable | Cause of a failed result remains unestablished, even where the test controls a known cause |
-| C3 | Comparison witness and `witness_contract/prediction_target_is_independent_of_attempt_target`: independent target/operation relations and submitted intent; native exec counterexamples; shared checker requires intent fields on response 7 and later | Submitted relation does not establish runtime object identity or full operation coverage |
+| C3 | Comparison witness and `witness_contract/prediction_target_is_independent_of_attempt_target`: independent target/operation relations and submitted intent; native exec counterexamples; shared checker requires intent fields from response 7 onward | Submitted relation does not establish runtime object identity or full operation coverage |
 | C4 | Comparison witness, `witness_contract/pre_apply_failure_reports_no_policy_verdict`, both `runner_validator_failure` CLI cases and `runner_filter_sysctl_name/prediction_unavailable_attempt_observed`: simultaneous limits and distinct missing reasons survive alongside raw observations; Swift encoding retains the whole limitations array including unfamiliar values | Several limits can coexist; no principal cause is inferred |
 | C5 | Comparison witness and `runner_unit`'s `DriftClassifierTests`/`EnvelopeInvariantTests`: later host enrichment and old-record absence survive encoding; shared blackbox checker rejects validator ownership or wrong phase on new host diagnostics | No earlier validator/worker observation or reaping guarantee follows from later host resolution |
 | C6 | `witness_contract/worker_termination_and_log_correlation`: live repeated candidates and matching provenance; `unit/rust.unit`'s `run_flow`/`sandbox_log` tests: serialized event indices, candidate multiplicity, capture limits and old-runner/new-controller independence; blackbox controls recover populated, unmatched, unavailable and disabled captures | Candidates are not unique occurrences or causes; absent/no-match capture supplies no negative proof |
@@ -881,8 +880,8 @@ remain in the tests that own the controlled inputs and independent observations.
 Swift legacy controls preserve original drift and do not invent comparison, intent
 or path provenance. `blackbox_e2e/checker_controls` exercises JSON recovery for
 versions 4–6, independent newer controller evidence, no admitted steps and no reply.
-The shared blackbox checker enforces the response-7 shape and blanket temporal
-limits on legacy replies. On response 8 it checks conditional ordering evidence,
+The shared blackbox checker enforces the comparison shape introduced in response 7 and blanket temporal
+limits on legacy replies. From response 8 it checks conditional ordering evidence,
 native-record eligibility and the prohibition on disagreement. A validated
 `reporting_failure` reply instead requires absent comparisons and explicit null
 drift, and retains unvalidated ordering observations for diagnosis. Both versions
@@ -899,8 +898,8 @@ checker controls retain accepted and rejected envelopes. It is separate from
 response-7 disagreements without silently applying current-build rules.
 
 Live comparison, native-exec, pre-apply, validator-failure and log-correlation
-witnesses require response version 8 before relying on version-gated checks.
-The three live filter callers pass `--expected-schema-version 8` to their
+witnesses require at least response 8 before relying on version-gated checks.
+The three live filter callers pass `--minimum-schema-version 8` to their
 adapter. Its offline controls accept legacy fixtures without that requirement,
 reject older/missing/invalid versions when it is supplied, and reject missing
 comparison/intent evidence on current replies. Compatibility with stored replies
@@ -925,7 +924,7 @@ other offsets are unchanged. The worker release wait is inventoried in
 
 Stored versions 4–7 preserve their original drift values and absence of new
 fields. Historical response-7 disagreement means deny/success despite unresolved
-order, state and identity. That legacy projection remains decodable; response 8
+order, state and identity. That legacy projection remains decodable; from response 8 the encoder
 rejects disagreement outright because no vocabulary for established state or
 runtime identity exists. Dropping limitation strings cannot manufacture evidence.
 The Rust controller preserves response versions and unfamiliar order strings.

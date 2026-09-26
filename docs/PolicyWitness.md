@@ -135,7 +135,7 @@ references is supported by the compiler.
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
-policy itself; its ABI 7 failure record identifies the failed operation and
+policy itself; its worker failure record identifies the failed operation and
 available native result, summarized as `runner_failed`. The controller runs
 `sbpl-check` only after `xpc_error`, retaining its independent result under
 `data.policy_check`. That fallback says nothing about how far a missing worker
@@ -407,11 +407,20 @@ Values are maxima unless labelled as defaults.
 
 ## Output envelope
 
+Every envelope carries a top-level `build` object naming the code that produced
+it: `version` (nearest `v*` git tag), `number` (commit count), `describe` and
+`commit`. The same values are stamped into the app's Info.plist. This is a
+coordinate for correlating evidence with source, not a compatibility signal; the
+contract versions below are.
+
 ### Shape and schema_version
 
-Runner responses use `schema_version = 8`, separately from request schema 1,
-the controller envelope and worker ABI 7. The XPC host stays unsandboxed and
-spawns a sandboxed attempt worker plus a batch validator. Worker identity for
+<!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
+Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 1. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+<!-- END GENERATED CONTRACT VERSIONS -->
+
+The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
+batch validator. Worker identity for
 correlation comes only from `runner_subprocess.pid`; top-level `pid` may name
 the host or client when no worker metadata exists.
 
@@ -433,7 +442,7 @@ null. Retained ordering observations are diagnostic; this reply certifies no
 per-step order. If serialization also fails for that degraded reply,
 `evidence_retained` is false and steps and subprocess evidence are absent.
 See the [reply failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure)
-for the narrow exception to normal response-8 comparison requirements.
+for the narrow exception to the normal comparison requirements.
 
 Every new step contains `deny_signal: null`: the C worker does not measure this
 channel. This is distinct from a measured count of zero. Stored legacy signal
@@ -554,7 +563,7 @@ meaning no completed result; it may have started. Completed attempts use source
 `worker`, but their rc is PW attempt status, not a raw syscall return, so their
 `native_rc` is also null. Received predictions use source `validator`; native rc
 is retained only for native-call result records. See the
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract-abi-7)
+[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract)
 for publication, absence and numeric-code definitions.
 
 The request schema also accepts an optional `_test_overrides`
@@ -913,6 +922,8 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
   `first_deny` diagnostic it backs) and want the per-run cost back.
   `data.sandbox_log_capture` is then `null`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
+- `--version`: print a `kind="version"` envelope with the build stamp and the
+  wire contract versions this build speaks
 
 ### Debug-attach to the worker
 
@@ -1253,11 +1264,11 @@ refusal remains `policy_too_large`; successful helper compilation cannot explain
 a missing worker reply.
 
 
-Response 6 makes `steps[].sandbox_check.pid` nullable: it is the spawned worker
-PID, or explicit null when no worker exists. It never substitutes the host PID.
-Typed readers must accept null; stored integer-PID replies remain decodable.
-The top-level legacy PID convention is unchanged. Request schema 1 and worker
-ABI 7 remain separate.
+`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
+worker exists. It never substitutes the host PID. Typed readers must accept
+null; replies before schema 6 carry an integer PID and remain decodable. The
+top-level legacy PID convention is unchanged. Request schema and worker ABI are
+separate contracts.
 
 Per-step `native_rc` is authoritative for native returns. A received diagnostic
 without a native return retains `result_source="validator"`, `native_rc=null`
