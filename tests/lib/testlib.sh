@@ -44,7 +44,7 @@ testlib_init() {
     export PW_TEST_RUN_ID
   fi
   if [[ -z "${PW_TEST_OUT_DIR:-}" ]]; then
-    PW_TEST_OUT_DIR="${root}/tests/out"
+    PW_TEST_OUT_DIR="${root}/tests/out/runs/direct"
     export PW_TEST_OUT_DIR
   fi
   if [[ -z "${PW_TEST_EVENTS:-}" ]]; then

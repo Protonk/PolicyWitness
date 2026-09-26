@@ -34,7 +34,7 @@ def exercise(out, interrupt, app_guard=False):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, target)
         target.chmod(0o755)
-    child_out = repo / 'tests/out'
+    child_out = repo / 'tests/out/runs/default'
     receipts = work / 'receipts.jsonl'
     env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
     env.update(PW_TEST_RUN_ID=name, PW_TEST_OUT_DIR=str(child_out),

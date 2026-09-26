@@ -74,9 +74,9 @@ def exercise(out, name):
     result = subprocess.run(['bash', str(repo / 'tests/run.sh')], env=env, capture_output=True, timeout=30)
     (work / 'stdout').write_bytes(result.stdout)
     (work / 'stderr').write_bytes(result.stderr)
-    run = json.loads((repo / 'tests/out/run.json').read_text())
+    run = json.loads((repo / 'tests/out/runs/default/run.json').read_text())
     integrity = run['artifact_integrity']
-    evidence = repo / 'tests/out/artifact-integrity'
+    evidence = repo / 'tests/out/runs/default/artifact-integrity'
     issues = json.loads((evidence / 'inspection.json').read_text())
     executed = [json.loads(line)['id'] for line in receipts.read_text().splitlines()]
     assert result.returncode == (0 if name == 'valid' else 1), (name, result.stderr)

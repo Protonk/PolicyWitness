@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 
 if [[ -z "${PW_TEST_OUT_DIR:-}" ]]; then
-  export PW_TEST_OUT_DIR="${ROOT_DIR}/tests/out"
+  export PW_TEST_OUT_DIR="${ROOT_DIR}/tests/out/runs/direct"
 fi
 
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"

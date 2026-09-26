@@ -85,7 +85,8 @@ The `runner` subcommands (install/list/status/verify/remove/validate) and the ma
 - Inspect selection without execution: `tests/run.sh --all --list`
 - Smoke only: `tests/run.sh --suite smoke`
 - Opt-in tests (signing, launchd, and implementation-mutation controls) live under `tests/suites/<suite>/opt_in/` with wrappers under [tests/suites/opt_in/](tests/suites/opt_in/), and are documented in [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md).
-- Execution replaces the output directory. Set `PW_TEST_OUT_DIR` to a subdirectory of `tests/out/` when retained evidence there must survive.
+- Execution defaults to `tests/out/runs/default`; use fresh explicit `PW_TEST_OUT_DIR=tests/out/runs/<name>` paths for separate evidence. `tests/RETAINED.json` protects indexed paths, including absent local copies. Only completed, owned, unretained output can be replaced; interrupted, ambiguous and unmanaged evidence is preserved.
+- Execution holds `tests/.checkout.lock` across revalidation, execution and finalization. Competing runs fail with checkout-busy even for another output path; use a second worktree for parallel execution. Never unlink the lock file: a new inode would bypass an existing holder. Help and `--list` remain read-only and available.
 
 ### Runner test machinery (deep contract)
 

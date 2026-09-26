@@ -79,6 +79,13 @@ def check(out):
         record = json.loads((work / 'acceptance.json').read_text())
         assert result == (0 if mode == 'valid' else 1), (mode, record)
         assert record['ok'] is (mode == 'valid')
+        if mode == 'valid':
+            line = next(line for line in (work / 'stdout').read_text().splitlines()
+                        if line.startswith('Suggested tests/RETAINED.json entry: '))
+            entry = json.loads(line.split(': ', 1)[1])
+            assert entry == dict(path=str(work.relative_to(ROOT / 'tests/out')),
+                                 run_id='release-fixture', reason='Release ZIP acceptance',
+                                 source=None, app_inventory='before.json')
         assert archive.read_bytes() == initial and fingerprint(source) == source_before
         if record.get('extraction_dir'):
             assert not Path(record['extraction_dir']).exists(), 'extraction was not cleaned up'

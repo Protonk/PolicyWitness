@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
-from repository import install_runner
+from repository import install_runner, completed_output
 
 
 def main():
@@ -65,10 +65,11 @@ def main():
             script.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/run.sh', script)
             script.chmod(0o644 if suite == 'nonexecutable' else 0o755)
-        child_out = repo / 'tests/out'
+        child_out = repo / 'tests/out/runs/default'
         child_out.mkdir(parents=True)
         # Old output must never be counted as evidence of this invocation.
-        (child_out / 'run.json').write_text('{"ok": true, "stale": true}')
+        completed_output(child_out)
+        prior_run = (child_out / 'run.json').read_text()
         env = {key: value for key, value in os.environ.items() if not key.startswith('PW_')}
         env.update(PW_TEST_OUT_DIR=str(child_out), PW_TEST_RUN_ID=f'control_{name}')
         argv = ['bash', str(repo / 'tests/run.sh')]
@@ -80,7 +81,7 @@ def main():
         (work / 'exit.json').write_text(json.dumps({'returncode': result.returncode}) + '\n')
         if name in ('missing', 'nonexecutable'):
             assert result.returncode == 2 and b'missing or nonexecutable case runner' in result.stderr, (name, result.stderr)
-            assert (child_out / 'run.json').read_text() == '{"ok": true, "stale": true}', name
+            assert (child_out / 'run.json').read_text() == prior_run, name
             assert not (child_out / 'dispatch.json').exists(), name
             inventory.append(name)
             print(f'{name}: ok', flush=True)

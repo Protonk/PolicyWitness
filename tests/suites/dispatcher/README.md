@@ -2,7 +2,7 @@
 
 Offline contracts for public selection, configuration, execution, and evidence
 reconciliation. Run `tests/run.sh --suite dispatcher`, or select `controls`,
-`accounting_controls`, `cancellation_controls`, `artifact_controls`, or `selection_controls` by their full `dispatcher/<case>`
+`accounting_controls`, `cancellation_controls`, `artifact_controls`, `selection_controls`, or `retention_controls` by their full `dispatcher/<case>`
 IDs. Each group runs once in its own invocation through the public command, so
 a failure in reconciliation does not suppress the accounting group.
 
@@ -19,7 +19,8 @@ of the selected cases. Whole-app symlinks are accepted, but the controller must
 resolve within the named bundle. Distinct catalog IDs cannot share a report path;
 valid reporting aliases and suite inclusions remain supported.
 
-Execution writes `plan.json` and delegates to `tests/lib/suite_run.py`. Each
+Execution validates retention and output ownership, acquires `tests/.checkout.lock`,
+revalidates, writes `owner.json` before `plan.json`, and delegates to `tests/lib/suite_run.py`. Each
 ordinary case has a separate command invocation. BYOXPC specimen cases share a
 single installation/cleanup lifecycle; the wrapper runs selected specimens in
 separate child processes. Independent cases continue after a failing command.
@@ -108,3 +109,23 @@ real inspector. Production has no bypass setting. Apple's signature semantics
 are checked separately by `preflight/signed_artifact_controls`.
 Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
 and `controls.json` remain in artifacts for inspection.
+
+## Retention controls
+
+`retention_controls` uses independent fixture checkouts and execution receipts.
+It reuses `artifact.inventory` to compare retained files, modes, symlink targets
+and empty directories. It checks retained siblings and overlap in all directions,
+absent local retained directories, invalid/unreadable indexes, redirected paths,
+completed failed runs, interrupted and ambiguous replacement refusals, and
+read-only help/list/invalid requests. A case receipt observes that `owner.json`
+already exists when execution starts.
+
+Held executions prove competing operations fail even for another output path,
+independent checkouts can execute, and a killed dispatcher releases the OS lock
+without inventing run completion. Tests inspect the stable lock inode and retain
+raw command output and receipts. The lock file must never be unlinked, including
+by cleanup: otherwise a second inode could admit a competing operation.
+
+See [the output contract](../../README.md#retention-ownership-and-execution-locking)
+for the committed index fields, terminal ownership checks, default
+`tests/out/runs/default`, direct-script fallback and release-acceptance output.

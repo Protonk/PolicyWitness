@@ -75,7 +75,7 @@ class Tools:
         output = Path(env['PW_TEST_OUT_DIR'])
         output.mkdir()
         cases = ['smoke/specimen_file_read_deny', 'witness_contract/happy_path_baseline']
-        summary = dict(ok=True, configuration={'app_dir': str(app)},
+        summary = dict(run_id='release-fixture', ok=True, configuration={'app_dir': str(app)},
             completion=dict(selected=2, completed=2, skipped=0, unrun=0),
             case_results=[dict(id=case, status='pass') for case in cases])
         if self.mode == 'skipped':

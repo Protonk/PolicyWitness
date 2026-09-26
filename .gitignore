@@ -15,3 +15,6 @@ controller/target
 # tests artifacts
 tests/out/
 tests/**/__pycache__/
+
+# Stable checkout advisory lock; never remove while held.
+/tests/.checkout.lock

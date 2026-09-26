@@ -115,6 +115,10 @@
         {
           "id": "artifact_controls",
           "description": "Reject invalid artifacts before app-dependent cases and detect mutation after passing or failing tests"
+        },
+        {
+          "id": "retention_controls",
+          "description": "Retained inventories, managed run ownership and checkout serialization protect execution evidence"
         }
       ]
     },

@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
-from repository import install_runner
+from repository import install_runner, completed_output
 from artifacts import bundle, seal
 
 LITERAL = "literal spaces 'quoted' $(touch CANARY)"
@@ -53,10 +53,10 @@ def main():
         fixture = repo / 'tests/fixtures/dispatcher/selection.py'
         fixture.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/selection.py', fixture)
-        child_out = repo / 'tests/out'
-        child_out.mkdir()
+        child_out = repo / 'tests/out/runs/default'
+        child_out.mkdir(parents=True)
         (child_out / 'old.bin').write_bytes(b'prior evidence\x00\xff')
-        (child_out / 'run.json').write_text('{"old":true}')
+        completed_output(child_out)
         app_dir = repo / 'An app.app'
         binary = app_dir / 'Contents/MacOS/policy-witness'
         if app:
@@ -225,7 +225,7 @@ def main():
         {'PW_TEST_RUNNER_MODE': 'byoxpc'}, {'PW_TEST_RUNNER_SERVICE': 'ignored.service'},
         {'PW_TEST_SUITE_OVERRIDE': 'ignored'}, {'PW_TEST_CASES': 'ignored'},
         {'PW_TEST_EVENTS': '/tmp/ignored'}, {'PW_TEST_QUIET': 'false'},
-        {'PW_APP_DIR': 'tests/out/Erased.app'},
+        {'PW_APP_DIR': 'tests/out/runs/default/Erased.app'},
         {'PW_TEST_RUN_ID': '../../escape'}, {'PW_TEST_RUN_ID': 'literal " quote'},
     ]:
         exercise('config_error_' + str(len(inventory)), ['--suite', 'probe'], code=2, invalid=True, settings=settings)

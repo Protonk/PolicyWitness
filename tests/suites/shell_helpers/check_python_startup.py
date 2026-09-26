@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
-from repository import install_runner
+from repository import install_runner, completed_output
 
 
 def require(condition, message):
@@ -43,10 +43,10 @@ def main():
                 suite.parent.mkdir(parents=True)
                 shutil.copyfile(ROOT / 'tests/fixtures/shell_case/python_startup.sh', suite)
                 suite.chmod(0o755)
-                child_out = repo / 'tests/out'
-                child_out.mkdir()
+                child_out = repo / 'tests/out/runs/default'
+                child_out.mkdir(parents=True)
                 (child_out / 'prior.bin').write_bytes(b'prior evidence\x00\xff')
-                (child_out / 'run.json').write_text('{"prior_run": true}\n')
+                completed_output(child_out)
                 before = snapshot(child_out)
                 started, continued, receipt = (work / leaf for leaf in ('started', 'continued', 'checker.json'))
                 env = {key: value for key, value in os.environ.items()

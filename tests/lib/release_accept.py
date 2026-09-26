@@ -8,6 +8,8 @@ import stat
 import sys
 import tempfile
 import zipfile
+import uuid
+import retention
 
 import artifact
 from release_commands import command, save
@@ -34,6 +36,7 @@ def archive_layout(archive):
 
 
 def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
+    retention.replacement_allowed(ROOT, out / 'tests', retention.load_index(ROOT))
     report = dict(schema_version=1, archive=str(archive), ok=False, errors=[], selected_cases=list(CASES))
     save(out / 'acceptance.json', report)
     staging, app, before = None, None, None
@@ -103,6 +106,10 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         report['ok'] = completed and not report['errors']
         save(out / 'acceptance.json', report)
     print(f'Release acceptance: {out / "acceptance.json"}', flush=True)
+    if report['ok']:
+        entry = dict(path=str(out.relative_to(ROOT / 'tests/out')), run_id=run['run_id'],
+                     reason='Release ZIP acceptance', source=None, app_inventory='before.json')
+        print('Suggested tests/RETAINED.json entry: ' + json.dumps(entry, sort_keys=True), flush=True)
     for error in report['errors']:
         print(f'STOP: {error}', file=sys.stderr)
     return 0 if report['ok'] else 1
@@ -119,9 +126,13 @@ def main():
     # The test dispatcher owns and replaces its output directory.
     if base.resolve() != base or base in archive.parents:
         parser.error('release output must be a real directory separate from the input archive')
-    base.mkdir(parents=True, exist_ok=True)
-    out = Path(tempfile.mkdtemp(prefix='run-', dir=base))
-    return accept(archive, out)
+    out = base / ('run-' + uuid.uuid4().hex)
+    try:
+        retention.replacement_allowed(ROOT, out, retention.load_index(ROOT))
+        out.mkdir(parents=True)
+        return accept(archive, out)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
 
 
 if __name__ == '__main__':

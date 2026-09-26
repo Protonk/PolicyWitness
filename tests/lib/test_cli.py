@@ -11,6 +11,7 @@ import uuid
 
 sys.dont_write_bytecode = True
 from suite_run import execute, save
+import retention
 
 
 def catalog(root):
@@ -136,7 +137,7 @@ def resolve_config(root, env):
         raise ValueError('controller must resolve inside the selected app bundle')
     if any(named_app != app for named_app in bin_apps) or (bins and bins[0] != binary):
         raise ValueError('PW_APP_DIR and controller override identify different artifacts')
-    out = path('PW_TEST_OUT_DIR', 'tests/out')
+    out = retention.bounded_path(root, path('PW_TEST_OUT_DIR', 'tests/out/runs/default', resolve=False))
     base = root / 'tests/out'
     if out != base and base not in out.parents:
         raise ValueError(f'PW_TEST_OUT_DIR must resolve within {base}; got {out}')
@@ -164,7 +165,7 @@ def main():
     parser.add_argument('--case', action='append', default=[], metavar='SUITE/CASE', help='select an exact case ID (repeatable)')
     parser.add_argument('--list', action='store_true', help='print the selected plan as JSON without running or writing anything')
     parser.epilog = ('Configuration: PW_APP_DIR chooses the app; PW_BIN/PW_BIN_PATH are agreeing bundle-controller aliases. '
-                     'PW_TEST_OUT_DIR (inside tests/out) is replaced on execution. PW_TEST_RUN_ID labels evidence. '
+                     'PW_TEST_OUT_DIR defaults to tests/out/runs/default; only completed, unretained output can be replaced. PW_TEST_RUN_ID labels evidence. '
                      'PW_TEST_QUIET=1 suppresses routine case messages. Relative paths are repository-relative. '
                      'Use --all --list to discover cases, suites, prerequisites, and skip contracts.')
     args = parser.parse_args()
@@ -191,13 +192,22 @@ def main():
         print(json.dumps(plan, indent=2, sort_keys=True))
         return 0
     out = Path(config['out_dir'])
-    if out.exists():
-        shutil.rmtree(out)
-    out.mkdir(parents=True)
-    run_id = os.environ.get('PW_TEST_RUN_ID') or time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()) + '_' + uuid.uuid4().hex[:8]
-    started = time.time_ns() // 1_000_000
-    save(out / 'plan.json', plan)
-    return execute(root, out, run_id, started, plan, config)
+    try:
+        retention.replacement_allowed(root, out, retention.load_index(root))
+        with retention.checkout_lock(root):
+            # A planner may have raced an earlier holder; check again under lock.
+            retention.replacement_allowed(root, out, retention.load_index(root))
+            if out.exists():
+                shutil.rmtree(out)
+            out.mkdir(parents=True)
+            run_id = os.environ.get('PW_TEST_RUN_ID') or time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()) + '_' + uuid.uuid4().hex[:8]
+            started = time.time_ns() // 1_000_000
+            save(out / 'owner.json', {'schema_version': 1, 'run_id': run_id,
+                                     'out_dir': str(out), 'started_at_unix_ms': started})
+            save(out / 'plan.json', plan)
+            return execute(root, out, run_id, started, plan, config)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
 
 
 if __name__ == '__main__':

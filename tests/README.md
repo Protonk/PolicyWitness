@@ -136,9 +136,10 @@ dependency-analysis framework.
   resolved controller and app paths. Whole-app symlinks are supported; a
   controller symlink must stay inside its named bundle, including when a
   controller alias supplies the app path implicitly.
-- `PW_TEST_OUT_DIR`: output directory, default `tests/out`. It must resolve inside
-  `tests/out`, including through symlinks, and cannot overlap the tested app.
-  Execution replaces this directory; inspection does not.
+- `PW_TEST_OUT_DIR`: output directory, default `tests/out/runs/default`. Named
+  disposable runs use `tests/out/runs/<name>`. Explicit paths must stay within
+  `tests/out`, without symlink redirects or path escapes, and cannot overlap the
+  tested app. Execution replaces only eligible output; inspection is read-only.
 - `PW_TEST_RUN_ID`: evidence label; unset or empty generates one. It does not
   create a separate output directory. Labels start with a letter/digit and use
   at most 128 letters, digits, dots, underscores, or hyphens, because specimen
@@ -154,6 +155,45 @@ working directory. The effective paths are recorded in `plan.json` and
 and event paths (`PW_TEST_RUNNER_*`, `PW_TEST_SUITE_OVERRIDE`, `PW_TEST_CASES`,
 `PW_TEST_EVENTS`) belong to child execution and are rejected as public settings.
 Select BYOXPC cases through the catalog instead.
+
+## Retention, ownership and execution locking
+
+`tests/RETAINED.json` is the committed retention index, outside disposable output.
+It has `schema_version: 1` and a `runs` array. Each entry records `path` relative
+to `tests/out`, `run_id`, a nonempty `reason`, `source` (the full tested commit
+hash, or null when unknown), and `app_inventory` (a run-relative evidence path,
+or null when unavailable). Paths stay protected even when their directories are
+absent locally. A missing, malformed or unreadable index prevents replacement.
+Targets equal to, containing or inside a retained path are refused before any
+output is changed. Symlink redirects and path escapes are rejected.
+
+The dispatcher writes `owner.json` first, with its run ID, resolved output path
+and start time. Only a matching, valid terminal `run.json` establishes completed
+output. Failed cases and ordinary Ctrl-C cancellation still produce terminal
+records and are disposable when unretained. A missing terminal record leaves an
+interrupted run; malformed or inconsistent evidence leaves ambiguous output.
+Nonempty output without ownership is unmanaged. Replacement refuses all three;
+inspect the evidence and choose a fresh output directory. Placement under
+`runs/` alone does not establish ownership. Planning refusals exit 2.
+
+After read-only planning, execution takes an OS-held advisory lock on
+`tests/.checkout.lock`, rechecks retention and output eligibility, and holds the
+lock through finalization. The file stays in place between operations. Never
+unlink it: the held lock belongs to its inode, so a replacement file would let
+later operations bypass the holder. PID and start information is diagnostic;
+process exit releases the lock, while run records determine completion.
+
+One checkout runs one execution at a time. Competing execution gets a
+checkout-busy error even with a different output path. A smoke run must wait
+for a long `--all` to finish before retrying; parallel work needs a second
+worktree. Help and `--list` remain available while execution holds the lock.
+
+Direct shell entrypoints default to `tests/out/runs/direct`; they do not replace
+output or provide dispatcher ownership/completion guarantees. Release acceptance
+keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
+`tests` output passes the same dispatcher checks. Passing acceptance prints a
+suggested index entry. Record source provenance only when established; the
+commit that adds an index entry is not the source of an earlier build.
 
 ## Tiers
 
@@ -177,11 +217,11 @@ prerequisites should fail, not skip.
 | Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
 | --- | --- | --- | --- | --- | --- |
 | `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; release continuation and real deadline controls | Built app for inspection; signing controls also need matching Developer ID; release controls need no app, with macOS socket/process observation for deadlines | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
-| `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`, and the shared paragraph of the sandboxed-harness note across its three copies. | Python 3 | — | `tests/out/suites/source_drift/.../check.log` |
+| `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`, and the shared paragraph of the sandboxed-harness note across its three copies. | Python 3 | — | `tests/out/runs/default/suites/source_drift/.../check.log` |
 | `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3; macOS codesign for mutation prerequisite control | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No built app or toolchain; mutation prerequisites inspect an unsigned fixture and forbid later builds; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |
-| `unit` | Baseline | Controller logic is correct at the unit level, and the controller crate is rustfmt-clean | Cargo toolchain with rustfmt | — | `tests/out/suites/unit/.../cargo-test-bins.log`, `cargo-fmt-check.log` |
-| `runner_unit` | Baseline | Swift runner internals: `CWorkerOrchestrator` envelope invariants, scoped comparison and consumer-encoding guarantees, `classify` worker/validator→normalized-outcome table, `buildAttemptResult` (kind, action, slot)→attempt-outcome table, shared prediction_unavailable exclusions and query planning, and CWorker + ValidatorClient drivers. Lifecycle controls retain independent polling, termination and confirmed-reap observations through the driver and JSON assembler. Native spawn controls retain unfamiliar return codes through release, worker-failure precedence and reply degradation. `WorkerEvidenceTests` covers ABI 7 publication, native call failures, diagnostic availability, cleanup-time snapshots, missing steps and EPIPE partial output. `HostOutcomeClassifierTests` exercises the production classifier with constructed results. Separate `SandboxApplyTests` checks exercise the unused Swift apply helper; they do not establish C-worker or CLI coverage. | Swift + clang; signed app for required live controls | — | `tests/out/suites/runner_unit/.../pwrunner_core_tests.log`. Wrapper builds `worker_lifecycle`; select with an app-dependent suite for integrity evidence and inspect the Swift log for internal SKIP. |
+| `unit` | Baseline | Controller logic is correct at the unit level, and the controller crate is rustfmt-clean | Cargo toolchain with rustfmt | — | `tests/out/runs/default/suites/unit/.../cargo-test-bins.log`, `cargo-fmt-check.log` |
+| `runner_unit` | Baseline | Swift runner internals: `CWorkerOrchestrator` envelope invariants, scoped comparison and consumer-encoding guarantees, `classify` worker/validator→normalized-outcome table, `buildAttemptResult` (kind, action, slot)→attempt-outcome table, shared prediction_unavailable exclusions and query planning, and CWorker + ValidatorClient drivers. Lifecycle controls retain independent polling, termination and confirmed-reap observations through the driver and JSON assembler. Native spawn controls retain unfamiliar return codes through release, worker-failure precedence and reply degradation. `WorkerEvidenceTests` covers ABI 7 publication, native call failures, diagnostic availability, cleanup-time snapshots, missing steps and EPIPE partial output. `HostOutcomeClassifierTests` exercises the production classifier with constructed results. Separate `SandboxApplyTests` checks exercise the unused Swift apply helper; they do not establish C-worker or CLI coverage. | Swift + clang; signed app for required live controls | — | `tests/out/runs/default/suites/runner_unit/.../pwrunner_core_tests.log`. Wrapper builds `worker_lifecycle`; select with an app-dependent suite for integrity evidence and inspect the Swift log for internal SKIP. |
 | `integration` | Baseline | CLI contract + runner envelope are stable end-to-end | Built app + XPC | — | Uses fixtures under `tests/fixtures/pw_runner/` |
 | `runner_apply_isolation_v2` | Baseline | v2 deny-default specimens complete cleanly: the unsandboxed XPC host posix_spawns the C worker, the worker applies the policy and writes its slot results to shared memory, and the host replies with a full envelope | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |
 | `runner_apply_isolation_v3` | Baseline | Same shape as `runner_apply_isolation_v2` but with SBPL v3 grammar, which has stricter validation | Built app + XPC | — | Asserts `runner_subprocess` and worker PID semantics |
@@ -201,7 +241,7 @@ prerequisites should fail, not skip.
 | `runner_abi_layout` | Baseline | Layout-drift guard between the C ABI header and Swift `PWShmLayout`. Compiles a tiny `printer.c` against `pw_probe_runner_abi.h` at test time, harvests every `sizeof`/`offsetof`/macro value, parses the mirrored Swift enum, and asserts bidirectional agreement. Catches what parser-only `source_drift` can't model (compiler struct padding). Checks compiled C values against the limits inventory and exercises the validator query-size boundary. | `xcrun clang` + macOS SDK; no app | — | Companion to `source_drift`'s enum-agreement check; both belong in the Baseline tier. |
 | `runner_c_worker_harness` | Baseline | Proves `pw-probe-runner` (the C worker) in isolation across 25 hand-built-shm scenarios, including ten release-barrier controls: `(allow default)` happy path, bare `(deny default)` isolation, clean exit-byte teardown, SIGKILL fallback, a 256-slot multi-page shared-memory run, an SBPL-params round-trip that proves `policy.params` reach the kernel (kernel-observed deny on `/etc/hosts` when `TARGET=/private/etc` is passed through `sandbox_create_params` + `sandbox_set_param`), the file unlink/create attempt kinds (allow + deny), and the worker's pre-apply self-defense exits (compile failure survives with `apply_rc=-1`; abi/prepared/step_count/param_count/policy-overflow refusals → exit 4/5/6/7/8). | Built app + harness | — | Compiles `harness.c` once per suite run into `tests/out/.../harness.runner_c_worker` |
 | `runner_use_c_worker` | Baseline | End-to-end coverage of the runner's C code path. Drives real specimens through `controller → XPC service → CWorkerOrchestrator → pw-probe-runner + sb_api_validator --batch` normally without `_test_overrides` (the timeout case deliberately uses the deadline and hang seams). Covers: v4 envelope shape (validator_subprocess populated, drift computed, prediction_unavailable verdicts synthesized locally), bug-report `(deny default)` survival, and regression cases for duplicate step_ids (plan-killer), unsupported attempt combos (per-step skip), worker timeout with completed write evidence and independent file effects, ENOENT/BOOTSTRAP_UNKNOWN_SERVICE not counted as drift, sandbox_check.pid = worker PID, DAC EACCES not counted as drift, and the access_failed outcome. | Built app + XPC | — | |
-| `runner_mach_service_liveness` | Baseline | The built `PWRunner` executable, launched directly with `--mach-service <name>` (the BYOXPC LaunchAgent launch shape), binds `NSXPCListener(machServiceName:)` and stays alive instead of aborting under `xpc_main`. Regression guard for the BYOXPC `xpc_timeout` crash: a host that calls `NSXPCListener.service()` for this launch aborts immediately (`"An XPC Service cannot be run directly."`), which is what made `runner verify` time out. Complements `runner_unit`'s `pwListenerConfig` table (which pins the argv→listener selection) by asserting the shipped binary itself does not abort. | Built app | — | Launches the host binary without launchd, so it never services a connection here — it only asserts the process does not abort. `tests/out/suites/runner_mach_service_liveness/.../artifacts/pwrunner.stderr.log` |
+| `runner_mach_service_liveness` | Baseline | The built `PWRunner` executable, launched directly with `--mach-service <name>` (the BYOXPC LaunchAgent launch shape), binds `NSXPCListener(machServiceName:)` and stays alive instead of aborting under `xpc_main`. Regression guard for the BYOXPC `xpc_timeout` crash: a host that calls `NSXPCListener.service()` for this launch aborts immediately (`"An XPC Service cannot be run directly."`), which is what made `runner verify` time out. Complements `runner_unit`'s `pwListenerConfig` table (which pins the argv→listener selection) by asserting the shipped binary itself does not abort. | Built app | — | Launches the host binary without launchd, so it never services a connection here — it only asserts the process does not abort. `tests/out/runs/default/suites/runner_mach_service_liveness/.../artifacts/pwrunner.stderr.log` |
 | `runner_byoxpc` | Opt-in | Smoke + blackbox coverage through a BYOXPC runner | Built app + launchd (GUI session) | Annotated mismatch condition in shared menagerie cases only | Uses an owned, uniquely named runner copy; signing preserves the selected app and cleanup verifies removal. Shared smoke/blackbox assertions include checker controls. BBX prediction disagreements fail and do not suppress attempt validation. |
 | `smoke` | Baseline + opt-in caller-auth case | Quick end-to-end checks against a built app bundle | Built app + XPC; selecting the whole suite also requires a matching Developer ID | — | `--suite smoke` includes `runner_caller_auth`. For ordinary smoke without signing equipment, select `--case smoke/specimen_file_read_deny --case smoke/specimen_file_read_deny_standard`. Ordinary specimens also run under `runner_byoxpc`. Caller-auth checks use signed app copies, identical-client restricted/relaxed controls, independent file effects, and a missing-service control. |
 | `blackbox_e2e` | Baseline | End-to-end black-box cases (BBX-*) validate the returned JSON envelope, attempts, and step identity/order. Prediction disagreements fail; independent checker controls ensure one failure cannot hide another. | Built app + XPC; checker controls need only Python 3 | — | Live cases also run under `runner_byoxpc`; runs standalone via `tests/run.sh --suite blackbox_e2e` |

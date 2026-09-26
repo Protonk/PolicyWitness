@@ -158,7 +158,7 @@ def finish(out, run_id, started, invocations, plan, integrity=None):
         by_suite[name] = counts([report for report in reports if report['suite'] == name])
     finished = time.time_ns() // 1_000_000
     run = {
-        'schema_version': 1, 'run_id': run_id, 'started_at_unix_ms': started,
+        'schema_version': 1, 'terminal': True, 'run_id': run_id, 'started_at_unix_ms': started,
         'finished_at_unix_ms': finished, 'duration_ms': finished - started,
         'ok': not errors and totals['fail'] == 0,
         'counts': totals, 'suites': by_suite, 'reports': reports,
