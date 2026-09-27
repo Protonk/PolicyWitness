@@ -1157,8 +1157,9 @@ No permanent test reads an execution plan, audit document or acceptance output.
 
 ### Compatibility and acceptance gate
 
-Response schema is **8**, request schema **1**, and worker ABI **7**. Current
-responses require per-step order and worker ordering observations. The ABI adds
+The current wire numbers are stated in [docs/CONTRACT.md](../docs/CONTRACT.md).
+Responses from schema 8 require per-step order and worker ordering observations,
+and from schema 10 the worker disposition record. The ABI adds
 release and acknowledgement in the two reserved header words; capacities and
 other offsets are unchanged. The worker release wait is inventoried in
 [Limits](../docs/LIMITS.md).

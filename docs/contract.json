@@ -2,8 +2,8 @@
   "schema_version": 1,
   "versions": {
     "request_schema": 1,
-    "response_schema": 9,
+    "response_schema": 10,
     "worker_abi": 7,
-    "controller_envelope": 2
+    "controller_envelope": 3
   }
 }

@@ -1,5 +1,5 @@
 {
-  "response_schema" : 9,
+  "response_schema" : 10,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -42,8 +42,12 @@
       "signal" : "string"
     },
     "reply.runner_subprocess" : {
+      "cleanup_trigger" : "string",
+      "collection_basis" : "string",
+      "disposition" : "object",
       "done_observed" : "boolean",
       "exit_requested" : "boolean",
+      "grace_end" : "string",
       "ordering" : "object",
       "partial_steps" : "boolean",
       "pid" : "number",
@@ -53,6 +57,87 @@
       "termination_request" : "object",
       "wait_errors" : "array",
       "worker_evidence" : "object"
+    },
+    "reply.runner_subprocess.disposition" : {
+      "issues" : "array",
+      "questions" : "object",
+      "steps" : "array"
+    },
+    "reply.runner_subprocess.disposition.questions" : {
+      "cleanup_trigger" : "object",
+      "collection_basis" : "object",
+      "final_status" : "object",
+      "grace_end" : "object",
+      "kill_request_and_result" : "object",
+      "progress_association" : "object",
+      "stop_reason" : "object"
+    },
+    "reply.runner_subprocess.disposition.questions.cleanup_trigger" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.questions.collection_basis" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.questions.final_status" : {
+      "basis" : "array",
+      "reason" : "string",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.questions.grace_end" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string",
+      "value" : "object"
+    },
+    "reply.runner_subprocess.disposition.questions.kill_request_and_result.value" : {
+      "errno" : "number",
+      "rc" : "number",
+      "signal" : "number"
+    },
+    "reply.runner_subprocess.disposition.questions.progress_association" : {
+      "reason" : "string",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.questions.stop_reason" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.steps[]" : {
+      "attempt_support" : "string",
+      "index" : "number",
+      "questions" : "object",
+      "slot" : "string",
+      "step_id" : "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions" : {
+      "step_boundary_reached" : "object",
+      "step_requested_operation_applicability" : "object",
+      "step_result_published" : "object"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_requested_operation_applicability" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.runner_subprocess.disposition.steps[].questions.step_result_published" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
     },
     "reply.runner_subprocess.ordering" : {
       "collection_closed_before_proceed" : "boolean",
@@ -93,6 +178,7 @@
     "reply.steps[].attempt" : {
       "errno" : "null",
       "exit_code" : "number",
+      "lifecycle" : "object",
       "native_rc" : "null",
       "normalized_path" : "null",
       "observed_path" : "null",
@@ -103,6 +189,21 @@
       "requested_path" : "string",
       "result_source" : "string",
       "syscall_errno" : "null"
+    },
+    "reply.steps[].attempt.lifecycle" : {
+      "boundary" : "object",
+      "result" : "object",
+      "summary" : "string"
+    },
+    "reply.steps[].attempt.lifecycle.boundary" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
+    },
+    "reply.steps[].attempt.lifecycle.result" : {
+      "answer" : "string",
+      "basis" : "array",
+      "state" : "string"
     },
     "reply.steps[].comparison" : {
       "conclusion" : "string",

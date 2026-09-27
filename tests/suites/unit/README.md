@@ -7,11 +7,11 @@ Rust unit tests and formatting for the controller crate.
 - `rust.unit` runs `cargo test --bins` only.
 - `rust.fmt` runs `cargo fmt -- --check` and fails on any difference; fix with
   `cargo fmt` in `controller/`.
-- `rust.disposition_reds` (non-default) selects B1 by its full test name with
-  `cargo test --bin policy-witness -- --include-ignored --exact <name>`. It runs
-  before and after removal of `#[ignore]`, requires that exact test to execute,
-  and distinguishes its known behavioral assertion from build or other failures.
-  It is red by design until the controller change lands (see `tests/OPT_IN_TESTS.md`).
+- `rust.disposition_reds` selects the four disposition record controller tests by
+  their full names with `cargo test --bin policy-witness -- --include-ignored --exact`
+  (B1's status-conflict report and E1's projection and withholding of the carried
+  record). They also run inside `rust.unit`; this case keeps them individually
+  selectable and classifies build, equipment and unrelated failures separately.
 - No case requires a built `.app` bundle.
 
 ## Success criteria

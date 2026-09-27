@@ -118,18 +118,20 @@ public enum CWorkerOrchestrator {
         let ordering = workerOutput.map {
             buildOrdering($0, validatorOutput: validatorOutput, hasQueries: !validatorProbes.isEmpty)
         }
+        let disposition = workerOutput.map { resolveDisposition($0, plan: parsed.probe_plan) }
         let stepResults = buildStepResults(
             probePlan: parsed.probe_plan,
             queryPlan: queryPlan,
             workerOutput: workerOutput,
-            validatorOutput: validatorOutput, ordering: ordering
+            validatorOutput: validatorOutput, ordering: ordering,
+            disposition: disposition
         )
 
         let admissionFailure: PWRunnerAdmissionFailure?
         if case .failure(.admissionFailed(let record), _) = workerResult { admissionFailure = record }
         else { admissionFailure = nil }
         let topPid: Int = workerOutput.map { Int($0.workerPid) } ?? Int(getpid())
-        var runnerSubprocess = workerOutput.map(buildWorkerSubprocess)
+        var runnerSubprocess = workerOutput.map { buildWorkerSubprocess($0, disposition: disposition) }
         runnerSubprocess?.ordering = ordering
         let validatorSubprocess = validatorOutput.map(buildValidatorSubprocess)
         let validatorSpawnFailure: PWRunnerSpawnFailure?
@@ -411,8 +413,11 @@ func buildStepResults(
     queryPlan: [ValidatorQueryDecision],
     workerOutput: CWorkerOutput?,
     validatorOutput: ValidatorOutput?,
-    ordering: PWRunnerOrdering? = nil
+    ordering: PWRunnerOrdering? = nil,
+    disposition: PWDispositionRecord? = nil
 ) -> [PWRunnerStepResult] {
+    // One resolved account for every lifecycle projection below.
+    let account = disposition ?? workerOutput.map { resolveDisposition($0, plan: probePlan) }
     // Index outputs by step_id for the join.
     let workerSlotsByStep: [String: CWorkerSlotResult] = Dictionary(
         uniqueKeysWithValues: (workerOutput?.slots ?? []).map { ($0.stepId, $0) }
@@ -429,7 +434,7 @@ func buildStepResults(
     var channels: [(step: PWRunnerProbeStep, sandboxCheck: PWRunnerSandboxCheckResult,
                     attempt: PWRunnerAttemptResult)] = []
     channels.reserveCapacity(probePlan.count)
-    for step in probePlan {
+    for (index, step) in probePlan.enumerated() {
         var sandboxCheck = buildSandboxCheckResult(
             step: step,
             verdict: verdictsByStep[step.step_id],
@@ -463,17 +468,28 @@ func buildStepResults(
         if attempt.result_source == "synthetic" {
             attempt.missing_reason = !supported ? "attempt_not_supported" : slot == nil ? "slot_absent" : "slot_incomplete"
         }
+        // The lifecycle object projects this step's two claims; the compatibility
+        // triple above is unchanged.
+        if let account, account.steps.indices.contains(index) {
+            attempt.lifecycle = attemptLifecycle(account.steps[index])
+        }
         channels.append((step: step, sandboxCheck: sandboxCheck, attempt: attempt))
     }
     let runAttempts = channels.map { $0.attempt }
     return channels.map { channel in
-        let comparison = computeComparison(sandboxCheck: channel.sandboxCheck, attempt: channel.attempt,
+        var comparison = computeComparison(sandboxCheck: channel.sandboxCheck, attempt: channel.attempt,
             queryExclusionReason: decisions[channel.step.step_id]?.exclusionCode,
             order: eligibleOrderedStep(stepId: channel.step.step_id, query: channel.sandboxCheck,
                 records: validatorOutput?.verdicts ?? [], ordering: ordering,
                 sandboxedAfterApply: workerOutput?.applied == true && workerOutput?.applyRC == 0,
                 workerPid: workerOutput.map { Int($0.workerPid) })
                 ? .queryFirst : .unestablished, runAttempts: runAttempts)
+        // Exactly one lifecycle limitation for a summary other than completed. It
+        // never changes agreement, order, drift or sandbox attribution.
+        if let summary = channel.attempt.lifecycle?.summary,
+           let limitation = PWDisposition.limitationForSummary[summary] {
+            comparison.limitations.append(limitation)
+        }
         return PWRunnerStepResult(
             step_id: channel.step.step_id,
             sandbox_check: channel.sandboxCheck,
@@ -874,11 +890,18 @@ func comparisonEvidence(
 // Internal for driver-to-JSON controls. Preserve the host's observations in the
 // authoritative subprocess object; classification does not rewrite them.
 func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
+    buildWorkerSubprocess(out, disposition: nil)
+}
+
+/// `partial_steps` and the record project from one resolved account; callers
+/// without a plan get the account resolved from the slots.
+func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecord?) -> PWRunnerSubprocess {
+    let record = disposition ?? resolveDisposition(out, plan: nil)
     var result = PWRunnerSubprocess(
         pid: Int(out.workerPid),
         term_signal: out.termSignal.map { Int($0) },
         exit_code: out.exitCode.map { Int($0) },
-        partial_steps: anySlotNotCompleted(out.slots),
+        partial_steps: record.steps.contains { $0.attempt_support == "supported" && $0.slot != "completed" },
         ready_byte_received: out.readyByteReceived,
         done_observed: out.done,
         poll_stop_reason: out.pollStopReason,
@@ -889,6 +912,10 @@ func buildWorkerSubprocess(_ out: CWorkerOutput) -> PWRunnerSubprocess {
     )
     result.worker_evidence = out.workerEvidence
     result.policy_transfer_error = out.policyTransferError
+    result.cleanup_trigger = out.cleanupTrigger
+    result.grace_end = out.graceEnd
+    result.collection_basis = out.collectionBasis
+    result.disposition = record
     return result
 }
 
@@ -913,6 +940,203 @@ func buildValidatorSubprocess(_ out: ValidatorOutput) -> PWRunnerValidatorSubpro
 
 private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
     return slots.contains { !$0.completed }
+}
+
+// MARK: - Worker disposition record
+//
+// One canonical lifecycle account, resolved once from the driver's output and
+// the submitted plan (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker
+// disposition record"). Every lifecycle conclusion below projects from it.
+
+private struct ProtocolPosition: Comparable {
+    let order: Int
+    let index: Int
+    let phase: Int
+    static func < (a: ProtocolPosition, b: ProtocolPosition) -> Bool {
+        (a.order, a.index, a.phase) < (b.order, b.index, b.phase)
+    }
+}
+
+private enum ProgressAssociation {
+    case none(ProtocolPosition)
+    case stepIndex(Int, ProtocolPosition)
+    case parameterIndex(Int, ProtocolPosition)
+    case invalid
+    case unrecognized
+}
+
+private func associateProgress(_ progress: PWWorkerProgress?, planCount: Int) -> ProgressAssociation? {
+    guard let progress else { return nil }
+    guard let order = PWDisposition.protocolOrder.firstIndex(of: progress.operation),
+          (1...2).contains(progress.phase) else { return .unrecognized }
+    let phase = Int(progress.phase)
+    switch progress.operation {
+    case 9:
+        guard let index = progress.index, Int(index) < planCount else { return .invalid }
+        return .stepIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
+    case 4:
+        guard let index = progress.index else { return .invalid }
+        return .parameterIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
+    default:
+        return .none(ProtocolPosition(order: order, index: 0, phase: phase))
+    }
+}
+
+/// Resolve the account. Without a plan (constructed inputs) the steps come from
+/// the slots and every attempt counts as supported; production passes the plan.
+func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWDispositionRecord {
+    var issues: [PWDispositionIssue] = []
+    func supported(_ answer: String, value: PWDispositionValue? = nil, basis: [String]) -> PWDispositionClaim {
+        PWDispositionClaim(state: "supported", answer: answer, value: value, basis: basis)
+    }
+    func unresolved(_ reason: String, basis: [String] = []) -> PWDispositionClaim {
+        PWDispositionClaim(state: "unresolved", reason: reason, basis: basis.isEmpty ? nil : basis)
+    }
+    func inapplicable(_ reason: String) -> PWDispositionClaim {
+        PWDispositionClaim(state: "inapplicable", reason: reason)
+    }
+    func conflict(_ rule: String, question: String, stepIndex: Int?, observations: [String],
+                  detail: String) -> PWDispositionClaim {
+        issues.append(PWDispositionIssue(kind: "conflict", rule: rule, question: question, step_index: stepIndex,
+                                         observations: observations, detail: detail))
+        return PWDispositionClaim(state: "conflicting", issue: issues.count - 1)
+    }
+    let hasProgress = out.workerEvidence?.progress != nil
+    func present(_ tokens: [String]) -> [String] { tokens.filter { $0 != "progress" || hasProgress } }
+
+    var questions: [String: PWDispositionClaim] = [:]
+    if out.reaped != true {
+        questions["final_status"] = unresolved("no_successful_reap", basis: ["reaped"])
+    } else if out.exitCode != nil && out.termSignal != nil {
+        questions["final_status"] = conflict("D1", question: "final_status", stepIndex: nil,
+            observations: ["exit_code", "term_signal"],
+            detail: "one successful reap represented as both an exit status and a signal")
+    } else if let signal = out.termSignal {
+        questions["final_status"] = supported("signal", value: .integer(Int(signal)), basis: ["reaped", "term_signal"])
+    } else if let code = out.exitCode {
+        questions["final_status"] = supported("exit_code", value: .integer(Int(code)), basis: ["reaped", "exit_code"])
+    } else {
+        questions["final_status"] = unresolved("status_unusable", basis: ["reaped"])
+    }
+    if let stop = out.pollStopReason {
+        questions["stop_reason"] = supported(stop, basis: ["poll_stop_reason"])
+    } else {
+        questions["stop_reason"] = unresolved(PWDisposition.notRecorded)
+    }
+    for (name, raw) in [("cleanup_trigger", out.cleanupTrigger), ("grace_end", out.graceEnd)] {
+        if out.exitRequested == false {
+            questions[name] = inapplicable("exit_not_requested")
+        } else if let raw {
+            questions[name] = supported(raw, basis: [name, "exit_requested"])
+        } else {
+            questions[name] = unresolved(PWDisposition.notRecorded)
+        }
+    }
+    // A recorded request is a direct observation; only the absence of a request
+    // needs the recorded cleanup phase (exit_requested) to count as observed.
+    if out.exitRequested == false {
+        questions["kill_request_and_result"] = inapplicable("exit_not_requested")
+    } else if let request = out.terminationRequest {
+        questions["kill_request_and_result"] = supported("requested", value: .request(request), basis: ["termination_request"])
+    } else if out.exitRequested == nil {
+        questions["kill_request_and_result"] = unresolved(PWDisposition.notRecorded)
+    } else {
+        questions["kill_request_and_result"] = supported("none", basis: ["termination_request", "exit_requested"])
+    }
+    if let basis = out.collectionBasis {
+        questions["collection_basis"] = supported(basis, basis: ["collection_basis"])
+    } else {
+        questions["collection_basis"] = unresolved(PWDisposition.notRecorded)
+    }
+
+    let planSteps: [(id: String, supported: Bool)] = plan?.map { ($0.step_id, mapAttemptKindOrNil($0.attempt) != nil) }
+        ?? out.slots.map { ($0.stepId, true) }
+    var position: ProtocolPosition? = nil
+    switch associateProgress(out.workerEvidence?.progress, planCount: planSteps.count) {
+    case nil:
+        questions["progress_association"] = inapplicable("no_progress_word")
+    case .unrecognized?:
+        questions["progress_association"] = unresolved("progress_unrecognized", basis: ["progress"])
+    case .invalid?:
+        questions["progress_association"] = supported("invalid", basis: ["progress", "plan"])
+    case .stepIndex(let index, let at)?:
+        questions["progress_association"] = supported("step_index", value: .integer(index), basis: ["progress", "plan"])
+        position = at
+    case .parameterIndex(let index, let at)?:
+        questions["progress_association"] = supported("parameter_index", value: .integer(index), basis: ["progress"])
+        position = at
+    case .none(let at)?:
+        questions["progress_association"] = supported("none", basis: ["progress"])
+        position = at
+    }
+
+    let terminal = out.collectionBasis == "after_confirmed_reap"
+    let attemptOrder = PWDisposition.protocolOrder.firstIndex(of: 9)!
+    var slotsById: [String: CWorkerSlotResult] = [:]
+    for slot in out.slots where slotsById[slot.stepId] == nil { slotsById[slot.stepId] = slot }
+    var steps: [PWDispositionStep] = []
+    for (i, step) in planSteps.enumerated() {
+        let slot = slotsById[step.id]
+        let slotState = slot == nil ? "absent" : (slot!.completed ? "completed" : "incomplete")
+        let completed = slotState == "completed"
+        let boundary = ProtocolPosition(order: attemptOrder, index: i, phase: 1)
+        let afterSlot = ProtocolPosition(order: attemptOrder, index: i, phase: 2)
+        var claims: [String: PWDispositionClaim] = [:]
+        claims["step_requested_operation_applicability"] =
+            supported(step.supported ? "supported" : "unsupported", basis: ["attempt_support"])
+        if let at = position, at >= boundary {
+            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
+        } else if completed && step.supported {
+            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
+        } else if position != nil && completed && terminal {
+            claims["step_boundary_reached"] = conflict("D5", question: "step_boundary_reached", stepIndex: i,
+                observations: ["progress", "slot", "collection_basis"],
+                detail: "a completed slot beside valid terminal progress that never reached it")
+        } else if position != nil && !completed && terminal {
+            claims["step_boundary_reached"] = supported("not_reached", basis: ["progress", "slot", "collection_basis"])
+        } else if position != nil && !completed {
+            claims["step_boundary_reached"] = unresolved("basis_not_terminal", basis: ["progress", "slot", "collection_basis"])
+        } else {
+            claims["step_boundary_reached"] = unresolved("no_usable_progress", basis: present(["progress", "slot"]))
+        }
+        if !step.supported {
+            claims["step_result_published"] = inapplicable("unsupported_attempt")
+        } else if slotState == "absent" {
+            claims["step_result_published"] = unresolved("slot_unavailable", basis: ["slot"])
+        } else if completed {
+            claims["step_result_published"] = supported("published", basis: ["slot", "attempt_support"])
+        } else if !terminal {
+            claims["step_result_published"] = unresolved("basis_not_terminal", basis: ["slot", "collection_basis"])
+        } else if let at = position, at >= afterSlot {
+            claims["step_result_published"] = conflict("D5", question: "step_result_published", stepIndex: i,
+                observations: ["progress", "slot", "collection_basis"],
+                detail: "valid returned progress for this step or a later position beside an incomplete slot")
+        } else {
+            claims["step_result_published"] = supported("unpublished", basis: present(["slot", "collection_basis", "progress"]))
+        }
+        steps.append(PWDispositionStep(index: i, step_id: step.id, slot: slotState,
+                                       attempt_support: step.supported ? "supported" : "unsupported", questions: claims))
+    }
+    return PWDispositionRecord(questions: questions, steps: steps, issues: issues)
+}
+
+/// The compact per-step summary: a registered projection of the two step claims.
+func lifecycleSummary(_ step: PWDispositionStep) -> String {
+    let boundary = step.questions["step_boundary_reached"]
+    let result = step.questions["step_result_published"]
+    if step.attempt_support == "unsupported" { return "unsupported" }
+    if result?.state == "supported" && result?.answer == "published" { return "completed" }
+    if boundary?.state == "conflicting" || result?.state == "conflicting" { return "conflicting" }
+    if result?.state == "supported" && boundary?.state == "supported" {
+        return boundary?.answer == "reached" ? "started_without_result" : "not_reached"
+    }
+    return "unresolved"
+}
+
+func attemptLifecycle(_ step: PWDispositionStep) -> PWAttemptLifecycle? {
+    guard let boundary = step.questions["step_boundary_reached"],
+          let result = step.questions["step_result_published"] else { return nil }
+    return PWAttemptLifecycle(summary: lifecycleSummary(step), boundary: boundary, result: result)
 }
 
 // MARK: - Classifier
@@ -989,27 +1213,37 @@ func classify(
                 error: "pw-probe-runner published a legacy preparation/application failure "
                     + "(status=\(out.applyRC)\(detail)); failed operation and native return unavailable")
         }
-        if out.pollStopReason == "sentinel_deadline" {
+        // Lifecycle clauses render from the resolved account (the same account
+        // the reply carries); worker, validator and setup diagnostics keep their
+        // own owners and are composed with these clauses, not generated from them.
+        let account = resolveDisposition(out, plan: nil)
+        let killRequested = account.questions["kill_request_and_result"]?.answer == "requested"
+        if account.questions["stop_reason"]?.answer == "sentinel_deadline" {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1,
                 error: "pw-probe-runner sentinel deadline expired; "
                     + (out.proceedSet && !out.proceedObserved ? "release not observed; " : "")
-                    + (out.terminationRequest != nil ? "host requested SIGKILL during cleanup" : "no termination requested"))
+                    + (killRequested ? "host requested SIGKILL during cleanup" : "no termination requested"))
         }
         var problems: [String] = []
         if out.proceedSet && !out.proceedObserved { problems.append("release not observed") }
         if !out.applied { problems.append("no published application") }
         if !out.done { problems.append("no completed report") }
         if out.done && anySlotNotCompleted(out.slots) { problems.append("incomplete slot publication") }
-        if out.reaped != true {
-            problems.append("process disposition unconfirmed")
-        } else if let signal = out.termSignal {
-            problems.append("reaped with signal \(signal)")
-        } else if let code = out.exitCode {
-            if code != 0 { problems.append("reaped with exit code \(code)") }
-        } else {
-            problems.append("reaped without usable exit status")
+        if let status = account.questions["final_status"] {
+            switch (status.state, status.answer, status.value) {
+            case ("unresolved", _, _):
+                problems.append(status.reason == "no_successful_reap" ? "process disposition unconfirmed"
+                                                                     : "reaped without usable exit status")
+            case ("conflicting", _, _):
+                problems.append("reaped with conflicting status representation")
+            case ("supported", "signal"?, .integer(let signal)?):
+                problems.append("reaped with signal \(signal)")
+            case ("supported", "exit_code"?, .integer(let code)?):
+                if code != 0 { problems.append("reaped with exit code \(code)") }
+            default: break
+            }
         }
-        if out.terminationRequest != nil { problems.append("host requested termination during cleanup") }
+        if killRequested { problems.append("host requested termination during cleanup") }
         // Recovered EINTR is retained evidence, not a run failure. A poll error
         // or any other wait error remains a host fault even if later reaped.
         if out.pollStopReason == "wait_error" || out.waitErrors == nil

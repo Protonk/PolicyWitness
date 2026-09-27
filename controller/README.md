@@ -120,7 +120,7 @@ Exit codes:
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Every step contains `deny_signal: null` because that channel is unobserved. Legacy signal objects remain readable by the Swift
@@ -169,8 +169,12 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.runner_sandbox_diagnostics`: process disposition and optional denial
   correlation, independent of outcome labels. `worker_pid` comes only from
   `runner_subprocess.pid`. `process_disposition` is `no_worker`, `unconfirmed`,
-  `clean_exit`, `nonzero_exit`, or `signaled`; abnormal/unconfirmed disposition
-  has `termination_cause="unknown"`. `capture_status` distinguishes disabled,
+  `clean_exit`, `nonzero_exit`, `signaled`, `conflicting`, `withheld` or
+  `unrecognized`, projected from the worker disposition record the runner carries;
+  `termination_cause` names witnessed host cleanup (`host_sentinel_deadline` and
+  its siblings), is null for a clean exit and `unknown` otherwise; `stop_reason`,
+  `disposition_integrity` and `disposition_issues` carry the projected stop reason
+  and the record's validation (legacy replies: `unknown` and `not_reported`). `capture_status` distinguishes disabled,
   no worker and observer availability. `correlation_status` is `not_attempted`,
   `unavailable`, `no_match`, or `pid_match`. `first_deny` is an `{event_index}`
   reference into `sandbox_log_capture.deny_events`, not a termination cause.

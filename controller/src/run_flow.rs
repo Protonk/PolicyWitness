@@ -10,6 +10,7 @@
 
 use serde::Serialize;
 use serde_json::Value;
+use serde_json::json;
 use std::ffi::OsString;
 use std::path::Path;
 
@@ -69,6 +70,13 @@ pub struct RunnerSandboxDiagnostics {
     pub capture_status: String,
     pub correlation_status: &'static str,
     pub termination_cause: Option<&'static str>,
+    /// Projection of the worker disposition record's stop reason; null for a
+    /// legacy reply or an unresolved question.
+    pub stop_reason: Option<String>,
+    /// `valid`, `invalid` (claims withheld) or `not_reported` (legacy reply).
+    pub disposition_integrity: Option<&'static str>,
+    /// Integrity issues plus the record's own reported conflicts; empty when none.
+    pub disposition_issues: Vec<Value>,
     /// First PID match in the capture array, not the first event in time or a
     /// cause of termination. Reference keeps the event in observer evidence.
     pub first_deny: Option<DenyEventReference>,
@@ -462,6 +470,465 @@ fn finish_sandbox_log_capture(
 
 // Execution disposition and optional log correlation are separate observations.
 // No outcome gate, host/client PID fallback, or causal interpretation of a match.
+
+// Worker disposition record projection (tests/FAILURE-PROPAGATION-CONTRACT.md,
+// "Worker disposition record"). The controller validates the carried record
+// against the raw facts it cites and projects from it; it never derives a
+// competing lifecycle answer from raw fields or prose. Spellings are shared
+// with tests/lib/lifecycle_contract.py.
+const DISPOSITION_CLAIM_STATES: &[&str] =
+    &["supported", "unresolved", "conflicting", "inapplicable"];
+const DISPOSITION_RUN_QUESTIONS: &[&str] = &[
+    "final_status",
+    "stop_reason",
+    "cleanup_trigger",
+    "grace_end",
+    "kill_request_and_result",
+    "collection_basis",
+    "progress_association",
+];
+const DISPOSITION_STEP_QUESTIONS: &[&str] = &[
+    "step_boundary_reached",
+    "step_result_published",
+    "step_requested_operation_applicability",
+];
+const DISPOSITION_RUN_REFERENCES: &[&str] = &[
+    "reaped",
+    "exit_code",
+    "term_signal",
+    "poll_stop_reason",
+    "exit_requested",
+    "termination_request",
+    "wait_errors",
+    "cleanup_trigger",
+    "grace_end",
+    "collection_basis",
+    "done_observed",
+    "progress",
+    "worker_failure",
+    "plan",
+];
+const DISPOSITION_STEP_REFERENCES: &[&str] = &["slot", "attempt_support"];
+const CAUSE_FOR_TRIGGER: &[(&str, &str)] = &[
+    ("deadline_expiry", "host_sentinel_deadline"),
+    ("completion", "host_exit_grace_exhausted"),
+    ("poll_wait_error", "host_cleanup_after_wait_error"),
+    ("policy_transfer_error", "host_cleanup_after_transfer_error"),
+];
+
+struct DispositionProjection {
+    disposition: &'static str,
+    cause: Option<&'static str>,
+    stop_reason: Option<String>,
+    integrity: Option<&'static str>,
+    issues: Vec<Value>,
+}
+
+fn integrity_issue(kind: &str, detail: String) -> Value {
+    json!({"kind": kind, "detail": detail})
+}
+
+fn status_conflict_issue() -> Value {
+    json!({"kind": "conflict", "rule": "D1", "question": "final_status",
+        "observations": ["exit_code", "term_signal"],
+        "detail": "one successful reap represented as both an exit status and a signal"})
+}
+
+fn reference_resolves(token: &str, sub: &Value, step: Option<&Value>) -> bool {
+    let present = |key: &str| sub.get(key).map_or(false, |v| !v.is_null());
+    match token {
+        "slot" | "attempt_support" => {
+            step.map_or(false, |s| s.get(token).map_or(false, |v| !v.is_null()))
+        }
+        "plan" | "worker_failure" | "wait_errors" | "done_observed" => true,
+        "progress" => sub
+            .get("worker_evidence")
+            .and_then(|e| e.get("progress"))
+            .map_or(false, |v| !v.is_null()),
+        // The host records an explicit non-request as an absent object once it has
+        // recorded the cleanup phase, so the token resolves beside exit_requested.
+        "termination_request" => present("termination_request") || present("exit_requested"),
+        other => present(other),
+    }
+}
+
+/// Structural and claim/basis validation of a carried record. Returns integrity
+/// issues; `unrecognized_value` issues do not invalidate the record.
+fn validate_disposition(record: &Value, sub: &Value, reply_steps: &[Value]) -> Vec<Value> {
+    let mut issues = Vec::new();
+    let Some(questions) = record.get("questions").and_then(Value::as_object) else {
+        return vec![integrity_issue(
+            "malformed_record",
+            "questions is not an object".into(),
+        )];
+    };
+    let record_issues = record
+        .get("issues")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if record.get("issues").map_or(true, |v| !v.is_array()) {
+        issues.push(integrity_issue(
+            "malformed_record",
+            "issues is not an array".into(),
+        ));
+    }
+    let raw_str = |key: &str| sub.get(key).and_then(Value::as_str);
+    let check_claim =
+        |name: &str, claim: &Value, step: Option<(usize, &Value)>, issues: &mut Vec<Value>| {
+            let where_ = match step {
+                Some((i, _)) => format!("step {i} {name}"),
+                None => name.to_string(),
+            };
+            let Some(state) = claim.get("state").and_then(Value::as_str) else {
+                issues.push(integrity_issue(
+                    "malformed_record",
+                    format!("{where_}: claim without a state"),
+                ));
+                return;
+            };
+            if !DISPOSITION_CLAIM_STATES.contains(&state) {
+                issues.push(integrity_issue(
+                    "unrecognized_value",
+                    format!("{where_}: unknown claim state {state}"),
+                ));
+                return;
+            }
+            match state {
+                "supported" => {
+                    if claim.get("answer").and_then(Value::as_str).is_none() {
+                        issues.push(integrity_issue(
+                            "invalid_claim",
+                            format!("{where_}: supported claim without an answer"),
+                        ));
+                    }
+                    match claim.get("basis").and_then(Value::as_array) {
+                        Some(basis) if !basis.is_empty() => {
+                            for token in basis.iter().filter_map(Value::as_str) {
+                                let known = DISPOSITION_RUN_REFERENCES.contains(&token)
+                                    || (step.is_some()
+                                        && DISPOSITION_STEP_REFERENCES.contains(&token));
+                                if !known {
+                                    issues.push(integrity_issue(
+                                        "unresolved_reference",
+                                        format!("{where_}: unknown reference {token}"),
+                                    ));
+                                } else if !reference_resolves(token, sub, step.map(|(_, s)| s)) {
+                                    issues.push(integrity_issue(
+                                        "unresolved_reference",
+                                        format!("{where_}: {token} does not resolve"),
+                                    ));
+                                }
+                            }
+                        }
+                        _ => issues.push(integrity_issue(
+                            "invalid_claim",
+                            format!("{where_}: supported claim without basis"),
+                        )),
+                    }
+                }
+                "conflicting" => {
+                    let matches = claim
+                        .get("issue")
+                        .and_then(Value::as_u64)
+                        .and_then(|i| record_issues.get(i as usize))
+                        .map_or(false, |issue| {
+                            issue.get("question").and_then(Value::as_str) == Some(name)
+                                && issue.get("step_index").and_then(Value::as_u64)
+                                    == step.map(|(i, _)| i as u64)
+                        });
+                    if !matches {
+                        issues.push(integrity_issue(
+                            "invalid_claim",
+                            format!("{where_}: conflicting claim without a matching issue"),
+                        ));
+                    }
+                }
+                _ => {
+                    if claim.get("reason").and_then(Value::as_str).is_none() {
+                        issues.push(integrity_issue(
+                            "invalid_claim",
+                            format!("{where_}: {state} claim without a reason"),
+                        ));
+                    }
+                }
+            }
+        };
+    for name in DISPOSITION_RUN_QUESTIONS {
+        match questions.get(*name) {
+            Some(claim) => check_claim(name, claim, None, &mut issues),
+            None => issues.push(integrity_issue(
+                "malformed_record",
+                format!("questions lacks {name}"),
+            )),
+        }
+    }
+    let reaped = sub.get("reaped").and_then(Value::as_bool) == Some(true);
+    let signal = sub.get("term_signal").and_then(Value::as_i64);
+    let exit = sub.get("exit_code").and_then(Value::as_i64);
+    if let Some(final_status) = questions.get("final_status") {
+        let state = final_status.get("state").and_then(Value::as_str);
+        let answer = final_status.get("answer").and_then(Value::as_str);
+        let value = final_status.get("value").and_then(Value::as_i64);
+        let contradiction = match (state, answer) {
+            (Some("supported"), Some("signal")) => !reaped || signal.is_none() || value != signal,
+            (Some("supported"), Some("exit_code")) => !reaped || exit.is_none() || value != exit,
+            (Some("conflicting"), _) => !reaped || exit.is_none() || signal.is_none(),
+            _ => false,
+        };
+        if contradiction {
+            issues.push(integrity_issue(
+                "invalid_claim",
+                "final_status: claim contradicts reaped status".into(),
+            ));
+        }
+    }
+    for (name, key) in [
+        ("stop_reason", "poll_stop_reason"),
+        ("cleanup_trigger", "cleanup_trigger"),
+        ("grace_end", "grace_end"),
+        ("collection_basis", "collection_basis"),
+    ] {
+        if let Some(claim) = questions.get(name) {
+            if claim.get("state").and_then(Value::as_str) == Some("supported")
+                && claim.get("answer").and_then(Value::as_str) != raw_str(key)
+            {
+                issues.push(integrity_issue(
+                    "invalid_claim",
+                    format!("{name}: claim contradicts the recorded host fact"),
+                ));
+            }
+        }
+    }
+    if let Some(kill) = questions.get("kill_request_and_result") {
+        if kill.get("state").and_then(Value::as_str) == Some("supported") {
+            let request = sub
+                .get("termination_request")
+                .map_or(false, |v| v.is_object());
+            match kill.get("answer").and_then(Value::as_str) {
+                Some("requested") if !request => issues.push(integrity_issue(
+                    "invalid_claim",
+                    "kill_request_and_result: request claimed without termination_request".into(),
+                )),
+                Some("none") if request => issues.push(integrity_issue(
+                    "invalid_claim",
+                    "kill_request_and_result: no-request claim beside a termination_request".into(),
+                )),
+                _ => {}
+            }
+        }
+    }
+    let Some(steps) = record.get("steps").and_then(Value::as_array) else {
+        issues.push(integrity_issue(
+            "malformed_record",
+            "steps is not an array".into(),
+        ));
+        return issues;
+    };
+    if steps.len() != reply_steps.len() {
+        issues.push(integrity_issue(
+            "invalid_claim",
+            format!(
+                "disposition steps ({}) disagree with reply steps ({})",
+                steps.len(),
+                reply_steps.len()
+            ),
+        ));
+    }
+    let terminal = raw_str("collection_basis") == Some("after_confirmed_reap");
+    for (i, step) in steps.iter().enumerate() {
+        if step.get("index").and_then(Value::as_u64) != Some(i as u64) {
+            issues.push(integrity_issue(
+                "malformed_record",
+                format!("step {i} carries the wrong index"),
+            ));
+        }
+        if let Some(reply_step) = reply_steps.get(i) {
+            if step.get("step_id") != reply_step.get("step_id") {
+                issues.push(integrity_issue(
+                    "invalid_claim",
+                    format!("step {i}: step_id disagrees with the reply"),
+                ));
+            }
+        }
+        let slot = step.get("slot").and_then(Value::as_str);
+        if !matches!(slot, Some("completed" | "incomplete" | "absent")) {
+            issues.push(integrity_issue(
+                "malformed_record",
+                format!("step {i}: unknown slot state"),
+            ));
+        }
+        if !matches!(
+            step.get("attempt_support").and_then(Value::as_str),
+            Some("supported" | "unsupported")
+        ) {
+            issues.push(integrity_issue(
+                "malformed_record",
+                format!("step {i}: unknown attempt support"),
+            ));
+        }
+        let Some(claims) = step.get("questions").and_then(Value::as_object) else {
+            issues.push(integrity_issue(
+                "malformed_record",
+                format!("step {i}: questions is not an object"),
+            ));
+            continue;
+        };
+        for name in DISPOSITION_STEP_QUESTIONS {
+            match claims.get(*name) {
+                Some(claim) => check_claim(name, claim, Some((i, step)), &mut issues),
+                None => issues.push(integrity_issue(
+                    "malformed_record",
+                    format!("step {i} lacks question {name}"),
+                )),
+            }
+        }
+        if let Some(result) = claims.get("step_result_published") {
+            if result.get("state").and_then(Value::as_str) == Some("supported") {
+                match result.get("answer").and_then(Value::as_str) {
+                    Some("published") if slot != Some("completed") => issues.push(integrity_issue("invalid_claim",
+                        format!("step {i}: published claim on a slot that is not completed"))),
+                    Some("unpublished") if slot != Some("incomplete") || !terminal => issues.push(integrity_issue(
+                        "invalid_claim", format!("step {i}: unpublished claim needs an incomplete slot under terminal collection"))),
+                    _ => {}
+                }
+            }
+        }
+        if let Some(boundary) = claims.get("step_boundary_reached") {
+            if boundary.get("state").and_then(Value::as_str) == Some("supported")
+                && boundary.get("answer").and_then(Value::as_str) == Some("not_reached")
+                && (!terminal || slot == Some("completed"))
+            {
+                issues.push(integrity_issue("invalid_claim",
+                    format!("step {i}: not_reached claim needs terminal collection and no completed slot")));
+            }
+        }
+    }
+    issues
+}
+
+fn project_disposition(sub: &Value, reply_steps: &[Value]) -> DispositionProjection {
+    let reaped = sub.get("reaped").and_then(Value::as_bool) == Some(true);
+    let signal = sub.get("term_signal").and_then(Value::as_i64);
+    let exit = sub.get("exit_code").and_then(Value::as_i64);
+    let Some(record) = sub.get("disposition").filter(|r| !r.is_null()) else {
+        // Legacy reply without the record: the raw-status compatibility projection,
+        // with the one integrity rule that needs no record (D1).
+        let mut issues = Vec::new();
+        let disposition = if !reaped {
+            "unconfirmed"
+        } else if signal.is_some() && exit.is_some() {
+            issues.push(status_conflict_issue());
+            "conflicting"
+        } else if signal.is_some() {
+            "signaled"
+        } else if exit == Some(0) {
+            "clean_exit"
+        } else if exit.is_some() {
+            "nonzero_exit"
+        } else {
+            "unconfirmed"
+        };
+        let cause = if disposition == "clean_exit" {
+            None
+        } else {
+            Some("unknown")
+        };
+        return DispositionProjection {
+            disposition,
+            cause,
+            stop_reason: None,
+            integrity: Some("not_reported"),
+            issues,
+        };
+    };
+    let mut issues = validate_disposition(record, sub, reply_steps);
+    let invalid = issues
+        .iter()
+        .any(|i| i.get("kind").and_then(Value::as_str) != Some("unrecognized_value"));
+    if invalid {
+        return DispositionProjection {
+            disposition: "withheld",
+            cause: Some("unknown"),
+            stop_reason: None,
+            integrity: Some("invalid"),
+            issues,
+        };
+    }
+    let questions = &record["questions"];
+    let claim = |name: &str| &questions[name];
+    let state = |name: &str| claim(name).get("state").and_then(Value::as_str);
+    let answer = |name: &str| claim(name).get("answer").and_then(Value::as_str);
+    let final_state = state("final_status");
+    let final_answer = answer("final_status");
+    let final_value = claim("final_status").get("value").and_then(Value::as_i64);
+    let disposition = match (final_state, final_answer) {
+        (Some("supported"), Some("signal")) => "signaled",
+        (Some("supported"), Some("exit_code")) => {
+            if final_value == Some(0) {
+                "clean_exit"
+            } else {
+                "nonzero_exit"
+            }
+        }
+        (Some("supported"), Some(other)) => {
+            issues.push(integrity_issue(
+                "unrecognized_value",
+                format!("final_status: unrecognized answer {other}"),
+            ));
+            "unrecognized"
+        }
+        (Some("conflicting"), _) => "conflicting",
+        (Some("unresolved"), _) | (Some("inapplicable"), _) => "unconfirmed",
+        _ => "unrecognized",
+    };
+    let mut cause = if disposition == "clean_exit" {
+        None
+    } else {
+        Some("unknown")
+    };
+    if disposition == "signaled" {
+        let requested_signal = claim("kill_request_and_result")
+            .get("value")
+            .and_then(|v| v.get("signal"))
+            .and_then(Value::as_i64);
+        let requested_rc = claim("kill_request_and_result")
+            .get("value")
+            .and_then(|v| v.get("rc"))
+            .and_then(Value::as_i64);
+        if state("cleanup_trigger") == Some("supported")
+            && state("grace_end") == Some("supported")
+            && answer("grace_end") == Some("exhausted")
+            && state("kill_request_and_result") == Some("supported")
+            && answer("kill_request_and_result") == Some("requested")
+            && requested_rc == Some(0)
+            && requested_signal == final_value
+        {
+            if let Some((_, label)) = CAUSE_FOR_TRIGGER
+                .iter()
+                .find(|(trigger, _)| Some(*trigger) == answer("cleanup_trigger"))
+            {
+                cause = Some(label);
+            }
+        }
+    }
+    let stop_reason = if state("stop_reason") == Some("supported") {
+        answer("stop_reason").map(str::to_string)
+    } else {
+        None
+    };
+    if let Some(conflicts) = record.get("issues").and_then(Value::as_array) {
+        issues.extend(conflicts.iter().cloned());
+    }
+    DispositionProjection {
+        disposition,
+        cause,
+        stop_reason,
+        integrity: Some("valid"),
+        issues,
+    }
+}
+
 fn synthesize_runner_sandbox_diagnostics(
     runner: Option<&Value>,
     disabled: bool,
@@ -469,24 +936,22 @@ fn synthesize_runner_sandbox_diagnostics(
 ) -> Option<RunnerSandboxDiagnostics> {
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
-    let reaped = sub.and_then(|s| s.get("reaped")).and_then(Value::as_bool) == Some(true);
-    let signal = sub
-        .and_then(|s| s.get("term_signal"))
-        .and_then(Value::as_i64);
-    let exit = sub.and_then(|s| s.get("exit_code")).and_then(Value::as_i64);
-    let disposition = if pid.is_none() {
-        "no_worker"
-    } else if !reaped {
-        "unconfirmed"
-    } else if signal.is_some() {
-        "signaled"
-    } else if exit == Some(0) {
-        "clean_exit"
-    } else if exit.is_some() {
-        "nonzero_exit"
-    } else {
-        "unconfirmed"
+    let reply_steps: Vec<Value> = runner
+        .and_then(|r| r.get("steps"))
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let projection = match (pid, sub) {
+        (Some(_), Some(sub)) => project_disposition(sub, &reply_steps),
+        _ => DispositionProjection {
+            disposition: "no_worker",
+            cause: None,
+            stop_reason: None,
+            integrity: None,
+            issues: vec![],
+        },
     };
+    let disposition = projection.disposition;
     let capture_status = if disabled {
         "disabled"
     } else if pid.is_none() {
@@ -530,11 +995,10 @@ fn synthesize_runner_sandbox_diagnostics(
         process_disposition: disposition,
         capture_status: capture_status.to_string(),
         correlation_status,
-        termination_cause: if matches!(disposition, "signaled" | "nonzero_exit" | "unconfirmed") {
-            Some("unknown")
-        } else {
-            None
-        },
+        termination_cause: projection.cause,
+        stop_reason: projection.stop_reason,
+        disposition_integrity: projection.integrity,
+        disposition_issues: projection.issues,
         first_deny,
         permission_failures_without_record,
     })
@@ -1073,7 +1537,6 @@ mod tests {
     // conflict issue with `termination_cause: unknown`. Run it explicitly with
     // `cargo test --bins -- --ignored conflicting_status_representation`.
     #[test]
-    #[ignore = "disposition plan B1: red until the controller validates status representations"]
     fn conflicting_status_representation_is_not_silently_resolved() {
         let mut runner = worker("runner_failed", Some(9));
         // One final reap represented as both a clean exit and a signal.
@@ -1122,7 +1585,6 @@ mod tests {
         runner
     }
     #[test]
-    #[ignore = "disposition plan E1: red until the controller projects the carried record"]
     fn disposition_record_projects_witnessed_host_cleanup_cause() {
         let runner = disposition_reply("deadline_expiry", true);
         let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
@@ -1137,7 +1599,6 @@ mod tests {
         assert_eq!(wire["stop_reason"], json!("sentinel_deadline"));
     }
     #[test]
-    #[ignore = "disposition plan E1: red until the controller validates the carried record"]
     fn record_contradicting_its_basis_is_withheld() {
         // A supported signal claim while the reply says the worker was never reaped.
         let runner = disposition_reply("deadline_expiry", false);
@@ -1156,7 +1617,6 @@ mod tests {
         );
     }
     #[test]
-    #[ignore = "disposition plan B1 (wave 2): red until the controller reports the status conflict"]
     fn conflicting_status_reports_the_status_rule() {
         let mut runner = worker("runner_failed", Some(9));
         runner["runner_subprocess"]["exit_code"] = json!(0);

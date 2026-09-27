@@ -6,7 +6,7 @@ import Foundation
 func replyFixture() throws -> PWRunnerRunResult {
     let json = #"""
     {
-      "schema_version":9,"specimen_id":"reply-\"é\"","run_kind":"unit",
+      "schema_version":10,"specimen_id":"reply-\"é\"","run_kind":"unit",
       "rc":1,"normalized_outcome":"runner_failed","error":"original cleanup fault",
       "pid":42,"bundle_id":"test.bundle","policy_format":"sbpl","policy_sha256":"hash",
       "applied_profile":{"schema_version":1,"status":"unavailable","reason":"constructed","worker_pid":42},
@@ -20,7 +20,10 @@ func replyFixture() throws -> PWRunnerRunResult {
           "path_diagnostics":{"input":"/owned","same_as_input":["realpath_resolved"],"firmlink_resolved":null,
             "observer":"runner_host","phase":"after_orchestration"}},
         "attempt":{"rc":0,"outcome":"ok","requested_kind":"file","requested_action":"open_read",
-          "requested_path":"/owned","result_source":"worker","native_rc":null},
+          "requested_path":"/owned","result_source":"worker","native_rc":null,
+          "lifecycle":{"summary":"completed",
+            "boundary":{"state":"supported","answer":"reached","basis":["slot","attempt_support"]},
+            "result":{"state":"supported","answer":"published","basis":["slot","attempt_support"]}}},
         "comparison":{"scope":"submitted_operation_and_target","prediction":"allow",
           "observation":"succeeded","observation_basis":"completed_worker_status",
           "operation_relation":"matched","target_relation":"same_submitted",
@@ -30,6 +33,23 @@ func replyFixture() throws -> PWRunnerRunResult {
         "ready_byte_received":true,"done_observed":true,"poll_stop_reason":"done","exit_requested":true,
         "termination_request":{"signal":9,"rc":-1,"errno":1},
         "wait_errors":[{"phase":"exit_grace","rc":-1,"errno":10}],
+        "cleanup_trigger":"completion","grace_end":"exhausted","collection_basis":"execution_may_continue",
+        "disposition":{
+          "questions":{
+            "final_status":{"state":"unresolved","reason":"no_successful_reap","basis":["reaped"]},
+            "stop_reason":{"state":"supported","answer":"done","basis":["poll_stop_reason"]},
+            "cleanup_trigger":{"state":"supported","answer":"completion","basis":["cleanup_trigger","exit_requested"]},
+            "grace_end":{"state":"supported","answer":"exhausted","basis":["grace_end","exit_requested"]},
+            "kill_request_and_result":{"state":"supported","answer":"requested",
+              "value":{"signal":9,"rc":-1,"errno":1},"basis":["termination_request"]},
+            "collection_basis":{"state":"supported","answer":"execution_may_continue","basis":["collection_basis"]},
+            "progress_association":{"state":"inapplicable","reason":"no_progress_word"}},
+          "steps":[{"index":0,"step_id":"s","slot":"completed","attempt_support":"supported",
+            "questions":{
+              "step_requested_operation_applicability":{"state":"supported","answer":"supported","basis":["attempt_support"]},
+              "step_boundary_reached":{"state":"supported","answer":"reached","basis":["slot","attempt_support"]},
+              "step_result_published":{"state":"supported","answer":"published","basis":["slot","attempt_support"]}}}],
+          "issues":[]},
         "ordering":{"collection_closed_before_proceed":true,"proceed_set":true,"proceed_observed":true,
           "validator_disposition":"reaped","worker_lifetime_established":true,"protocol_violations":[]},
         "worker_evidence":{"abi_version":7,"failure_publication":0,"failure_state":"absent",

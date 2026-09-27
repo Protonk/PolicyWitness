@@ -1,8 +1,7 @@
 # opt_in
 
 Catalog group containing every non-default case: signing and BYOXPC tests, plus
-exec inheritance mutation controls and the disposition record's red-by-design
-cases (see `controller/DISPOSITION-RECORD-PLAN.md`). See `tests/OPT_IN_TESTS.md` for requirements.
+exec inheritance mutation controls. See `tests/OPT_IN_TESTS.md` for requirements.
 
 Inspect with `tests/run.sh --suite opt_in --list`; execute with
 `tests/run.sh --suite opt_in`. `--all` also includes these cases. Missing required

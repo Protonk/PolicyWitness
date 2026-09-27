@@ -706,7 +706,32 @@ def self_check():
     return True
 
 
+def export():
+    """Spellings and example rows as plain JSON for the Swift mirror comparison."""
+    return {
+        'response_with_disposition': RESPONSE_WITH_DISPOSITION, 'envelope_with_host_cause': ENVELOPE_WITH_HOST_CAUSE,
+        'claim_states': list(CLAIM_STATES), 'run_questions': list(RUN_QUESTIONS), 'step_questions': list(STEP_QUESTIONS),
+        'cleanup_triggers': list(CLEANUP_TRIGGERS), 'grace_ends': list(GRACE_ENDS),
+        'collection_bases': list(COLLECTION_BASES), 'trigger_for_stop': dict(TRIGGER_FOR_STOP),
+        'slot_states': list(SLOT_STATES), 'attempt_support': list(ATTEMPT_SUPPORT),
+        'summaries': list(LIFECYCLE_SUMMARIES), 'limitation_for_summary': dict(LIMITATION_FOR_SUMMARY),
+        'cause_for_trigger': dict(CAUSE_FOR_TRIGGER), 'not_recorded': NOT_RECORDED,
+        'protocol_order': list(PROTOCOL_ORDER), 'run_references': list(RUN_REFERENCES),
+        'step_references': list(STEP_REFERENCES),
+        'reasons': {q.name: list(reasons(q.name)) + [q.inapplicable] for q in QUESTIONS},
+        'examples': [{'name': e.name, 'observations': dict(e.observations, steps=list(e.observations['steps'])),
+                      'claims': e.claims, 'steps': e.steps, 'issues': e.issues, 'projections': e.projections}
+                     for e in EXAMPLES],
+    }
+
+
 if __name__ == '__main__':
+    import json as _json
+    import sys as _sys
+    if '--json' in _sys.argv:
+        self_check()
+        print(_json.dumps(export(), indent=1, sort_keys=True))
+        raise SystemExit(0)
     self_check()
     answers = sum(len(entry.answers) for entry in QUESTIONS)
     conflicts = sum(entry.conflict is not None for entry in QUESTIONS)

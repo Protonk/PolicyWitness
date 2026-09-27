@@ -43,7 +43,11 @@ def extract_observations(envelope, view):
     obs = C.observations(
         reaped=sub.get('reaped'), exit_code=sub.get('exit_code'), term_signal=sub.get('term_signal'),
         poll_stop_reason=field('poll_stop_reason'), exit_requested=sub.get('exit_requested'),
-        termination_request=(sub['termination_request'] if 'termination_request' in sub else MISSING),
+        # The host encodes an observed non-request as an absent object once it has
+        # recorded the cleanup phase (exit_requested); before that phase was recorded
+        # (legacy replies) absence is not an observation.
+        termination_request=(sub['termination_request'] if 'termination_request' in sub
+                             else None if 'exit_requested' in sub else MISSING),
         cleanup_trigger=field('cleanup_trigger'), grace_end=field('grace_end'),
         collection_basis=field('collection_basis'),
         progress=(sub.get('worker_evidence') or {}).get('progress'),
@@ -359,6 +363,8 @@ def _resolvable(token, obs, entry):
         return True
     if token in ('reaped', 'exit_code', 'term_signal', 'exit_requested'):
         return obs[token] is not None
+    if token == 'termination_request':
+        return obs[token] is not MISSING
     if token == 'progress':
         return obs['progress'] is not None
     if token == 'worker_failure':

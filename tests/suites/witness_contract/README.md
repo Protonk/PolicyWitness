@@ -235,8 +235,8 @@ That suite owns the deliberately empty-plan timeout control;
 ## Attempt in flight at the deadline
 
 `worker_attempt_in_flight_at_deadline` holds the area A tests of
-[controller/DISPOSITION-RECORD-PLAN.md](../../../controller/DISPOSITION-RECORD-PLAN.md)
-and is registered non-default until it turns green. It runs three specimens
+[controller/DISPOSITION-RECORD-PLAN.md](../../../controller/DISPOSITION-RECORD-PLAN.md).
+It runs three specimens
 under `(version 1) (allow default)` with `--no-log-capture`:
 
 - `a1`: a FIFO with no writer, then `/etc/hosts`, with `worker_timeout_ms: 2000`.
@@ -246,7 +246,7 @@ under `(version 1) (allow default)` with `--no-log-capture`:
   `term_signal: 9`, `reaped: true` and the attempt 0 started progress word.
   The check asserts those witnesses and the echoed override as setup and
   preserves `runner_timeout`, the deadline and SIGKILL error clauses and the
-  `signaled` disposition. Its red, asserted last, requires
+  `signaled` disposition. It then requires
   `runner_sandbox_diagnostics.termination_cause` to equal the
   `HOST_SENTINEL_DEADLINE` constant from `tests/lib/lifecycle_contract.py` and
   forbids `unknown` or any value attributing the signal to the sandbox.
@@ -260,11 +260,9 @@ under `(version 1) (allow default)` with `--no-log-capture`:
   `runner_timeout`, a `clean_exit` disposition and a null cause all coexist,
   and the error names the deadline with "no termination requested".
 
-The `a3` and `a4` preservation halves pass today and run before the red. The
-per-step compatibility triples are recorded in `compatibility_triples.json`
-without assertion. After the red, the wave 2 checks run: they are gated on the
-reply's response version (a producer before the record fails as version
-gating, not as the behavioral red), require an empty finding list from
+The per-step compatibility triples are recorded in `compatibility_triples.json`
+without assertion. The lifecycle checks are gated on the reply's response
+version (a producer before the record fails as version gating), require an empty finding list from
 `tests/lib/lifecycle_oracle.py` on each envelope (written to
 `oracle_findings.json`), and assert through `tests/lib/lifecycle_adapter.py`
 that `a1` reports `started_without_result` then `not_reached`, `a3` reports

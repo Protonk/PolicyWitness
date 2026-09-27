@@ -335,6 +335,13 @@ public struct CWorkerOutput {
     public var proceedObserved: Bool = false
     public var proceedOwnershipEstablished: Bool = false
     public var orderingProtocolViolations: [String] = []
+    /// Direct host observations for the disposition record: why exit was
+    /// requested (recorded at the exit-request store), how the exit-grace wait
+    /// ended, and whether the final reads followed a confirmed reap. Nil only
+    /// for constructed legacy inputs.
+    public var cleanupTrigger: String? = nil
+    public var graceEnd: String? = nil
+    public var collectionBasis: String? = nil
 }
 
 
@@ -925,18 +932,28 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
 
     // ---- Request worker exit (a no-op if it already died on its own).
     storeRelease(rawBase, offset: PWShmLayout.exitRequestedOffset, 1)
+    // The cleanup trigger is recorded here, at the store, as the reason polling
+    // stopped; it is a host fact for the disposition record, not reconstructed
+    // from a final exit code.
+    let cleanupTrigger = PWDisposition.triggerForStop[pollStopReason] ?? pollStopReason
 
     // ---- Reap (grace + SIGKILL fallback), unless the poll loop already
-    // reaped a worker that exited without flipping `done`.
+    // reaped a worker that exited without flipping `done`. How the grace wait
+    // ended is recorded directly: a reap, a wait error, or exhaustion (which
+    // is followed by the termination request), never inferred later.
+    var graceEnd = "not_entered"
     if process.status == nil && !process.childUnavailable {
         let pollIntervalNs: UInt64 = 10_000_000
         let graceIters = max(1, input.exitGraceMs * 1_000_000 / Int(pollIntervalNs))
+        graceEnd = "exhausted"
         grace: for _ in 0..<graceIters {
             observeAcknowledgement()
             switch process.wait(options: WNOHANG, phase: "exit_grace") {
             case .reaped:
+                graceEnd = "reaped_during_grace"
                 break grace
             case .failed:
+                graceEnd = "wait_error"
                 ownershipUnbroken = false
                 break grace
             case .pending:
@@ -948,6 +965,9 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         process.terminate()
         if process.waitErrors.count > errorsBeforeTermination { ownershipUnbroken = false }
     }
+    // Collection basis: whether every read below follows a successful reap. A
+    // reap observed later cannot upgrade it.
+    let collectionBasis = process.status != nil ? "after_confirmed_reap" : "execution_may_continue"
 
     // Final acquire snapshot after cleanup. Publications are immutable, so this
     // also safely retains results if cleanup failed and the child is still alive.
@@ -1047,7 +1067,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         proceedSet: proceedSet,
         proceedObserved: finalProceedObserved,
         proceedOwnershipEstablished: finalProceedObserved && (acknowledgedWhileOwned || ownershipUnbroken),
-        orderingProtocolViolations: Array(Set(orderingFaults)).sorted()
+        orderingProtocolViolations: Array(Set(orderingFaults)).sorted(),
+        cleanupTrigger: cleanupTrigger,
+        graceEnd: graceEnd,
+        collectionBasis: collectionBasis
     )
     if let error = transferError {
         return .failure(.policyWriteFailed("errno=\(error.errno) (\(String(cString: strerror(error.errno)))); "

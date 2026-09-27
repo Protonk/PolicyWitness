@@ -66,9 +66,9 @@ runListenerConfigTests(tk)
 // Compiled-object receipt wire bytes: selected-byte changes versus ignored
 // padding/order changes have different effects.
 runAppliedProfileCaptureTests(tk)
-// Disposition record (controller/DISPOSITION-RECORD-PLAN.md): constructed and
-// fixture-produced observations that the resolver will interpret, preservation
-// controls that pass today, and PW_DISPOSITION_REDS-gated integration gaps.
+// Worker disposition record: the resolver against fixture publications (C2, C5),
+// constructed interpretation cases (B2 to B6, C3, C4, D1), encoder integrity, and
+// the mirror of tests/lib/lifecycle_contract.py's spellings and example rows.
 runDispositionResolverTests(tk)
 
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))

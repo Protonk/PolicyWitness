@@ -14,7 +14,7 @@ private struct ContractManifest: Decodable {
     let versions: Versions
 }
 
-private func repositoryRoot() -> URL {
+func repositoryRoot() -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }

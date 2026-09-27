@@ -163,7 +163,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 1
-    public static let responseSchema: Int = 9
+    public static let responseSchema: Int = 10
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -618,6 +618,9 @@ public struct PWRunnerAttemptResult: Codable {
     public var result_source: String? = nil
     public var native_rc: Int? = nil
     public var missing_reason: String? = nil
+    /// Projection of this step's disposition claims; absent in replies before
+    /// the record. `not_run_worker_died`/`slot_incomplete` stay as they are.
+    public var lifecycle: PWAttemptLifecycle? = nil
     public var rc: Int
     public var exit_code: Int
     public var errno: Int?
@@ -679,7 +682,7 @@ public struct PWRunnerAttemptResult: Codable {
 
     enum CodingKeys: String, CodingKey {
         case requested_kind, requested_action
-        case result_source, native_rc, missing_reason
+        case result_source, native_rc, missing_reason, lifecycle
         case rc
         case exit_code
         case errno
@@ -703,6 +706,7 @@ public struct PWRunnerAttemptResult: Codable {
         try container.encodeIfPresent(result_source, forKey: .result_source)
         if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
+        try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
         try container.encode(rc, forKey: .rc)
         try container.encode(exit_code, forKey: .exit_code)
         if let errno {
@@ -753,6 +757,7 @@ public struct PWRunnerAttemptResult: Codable {
         result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
         native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
+        lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
         rc = try container.decode(Int.self, forKey: .rc)
         exit_code = try container.decodeIfPresent(Int.self, forKey: .exit_code) ?? rc
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
@@ -1035,6 +1040,16 @@ public struct PWRunnerSubprocess: Codable {
     /// unconfirmed disposition, distinct from absent/null legacy observation.
     public var reaped: Bool?
     public var wait_errors: [PWRunnerWaitError]?
+    /// Host facts recorded where the host acts (tests/FAILURE-PROPAGATION-CONTRACT.md,
+    /// "Worker disposition record"): why exit was requested, how the exit-grace
+    /// wait ended, and whether the final reads followed a confirmed reap. Absent
+    /// in replies before the record; absence is unreported, not observed false.
+    public var cleanup_trigger: String? = nil
+    public var grace_end: String? = nil
+    public var collection_basis: String? = nil
+    /// The canonical lifecycle account, resolved once by the host. Mandatory
+    /// whenever this object is present from the response that introduced it.
+    public var disposition: PWDispositionRecord? = nil
 
     public init(
         pid: Int,
@@ -1061,6 +1076,216 @@ public struct PWRunnerSubprocess: Codable {
         self.reaped = reaped
         self.wait_errors = wait_errors
     }
+}
+
+// MARK: - Worker disposition record
+//
+// Wire spellings shared with tests/lib/lifecycle_contract.py; DispositionContractTests
+// compares them. The contract is tests/FAILURE-PROPAGATION-CONTRACT.md,
+// "Worker disposition record". Every claim carries a state; a supported claim
+// names its answer and the raw observations that support it; unresolved and
+// inapplicable claims name a reason; a conflicting claim points at an issue.
+public enum PWDisposition {
+    public static let claimStates = ["supported", "unresolved", "conflicting", "inapplicable"]
+    public static let runQuestions = ["final_status", "stop_reason", "cleanup_trigger", "grace_end",
+                                      "kill_request_and_result", "collection_basis", "progress_association"]
+    public static let stepQuestions = ["step_boundary_reached", "step_result_published",
+                                       "step_requested_operation_applicability"]
+    public static let cleanupTriggers = ["deadline_expiry", "completion", "child_reaped", "poll_wait_error",
+                                         "policy_transfer_error"]
+    public static let graceEnds = ["not_entered", "reaped_during_grace", "exhausted", "wait_error"]
+    public static let collectionBases = ["after_confirmed_reap", "execution_may_continue", "unavailable"]
+    public static let triggerForStop: [String: String] = [
+        "sentinel_deadline": "deadline_expiry", "done": "completion", "child_reaped": "child_reaped",
+        "wait_error": "poll_wait_error", "policy_write_error": "policy_transfer_error"]
+    public static let slotStates = ["completed", "incomplete", "absent"]
+    public static let attemptSupport = ["supported", "unsupported"]
+    public static let summaries = ["completed", "started_without_result", "not_reached", "unsupported",
+                                   "unresolved", "conflicting"]
+    public static let limitationForSummary: [String: String] = [
+        "started_without_result": "attempt:started_without_result", "not_reached": "attempt:not_reached",
+        "unsupported": "attempt:unsupported", "unresolved": "attempt:lifecycle_unresolved",
+        "conflicting": "attempt:lifecycle_conflicting"]
+    public static let causeForTrigger: [String: String] = [
+        "deadline_expiry": "host_sentinel_deadline", "completion": "host_exit_grace_exhausted",
+        "poll_wait_error": "host_cleanup_after_wait_error", "policy_transfer_error": "host_cleanup_after_transfer_error"]
+    public static let notRecorded = "not_recorded"
+    /// Temporal order of worker operations (pw_probe_runner_abi.h): proceed (11)
+    /// precedes the indexed attempts (9); completion (10) follows them.
+    public static let protocolOrder: [UInt32] = [1, 2, 3, 4, 5, 6, 7, 8, 11, 9, 10]
+    public static let runReferences = ["reaped", "exit_code", "term_signal", "poll_stop_reason", "exit_requested",
+                                       "termination_request", "wait_errors", "cleanup_trigger", "grace_end",
+                                       "collection_basis", "done_observed", "progress", "worker_failure", "plan"]
+    public static let stepReferences = ["slot", "attempt_support"]
+}
+
+extension PWRunnerTerminationRequest: Equatable {}
+
+/// A claim value: an exit code, signal or index, or the termination request.
+public enum PWDispositionValue: Codable, Equatable {
+    case integer(Int)
+    case request(PWRunnerTerminationRequest)
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let integer = try? c.decode(Int.self) { self = .integer(integer); return }
+        self = .request(try c.decode(PWRunnerTerminationRequest.self))
+    }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .integer(let integer): try c.encode(integer)
+        case .request(let request): try c.encode(request)
+        }
+    }
+}
+
+public struct PWDispositionClaim: Codable, Equatable {
+    public var state: String
+    public var answer: String? = nil
+    public var value: PWDispositionValue? = nil
+    public var reason: String? = nil
+    public var issue: Int? = nil
+    public var basis: [String]? = nil
+}
+
+public struct PWDispositionIssue: Codable, Equatable {
+    public var kind: String
+    public var rule: String
+    public var question: String
+    public var step_index: Int? = nil
+    public var observations: [String]
+    public var detail: String
+}
+
+public struct PWDispositionStep: Codable, Equatable {
+    public var index: Int
+    public var step_id: String
+    public var slot: String
+    public var attempt_support: String
+    public var questions: [String: PWDispositionClaim]
+}
+
+public struct PWDispositionRecord: Codable, Equatable {
+    public var questions: [String: PWDispositionClaim]
+    public var steps: [PWDispositionStep]
+    public var issues: [PWDispositionIssue]
+}
+
+public struct PWAttemptLifecycle: Codable, Equatable {
+    public var summary: String
+    public var boundary: PWDispositionClaim
+    public var result: PWDispositionClaim
+}
+
+/// Integrity of an assembled record against the raw facts it cites. The
+/// encoder rejects a record that fails this; the degraded reply retains it
+/// unchecked so the conflict being reported is never lost. A record that
+/// reports an observed conflict through `issues` passes.
+func dispositionIntegrityProblems(_ record: PWDispositionRecord, subprocess sub: PWRunnerSubprocess,
+                                  stepCount: Int) -> [String] {
+    var problems: [String] = []
+    for name in PWDisposition.runQuestions where record.questions[name] == nil {
+        problems.append("disposition lacks question \(name)")
+    }
+    for (name, claim) in record.questions {
+        guard PWDisposition.claimStates.contains(claim.state) else {
+            problems.append("\(name): unknown claim state \(claim.state)"); continue
+        }
+        if claim.state == "supported" {
+            guard let basis = claim.basis, !basis.isEmpty, claim.answer != nil else {
+                problems.append("\(name): supported claim without answer or basis"); continue
+            }
+            for token in basis where !PWDisposition.runReferences.contains(token) {
+                problems.append("\(name): unknown reference \(token)")
+            }
+        }
+        if claim.state == "conflicting" {
+            guard let issue = claim.issue, record.issues.indices.contains(issue),
+                  record.issues[issue].question == name, record.issues[issue].step_index == nil else {
+                problems.append("\(name): conflicting claim without a matching issue"); continue
+            }
+        }
+        if claim.state == "unresolved" || claim.state == "inapplicable", claim.reason == nil {
+            problems.append("\(name): \(claim.state) claim without a reason")
+        }
+    }
+    if let final = record.questions["final_status"] {
+        switch (final.state, final.answer) {
+        case ("supported", "signal"?):
+            if sub.reaped != true || sub.term_signal == nil || final.value != sub.term_signal.map { .integer($0) } {
+                problems.append("final_status: signal claim contradicts reaped/term_signal")
+            }
+        case ("supported", "exit_code"?):
+            if sub.reaped != true || sub.exit_code == nil || final.value != sub.exit_code.map { .integer($0) } {
+                problems.append("final_status: exit_code claim contradicts reaped/exit_code")
+            }
+        case ("supported", _): break
+        case ("conflicting", _):
+            if sub.reaped != true || sub.exit_code == nil || sub.term_signal == nil {
+                problems.append("final_status: conflict claimed without both status representations")
+            }
+        default: break
+        }
+    }
+    if let stop = record.questions["stop_reason"], stop.state == "supported", stop.answer != sub.poll_stop_reason {
+        problems.append("stop_reason: claim contradicts poll_stop_reason")
+    }
+    for (name, raw) in [("cleanup_trigger", sub.cleanup_trigger), ("grace_end", sub.grace_end),
+                        ("collection_basis", sub.collection_basis)] {
+        if let claim = record.questions[name], claim.state == "supported", claim.answer != raw {
+            problems.append("\(name): claim contradicts the recorded host fact")
+        }
+    }
+    if let kill = record.questions["kill_request_and_result"], kill.state == "supported" {
+        if kill.answer == "requested", sub.termination_request == nil {
+            problems.append("kill_request_and_result: request claimed without termination_request")
+        }
+        if kill.answer == "none", sub.termination_request != nil {
+            problems.append("kill_request_and_result: no-request claim beside a termination_request")
+        }
+    }
+    if record.steps.count != stepCount {
+        problems.append("disposition steps (\(record.steps.count)) disagree with reply steps (\(stepCount))")
+    }
+    for (position, step) in record.steps.enumerated() {
+        if step.index != position { problems.append("disposition step \(position) carries index \(step.index)") }
+        if !PWDisposition.slotStates.contains(step.slot) { problems.append("step \(position): unknown slot state") }
+        if !PWDisposition.attemptSupport.contains(step.attempt_support) {
+            problems.append("step \(position): unknown attempt support")
+        }
+        for name in PWDisposition.stepQuestions where step.questions[name] == nil {
+            problems.append("step \(position) lacks question \(name)")
+        }
+        for (name, claim) in step.questions {
+            if claim.state == "supported" {
+                guard let basis = claim.basis, !basis.isEmpty, claim.answer != nil else {
+                    problems.append("step \(position) \(name): supported claim without answer or basis"); continue
+                }
+                for token in basis where !(PWDisposition.runReferences + PWDisposition.stepReferences).contains(token) {
+                    problems.append("step \(position) \(name): unknown reference \(token)")
+                }
+            }
+            if claim.state == "conflicting" {
+                guard let issue = claim.issue, record.issues.indices.contains(issue),
+                      record.issues[issue].question == name, record.issues[issue].step_index == position else {
+                    problems.append("step \(position) \(name): conflicting claim without a matching issue"); continue
+                }
+            }
+        }
+        if let result = step.questions["step_result_published"], result.state == "supported" {
+            if result.answer == "published", step.slot != "completed" {
+                problems.append("step \(position): published claim on a slot that is not completed")
+            }
+            if result.answer == "unpublished", step.slot != "incomplete" || sub.collection_basis != "after_confirmed_reap" {
+                problems.append("step \(position): unpublished claim needs an incomplete slot under terminal collection")
+            }
+        }
+        if let boundary = step.questions["step_boundary_reached"], boundary.state == "supported",
+           boundary.answer == "not_reached", sub.collection_basis != "after_confirmed_reap" || step.slot == "completed" {
+            problems.append("step \(position): not_reached claim needs terminal collection and no completed slot")
+        }
+    }
+    return problems
 }
 
 public struct ValidatorVerdict: Codable {
@@ -1278,6 +1503,10 @@ public struct PWRunnerRunResult: Codable {
             throw DecodingError.dataCorruptedError(forKey: .steps, in: c,
                 debugDescription: "response 9 path diagnostics require same_as_input")
         }
+        if schema_version >= 10, reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
+            throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
+                debugDescription: "response 10 requires the worker disposition record")
+        }
     }
     public func encode(to encoder: Encoder) throws {
         if schema_version >= 9 && steps.contains(where: { $0.sandbox_check.path_diagnostics?.legacyAbsentForms != nil }) {
@@ -1299,6 +1528,20 @@ public struct PWRunnerRunResult: Codable {
             if normalized_outcome == NormalizedOutcome.runnerReportingFailed {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "runner_reporting_failed requires reporting_failure diagnostics"))
+            }
+            // The disposition record is mandatory beside a worker subprocess from
+            // response 10 and must agree with the raw facts it cites. The degraded
+            // reply above skips this so a reported conflict is never lost.
+            if schema_version >= 10, let sub = runner_subprocess {
+                guard let record = sub.disposition else {
+                    throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                        debugDescription: "response 10 requires the worker disposition record"))
+                }
+                let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: steps.count)
+                if let first = problems.first {
+                    throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                        debugDescription: "disposition record contradicts its basis: \(first)"))
+                }
             }
             if runner_subprocess != nil && runner_subprocess?.ordering == nil {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,

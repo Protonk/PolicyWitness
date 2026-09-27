@@ -431,7 +431,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -574,7 +574,11 @@ Step channels expose `result_source`, `native_rc` and optional `missing_reason`.
 A missing prediction retains the compatibility `rc=0` but has source `synthetic`,
 `native_rc:null`, and distinguishes `validator_not_invoked` from
 `validator_no_verdict`. An incomplete attempt retains `not_run_worker_died`,
-meaning no completed result; it may have started. Completed attempts use source
+meaning no completed result; `attempt.lifecycle` says which: its `summary` is
+`completed`, `started_without_result`, `not_reached`, `unsupported`, `unresolved` or
+`conflicting`, and its `boundary` and `result` claims carry the supporting
+observations or the reason the question is unresolved (see
+[the worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)). Completed attempts use source
 `worker`, but their rc is PW attempt status, not a raw syscall return, so their
 `native_rc` is also null. Received predictions use source `validator`; native rc
 is retained only for native-call result records. See the
@@ -972,11 +976,19 @@ $PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSER
 ### Denial-log correlation
 
 The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
-It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports
-`process_disposition` (`no_worker`, `unconfirmed`, `clean_exit`, `nonzero_exit`,
-`signaled`), `capture_status`, and `correlation_status` (`not_attempted`,
-`unavailable`, `no_match`, `pid_match`). Abnormal/unconfirmed termination has
-`termination_cause="unknown"`. These fields do not change `normalized_outcome`.
+It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports `process_disposition` (`no_worker`, `unconfirmed`,
+`clean_exit`, `nonzero_exit`, `signaled`, `conflicting`, `withheld`, `unrecognized`),
+`capture_status`, and `correlation_status` (`not_attempted`, `unavailable`, `no_match`,
+`pid_match`). `termination_cause` names host cleanup the worker disposition record
+witnesses end to end (`host_sentinel_deadline`, `host_exit_grace_exhausted`,
+`host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`); it is null for a
+confirmed clean exit and `unknown` for every other termination, including a
+self-signal, an unresolved or conflicting status, and every reply without the record.
+It never names the sandbox. `stop_reason` projects why polling stopped (a deadline can
+coexist with a clean exit), and `disposition_integrity` with `disposition_issues` says
+whether the carried record agreed with the raw facts it cites (`valid`, `invalid` with
+claims withheld, or `not_reported` for a legacy reply). These fields do not change
+`normalized_outcome`.
 `permission_failures_without_record` lists the step IDs whose attempt the
 runner classified as a permission-shaped failure and that no captured event
 names as a candidate (null unless correlation reached `pid_match` or `no_match`

@@ -47,6 +47,7 @@ scripts=(
   "${SUITE_DIR}/validator_subprocess_populated.sh"
   "${SUITE_DIR}/validator_unavailable_reports_degraded.sh"
   "${SUITE_DIR}/worker_post_apply_hang_seam.sh"
+  "${SUITE_DIR}/worker_attempt_in_flight_at_deadline.sh"
   "${SUITE_DIR}/drift_determination_via_validator_seam.sh"
 )
 test_run_scripts "${scripts[@]}"

@@ -213,7 +213,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Legacy replies remain decodable. Typed readers that require a signal object must migrate
@@ -233,7 +233,12 @@ Per-step fields under `steps[]`:
   worker does not measure this channel; zero counts would invent evidence.
 - `not_run_worker_died` is a compatibility attempt-outcome spelling for no
   completed result, not proof that an operation never began. Errno/drift stay
-  null when no result supports them.
+  null when no result supports them. `attempt.lifecycle` distinguishes
+  `started_without_result`, `not_reached`, `unsupported`, `unresolved` and
+  `conflicting` from `completed`, projecting the per-step claims of
+  `runner_subprocess.disposition`, the host's canonical lifecycle account
+  (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record"). The
+  subprocess also records `cleanup_trigger`, `grace_end` and `collection_basis`.
 
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
   `filter_value` (the exact string passed to the check). It also reports `pid`,

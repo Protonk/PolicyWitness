@@ -15,15 +15,16 @@ from that account. An independent acceptance oracle checks required claims,
 forbidden claims, and the handling of uncertainty and inconsistency against
 the underlying observations, without calling the production resolver.
 
-This remains a plan for the app change. Planning, including the contract
-stage, is complete; the execution order is **contract → tests → app code**.
-The reproduction chain establishes the existing flaw. The sections below
-specify the intended guarantees, the implementation boundaries, and red tests
-grounded in current observations and independent contract examples. The wire
-shape, spellings and claim tables are fixed in
-[tests/FAILURE-PROPAGATION-CONTRACT.md → Worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record),
-and the independent oracle exists as `tests/lib/lifecycle_oracle.py` with
-constructed controls; no app code produces the record yet.
+Every stage of this plan is on main: contract, tests and app code, in that
+order. The reproduction chain below documents the flaw as it stood before the
+change and, under "Re-running the chain after the repair", what the rebuilt app
+reports now. The sections after it specify the guarantees, the implementation
+boundaries and the tests that pin them. The wire shape, spellings and claim
+tables are fixed in
+[tests/FAILURE-PROPAGATION-CONTRACT.md → Worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record);
+the runner resolves the record in `CWorkerOrchestrator.swift`, the controller
+projects it in `run_flow.rs`, and `tests/lib/lifecycle_oracle.py` checks both
+independently. The plan stays on disk for its final audit.
 
 Read [AGENTS.md → Core ideas](../AGENTS.md#core-ideas) first. "No dishonest
 attribution" is the principle this plan serves, not one it relaxes. The host
@@ -1155,15 +1156,15 @@ does not mistake them for reds:
 
 | Home | Additions |
 | --- | --- |
-| `tests/catalog.json`, `tests/suites/witness_contract/` | Case `worker_attempt_in_flight_at_deadline`: wrapper script, Python check (A1 plus the A3/A4 preservation halves), README section, coverage-table note. |
-| `tests/catalog.json`, `tests/suites/unit/` | Non-default case `rust.disposition_reds`, which runs the `#[ignore]`d Rust reds. |
-| `tests/catalog.json`, `tests/suites/runner_unit/` | Non-default case `disposition_reds`, which runs the Swift unit executable with `PW_DISPOSITION_REDS=1`. |
+| `tests/catalog.json`, `tests/suites/witness_contract/` | Case `worker_attempt_in_flight_at_deadline` (default): wrapper script, Python check (A1, the A3/A4 preservation halves, and the wave-2 claims through the adapter and oracle), README section, coverage-table note. |
+| `tests/catalog.json`, `tests/suites/unit/` | Case `rust.disposition_reds` (default since promotion), which runs the four controller tests by exact name. |
+| `runner/Tests/PWRunnerCoreTests/` | `DispositionResolverTests.swift` (fixture, constructed, integrity and mirror groups) and the shared `repositoryRoot` helper; the gated red case it once needed is gone. |
 | `tests/fixtures/disposition/` | `a1_expected.json` and `a1_known_loss.json` with their README. |
 | `runner/Tests/PWRunnerCoreTests/` | `DispositionResolverTests.swift` and its registry line; the D-model table and self-checks; renderer/composition controls; a two-slot fixture helper with independent cleanup. |
 | `tests/fixtures/worker_lifecycle/` | `skip_publication` mode and its README entry. |
 | `controller/src/run_flow.rs` | Tests B1 and E1 beside the existing diagnostics tests. |
 | `tests/lib/`, `tests/suites/blackbox_e2e/` | `lifecycle_contract.py`, `lifecycle_adapter.py` and `lifecycle_oracle.py`; `worker_exit_witness.py` and its cleanup-witness controls; the projection coverage inventory; accepted expected-output fixtures; the captured A1 known-loss fixture; and the E2 positive and rejection controls. |
-| `tests/fixtures/contract/response_shape.json` | Regenerated in the app-code stage and reviewed against the contract. |
+| `tests/fixtures/contract/response_shape.json` | Regenerated at response 10 from the field-complete fixture, additions only. |
 
 No new `NormalizedOutcome` or `AttemptOutcome` value is introduced, so the
 matrices in [tests/COVERAGE.md](../tests/COVERAGE.md) do not change. Lifecycle
@@ -1286,28 +1287,36 @@ separate scope/version decision, not an incidental implementation detail.
 
 ### Current execution scope
 
-The contract is fixed and the test stage is on main. The reds and their
-homes: `witness_contract/worker_attempt_in_flight_at_deadline` (A1 wave 1,
-then the version-gated wave-2 claims of A2, A3 and A4 through the adapter and
-oracle), `unit/rust.disposition_reds` (B1 refusal and wave 2, E1 projection
-and withholding, by exact name) and `runner_unit/disposition_reds` (the
-`PW_DISPOSITION_REDS`-gated integration gaps of areas B and C in
-`DispositionResolverTests.swift`). The same Swift file's fixture-observation
-and preservation blocks, the E2 expected-fixture and known-loss controls, the
-F3 consumer rules, the D-model and D-props self-checks and the oracle's
-mutation controls run in the default battery. `tests/fixtures/disposition/`
-holds the expected and known-loss envelopes; the `skip_publication` fixture
-mode produces C5's publication conflict. Swift wave-2 claims that need the
-resolver's types (B2 to B5 reasons, C1 to C5 claims, D-model enumeration in
-Swift, F1, F2) cannot compile before the resolver exists and are written with
-it; their expectations are already fixed in the Python tables.
+The app-code stage is on main and the app is rebuilt at response 10 and
+envelope 3. The driver records `cleanup_trigger`, `grace_end` and
+`collection_basis`; the orchestrator resolves one `PWDispositionRecord` per
+worker and projects `partial_steps`, `attempt.lifecycle`, the `attempt:*`
+lifecycle limitations and the error's lifecycle clauses from it; the encoder
+requires the record beside a worker subprocess and rejects a claim that
+contradicts its basis, while the degraded reply retains the record as
+assembled; the controller validates the carried record and projects
+`process_disposition`, `termination_cause`, `stop_reason`,
+`disposition_integrity` and `disposition_issues`, keeping the raw-status
+projection with `unknown` and `not_reported` for legacy replies.
 
-The next increment is the app-code stage: collection facts in `CWorker.swift`,
-the resolver and record types in `PWRunnerAPI.swift` and
-`CWorkerOrchestrator.swift`, runner and controller projections, encoding and
-degradation, the manifest bump with the regenerated copies, the shape golden,
-the Swift table mirror with its `ContractVersionTests`-style comparison, and
-promotion of each red as it turns green.
+Every red is green and promoted: the witness case and the four controller
+tests run in the default battery, the Swift file's claims run without a gate,
+and its mirror group requires the resolver to reproduce every hand-reviewed
+row of the Python contract module. Re-running the STR chain against the
+rebuilt app gives `termination_cause: host_sentinel_deadline`,
+`stop_reason: sentinel_deadline`, `disposition_integrity: valid`, and the two
+steps report `started_without_result` and `not_reached` with their
+compatibility triples unchanged; the oracle finds nothing to reject.
+
+Remaining explicit uncertainty is the uncertainty the record itself carries:
+a started boundary with no published result never says which instruction was
+executing; an unreaped worker keeps an unresolved final status; live or
+unavailable collection leaves per-step publication unresolved; and an
+unrecognized progress code leaves association unresolved while completed
+results stay known. `collection_basis: unavailable` is defined but no current
+driver path produces it. Self-signals, nonzero exits and unresolved statuses
+still project `unknown`, now as a specific statement that the account does not
+attribute the termination.
 
 For the eventual app change, run
 `cargo test --manifest-path controller/Cargo.toml`, then

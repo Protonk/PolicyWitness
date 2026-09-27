@@ -7,16 +7,16 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 1 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 9 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 10 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 2 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 3 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -77,6 +77,7 @@ which of these rules apply; every later number keeps the earlier rows.
 | 7 | Per-step `comparison` with scope and limitations, submitted attempt intent (`requested_kind`, `requested_action`) and host path provenance. Older replies keep their original `drift` and lack these derivations. |
 | 8 | Ordered comparisons (`comparison.order`, `runner_subprocess.ordering`), the `runner_reporting_failed` reply with `reporting_failure`, and optional `validator_spawn_failure`. Absence of the spawn record in older replies is unknown, not a successful spawn. |
 | 9 | `sandbox_check.effective_filter_value` is gone; it always equaled `filter_value`. `path_diagnostics` names the forms equal to `input` in `same_as_input` and omits their keys, carries `realpath_resolved` and `firmlink_resolved` only when they differ (a string) or could not be derived (null), and no longer carries the `data_volume_form` heuristic. Each form is in exactly one of those states; equality means identical UTF-8 bytes. Conflicting or missing states are malformed; legacy omissions remain unreported. |
+| 10 | `runner_subprocess.disposition`, the worker disposition record, is mandatory beside a worker subprocess, with the host facts `cleanup_trigger`, `grace_end` and `collection_basis`, and `steps[].attempt.lifecycle` with its `attempt:*` lifecycle limitations. Readers validate the record against the raw facts it cites and project from it; a subprocess without the record at this version is invalid, not a legacy omission. Omission in older replies is unreported. See tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record". |
 
 | Worker ABI | Introduced |
 | --- | --- |
@@ -92,6 +93,7 @@ which of these rules apply; every later number keeps the earlier rows.
 | --- | --- |
 | 1 | Initial shape. `data.sandbox_log_capture.window` recorded a trailing `last` lookback (`kind: "trailing"`), and `data.log_last` echoed the flag that set it. |
 | 2 | Deny-log capture requests the runner client's own span: `window` carries `kind: "runner_client_span"`, the client's start and end milliseconds and the whole-second UTC `start`/`end` strings handed to `log show`; `last` and `data.log_last` are gone. Reversed clock readings retain the milliseconds with null bounds and `capture_status: "invalid_window"`, without invoking the observer. `runner_sandbox_diagnostics.permission_failures_without_record` names the steps whose attempt reported a permission-shaped failure that no captured event records. A reply for different or missing bounds or a trailing lookback is `window_mismatch`; raw observer evidence survives without candidate or diagnostic correlation. |
+| 3 | `runner_sandbox_diagnostics` projects the worker disposition record: `termination_cause` names witnessed host cleanup (`host_sentinel_deadline`, `host_exit_grace_exhausted`, `host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`) instead of a blanket `unknown`, `stop_reason` carries the projected poll stop reason, `disposition_integrity` and `disposition_issues` report validation, and `process_disposition` adds `conflicting`, `withheld` and `unrecognized`. Legacy replies without the record keep the raw-status projection with `unknown` and `not_reported`. |
 
 Request schema has stayed at 1.
 

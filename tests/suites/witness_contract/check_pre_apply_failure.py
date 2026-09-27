@@ -15,6 +15,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from blackbox import validate_step
 from run_capture import RunCapture
+from lifecycle_contract import CAUSE_LABELS
 from consumer import recover_evidence, validate_evidence_shape
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
@@ -63,8 +64,10 @@ def no_cause_claim(envelope):
     if diagnostics is not None:
         assert isinstance(diagnostics, dict), diagnostics
         assert diagnostics.get('first_deny') is None, diagnostics
+        # A witnessed host cleanup label is not a sandbox or policy claim; sandbox and
+        # policy attributions stay forbidden without pinning the old placeholder.
         for key in ('cause', 'termination_cause'):
-            assert diagnostics.get(key) in (None, 'unknown', 'undetermined'), diagnostics
+            assert diagnostics.get(key) in (None, 'unknown', 'undetermined', *CAUSE_LABELS), diagnostics
         for key in ('sandbox_caused_termination', 'policy_caused_termination'):
             assert diagnostics.get(key) is not True, diagnostics
         prose = json.dumps(diagnostics).lower()
