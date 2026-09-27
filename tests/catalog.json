@@ -480,6 +480,14 @@
           "description": "unlink denied (errno=1); target survived under (deny default)"
         },
         {
+          "id": "exec_descriptor_limit_raised",
+          "description": "32 exec slots spawn under an inherited 64-descriptor soft limit; the worker raises it pre-apply"
+        },
+        {
+          "id": "exec_descriptor_limit_capped",
+          "description": "With the hard limit capped at 64, later exec slots fail per step naming the failed raise and pipe(); the run stays clean"
+        },
+        {
           "id": "proceed_never_set",
           "description": "Worker release barrier: proceed never set"
         },
@@ -1175,6 +1183,14 @@
           "requires": [
             "app",
             "clang"
+          ]
+        },
+        {
+          "id": "max_exec_steps_spawn",
+          "description": "Every exec step of a 256-step plan spawns a clean child; the worker raises its descriptor limit to fit the plan",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/max_exec_steps_spawn.sh"
           ]
         },
         {

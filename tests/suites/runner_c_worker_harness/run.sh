@@ -436,6 +436,49 @@ run_refusal_case "policy_overflow_refused"     "policy_overflow"     7 \
 run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
 
+# ---- test_id: exec_descriptor_limit_{raised,capped} -----------------------
+# The worker raises an inherited 64-descriptor soft limit to fit 32 exec slots
+# before opening any pipe. When the hard limit caps the raise, the later slots
+# fail per step naming the raise outcome and pipe(); the run itself stays clean.
+
+run_exec_descriptor_limit() {
+  local test_id="$1" scenario="$2" mode="$3"
+  run_harness_case "${test_id}" "${scenario}" \
+    "32 exec slots under an inherited 64-descriptor soft limit (${mode})" || return 0
+  set +e
+  PW_MODE="${mode}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, os, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+mode = os.environ["PW_MODE"]
+assert r["ready_byte_received"] and r["applied"] and r["apply_rc"] == 0 and r["done"], r
+assert not r["sent_sigkill"] and r["exit_code"] == 0 and r["term_signal"] is None, r
+assert r["failure_published"] == 0, f"a descriptor shortfall is per-step evidence, never a run failure: {r}"
+slots = r["slots"]
+assert len(slots) == 32 and all(s["completed"] == 1 for s in slots), slots
+spawned = [s for s in slots if s["child_pid"] > 0]
+failed = [s for s in slots if s["child_pid"] == 0]
+if mode == "raised":
+    assert len(spawned) == 32, f"every slot must spawn once the soft limit is raised; first failures: {failed[:2]}"
+    assert all(s["rc"] == 0 and s["child_exit_code"] == 0 and s["error"] == "" for s in slots), slots[:2]
+    print("ok: 32 exec slots spawned under an inherited 64-descriptor soft limit; the worker raised it pre-apply")
+else:
+    assert spawned and failed, f"a capped hard limit must spawn some slots and fail the rest: spawned={len(spawned)} failed={len(failed)}"
+    assert [s["child_pid"] > 0 for s in slots] == [True] * len(spawned) + [False] * len(failed), \
+        "descriptor exhaustion must fail the later slots, never earlier ones"
+    for s in failed:
+        assert s["errno"] == 24 and s["rc"] == -1, s
+        assert "setrlimit(RLIMIT_NOFILE" in s["error"] and "pipe(" in s["error"], s["error"]
+    print(f"ok: hard cap 64 let {len(spawned)} slots spawn; {len(failed)} later slots name the failed raise and pipe()")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+run_exec_descriptor_limit "exec_descriptor_limit_raised" "exec_descriptor_limit_raised" "raised"
+run_exec_descriptor_limit "exec_descriptor_limit_capped" "exec_descriptor_limit_capped" "capped"
+
 run_proceed_control() {
   local scenario="$1"
   run_harness_case "${scenario}" "${scenario}" "Exercise release, acknowledgement and attempt exclusion: ${scenario}" || return 0

@@ -13,8 +13,8 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Twenty-five scenarios, each driven by `harness.c`: six core lifecycle cases,
-nine attempt and pre-apply cases, and ten release controls listed below.
+Twenty-seven scenarios, each driven by `harness.c`: six core lifecycle cases,
+eleven attempt and pre-apply cases, and ten release controls listed below.
 
 ### Core lifecycle
 
@@ -81,6 +81,17 @@ while enforcing write permission.
 9. **create_allow** — `PW_ATTEMPT_FILE_CREATE` under `(allow default)`
    against an absent path: `rc=0`, `observed_path` captured from the open
    fd, and the target exists afterward.
+
+### Exec descriptor budget
+
+`exec_descriptor_limit_raised` sets the harness's soft descriptor limit to 64
+before spawning the worker with 32 exec slots that run `/usr/bin/true`. Four
+descriptors per slot would exhaust that limit, so every slot spawning proves
+the worker raised its soft limit pre-apply. `exec_descriptor_limit_capped`
+also lowers the hard limit to 64: the raise cannot succeed, the earlier slots
+spawn, and every later slot fails with errno 24 and an error naming both the
+raise outcome and `pipe()`, while the run publishes no failure and exits
+cleanly. See `exec_step_descriptors` in `docs/LIMITS.md`.
 
 ### Pre-apply self-defense
 

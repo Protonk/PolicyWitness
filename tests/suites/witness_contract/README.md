@@ -176,17 +176,21 @@ agreement, and deny/permission failure is directional consistency with null drif
 `max_targets_reply_survives` measures five 256-step workloads with 511-byte
 attempt targets: denied ASCII reads with log capture, successful reads of
 JSON-escaped paths with observed paths, independent query/attempt targets,
-32 execs with stdout/stderr plus 224 file reads, and an admitted plan whose independent 32,768-byte query
+256 execs with stdout/stderr, and an admitted plan whose independent 32,768-byte query
 filters exceed the controller cap. The first four require complete replies
 and exact targets, outcomes and applicable output. The fifth requires explicit
 receiver loss and separately invokes the raw client to verify a complete,
 admitted runner reply with successful attempts. Every variant records its reply
 size. These are workload guarantees; target admission does not bound all
 serialized reply fields. The exec case uses the independently controlled
-`tests/fixtures/exec` helper and requires clang.
-Its bounded exec count leaves room for the four pipe descriptors prepared per
-exec before sandbox application; the 256-step admission limit does not guarantee
-enough process descriptors for 256 simultaneous sets of capture pipes.
+`tests/fixtures/exec` helper and requires clang. Every step execs: the worker
+raises its soft descriptor limit pre-apply to fit the four pipe descriptors
+each exec step prepares (see `exec_step_descriptors` in `docs/LIMITS.md`).
+
+`max_exec_steps_spawn` runs 256 exec steps of `/usr/bin/true` through the
+CLI and requires every attempt to report a clean child. Under launchd's
+default soft limit only 62 exec steps could open their pipes before the raise
+existed; the case records any step that did not spawn.
 
 The bridge is test equipment selected through the existing executable override;
 its direct protocol/native controls live in `validator_bridge`. The opt-in

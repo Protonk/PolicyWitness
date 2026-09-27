@@ -19,7 +19,7 @@ from run_capture import RunCapture
 
 STEPS = 256
 TARGET_BYTES = 511
-EXEC_STEPS = 32  # Four pre-apply pipe descriptors per exec; keep within the host's FD budget.
+EXEC_STEPS = STEPS  # The worker raises its soft descriptor limit to fit every exec step.
 IDS = [f's{i:03d}' for i in range(STEPS)]
 
 

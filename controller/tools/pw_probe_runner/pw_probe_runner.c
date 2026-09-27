@@ -7,6 +7,9 @@
  *                  [--policy-fd <N>] (defaults to stdin).
  *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
  *      --shm-fd. Verify abi_version and prepared sentinel.
+ *   2b. Raise the soft descriptor limit to fit the plan's exec slots (a
+ *      bound change, not a resource), then create each exec slot's
+ *      pipes and file actions. Both happen before the policy is read.
  *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
  *      into a stack-fixed buffer. This is the LAST allocation
  *      attempt before sandbox_apply().
@@ -45,6 +48,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
@@ -73,6 +77,22 @@
 /* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
  * This is a worker observation deadline, not a bound on host scheduling/reap. */
 #define PW_PROCEED_WAIT_MS_DEFAULT 60000L
+
+/* Descriptors each exec step holds open before sandbox_apply: both ends of
+ * a stdout pipe and a stderr pipe, created in setup_exec_resources. The
+ * worker raises its inherited soft descriptor limit (launchd's default is
+ * 256) to fit the plan before opening any pipe; when the raise falls short
+ * of the need, later exec steps record exec_failed with EMFILE naming both
+ * the raise outcome and pipe(). Documented as exec_step_descriptors in
+ * docs/limits.json. */
+#define PW_EXEC_DESCRIPTORS_PER_STEP 4
+
+/* Allowance for the descriptors the worker holds before exec setup (stdio,
+ * shared memory, ready byte, policy source) plus whatever the launching
+ * environment left open. The pre-apply soft-limit raise targets this plus
+ * PW_EXEC_DESCRIPTORS_PER_STEP per exec slot. Documented as
+ * exec_descriptor_baseline in docs/limits.json. */
+#define PW_EXEC_DESCRIPTOR_BASELINE 64
 
 static long g_exec_child_deadline_ms = PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
 
@@ -559,6 +579,52 @@ typedef struct {
 
 static pw_exec_resources_t exec_resources[PW_SHM_MAX_STEPS];
 
+/* Outcome of the pre-apply soft-limit raise when it could not reach the
+ * plan's need; empty when the limit already fit or the raise succeeded.
+ * Prefixed to every exec slot that later fails at pipe(), so the step
+ * names both the limit outcome and the syscall. */
+static char g_descriptor_limit_note[160];
+
+/* Pre-apply: make the soft descriptor limit fit the plan so that exec
+ * slots beyond the inherited limit do not fail at pipe(). A limit is a
+ * bound, not a resource; nothing is opened here and the limit is never
+ * lowered. Clamped at the hard limit and at OPEN_MAX, which macOS
+ * enforces on the soft limit. */
+static void raise_descriptor_limit(uint32_t exec_count) {
+    g_descriptor_limit_note[0] = '\0';
+    if (exec_count == 0) return;
+    rlim_t need = (rlim_t)PW_EXEC_DESCRIPTOR_BASELINE
+                + (rlim_t)exec_count * (rlim_t)PW_EXEC_DESCRIPTORS_PER_STEP;
+    struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+        int e = errno;
+        snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
+                 "getrlimit(RLIMIT_NOFILE): %s", strerror(e));
+        return;
+    }
+    if (rl.rlim_cur >= need) return;
+    rlim_t target = need;
+    if (rl.rlim_max != RLIM_INFINITY && target > rl.rlim_max) target = rl.rlim_max;
+    if (target > (rlim_t)OPEN_MAX) target = (rlim_t)OPEN_MAX;
+    struct rlimit want = rl;
+    want.rlim_cur = target;
+    if (setrlimit(RLIMIT_NOFILE, &want) != 0) {
+        int e = errno;
+        snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
+                 "setrlimit(RLIMIT_NOFILE %llu->%llu): %s",
+                 (unsigned long long)rl.rlim_cur, (unsigned long long)target, strerror(e));
+        return;
+    }
+    if (target < need) {
+        snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
+                 "setrlimit(RLIMIT_NOFILE %llu->%llu) below need %llu (hard %llu)",
+                 (unsigned long long)rl.rlim_cur, (unsigned long long)target,
+                 (unsigned long long)need,
+                 rl.rlim_max == RLIM_INFINITY ? (unsigned long long)OPEN_MAX
+                                              : (unsigned long long)rl.rlim_max);
+    }
+}
+
 static void exec_resources_reset_all(void) {
     for (uint32_t i = 0; i < PW_SHM_MAX_STEPS; i++) {
         exec_resources[i].stdout_rfd          = -1;
@@ -574,11 +640,12 @@ static void exec_resources_reset_all(void) {
 }
 
 /* Pre-apply: walk every slot, and for each exec slot create both pipes
- * and build the posix_spawn_file_actions handle that wires them to the
- * child's STDOUT/STDERR. Per-slot failures are recorded into the
- * resource entry (and surfaced by attempt_exec_spawn at execution
- * time) so a transient resource shortage on one exec slot doesn't kill
- * the whole run.
+ * (PW_EXEC_DESCRIPTORS_PER_STEP descriptors) and build the
+ * posix_spawn_file_actions handle that wires them to the child's
+ * STDOUT/STDERR. Per-slot failures are recorded into the resource entry
+ * (and surfaced by attempt_exec_spawn at execution time) so a resource
+ * shortage on one exec slot doesn't kill the whole run; once the soft
+ * descriptor limit is spent, every later exec slot fails here.
  *
  * IMPORTANT: this MUST be called before sandbox_apply. After
  * sandbox_apply the worker should only call posix_spawn + close/poll/
@@ -595,14 +662,16 @@ static void setup_exec_resources(pw_shm_slot_t *slots, uint32_t step_count) {
             r->setup_failed = 1;
             r->setup_errno = errno;
             snprintf(r->setup_error, sizeof(r->setup_error),
-                     "pipe(stdout): %s", strerror(errno));
+                     "%s%spipe(stdout): %s", g_descriptor_limit_note,
+                     g_descriptor_limit_note[0] ? "; " : "", strerror(r->setup_errno));
             continue;
         }
         if (pipe(err_pipe) != 0) {
             r->setup_failed = 1;
             r->setup_errno = errno;
             snprintf(r->setup_error, sizeof(r->setup_error),
-                     "pipe(stderr): %s", strerror(errno));
+                     "%s%spipe(stderr): %s", g_descriptor_limit_note,
+                     g_descriptor_limit_note[0] ? "; " : "", strerror(r->setup_errno));
             close(out_pipe[0]); close(out_pipe[1]);
             continue;
         }
@@ -1184,6 +1253,11 @@ int main(int argc, char **argv) {
         g_exec_child_deadline_ms = args.exec_child_deadline_ms;
     }
     exec_resources_reset_all();
+    uint32_t exec_count = 0;
+    for (uint32_t i = 0; i < step_count; i++) {
+        if (slots[i].attempt_kind == PW_ATTEMPT_EXEC_SPAWN) exec_count++;
+    }
+    raise_descriptor_limit(exec_count);
     setup_exec_resources(slots, step_count);
 
     /* Read policy text into a fixed buffer. SBPL policies are

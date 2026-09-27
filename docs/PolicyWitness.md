@@ -340,6 +340,12 @@ import resolution or compilation.
 - Probe query JSON has a wire-size limit independent of attempt-target admission.
   A long operation or filter value can lose its prediction while the attempted
   operation still runs. JSON escaping contributes to the query size.
+- Exec attempts spend descriptors before the sandbox applies, four per step,
+  so the worker raises its inherited soft descriptor limit to fit the plan
+  before opening any pipe. The raise is a bound change, not a resource, and is
+  clamped by the hard limit; when it falls short, later exec attempts fail one
+  step at a time with the limit outcome and `pipe()` named in the step, while
+  the run itself reports success.
 - Deny-log capture has no fixed lookback limit. The requested interval is the
   runner client's wall-clock span, widened to whole seconds because `log show`
   accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
@@ -378,6 +384,8 @@ Values are maxima unless labelled as defaults.
 | Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Polling grace after closing validator pipes. Expiry triggers a SIGKILL attempt, then reaping; failures remain reported. | Production default; test-only controls are not a public tuning interface. |
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Per-exec child observation deadline after successful spawn. Worker attempts to kill/reap the child; the step records that the deadline fired. | Production default; test-only controls are not a public tuning interface. |
+| Exec attempt descriptors (`exec_step_descriptors`) | 4 items | Descriptors the worker opens before sandbox application for each exec step: both ends of a stdout pipe and a stderr pipe. They are opened pre-apply on purpose, so a refused pipe() after apply is never mistaken for a policy effect. Before opening any, the worker raises its inherited soft descriptor limit (launchd default 256) to the baseline allowance plus this count per exec step, clamped at the hard limit and at OPEN_MAX (10,240). With the raise in place every admitted exec step has its pipes. A raise that fails or falls short is named, together with the pipe() error, in each exec step that then fails with errno 24; no child is spawned for those steps, sandbox attribution stays unestablished, and the run is still ok. | Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it. |
+| Exec descriptor baseline allowance (`exec_descriptor_baseline`) | 64 items | Allowance for descriptors the worker holds before exec setup (stdio, shared memory, ready byte, policy source) plus whatever the launching environment left open. The pre-apply soft-limit raise targets this plus four per exec step. Too small an allowance would leave the raised limit short and later exec steps failing at pipe(); the worker itself holds about a dozen descriptors, so the allowance is generous. | Fixed; no public override. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
 
 ### Queries and transport
@@ -885,7 +893,10 @@ combinations:
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].
   The runner pre-creates stdout/stderr pipes
   pre-apply (so the post-apply syscall surface stays minimal — see
-  [Augments](#augments) → `exec_baseline` for the policy contract),
+  [Augments](#augments) → `exec_baseline` for the policy contract);
+  the worker first raises its soft descriptor limit to fit them, four per
+  exec step, see `exec_step_descriptors` under
+  [Execution budgets](#execution-budgets),
   drains both streams interleaved while the child runs, reaps via
   `waitpid`, and surfaces these fields under `attempt`:
 
