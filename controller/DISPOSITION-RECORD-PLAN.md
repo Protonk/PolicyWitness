@@ -217,8 +217,8 @@ away describes it. The information exists; the conclusions did not consume it.
 ### Link 5: the derivations do not read the facts
 
 ```sh
-rg -n "progress" runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift
-rg -n "termination_request|poll_stop_reason|exit_requested" controller/src/*.rs
+grep -n "progress" runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift
+grep -n "termination_request\|poll_stop_reason\|exit_requested" controller/src/*.rs
 ```
 
 Expect the first command to print nothing. The per-step derivation in
@@ -233,13 +233,13 @@ and emits `unknown` for every signaled disposition.
 This establishes the mechanism: not a bug in reading the facts, but derivations
 written without them.
 
-### Link 6: the tests pin the discard
+### Link 6: the tests pin the current conclusions
 
 ```sh
-rg -n -F 'termination_cause, Some("unknown")' controller/src/run_flow.rs
-rg -n "termination_cause" tests/suites/witness_contract/check_termination_correlation.py \
+grep -nF 'termination_cause, Some("unknown")' controller/src/run_flow.rs
+grep -n "termination_cause" tests/suites/witness_contract/check_termination_correlation.py \
   tests/suites/witness_contract/check_pre_apply_failure.py tests/suites/blackbox_e2e/checker_controls.py
-rg -n "partial_steps" tests/suites/runner_outcome_runner_timeout/check.py
+grep -n "partial_steps" tests/suites/runner_outcome_runner_timeout/check.py
 ```
 
 Expect four Rust assertions that `termination_cause` is `unknown` for
@@ -248,21 +248,17 @@ self-signaled worker yields `unknown`; a pre-apply assertion that
 `termination_cause` is in `(None, 'unknown', 'undetermined')`; and the
 runner-timeout suite asserting `partial_steps is False`.
 
-This identifies existing assertions to review, not a list to flip wholesale.
-Unknown external cause remains appropriate for the self-signal case, and
-completed post-apply-hang slots must remain completed. That hang seam occurs
-after all attempts; it does not exercise the FIFO's started-without-result
-boundary. The expanded oracle also needs the independent requirements below.
+This establishes two things. The oracles that depend on the current
+conclusions are enumerable; which of them move and which stay is decided under
+"Where things live". And the existing hang seam fires after all attempts, so no
+existing suite models the FIFO's started-without-result boundary.
 
 ### Re-running the chain after the repair
 
-Links 1 and 2 are unchanged. Link 3 retains the fact observations. Inspect
-link 4's fields together with the new lifecycle reasons/issues selected during
-contract design; they must satisfy the acceptance observations below. Link 5
-must show both derivation sites consuming the canonical account. Link 6 must
-show targeted expectation changes while retaining justified unknowns and
-completed-result controls. Source searches locate dependencies; the independent
-oracle establishes semantic agreement.
+Links 1 through 3 are unchanged. Link 4, read together with the lifecycle
+reasons chosen in the contract stage, must satisfy the acceptance observations
+below. Link 5 must show both derivation sites consuming the canonical account.
+Link 6 must show the oracle changes listed under "Where things live".
 
 ## Eventual behavior
 
@@ -315,11 +311,10 @@ JSON representation is a contract-stage decision:
 
 The canonical resolver's input must contain or immutably include all these
 dependencies. Existing raw fact fields remain authoritative observations;
-reuse them rather than creating separately mutable copies. Decide during
-contract design which facts the serialized record contains directly and which
-existing fields it identifies as its immutable basis. A basis reference must
-resolve within the same retained reply, including a degraded reply. Projections
-receive the resolved record, not a record plus opportunistic lifecycle inputs.
+reuse them rather than creating separately mutable copies. A basis reference
+must resolve within the same retained reply, including a degraded reply.
+Projections receive the resolved record, not a record plus opportunistic
+lifecycle inputs.
 
 A single exclusive `terminated_by` value is insufficient as the canonical
 representation. It would lose a deadline followed by voluntary exit, a failed
@@ -365,17 +360,12 @@ Reaping followed by all relevant reads can establish a stable worker snapshot;
 the mere fact that cleanup was attempted cannot. No progress value permits
 reading an unpublished slot payload.
 
-Likewise, `attempt/started` with no completed slot witnesses a started boundary
-without a published result. The underlying operation may have returned or had
-effects before publication was interrupted. The new lifecycle wording must
-express that limit; `interrupted_in_flight` must not imply that a particular
-syscall was still executing at termination. An unreaped worker must not be
-described as definitively interrupted.
-
-For the same reason, `returned_unpublished` is not an unconditional lifecycle
-classification or proof of a worker anomaly. Only the stable, valid,
-same-slot combination above establishes the publication conflict. Preserve
-both the evidence and the specific unresolved/conflicting question.
+The lifecycle wording must carry the same limits. A started boundary with no
+published result must not imply that a particular syscall was still executing
+at termination, and an unreaped worker must not be described as definitively
+interrupted. A publication conflict is established only by the stable,
+same-slot combination in the table above (rule D5), never by the bare
+combination of an incomplete slot and later progress.
 
 ### Claim requirements and projection inventory
 
@@ -416,10 +406,9 @@ old spellings as proof of death or non-execution.
 For the FIFO case, `termination_cause: host_sentinel_deadline` is the intended
 projection of observed deadline, host termination request, and matching reaped
 signal. Its contract describes this witnessed host cleanup sequence, not
-exclusive signal-sender attribution or a sandbox cause. Other cause mappings,
-including exit-grace cleanup and nonzero exit, need complete rules and exact
-wire decisions before implementation. Unknown external signal cause can
-coexist with fully known signal disposition.
+exclusive signal-sender attribution or a sandbox cause. The remaining cause
+mappings are on the decision list. Unknown external signal cause can coexist
+with fully known signal disposition.
 
 A legacy `unknown` or null may remain in a compatibility projection where its
 contract requires it; the new account names the unresolved question and reason.
@@ -434,9 +423,8 @@ worker failure still takes precedence over later cleanup. Only lifecycle
 clauses of the prose error are generated from this record, not every error
 from every observer.
 
-Log-correlation fields and comparison verdicts retain their current contracts.
-Logs never feed the lifecycle resolver. Additional step limitations must not
-silently change agreement, order, drift, or sandbox attribution.
+Additional step limitations must not silently change agreement, order, drift,
+or sandbox attribution.
 
 ### Acceptance observations across boundaries
 
@@ -461,8 +449,10 @@ mappings are finalized in the contract stage.
 The production FIFO budget is slow. Pair the specimen with
 `"_test_overrides": {"worker_timeout_ms": 2000}` for a short run; assert the
 echoed override as well as the failure observations. This changes the host
-deadline, not the worker result. A completed prefix makes one run expose all
-three relevant publication situations.
+deadline, not the worker result; against the current build the pairing returns
+in seconds with links 3 and 4 unchanged and the override mirrored under
+`test_overrides`. A completed prefix makes one run expose all three relevant
+publication situations.
 
 The grace-exit boundary is reachable with an allow-default file specimen and
 `worker_timeout_ms: 300`, `worker_post_apply_hang_ms: 800`. Check the actual
@@ -547,25 +537,17 @@ observations retain an explicit unresolved path.
    reasons. Uncertainty and conflicts remain local to dependent claims.
 4. Changing unrelated log records, diagnostic wording, or irrelevant values
    does not alter lifecycle claims.
-5. All registered projections agree with the same account and preserve its
-   limits through encoding, forwarding and evidence-preserving degradation.
-   Degradation may withhold comparisons under the existing reply contract while
-   retaining the lifecycle account; it must not leave a surviving contradictory
-   claim. Minimal reporting failure explicitly reports evidence loss.
+5. Projections and transport satisfy D7 and D8. Degradation may withhold
+   comparisons under the existing reply contract while retaining the lifecycle
+   account; it must not leave a surviving contradictory claim.
 6. An independent negative control must demonstrate that the checker rejects
    each kind of unsupported, contradictory, or discarded claim it claims to
    detect. A checker that accepts every output cannot pass its own controls.
 
-The projection inventory is an explicit maintenance obligation, not automatic
-discovery of meaning. Adding a lifecycle conclusion requires its rule,
-dependencies, compatibility behavior, and oracle coverage in the same change.
-The test-design stage must decide how inventory coverage is enforced.
-
 ## App-code action plan to finish first
 
 Plan these actions before specifying the detailed red tests. They describe
-implementation boundaries and dependencies, not permission to implement app
-code before the contract and tests.
+implementation boundaries and dependencies.
 
 1. **Collection and provenance — CWorker.swift.** Audit every poll stop,
    cleanup exit, and final read. Preserve independent stop/intervention/status
@@ -573,8 +555,7 @@ code before the contract and tests.
    distinguish grace exhaustion from wait-error cleanup. Decide how the host
    establishes stable terminal scope and how it reports potentially advancing
    reads. Keep completed-slot acquire gates; do not infer coherence from kill
-   success. No worker ABI expansion is planned to obtain a finer execution
-   history.
+   success.
 2. **Canonical input and resolver — PWRunnerAPI.swift and
    CWorkerOrchestrator.swift.** Define the evidence dependencies, per-question
    results and issue representation. Choose one inspectable resolver over
@@ -601,9 +582,7 @@ code before the contract and tests.
    Keep minimal reporting failure and old-response absence semantics explicit.
 6. **Integration inventory.** Map each action to its contract clauses,
    projection entries, shape fixture and eventual red tests. Update the
-   relevant docs and version decisions through the contract stage; implement
-   the planned code only after the test stage demonstrates the intended
-   failures.
+   relevant docs and version decisions through the contract stage.
 
 ### Decisions to settle in planning and contract work
 
@@ -619,9 +598,8 @@ code before the contract and tests.
 - Finite model and oracle inventory enforcement, legacy/unknown-value behavior,
   and required version changes.
 
-These decisions may refine the app-code action plan. They must not weaken the
-soundness, completeness, locality or preservation requirements to accommodate
-an implementation shortcut.
+These decisions may refine the app-code action plan. They must not weaken any
+of the five guarantees to accommodate an implementation shortcut.
 
 ## Reserved space: desired red-test specifications
 
@@ -693,9 +671,10 @@ Existing controls to review, not indiscriminately flip:
   `CWorkerLifecycleTests`, `WorkerEvidenceTests`,
   `HostOutcomeClassifierTests`, `EnvelopeInvariantTests`,
   `ReplyFailureTests`, and `DiagnosticTransportTests`.
-- `tests/fixtures/contract/response_shape.json` and its field-complete reply
-  fixture: acknowledge the new record and reasons after deciding the contract.
-  A shape golden alone does not establish semantic correctness.
+- `tests/fixtures/contract/response_shape.json` and the field-complete reply
+  that `ContractVersionTests` constructs: acknowledge the new record and
+  reasons after deciding the contract. A shape golden alone does not establish
+  semantic correctness.
 
 Contract and explanatory documents:
 
@@ -717,11 +696,10 @@ requirements or changes to existing field meaning do require the appropriate
 version bump; do not label those changes merely additive.
 
 The intended change to controller `termination_cause` semantics requires an
-envelope bump. Decide separately whether the completed response invariants
-require a response bump. Edit [docs/contract.json](../docs/contract.json), run
-`python3 docs/generate_contract.py`, and move only tests that depend on the
-changed contract. The app-code plan must identify those decisions before
-execution, rather than choosing numbers while implementing.
+envelope bump; whether the completed response invariants require a response
+bump is on the decision list. Edit [docs/contract.json](../docs/contract.json),
+run `python3 docs/generate_contract.py`, and move only tests that depend on the
+changed contract.
 
 No worker ABI change is planned. Host observations plus existing publications
 support the bounded claims above; they do not determine every lifecycle answer.
@@ -783,8 +761,8 @@ record in this implementation.
   evidence and does not create a second downstream derivation.
 - Causal claims from log correlation remain outside this contract.
   `first_deny` stays a reference.
-- Changes to `normalized_outcome` values/precedence and comparison verdicts
-  remain outside scope. Consistency and preservation checks include their
-  existing contracts without redefining them.
+- `normalized_outcome` values, precedence and comparison verdicts keep their
+  current contracts, as stated under "Claim requirements and projection
+  inventory".
 - This work does not add execution tracing, exact syscall-interruption
   attribution, a global lifecycle timeout, or new cleanup ownership.
