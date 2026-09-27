@@ -384,22 +384,56 @@ combination of an incomplete slot and later progress.
 ### The questions the record answers
 
 The record answers a fixed list of questions. Each has a supported,
-unresolved, conflicting, or inapplicable state; the D-rules below say which
-witnesses support each answer. The contract stage completes this table, and
-the resolver, the independent oracle, the semantic adapter and the projection
-inventory all key off it.
+unresolved, conflicting, or inapplicable state. For every supported answer the
+first table lists the alternative sufficient witness sets and the collection
+scope they need: `any` means the witness holds under every collection basis,
+and `terminal` means all relevant reads followed a confirmed reap, so the
+worker can publish nothing more. Negative answers (`not reached`,
+`unpublished`) need terminal scope because a live worker can still publish.
+The second table lists each question's conflict apart from the answers it
+disqualifies (a conflict witness never supports an answer), the conditions
+that leave it unresolved, its applicability and its consumers.
+`tests/lib/lifecycle_contract.py` carries the same tables with a structural
+self-check, and the two must agree. The resolver, the independent oracle, the
+semantic adapter and the projection inventory key off these tables, and the
+contract stage completes the claim tables from them.
 
-| Question | Answer domain | Sufficient witnesses | Applicability | Consuming projections |
+| Question | Answer | Sufficient witnesses (any one) | Scope | Rules |
 | --- | --- | --- | --- | --- |
-| Final status | exit code; signal; unresolved | successful reap plus one valid status representation (D1) | whenever a worker was spawned | `process_disposition`, `termination_cause` |
-| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation (D2) | whenever polling started | `stop_reason`, lifecycle error clause |
-| Cleanup trigger and grace end | not entered; reap during grace; exhaustion; wait error | direct host observation (D2) | whenever exit was requested | `termination_cause`, lifecycle error clause |
-| Kill request and result | none; requested, with `rc` and `errno` | direct host observation (D2) | whenever cleanup ran | `termination_cause`, lifecycle error clause |
-| Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection (D2) | whenever slots were read | the scope of every per-step answer (D4, D5) |
-| Progress association | valid step index; parameter index; none; invalid | the decoded word validated against the submitted plan (D3) | whenever a progress word was published | the per-step answers below |
-| Per-step boundary reached | reached; not reached; unresolved | progress at or beyond the step under terminal scope (D3, D4) | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
-| Per-step result published | published; unpublished; conflicting | a completed slot, or progress beyond an incomplete slot under terminal scope (D3, D5) | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
-| Per-step requested-operation applicability | supported; unsupported | the host's attempt mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
+| Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
+| | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
+| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation | any | D2 |
+| Cleanup trigger | deadline expiry; completion; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
+| Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
+| Kill request and result | none; requested, with `rc` and `errno` | direct host observation of the request and its return | any | D2 |
+| Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
+| Progress association | valid step index; parameter index; none; invalid | the decoded word validated against the ABI operation table and the submitted plan | any | D3 |
+| Per-step boundary reached | reached | valid started or returned attempt progress associated with this step; or a completed slot for this supported step, whatever the progress word says; or valid attempt progress associated with a later step under the serial attempt order | any | D3 |
+| | not reached | a valid known protocol position before this step and no completed slot for this step | terminal | D4 |
+| Per-step result published | published | a completed slot for this supported step | any | D3 |
+| | unpublished | an incomplete slot for this step and no valid progress beyond it | terminal | D3 |
+| Per-step requested-operation applicability | supported; unsupported | the host's attempt mapping (`PW_ATTEMPT_NONE` marks unsupported) | any | D3 |
+
+| Question | Conflict (rule; witnesses; scope) | Unresolved when | Applicability | Consuming projections |
+| --- | --- | --- | --- | --- |
+| Final status | D1; one successful reap represented as both an exit status and a signal; any | no successful reap (a successful kill request is not a reap) | whenever a worker was spawned | `process_disposition`, `termination_cause` |
+| Stop reason | none | the host recorded no poll-loop stop | whenever polling started | `stop_reason`, lifecycle error clause |
+| Cleanup trigger | none | the host recorded no trigger apart from the stop reason | whenever exit was requested | `termination_cause`, lifecycle error clause |
+| Grace end | none | the host recorded no grace outcome; never infer exhaustion from `done` plus a kill | whenever exit was requested | `termination_cause`, lifecycle error clause |
+| Kill request and result | none | the host recorded no request outcome | whenever cleanup ran | `termination_cause`, lifecycle error clause |
+| Collection basis | none | the host recorded no basis; a later kill or reap never stabilizes earlier reads | whenever slots were read | the scope of every per-step answer |
+| Progress association | none | no progress word; unrecognized operation or phase code, with the raw word retained | whenever a progress word was published | the per-step answers below |
+| Per-step boundary reached | D5; a completed slot for this step beside valid terminal progress that never reached it; terminal | no usable progress and no completed slot; a live or unavailable basis for `not reached` | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
+| Per-step result published | D5; valid association, an incomplete slot and valid progress beyond this step, violating completion-before-return; terminal | an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
+| Per-step requested-operation applicability | none | the host recorded no mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
+
+The FIFO case reads off these rows. Attempt 0 has a reached boundary from its
+started progress under any scope and, because collection followed the reap with
+no progress beyond its incomplete slot, an unpublished result. Attempt 1 is not
+reached because the last valid position precedes it under terminal scope and
+its slot is incomplete. A completed slot with absent or invalid progress keeps
+both its result and its reached boundary. Terminal progress beyond an
+incomplete slot is the D5 conflict, never an answer.
 
 ### Claim requirements and projection inventory
 
@@ -680,16 +714,26 @@ result.
 failed assertion or a harness timeout does not prove a child exited. Establish
 worker absence before removing staging, keep the primary failure and any
 cleanup failure separately visible, and never signal a PID taken solely from
-an envelope. If safe recovery cannot establish ownership and exit, retain
-staging and durable run metadata and fail with the unresolved cleanup
-identified.
+an envelope. The only positive witness of worker exit in an envelope is
+`runner_subprocess.reaped: true`; a reply without a subprocess record, such as
+a client-synthesized `xpc_timeout` reply or the minimal reporting-failure
+reply, does not establish that no worker spawned, so its staging is retained
+(`tests/lib/worker_exit_witness.py`, with constructed controls in
+`blackbox_e2e/checker_controls`). If safe recovery cannot establish ownership
+and exit, retain staging and durable run metadata and fail with the unresolved
+cleanup identified.
 
 **Registration while red.** Register each new case as a non-default catalog
 member documented in [tests/OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md) until
 it is green, then promote it to default membership in the change that turns it
 green. Explicit `--suite` selection includes non-default members, so the
 verification recipe under "Order of work" is red by design during the test
-stage while the default battery stays green on main.
+stage while the default battery stays green on main. Rust reds cannot be
+catalog members individually because `unit/rust.unit` runs the whole crate:
+mark them `#[ignore]` with the plan's reason and run them through the
+non-default case `unit/rust.disposition_reds`, so `--all` and `--suite opt_in`
+exercise every red. Promotion removes the attribute in the change that turns
+the test green.
 
 **Four input classes, four homes.** Live boundaries run the CLI through
 `RunCapture` in a `witness_contract` case. Driver fault controls run the
@@ -1141,11 +1185,12 @@ does not mistake them for reds:
 
 | Home | Additions |
 | --- | --- |
-| `tests/catalog.json`, `tests/suites/witness_contract/` | Case `worker_attempt_in_flight_at_deadline`: wrapper script, Python check, README section, coverage-table note. |
+| `tests/catalog.json`, `tests/suites/witness_contract/` | Case `worker_attempt_in_flight_at_deadline`: wrapper script, Python check (A1 plus the A3/A4 preservation halves), README section, coverage-table note. |
+| `tests/catalog.json`, `tests/suites/unit/` | Non-default case `rust.disposition_reds`, which runs the `#[ignore]`d Rust reds. |
 | `runner/Tests/PWRunnerCoreTests/` | `DispositionResolverTests.swift` and its registry line; the D-model table and self-checks; renderer/composition controls; a two-slot fixture helper with independent cleanup. |
 | `tests/fixtures/worker_lifecycle/` | `skip_publication` mode and its README entry. |
 | `controller/src/run_flow.rs` | Tests B1 and E1 beside the existing diagnostics tests. |
-| `tests/lib/`, `tests/suites/blackbox_e2e/` | `lifecycle_contract.py`, `lifecycle_adapter.py` and `lifecycle_oracle.py`; the projection coverage inventory; accepted expected-output fixtures; the captured A1 known-loss fixture; and the E2 positive and rejection controls. |
+| `tests/lib/`, `tests/suites/blackbox_e2e/` | `lifecycle_contract.py`, `lifecycle_adapter.py` and `lifecycle_oracle.py`; `worker_exit_witness.py` and its cleanup-witness controls; the projection coverage inventory; accepted expected-output fixtures; the captured A1 known-loss fixture; and the E2 positive and rejection controls. |
 | `tests/fixtures/contract/response_shape.json` | Regenerated in the app-code stage and reviewed against the contract. |
 
 No new `NormalizedOutcome` or `AttemptOutcome` value is introduced, so the
@@ -1265,19 +1310,27 @@ separate scope/version decision, not an incidental implementation detail.
    independent oracle and transport guarantees, then run the required suites.
    Describe the final behavior and any remaining explicit uncertainty.
 
-### First increment
+### Increments so far
 
-The first working session on this plan does the following and nothing more.
-Rerun the STR chain. Add the contract module skeleton with the question table
-and `host_sentinel_deadline` as its one fixed cause label. Write A1 and the
-refusal half of B1 as non-default cases. Confirm each fails on the unchanged
-build for the stated reason, with the failing assertion and the raw witnesses
-in the artifacts. Commit. Do not touch app code, and do not add a placeholder
-spelling for any other open value.
+The first increment is on main. The STR chain reruns as described, the
+contract module skeleton carries the question tables above and
+`host_sentinel_deadline`, and the wave-1 reds exist as non-default cases: A1
+with the preservation halves of A3 and A4 as
+`witness_contract/worker_attempt_in_flight_at_deadline`, and the refusal half
+of B1 as `unit/rust.disposition_reds`. Both fail on the unchanged build for
+the stated reason, with the failing assertion and the raw witnesses in their
+artifacts. No app code has changed and no other open value has a placeholder
+spelling.
+
+The next increment is the contract stage's remaining deliverables under "Order
+of work": the claim tables the D-model evaluates, the typed references and
+dependency sets, the trigger-to-cause table, the wire representation, the
+legacy and unknown-value rules, the degradation representation, the adapter
+and oracle modules, and the version bumps.
 
 For the eventual app change, run
 `cargo test --manifest-path controller/Cargo.toml`, then
-`tests/run.sh --suite source_drift --suite runner_unit --suite runner_outcome_runner_timeout --suite witness_contract --suite blackbox_e2e`
+`tests/run.sh --suite source_drift --suite unit --suite runner_unit --suite runner_outcome_runner_timeout --suite witness_contract --suite blackbox_e2e`
 against a normal signed build, then the default battery. Add the cases in
 the registration summary to that list as they land. Changes to the wait,
 release store or ordering eligibility also require the opt-in

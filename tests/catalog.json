@@ -149,6 +149,18 @@
           "requires": [
             "cargo"
           ]
+        },
+        {
+          "id": "rust.disposition_reds",
+          "default": false,
+          "description": "The disposition record plan's #[ignore]d Rust reds (B1 refusal half); red until the controller change lands",
+          "command": [
+            "bash",
+            "tests/suites/unit/disposition_reds.sh"
+          ],
+          "requires": [
+            "cargo"
+          ]
         }
       ]
     },
@@ -1404,6 +1416,7 @@
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
         "witness_contract/worker_attempt_in_flight_at_deadline",
+        "unit/rust.disposition_reds",
         "runner_byoxpc/registry_recovery"
       ]
     },

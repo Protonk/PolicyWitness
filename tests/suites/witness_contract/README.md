@@ -234,25 +234,42 @@ That suite owns the deliberately empty-plan timeout control;
 
 ## Attempt in flight at the deadline
 
-`worker_attempt_in_flight_at_deadline` is a specified red test from
+`worker_attempt_in_flight_at_deadline` holds the area A tests of
 [controller/DISPOSITION-RECORD-PLAN.md](../../../controller/DISPOSITION-RECORD-PLAN.md)
-(A1) and is registered non-default until it turns green. Its first step opens
-a FIFO with no writer, so attempt 0 blocks inside the worker until the host's
-sentinel deadline (`worker_timeout_ms: 2000`) fires; the second step is never
-reached. The envelope records `poll_stop_reason: sentinel_deadline`,
-`termination_request: {rc: 0, signal: 9}`, `term_signal: 9`, `reaped: true`
-and the attempt 0 started progress word. The check asserts those witnesses and
-the echoed override as setup, preserves `runner_timeout`, the deadline and
-SIGKILL error clauses and the `signaled` disposition, then requires
-`runner_sandbox_diagnostics.termination_cause` to equal the
-`HOST_SENTINEL_DEADLINE` constant from `tests/lib/lifecycle_contract.py`. It
-forbids `unknown` and any value attributing the signal to the sandbox. The
-per-step compatibility triples are recorded in `compatibility_triples.json`
-without assertion; the wave 2 semantic claims (A2) remain specified in the plan.
+and is registered non-default until it turns green. It runs three specimens
+under `(version 1) (allow default)` with `--no-log-capture`:
 
-The FIFO lives in test-owned staging under `/private/tmp` that the check never
-opens and removes only after the envelope's `reaped: true` witnesses worker
-exit; otherwise the staging is retained and named in `cleanup.json`.
+- `a1`: a FIFO with no writer, then `/etc/hosts`, with `worker_timeout_ms: 2000`.
+  Attempt 0 blocks inside the worker until the sentinel deadline; the second
+  step is never reached. The envelope records `poll_stop_reason:
+  sentinel_deadline`, `termination_request: {rc: 0, signal: 9}`,
+  `term_signal: 9`, `reaped: true` and the attempt 0 started progress word.
+  The check asserts those witnesses and the echoed override as setup and
+  preserves `runner_timeout`, the deadline and SIGKILL error clauses and the
+  `signaled` disposition. Its red, asserted last, requires
+  `runner_sandbox_diagnostics.termination_cause` to equal the
+  `HOST_SENTINEL_DEADLINE` constant from `tests/lib/lifecycle_contract.py` and
+  forbids `unknown` or any value attributing the signal to the sandbox.
+- `a3`: `/etc/hosts`, the FIFO, `/etc/hosts`. The same host witnesses appear with
+  progress at attempt index 1, and the completed first step keeps `outcome: ok`,
+  `result_source: worker`, `rc: 0` and `conclusion: agreement`.
+- `a4`: `/etc/hosts` with `worker_timeout_ms: 300` and
+  `worker_post_apply_hang_ms: 800`. The deadline fires and the worker exits 0
+  during grace: `sentinel_deadline`, `exit_code: 0`, `done_observed: true`, no
+  termination request, `partial_steps: false`, the completed result,
+  `runner_timeout`, a `clean_exit` disposition and a null cause all coexist,
+  and the error names the deadline with "no termination requested".
+
+The `a3` and `a4` preservation halves pass today and run before the red. The
+per-step compatibility triples are recorded in `compatibility_triples.json`
+without assertion; the wave 2 semantic claims (A2, and the semantic halves of
+A3 and A4) remain specified in the plan.
+
+Each FIFO lives in test-owned staging under `/private/tmp` that the check never
+opens. Staging is removed only when the envelope's `reaped: true` witnesses
+worker exit (`tests/lib/worker_exit_witness.py`); a reply without a subprocess
+record does not establish that no worker spawned, so the staging is retained
+and named in `cleanup.json`.
 
 ## Failure before published application
 

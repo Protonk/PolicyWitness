@@ -13,6 +13,7 @@ CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from consumer import recover_evidence, validate_evidence_shape, validate_current_build_evidence
 from path_diagnostics_contract import check_cases
+from worker_exit_witness import worker_exit_witness
 
 
 def consumer_controls(artifacts, baseline, current):
@@ -256,6 +257,35 @@ def consumer_controls(artifacts, baseline, current):
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')
 
 
+def cleanup_witness_controls(artifacts):
+    """Envelope shapes and the staging removal each permits; constructed, no process launched.
+
+    Only a confirmed reap witnesses worker exit. A client-synthesized xpc_timeout
+    reply, a lost reply and the minimal reporting-failure reply carry no
+    subprocess record although a worker may have spawned; an unreaped or
+    unrecorded reap says it may still run. Each must retain staging.
+    """
+    cases = [
+        ('client_timeout', {'data': {'runner_result': {'normalized_outcome': 'xpc_timeout', 'steps': []}}}, False),
+        ('lost_runner_reply', {'data': {'runner_result': None}}, False),
+        ('no_envelope', None, False),
+        ('minimal_reporting_failure', {'data': {'runner_result': {
+            'normalized_outcome': 'runner_reporting_failed', 'steps': [],
+            'reporting_failure': {'evidence_retained': False}}}}, False),
+        ('unreaped_worker', {'data': {'runner_result': {'runner_subprocess': {'pid': 42, 'reaped': False}}}}, False),
+        ('reap_unrecorded', {'data': {'runner_result': {'runner_subprocess': {'pid': 42}}}}, False),
+        ('reaped_worker', {'data': {'runner_result': {'runner_subprocess': {'pid': 42, 'reaped': True}}}}, True),
+    ]
+    records = []
+    for name, envelope, expected in cases:
+        witnessed, reason = worker_exit_witness(envelope)
+        assert witnessed is expected, f'{name}: staging removal permitted={witnessed}, expected {expected}: {reason}'
+        assert reason, name
+        records.append({'control': name, 'removal_permitted': witnessed, 'witness': reason})
+    (artifacts / 'cleanup-witness-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+    print('cleanup witness controls: ok', flush=True)
+
+
 def ordering_controls(artifacts):
     """Handwritten response-8 chain with one independently specified native record."""
     query = dict(operation='file-read-data', filter_kind='path', filter_value='/owned',
@@ -447,6 +477,7 @@ def main():
     check("response7", current)
     consumer_controls(artifacts, baseline, current)
     ordering_controls(artifacts)
+    cleanup_witness_controls(artifacts)
     for label, change, diagnostic in [
         ('missing_intent', lambda s: s['attempt'].pop('requested_action'), 'missing attempt.requested_action'),
         ('missing_temporal_limit', lambda s: s['comparison']['limitations'].remove('state_stability_unestablished'), 'missing comparison limitation state_stability_unestablished'),

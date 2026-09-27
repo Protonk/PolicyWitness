@@ -160,33 +160,42 @@ selection, deduplication, configuration validation, and complete accounting.
 
 ### Disposition record red tests
 
-- **Suite name:** `witness_contract`, case `worker_attempt_in_flight_at_deadline`.
+- **Suite name:** `witness_contract`, case `worker_attempt_in_flight_at_deadline`;
+  `unit`, case `rust.disposition_reds`.
 - **Location:** `tests/suites/witness_contract/worker_attempt_in_flight_at_deadline.sh`
-  with `check_attempt_in_flight.py`. It lives beside the default cases, not under
-  `opt_in/`, because it is promoted in place when it turns green. The Rust half,
-  B1, is the `#[ignore]`d test `conflicting_status_representation_is_not_silently_resolved`
-  in `controller/src/run_flow.rs`; run it with
-  `cargo test --manifest-path controller/Cargo.toml --bins -- --ignored conflicting_status_representation`.
-- **Purpose:** A1 of `controller/DISPOSITION-RECORD-PLAN.md`: a FIFO open with no
-  writer blocks attempt 0 until the host deadline; the host's deadline, successful
-  SIGKILL request and reaped signal 9 must project to
-  `termination_cause: host_sentinel_deadline` (the `HOST_SENTINEL_DEADLINE` constant
-  in `tests/lib/lifecycle_contract.py`). B1 forbids an unqualified `signaled` or
-  `clean_exit` disposition from a reply carrying `exit_code` 0 beside `term_signal` 9.
+  with `check_attempt_in_flight.py`, and `tests/suites/unit/disposition_reds.sh`.
+  Both live beside their suite's default cases, not under `opt_in/`, because
+  each is promoted in place when it turns green.
+- **Purpose:** Area A of `controller/DISPOSITION-RECORD-PLAN.md`. Specimen `a1`
+  blocks attempt 0 on a FIFO with no writer until the host deadline; the host's
+  deadline, successful SIGKILL request and reaped signal 9 must project to
+  `termination_cause: host_sentinel_deadline` (the `HOST_SENTINEL_DEADLINE`
+  constant in `tests/lib/lifecycle_contract.py`). Specimen `a3` adds a completed
+  first step that must survive, and `a4` has the worker exit 0 during grace after
+  the deadline with no invented kill; those preservation halves pass today and run
+  before the red. `rust.disposition_reds` runs the `#[ignore]`d Rust test
+  `conflicting_status_representation_is_not_silently_resolved` (B1), which forbids
+  an unqualified `signaled` or `clean_exit` disposition from a reply carrying
+  `exit_code` 0 beside `term_signal` 9.
 - **Opt-in reason:** Red by design against the unchanged controller, per the plan's
   registration-while-red convention. Promote to default membership, and drop the
   `#[ignore]`, in the change that turns each green.
-- **Resource dependency:** Built app and unsandboxed live XPC for A1; cargo only for B1.
+- **Resource dependency:** Built app and unsandboxed live XPC for the witness case;
+  cargo only for the Rust case.
 - **When to run:** During the disposition record's test and app-code stages, and after
   changes to `synthesize_runner_sandbox_diagnostics` or the host's cleanup path.
-  Select with `tests/run.sh --case witness_contract/worker_attempt_in_flight_at_deadline`.
-- **Artifacts:** `<run>/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/`:
+  Select with `tests/run.sh --case witness_contract/worker_attempt_in_flight_at_deadline --case unit/rust.disposition_reds`.
+- **Artifacts:** `<run>/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/`
+  holds `assertions.log` and one directory per specimen (`a1/`, `a3/`, `a4/`) with
   `specimen.json`, `run.json`, `pw.stderr`, `capture.json`, `witnesses.json`,
-  `diagnostics.json`, `compatibility_triples.json`, `cleanup.json` and `assertions.log`.
-  FIFO staging under `/private/tmp` is removed once the envelope's `reaped: true`
-  witnesses worker exit; otherwise it is retained and named in `cleanup.json`.
-- **Gating:** Missing app fails; no skip code. A run that does not reach the FIFO
-  boundary fails as setup, not as the behavioral red.
+  `diagnostics.json`, `compatibility_triples.json` and, for the FIFO specimens,
+  `cleanup.json`. FIFO staging under `/private/tmp` is removed only when the
+  envelope's `reaped: true` witnesses worker exit (`tests/lib/worker_exit_witness.py`);
+  otherwise it is retained and named in `cleanup.json`.
+  `<run>/suites/unit/rust.disposition_reds/artifacts/cargo-test-ignored.log` holds
+  the Rust run.
+- **Gating:** Missing app or cargo fails; no skip code. A specimen that does not
+  reach its boundary fails as setup, not as the behavioral red.
 
 ## Adding a new opt-in test
 
