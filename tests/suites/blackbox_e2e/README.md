@@ -78,8 +78,11 @@ No worker launches in these controls. The real Rust-red wrapper runs against
 controlled Cargo output to distinguish the intended assertion from build and
 unrelated failures, reject zero/wrong-test runs, and accept the exact passing test.
 Artifacts retain cleanup receipts, recovery records, wrapper reports and arguments.
-The contract skeleton's self-check is structural; the semantic oracle remains
-contract-stage work.
+The disposition contract's structural self-check and the independent oracle's
+self-check also run here: every hand-reviewed example row is reproduced by the
+claim tables, a record built from it is accepted, its mutations are rejected with
+the expected rule, and the core D-model evaluates totally. These are constructed
+controls; they establish interpretation, not live reachability.
 
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,

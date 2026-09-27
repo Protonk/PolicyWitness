@@ -151,6 +151,232 @@ snapshot follows cleanup, preserving late immutable publications. The write
 pipe suppresses SIGPIPE; original descriptors close on exec so only intended
 child descriptors survive.
 
+## Worker disposition record
+
+The host resolves one canonical account of the worker's lifecycle and carries it
+in the reply as `runner_subprocess.disposition`. Every lifecycle conclusion
+downstream is a projection of that account. The record answers a fixed list of
+questions; each answer names the observations that support it, and unresolved,
+conflicting and inapplicable questions carry a specific reason. The
+observations themselves stay in their existing raw fields, which remain the
+authoritative facts; the record references them and never copies them into a
+separately mutable form. `tests/lib/lifecycle_contract.py` carries the same
+tables and spellings, `tests/lib/lifecycle_adapter.py` reads the record without
+deriving answers, and `tests/lib/lifecycle_oracle.py` checks a reply against
+the claim tables independently of the production resolver.
+
+A worker reply at or after the response version that introduces the record
+carries it whenever it carries `runner_subprocess`; omission at that version is
+a contract violation, not a legacy fallback. No worker means no record. Replies
+before that version have no record, and a consumer reports the account as
+`not_reported` rather than deriving one. The record's own version is the
+response schema; it carries no separate number.
+
+### Raw host facts the record needs
+
+Three host observations join `runner_subprocess` beside the fields in
+[Host observations](#host-observations). They are facts, recorded where the host
+acts, not conclusions reconstructed from a final status.
+
+| JSON location under `runner_subprocess` | Producer, type and validity |
+| --- | --- |
+| `cleanup_trigger` | Host string recorded at the exit-request store: `deadline_expiry`, `completion`, `child_reaped`, `poll_wait_error` or `policy_transfer_error`. It names why exit was requested; today it corresponds one-to-one with `poll_stop_reason`, and both are retained. |
+| `grace_end` | Host string recorded when the exit-grace wait ends: `not_entered` (the poll loop already reaped the child), `reaped_during_grace`, `exhausted` (the host then requests termination) or `wait_error`. Never inferred from `done` plus a kill. |
+| `collection_basis` | Host string recorded at the final shared-memory reads: `after_confirmed_reap` (every relevant read followed a successful reap), `execution_may_continue` (the worker was not confirmed reaped when the reads happened, including after a failed kill) or `unavailable` (no usable mapping). A reap observed after the reads does not upgrade the basis. |
+
+Absence of any of the three in an older reply is unreported, not observed
+false. The record's per-step entries additionally carry two host facts about
+each submitted step: `slot` (`completed`, `incomplete` or `absent`) and
+`attempt_support` (`supported` or `unsupported`, from the host's attempt
+mapping). They agree with the step channel: `attempt.result_source` is
+`worker` exactly when the slot is completed and supported, and
+`attempt.missing_reason` is `attempt_not_supported`, `slot_absent` or
+`slot_incomplete` accordingly.
+
+### Nesting
+
+```
+runner_subprocess.disposition = {
+  "questions": { <run question>: <claim>, ... },   // all seven run questions, always present
+  "steps": [ { "index": i, "step_id": "...", "slot": "...", "attempt_support": "...",
+               "questions": { <step question>: <claim>, ... } }, ... ],   // one per submitted step, in plan order
+  "issues": [ { "kind": "conflict", "rule": "D1" | "D5", "question": "...",
+                "step_index": i?, "observations": [ <reference>, ... ], "detail": "..." }, ... ]
+}
+<claim> = { "state": "supported", "answer": "...", "value"?: ..., "basis": [ <reference>, ... ] }
+        | { "state": "unresolved", "reason": "...", "basis"?: [ ... ] }
+        | { "state": "conflicting", "issue": <index into issues> }
+        | { "state": "inapplicable", "reason": "..." }
+```
+
+The run questions are `final_status`, `stop_reason`, `cleanup_trigger`,
+`grace_end`, `kill_request_and_result`, `collection_basis` and
+`progress_association`. The step questions are `step_boundary_reached`,
+`step_result_published` and `step_requested_operation_applicability`. A
+`value` accompanies `final_status` (the exit code or signal number),
+`kill_request_and_result` when `requested` (the `termination_request` object),
+and `progress_association` when it names an index. Every question is present
+in every record; an absent question is malformed, never unresolved.
+
+### Evidence references
+
+A `basis` or `observations` entry is one token from a fixed set. Run-scoped
+tokens resolve under `runner_subprocess`; step-scoped tokens resolve inside the
+record's own step entry. A token that does not resolve within the same retained
+reply invalidates the claim that uses it.
+
+| Token | Resolves to |
+| --- | --- |
+| `reaped`, `exit_code`, `term_signal` | the same-named `runner_subprocess` fields |
+| `poll_stop_reason`, `exit_requested`, `termination_request`, `wait_errors`, `done_observed` | the same-named `runner_subprocess` fields |
+| `cleanup_trigger`, `grace_end`, `collection_basis` | the new host facts above |
+| `progress`, `worker_failure` | `runner_subprocess.worker_evidence.progress` and `.failure` |
+| `plan` | the submitted probe plan's step count and order |
+| `slot`, `attempt_support` | this step entry's own facts (step questions only) |
+
+### Questions, answers and witnesses
+
+The tables below are the claim requirements. Each supported answer lists its
+alternative sufficient witness sets and the collection scope they need: `any`
+holds under every collection basis; `terminal` requires `collection_basis` to
+be `after_confirmed_reap`, so the worker can publish nothing more. Negative
+answers (`not_reached`, `unpublished`) need terminal scope because a live
+worker can still publish. A conflict is listed apart from the answers it
+disqualifies: once its identity and scope are established it disqualifies a
+supported answer to that question even when a candidate basis is also present,
+and it leaves every other question's answer alone. Unresolved conditions carry
+the reason code the record must use. Applicability is explicit: an inapplicable
+question is not missing evidence.
+
+Protocol position orders progress words by the worker protocol, not by opcode:
+header 1, policy read 2, parameter allocation 3, parameter assignment 4,
+compilation 5, capture 6, readiness 7, application 8, proceed 11, then attempt
+9 for each step in plan order, then completion 10. An attempt word's item
+index names the step; a parameter word's names the parameter. An attempt index
+that names no submitted step, including any attempt index for an empty plan,
+is `invalid`; an unrecognized operation or phase code is `progress_unrecognized`
+and its raw word is retained. Progress at or beyond a step's boundary means a
+position at or after that step's `started` word.
+
+| Question | Answer | Sufficient witnesses (any one) | Scope | Rules |
+| --- | --- | --- | --- | --- |
+| Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
+| | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
+| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation | any | D2 |
+| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
+| Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
+| Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
+| Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
+| Progress association | valid step index; parameter index; none; invalid | the decoded word validated against the ABI operation table and the submitted plan | any | D3 |
+| Per-step boundary reached | reached | valid started or returned attempt progress associated with this step; or a valid completed slot for this supported step, including with absent or unusable progress; or valid attempt progress associated with a later step under the serial attempt order | any | D3 |
+| | not reached | a valid known protocol position before this step and no completed slot for this step | terminal | D4 |
+| Per-step result published | published | a completed slot for this supported step | any | D3 |
+| | unpublished | a valid incomplete slot for this step with no applicable publication conflict | terminal | D3 |
+| Per-step requested-operation applicability | supported; unsupported | the host's attempt mapping (`PW_ATTEMPT_NONE` marks unsupported) | any | D3 |
+
+| Question | Conflict (rule; witnesses; scope) | Unresolved when | Applicability | Consuming projections |
+| --- | --- | --- | --- | --- |
+| Final status | D1; one successful reap represented as both an exit status and a signal; any | no successful reap (a successful kill request is not a reap); or a reap with missing, malformed or unrecognized status representation | whenever a worker was spawned | `process_disposition`, `termination_cause` |
+| Stop reason | none | the host recorded no poll-loop stop | whenever polling started | `stop_reason`, lifecycle error clause |
+| Cleanup trigger | none | the host recorded no trigger apart from the stop reason | whenever exit was requested | `termination_cause`, lifecycle error clause |
+| Grace end | none | the host recorded no grace outcome; never infer exhaustion from `done` plus a kill | whenever exit was requested | `termination_cause`, lifecycle error clause |
+| Kill request and result | none | the host recorded no request outcome; absent evidence is not an observed non-request | whenever cleanup ran | `termination_cause`, lifecycle error clause |
+| Collection basis | none | the host recorded no basis; a later kill or reap never stabilizes earlier reads | whenever slots were read | the scope of every per-step answer |
+| Progress association | none | no progress word; unrecognized operation or phase code, with the raw word retained | whenever a progress word was published | the per-step answers below |
+| Per-step boundary reached | D5; a completed slot for this step beside valid terminal progress that never reached it; terminal | no usable progress and no completed slot; a live or unavailable basis for `not reached` | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
+| Per-step result published | D5; valid association, an incomplete slot and valid returned progress for this step or a later known protocol position, violating completion-before-return; terminal | an absent or unusable slot; an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
+| Per-step requested-operation applicability | none | the host recorded no mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
+
+The FIFO case reads off these rows. Attempt 0 has a reached boundary from its
+started progress under any scope and, because collection followed the reap with
+no progress beyond its incomplete slot, an unpublished result. Attempt 1 is not
+reached because the last valid position precedes it under terminal scope and
+its slot is incomplete. A completed slot with absent or invalid progress keeps
+both its result and its reached boundary. Terminal progress beyond an
+incomplete slot is the D5 conflict; returned progress for that same incomplete
+slot also violates completion-before-return. These combinations leave the
+publication question conflicting, while an independently witnessed reached
+boundary stays known. A poll-time reap still leads the host to publish
+`exit_requested`; its cleanup trigger is the observed reap and its grace end
+is `not entered`. No termination request is implied.
+
+### Cause labels
+
+`runner_sandbox_diagnostics.termination_cause` projects host cleanup that the
+account witnesses end to end. A label requires all of: `cleanup_trigger`
+supported with the trigger in the table, `grace_end` supported as `exhausted`,
+`kill_request_and_result` supported as `requested` with `rc` 0, and
+`final_status` supported as `signal` equal to the requested signal. The label
+describes that witnessed host sequence. It is not exclusive signal-sender
+attribution and never a sandbox cause.
+
+| Witnessed trigger | Label |
+| --- | --- |
+| `deadline_expiry` | `host_sentinel_deadline` |
+| `completion` | `host_exit_grace_exhausted` |
+| `poll_wait_error` | `host_cleanup_after_wait_error` |
+| `policy_transfer_error` | `host_cleanup_after_transfer_error` |
+
+Otherwise the cause is null for a supported exit code 0, and `unknown` for a
+supported nonzero exit or signal without the full chain, an unresolved or
+conflicting final status, an unrecognized final-status answer, a record that
+failed integrity validation, and every legacy reply. `unknown` is a specific
+statement that the account does not attribute the termination; the record's
+own reasons say why.
+
+### Projections
+
+Each registered projection is a total function of the record. The controller
+validates the record before projecting and never derives a competing lifecycle
+answer from raw fields or prose.
+
+| Projection | Rule |
+| --- | --- |
+| `runner_sandbox_diagnostics.process_disposition` | `final_status` supported: `signal` gives `signaled`; `exit_code` 0 gives `clean_exit`; nonzero gives `nonzero_exit`. Unresolved gives `unconfirmed`. Conflicting gives `conflicting`. A record that fails validation gives `withheld`; an unrecognized answer spelling gives `unrecognized`. No worker gives `no_worker`. A legacy reply keeps the raw-status compatibility projection. |
+| `runner_sandbox_diagnostics.termination_cause` | The cause table above. |
+| `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. Null for a legacy reply; the raw `poll_stop_reason` remains readable there. |
+| `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid`, `invalid` or `not_reported` (legacy). Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record` or `malformed_record`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
+| `runner_subprocess.partial_steps` | True when any supported step's slot is not completed. Its legacy meaning is unchanged: it does not say an attempt never began. |
+| `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
+| `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. `attempt:slot_incomplete` stays as today. Lifecycle entries never change agreement, order, drift or sandbox attribution. |
+| `steps[].attempt.outcome`, `missing_reason`, `result_source` | Unchanged compatibility spellings. `not_run_worker_died` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |
+| `error` lifecycle clauses | Rendered from the account, text unchanged: a `sentinel_deadline` stop renders `pw-probe-runner sentinel deadline expired` followed by `host requested SIGKILL during cleanup` when a request was made or `no termination requested` otherwise. The `runner_failed` problem list keeps `process disposition unconfirmed`, `reaped with signal N`, `reaped with exit code N`, `reaped without usable exit status` and `host requested termination during cleanup`, each from the corresponding claim. Worker failure, validator and setup diagnostics keep their owners and precedence and are composed with, not generated from, these clauses. |
+
+`normalized_outcome` keeps its values and precedence. A deadline followed by a
+voluntary exit stays `runner_timeout`; a published worker failure still takes
+precedence over later cleanup.
+
+### Integrity, unknown values and degradation
+
+The encoder rejects an assembled claim that contradicts its basis, such as a
+supported final status without a successful reap or a basis token that does
+not resolve; the service reply boundary then produces the evidence-preserving
+degraded reply, which retains `runner_subprocess` and the record as assembled,
+withholds comparisons, and names the invariant in `reporting_failure`. The
+degraded encoder does not re-check the invariant, so the conflict being
+reported is never lost to a rejection loop. A record that reports an observed
+conflict through `issues` is valid and encodes normally. The minimal
+reporting-failure reply carries no `runner_subprocess` and therefore no record,
+and says `evidence_retained: false`.
+
+Unrecognized answer, reason and summary spellings transport unchanged through
+the runner encoder, the XPC client and the controller. Only interpretations
+that need recognition become unresolved for the reader: an unrecognized
+final-status answer projects `process_disposition: unrecognized` and cause
+`unknown`; an unrecognized stop reason projects null; an unrecognized lifecycle
+summary keeps its raw value. Consumers never reinterpret a stored reply under
+a later version's rules.
+
+### Versions
+
+The record is mandatory for worker replies from the response schema that ships
+it, and the controller's `termination_cause`, `stop_reason`,
+`disposition_integrity` and the two new `process_disposition` values ship with
+the next controller envelope. `tests/lib/lifecycle_contract.py` names both
+numbers as the minimums tests assert. Per [docs/CONTRACT.md](../docs/CONTRACT.md)
+the manifest moves with the change that produces them; a rebuilt app must never
+report the new response number without carrying the record.
+
 ## Public compatibility and correlation
 
 The response, request, controller envelope and worker ABI are separate
@@ -184,7 +410,8 @@ distinct. Correlation status is `not_attempted`, `unavailable`, `no_match`, or
 the runner classified as a permission-shaped failure and that no captured event
 names as a candidate, so `no_match` never reads as "nothing was denied" (null
 when correlation was not reached or the reply has no per-step comparisons).
-Abnormal/unconfirmed disposition has `termination_cause="unknown"`.
+Abnormal or unconfirmed disposition has `termination_cause` `unknown` unless the
+[worker disposition record](#worker-disposition-record) witnesses host cleanup end to end.
 Application remains separately recorded in `sandboxed_after_apply`.
 
 `first_deny` is an `{event_index}` reference to the first matching worker PID in

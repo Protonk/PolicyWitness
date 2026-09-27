@@ -191,11 +191,15 @@ def run_controls(artifacts):
     out.mkdir()
     capture_controls(out / 'capture')
     rust_wrapper_controls(out / 'rust')
-    # This is a structural check of the skeleton, not the future semantic oracle.
+    # The contract skeleton's structural check plus the independent oracle's
+    # self-check: every hand-reviewed example is reproduced by the claim tables,
+    # a record built from it is accepted, its mutations are rejected with the
+    # expected rule, and the core D-model evaluates totally. Constructed only.
     sys.path.insert(0, str(ROOT / 'tests/lib'))
-    from lifecycle_contract import self_check
-    assert self_check()
-    print('disposition capture and Rust wrapper controls: ok', flush=True)
+    from lifecycle_oracle import self_check
+    summary = self_check()
+    (out / 'oracle-self-check.json').write_text(json.dumps(summary, indent=2) + '\n')
+    print(f'disposition capture, Rust wrapper and oracle controls: ok {summary}', flush=True)
 
 
 if __name__ == '__main__':

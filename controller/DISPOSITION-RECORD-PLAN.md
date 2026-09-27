@@ -15,13 +15,15 @@ from that account. An independent acceptance oracle checks required claims,
 forbidden claims, and the handling of uncertainty and inconsistency against
 the underlying observations, without calling the production resolver.
 
-This remains a plan. Planning is complete except the contract stage; the
-execution order is **contract → tests → app code**. The reproduction chain
-establishes the existing flaw. The sections
-below specify the intended guarantees, the implementation boundaries, and red
-tests grounded in current observations and independent contract examples. The
-exact wire shape is still to be fixed in the contract stage; this document does
-not claim that the new oracle exists.
+This remains a plan for the app change. Planning, including the contract
+stage, is complete; the execution order is **contract → tests → app code**.
+The reproduction chain establishes the existing flaw. The sections below
+specify the intended guarantees, the implementation boundaries, and red tests
+grounded in current observations and independent contract examples. The wire
+shape, spellings and claim tables are fixed in
+[tests/FAILURE-PROPAGATION-CONTRACT.md → Worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record),
+and the independent oracle exists as `tests/lib/lifecycle_oracle.py` with
+constructed controls; no app code produces the record yet.
 
 Read [AGENTS.md → Core ideas](../AGENTS.md#core-ideas) first. "No dishonest
 attribution" is the principle this plan serves, not one it relaxes. The host
@@ -255,9 +257,8 @@ existing suite models the FIFO's started-without-result boundary.
 
 ### Re-running the chain after the repair
 
-Links 1 through 3 are unchanged. Link 4, read together with the lifecycle
-reasons chosen in the contract stage, must satisfy the acceptance observations
-below. Link 5 must show both derivation sites consuming the canonical account.
+Links 1 through 3 are unchanged. Link 4, read with the lifecycle reasons the contract fixes, must satisfy the
+acceptance observations below. Link 5 must show both derivation sites consuming the canonical account.
 Link 6 must show the oracle changes listed under "Where things live".
 
 ## Eventual behavior
@@ -300,8 +301,7 @@ The record is an account of observations and claims, not just an enum and a
 progress word. Each question has a supported, unresolved, conflicting, or
 inapplicable answer, with a value where appropriate, a reason or issue code,
 and typed references to its supporting observations. The following are required
-dimensions; the exact nesting and remaining wire spellings are contract-stage
-decisions:
+dimensions; the nesting and wire spellings are fixed in the contract:
 
 | Dimension | Required content and limits |
 | --- | --- |
@@ -383,77 +383,28 @@ combination of an incomplete slot and later progress.
 
 ### The questions the record answers
 
-The record answers a fixed list of questions. Each has a supported,
-unresolved, conflicting, or inapplicable state. For every supported answer the
-first table lists the alternative sufficient witness sets and the collection
-scope they need: `any` means the witness holds under every collection basis,
-and `terminal` means all relevant reads followed a confirmed reap, so the
-worker can publish nothing more. Negative answers (`not reached`,
-`unpublished`) need terminal scope because a live worker can still publish.
-The second table lists each question's conflict apart from the answers it
-disqualifies, the conditions that leave it unresolved, its applicability and
-its consumers.
-`tests/lib/lifecycle_contract.py` carries the same tables with a structural
-self-check, and the two must agree. The resolver, the independent oracle, the
-semantic adapter and the projection inventory key off these tables, and the
-contract stage completes the claim tables from them.
-
-Supporting witness sets are candidate bases after validity and applicability
-checks. A conflict whose identity and scope have been established disqualifies
-a supported answer to that question even when a candidate basis is also present.
-Other questions keep their independent answers and publications. String equality
-checks in the skeleton catch duplicate table entries; they do not prove this
-semantic precedence or the absence of overlapping conditions.
-
-| Question | Answer | Sufficient witnesses (any one) | Scope | Rules |
-| --- | --- | --- | --- | --- |
-| Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
-| | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
-| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation | any | D2 |
-| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
-| Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
-| Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
-| Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
-| Progress association | valid step index; parameter index; none; invalid | the decoded word validated against the ABI operation table and the submitted plan | any | D3 |
-| Per-step boundary reached | reached | valid started or returned attempt progress associated with this step; or a valid completed slot for this supported step, including with absent or unusable progress; or valid attempt progress associated with a later step under the serial attempt order | any | D3 |
-| | not reached | a valid known protocol position before this step and no completed slot for this step | terminal | D4 |
-| Per-step result published | published | a completed slot for this supported step | any | D3 |
-| | unpublished | a valid incomplete slot for this step with no applicable publication conflict | terminal | D3 |
-| Per-step requested-operation applicability | supported; unsupported | the host's attempt mapping (`PW_ATTEMPT_NONE` marks unsupported) | any | D3 |
-
-| Question | Conflict (rule; witnesses; scope) | Unresolved when | Applicability | Consuming projections |
-| --- | --- | --- | --- | --- |
-| Final status | D1; one successful reap represented as both an exit status and a signal; any | no successful reap (a successful kill request is not a reap); or a reap with missing, malformed or unrecognized status representation | whenever a worker was spawned | `process_disposition`, `termination_cause` |
-| Stop reason | none | the host recorded no poll-loop stop | whenever polling started | `stop_reason`, lifecycle error clause |
-| Cleanup trigger | none | the host recorded no trigger apart from the stop reason | whenever exit was requested | `termination_cause`, lifecycle error clause |
-| Grace end | none | the host recorded no grace outcome; never infer exhaustion from `done` plus a kill | whenever exit was requested | `termination_cause`, lifecycle error clause |
-| Kill request and result | none | the host recorded no request outcome; absent evidence is not an observed non-request | whenever cleanup ran | `termination_cause`, lifecycle error clause |
-| Collection basis | none | the host recorded no basis; a later kill or reap never stabilizes earlier reads | whenever slots were read | the scope of every per-step answer |
-| Progress association | none | no progress word; unrecognized operation or phase code, with the raw word retained | whenever a progress word was published | the per-step answers below |
-| Per-step boundary reached | D5; a completed slot for this step beside valid terminal progress that never reached it; terminal | no usable progress and no completed slot; a live or unavailable basis for `not reached` | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
-| Per-step result published | D5; valid association, an incomplete slot and valid returned progress for this step or a later known protocol position, violating completion-before-return; terminal | an absent or unusable slot; an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
-| Per-step requested-operation applicability | none | the host recorded no mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
-
-The FIFO case reads off these rows. Attempt 0 has a reached boundary from its
-started progress under any scope and, because collection followed the reap with
-no progress beyond its incomplete slot, an unpublished result. Attempt 1 is not
-reached because the last valid position precedes it under terminal scope and
-its slot is incomplete. A completed slot with absent or invalid progress keeps
-both its result and its reached boundary. Terminal progress beyond an
-incomplete slot is the D5 conflict; returned progress for that same incomplete
-slot also violates completion-before-return. These combinations leave the
-publication question conflicting, while an independently witnessed reached
-boundary stays known. A poll-time reap still leads the host to publish
-`exit_requested`; its cleanup trigger is the observed reap and its grace end
-is `not entered`. No termination request is implied.
+The record answers a fixed list of ten questions: final status, stop reason,
+cleanup trigger, grace end, kill request and result, collection basis and
+progress association for the run, and boundary reached, result published and
+requested-operation applicability for each submitted step. Each has a
+supported, unresolved, conflicting or inapplicable state. The claim tables,
+with per-answer witness alternatives, the collection scope each needs,
+conflicts listed apart from the answers they disqualify, unresolved reason
+codes, applicability and consumers, are fixed in
+[tests/FAILURE-PROPAGATION-CONTRACT.md → Worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)
+together with the wire nesting, evidence references, cause labels, projections
+and legacy rules. `tests/lib/lifecycle_contract.py` mirrors them, and
+`tests/lib/lifecycle_oracle.py` evaluates them independently of the resolver.
+The FIFO case reads off those rows: attempt 0 has a reached boundary and an
+unpublished result, attempt 1 is not reached, and the deadline, kill request
+and reaped signal project `host_sentinel_deadline`.
 
 ### Claim requirements and projection inventory
 
 Each rule needs minimal sufficient witness sets, disqualifying conditions,
 required and forbidden claims, and the result of missing or conflicting
-witnesses. Alternative sufficient bases must be explicit. These seed rules
-bound the contract; the contract stage completes their tables before tests or
-app implementation.
+witnesses. Alternative sufficient bases must be explicit. These seed rules bound the contract; the contract's question tables complete
+them, and the oracle evaluates them before tests or app implementation.
 
 | Rule | Claim requirement | Forbidden shortcut |
 | --- | --- | --- |
@@ -476,7 +427,7 @@ coverage for every entry. The initial inventory is:
 | `runner_sandbox_diagnostics.process_disposition` and `termination_cause` | Project independent final status and bounded host-action detail; preserve no-worker and legacy absence semantics. |
 | `runner_sandbox_diagnostics.stop_reason` | Project the independently observed polling stop reason, including a deadline followed by voluntary exit. Its values are the `poll_stop_reason` spellings; the diagnostics object names it `stop_reason` because it is a projection of the account, not a copy of the raw field, and the two must agree. Absence in older records is unreported, not proof of no deadline. |
 | `runner_subprocess.partial_steps` | Project slot publication completeness without asserting that an operation never began. |
-| `attempt.lifecycle` and its reasons/issues | Distinguish supported completed result, started without result, proven not-reached, unsupported/inapplicable, and unresolved/conflicting questions. Exact wire spellings remain open. |
+| `attempt.lifecycle` and its reasons/issues | Distinguish supported completed result, started without result, proven not-reached, unsupported/inapplicable, and unresolved/conflicting questions; the summary and limitation spellings are in the contract. |
 | Lifecycle-related `attempt.outcome`, `missing_reason`, `result_source`, and `comparison.limitations` | Agree with the same step account. Completed attempt outcome mapping retains its native-result inputs; it is not replaced by lifecycle classification. |
 | Worker-lifecycle clauses of `error` | Render the canonical facts and limits while retaining independently owned worker/validator/setup diagnostics and summary precedence. |
 
@@ -495,15 +446,15 @@ old spellings as proof of death or non-execution.
 For the FIFO case, `termination_cause: host_sentinel_deadline` is the intended
 projection of observed deadline, host termination request, and matching reaped
 signal. Its contract describes this witnessed host cleanup sequence, not
-exclusive signal-sender attribution or a sandbox cause. This label is fixed
-now so that A1 is runnable; the rest of the trigger-to-label table stays open.
+exclusive signal-sender attribution or a sandbox cause. The complete
+trigger-to-label table is in the contract.
 Cause is narrower than the lifecycle account:
 
 | Observed account | Required cause behavior |
 | --- | --- |
 | Confirmed clean exit, including voluntary exit after a deadline | Null cause; retain any deadline independently in `stop_reason`, the account, and lifecycle diagnostic. |
 | Signal or nonzero exit without a supported host-cleanup attribution | `unknown`; retain the known final status and any independent worker failure publication. |
-| Host termination with witnessed trigger, successful request and matching reaped signal | Project the supported host-cleanup label; the complete trigger-to-label table is fixed in the contract stage. |
+| Host termination with witnessed trigger, successful request and matching reaped signal | Project the supported host-cleanup label from the contract's trigger-to-label table. |
 | Failed cleanup or unconfirmed reap | Preserve action/result and unresolved status; do not infer a successful termination cause. |
 | Conflicting status or invalid claim/basis pair | Report the validation/conflict issue and withhold unsupported disposition claims; `termination_cause` is `unknown`, not a new physical cause called conflict. |
 
@@ -529,8 +480,8 @@ or sandbox attribution.
 ### Acceptance observations across boundaries
 
 These are semantic requirements and existing ways to reach observations; the
-red-test specifications below turn them into tests. Exact lifecycle/reason
-strings and cause mappings are finalized in the contract stage.
+red-test specifications below turn them into tests. Lifecycle
+spellings, reason codes and cause mappings are in the contract.
 
 | Scenario | Required account |
 | --- | --- |
@@ -654,10 +605,11 @@ These actions describe implementation boundaries and dependencies.
    exhaustion from wait-error cleanup. Record whether all relevant reads follow
    confirmed reap, execution may continue, or scope is unavailable. Keep
    completed-slot acquire gates; do not infer coherence from kill success or a
-   reap observed after the reads. These observations become new `CWorkerOutput`
-   fields, provisionally `collectionBasis`, `graceEnd` and `cleanupTrigger`,
-   with spellings fixed in the contract stage; the constructed-case builder in
-   area B and the D-model's collection-basis axis use them as inputs.
+   reap observed after the reads. These observations become new `CWorkerOutput` fields, `collectionBasis`,
+   `graceEnd` and `cleanupTrigger`, encoded with the contract's spellings
+   (`runner_subprocess.collection_basis`, `grace_end`, `cleanup_trigger`); the
+   constructed-case builder in area B and the D-model's collection-basis axis
+   use them as inputs.
 2. **Canonical input and resolver — PWRunnerAPI.swift and
    CWorkerOrchestrator.swift.** Define the evidence dependencies, per-question
    results and issue representation. Choose one inspectable resolver over
@@ -682,9 +634,9 @@ These actions describe implementation boundaries and dependencies.
    conflict from an invalid assembled claim that encoding must reject. Avoid a
    rejection/degradation loop that loses the very conflict being reported.
    Keep minimal reporting failure and old-response absence semantics explicit.
-6. **Integration inventory.** Map each action to its contract clauses,
-   projection entries, shape fixture and red tests. Update the
-   relevant docs and version decisions through the contract stage.
+6. **Integration inventory.** Map each action to its contract clauses, projection entries, shape fixture
+   and red tests. Update the relevant docs, and move the manifest with the
+   change that produces the record.
 
 ### Design decisions and remaining contract work
 
@@ -694,13 +646,13 @@ stop reason and bounded cause projections; generated lifecycle prose;
 explicit projection coverage; and response plus envelope version bumps for
 the new mandatory invariants. The sections above specify their meaning.
 
-The contract stage's deliverables and their paths are listed under "Order of
-work". None of its remaining decisions may weaken the five guarantees to
-accommodate an implementation shortcut.
+The contract stage's deliverables exist at the paths listed under "Order of
+work". No later decision may weaken the five guarantees to accommodate an
+implementation shortcut.
 
 ## Red-test specifications
 
-This section specifies the tests the contract stage resolves and the test
+This section specifies the tests the contract resolves and the test
 stage implements. Existing live observations establish the baseline loss and
 the preservation controls. Contract-valid expected replies and deliberately
 invalid inputs are independently constructed, not described as live outputs.
@@ -711,11 +663,11 @@ that require the new wire shape remain wave 2 until that shape is fixed.
 
 **Two waves.** Wave 1 reds run against the unchanged build with no contract
 decision beyond the one fixed cause label, and go red for a behavioral reason.
-Only A1 and the refusal half of B1 qualify. Wave 2 reds need the resolver API,
-a new reply field, or a spelling the contract stage has not fixed; they are
-specified but not runnable until then, and a missing key or a compile failure
-is not their red. Do not promote a wave 2 test by asserting on a placeholder
-spelling.
+Only A1 and the refusal half of B1 qualify. Wave 2 reds need the resolver API
+or the reply field the contract names; their spellings are fixed, but against a
+producer that predates the record they fail on version gating, and a missing
+key or a compile failure is not their red. Do not promote a wave 2 test by
+asserting on a placeholder spelling.
 
 **Timing is equipment, not the oracle.** Override values and sleeps make a
 boundary reachable; assert the echoed overrides and the observed facts. If the
@@ -761,10 +713,11 @@ builder directly. Transport fixtures are constructed JSON handed to the
 controller's `synthesize_runner_sandbox_diagnostics`, to `recover_evidence`, or
 to the reply encoder. A failure in one class says nothing about another.
 
-**Semantic assertions.** Once the contract fixes the representation, a small
-test-side adapter reads only registered lifecycle claims and reasons. It
-normalizes wire spellings without deriving answers from raw facts or calling
-production code. Expected answers come from the independent claim tables.
+**Semantic assertions.** The test-side adapter, `tests/lib/lifecycle_adapter.py`,
+reads only registered lifecycle claims and reasons. It normalizes wire
+spellings without deriving answers from raw facts or calling production code.
+Expected answers come from the independent claim tables evaluated by
+`tests/lib/lifecycle_oracle.py`.
 Tests assert that the FIFO boundary was started without a published result
 and the following attempt was not reached; merely asserting different objects
 would also accept swapped claims or unrelated debug indices.
@@ -901,7 +854,7 @@ and the uncertainty table's last row. Input: constructed output with an
 incomplete slot and `workerEvidence` nil, then with progress nil. Required: the
 step's lifecycle question is unresolved with a reason naming missing progress;
 `missing_reason` stays `slot_incomplete`. Forbidden: not-reached and
-started-boundary claims. Blocked on the reason representation.
+started-boundary claims. The reason is `no_usable_progress`.
 
 **B3. An unrecognized progress operation does not disturb a completed result
 (wave 2).** Protects D3, D6 and locality. Input: two slots, both completed,
@@ -1278,10 +1231,13 @@ account, so every Swift test that hand-builds `PWRunnerSubprocess` or
 audited in the app-code stage. The minimal reporting-failure reply is
 unaffected because it carries no `runner_subprocess`. Structurally
 valid unfamiliar values remain transportable and leave only dependent reader
-interpretations unresolved. During the contract stage, edit
-[docs/contract.json](../docs/contract.json), run
+interpretations unresolved. The manifest moves with the app-code
+change that produces the record, per [docs/CONTRACT.md](../docs/CONTRACT.md):
+edit [docs/contract.json](../docs/contract.json), run
 `python3 docs/generate_contract.py`, and move only tests that depend on the
-changed contracts.
+changed contracts. A rebuilt app must never report the new response number
+without carrying the record. `tests/lib/lifecycle_contract.py` names the
+minimums tests assert.
 
 No worker ABI change is planned. Host observations plus existing publications
 support the bounded claims above; they do not determine every lifecycle answer.
@@ -1291,27 +1247,26 @@ separate scope/version decision, not an incidental implementation detail.
 
 ## Order of work
 
-1. **Contract.** Complete the question table, the observation validity and
-   scope rules, the claim tables, the projection inventory, the wire
-   representation, the legacy behavior and the finite model, and resolve the
-   open spellings in the red-test specifications. The deliverables and their
-   paths:
-   - `tests/FAILURE-PROPAGATION-CONTRACT.md`: the record's nesting, the
-     question table, the completed D-rule tables, the permitted typed
-     references and dependency sets, the trigger-to-cause table, the legacy
-     and unknown-value rules, and the degradation representation.
-   - `tests/lib/lifecycle_contract.py`: the constants (cause labels, reason
-     and issue codes, question names), the question list, the projection
-     inventory with dependencies and named controls, and the claim tables the
-     D-model evaluates.
+1. **Contract.** Fixed. The deliverables:
+   - `tests/FAILURE-PROPAGATION-CONTRACT.md`, section "Worker disposition
+     record": the record's nesting, the raw host facts it needs, the evidence
+     references, the question tables with per-answer witnesses, the
+     trigger-to-cause table, the projection rules, the error clause renderer,
+     the integrity, unknown-value and degradation rules, and the version rule.
+   - `tests/lib/lifecycle_contract.py`: the constants (cause labels, reason and
+     issue codes, question names, summaries, limitations, references), the
+     question tables, the projection inventory with dependencies and named
+     controls, and the hand-reviewed example rows the D-model anchors on.
    - `tests/lib/lifecycle_adapter.py` and `tests/lib/lifecycle_oracle.py`: the
-     semantic adapter and the independent checker, named now so tests can
-     reference them.
-   - `docs/contract.json`: the response and envelope bumps, regenerated with
-     `python3 docs/generate_contract.py`.
-   The Swift constants in `PWRunnerAPI.swift` land in the app-code stage; a
-   `runner_unit` check modeled on `ContractVersionTests` compares them with
-   the Python module.
+     semantic adapter and the independent checker, with `expected_claims` as
+     the declarative evaluation of the claim tables, a record and envelope
+     builder for expected fixtures, the core D-model enumeration, and a
+     self-check that accepts every example and rejects its mutations. The
+     default `blackbox_e2e/checker_controls` case runs that self-check.
+   - `docs/contract.json` moves with the app-code stage (see Versioning); the
+     Swift constants in `PWRunnerAPI.swift` land there too, with a
+     `runner_unit` check modeled on `ContractVersionTests` comparing them with
+     the Python module.
 2. **Tests.** Implement independent acceptance/rejection controls and the
    specified live/driver/transport tests. Establish the intended behavioral
    reds against unchanged app logic and record the preservation controls that
@@ -1329,20 +1284,22 @@ separate scope/version decision, not an incidental implementation detail.
 
 ### Current execution scope
 
-The contract module skeleton carries the question tables above and
-`host_sentinel_deadline`, and the wave-1 reds exist as non-default cases: A1
+The contract module carries the fixed spellings, question tables, projection
+inventory and example rows, and the wave-1 reds exist as non-default cases: A1
 with the preservation halves of A3 and A4 as
 `witness_contract/worker_attempt_in_flight_at_deadline`, and the refusal half
 of B1 as `unit/rust.disposition_reds`. Both fail on the unchanged build for
 the stated reason, with the failing assertion and the raw witnesses in their
-artifacts. The canonical record and its app implementation remain pending;
-other open values have no placeholder spellings.
+artifacts. The adapter and oracle exist and pass their constructed controls in
+the default battery. The canonical record and its app implementation remain
+pending; every open spelling is now fixed in the contract.
 
-The next increment is the contract stage's remaining deliverables under "Order
-of work": the claim tables the D-model evaluates, the typed references and
-dependency sets, the trigger-to-cause table, the wire representation, the
-legacy and unknown-value rules, the degradation representation, the adapter
-and oracle modules, and the version bumps.
+The next increment is the test stage: the wave-2 tests of areas A through F
+written against the fixed contract, E2's accepted expected-output fixture built
+from the A1 witnesses through `lifecycle_oracle.build_envelope`, the captured
+A1 known-loss fixture, the `DispositionResolverTests.swift` skeleton with the
+D-model table, and the `skip_publication` fixture mode. Each is registered
+non-default until it turns green.
 
 For the eventual app change, run
 `cargo test --manifest-path controller/Cargo.toml`, then
