@@ -391,40 +391,47 @@ and `terminal` means all relevant reads followed a confirmed reap, so the
 worker can publish nothing more. Negative answers (`not reached`,
 `unpublished`) need terminal scope because a live worker can still publish.
 The second table lists each question's conflict apart from the answers it
-disqualifies (a conflict witness never supports an answer), the conditions
-that leave it unresolved, its applicability and its consumers.
+disqualifies, the conditions that leave it unresolved, its applicability and
+its consumers.
 `tests/lib/lifecycle_contract.py` carries the same tables with a structural
 self-check, and the two must agree. The resolver, the independent oracle, the
 semantic adapter and the projection inventory key off these tables, and the
 contract stage completes the claim tables from them.
+
+Supporting witness sets are candidate bases after validity and applicability
+checks. A conflict whose identity and scope have been established disqualifies
+a supported answer to that question even when a candidate basis is also present.
+Other questions keep their independent answers and publications. String equality
+checks in the skeleton catch duplicate table entries; they do not prove this
+semantic precedence or the absence of overlapping conditions.
 
 | Question | Answer | Sufficient witnesses (any one) | Scope | Rules |
 | --- | --- | --- | --- | --- |
 | Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
 | | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
 | Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation | any | D2 |
-| Cleanup trigger | deadline expiry; completion; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
+| Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
 | Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
-| Kill request and result | none; requested, with `rc` and `errno` | direct host observation of the request and its return | any | D2 |
+| Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
 | Collection basis | reads after confirmed reap; reads while execution may continue; unavailable | direct host observation at collection time | any | D2 |
 | Progress association | valid step index; parameter index; none; invalid | the decoded word validated against the ABI operation table and the submitted plan | any | D3 |
-| Per-step boundary reached | reached | valid started or returned attempt progress associated with this step; or a completed slot for this supported step, whatever the progress word says; or valid attempt progress associated with a later step under the serial attempt order | any | D3 |
+| Per-step boundary reached | reached | valid started or returned attempt progress associated with this step; or a valid completed slot for this supported step, including with absent or unusable progress; or valid attempt progress associated with a later step under the serial attempt order | any | D3 |
 | | not reached | a valid known protocol position before this step and no completed slot for this step | terminal | D4 |
 | Per-step result published | published | a completed slot for this supported step | any | D3 |
-| | unpublished | an incomplete slot for this step and no valid progress beyond it | terminal | D3 |
+| | unpublished | a valid incomplete slot for this step with no applicable publication conflict | terminal | D3 |
 | Per-step requested-operation applicability | supported; unsupported | the host's attempt mapping (`PW_ATTEMPT_NONE` marks unsupported) | any | D3 |
 
 | Question | Conflict (rule; witnesses; scope) | Unresolved when | Applicability | Consuming projections |
 | --- | --- | --- | --- | --- |
-| Final status | D1; one successful reap represented as both an exit status and a signal; any | no successful reap (a successful kill request is not a reap) | whenever a worker was spawned | `process_disposition`, `termination_cause` |
+| Final status | D1; one successful reap represented as both an exit status and a signal; any | no successful reap (a successful kill request is not a reap); or a reap with missing, malformed or unrecognized status representation | whenever a worker was spawned | `process_disposition`, `termination_cause` |
 | Stop reason | none | the host recorded no poll-loop stop | whenever polling started | `stop_reason`, lifecycle error clause |
 | Cleanup trigger | none | the host recorded no trigger apart from the stop reason | whenever exit was requested | `termination_cause`, lifecycle error clause |
 | Grace end | none | the host recorded no grace outcome; never infer exhaustion from `done` plus a kill | whenever exit was requested | `termination_cause`, lifecycle error clause |
-| Kill request and result | none | the host recorded no request outcome | whenever cleanup ran | `termination_cause`, lifecycle error clause |
+| Kill request and result | none | the host recorded no request outcome; absent evidence is not an observed non-request | whenever cleanup ran | `termination_cause`, lifecycle error clause |
 | Collection basis | none | the host recorded no basis; a later kill or reap never stabilizes earlier reads | whenever slots were read | the scope of every per-step answer |
 | Progress association | none | no progress word; unrecognized operation or phase code, with the raw word retained | whenever a progress word was published | the per-step answers below |
 | Per-step boundary reached | D5; a completed slot for this step beside valid terminal progress that never reached it; terminal | no usable progress and no completed slot; a live or unavailable basis for `not reached` | every submitted step | `attempt.lifecycle`, `comparison.limitations` |
-| Per-step result published | D5; valid association, an incomplete slot and valid progress beyond this step, violating completion-before-return; terminal | an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
+| Per-step result published | D5; valid association, an incomplete slot and valid returned progress for this step or a later known protocol position, violating completion-before-return; terminal | an absent or unusable slot; an incomplete slot under a live or unavailable basis, with or without progress beyond it | every supported step | `attempt.lifecycle`, `partial_steps`, `comparison.limitations` |
 | Per-step requested-operation applicability | none | the host recorded no mapping | every submitted step | `attempt.lifecycle`, `missing_reason` |
 
 The FIFO case reads off these rows. Attempt 0 has a reached boundary from its
@@ -433,7 +440,12 @@ no progress beyond its incomplete slot, an unpublished result. Attempt 1 is not
 reached because the last valid position precedes it under terminal scope and
 its slot is incomplete. A completed slot with absent or invalid progress keeps
 both its result and its reached boundary. Terminal progress beyond an
-incomplete slot is the D5 conflict, never an answer.
+incomplete slot is the D5 conflict; returned progress for that same incomplete
+slot also violates completion-before-return. These combinations leave the
+publication question conflicting, while an independently witnessed reached
+boundary stays known. A poll-time reap still leads the host to publish
+`exit_requested`; its cleanup trigger is the observed reap and its grace end
+is `not entered`. No termination request is implied.
 
 ### Claim requirements and projection inventory
 
@@ -715,25 +727,30 @@ failed assertion or a harness timeout does not prove a child exited. Establish
 worker absence before removing staging, keep the primary failure and any
 cleanup failure separately visible, and never signal a PID taken solely from
 an envelope. The only positive witness of worker exit in an envelope is
-`runner_subprocess.reaped: true`; a reply without a subprocess record, such as
-a client-synthesized `xpc_timeout` reply or the minimal reporting-failure
+`runner_subprocess.reaped: true` with a valid worker PID; a reply without a
+subprocess record, such as a client-synthesized `xpc_timeout` reply or the minimal reporting-failure
 reply, does not establish that no worker spawned, so its staging is retained
 (`tests/lib/worker_exit_witness.py`, with constructed controls in
 `blackbox_e2e/checker_controls`). If safe recovery cannot establish ownership
 and exit, retain staging and durable run metadata and fail with the unresolved
-cleanup identified.
+cleanup identified. Before attempting CLI launch the test can independently
+establish non-spawn and remove staging after setup failure. Record staging
+ownership before capture, refuse reused artifact directories, and preserve the
+primary failure even if writing cleanup metadata also fails.
 
 **Registration while red.** Register each new case as a non-default catalog
 member documented in [tests/OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md) until
 it is green, then promote it to default membership in the change that turns it
 green. Explicit `--suite` selection includes non-default members, so the
 verification recipe under "Order of work" is red by design during the test
-stage while the default battery stays green on main. Rust reds cannot be
-catalog members individually because `unit/rust.unit` runs the whole crate:
-mark them `#[ignore]` with the plan's reason and run them through the
-non-default case `unit/rust.disposition_reds`, so `--all` and `--suite opt_in`
-exercise every red. Promotion removes the attribute in the change that turns
-the test green.
+stage while the default battery stays green on main. Since `unit/rust.unit`
+runs the whole crate, mark Rust reds `#[ignore]` with the plan's reason and run
+them through the non-default case `unit/rust.disposition_reds`, so `--all` and `--suite opt_in`
+exercise every red. The wrapper selects B1 by its exact name with
+`--include-ignored`, verifies that it ran, and distinguishes its expected
+assertion from build, equipment and unrelated failures. Promotion removes the
+attribute in the change that turns the test green; the exact selector still
+executes it afterward.
 
 **Four input classes, four homes.** Live boundaries run the CLI through
 `RunCapture` in a `witness_contract` case. Driver fault controls run the
@@ -1310,17 +1327,16 @@ separate scope/version decision, not an incidental implementation detail.
    independent oracle and transport guarantees, then run the required suites.
    Describe the final behavior and any remaining explicit uncertainty.
 
-### Increments so far
+### Current execution scope
 
-The first increment is on main. The STR chain reruns as described, the
-contract module skeleton carries the question tables above and
+The contract module skeleton carries the question tables above and
 `host_sentinel_deadline`, and the wave-1 reds exist as non-default cases: A1
 with the preservation halves of A3 and A4 as
 `witness_contract/worker_attempt_in_flight_at_deadline`, and the refusal half
 of B1 as `unit/rust.disposition_reds`. Both fail on the unchanged build for
 the stated reason, with the failing assertion and the raw witnesses in their
-artifacts. No app code has changed and no other open value has a placeholder
-spelling.
+artifacts. The canonical record and its app implementation remain pending;
+other open values have no placeholder spellings.
 
 The next increment is the contract stage's remaining deliverables under "Order
 of work": the claim tables the D-model evaluates, the typed references and

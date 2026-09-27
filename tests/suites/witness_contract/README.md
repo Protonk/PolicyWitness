@@ -266,10 +266,13 @@ without assertion; the wave 2 semantic claims (A2, and the semantic halves of
 A3 and A4) remain specified in the plan.
 
 Each FIFO lives in test-owned staging under `/private/tmp` that the check never
-opens. Staging is removed only when the envelope's `reaped: true` witnesses
-worker exit (`tests/lib/worker_exit_witness.py`); a reply without a subprocess
-record does not establish that no worker spawned, so the staging is retained
-and named in `cleanup.json`.
+opens. Once CLI launch is attempted, staging is removed only when the envelope's
+`reaped: true` and valid worker PID witness exit (`tests/lib/worker_exit_witness.py`).
+A missing or malformed subprocess record leaves staging retained. `staging.json`
+records ownership before capture, and `cleanup.json` records removal or retention.
+Setup failure before launch permits removal on the test's own non-spawn observation.
+Reused artifact directories are refused before creating staging. Cleanup reporting
+failures name the recovery path in stderr and preserve the original failure.
 
 ## Failure before published application
 

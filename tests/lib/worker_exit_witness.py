@@ -3,7 +3,8 @@
 Test-owned cleanup may remove staging a worker could still hold, such as a FIFO
 the worker is blocked opening, only after the run's own record confirms the
 worker is gone. The one positive witness in an envelope is
-runner_subprocess.reaped == true: the host waited on the child it spawned.
+runner_subprocess.reaped == true with a valid worker PID: the host waited on
+the identified child it spawned. A malformed subprocess is not a witness.
 
 Every other shape lacks that witness and is retained. A client-synthesized
 xpc_timeout reply and a lost reply carry no runner_result or subprocess record
@@ -28,6 +29,8 @@ def worker_exit_witness(envelope):
         return False, (f'no runner_subprocess record beside normalized_outcome {outcome!r}; '
                        'worker spawn and exit unknown')
     pid = sub.get('pid')
+    if type(pid) is not int or pid <= 0:
+        return False, f'no valid worker pid in subprocess record ({pid!r}); worker exit unknown'
     if sub.get('reaped') is True:
         return True, f'host reaped worker pid {pid}'
     return False, f'worker pid {pid} not reaped (reaped={sub.get("reaped")!r}); it may still run'

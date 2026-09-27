@@ -274,6 +274,12 @@ def cleanup_witness_controls(artifacts):
             'reporting_failure': {'evidence_retained': False}}}}, False),
         ('unreaped_worker', {'data': {'runner_result': {'runner_subprocess': {'pid': 42, 'reaped': False}}}}, False),
         ('reap_unrecorded', {'data': {'runner_result': {'runner_subprocess': {'pid': 42}}}}, False),
+        ('missing_pid', {'data': {'runner_result': {'runner_subprocess': {'reaped': True}}}}, False),
+        ('invalid_pid', {'data': {'runner_result': {'runner_subprocess': {'pid': 0, 'reaped': True}}}}, False),
+        ('negative_pid', {'data': {'runner_result': {'runner_subprocess': {'pid': -1, 'reaped': True}}}}, False),
+        ('boolean_pid', {'data': {'runner_result': {'runner_subprocess': {'pid': True, 'reaped': True}}}}, False),
+        ('string_pid', {'data': {'runner_result': {'runner_subprocess': {'pid': '42', 'reaped': True}}}}, False),
+        ('numeric_reaped', {'data': {'runner_result': {'runner_subprocess': {'pid': 42, 'reaped': 1}}}}, False),
         ('reaped_worker', {'data': {'runner_result': {'runner_subprocess': {'pid': 42, 'reaped': True}}}}, True),
     ]
     records = []
@@ -478,6 +484,8 @@ def main():
     consumer_controls(artifacts, baseline, current)
     ordering_controls(artifacts)
     cleanup_witness_controls(artifacts)
+    from disposition_controls import run_controls
+    run_controls(artifacts)
     for label, change, diagnostic in [
         ('missing_intent', lambda s: s['attempt'].pop('requested_action'), 'missing attempt.requested_action'),
         ('missing_temporal_limit', lambda s: s['comparison']['limitations'].remove('state_stability_unestablished'), 'missing comparison limitation state_stability_unestablished'),

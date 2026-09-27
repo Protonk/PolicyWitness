@@ -70,6 +70,17 @@ The missing-file control also verifies the unavailable-result contract,
 rejects an invented prediction, and proves that an expected unavailable
 prediction cannot hide a later attempt failure.
 
+Disposition controls reject missing or malformed worker-exit witnesses and
+exercise the actual FIFO case's cleanup with controlled capture outcomes. They
+check staging retention, setup failure before launch, metadata and removal
+failures, preservation of the primary exception, and refusal of reused evidence.
+No worker launches in these controls. The real Rust-red wrapper runs against
+controlled Cargo output to distinguish the intended assertion from build and
+unrelated failures, reject zero/wrong-test runs, and accept the exact passing test.
+Artifacts retain cleanup receipts, recovery records, wrapper reports and arguments.
+The contract skeleton's self-check is structural; the semantic oracle remains
+contract-stage work.
+
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,
 step correlation, alias presence/agreement, and combined failures, alongside

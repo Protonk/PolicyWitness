@@ -179,7 +179,8 @@ selection, deduplication, configuration validation, and complete accounting.
   `exit_code` 0 beside `term_signal` 9.
 - **Opt-in reason:** Red by design against the unchanged controller, per the plan's
   registration-while-red convention. Promote to default membership, and drop the
-  `#[ignore]`, in the change that turns each green.
+  `#[ignore]`, in the change that turns each green. The Rust wrapper uses an
+  exact name and `--include-ignored`, so it still runs the test after promotion.
 - **Resource dependency:** Built app and unsandboxed live XPC for the witness case;
   cargo only for the Rust case.
 - **When to run:** During the disposition record's test and app-code stages, and after
@@ -189,13 +190,18 @@ selection, deduplication, configuration validation, and complete accounting.
   holds `assertions.log` and one directory per specimen (`a1/`, `a3/`, `a4/`) with
   `specimen.json`, `run.json`, `pw.stderr`, `capture.json`, `witnesses.json`,
   `diagnostics.json`, `compatibility_triples.json` and, for the FIFO specimens,
-  `cleanup.json`. FIFO staging under `/private/tmp` is removed only when the
-  envelope's `reaped: true` witnesses worker exit (`tests/lib/worker_exit_witness.py`);
-  otherwise it is retained and named in `cleanup.json`.
+  `staging.json` and `cleanup.json`. After CLI launch is attempted, FIFO staging
+  under `/private/tmp` is removed only when `reaped: true` beside a valid worker
+  PID witnesses exit (`tests/lib/worker_exit_witness.py`); otherwise it is retained.
+  Setup failure before CLI launch permits removal on the test's own non-spawn
+  observation. Cleanup reporting errors preserve the original failure and name
+  the staging path in stderr.
   `<run>/suites/unit/rust.disposition_reds/artifacts/cargo-test-ignored.log` holds
   the Rust run.
 - **Gating:** Missing app or cargo fails; no skip code. A specimen that does not
-  reach its boundary fails as setup, not as the behavioral red.
+  reach its boundary fails as setup, not as the behavioral red. The Rust wrapper
+  verifies execution of the exact test and its known assertion before identifying
+  an expected red; build failures, other assertions and zero-test runs fail separately.
 
 ## Adding a new opt-in test
 

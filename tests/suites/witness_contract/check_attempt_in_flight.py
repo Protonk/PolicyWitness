@@ -24,9 +24,11 @@ without assertion; the wave-2 semantic claims (A2, A3, A4) stay in the plan.
 
 Test-owned cleanup: each FIFO lives in staging this check creates under
 /private/tmp and never opens. Staging is removed only when the envelope's own
-host witness, runner_subprocess.reaped == true, establishes the worker is gone
+host witness, runner_subprocess.reaped == true with a valid worker PID,
+establishes the worker is gone
 (tests/lib/worker_exit_witness.py); otherwise it is retained and named
-separately from any primary failure.
+separately from any primary failure. Setup failure before CLI launch is settled
+from the test's own non-spawn observation.
 """
 import json
 import os
@@ -107,19 +109,14 @@ def compatibility_triples(envelope):
     return rows
 
 
-def make_staging():
-    staging = Path(tempfile.mkdtemp(prefix='pw-in-flight-', dir='/private/tmp'))
-    fifo = staging / 'blocker.fifo'
-    os.mkfifo(fifo, 0o600)
-    assert stat.S_ISFIFO(fifo.lstat().st_mode), f'setup: {fifo} is not a FIFO'
-    return staging, fifo
-
-
-def cleanup_staging(staging, envelope, artifacts):
+def cleanup_staging(staging, envelope, artifacts, *, launch_attempted):
     witnessed, reason = worker_exit_witness(envelope)
+    if not launch_attempted:
+        reason = 'the test did not attempt CLI launch; it could not spawn a worker'
     record = {'staging': str(staging), 'worker_exit_witnessed': witnessed, 'witness': reason,
+              'cli_launch_attempted': launch_attempted,
               'removed': False, 'error': None}
-    if witnessed:
+    if witnessed or not launch_attempted:
         try:
             shutil.rmtree(staging)
             record['removed'] = True
@@ -132,26 +129,46 @@ def cleanup_staging(staging, envelope, artifacts):
     return record['error']
 
 
-def execute(pw, out, name, spec, staging):
-    """Run one specimen and settle its staging on the envelope's witness alone."""
+def execute(pw, out, name, make_spec, *, fifo=False):
+    """Own staging from setup through capture; retain it when worker exit is unknown."""
     artifacts = out / name
-    artifacts.mkdir(parents=True, exist_ok=True)
+    # Refuse reuse before creating staging or overwriting any prior evidence.
+    artifacts.mkdir(parents=True, exist_ok=False)
     envelope, rc, primary = None, None, None
+    staging = None
+    launch_attempted = False
     try:
-        with RunCapture(pw, artifacts, spec, cli_args=CLI_ARGS) as run:
+        target = None
+        if fifo:
+            staging = Path(tempfile.mkdtemp(prefix='pw-in-flight-', dir='/private/tmp'))
+            # Keep the recovery path even if FIFO setup or capture later fails.
+            (artifacts / 'staging.json').write_text(json.dumps({'staging': str(staging)}) + '\n')
+            target = staging / 'blocker.fifo'
+            os.mkfifo(target, 0o600)
+            assert stat.S_ISFIFO(target.lstat().st_mode), f'setup: {target} is not a FIFO'
+        spec = make_spec(target)
+        capture = RunCapture(pw, artifacts, spec, cli_args=CLI_ARGS)
+        launch_attempted = True
+        with capture as run:
             rc = run.wait(timeout=HARNESS_WAIT_SECONDS)
             envelope = run.load_json()
             print(f'{name}: elapsed {run.elapsed_seconds:.2f}s', flush=True)
     except BaseException as exc:  # keep the primary failure visible beside cleanup
         primary = exc
-    note = cleanup_staging(staging, envelope, artifacts) if staging is not None else None
+    note = None
+    if staging is not None:
+        try:
+            note = cleanup_staging(staging, envelope, artifacts, launch_attempted=launch_attempted)
+        except Exception as exc:
+            # Metadata I/O failures must not replace the original capture failure.
+            note = f'cleanup reporting failed for staging {staging}: {exc}; inspect staging.json and the capture'
     if primary is not None:
         if note:
             print(f'{name}: cleanup: {note}', file=sys.stderr, flush=True)
         raise primary
     if note:
         raise AssertionError(f'{name}: {note}')
-    return rc, envelope, artifacts
+    return rc, envelope, artifacts, spec
 
 
 def record(artifacts, envelope):
@@ -238,28 +255,26 @@ def main():
     pw, directory = sys.argv[1:]
     out = Path(directory).resolve()
 
-    staging, fifo = make_staging()
-    spec_a1 = specimen('a1_fifo_then_file', [read_step('fifo', fifo), read_step('hosts', '/etc/hosts')],
-                       FIFO_OVERRIDES)
-    rc, envelope, artifacts = execute(pw, out, 'a1', spec_a1, staging)
+    rc, envelope, artifacts, spec_a1 = execute(pw, out, 'a1', lambda fifo: specimen(
+        'a1_fifo_then_file', [read_step('fifo', fifo), read_step('hosts', '/etc/hosts')],
+        FIFO_OVERRIDES), fifo=True)
     seen_a1, diagnostics_a1 = record(artifacts, envelope)
     check_kill_after_deadline('a1', rc, seen_a1, spec_a1, started_attempt(0))
     check_deadline_preserved('a1', seen_a1, diagnostics_a1)
     print('a1: FIFO boundary reached; deadline, SIGKILL request and reap witnessed; summary preserved', flush=True)
 
-    staging, fifo = make_staging()
-    spec_a3 = specimen('a3_completed_prefix_then_fifo',
-                       [read_step('first', '/etc/hosts'), read_step('fifo', fifo), read_step('after', '/etc/hosts')],
-                       FIFO_OVERRIDES)
-    rc, envelope, artifacts = execute(pw, out, 'a3', spec_a3, staging)
+    rc, envelope, artifacts, spec_a3 = execute(pw, out, 'a3', lambda fifo: specimen(
+        'a3_completed_prefix_then_fifo',
+        [read_step('first', '/etc/hosts'), read_step('fifo', fifo), read_step('after', '/etc/hosts')],
+        FIFO_OVERRIDES), fifo=True)
     seen_a3, diagnostics_a3 = record(artifacts, envelope)
     check_kill_after_deadline('a3', rc, seen_a3, spec_a3, started_attempt(1))
     check_deadline_preserved('a3', seen_a3, diagnostics_a3)
     check_completed('a3', step(envelope, 'first'))
     print('a3: completed prefix survives termination with an attempt in flight', flush=True)
 
-    spec_a4 = specimen('a4_deadline_then_voluntary_exit', [read_step('hosts', '/etc/hosts')], GRACE_OVERRIDES)
-    rc, envelope, artifacts = execute(pw, out, 'a4', spec_a4, None)
+    rc, envelope, artifacts, spec_a4 = execute(pw, out, 'a4', lambda _: specimen(
+        'a4_deadline_then_voluntary_exit', [read_step('hosts', '/etc/hosts')], GRACE_OVERRIDES))
     seen_a4, diagnostics_a4 = record(artifacts, envelope)
     check_grace_exit(rc, seen_a4, spec_a4, diagnostics_a4, envelope)
     print('a4: deadline and voluntary clean exit coexist; completed result survives; no kill invented', flush=True)

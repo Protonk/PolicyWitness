@@ -17,6 +17,11 @@ fixes two things now:
   "The questions the record answers" tables carry the same content, and the two
   must agree.
 
+Witness alternatives are candidate bases after validity and applicability
+checks. An applicable conflict disqualifies a supported answer to that question;
+it does not erase independent publications or other questions' supported answers.
+The string-level self-check below cannot establish this semantic precedence.
+
 Everything else belongs to the contract stage and is deliberately absent: reason
 and issue codes, lifecycle value spellings, the trigger-to-cause table beyond the
 one label, the projection inventory's dependency sets and named controls, and
@@ -101,7 +106,8 @@ QUESTIONS = (
                  'successful reap with a valid signal representation and no exit-status representation',
                  rules=('D1',))),
         Conflict('D1', ('one successful reap represented as both an exit status and a signal',), 'any'),
-        ('no successful reap; a successful kill request is not a reap',),
+        ('no successful reap; a successful kill request is not a reap',
+         'a successful reap with missing, malformed or unrecognized status representation'),
         ('decoding unconfirmed wait storage', 'requiring a successful kill to retain an independently reaped exit'),
         'whenever a worker was spawned',
         ('runner_sandbox_diagnostics.process_disposition', 'runner_sandbox_diagnostics.termination_cause')),
@@ -117,6 +123,7 @@ QUESTIONS = (
         'cleanup_trigger',
         (_answer('deadline expiry', HOST_OBSERVATION + ' of why exit was requested', rules=('D2',)),
          _answer('completion', HOST_OBSERVATION + ' of why exit was requested', rules=('D2',)),
+         _answer('child reaped during polling', HOST_OBSERVATION + ' of why exit was requested', rules=('D2',)),
          _answer('poll wait error', HOST_OBSERVATION + ' of why exit was requested', rules=('D2',)),
          _answer('policy transfer error', HOST_OBSERVATION + ' of why exit was requested', rules=('D2',))),
         None,
@@ -137,12 +144,12 @@ QUESTIONS = (
         ('runner_sandbox_diagnostics.termination_cause', 'error lifecycle clause')),
     Question(
         'kill_request_and_result',
-        (_answer('none', HOST_OBSERVATION + ': no termination request recorded', rules=('D2',)),
+        (_answer('none', HOST_OBSERVATION + ' that no termination request was issued', rules=('D2',)),
          _answer('requested, with rc and errno', HOST_OBSERVATION + ' of the request and its return',
                  rules=('D2',))),
         None,
         ('the host recorded no request outcome',),
-        ('treating a successful request as a reap',),
+        ('treating a successful request as a reap', 'treating absent request evidence as an observed non-request'),
         'whenever cleanup ran',
         ('runner_sandbox_diagnostics.termination_cause', 'error lifecycle clause')),
     Question(
@@ -172,7 +179,7 @@ QUESTIONS = (
         'step_boundary_reached',
         (_answer('reached',
                  'valid started or returned attempt progress associated with this step',
-                 'a completed slot for this supported step, whatever the progress word says',
+                 'a valid completed slot for this supported step, including with absent or unusable progress',
                  'valid attempt progress associated with a later step under the serial attempt order',
                  rules=('D3',)),
          _answer('not reached',
@@ -189,11 +196,13 @@ QUESTIONS = (
     Question(
         'step_result_published',
         (_answer('published', 'a completed slot for this supported step', rules=('D3',)),
-         _answer('unpublished', 'an incomplete slot for this step and no valid progress beyond it',
+         _answer('unpublished', 'a valid incomplete slot for this step with no applicable publication conflict',
                  rules=('D3',), scope='terminal')),
-        Conflict('D5', ('valid association, an incomplete slot and valid progress beyond this step: '
+        Conflict('D5', ('valid association, an incomplete slot and valid returned progress for this step '
+                        'or a later known protocol position: '
                         'the completion-before-return rule is violated',), 'terminal'),
-        ('an incomplete slot under a live or unavailable basis, with or without progress beyond it',),
+        ('an absent or unusable slot',
+         'an incomplete slot under a live or unavailable basis, with or without progress beyond it'),
         ('treating a completed slot as proof of successful effect',
          'declaring a protocol violation from reads that can describe different moments',
          'inventing a result for an incomplete slot'),
@@ -247,7 +256,8 @@ def self_check():
         if entry.conflict is not None:
             assert entry.conflict.rule in RULES and entry.conflict.scope in SCOPES, entry.name
             assert entry.conflict.witnesses, entry.name
-            # A conflict witness never doubles as a supporting witness.
+            # Catch identical table entries in both roles. Semantic overlap of a
+            # supporting basis with a larger conflict witness needs the D-model.
             assert not supporting & set(entry.conflict.witnesses), entry.name
         assert all(isinstance(u, str) and u for u in entry.unresolved), entry.name
         assert all(isinstance(f, str) and f for f in entry.forbidden), entry.name
