@@ -147,6 +147,29 @@ static void populate_exec_true(pw_shm_slot_t *slots) {
     }
 }
 
+/* Reads surround exec steps so preallocated pipes cannot starve an unrelated
+ * attempt, even before any successful exec has released its descriptors. */
+static void populate_exec_mixed(pw_shm_slot_t *slots) {
+    populate_happy(slots);
+    populate_exec_true(slots + 1);
+    populate_happy(slots + EXEC_TRUE_SLOTS + 1);
+    snprintf(slots[EXEC_TRUE_SLOTS + 1].step_id, sizeof(slots[0].step_id), "read_after_exec");
+}
+
+static int inherited_fds[80];
+static unsigned inherited_fd_count;
+static void populate_exec_inherited(pw_shm_slot_t *slots) {
+    populate_exec_true(slots);
+    for (unsigned i = 0; i < sizeof(inherited_fds) / sizeof(inherited_fds[0]); i++) {
+        int fd = open("/dev/null", O_RDONLY);
+        if (fd < 0) {
+            fprintf(stderr, "harness: inherited descriptor: %s\n", strerror(errno));
+            exit(1);
+        }
+        inherited_fds[inherited_fd_count++] = fd;
+    }
+}
+
 static void populate_max_slots(pw_shm_slot_t *slots) {
     for (uint32_t i = 0; i < PW_SHM_MAX_STEPS; i++) {
         snprintf(slots[i].step_id, sizeof(slots[i].step_id), "none_%03u", i);
@@ -274,11 +297,28 @@ static scenario_t SCENARIOS[] = {
     { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
     { "policy_overflow",        SCEN_POLICY_OVERFLOW_PLACEHOLDER, 1,         1, populate_happy,        NULL,                   0, 0, 0, 0, 1, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
 
-    /* #3 — exec descriptor budget: the worker raises an inherited 64-descriptor
-     * soft limit to fit 32 exec slots; with the hard limit capped at 64 too, the
-     * later slots must fail per step naming the raise outcome and pipe(). */
+    /* #3 — exec descriptor budget. Capped mixed plans import a real system
+     * profile and read files before/after execs. Adjacent ceilings vary the
+     * number of descriptors left over after four-descriptor pipe groups. */
     { "exec_descriptor_limit_raised", SCEN_ALLOW_DEFAULT_POLICY, EXEC_TRUE_SLOTS, 1, populate_exec_true, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0, 64, 0 },
-    { "exec_descriptor_limit_capped", SCEN_ALLOW_DEFAULT_POLICY, EXEC_TRUE_SLOTS, 1, populate_exec_true, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0, 64, 64 },
+    { .name = "exec_descriptor_limit_capped", .policy = "(version 1)(allow default)(import \"system.sb\")",
+      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
+      .rlimit_soft = 64, .rlimit_hard = 64 },
+    { .name = "exec_descriptor_cap_126", .policy = "(version 1)(allow default)(import \"system.sb\")",
+      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
+      .rlimit_soft = 64, .rlimit_hard = 126 },
+    { .name = "exec_descriptor_cap_127", .policy = "(version 1)(allow default)(import \"system.sb\")",
+      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
+      .rlimit_soft = 64, .rlimit_hard = 127 },
+    { .name = "exec_descriptor_cap_128", .policy = "(version 1)(allow default)(import \"system.sb\")",
+      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
+      .rlimit_soft = 64, .rlimit_hard = 128 },
+    { .name = "exec_descriptor_cap_129", .policy = "(version 1)(allow default)(import \"system.sb\")",
+      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
+      .rlimit_soft = 64, .rlimit_hard = 129 },
+    { .name = "exec_descriptor_inherited", .policy = SCEN_ALLOW_DEFAULT_POLICY,
+      .step_count = EXEC_TRUE_SLOTS, .request_exit = 1, .populate_slots = populate_exec_inherited,
+      .rlimit_soft = 128, .rlimit_hard = 4096 },
 };
 static const size_t SCENARIO_COUNT = sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
 
@@ -521,6 +561,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     int spawn_rc = posix_spawn(&pid, exec_helper ? exec_helper : worker_path, &fa, NULL,
                                exec_helper ? inspected_argv : worker_argv, environ);
     posix_spawn_file_actions_destroy(&fa);
+    for (unsigned i = 0; i < inherited_fd_count; i++) close(inherited_fds[i]);
     if (spawn_rc != 0) {
         fprintf(stderr, "harness: posix_spawn: %s\n", strerror(spawn_rc));
         return 1;
@@ -650,6 +691,8 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     /* Emit result envelope. */
     printf("{");
     printf("\"scenario\":"); emit_json_string(stdout, scen->name);
+    printf(",\"inherited_extra_fds\":%u,\"rlimit_soft\":%u,\"rlimit_hard\":%u",
+           inherited_fd_count, scen->rlimit_soft, scen->rlimit_hard);
     printf(",\"worker_pid\":%d", pid);
     printf(",\"ready_byte_received\":%s", ready_received ? "true" : "false");
     printf(",\"applied\":%s", saw_applied ? "true" : "false");

@@ -610,8 +610,8 @@
       "title": "Exec attempt descriptors",
       "value": 4,
       "unit": "items",
-      "counting": "Descriptors the worker opens before sandbox application for each exec step: both ends of a stdout pipe and a stderr pipe. They are opened pre-apply on purpose, so a refused pipe() after apply is never mistaken for a policy effect. Before opening any, the worker raises its inherited soft descriptor limit (launchd default 256) to the baseline allowance plus this count per exec step, clamped at the hard limit and at OPEN_MAX (10,240).",
-      "effect": "With the raise in place every admitted exec step has its pipes. A raise that fails or falls short is named, together with the pipe() error, in each exec step that then fails with errno 24; no child is spawned for those steps, sandbox attribution stays unestablished, and the run is still ok.",
+      "counting": "Descriptors opened before sandbox application per exec step: both ends of stdout and stderr pipes. Before opening any, the worker scans for free descriptor numbers, accounting for inherited descriptors, and raises its soft limit to fit the plan plus the descriptor reserve. Raises are capped at the hard limit and OPEN_MAX (10,240); an already higher soft limit is preserved.",
+      "effect": "Only exec slots that fit without spending the reserve get pipes. Excess slots report exec_failed with errno 24 and an exec descriptor budget diagnostic naming the limit; no pipe syscall or child spawn is claimed. Actual pipe failures report their own syscall and errno. Budget refusal is per-step evidence, with sandbox attribution unestablished; imports and other attempts retain descriptor headroom.",
       "control": "Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it.",
       "sources": [
         {
@@ -645,25 +645,25 @@
           "kind": "path"
         }
       ],
-      "behavior": "The per-step count is value-checked against the compiled worker. A 256-exec plan spawning every child is pinned live through the CLI, and the harness pins the raise under an inherited 64-descriptor soft limit plus the per-step evidence when the hard limit caps it too. The exact OPEN_MAX clamp is source-inspected."
+      "behavior": "The per-step count is value-checked against the compiled worker. A 256-exec plan is pinned live through the CLI. Native harness cases cover a raised soft limit, 80 extra inherited descriptors, and hard caps 64 and 126 through 129 with policy imports and reads before/after execs. Every prepared child must exit cleanly and excess slots must report budget refusal. The OPEN_MAX clamp is source-inspected."
     },
     {
-      "id": "exec_descriptor_baseline",
+      "id": "exec_descriptor_reserve",
       "section": "execution",
-      "title": "Exec descriptor baseline allowance",
+      "title": "Exec descriptor reserve",
       "value": 64,
       "unit": "items",
-      "counting": "Allowance for descriptors the worker holds before exec setup (stdio, shared memory, ready byte, policy source) plus whatever the launching environment left open. The pre-apply soft-limit raise targets this plus four per exec step.",
-      "effect": "Too small an allowance would leave the raised limit short and later exec steps failing at pipe(); the worker itself holds about a dozen descriptors, so the allowance is generous.",
+      "counting": "Free descriptor slots withheld from exec pipe setup, in addition to descriptors already open. The worker scans with fcntl(F_GETFD) to find room for this reserve plus four descriptors per exec step.",
+      "effect": "Preserves headroom for policy compilation/imports, file probes, and spawn file actions. If the inherited/hard limit already leaves fewer free slots than the reserve, exec setup opens no pipes. This bounds exec pipe consumption; it does not guarantee that arbitrary imports or other resource users fit.",
       "control": "Fixed; no public override.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-          "symbol": "PW_EXEC_DESCRIPTOR_BASELINE"
+          "symbol": "PW_EXEC_DESCRIPTOR_RESERVE"
         },
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-          "symbol": "raise_descriptor_limit"
+          "symbol": "prepare_exec_descriptor_budget"
         }
       ],
       "checks": [
@@ -678,7 +678,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Value-checked against the compiled worker. The harness control observes the raise's effect on a 32-exec plan, not the exact allowance."
+      "behavior": "Value-checked against the compiled worker. Capped mixed plans require successful policy imports and file reads even when all exec slots are refused, and clean exits for every prepared exec. The inherited-descriptor case requires all 32 execs with ample hard-limit capacity."
     },
     {
       "id": "client_rpc_wait",

@@ -11,7 +11,7 @@
 int main(void) {
     printf("exec_child_wait=%ld\n", PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
     printf("exec_step_descriptors=%d\n", PW_EXEC_DESCRIPTORS_PER_STEP);
-    printf("exec_descriptor_baseline=%d\n", PW_EXEC_DESCRIPTOR_BASELINE);
+    printf("exec_descriptor_reserve=%d\n", PW_EXEC_DESCRIPTOR_RESERVE);
     printf("worker_proceed_wait=%ld\n", PW_PROCEED_WAIT_MS_DEFAULT);
     return 0;
 }

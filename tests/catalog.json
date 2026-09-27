@@ -485,7 +485,27 @@
         },
         {
           "id": "exec_descriptor_limit_capped",
-          "description": "With the hard limit capped at 64, later exec slots fail per step naming the failed raise and pipe(); the run stays clean"
+          "description": "Hard cap 64 refuses exec setup while preserving policy imports and file reads"
+        },
+        {
+          "id": "exec_descriptor_cap_126",
+          "description": "Soft/hard limits 64/126: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
+        },
+        {
+          "id": "exec_descriptor_cap_127",
+          "description": "Soft/hard limits 64/127: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
+        },
+        {
+          "id": "exec_descriptor_cap_128",
+          "description": "Soft/hard limits 64/128: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
+        },
+        {
+          "id": "exec_descriptor_cap_129",
+          "description": "Soft/hard limits 64/129: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
+        },
+        {
+          "id": "exec_descriptor_inherited",
+          "description": "32 execs spawn with 80 extra inherited descriptors and soft/hard limits 128/4096"
         },
         {
           "id": "proceed_never_set",

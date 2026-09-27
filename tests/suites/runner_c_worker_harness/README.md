@@ -13,8 +13,8 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Twenty-seven scenarios, each driven by `harness.c`: six core lifecycle cases,
-eleven attempt and pre-apply cases, and ten release controls listed below.
+Thirty-two scenarios, each driven by `harness.c`: six core lifecycle cases,
+sixteen attempt and pre-apply cases, and ten release controls listed below.
 
 ### Core lifecycle
 
@@ -84,14 +84,21 @@ while enforcing write permission.
 
 ### Exec descriptor budget
 
-`exec_descriptor_limit_raised` sets the harness's soft descriptor limit to 64
-before spawning the worker with 32 exec slots that run `/usr/bin/true`. Four
-descriptors per slot would exhaust that limit, so every slot spawning proves
-the worker raised its soft limit pre-apply. `exec_descriptor_limit_capped`
-also lowers the hard limit to 64: the raise cannot succeed, the earlier slots
-spawn, and every later slot fails with errno 24 and an error naming both the
-raise outcome and `pipe()`, while the run publishes no failure and exits
-cleanly. See `exec_step_descriptors` in `docs/LIMITS.md`.
+`exec_descriptor_limit_raised` lowers the soft limit to 64 and requires all
+32 `/usr/bin/true` children to exit cleanly. `exec_descriptor_inherited` adds
+80 inheritable descriptors with soft/hard limits 128/4096 and requires the
+same result, so a fixed allowance for existing descriptors cannot pass.
+
+`exec_descriptor_limit_capped` sets both limits to 64. The worker refuses all
+exec setup to preserve its 64-descriptor reserve. `exec_descriptor_cap_126`
+through `exec_descriptor_cap_129` start at soft limit 64 and exercise four
+adjacent hard ceilings: some children must spawn and exit cleanly, and excess
+slots must report descriptor-budget refusal without claiming `pipe()` ran.
+All capped plans import `system.sb` and read `/etc/hosts` before and after the
+32 exec steps. Successful compilation and reads prove that pipe setup did not
+starve unrelated work. Every case requires completed slots and a clean worker
+exit. See `exec_step_descriptors` and `exec_descriptor_reserve` in
+`docs/LIMITS.md`.
 
 ### Pre-apply self-defense
 

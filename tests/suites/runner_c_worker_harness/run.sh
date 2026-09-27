@@ -437,14 +437,13 @@ run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
 
 # ---- test_id: exec_descriptor_limit_{raised,capped} -----------------------
-# The worker raises an inherited 64-descriptor soft limit to fit 32 exec slots
-# before opening any pipe. When the hard limit caps the raise, the later slots
-# fail per step naming the raise outcome and pipe(); the run itself stays clean.
+# The worker budgets actual free slots and reserves descriptors for imports,
+# file probes and spawn actions. Excess execs fail before pipe creation.
 
 run_exec_descriptor_limit() {
   local test_id="$1" scenario="$2" mode="$3"
   run_harness_case "${test_id}" "${scenario}" \
-    "32 exec slots under an inherited 64-descriptor soft limit (${mode})" || return 0
+    "32 exec slots with controlled descriptor limits and inheritance (${mode})" || return 0
   set +e
   PW_MODE="${mode}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
 import json, os, sys
@@ -454,22 +453,40 @@ mode = os.environ["PW_MODE"]
 assert r["ready_byte_received"] and r["applied"] and r["apply_rc"] == 0 and r["done"], r
 assert not r["sent_sigkill"] and r["exit_code"] == 0 and r["term_signal"] is None, r
 assert r["failure_published"] == 0, f"a descriptor shortfall is per-step evidence, never a run failure: {r}"
-slots = r["slots"]
-assert len(slots) == 32 and all(s["completed"] == 1 for s in slots), slots
+all_slots = r["slots"]
+assert all(s["completed"] == 1 for s in all_slots), all_slots
+slots = [s for s in all_slots if "child_pid" in s]
+reads = [s for s in all_slots if "child_pid" not in s]
+assert len(slots) == 32, slots
+if mode.startswith("capped"):
+    assert [s["step_id"] for s in reads] == ["read_etc_hosts", "read_after_exec"], reads
+    assert all(s["rc"] == 0 and s["errno"] == 0 and s["observed_path"] == "/private/etc/hosts"
+               for s in reads), reads
+else:
+    assert not reads, reads
 spawned = [s for s in slots if s["child_pid"] > 0]
 failed = [s for s in slots if s["child_pid"] == 0]
-if mode == "raised":
+assert all(s["rc"] == 0 and s["errno"] == 0 and s["child_exit_code"] == 0
+           and s["child_term_signal"] == 0 and s["error"] == "" for s in spawned), spawned
+if mode in ("raised", "inherited"):
     assert len(spawned) == 32, f"every slot must spawn once the soft limit is raised; first failures: {failed[:2]}"
-    assert all(s["rc"] == 0 and s["child_exit_code"] == 0 and s["error"] == "" for s in slots), slots[:2]
-    print("ok: 32 exec slots spawned under an inherited 64-descriptor soft limit; the worker raised it pre-apply")
+    if mode == "inherited":
+        assert r["inherited_extra_fds"] == 80 and r["rlimit_soft"] == 128 and r["rlimit_hard"] == 4096, r
+    print(f"ok: 32 clean execs with soft limit {r['rlimit_soft']} and {r['inherited_extra_fds']} extra inherited descriptors")
 else:
-    assert spawned and failed, f"a capped hard limit must spawn some slots and fail the rest: spawned={len(spawned)} failed={len(failed)}"
+    assert failed, "hard cap must refuse excess exec slots"
+    if mode == "capped_empty":
+        assert not spawned, "cap 64 cannot fit pipes plus the 64-descriptor reserve"
+    else:
+        assert spawned, "available exec capacity must still spawn clean children"
     assert [s["child_pid"] > 0 for s in slots] == [True] * len(spawned) + [False] * len(failed), \
-        "descriptor exhaustion must fail the later slots, never earlier ones"
+        "only exec slots beyond the budget may fail"
     for s in failed:
         assert s["errno"] == 24 and s["rc"] == -1, s
-        assert "setrlimit(RLIMIT_NOFILE" in s["error"] and "pipe(" in s["error"], s["error"]
-    print(f"ok: hard cap 64 let {len(spawned)} slots spawn; {len(failed)} later slots name the failed raise and pipe()")
+        assert s["child_exit_code"] == -1 and s["child_term_signal"] == 0, s
+        assert s["error"].startswith("exec descriptor budget: RLIMIT_NOFILE"), s
+        assert "reserve 64" in s["error"] and "pipe(" not in s["error"], s
+    print(f"ok: hard cap {r['rlimit_hard']}: {len(spawned)} clean execs, {len(failed)} budget refusals; imports and both reads succeeded")
 PY
   local arc=$?
   set -e
@@ -477,7 +494,11 @@ PY
 }
 
 run_exec_descriptor_limit "exec_descriptor_limit_raised" "exec_descriptor_limit_raised" "raised"
-run_exec_descriptor_limit "exec_descriptor_limit_capped" "exec_descriptor_limit_capped" "capped"
+run_exec_descriptor_limit "exec_descriptor_limit_capped" "exec_descriptor_limit_capped" "capped_empty"
+for cap in 126 127 128 129; do
+  run_exec_descriptor_limit "exec_descriptor_cap_${cap}" "exec_descriptor_cap_${cap}" "capped"
+done
+run_exec_descriptor_limit "exec_descriptor_inherited" "exec_descriptor_inherited" "inherited"
 
 run_proceed_control() {
   local scenario="$1"
