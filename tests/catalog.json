@@ -44,7 +44,7 @@
       "cases": [
         {
           "id": "runner_source_manifests_agree",
-          "description": "Runner sources, test registry and shared outcome vocabularies agree"
+          "description": "Runner sources, test registry, shared outcome vocabularies and the CLI usage/README surface agree"
         },
         {
           "id": "limits_documentation",
@@ -1005,6 +1005,14 @@
             "tests/suites/witness_contract/worker_termination_and_log_correlation.sh"
           ],
           "description": "Consumer recovery preserves denied writes, independent disposition, capture limits and ambiguous matching provenance"
+        },
+        {
+          "id": "deny_capture_covers_the_run",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/deny_capture_covers_the_run.sh"
+          ],
+          "description": "Deny capture requests the full client interval; real log show accepts its bounds and available timestamped events retain candidate associations"
         },
         {
           "id": "instrumentation_field_rejected",

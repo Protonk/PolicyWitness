@@ -27,12 +27,11 @@ use crate::runner_select::{
     runner_provenance_from_target,
 };
 use crate::sandbox_log::{
-    SandboxLogCapture, SandboxLogWindow, capture_sandbox_logs_last, match_step_denies, worker_pid,
+    SandboxLogCapture, SandboxLogWindow, capture_sandbox_logs, match_step_denies, worker_pid,
 };
 use crate::utils::now_unix_ms;
 
 pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
-const DEFAULT_LOG_LAST: &str = "10s";
 
 #[derive(Serialize)]
 pub struct AppProvenance {
@@ -56,7 +55,6 @@ pub struct RunData {
     pub policy_augmentation: Option<PolicyAugmentation>,
     pub policy_check: Option<PolicyCheckCapture>,
     pub timeout_ms: u64,
-    pub log_last: String,
     pub runner_client: RunnerClientRun,
     pub runner_result: Option<Value>,
     pub sandbox_log_capture: Option<SandboxLogCapture>,
@@ -74,6 +72,13 @@ pub struct RunnerSandboxDiagnostics {
     /// First PID match in the capture array, not the first event in time or a
     /// cause of termination. Reference keeps the event in observer evidence.
     pub first_deny: Option<DenyEventReference>,
+    /// Step IDs whose attempt the runner itself classified as a permission-shaped
+    /// failure and that no captured event names as a candidate. Beside
+    /// `no_match` a non-empty list means the log holds no record of denials the
+    /// attempts reported, not that nothing was denied; it never says why. Null
+    /// when correlation was not possible or the reply carries no per-step
+    /// comparison.
+    pub permission_failures_without_record: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -140,7 +145,6 @@ fn synthetic_runner_client(note: &str) -> RunnerClientRun {
 pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut request_path: Option<std::path::PathBuf> = None;
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
-    let mut log_last = DEFAULT_LOG_LAST.to_string();
     let mut runner_mode_arg: Option<String> = None;
     let mut no_log_capture = false;
 
@@ -166,14 +170,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     .and_then(|s| s.to_string_lossy().parse::<u64>().ok())
                     .ok_or_else(|| "invalid value for --timeout-ms".to_string())?;
                 timeout_ms = value.max(1);
-                idx += 2;
-            }
-            "--log-last" => {
-                let value = args
-                    .get(idx + 1)
-                    .and_then(|s| s.to_str())
-                    .ok_or_else(|| "missing value for --log-last".to_string())?;
-                log_last = value.to_string();
                 idx += 2;
             }
             "--runner-mode" => {
@@ -274,7 +270,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 policy_augmentation: None,
                 policy_check: None,
                 timeout_ms,
-                log_last,
                 runner_client,
                 runner_result: None,
                 sandbox_log_capture: None,
@@ -353,9 +348,15 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     } else {
         runner_pid.map(|pid| {
             // Capture unified-log evidence only when the runner PID is known.
-            capture_sandbox_logs_last(i64::from(pid), "pw-probe-runner", &log_last).unwrap_or_else(
+            // Request the client's wall-clock interval, with no lookback cap.
+            // Invalid timing is retained without invoking the observer.
+            let window = SandboxLogWindow::runner_client_span(
+                runner_client.started_at_unix_ms,
+                runner_client.ended_at_unix_ms,
+            );
+            capture_sandbox_logs(i64::from(pid), "pw-probe-runner", window.clone()).unwrap_or_else(
                 |err| SandboxLogCapture {
-                    window: SandboxLogWindow::trailing(&log_last),
+                    window,
                     capture_status: "requested_unavailable".to_string(),
                     tool_exit_code: 1,
                     blocked_reason: None,
@@ -369,30 +370,11 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         })
     };
 
-    if let (Some(ref mut capture), Some(steps)) = (
-        sandbox_log_capture.as_mut(),
-        runner_result
-            .as_ref()
-            .and_then(|v| v.get("steps"))
-            .and_then(|v| v.as_array()),
-    ) {
-        if let Some(deny_events) = capture.deny_events.as_ref() {
-            if capture.capture_status == "captured" {
-                let plan = request_value.get("probe_plan").and_then(Value::as_array);
-                capture.step_denies = Some(match_step_denies(
-                    steps,
-                    plan.map(Vec::as_slice).unwrap_or(&[]),
-                    deny_events,
-                    runner_pid,
-                ));
-            }
-        }
-    }
-
-    let runner_sandbox_diagnostics = synthesize_runner_sandbox_diagnostics(
+    let runner_sandbox_diagnostics = finish_sandbox_log_capture(
         runner_result.as_ref(),
+        &request_value,
         no_log_capture,
-        sandbox_log_capture.as_ref(),
+        &mut sandbox_log_capture,
     );
 
     let data = RunData {
@@ -409,7 +391,6 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         policy_augmentation,
         policy_check,
         timeout_ms,
-        log_last,
         runner_client,
         runner_result,
         sandbox_log_capture,
@@ -447,6 +428,36 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 
     json_contract::print_envelope("run", result, &data)?;
     Ok(if ok { 0 } else { 1 })
+}
+
+// Both association and diagnostics consume the observer's capture status. Keep
+// this assembly on the production path so receiver-to-consumer controls cover it.
+fn finish_sandbox_log_capture(
+    runner: Option<&Value>,
+    request: &Value,
+    disabled: bool,
+    capture: &mut Option<SandboxLogCapture>,
+) -> Option<RunnerSandboxDiagnostics> {
+    if let Some(capture) = capture.as_mut() {
+        capture.step_denies = None;
+        if !disabled && capture.capture_status == "captured" {
+            if let (Some(steps), Some(events)) = (
+                runner
+                    .and_then(|r| r.get("steps"))
+                    .and_then(Value::as_array),
+                capture.deny_events.as_ref(),
+            ) {
+                let plan = request.get("probe_plan").and_then(Value::as_array);
+                capture.step_denies = Some(match_step_denies(
+                    steps,
+                    plan.map(Vec::as_slice).unwrap_or(&[]),
+                    events,
+                    worker_pid(runner),
+                ));
+            }
+        }
+    }
+    synthesize_runner_sandbox_diagnostics(runner, disabled, capture.as_ref())
 }
 
 // Execution disposition and optional log correlation are separate observations.
@@ -508,6 +519,12 @@ fn synthesize_runner_sandbox_diagnostics(
     } else {
         "no_match"
     };
+    let permission_failures_without_record =
+        if matches!(correlation_status, "pid_match" | "no_match") {
+            permission_failures_without_record(runner, capture)
+        } else {
+            None
+        };
     Some(RunnerSandboxDiagnostics {
         worker_pid: pid,
         process_disposition: disposition,
@@ -519,7 +536,47 @@ fn synthesize_runner_sandbox_diagnostics(
             None
         },
         first_deny,
+        permission_failures_without_record,
     })
+}
+
+// The runner's own per-step classification is the only input: a step counts
+// when `comparison.observation` is `permission_failure`. Candidate membership
+// comes from the associations already computed for this capture. A reply whose
+// steps carry no comparison cannot be classified and yields null.
+fn permission_failures_without_record(
+    runner: Option<&Value>,
+    capture: Option<&SandboxLogCapture>,
+) -> Option<Vec<String>> {
+    let steps = runner?.get("steps")?.as_array()?;
+    if !steps.is_empty()
+        && !steps
+            .iter()
+            .any(|s| s.pointer("/comparison/observation").is_some())
+    {
+        return None;
+    }
+    let recorded: std::collections::HashSet<&str> = capture
+        .and_then(|c| c.step_denies.as_ref())
+        .map(|associations| {
+            associations
+                .iter()
+                .flat_map(|a| a.candidate_step_ids.iter().map(String::as_str))
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(
+        steps
+            .iter()
+            .filter(|s| {
+                s.pointer("/comparison/observation").and_then(Value::as_str)
+                    == Some("permission_failure")
+            })
+            .filter_map(|s| s.get("step_id").and_then(Value::as_str))
+            .filter(|id| !recorded.contains(id))
+            .map(str::to_string)
+            .collect(),
+    )
 }
 
 #[cfg(test)]
@@ -527,6 +584,80 @@ mod tests {
     use super::*;
     use crate::sandbox_log::SandboxDenyEvent;
     use serde_json::json;
+
+    #[test]
+    fn no_match_is_distinguished_by_unrecorded_permission_failures() {
+        fn step(id: &str, observation: &str) -> Value {
+            json!({"step_id": id, "drift": null, "attempt": {"requested_path": format!("/{id}")},
+                "comparison": {"observation": observation}})
+        }
+        fn plan(ids: &[&str]) -> Value {
+            json!({"probe_plan": ids.iter().map(|id| json!({"step_id": id, "attempt": {
+                "kind": "file", "action": "open_write", "target": format!("/{id}")}})).collect::<Vec<_>>()})
+        }
+        fn denied(path: &str) -> SandboxDenyEvent {
+            let mut e = event(Some(42));
+            e.path = Some(path.into());
+            e
+        }
+        let ids = ["recorded", "silent", "fine"];
+        let request = plan(&ids);
+        let mut runner = worker("ok", None);
+        runner["steps"] = json!([
+            step("recorded", "permission_failure"),
+            step("silent", "permission_failure"),
+            step("fine", "succeeded"),
+        ]);
+        // One denial recorded, one not: only the silent one is listed.
+        let mut cap = Some(capture_with("captured", vec![denied("/recorded")]));
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap).unwrap();
+        assert_eq!(diag.correlation_status, "pid_match");
+        assert_eq!(
+            diag.permission_failures_without_record,
+            Some(vec!["silent".to_string()])
+        );
+        // No record at all: no_match now names the denials the attempts reported.
+        let mut cap = Some(capture_with("captured", vec![event(Some(99))]));
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap).unwrap();
+        assert_eq!(diag.correlation_status, "no_match");
+        assert_eq!(
+            diag.permission_failures_without_record,
+            Some(vec!["recorded".to_string(), "silent".to_string()])
+        );
+        let wire = serde_json::to_value(&diag).unwrap();
+        assert_eq!(
+            wire["permission_failures_without_record"],
+            json!(["recorded", "silent"])
+        );
+        // Nothing permission-shaped: the list is empty, not null.
+        let mut clean = runner.clone();
+        clean["steps"] = json!([step("fine", "succeeded"), step("other", "other_failure")]);
+        let mut cap = Some(capture_with("captured", vec![]));
+        let diag = finish_sandbox_log_capture(Some(&clean), &request, false, &mut cap).unwrap();
+        assert_eq!(diag.permission_failures_without_record, Some(vec![]));
+        // Unclassifiable, uncorrelated or disabled: null, never an invented list.
+        let mut legacy = runner.clone();
+        legacy["steps"] = json!([{"step_id": "recorded", "drift": false,
+            "attempt": {"requested_path": "/recorded", "errno": 1}}]);
+        let mut cap = Some(capture_with("captured", vec![]));
+        let diag = finish_sandbox_log_capture(Some(&legacy), &request, false, &mut cap).unwrap();
+        assert_eq!(diag.correlation_status, "no_match");
+        assert_eq!(diag.permission_failures_without_record, None);
+        for (status, disabled) in [
+            ("error", false),
+            ("window_mismatch", false),
+            ("captured", true),
+        ] {
+            let mut cap = Some(capture_with(status, vec![]));
+            let diag =
+                finish_sandbox_log_capture(Some(&runner), &request, disabled, &mut cap).unwrap();
+            assert_ne!(diag.correlation_status, "no_match", "{status}");
+            assert_eq!(diag.permission_failures_without_record, None, "{status}");
+        }
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut None).unwrap();
+        assert_eq!(diag.correlation_status, "unavailable");
+        assert_eq!(diag.permission_failures_without_record, None);
+    }
 
     #[test]
     fn documented_controller_limits() {
@@ -580,7 +711,7 @@ mod tests {
 
     fn capture_with(status: &str, events: Vec<SandboxDenyEvent>) -> SandboxLogCapture {
         SandboxLogCapture {
-            window: SandboxLogWindow::trailing("10s"),
+            window: SandboxLogWindow::runner_client_span(0, 1),
             capture_status: status.into(),
             tool_exit_code: 0,
             blocked_reason: None,
@@ -589,6 +720,161 @@ mod tests {
             observed_deny: Some(!events.is_empty()),
             deny_events: Some(events),
             step_denies: None,
+        }
+    }
+
+    #[test]
+    fn observer_windows_survive_association_serialization_and_consumer_recovery() {
+        use crate::sandbox_log::parse_observer_output;
+        use std::io::Write;
+        use std::os::unix::process::ExitStatusExt;
+        use std::process::{Command, ExitStatus, Output, Stdio};
+
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let good = json!({"start": window.start, "end": window.end, "last": null});
+        let mut replies = vec![("matching", good.clone(), "captured")];
+        for (name, field, value) in [
+            ("wrong_start", "start", json!("1970-01-01 00:00:02+0000")),
+            ("wrong_end", "end", json!("1970-01-01 00:00:04+0000")),
+            ("trailing", "last", json!("10s")),
+            ("null_start", "start", Value::Null),
+        ] {
+            let mut reply = good.clone();
+            reply[field] = value;
+            replies.push((name, reply, "window_mismatch"));
+        }
+        for field in ["start", "end"] {
+            let mut reply = good.clone();
+            reply.as_object_mut().unwrap().remove(field);
+            replies.push((field, reply, "window_mismatch"));
+        }
+        replies.push(("missing_bounds", json!({"last": "10s"}), "window_mismatch"));
+        replies.push(("clock_rollback", Value::Null, "invalid_window"));
+
+        let request = json!({"probe_plan": [{"step_id": "s", "attempt": {
+            "kind": "file", "action": "open_write", "target": "/attempt"}}]});
+        let events = json!([{"pid": 42, "process": "pw-probe-runner", "operation": "file-write-data",
+            "path": "/attempt", "raw_line": "retained observer evidence"}]);
+        let mut envelopes = Vec::new();
+        for version in [5, 8] {
+            for signaled in [false, true] {
+                let outcome = if signaled { "runner_failed" } else { "ok" };
+                let mut runner = worker(outcome, signaled.then_some(9));
+                runner["schema_version"] = json!(version);
+                runner["steps"] = json!([{"step_id": "s", "drift": null,
+                    "attempt": {"requested_path": "/attempt"}}]);
+                for (name, bounds, expected_status) in &replies {
+                    let mut observer = json!({"data": bounds});
+                    let mut capture = Some(if *expected_status == "invalid_window" {
+                        capture_sandbox_logs(
+                            42,
+                            "pw-probe-runner",
+                            SandboxLogWindow::runner_client_span(5_000, 4_000),
+                        )
+                        .unwrap()
+                    } else {
+                        observer["data"]["observed_deny"] = json!(true);
+                        observer["data"]["deny_events"] = events.clone();
+                        let out = Output {
+                            status: ExitStatus::from_raw(0),
+                            stdout: serde_json::to_vec(&observer).unwrap(),
+                            stderr: vec![],
+                        };
+                        parse_observer_output(&out, window.clone())
+                    });
+                    let diagnostics =
+                        finish_sandbox_log_capture(Some(&runner), &request, false, &mut capture);
+                    let result = json_contract::JsonResult {
+                        ok: !signaled,
+                        rc: None,
+                        exit_code: Some(i32::from(signaled)),
+                        normalized_outcome: Some(outcome.into()),
+                        errno: None,
+                        error: signaled.then(|| "worker signal 9".into()),
+                        stderr: None,
+                        stdout: None,
+                    };
+                    let data = json!({"runner_result": runner, "sandbox_log_capture": capture,
+                        "runner_sandbox_diagnostics": diagnostics});
+                    let text = json_contract::render_envelope("run", result, &data).unwrap();
+                    let wire: Value = serde_json::from_str(&text).unwrap();
+                    assert!(wire["schema_version"].as_u64().unwrap() >= 2);
+                    assert_eq!(wire["result"]["ok"], !signaled);
+                    assert_eq!(wire["result"]["normalized_outcome"], outcome);
+                    assert_eq!(wire["data"]["runner_result"], runner);
+                    let cap = &wire["data"]["sandbox_log_capture"];
+                    let diag = &wire["data"]["runner_sandbox_diagnostics"];
+                    assert_eq!(cap["capture_status"], *expected_status, "{name}");
+                    assert_eq!(diag["capture_status"], *expected_status);
+                    if *expected_status == "invalid_window" {
+                        assert!(cap["observer"].is_null() && cap["deny_events"].is_null());
+                        assert!(cap["window"]["start"].is_null() && cap["window"]["end"].is_null());
+                        assert_eq!(cap["window"]["started_at_unix_ms"], 5_000);
+                        assert_eq!(cap["window"]["ended_at_unix_ms"], 4_000);
+                    } else {
+                        assert_eq!(cap["observer"], observer);
+                        assert_eq!(cap["deny_events"], events);
+                        assert_eq!(cap["observed_deny"], true);
+                    }
+                    if *expected_status == "captured" {
+                        assert_eq!(cap["step_denies"][0]["candidate_step_ids"], json!(["s"]));
+                        assert_eq!(diag["first_deny"], json!({"event_index": 0}));
+                        assert_eq!(diag["correlation_status"], "pid_match");
+                    } else {
+                        assert!(
+                            cap["step_denies"].is_null(),
+                            "{name}: no candidate from unusable interval"
+                        );
+                        assert!(
+                            diag["first_deny"].is_null(),
+                            "{name}: no diagnostic match from unusable interval"
+                        );
+                        assert_eq!(diag["correlation_status"], "unavailable");
+                    }
+                    envelopes.push(wire);
+                }
+            }
+        }
+        // Exercise the real independent consumer on serialized production output,
+        // including old runner replies inside the new controller envelope.
+        let mut child = Command::new("/usr/bin/python3")
+            .args(["-B", "-c", "import json, sys; sys.path.insert(0, sys.argv[1]); from consumer import recover_evidence; print(json.dumps([recover_evidence(e) for e in json.load(sys.stdin)]))"])
+            .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&envelopes).unwrap())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let answers: Vec<Value> = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(answers.len(), envelopes.len());
+        for (wire, answer) in envelopes.iter().zip(answers) {
+            let cap = &wire["data"]["sandbox_log_capture"];
+            let diag = &wire["data"]["runner_sandbox_diagnostics"];
+            let recovered = &answer["denials"];
+            assert_eq!(recovered["capture"], *cap);
+            assert_eq!(recovered["window"], cap["window"]);
+            assert_eq!(recovered["events"], cap["deny_events"]);
+            assert_eq!(recovered["capture_status"], cap["capture_status"]);
+            assert_eq!(recovered["diagnostics"], *diag);
+            assert_eq!(recovered["correlation_status"], diag["correlation_status"]);
+            if cap["capture_status"] == "captured" {
+                assert_eq!(recovered["candidates"][0]["event"], events[0]);
+                assert_eq!(
+                    recovered["candidates"][0]["candidate_step_ids"],
+                    json!(["s"])
+                );
+            } else {
+                assert!(recovered["candidates"].is_null());
+                assert_eq!(recovered["association_reporting"], "not_reported");
+            }
         }
     }
     fn event(pid: Option<i32>) -> SandboxDenyEvent {

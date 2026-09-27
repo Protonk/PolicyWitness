@@ -14,7 +14,7 @@ pub fn print_usage() {
     eprintln!(
         "\
 usage:
-  policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
+  policy-witness run <request.json> [--timeout-ms <n>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
   policy-witness runner <command> [options]
     commands: install, list, status, verify, remove, validate, reconcile
   policy-witness --version
@@ -22,7 +22,8 @@ usage:
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is passed through to the runner client (or copied with runner mode injected)
-  - --no-log-capture skips the unified-log (`log show`) deny scan; use it when you don't consume the deny evidence and want the per-run cost back
+  - the unified-log (`log show`) deny scan requests the runner client's wall-clock span, widened to whole seconds; reversed endpoints prevent the scan
+  - --no-log-capture skips that scan; use it when you don't consume the deny evidence and want the per-run cost back
   - --version prints a JSON envelope (kind=version) with the build stamp and the wire contract versions this build speaks; every envelope also carries the stamp under `build`"
     );
 }

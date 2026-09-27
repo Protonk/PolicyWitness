@@ -70,16 +70,30 @@ pub fn run_pw_runner_client(
     }
     argv.push(OsString::from(service_name));
     argv.push(request_path.as_os_str().to_os_string());
+    run_client_argv(&argv)
+}
 
-    let started = now_unix_ms();
+/// The recorded span brackets the child's whole lifetime: `started` is taken
+/// before the spawn and `ended` after the exit is collected. Deny-log capture
+/// requests this wall-clock span and rejects reversed endpoints. Two readings
+/// do not establish clock continuity throughout execution.
+fn run_client_argv(argv: &[OsString]) -> Result<(RunnerClientRun, Option<Value>), String> {
+    run_client_argv_with_clock(argv, now_unix_ms)
+}
+
+fn run_client_argv_with_clock(
+    argv: &[OsString],
+    mut clock: impl FnMut() -> u64,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    let started = clock();
     let out = Command::new(&argv[0])
         .args(&argv[1..])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
         .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
-    let ended = now_unix_ms();
-    Ok(parse_runner_client_output(&argv, started, ended, &out))
+    let ended = clock();
+    Ok(parse_runner_client_output(argv, started, ended, &out))
 }
 
 #[cfg(test)]
@@ -157,6 +171,59 @@ mod tests {
                 assert!(capture.output.stdout_capture_error.is_some());
                 assert!(capture.output.stdout_parse_error.is_none());
             }
+        }
+    }
+
+    #[test]
+    fn recorded_span_brackets_the_child_process() {
+        // The child reports its own clock twice, around a sleep; both readings
+        // must fall inside the span the controller records for it.
+        let argv = vec![
+            OsString::from("/usr/bin/python3"),
+            OsString::from("-c"),
+            OsString::from(
+                "import json, time; a = int(time.time() * 1000); time.sleep(0.3); \
+                 b = int(time.time() * 1000); print(json.dumps({'a': a, 'b': b}))",
+            ),
+        ];
+        let (run, parsed) = run_client_argv(&argv).unwrap();
+        let reply = parsed.expect("child reply is JSON");
+        let (a, b) = (reply["a"].as_u64().unwrap(), reply["b"].as_u64().unwrap());
+        assert!(
+            run.started_at_unix_ms <= a,
+            "{} <= {a}",
+            run.started_at_unix_ms
+        );
+        assert!(b <= run.ended_at_unix_ms, "{b} <= {}", run.ended_at_unix_ms);
+        assert!(run.ended_at_unix_ms - run.started_at_unix_ms >= 300);
+        assert_eq!(run.exit_code, 0);
+    }
+
+    #[test]
+    fn backwards_clock_readings_are_retained_without_a_log_scan() {
+        use crate::sandbox_log::{SandboxLogWindow, capture_sandbox_logs, observer_argv};
+        let argv = vec![OsString::from("/usr/bin/true")];
+        for (started, ended) in [(5_000, 4_000), (5_999, 5_001)] {
+            let mut readings = [started, ended].into_iter();
+            let (run, _) = run_client_argv_with_clock(&argv, || readings.next().unwrap()).unwrap();
+            assert!(readings.next().is_none());
+            assert_eq!(
+                (run.started_at_unix_ms, run.ended_at_unix_ms),
+                (started, ended)
+            );
+            assert_eq!(run.exit_code, 0);
+            let window =
+                SandboxLogWindow::runner_client_span(run.started_at_unix_ms, run.ended_at_unix_ms);
+            assert!(window.start.is_none() && window.end.is_none());
+            assert!(observer_argv("observer".into(), 42, "pw-probe-runner", &window).is_err());
+            // A unit-test binary has no bundle helper to resolve. This must
+            // return without even resolving, let alone spawning, the observer.
+            let capture = capture_sandbox_logs(42, "pw-probe-runner", window).unwrap();
+            assert_eq!(capture.capture_status, "invalid_window");
+            assert!(capture.observer.is_none());
+            assert!(capture.deny_events.is_none() && capture.observed_deny.is_none());
+            assert!(capture.output.stdout_bytes_received.is_none());
+            assert!(capture.output.stderr.contains("wall clock moved backwards"));
         }
     }
 

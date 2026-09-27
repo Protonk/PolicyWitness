@@ -43,10 +43,19 @@ pub struct SandboxLogMatchEvidence {
     pub path_sources: Vec<String>,
 }
 
-#[derive(Serialize)]
+/// The interval requested from the observer. It is the runner client's own
+/// wall-clock span, widened to whole seconds because `log show` accepts
+/// `YYYY-MM-DD HH:MM:SS+0000` and nothing finer. Reversed clock readings retain
+/// their raw values but have no scan bounds. Ordered endpoints do not establish
+/// clock continuity or complete log delivery. Events have no structured
+/// timestamps here, and a PID can be reused inside the interval.
+#[derive(Serialize, Clone, PartialEq, Debug)]
 pub struct SandboxLogWindow {
     pub kind: &'static str,
-    pub last: String,
+    pub started_at_unix_ms: u64,
+    pub ended_at_unix_ms: u64,
+    pub start: Option<String>,
+    pub end: Option<String>,
     pub event_timestamps_available: bool,
     pub exact_run_membership: bool,
     pub step_ordering: bool,
@@ -54,16 +63,45 @@ pub struct SandboxLogWindow {
 }
 
 impl SandboxLogWindow {
-    pub fn trailing(last: &str) -> Self {
+    /// Floor the start and ceil the end to whole seconds; a truncated end would
+    /// drop events from the run's final partial second. The end is always at
+    /// least one second after the start so an equal span still scans. A clock
+    /// rollback cannot be repaired by inventing a later end: withhold both bounds.
+    pub fn runner_client_span(started_at_unix_ms: u64, ended_at_unix_ms: u64) -> Self {
+        let start_s = started_at_unix_ms / 1000;
+        let end_s = ended_at_unix_ms.div_ceil(1000).max(start_s + 1);
         Self {
-            kind: "trailing",
-            last: last.to_string(),
+            kind: "runner_client_span",
+            started_at_unix_ms,
+            ended_at_unix_ms,
+            start: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(start_s)),
+            end: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(end_s)),
             event_timestamps_available: false,
             exact_run_membership: false,
             step_ordering: false,
             pid_reuse_protection: false,
         }
     }
+}
+
+/// Render a Unix second as the `%Y-%m-%d %H:%M:%S%z` form `log show` parses,
+/// always in UTC with an explicit offset so local time and DST never move the
+/// window. Fractional seconds are rejected by the tool, so none are emitted.
+pub fn log_show_timestamp(unix_seconds: u64) -> String {
+    let days = i64::try_from(unix_seconds / 86_400).unwrap_or(i64::MAX);
+    let rem = unix_seconds % 86_400;
+    let (hour, minute, second) = (rem / 3_600, (rem % 3_600) / 60, rem % 60);
+    // Proleptic Gregorian civil date from days since 1970-01-01 (H. Hinnant).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}+0000")
 }
 
 #[derive(Serialize)]
@@ -236,23 +274,57 @@ pub fn match_step_denies(
     out
 }
 
-pub fn capture_sandbox_logs_last(
+/// The observer is asked for exactly the window; `--last` never appears.
+pub fn observer_argv(
+    tool: OsString,
     pid: i64,
     process_name: &str,
-    last: &str,
-) -> Result<SandboxLogCapture, String> {
-    let tool = resolve_contents_macos_tool("sandbox-log-observer")?;
-    let argv = vec![
-        tool.into_os_string(),
+    window: &SandboxLogWindow,
+) -> Result<Vec<OsString>, String> {
+    let (Some(start), Some(end)) = (&window.start, &window.end) else {
+        return Err(
+            "runner client wall clock moved backwards; deny-log interval unavailable".into(),
+        );
+    };
+    Ok(vec![
+        tool,
         OsString::from("--pid"),
         OsString::from(format!("{pid}")),
         OsString::from("--process-name"),
         OsString::from(process_name),
-        OsString::from("--last"),
-        OsString::from(last),
+        OsString::from("--start"),
+        OsString::from(start),
+        OsString::from("--end"),
+        OsString::from(end),
         OsString::from("--format"),
         OsString::from("json"),
-    ];
+    ])
+}
+
+pub fn capture_sandbox_logs(
+    pid: i64,
+    process_name: &str,
+    window: SandboxLogWindow,
+) -> Result<SandboxLogCapture, String> {
+    // Check before resolving or executing a helper. The raw clock readings
+    // remain available even though no interval can be submitted to log show.
+    if window.start.is_none() || window.end.is_none() {
+        return Ok(SandboxLogCapture {
+            window,
+            capture_status: "invalid_window".into(),
+            tool_exit_code: 1,
+            blocked_reason: None,
+            output: JsonOutputCapture::unavailable(
+                "runner client wall clock moved backwards; deny-log scan not attempted".into(),
+            ),
+            observer: None,
+            observed_deny: None,
+            deny_events: None,
+            step_denies: None,
+        });
+    }
+    let tool = resolve_contents_macos_tool("sandbox-log-observer")?;
+    let argv = observer_argv(tool.into_os_string(), pid, process_name, &window)?;
 
     let out = Command::new(&argv[0])
         .args(&argv[1..])
@@ -261,10 +333,27 @@ pub fn capture_sandbox_logs_last(
         .output()
         .map_err(|e| format!("failed to run sandbox-log-observer: {e}"))?;
 
-    Ok(parse_observer_output(&out, last))
+    Ok(parse_observer_output(&out, window))
 }
 
-fn parse_observer_output(out: &std::process::Output, last: &str) -> SandboxLogCapture {
+/// The observer mirrors the window it actually handed to `log show`. A reply
+/// that scanned a different interval, or a trailing one, is not evidence for
+/// this run's window, whatever else it carries.
+fn observer_window_matches(obj: &Value, window: &SandboxLogWindow) -> bool {
+    let Some(data) = obj.get("data") else {
+        return false;
+    };
+    window.start.is_some()
+        && window.end.is_some()
+        && data.get("start").and_then(Value::as_str) == window.start.as_deref()
+        && data.get("end").and_then(Value::as_str) == window.end.as_deref()
+        && data.get("last").is_none_or(Value::is_null)
+}
+
+pub(crate) fn parse_observer_output(
+    out: &std::process::Output,
+    window: SandboxLogWindow,
+) -> SandboxLogCapture {
     let exit_code = out.status.code().unwrap_or(1);
 
     let (output, parsed) = capture_json_output(out, "sandbox-log-observer");
@@ -275,6 +364,9 @@ fn parse_observer_output(out: &std::process::Output, last: &str) -> SandboxLogCa
     let observer_log_error = parsed.as_ref().and_then(observer_log_error);
     let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
     let deny_events = parsed.as_ref().and_then(observer_deny_events);
+    let window_mirrored = parsed
+        .as_ref()
+        .is_some_and(|obj| observer_window_matches(obj, &window));
 
     let capture_status = if output.stdout_capture_error.is_some() {
         "capture_error".to_string()
@@ -287,7 +379,11 @@ fn parse_observer_output(out: &std::process::Output, last: &str) -> SandboxLogCa
     } else if exit_code != 0 {
         "error".to_string()
     } else if observed_deny.is_some() {
-        "captured".to_string()
+        if window_mirrored {
+            "captured".to_string()
+        } else {
+            "window_mismatch".to_string()
+        }
     } else if parsed.is_some() {
         "invalid_reply".to_string()
     } else {
@@ -295,7 +391,7 @@ fn parse_observer_output(out: &std::process::Output, last: &str) -> SandboxLogCa
     };
 
     SandboxLogCapture {
-        window: SandboxLogWindow::trailing(last),
+        window,
         capture_status,
         tool_exit_code: exit_code,
         blocked_reason,
@@ -319,7 +415,8 @@ mod tests {
             "observed_deny": false, "deny_events": [], "log_error": "independent collection failure"}});
         for mode in ["valid", "oversized"] {
             let output = crate::utils::receiver_fixture(&original.to_string(), mode);
-            let capture = parse_observer_output(&output, "10s");
+            let capture =
+                parse_observer_output(&output, SandboxLogWindow::runner_client_span(0, 1));
             let wire = serde_json::to_value(&capture).unwrap();
             if mode == "valid" {
                 assert_eq!(wire["observer"], original);
@@ -348,10 +445,12 @@ mod tests {
             ("missing", "invalid_reply"),
         ] {
             let original = receiver_fixture(
-                r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319}}"#,
+                r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319,
+                    "start":"1970-01-01 00:00:00+0000","end":"1970-01-01 00:00:01+0000","last":null}}"#,
                 mode,
             );
-            let capture = parse_observer_output(&original, "10s");
+            let capture =
+                parse_observer_output(&original, SandboxLogWindow::runner_client_span(0, 1));
             let wire = serde_json::to_value(&capture).unwrap();
             assert_eq!(capture.capture_status, expected, "{mode}");
             assert_eq!(wire["stdout_bytes_received"], original.stdout.len());
@@ -562,10 +661,56 @@ mod tests {
         );
     }
     #[test]
-    fn trailing_window_reports_missing_temporal_evidence() {
-        let v = serde_json::to_value(SandboxLogWindow::trailing("10s")).unwrap();
-        assert_eq!(v["last"], "10s");
-        assert_eq!(v["kind"], "trailing");
+    fn log_show_timestamps_are_utc_whole_seconds_with_explicit_offset() {
+        // Expected strings come from Python's datetime, not from this formatter.
+        for (seconds, expected) in [
+            (0, "1970-01-01 00:00:00+0000"),
+            (951782400, "2000-02-29 00:00:00+0000"),
+            (1767225599, "2025-12-31 23:59:59+0000"),
+            (1790463530, "2026-09-26 22:58:50+0000"),
+            (4107542399, "2100-02-28 23:59:59+0000"),
+            (4107542400, "2100-03-01 00:00:00+0000"),
+            (253402300799, "9999-12-31 23:59:59+0000"),
+        ] {
+            assert_eq!(log_show_timestamp(seconds), expected, "{seconds}");
+        }
+    }
+
+    #[test]
+    fn run_span_window_floors_start_ceils_end_and_never_collapses() {
+        let window = SandboxLogWindow::runner_client_span(951_782_400_999, 951_782_401_001);
+        assert_eq!(window.start.as_deref(), Some("2000-02-29 00:00:00+0000"));
+        assert_eq!(window.end.as_deref(), Some("2000-02-29 00:00:02+0000"));
+        assert_eq!(window.started_at_unix_ms, 951_782_400_999);
+        assert_eq!(window.ended_at_unix_ms, 951_782_401_001);
+        // An exact-second end is not widened.
+        assert_eq!(
+            SandboxLogWindow::runner_client_span(1_000, 3_000)
+                .end
+                .as_deref(),
+            Some("1970-01-01 00:00:03+0000")
+        );
+        // Equal inputs still yield a one-second scan.
+        for (started, ended) in [(5_000, 5_000), (5_500, 5_500)] {
+            let window = SandboxLogWindow::runner_client_span(started, ended);
+            assert_eq!(window.start.as_deref(), Some("1970-01-01 00:00:05+0000"));
+            assert_eq!(window.end.as_deref(), Some("1970-01-01 00:00:06+0000"));
+        }
+        // A long run is scanned in full: no lookback cap is reintroduced.
+        let long = SandboxLogWindow::runner_client_span(0, 300_000);
+        assert_eq!(long.start.as_deref(), Some("1970-01-01 00:00:00+0000"));
+        assert_eq!(long.end.as_deref(), Some("1970-01-01 00:05:00+0000"));
+    }
+
+    #[test]
+    fn run_span_window_claims_coverage_and_nothing_stronger() {
+        let v = serde_json::to_value(SandboxLogWindow::runner_client_span(1_000, 2_500)).unwrap();
+        assert_eq!(v["kind"], "runner_client_span");
+        assert_eq!(v["started_at_unix_ms"], 1_000);
+        assert_eq!(v["ended_at_unix_ms"], 2_500);
+        assert_eq!(v["start"], "1970-01-01 00:00:01+0000");
+        assert_eq!(v["end"], "1970-01-01 00:00:03+0000");
+        assert!(v.get("last").is_none());
         for field in [
             "event_timestamps_available",
             "exact_run_membership",
@@ -573,6 +718,124 @@ mod tests {
             "pid_reuse_protection",
         ] {
             assert_eq!(v[field], false);
+        }
+    }
+
+    #[test]
+    fn observer_is_asked_for_the_window_and_never_for_a_trailing_lookback() {
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let argv = observer_argv(
+            OsString::from("/x/sandbox-log-observer"),
+            42,
+            "pw-probe-runner",
+            &window,
+        )
+        .unwrap();
+        let argv: Vec<String> = argv
+            .iter()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert_eq!(
+            argv,
+            [
+                "/x/sandbox-log-observer",
+                "--pid",
+                "42",
+                "--process-name",
+                "pw-probe-runner",
+                "--start",
+                "1970-01-01 00:00:01+0000",
+                "--end",
+                "1970-01-01 00:00:03+0000",
+                "--format",
+                "json",
+            ]
+        );
+        assert!(!argv.iter().any(|a| a == "--last"));
+    }
+
+    #[test]
+    fn observer_reply_for_another_window_is_not_captured_evidence() {
+        use crate::utils::receiver_fixture;
+        let window = SandboxLogWindow::runner_client_span(1_000, 2_500);
+        let event = r#"{"pid":42,"operation":"file-read-data","path":"/attempt","raw_line":"x"}"#;
+        for (reply, expected) in [
+            (
+                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000","last":null"#,
+                "captured",
+            ),
+            (
+                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000""#,
+                "captured",
+            ),
+            (
+                r#""start":"1970-01-01 00:00:02+0000","end":"1970-01-01 00:00:03+0000","last":null"#,
+                "window_mismatch",
+            ),
+            (
+                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:04+0000","last":null"#,
+                "window_mismatch",
+            ),
+            (
+                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000","last":"10s""#,
+                "window_mismatch",
+            ),
+            (r#""last":"10s""#, "window_mismatch"),
+        ] {
+            let body =
+                format!(r#"{{"data":{{"observed_deny":true,"deny_events":[{event}],{reply}}}}}"#);
+            let capture = parse_observer_output(&receiver_fixture(&body, "valid"), window.clone());
+            assert_eq!(capture.capture_status, expected, "{reply}");
+            // Raw evidence survives either way; only its standing changes.
+            assert_eq!(capture.deny_events.as_ref().unwrap().len(), 1, "{reply}");
+            assert_eq!(capture.observed_deny, Some(true));
+            assert_eq!(capture.window, window);
+        }
+    }
+
+    #[test]
+    fn requested_intervals_select_independently_timed_events() {
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures/deny_capture/observer.py");
+        for (started, ended, paths) in [
+            (
+                1_999,
+                22_001,
+                vec![
+                    "/start-slack",
+                    "/early",
+                    "/short-tail",
+                    "/late",
+                    "/end-slack",
+                ],
+            ),
+            (1_999, 2_001, vec!["/start-slack", "/early", "/short-tail"]),
+            (2_500, 2_500, vec!["/early", "/short-tail"]),
+            // Explicit ten-second control against the very same event corpus.
+            (13_000, 23_000, vec!["/late", "/end-slack"]),
+        ] {
+            let window = SandboxLogWindow::runner_client_span(started, ended);
+            let argv = observer_argv("observer".into(), 42, "pw-probe-runner", &window).unwrap();
+            let out = Command::new("/usr/bin/python3")
+                .arg(&fixture)
+                .args(&argv[1..])
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            let capture = parse_observer_output(&out, window);
+            assert_eq!(capture.capture_status, "captured");
+            let actual: Vec<_> = capture
+                .deny_events
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|event| event.path.as_deref().unwrap())
+                .collect();
+            assert_eq!(actual, paths, "span {started}..{ended}");
         }
     }
 }

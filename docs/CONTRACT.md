@@ -7,7 +7,7 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 1. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
@@ -16,7 +16,7 @@ Current wire contracts: request schema 1, response schema 8, worker ABI 7, contr
 | request schema (`request_schema`) | 1 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 8 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 1 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 2 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -87,7 +87,12 @@ which of these rules apply; every later number keeps the earlier rows.
 | 6 | Progress/failure evidence header and diagnostic text region. |
 | 7 | Host release and worker acknowledgement words in the header (the ordering barrier). |
 
-Request schema and controller envelope have stayed at 1.
+| Controller envelope | Introduced |
+| --- | --- |
+| 1 | Initial shape. `data.sandbox_log_capture.window` recorded a trailing `last` lookback (`kind: "trailing"`), and `data.log_last` echoed the flag that set it. |
+| 2 | Deny-log capture requests the runner client's own span: `window` carries `kind: "runner_client_span"`, the client's start and end milliseconds and the whole-second UTC `start`/`end` strings handed to `log show`; `last` and `data.log_last` are gone. Reversed clock readings retain the milliseconds with null bounds and `capture_status: "invalid_window"`, without invoking the observer. `runner_sandbox_diagnostics.permission_failures_without_record` names the steps whose attempt reported a permission-shaped failure that no captured event records. A reply for different or missing bounds or a trailing lookback is `window_mismatch`; raw observer evidence survives without candidate or diagnostic correlation. |
+
+Request schema has stayed at 1.
 
 ## Shape goldens
 

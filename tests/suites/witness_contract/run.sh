@@ -25,6 +25,7 @@ scripts=(
 # current drift case is identified that the R10 steps[].drift field
 # should surface.
   "${SUITE_DIR}/worker_termination_and_log_correlation.sh"
+  "${SUITE_DIR}/deny_capture_covers_the_run.sh"
   "${SUITE_DIR}/instrumentation_field_rejected.sh"
   "${SUITE_DIR}/prediction_target_is_independent_of_attempt_target.sh"
   "${SUITE_DIR}/pre_apply_failure_reports_no_policy_verdict.sh"

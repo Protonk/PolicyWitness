@@ -44,7 +44,7 @@ def main():
             specimen = dict(base)
             if signaled:
                 specimen['_test_overrides'] = overrides
-            args = ['--timeout-ms', '20000', '--log-last', '10s']
+            args = ['--timeout-ms', '20000']
             if not capture_enabled:
                 args.append('--no-log-capture')
             run = RunCapture(pw, out / name, specimen, cli_args=args)
@@ -56,7 +56,9 @@ def main():
             (run.out / 'file.after').write_bytes(after)
             assert after == seed, 'denied attempts changed file contents'
             assert rc == (1 if signaled else 0), rc
+            assert envelope['schema_version'] >= 2, envelope['schema_version']
             data = envelope['data']
+            assert 'log_last' not in data, data.keys()
             runner = data['runner_result']
             expected = 'runner_failed' if signaled else 'ok'
             assert runner['schema_version'] >= 7, runner  # comparison groups: response 7
@@ -106,23 +108,33 @@ def main():
                 assert capture is None, capture
                 assert diag['capture_status'] == 'disabled' and diag['correlation_status'] == 'not_attempted', diag
                 assert diag['first_deny'] is None, diag
+                assert diag['permission_failures_without_record'] is None, diag
             else:
                 assert isinstance(capture, dict), 'observer must be invoked for both failure and success'
                 assert diag['capture_status'] == capture['capture_status'], diag
                 window = capture['window']
                 assert recovered['window'] == window
-                assert window['kind'] == 'trailing' and window['last'] == '10s', window
+                client = data['runner_client']
+                assert window['kind'] == 'runner_client_span' and 'last' not in window, window
+                assert window['started_at_unix_ms'] == client['started_at_unix_ms'], (window, client)
+                assert window['ended_at_unix_ms'] == client['ended_at_unix_ms'], (window, client)
+                assert window['start'] < window['end'], window
                 for key in ('event_timestamps_available', 'exact_run_membership', 'step_ordering', 'pid_reuse_protection'):
                     assert window[key] is False, window
                 observer = capture.get('observer')
                 if observer is not None:
                     assert observer['data']['pid'] == worker['pid'], observer
                     assert observer['data']['process_name'] == 'pw-probe-runner', observer
+                    assert observer['data']['last'] is None, observer
+                    assert (observer['data']['start'], observer['data']['end']) == (window['start'], window['end']), observer
                 events = capture.get('deny_events')
                 if capture['capture_status'] == 'captured' and events is not None:
                     matches = [i for i, event in enumerate(events) if event.get('pid') == worker['pid']]
                     assert diag['correlation_status'] == ('pid_match' if matches else 'no_match'), diag
                     assert diag['first_deny'] == ({'event_index': matches[0]} if matches else None), diag
+                    # Both denied writes are permission failures by the runner's own account;
+                    # the ones no captured event names stay listed beside the status.
+                    assert diag['permission_failures_without_record'] == ([] if matches else ids), diag
                     associations = capture['step_denies']
                     assert recovered['events'] == events
                     assert recovered['association_reporting'] == 'reported'
@@ -159,6 +171,7 @@ def main():
                 else:
                     assert diag['correlation_status'] == 'unavailable', diag
                     assert diag['first_deny'] is None, diag
+                    assert diag['permission_failures_without_record'] is None, diag
             observations.append({'run': name, 'outcome': expected, 'diagnostics': diag})
             (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
             print(f'{name}: disposition and independent denied attempts verified; capture={diag["capture_status"]}', flush=True)

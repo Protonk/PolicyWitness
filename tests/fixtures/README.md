@@ -21,6 +21,9 @@ deterministic, and checked into the repo so tests are hermetic.
   and wrapper execution controls in `shell_helpers`.
 - `capture/`: independent CLI-shaped byte emitter with a socket gate for
   capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
+- `deny_capture/`: an observer transport fixture with fixed event timestamps;
+  Rust tests pass the real outgoing interval arguments through Python's date
+  parser to check inclusion, widening and exclusion without kernel-log delivery.
 - `caller_auth/`: disposable built-in XPC app copies, explicit signing and
   signature inspection, command capture, and process cleanup. Authorization
   expectations and independent file-effect checks belong to the smoke case.

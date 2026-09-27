@@ -55,7 +55,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--log-last <dur>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
+policy-witness run <request.json> [--timeout-ms <n>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
 policy-witness --version
 ```
@@ -76,7 +76,7 @@ Runs a **single runner evaluation** against the selected runner service:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance (one XPC host + two short-lived children), applies the policy exactly once inside the C worker, executes the probe plan and validator batch in parallel, and returns the runner's structured JSON result.
-- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. Pass `--no-log-capture` to skip this scan entirely: the `log show` deny scan is archive-bound and costs seconds per run (independent of `--log-last`), so callers that don't consume the deny evidence can opt out to reclaim it.
+- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, widened to whole seconds, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. Archive access has been observed to cost seconds even for short spans; that observation is not a fixed-cost guarantee.
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
   process per run), spawned by the runner host alongside the C
   worker. It reads NDJSON probes from stdin and writes NDJSON
@@ -120,7 +120,7 @@ Exit codes:
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 1. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Every step contains `deny_signal: null` because that channel is unobserved. Legacy signal objects remain readable by the Swift
@@ -174,10 +174,23 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   no worker and observer availability. `correlation_status` is `not_attempted`,
   `unavailable`, `no_match`, or `pid_match`. `first_deny` is an `{event_index}`
   reference into `sandbox_log_capture.deny_events`, not a termination cause.
+  `permission_failures_without_record` lists the step IDs whose attempt the
+  runner classified as a permission-shaped failure and that no captured event
+  names as a candidate; it is null unless correlation was `pid_match` or
+  `no_match` and the reply carries per-step comparisons. `no_match` beside a
+  non-empty list means the log holds no record of denials the attempts
+  themselves reported, not that nothing was denied; the field never says why.
 - `data.sandbox_log_capture`: optional observer evidence, also captured for
   successful runs; null when disabled or no authoritative worker PID exists.
-  `window` records trailing `last` and explicitly disclaims structured event
-  timestamps, exact run membership, step ordering and PID-reuse protection.
+  `window` records the scanned interval: the runner client's start and end
+  (`started_at_unix_ms`, `ended_at_unix_ms`) and the whole-second UTC `start`
+  and `end` strings handed to `log show`, which the observer mirrors back; a
+  reply for any other interval is `window_mismatch`, not `captured`. If the
+  client's end precedes its start, both strings are null, the raw milliseconds
+  are retained, and `invalid_window` records that no observer was invoked.
+  Ordered endpoints alone cannot establish clock continuity during the run.
+  The window explicitly disclaims structured event timestamps, exact run membership, step
+  ordering and PID-reuse protection.
   `step_denies` contains event references with candidate step IDs: one candidate
   is `candidate`, repeated matching attempts are `ambiguous`. Matching requires
   worker PID, exact attempt-relevant operation and exact target/path evidence.
@@ -185,17 +198,29 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   independent sandbox-check query. `matching_evidence` records each candidate's
   mapped operation, submitted kind/action, matched path and path sources.
   Unowned `normalized_path` alone is not a match source. Unmatched events remain
-  in `deny_events`.
+  in `deny_events`. Validator queries can themselves generate denial records
+  naming the worker PID before attempts begin. Neither a matching path nor a
+  candidate association establishes that an attempted operation produced a log
+  record. A complete requested interval does not guarantee complete log delivery.
   [Operation mapping and correlation limits](../docs/PolicyWitness.md#denial-log-correlation).
 - `data.runner_provenance`: runner identity + entitlements metadata
 - `data.app_provenance`: embedded app evidence metadata (and optional verification)
 
 `data.sandbox_log_capture.capture_status` values:
 
-- `captured`: observer succeeded, no error reported
+- `captured`: observer succeeded, no error reported, and its interval matches;
+  this does not certify that every denial was logged
+- `window_mismatch`: observer returned different or missing bounds, or a trailing
+  lookback; its raw reply and parsed denial events survive, but `step_denies` and
+  diagnostics `first_deny` are null and correlation is `unavailable`
+- `invalid_window`: the client's wall-clock end precedes its start; scan bounds
+  are null and no observer runs. Raw timestamps and a diagnostic in `stderr`
+  survive; observer/events/associations are null and correlation is `unavailable`
 - `blocked`: unified log access blocked (see `blocked_reason`)
 - `error`: observer returned an error or non-zero exit
 - `parse_error`: observer stdout was not valid JSON
+- `capture_error`: the controller could not retain the full observer JSON
+- `invalid_reply`: parsed observer JSON lacks the required observation
 - `requested_unavailable`: observer could not be executed
 
 Optional:

@@ -734,6 +734,52 @@ def check_harness_note_agreement() -> list[str]:
 # Entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# CLI surface agreement.
+#
+# controller/README.md ("CLI surface (contract)") promises the exact usage
+# lines and controller/src/cli.rs prints them. A flag added or removed on one
+# side only ships a README that lies about the binary; compare the lines.
+# ---------------------------------------------------------------------------
+CLI_RS = REPO_ROOT / "controller" / "src" / "cli.rs"
+CONTROLLER_README = REPO_ROOT / "controller" / "README.md"
+
+
+def parse_cli_usage_lines() -> list[str]:
+    if not CLI_RS.is_file():
+        return []
+    text = CLI_RS.read_text(encoding="utf-8")
+    match = re.search(r"usage:\n(.*?)\n\nnotes:", text, re.DOTALL)
+    if match is None:
+        return []
+    return [line[2:] for line in match.group(1).splitlines() if line.startswith("  policy-witness ")]
+
+
+def parse_readme_surface_lines() -> list[str]:
+    if not CONTROLLER_README.is_file():
+        return []
+    text = CONTROLLER_README.read_text(encoding="utf-8")
+    match = re.search(r"## CLI surface \(contract\).*?```text\n(.*?)```", text, re.DOTALL)
+    if match is None:
+        return []
+    return [line for line in match.group(1).splitlines() if line.startswith("policy-witness ")]
+
+
+def check_cli_surface_agreement() -> list[str]:
+    problems: list[str] = []
+    cli = parse_cli_usage_lines()
+    readme = parse_readme_surface_lines()
+    if not cli:
+        problems.append("controller/src/cli.rs: could not locate the usage block (usage: ... notes:)")
+    if not readme:
+        problems.append("controller/README.md: could not locate the CLI surface (contract) text block")
+    if cli and readme and cli != readme:
+        problems.append("CLI surface drift between controller/src/cli.rs usage and controller/README.md:")
+        problems.extend(f"  cli.rs   : {line}" for line in cli)
+        problems.extend(f"  README.md: {line}" for line in readme)
+    return problems
+
+
 def main() -> int:
     # SwiftPM auto-discovers the same files off disk (convention layout, no
     # sources: arrays to parse), so the load-bearing comparison is build.sh
@@ -762,6 +808,7 @@ def main() -> int:
     problems.extend(check_prediction_unavailable_planner())
     problems.extend(check_test_overrides_table_agreement())
     problems.extend(check_harness_note_agreement())
+    problems.extend(check_cli_surface_agreement())
 
     if problems:
         fail("source/test-registry drift detected:")

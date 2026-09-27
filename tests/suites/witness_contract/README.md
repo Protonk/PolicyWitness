@@ -68,6 +68,46 @@ Run it independently with:
 tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt_target
 ```
 
+## Deny capture covers the run
+
+`deny_capture_covers_the_run` denies one read, holds two `/bin/sleep` exec
+children to the worker's exec deadline, then denies another read. Its metadata
+queries are allowed, avoiding query-generated denials for the attempted reads.
+It requires the recorded
+`capture.window` to be the runner client's own span (`runner_client_span`), with
+`start`/`end` equal to an independent whole-second UTC rendering of the client's
+timestamps, mirrored back by the observer with `last` null and a zero `log show`
+exit. Each available read-denial event must be associated with its step.
+The retired trailing interval (the ten seconds before the client's end) is then
+replayed through the embedded observer against the same log store. Test-only
+parsing of raw event timestamps checks membership in both intervals; path names
+are never used to infer timing. The final denied read is the minimum witness:
+it happened last, inside the scanned span, so a log store with no record of it
+fails the case with a named reason after every artifact is written, and the
+envelope's `permission_failures_without_record` must name exactly the denied
+reads the log did not record. The early denial is not required; its
+availability is recorded. `observations.json` records early/late availability
+and any timestamped events outside the shorter interval. A blocked unified log
+still fails the real-tool check with a pointer to the harness note. Artifacts include
+the run capture, consumer answers, `retired-window.json` and `observations.json`.
+
+Rust controls independently exercise the actual outgoing argv against
+`tests/fixtures/deny_capture/observer.py`, whose fixed event timestamps require
+early/late inclusion, whole-second widening, and exclusion outside the bounds.
+Short, long, equal-endpoint and ten-second intervals share the same event corpus.
+Injected clock rollbacks must retain raw readings with null bounds and no helper
+invocation. Receiver-to-consumer controls send mismatched and missing bounds and
+trailing replies containing matching events through production association,
+diagnostics and serialization, then the Python consumer. Both successful and
+signaled runs, and old/current runner replies, must preserve execution evidence
+without inventing correlations. Historical controller-envelope fixtures retain
+their trailing-window meaning in the blackbox consumer controls. Run with:
+
+```sh
+tests/run.sh --case witness_contract/deny_capture_covers_the_run
+tests/run.sh --suite unit --case blackbox_e2e/checker_controls
+```
+
 ## Create on an existing file
 
 `create_existing_file_preserves_contents` submits two `file/create` attempts

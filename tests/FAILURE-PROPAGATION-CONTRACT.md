@@ -180,7 +180,11 @@ host/client top-level PID. Capture remains available on successful runs.
 `runner_sandbox_diagnostics` describes process disposition and capture status
 independently of outcome: disabled, no worker, and observer availability stay
 distinct. Correlation status is `not_attempted`, `unavailable`, `no_match`, or
-`pid_match`. Abnormal/unconfirmed disposition has `termination_cause="unknown"`.
+`pid_match`; `permission_failures_without_record` names the steps whose attempt
+the runner classified as a permission-shaped failure and that no captured event
+names as a candidate, so `no_match` never reads as "nothing was denied" (null
+when correlation was not reached or the reply has no per-step comparisons).
+Abnormal/unconfirmed disposition has `termination_cause="unknown"`.
 Application remains separately recorded in `sandboxed_after_apply`.
 
 `first_deny` is an `{event_index}` reference to the first matching worker PID in
@@ -200,8 +204,18 @@ wildcard/prefix aliases are used; create accepts both `file-write-create` and
 public contract. An incomplete attempt can still be a candidate: a kernel event
 can precede interrupted publication.
 
-`capture.window` records trailing `--last` and explicitly reports no structured
-event timestamps, exact run membership, step ordering, or PID-reuse protection.
+`capture.window` records the scanned interval, the runner client's own span
+widened to whole seconds, and explicitly reports no structured event
+timestamps, exact run membership, step ordering, or PID-reuse protection. The
+observer mirrors the interval it scanned; any other interval is
+`window_mismatch`, which retains raw observer evidence but never yields
+`step_denies` or `first_deny`; correlation is `unavailable`. Reversed client clock
+readings produce `invalid_window`, retaining the raw milliseconds with null
+`start`/`end` and no observer invocation. Ordered endpoints do not establish clock
+continuity. Validator queries can generate worker-PID denial records before
+attempts begin, and some denied attempts have no available log record. Neither
+path matching nor interval coverage establishes a record's origin or complete
+log delivery.
 Raw lines remain available. The observer preserves the full remaining target,
 including spaces; it does not shorten a path into a different target. PID
 matching alone never establishes a termination cause or exact run membership.
@@ -579,7 +593,7 @@ and the signed app must be restored before acceptance.
 | Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from an outcome comparison |
 | Query time → attempt time; host and two children | Application → closed query collection → host release → worker acknowledgement → attempts; eligible uniquely associated native records acquire query_first | External state can change during the interval; earlier attempts can affect later attempts | Established order for eligible records, without stable state or runtime identity claims |
 | Path enrichment → query/attempt; runner host | Host resolves submitted query path after the orchestrator returns | Worker unlinks the path before host resolution; host and sandboxed worker can resolve differently | Later host diagnostic, never an earlier validator/worker observation |
-| Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates | Repeated attempts, PID reuse, trailing capture and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
+| Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates | Repeated attempts, PID reuse, whole-second capture bounds and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
 | Test control → runtime interpretation; test harness and PW | Controls can establish expected meanings independently of the classifier | Direct unsandboxed execution or a fixture oracle is not an observation available in a normal PW envelope | Credit controlled interpretation separately from native observation; no test knowledge silently becomes runtime attribution |
 
 ### Consumer-question baseline and design dispositions

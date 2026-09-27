@@ -26,6 +26,12 @@ import resolution or compilation.
 - Probe query JSON has a wire-size limit independent of attempt-target admission.
   A long operation or filter value can lose its prediction while the attempted
   operation still runs. JSON escaping contributes to the query size.
+- Deny-log capture has no fixed lookback limit. The requested interval is the
+  runner client's wall-clock span, widened to whole seconds because `log show`
+  accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
+  do not establish clock continuity or complete log delivery. Archive access has
+  been observed to cost seconds even for short spans; scan cost is not guaranteed
+  to be independent of span or log volume.
 
 <!-- BEGIN GENERATED LIMITS -->
 

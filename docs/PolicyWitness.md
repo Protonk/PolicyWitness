@@ -340,6 +340,12 @@ import resolution or compilation.
 - Probe query JSON has a wire-size limit independent of attempt-target admission.
   A long operation or filter value can lose its prediction while the attempted
   operation still runs. JSON escaping contributes to the query size.
+- Deny-log capture has no fixed lookback limit. The requested interval is the
+  runner client's wall-clock span, widened to whole seconds because `log show`
+  accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
+  do not establish clock continuity or complete log delivery. Archive access has
+  been observed to cost seconds even for short spans; scan cost is not guaranteed
+  to be independent of span or log volume.
 
 <!-- BEGIN GENERATED LIMITS -->
 
@@ -416,7 +422,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 1. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -915,12 +921,13 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 ### Common flags
 
 - `--timeout-ms <n>`: runner RPC timeout
-- `--log-last <dur>`: unified log lookback window for deny capture (default 10s)
-- `--no-log-capture`: skip the unified-log (`log show`) deny scan. The scan is
-  archive-bound and costs seconds per run independent of `--log-last`, so pass
-  this when you don't consume `data.sandbox_log_capture` (or the
-  `first_deny` diagnostic it backs) and want the per-run cost back.
-  `data.sandbox_log_capture` is then `null`.
+- `--no-log-capture`: skip the unified-log (`log show`) deny scan. Its requested
+  interval is the runner client's own wall-clock span, widened to whole seconds;
+  there is no fixed lookback to tune. Archive access has been observed to cost
+  seconds even for short spans, without a fixed-cost guarantee. Pass this when
+  you don't consume
+  `data.sandbox_log_capture` (or the `first_deny` diagnostic it backs) and want
+  the per-run cost back. `data.sandbox_log_capture` is then `null`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 - `--version`: print a `kind="version"` envelope with the build stamp and the
   wire contract versions this build speaks
@@ -951,6 +958,12 @@ It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports
 `signaled`), `capture_status`, and `correlation_status` (`not_attempted`,
 `unavailable`, `no_match`, `pid_match`). Abnormal/unconfirmed termination has
 `termination_cause="unknown"`. These fields do not change `normalized_outcome`.
+`permission_failures_without_record` lists the step IDs whose attempt the
+runner classified as a permission-shaped failure and that no captured event
+names as a candidate (null unless correlation reached `pid_match` or `no_match`
+and the reply carries per-step comparisons). A `no_match` beside a non-empty
+list means the log holds no record of denials the attempts themselves reported;
+it does not mean nothing was denied, and it does not say why.
 
 `first_deny` references an event by array index. Step associations under
 `sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
@@ -979,9 +992,25 @@ step-ID joins stay unmatched. Create can create a new file or open an existing
 one for writing. A missing completed attempt does not prevent a candidate
 association: a denial can precede interrupted publication.
 
-Capture uses trailing `--last`, recorded in `capture.window`.
-Parsed events have no structured timestamps. Window fields explicitly report no
-exact run membership, step ordering, or PID-reuse protection. Raw log lines are
+Capture scans the runner client's own start-to-end span, widened to whole
+seconds, and records it in `capture.window`; the observer mirrors the interval
+it scanned, and a reply for any other interval is `window_mismatch` rather than
+`captured`. Mismatched replies and parsed events remain inspectable, but
+`step_denies` and diagnostics `first_deny` are null and correlation is
+`unavailable`. If the client's wall-clock end precedes its start, capture is
+`invalid_window`: raw milliseconds survive, `start`/`end` are null, and the
+observer is not invoked. A diagnostic remains in capture `stderr`; observer,
+events and associations are null. Ordered endpoints do not prove clock
+continuity during execution.
+
+Validator `sandbox_check` queries can generate denial records naming the worker
+PID before any attempt begins. A matching target is therefore not proof that a
+record came from its paired attempt. Some denied attempts have no available log
+record; requesting the full interval does not guarantee complete delivery.
+
+Parsed events have no structured timestamps. Window fields
+explicitly report no exact run membership, step ordering, or PID-reuse
+protection. Raw log lines are
 retained; array position is not proof of execution order. A PID match can reflect
 an ordinary denied probe followed by an unrelated self-signal or crash.
 

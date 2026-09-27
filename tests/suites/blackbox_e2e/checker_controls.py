@@ -197,20 +197,37 @@ def consumer_controls(artifacts, baseline, current):
     event = {'pid':42, 'operation':'file-write-data', 'path':'/attempt', 'raw_line':'controlled denial'}
     match = {'step_id':'fs_write_allowed', 'operation':'file-write-data', 'operation_source':'submitted_attempt',
              'requested_kind':'file', 'requested_action':'open_write', 'path':'/attempt', 'path_sources':['submitted_attempt.target']}
-    window = {'kind':'trailing', 'last':'10s', 'event_timestamps_available':False, 'exact_run_membership':False, 'step_ordering':False, 'pid_reuse_protection':False}
+    window = {'kind':'runner_client_span', 'started_at_unix_ms':1000, 'ended_at_unix_ms':2500,
+              'start':'1970-01-01 00:00:01+0000', 'end':'1970-01-01 00:00:03+0000',
+              'event_timestamps_available':False, 'exact_run_membership':False, 'step_ordering':False, 'pid_reuse_protection':False}
     logged['data']['sandbox_log_capture'] = {'capture_status':'captured', 'window':window,
         'deny_events':[event, dict(event, pid=99)], 'step_denies':[{'event_index':0,
         'candidate_step_ids':['fs_write_allowed'], 'association':'candidate', 'matching_evidence':[match]}]}
     logged['data']['runner_sandbox_diagnostics'] = {'capture_status':'captured', 'correlation_status':'pid_match', 'termination_cause':'unknown'}
 
-    def candidate(a):
+    def candidate(a, expected_window=window):
         d = a['denials']; c = d['candidates'][0]
         require(d['events'] == [event, dict(event,pid=99)], 'unmatched raw events must survive')
         require(c['event_index'] == 0 and c['event'] == event and c['association'] == 'candidate', 'candidate reference is not unique occurrence')
         require(c['matching_evidence'] == [match], 'matching provenance must survive')
-        require(d['window'] == window and d['diagnostics']['termination_cause'] == 'unknown', 'capture limits and unknown cause must survive')
+        require(d['window'] == expected_window and d['diagnostics']['termination_cause'] == 'unknown', 'capture limits and unknown cause must survive')
 
-    run('legacy_with_controller_candidates', logged, candidate)
+    # Retain historical controller windows as well as old runner replies inside
+    # current envelopes. Decoding must not reinterpret a stored trailing scan.
+    old_window = dict(kind='trailing', last='10s', event_timestamps_available=False,
+                      exact_run_membership=False, step_ordering=False, pid_reuse_protection=False)
+    for envelope_version, recorded_window in [(1, old_window), (2, window)]:
+        historical = copy.deepcopy(logged)
+        historical['schema_version'] = envelope_version
+        historical['data']['sandbox_log_capture']['window'] = recorded_window
+        if envelope_version == 1:
+            historical['data']['log_last'] = '10s'
+        else:
+            historical['data'].pop('log_last', None)
+        run('envelope_%d_with_legacy_runner_candidates' % envelope_version, historical,
+            lambda a: candidate(a, recorded_window))
+    logged['schema_version'] = 2
+    logged['data'].pop('log_last', None)
     lost = copy.deepcopy(logged)
     del lost['data']['sandbox_log_capture']['step_denies'][0]['matching_evidence'][0]['operation_source']
     run('lost_matching_owner', lost, candidate, reject=True)
