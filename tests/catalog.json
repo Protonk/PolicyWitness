@@ -193,6 +193,19 @@
         {
           "id": "pwrunner_core_unit_executable",
           "description": "Swift runner unit-test batch"
+        },
+        {
+          "id": "disposition_reds",
+          "default": false,
+          "description": "PW_DISPOSITION_REDS-gated Swift integration gaps of the disposition record (areas B and C); red until the resolver lands",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/disposition_reds.sh"
+          ],
+          "requires": [
+            "swift",
+            "clang"
+          ]
         }
       ]
     },
@@ -1417,6 +1430,7 @@
         "witness_contract/order_barrier_mutations",
         "witness_contract/worker_attempt_in_flight_at_deadline",
         "unit/rust.disposition_reds",
+        "runner_unit/disposition_reds",
         "runner_byoxpc/registry_recovery"
       ]
     },

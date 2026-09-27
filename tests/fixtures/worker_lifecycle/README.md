@@ -19,6 +19,12 @@ real-worker readiness and deadline/grace behavior remain separate tests.
 
 The ABI 7 scenarios also publish unfamiliar/zero failure records, late slots,
 started-but-unpublished slots, and rich/missing/empty/truncated diagnostics.
+`skip_publication` takes a two-step plan and deliberately violates the
+completion-before-return rule through the real publication primitives: slot 0
+completes with returned progress, slot 1 publishes started and returned progress
+without completing, then done; it exits 0 on the exit request. It produces the
+D5 publication conflict for the disposition record (plan test C5) and claims no
+production reachability.
 `diagnostic_after_apply` applies a real deny-default profile before memory-only
 publication. `close_report`, `close_absent` and `close_hang_report` read a command
 prefix then close stdin; the last has a test-only watchdog and independently

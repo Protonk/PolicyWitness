@@ -83,6 +83,15 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
+The expected-fixture controls accept `tests/fixtures/disposition/a1_expected.json`
+(built from the witnessed A1 facts and the reviewed claim row), accept the
+captured `a1_known_loss.json` as the legacy reply it is and reject it at the
+record version, and reject named mutations of the accepted baseline (request
+removed while the cause is kept, exit code beside signal without a conflict,
+supported cause replaced by unknown, identical unresolved or swapped step
+answers, with or without differing debug indices), each with its expected rule.
+The consumer library reports the lifecycle account as `not_reported` for legacy
+replies and requires the record at the record version.
 
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,

@@ -132,6 +132,13 @@ def capture_controls(out):
 
 
 def rust_wrapper_controls(out):
+    """The real Rust-red wrapper against controlled cargo output.
+
+    The wrapper selects four tests by exact name with --include-ignored. Each
+    scenario supplies the whole cargo transcript; the wrapper must identify each
+    expected assertion, count promoted tests, and fail build, equipment, empty,
+    wrong-test and unrelated-assertion runs separately.
+    """
     repo = out / 'fixture repo'
     wrapper = 'tests/suites/unit/disposition_reds.sh'
     for relative in (wrapper, 'tests/lib/testlib.sh'):
@@ -149,18 +156,42 @@ sys.stdout.write(config['stdout'])
 sys.exit(config['status'])
 ''')
     cargo.chmod(0o755)
-    failed = f'test {TEST_NAME} ... FAILED\ntest result: FAILED. 0 passed; 1 failed; 0 ignored;\n'
-    assertion = ('exit_code 0 beside term_signal 9 is an invalid status pair; an unqualified disposition '
-                 '(signaled) resolves it silently\n')
-    passed = f'test {TEST_NAME} ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored;\n'
+    # Exact names and the assertion each red is identified by, as the wrapper lists them.
+    tests = []
+    for line in (ROOT / wrapper).read_text().splitlines():
+        line = line.strip()
+        if line.startswith('"') and '|' in line and line.endswith('"'):
+            name, message = line.strip('"').split('|', 1)
+            tests.append((f'run_flow::tests::{name}', message))
+    assert len(tests) == 4, tests
+
+    def transcript(results):
+        lines = [f'running {len(results)} tests']
+        failed = 0
+        for name, outcome, message in results:
+            lines.append(f'test {name} ... {"ok" if outcome else "FAILED"}')
+            if not outcome:
+                failed += 1
+                if message:
+                    lines.append(f"---- {name} stdout ----\nthread panicked: {message}")
+        passed = len(results) - failed
+        verdict = 'ok' if failed == 0 else 'FAILED'
+        lines.append(f'test result: {verdict}. {passed} passed; {failed} failed; 0 ignored;')
+        return '\n'.join(lines) + '\n'
+
+    all_red = transcript([(n, False, m) for n, m in tests])
+    all_green = transcript([(n, True, None) for n, m in tests])
+    partial = transcript([(n, i < 2, m) for i, (n, m) in enumerate(tests)])
+    other = transcript([(n, False, 'unrelated assertion failed' if i == 0 else m) for i, (n, m) in enumerate(tests)])
     scenarios = (
-        ('red', 101, failed + assertion, 'fail', 'B1 behavioral red'),
-        ('build_failure', 101, 'error: could not compile policy-witness\n', 'fail', 'without the expected B1 assertion'),
-        ('other_failure', 101, failed + 'unrelated assertion failed\n', 'fail', 'without the expected B1 assertion'),
-        ('missing_cargo', 127, 'cargo: not found\n', 'fail', 'without the expected B1 assertion'),
-        ('empty', 0, 'test result: ok. 0 passed; 0 failed; 0 ignored;\n', 'fail', 'did not run successfully'),
-        ('wrong_test', 0, passed.replace(TEST_NAME, 'some_other_test'), 'fail', 'did not run successfully'),
-        ('green', 0, passed, 'pass', 'disposition test passes'),
+        ('red', 101, all_red, 'fail', 'behavioral reds still open: 4 of 4 (0 promoted)'),
+        ('partial_promotion', 101, partial, 'fail', 'behavioral reds still open: 2 of 4 (2 promoted)'),
+        ('build_failure', 101, 'error: could not compile policy-witness\n', 'fail', 'did not run'),
+        ('other_failure', 101, other, 'fail', 'without their expected assertion'),
+        ('missing_cargo', 127, 'cargo: not found\n', 'fail', 'did not run'),
+        ('empty', 0, 'running 0 tests\ntest result: ok. 0 passed; 0 failed; 0 ignored;\n', 'fail', 'did not run'),
+        ('wrong_test', 0, all_green.replace('run_flow::tests::', 'other::'), 'fail', 'did not run'),
+        ('green', 0, all_green, 'pass', 'disposition tests pass'),
     )
     records = []
     for name, status, stdout, expected_status, message in scenarios:
@@ -180,10 +211,88 @@ sys.exit(config['status'])
         assert report['status'] == expected_status and message in report['message'], (name, report)
         assert result.returncode == (0 if expected_status == 'pass' else 1), (name, result)
         argv = json.loads((work / 'argv.json').read_text())
-        assert argv[-4:] == ['--', '--include-ignored', '--exact', TEST_NAME], argv
         assert argv[argv.index('--bin') + 1] == 'policy-witness', argv
+        assert '--include-ignored' in argv and '--exact' in argv, argv
+        assert all(n in argv for n, _ in tests), argv
         records.append({'mode': name, 'returncode': result.returncode, 'report': report})
     (out / 'wrapper-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+
+def expected_fixture_controls(out):
+    """E2: the accepted expected envelope, the known-loss capture, and named rejections.
+
+    The expected fixture was built from the witnessed A1 raw facts and the
+    reviewed claim row; it is an expected-output fixture, not a live result.
+    Each rejection starts from a fresh copy of the accepted baseline and must be
+    rejected with the independently expected rule; the baseline stays accepted.
+    """
+    import copy
+    sys.path.insert(0, str(ROOT / 'tests/lib'))
+    import lifecycle_contract as C
+    import lifecycle_oracle as O
+    from lifecycle_adapter import read_lifecycle
+    from consumer import validate_evidence_shape
+    out.mkdir(parents=True, exist_ok=True)
+    fixtures = ROOT / 'tests/fixtures/disposition'
+    expected = json.loads((fixtures / 'a1_expected.json').read_text())
+    known = json.loads((fixtures / 'a1_known_loss.json').read_text())
+    records = []
+    assert not O.check_record(expected), O.check_record(expected)
+    assert not validate_evidence_shape(expected), validate_evidence_shape(expected)
+    records.append({'control': 'expected_accepted', 'rejected': False})
+    # Known loss: legal as the legacy reply it is; a missing record at the new version.
+    assert not O.check_record(known) and read_lifecycle(known)['reporting'] == 'not_reported'
+    assert not validate_evidence_shape(known)
+    loss = copy.deepcopy(known)
+    loss['data']['runner_result']['schema_version'] = C.RESPONSE_WITH_DISPOSITION
+    findings = O.check_record(loss)
+    assert any(f['kind'] == 'missing_record' for f in findings), findings
+    assert any('disposition' in e for e in validate_evidence_shape(loss))
+    records.append({'control': 'known_loss_rejected_at_record_version', 'rejected': True, 'findings': findings})
+
+    def steps(e):
+        return e['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]['steps']
+
+    def drop_request(e):
+        del e['data']['runner_result']['runner_subprocess']['termination_request']
+
+    def exit_beside_signal(e):
+        e['data']['runner_result']['runner_subprocess']['exit_code'] = 0
+
+    def cause_unknown(e):
+        e['data']['runner_sandbox_diagnostics']['termination_cause'] = 'unknown'
+
+    def identical_unresolved(e):
+        for st in steps(e):
+            st['questions']['step_boundary_reached'] = {'state': 'unresolved', 'reason': 'no_usable_progress'}
+
+    def swapped(e):
+        a, b = steps(e)
+        a['questions']['step_boundary_reached'], b['questions']['step_boundary_reached'] = \
+            b['questions']['step_boundary_reached'], a['questions']['step_boundary_reached']
+
+    def swapped_with_debug_indices(e):
+        swapped(e)
+        for n, st in enumerate(steps(e)):
+            st['debug_index'] = 100 + n
+            st['questions']['step_boundary_reached']['debug'] = n
+
+    for name, rule, change in (
+            ('request_removed_cause_kept', 'D2', drop_request),
+            ('exit_beside_signal_without_conflict', 'D1', exit_beside_signal),
+            ('supported_cause_replaced_by_unknown', 'D7', cause_unknown),
+            ('identical_unresolved_step_answers', 'D3', identical_unresolved),
+            ('swapped_step_answers', 'D3', swapped),
+            ('swapped_step_answers_with_debug_indices', 'D3', swapped_with_debug_indices)):
+        mutated = copy.deepcopy(expected)
+        change(mutated)
+        (out / f'{name}.json').write_text(json.dumps(mutated, indent=2) + '\n')
+        findings = O.check_record(mutated)
+        assert findings, f'{name}: accepted'
+        assert any(f['rule'] == rule for f in findings), (name, rule, findings)
+        records.append({'control': name, 'rejected': True, 'rule': rule, 'findings': findings})
+    assert not O.check_record(expected), 'baseline changed under mutation'
+    (out / 'expected-fixture-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+    print('disposition expected-fixture controls: ok', flush=True)
 
 
 def run_controls(artifacts):
@@ -191,6 +300,7 @@ def run_controls(artifacts):
     out.mkdir()
     capture_controls(out / 'capture')
     rust_wrapper_controls(out / 'rust')
+    expected_fixture_controls(out / 'fixtures')
     # The contract skeleton's structural check plus the independent oracle's
     # self-check: every hand-reviewed example is reproduced by the claim tables,
     # a record built from it is accepted, its mutations are rejected with the

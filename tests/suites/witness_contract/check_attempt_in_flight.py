@@ -39,7 +39,10 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import lifecycle_contract as C
 from lifecycle_contract import HOST_SENTINEL_DEADLINE
+import lifecycle_oracle
+from lifecycle_adapter import read_lifecycle, summaries
 from run_capture import RunCapture
 from worker_exit_witness import worker_exit_witness
 
@@ -251,36 +254,67 @@ def check_cause(seen, diagnostics):
         f'reaped term_signal 9; witnesses: {seen}')
 
 
+def check_wave2(name, envelope, expected_summaries, artifacts):
+    """A2, A3 and A4 semantic claims through the adapter and the independent oracle.
+
+    Gated on the reply version: a producer that predates the record fails here
+    as version gating, which is not the behavioral red (the plan's two waves).
+    """
+    schema = envelope['data']['runner_result'].get('schema_version')
+    assert type(schema) is int and schema >= C.RESPONSE_WITH_DISPOSITION, (
+        f'{name}: wave 2 gated; producer reports response schema {schema!r}, before the disposition record '
+        f'(requires {C.RESPONSE_WITH_DISPOSITION})')
+    findings = lifecycle_oracle.check_record(envelope)
+    (artifacts / 'oracle_findings.json').write_text(json.dumps(findings, indent=2) + '\n', encoding='utf-8')
+    assert not findings, f'{name}: oracle findings {findings}'
+    view = read_lifecycle(envelope)
+    assert view['reporting'] == 'reported', (name, view['reporting'], view['malformed'])
+    assert summaries(view) == expected_summaries, (name, summaries(view), expected_summaries)
+    return view
+
+
 def main():
     pw, directory = sys.argv[1:]
     out = Path(directory).resolve()
 
-    rc, envelope, artifacts, spec_a1 = execute(pw, out, 'a1', lambda fifo: specimen(
+    rc, envelope_a1, artifacts, spec_a1 = execute(pw, out, 'a1', lambda fifo: specimen(
         'a1_fifo_then_file', [read_step('fifo', fifo), read_step('hosts', '/etc/hosts')],
         FIFO_OVERRIDES), fifo=True)
+    envelope = envelope_a1
     seen_a1, diagnostics_a1 = record(artifacts, envelope)
     check_kill_after_deadline('a1', rc, seen_a1, spec_a1, started_attempt(0))
     check_deadline_preserved('a1', seen_a1, diagnostics_a1)
     print('a1: FIFO boundary reached; deadline, SIGKILL request and reap witnessed; summary preserved', flush=True)
 
-    rc, envelope, artifacts, spec_a3 = execute(pw, out, 'a3', lambda fifo: specimen(
+    rc, envelope_a3, artifacts, spec_a3 = execute(pw, out, 'a3', lambda fifo: specimen(
         'a3_completed_prefix_then_fifo',
         [read_step('first', '/etc/hosts'), read_step('fifo', fifo), read_step('after', '/etc/hosts')],
         FIFO_OVERRIDES), fifo=True)
+    envelope = envelope_a3
     seen_a3, diagnostics_a3 = record(artifacts, envelope)
     check_kill_after_deadline('a3', rc, seen_a3, spec_a3, started_attempt(1))
     check_deadline_preserved('a3', seen_a3, diagnostics_a3)
     check_completed('a3', step(envelope, 'first'))
     print('a3: completed prefix survives termination with an attempt in flight', flush=True)
 
-    rc, envelope, artifacts, spec_a4 = execute(pw, out, 'a4', lambda _: specimen(
+    rc, envelope_a4, artifacts, spec_a4 = execute(pw, out, 'a4', lambda _: specimen(
         'a4_deadline_then_voluntary_exit', [read_step('hosts', '/etc/hosts')], GRACE_OVERRIDES))
+    envelope = envelope_a4
     seen_a4, diagnostics_a4 = record(artifacts, envelope)
     check_grace_exit(rc, seen_a4, spec_a4, diagnostics_a4, envelope)
     print('a4: deadline and voluntary clean exit coexist; completed result survives; no kill invented', flush=True)
 
     check_cause(seen_a1, diagnostics_a1)
-    print(f'a1: termination_cause == {HOST_SENTINEL_DEADLINE!r}: witnessed host cleanup projected')
+    print(f'a1: termination_cause == {HOST_SENTINEL_DEADLINE!r}: witnessed host cleanup projected', flush=True)
+
+    # Wave 2: the account itself, asserted after the wave-1 red so that red stays visible first.
+    check_wave2('a1', envelope_a1, ['started_without_result', 'not_reached'], out / 'a1')
+    check_wave2('a3', envelope_a3, ['completed', 'started_without_result', 'not_reached'], out / 'a3')
+    view_a4 = check_wave2('a4', envelope_a4, ['completed'], out / 'a4')
+    assert view_a4['projections']['stop_reason'] == 'sentinel_deadline', view_a4['projections']
+    assert view_a4['projections']['process_disposition'] == 'clean_exit', view_a4['projections']
+    assert view_a4['projections']['termination_cause'] is None, view_a4['projections']
+    print('a2/a3/a4: lifecycle claims, projections and stop reason agree with the independent oracle')
 
 
 if __name__ == '__main__':

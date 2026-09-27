@@ -252,6 +252,21 @@ def consumer_controls(artifacts, baseline, current):
             require(d['candidates'] == ([] if status=='captured' else None), 'no match and no report differ')
             if status=='blocked': require(d['capture']['blocked_reason']=='controlled blockage', 'capture detail lost')
         run('capture_'+status, absent, availability)
+    # F3: a legacy reply reports the lifecycle account as not_reported rather than
+    # inventing one; a worker reply at the record version must carry the record.
+    run('no_worker_lifecycle', old,
+        lambda a: require(a['lifecycle']['reporting'] == 'no_worker' and a['lifecycle']['record'] is None,
+                          'a reply without a worker subprocess carries no lifecycle account'))
+    legacy_worker = copy.deepcopy(old)
+    legacy_worker['data']['runner_result']['runner_subprocess'] = {'pid': 42, 'reaped': True, 'term_signal': 9, 'partial_steps': True}
+    run('legacy_lifecycle_not_reported', legacy_worker,
+        lambda a: require(a['lifecycle']['reporting'] == 'not_reported' and a['lifecycle']['record'] is None,
+                          'legacy lifecycle account must be not_reported, not derived'))
+    unrecorded = copy.deepcopy(current)
+    unrecorded['data']['runner_result']['schema_version'] = 10
+    unrecorded['data']['runner_result']['runner_subprocess'] = {'pid': 42, 'reaped': True, 'exit_code': 0, 'partial_steps': False}
+    assert any('disposition' in e for e in validate_evidence_shape(unrecorded)), 'record version without the record must be rejected'
+    records.append({'control': 'record_required_at_new_version', 'rejected': True})
     for name, runner, state in [('no_reply',None,'no_runner_reply'), ('no_steps',{'schema_version':7,'steps':[]},'no_admitted_steps')]:
         run(name, {'data':{'runner_result':runner}}, lambda a: require(a['step_reporting']==state and a['steps']==[], 'run absence must not invent step comparisons'))
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')

@@ -1090,4 +1090,115 @@ mod tests {
         assert_eq!(diag.capture_status, "disabled");
         assert_eq!(diag.correlation_status, "not_attempted");
     }
+    // Disposition record plan, E1 (wave 2, behavioral red). The runner reply
+    // carries the record the contract names; the controller must project the
+    // witnessed host cleanup instead of ignoring the object. Constructed JSON,
+    // runnable before the runner produces the record.
+    fn disposition_reply(cause_trigger: &str, reaped: bool) -> Value {
+        let mut runner = worker("runner_timeout", Some(9));
+        runner["schema_version"] = json!(10);
+        let sub = &mut runner["runner_subprocess"];
+        sub["reaped"] = json!(reaped);
+        sub["poll_stop_reason"] = json!("sentinel_deadline");
+        sub["exit_requested"] = json!(true);
+        sub["termination_request"] = json!({"signal": 9, "rc": 0});
+        sub["cleanup_trigger"] = json!(cause_trigger);
+        sub["grace_end"] = json!("exhausted");
+        sub["collection_basis"] = json!("after_confirmed_reap");
+        sub["disposition"] = json!({
+            "questions": {
+                "final_status": {"state": "supported", "answer": "signal", "value": 9, "basis": ["reaped", "term_signal"]},
+                "stop_reason": {"state": "supported", "answer": "sentinel_deadline", "basis": ["poll_stop_reason"]},
+                "cleanup_trigger": {"state": "supported", "answer": cause_trigger, "basis": ["cleanup_trigger", "exit_requested"]},
+                "grace_end": {"state": "supported", "answer": "exhausted", "basis": ["grace_end", "exit_requested"]},
+                "kill_request_and_result": {"state": "supported", "answer": "requested",
+                    "value": {"signal": 9, "rc": 0}, "basis": ["termination_request"]},
+                "collection_basis": {"state": "supported", "answer": "after_confirmed_reap", "basis": ["collection_basis"]},
+                "progress_association": {"state": "inapplicable", "reason": "no_progress_word"}
+            },
+            "steps": [], "issues": []
+        });
+        runner["steps"] = json!([]);
+        runner
+    }
+    #[test]
+    #[ignore = "disposition plan E1: red until the controller projects the carried record"]
+    fn disposition_record_projects_witnessed_host_cleanup_cause() {
+        let runner = disposition_reply("deadline_expiry", true);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert_eq!(
+            diag.termination_cause,
+            Some("host_sentinel_deadline"),
+            "E1: the controller ignores the carried disposition record and reports a generic cause"
+        );
+        assert_eq!(diag.process_disposition, "signaled");
+        let wire = serde_json::to_value(&diag).unwrap();
+        assert_eq!(wire["disposition_integrity"], json!("valid"));
+        assert_eq!(wire["stop_reason"], json!("sentinel_deadline"));
+    }
+    #[test]
+    #[ignore = "disposition plan E1: red until the controller validates the carried record"]
+    fn record_contradicting_its_basis_is_withheld() {
+        // A supported signal claim while the reply says the worker was never reaped.
+        let runner = disposition_reply("deadline_expiry", false);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert_eq!(
+            diag.process_disposition, "withheld",
+            "E1: an assembled claim that contradicts its basis must be withheld, not re-derived"
+        );
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        let wire = serde_json::to_value(&diag).unwrap();
+        assert_eq!(wire["disposition_integrity"], json!("invalid"));
+        assert!(
+            wire["disposition_issues"]
+                .as_array()
+                .map_or(false, |v| !v.is_empty())
+        );
+    }
+    #[test]
+    #[ignore = "disposition plan B1 (wave 2): red until the controller reports the status conflict"]
+    fn conflicting_status_reports_the_status_rule() {
+        let mut runner = worker("runner_failed", Some(9));
+        runner["runner_subprocess"]["exit_code"] = json!(0);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert_eq!(
+            diag.process_disposition, "conflicting",
+            "B1: exit_code 0 beside term_signal 9 must be reported as a status conflict"
+        );
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        let wire = serde_json::to_value(&diag).unwrap();
+        let issues = wire["disposition_issues"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert!(
+            issues.iter().any(|i| i["rule"] == json!("D1")),
+            "issue must name the status rule D1"
+        );
+    }
+    // Disposition record plan, F3 (wave 1, preservation) and E1's counterexamples:
+    // legacy replies without the record keep their compatibility projections, and
+    // an unrecognized future trigger never projects a cause.
+    #[test]
+    fn legacy_reply_without_record_keeps_compatibility_projections() {
+        let mut signaled = worker("runner_failed", Some(9));
+        signaled["schema_version"] = json!(9);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&signaled), true, None).unwrap();
+        assert_eq!(diag.process_disposition, "signaled");
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        let wire = serde_json::to_value(&diag).unwrap();
+        assert!(wire.get("stop_reason").map_or(true, Value::is_null));
+        let mut clean = worker("ok", None);
+        clean["schema_version"] = json!(9);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&clean), true, None).unwrap();
+        assert_eq!(diag.process_disposition, "clean_exit");
+        assert_eq!(diag.termination_cause, None);
+    }
+    #[test]
+    fn unrecognized_future_trigger_never_projects_a_cause() {
+        let runner = disposition_reply("host_future_trigger", true);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert_eq!(diag.termination_cause, Some("unknown"));
+        assert_ne!(diag.process_disposition, "clean_exit");
+    }
 }

@@ -22,6 +22,12 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
 - Exec-child environment and descriptor isolation are covered by
   `runner_exec_inheritance`, with explicit child observations and controlled
   worker launch resources.
+- `DispositionResolverTests` establishes what the disposition record's resolver
+  will interpret: fixture-produced observations (`started_attempt` with two
+  slots, `skip_publication`) and constructed outputs with slots and a progress
+  word, plus preservation controls on the current step builder and classifier.
+  Its `disposition gap:` blocks register only under `PW_DISPOSITION_REDS=1`, run
+  by the non-default case `disposition_reds`, and fail until the record exists.
 - `PathDiagnosticsTests` pins all nine combinations of compact path states,
   UTF-8 identity, rejection of conflicting/missing representations, and legacy
   omission preservation. `tests/fixtures/contract/path_diagnostics.json` supplies
@@ -54,6 +60,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
 default to `tests/out/runs/direct`.
 
 - `<run>/suites/runner_unit/<test_id>/artifacts/pwrunner_core_tests.log`
+- `disposition_reds` writes the same log under its own test ID with the gated blocks included.
 - The same artifact directory retains `worker-lifecycle-fixture` and
   `lifecycle-fixture-build.log`; subprocess JSON is printed in the Swift log.
 

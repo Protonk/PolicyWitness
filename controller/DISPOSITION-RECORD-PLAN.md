@@ -1157,6 +1157,8 @@ does not mistake them for reds:
 | --- | --- |
 | `tests/catalog.json`, `tests/suites/witness_contract/` | Case `worker_attempt_in_flight_at_deadline`: wrapper script, Python check (A1 plus the A3/A4 preservation halves), README section, coverage-table note. |
 | `tests/catalog.json`, `tests/suites/unit/` | Non-default case `rust.disposition_reds`, which runs the `#[ignore]`d Rust reds. |
+| `tests/catalog.json`, `tests/suites/runner_unit/` | Non-default case `disposition_reds`, which runs the Swift unit executable with `PW_DISPOSITION_REDS=1`. |
+| `tests/fixtures/disposition/` | `a1_expected.json` and `a1_known_loss.json` with their README. |
 | `runner/Tests/PWRunnerCoreTests/` | `DispositionResolverTests.swift` and its registry line; the D-model table and self-checks; renderer/composition controls; a two-slot fixture helper with independent cleanup. |
 | `tests/fixtures/worker_lifecycle/` | `skip_publication` mode and its README entry. |
 | `controller/src/run_flow.rs` | Tests B1 and E1 beside the existing diagnostics tests. |
@@ -1284,22 +1286,28 @@ separate scope/version decision, not an incidental implementation detail.
 
 ### Current execution scope
 
-The contract module carries the fixed spellings, question tables, projection
-inventory and example rows, and the wave-1 reds exist as non-default cases: A1
-with the preservation halves of A3 and A4 as
-`witness_contract/worker_attempt_in_flight_at_deadline`, and the refusal half
-of B1 as `unit/rust.disposition_reds`. Both fail on the unchanged build for
-the stated reason, with the failing assertion and the raw witnesses in their
-artifacts. The adapter and oracle exist and pass their constructed controls in
-the default battery. The canonical record and its app implementation remain
-pending; every open spelling is now fixed in the contract.
+The contract is fixed and the test stage is on main. The reds and their
+homes: `witness_contract/worker_attempt_in_flight_at_deadline` (A1 wave 1,
+then the version-gated wave-2 claims of A2, A3 and A4 through the adapter and
+oracle), `unit/rust.disposition_reds` (B1 refusal and wave 2, E1 projection
+and withholding, by exact name) and `runner_unit/disposition_reds` (the
+`PW_DISPOSITION_REDS`-gated integration gaps of areas B and C in
+`DispositionResolverTests.swift`). The same Swift file's fixture-observation
+and preservation blocks, the E2 expected-fixture and known-loss controls, the
+F3 consumer rules, the D-model and D-props self-checks and the oracle's
+mutation controls run in the default battery. `tests/fixtures/disposition/`
+holds the expected and known-loss envelopes; the `skip_publication` fixture
+mode produces C5's publication conflict. Swift wave-2 claims that need the
+resolver's types (B2 to B5 reasons, C1 to C5 claims, D-model enumeration in
+Swift, F1, F2) cannot compile before the resolver exists and are written with
+it; their expectations are already fixed in the Python tables.
 
-The next increment is the test stage: the wave-2 tests of areas A through F
-written against the fixed contract, E2's accepted expected-output fixture built
-from the A1 witnesses through `lifecycle_oracle.build_envelope`, the captured
-A1 known-loss fixture, the `DispositionResolverTests.swift` skeleton with the
-D-model table, and the `skip_publication` fixture mode. Each is registered
-non-default until it turns green.
+The next increment is the app-code stage: collection facts in `CWorker.swift`,
+the resolver and record types in `PWRunnerAPI.swift` and
+`CWorkerOrchestrator.swift`, runner and controller projections, encoding and
+degradation, the manifest bump with the regenerated copies, the shape golden,
+the Swift table mirror with its `ContractVersionTests`-style comparison, and
+promotion of each red as it turns green.
 
 For the eventual app change, run
 `cargo test --manifest-path controller/Cargo.toml`, then

@@ -66,6 +66,10 @@ runListenerConfigTests(tk)
 // Compiled-object receipt wire bytes: selected-byte changes versus ignored
 // padding/order changes have different effects.
 runAppliedProfileCaptureTests(tk)
+// Disposition record (controller/DISPOSITION-RECORD-PLAN.md): constructed and
+// fixture-produced observations that the resolver will interpret, preservation
+// controls that pass today, and PW_DISPOSITION_REDS-gated integration gaps.
+runDispositionResolverTests(tk)
 
 FileHandle.standardOutput.write(Data("\n\(tk.summary())\n".utf8))
 exit(tk.exitCode())

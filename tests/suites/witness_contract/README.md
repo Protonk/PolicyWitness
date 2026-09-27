@@ -262,8 +262,15 @@ under `(version 1) (allow default)` with `--no-log-capture`:
 
 The `a3` and `a4` preservation halves pass today and run before the red. The
 per-step compatibility triples are recorded in `compatibility_triples.json`
-without assertion; the wave 2 semantic claims (A2, and the semantic halves of
-A3 and A4) remain specified in the plan.
+without assertion. After the red, the wave 2 checks run: they are gated on the
+reply's response version (a producer before the record fails as version
+gating, not as the behavioral red), require an empty finding list from
+`tests/lib/lifecycle_oracle.py` on each envelope (written to
+`oracle_findings.json`), and assert through `tests/lib/lifecycle_adapter.py`
+that `a1` reports `started_without_result` then `not_reached`, `a3` reports
+`completed`, `started_without_result`, `not_reached`, and `a4` reports
+`completed` with `stop_reason: sentinel_deadline` beside `clean_exit` and a
+null cause.
 
 Each FIFO lives in test-owned staging under `/private/tmp` that the check never
 opens. Once CLI launch is attempted, staging is removed only when the envelope's

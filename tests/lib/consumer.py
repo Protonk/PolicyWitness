@@ -5,6 +5,9 @@ Scenario expectations belong to callers. Legacy absences remain unreported.
 """
 from copy import deepcopy
 
+import lifecycle_contract
+from lifecycle_adapter import read_lifecycle, summaries
+
 
 PATH_FORMS = ('realpath_resolved', 'firmlink_resolved')
 
@@ -120,6 +123,14 @@ def recover_evidence(envelope):
         # Preserve capture/observer errors as well as status and candidate summaries.
         'capture': data.get('sandbox_log_capture'),
     }
+    # Worker lifecycle account: reported through the record, or not_reported for
+    # replies before it. Nothing here derives a lifecycle answer from raw facts.
+    lifecycle = read_lifecycle(envelope)
+    answer['lifecycle'] = {'reporting': lifecycle['reporting'], 'summaries': summaries(lifecycle),
+                           'record': lifecycle['record'], 'malformed': lifecycle['malformed'],
+                           'projections': {k: lifecycle['projections'].get(k) for k in
+                                           ('process_disposition', 'termination_cause', 'stop_reason',
+                                            'disposition_integrity')}}
     return deepcopy(answer)
 
 
@@ -209,6 +220,10 @@ def validate_evidence_shape(envelope):
                 path, require_compact=runner['schema_version'] >= 9))
     if runner['schema_version'] >= 8 and not failed_reporting:
         errors.extend(validate_ordering(runner))
+    if runner['schema_version'] >= lifecycle_contract.RESPONSE_WITH_DISPOSITION:
+        sub = runner.get('runner_subprocess')
+        if isinstance(sub, dict) and sub.get(lifecycle_contract.RECORD_KEY) is None:
+            errors.append('worker subprocess without runner_subprocess.disposition at the record version')
     return errors
 
 

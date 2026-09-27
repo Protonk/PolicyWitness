@@ -161,47 +161,60 @@ selection, deduplication, configuration validation, and complete accounting.
 ### Disposition record red tests
 
 - **Suite name:** `witness_contract`, case `worker_attempt_in_flight_at_deadline`;
-  `unit`, case `rust.disposition_reds`.
+  `unit`, case `rust.disposition_reds`; `runner_unit`, case `disposition_reds`.
 - **Location:** `tests/suites/witness_contract/worker_attempt_in_flight_at_deadline.sh`
-  with `check_attempt_in_flight.py`, and `tests/suites/unit/disposition_reds.sh`.
-  Both live beside their suite's default cases, not under `opt_in/`, because
-  each is promoted in place when it turns green.
-- **Purpose:** Area A of `controller/DISPOSITION-RECORD-PLAN.md`. Specimen `a1`
-  blocks attempt 0 on a FIFO with no writer until the host deadline; the host's
-  deadline, successful SIGKILL request and reaped signal 9 must project to
-  `termination_cause: host_sentinel_deadline` (the `HOST_SENTINEL_DEADLINE`
-  constant in `tests/lib/lifecycle_contract.py`). Specimen `a3` adds a completed
-  first step that must survive, and `a4` has the worker exit 0 during grace after
-  the deadline with no invented kill; those preservation halves pass today and run
-  before the red. `rust.disposition_reds` runs the `#[ignore]`d Rust test
-  `conflicting_status_representation_is_not_silently_resolved` (B1), which forbids
-  an unqualified `signaled` or `clean_exit` disposition from a reply carrying
-  `exit_code` 0 beside `term_signal` 9.
-- **Opt-in reason:** Red by design against the unchanged controller, per the plan's
-  registration-while-red convention. Promote to default membership, and drop the
-  `#[ignore]`, in the change that turns each green. The Rust wrapper uses an
-  exact name and `--include-ignored`, so it still runs the test after promotion.
+  with `check_attempt_in_flight.py`; `tests/suites/unit/disposition_reds.sh`;
+  `tests/suites/runner_unit/disposition_reds.sh`. Each lives beside its suite's
+  default cases, not under `opt_in/`, because it is promoted in place.
+- **Purpose:** The red tests of `controller/DISPOSITION-RECORD-PLAN.md`. The
+  witness case runs specimens `a1` (a FIFO with no writer blocks attempt 0 until
+  the host deadline; the witnessed deadline, SIGKILL request and reaped signal 9
+  must project `termination_cause: host_sentinel_deadline`, the wave-1 red), `a3`
+  (a completed first step must survive) and `a4` (voluntary exit 0 during grace
+  after the deadline, no invented kill); the `a3`/`a4` preservation halves pass
+  today and run before the red. After the red, the version-gated wave-2 checks
+  read the record through `tests/lib/lifecycle_adapter.py`, require an empty
+  finding list from `tests/lib/lifecycle_oracle.py`, and assert the per-step
+  summaries and the `stop_reason` projection. `rust.disposition_reds` runs the
+  four `#[ignore]`d controller tests by exact name: B1's refusal and its wave-2
+  status-conflict report, and E1's projection of a carried record and withholding
+  of a record that contradicts its basis. `runner_unit/disposition_reds` runs the
+  Swift unit executable with `PW_DISPOSITION_REDS=1`, which registers the
+  `disposition gap:` blocks in `DispositionResolverTests.swift`: the record and
+  host facts in `runner_subprocess`, `attempt.lifecycle`, and the C2/C5 fixture
+  claims. The same file's observation and preservation blocks run in the default
+  battery.
+- **Opt-in reason:** Red by design against the unchanged runner and controller,
+  per the plan's registration-while-red convention. Promote to default membership,
+  drop the `#[ignore]` attributes and the `PW_DISPOSITION_REDS` gate in the change
+  that turns each green. The Rust wrapper's exact selectors and the Swift gate
+  keep the tests running after promotion.
 - **Resource dependency:** Built app and unsandboxed live XPC for the witness case;
-  cargo only for the Rust case.
-- **When to run:** During the disposition record's test and app-code stages, and after
-  changes to `synthesize_runner_sandbox_diagnostics` or the host's cleanup path.
-  Select with `tests/run.sh --case witness_contract/worker_attempt_in_flight_at_deadline --case unit/rust.disposition_reds`.
+  cargo for the Rust case; swift and clang for the Swift case (it builds the
+  lifecycle fixture).
+- **When to run:** During the disposition record's test and app-code stages, and
+  after changes to `synthesize_runner_sandbox_diagnostics`, the host's cleanup path
+  or the step builder. Select with
+  `tests/run.sh --case witness_contract/worker_attempt_in_flight_at_deadline --case unit/rust.disposition_reds --case runner_unit/disposition_reds`.
 - **Artifacts:** `<run>/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/`
   holds `assertions.log` and one directory per specimen (`a1/`, `a3/`, `a4/`) with
   `specimen.json`, `run.json`, `pw.stderr`, `capture.json`, `witnesses.json`,
-  `diagnostics.json`, `compatibility_triples.json` and, for the FIFO specimens,
-  `staging.json` and `cleanup.json`. After CLI launch is attempted, FIFO staging
-  under `/private/tmp` is removed only when `reaped: true` beside a valid worker
-  PID witnesses exit (`tests/lib/worker_exit_witness.py`); otherwise it is retained.
-  Setup failure before CLI launch permits removal on the test's own non-spawn
-  observation. Cleanup reporting errors preserve the original failure and name
-  the staging path in stderr.
-  `<run>/suites/unit/rust.disposition_reds/artifacts/cargo-test-ignored.log` holds
-  the Rust run.
-- **Gating:** Missing app or cargo fails; no skip code. A specimen that does not
-  reach its boundary fails as setup, not as the behavioral red. The Rust wrapper
-  verifies execution of the exact test and its known assertion before identifying
-  an expected red; build failures, other assertions and zero-test runs fail separately.
+  `diagnostics.json`, `compatibility_triples.json`, `oracle_findings.json` once
+  wave 2 runs and, for the FIFO specimens, `staging.json` and `cleanup.json`. After
+  CLI launch is attempted, FIFO staging under `/private/tmp` is removed only when
+  `reaped: true` beside a valid worker PID witnesses exit
+  (`tests/lib/worker_exit_witness.py`); otherwise it is retained. Setup failure
+  before CLI launch permits removal on the test's own non-spawn observation.
+  Cleanup reporting errors preserve the original failure and name the staging path
+  in stderr. `<run>/suites/unit/rust.disposition_reds/artifacts/cargo-test-ignored.log`
+  and `<run>/suites/runner_unit/disposition_reds/artifacts/pwrunner_core_tests.log`
+  hold the Rust and Swift runs.
+- **Gating:** Missing app, cargo or swift fails; no skip code. A specimen that does
+  not reach its boundary fails as setup, not as the behavioral red; a producer that
+  predates the record fails the wave-2 checks as version gating. The Rust wrapper
+  requires every named test to run and identifies each expected assertion; build
+  failures, other assertions and zero-test runs fail separately. The Swift wrapper
+  requires the gap blocks to have run and fails any unrelated `FAIL` separately.
 
 ## Adding a new opt-in test
 

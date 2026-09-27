@@ -664,8 +664,45 @@ def _mutations(example):
     return out
 
 
+def _property_checks():
+    """D-props over the claim tables: evidence changes affect only dependent claims."""
+    checked = 0
+    for labels, obs in enumerate_model():
+        claims, steps, issues = expected_claims(obs)
+        # Removing the progress word removes only progress-based certainty: a completed
+        # supported slot keeps its reached boundary and published result.
+        without = dict(obs, progress=None)
+        claims2, steps2, _ = expected_claims(without)
+        for i, entry in enumerate(obs['steps']):
+            if entry['slot'] == 'completed' and entry['supported']:
+                assert steps2[i]['step_boundary_reached'] == supported('reached'), (labels, i)
+                assert steps2[i]['step_result_published'] == supported('published'), (labels, i)
+            assert steps2[i]['step_result_published']['state'] != 'conflicting', (labels, i)
+        assert claims2['final_status'] == claims['final_status'] and claims2['stop_reason'] == claims['stop_reason']
+        # Completing an incomplete supported slot changes that step and partial_steps only.
+        for i, entry in enumerate(obs['steps']):
+            if entry['slot'] == 'incomplete' and entry['supported']:
+                completed = dict(obs, steps=tuple(dict(e, slot='completed') if k == i else e
+                                                  for k, e in enumerate(obs['steps'])))
+                claims3, steps3, _ = expected_claims(completed)
+                assert steps3[i]['step_result_published'] == supported('published'), (labels, i)
+                assert claims3 == claims, (labels, i)
+                for k in range(len(steps)):
+                    if k != i:
+                        assert steps3[k] == steps[k], (labels, i, k)
+        # An unrelated value change (a different nonzero exit code) touches final_status only.
+        if obs['exit_code'] not in (None, 0) and obs['term_signal'] is None:
+            claims4, steps4, issues4 = expected_claims(dict(obs, exit_code=obs['exit_code'] + 6))
+            assert steps4 == steps and issues4 == issues, labels
+            assert {k: v for k, v in claims4.items() if k != 'final_status'} == \
+                {k: v for k, v in claims.items() if k != 'final_status'}, labels
+        checked += 1
+    return checked
+
+
 def self_check():
     C.self_check()
+    properties = _property_checks()
     for example in C.EXAMPLES:
         claims, steps, issues = expected_claims(example.observations)
         assert claims == example.claims, (example.name, claims, example.claims)
@@ -692,8 +729,8 @@ def self_check():
             assert claim['state'] in C.CLAIM_STATES, (labels, claim)
         expected_projections(claims, steps, obs)
         total += 1
-    assert total == 5 * 6 * 8 * 4 * 3, total
-    return {'examples': len(C.EXAMPLES), 'model_rows': total}
+    assert total == 5 * 6 * 8 * 4 * 3 == properties, (total, properties)
+    return {'examples': len(C.EXAMPLES), 'model_rows': total, 'property_rows': properties}
 
 
 if __name__ == '__main__':

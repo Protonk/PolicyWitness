@@ -192,6 +192,30 @@ int main(void) {
         }
         return 0;
     }
+    if (!strcmp(mode, "skip_publication")) {
+        /* Deliberately violates completion-before-return for slot 1 through the
+         * real publication primitives: slot 0 completes with returned progress,
+         * slot 1 publishes started and returned progress but never completes,
+         * then done. Requires a two-step plan. Not a production reachability claim. */
+        pw_shm_slot_t *slots = (void *)((char *)base + PW_SHM_HEADER_BYTES);
+        if (hdr->step_count != 2) return 94;
+        hdr->apply_rc = 0;
+        atomic_store_explicit(&hdr->applied, 1, memory_order_release);
+        pw_progress(e, 9, 1, 0);
+        slots[0].rc = 0;
+        slots[0].errno_val = 0;
+        snprintf(slots[0].observed_path, sizeof(slots[0].observed_path), "fixture-observation");
+        atomic_store_explicit(&slots[0].completed, 1, memory_order_release);
+        pw_progress(e, 9, 2, 0);
+        pw_progress(e, 9, 1, 1);
+        slots[1].rc = 12345; /* Poison: never readable without completed publication. */
+        pw_progress(e, 9, 2, 1);
+        atomic_store_explicit(&hdr->done, 1, memory_order_release);
+        if (write(4, "R", 1) != 1) return 97;
+        close(4);
+        while (!atomic_load_explicit(&hdr->exit_requested, memory_order_acquire)) usleep(1000);
+        return 0;
+    }
     int complete = !strcmp(mode, "complete_hang") || !strcmp(mode, "complete_exit_0") ||
                    !strcmp(mode, "complete_exit_17") || !strcmp(mode, "complete_signal");
     int failure = !strcmp(mode, "reported_failure_hang");
