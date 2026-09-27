@@ -1068,4 +1068,26 @@ mod tests {
         assert_eq!(diag.process_disposition, "unconfirmed");
         assert_eq!(diag.termination_cause, Some("unknown"));
     }
+    // Disposition record plan, B1 (wave 1 refusal). Red by design until the
+    // controller validates status representations; wave 2 adds the structured
+    // conflict issue with `termination_cause: unknown`. Run it explicitly with
+    // `cargo test --bins -- --ignored conflicting_status_representation`.
+    #[test]
+    #[ignore = "disposition plan B1: red until the controller validates status representations"]
+    fn conflicting_status_representation_is_not_silently_resolved() {
+        let mut runner = worker("runner_failed", Some(9));
+        // One final reap represented as both a clean exit and a signal.
+        runner["runner_subprocess"]["exit_code"] = json!(0);
+        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        assert!(
+            !matches!(diag.process_disposition, "signaled" | "clean_exit"),
+            "exit_code 0 beside term_signal 9 is an invalid status pair; \
+             an unqualified disposition ({}) resolves it silently",
+            diag.process_disposition
+        );
+        // Unaffected: identity and capture fields do not depend on the status rule.
+        assert_eq!(diag.worker_pid, Some(42));
+        assert_eq!(diag.capture_status, "disabled");
+        assert_eq!(diag.correlation_status, "not_attempted");
+    }
 }

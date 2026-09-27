@@ -1082,6 +1082,15 @@
           ]
         },
         {
+          "id": "worker_attempt_in_flight_at_deadline",
+          "default": false,
+          "description": "Host deadline, SIGKILL request and reaped signal during an in-flight FIFO open project to the witnessed host cleanup cause (disposition plan A1; red until the record lands)",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/worker_attempt_in_flight_at_deadline.sh"
+          ]
+        },
+        {
           "id": "drift_determination_via_validator_seam",
           "command": [
             "bash",
@@ -1394,6 +1403,7 @@
         "runner_byoxpc/BBX-001",
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
+        "witness_contract/worker_attempt_in_flight_at_deadline",
         "runner_byoxpc/registry_recovery"
       ]
     },
