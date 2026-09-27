@@ -100,6 +100,49 @@ fn run_client_argv_with_clock(
 mod tests {
     use super::*;
 
+    #[test]
+    fn path_wire_fixtures_survive_capture_serialization_and_independent_consumer() {
+        use std::io::Write;
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let fixture = root.join("tests/fixtures/contract/path_diagnostics.json");
+        let original: Value = serde_json::from_slice(&std::fs::read(&fixture).unwrap()).unwrap();
+        let output = Command::new("/usr/bin/python3")
+            .args([
+                "-B",
+                "-c",
+                "import sys; sys.stdout.buffer.write(open(sys.argv[1], 'rb').read())",
+            ])
+            .arg(&fixture)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let (capture, parsed) = parse_runner_client_output(&[], 0, 1, &output);
+        assert!(capture.output.stdout_capture_error.is_none());
+        assert_eq!(parsed.as_ref(), Some(&original));
+        // Forward valid and malformed representations unchanged. The independent
+        // consumer owns interpretation; the controller must not normalize them.
+        let mut consumer = Command::new("/usr/bin/python3")
+            .arg("-B")
+            .arg(root.join("tests/lib/path_diagnostics_contract.py"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        consumer
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&parsed.unwrap()).unwrap())
+            .unwrap();
+        let answer = consumer.wait_with_output().unwrap();
+        assert!(
+            answer.status.success(),
+            "{}",
+            String::from_utf8_lossy(&answer.stderr)
+        );
+    }
+
     // Real subprocess producers exercise full capture before prefix selection.
     fn producer(program: &str) -> (RunnerClientRun, Option<Value>, Vec<u8>) {
         let argv = vec![
@@ -230,7 +273,7 @@ mod tests {
     #[test]
     fn valid_oversized_producer_is_receiver_loss_not_malformed_json() {
         let (capture, parsed, full) =
-            producer("import sys; sys.stdout.write('{\"value\":\"' + 'x'*1048576 + '\"}')");
+            producer("import sys; sys.stdout.write('{\"value\":\"' + 'x'*8388608 + '\"}')");
         assert!(
             serde_json::from_slice::<Value>(&full).is_ok(),
             "producer emitted valid complete JSON"
@@ -253,7 +296,7 @@ mod tests {
             capture.output.stdout_bytes_retained,
             Some(MAX_CAPTURE_BYTES)
         );
-        assert_eq!(capture.output.capture_limit_bytes, 1048576);
+        assert_eq!(capture.output.capture_limit_bytes, 8388608);
         assert!(capture.output.stdout_truncated);
         assert!(capture.output.stdout_parse_error.is_none());
         assert!(
@@ -292,7 +335,7 @@ mod tests {
     #[test]
     fn multibyte_cut_counts_bytes_before_lossy_conversion() {
         let (capture, parsed, full) = producer(
-            "import sys; sys.stdout.buffer.write(b'{\"v\":\"' + b'x'*(1048576-7) + bytes([0xe2,0x82,0xac]) + b'\"}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*349526)",
+            "import sys; sys.stdout.buffer.write(b'{\"v\":\"' + b'x'*(8388608-7) + bytes([0xe2,0x82,0xac]) + b'\"}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*2796203)",
         );
         assert!(serde_json::from_slice::<Value>(&full).is_ok());
         assert!(parsed.is_none());
@@ -304,7 +347,7 @@ mod tests {
             capture.output.stdout_bytes_retained,
             Some(MAX_CAPTURE_BYTES)
         );
-        assert_eq!(capture.output.stderr_bytes_received, Some(1048578));
+        assert_eq!(capture.output.stderr_bytes_received, Some(8388609));
         assert_eq!(
             capture.output.stderr_bytes_retained,
             Some(MAX_CAPTURE_BYTES)

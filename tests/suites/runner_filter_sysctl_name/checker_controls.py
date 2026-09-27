@@ -36,7 +36,7 @@ def main():
                     "step_id": step_id, "drift": None,
                     "sandbox_check": {
                         "scope": "post_sandbox", "pid": 1234, "operation": operation,
-                        "effective_filter_value": value, "filter_type_id": None,
+                        "filter_value": value, "filter_type_id": None,
                         "outcome": "prediction_unavailable", "rc": -1, "errno": None, "error": None,
                     },
                     "attempt": {
@@ -143,7 +143,7 @@ def main():
             check("supported_file_failure", changed, status=0)
 
         for channel, keys in (
-            ("sandbox_check", ("scope", "pid", "operation", "effective_filter_value",
+            ("sandbox_check", ("scope", "pid", "operation", "filter_value",
                                "filter_type_id", "errno", "error")),
             ("attempt", ("exit_code", "errno", "syscall_errno", "requested_path", "normalized_path", "observed_path", "rc")),
         ):
@@ -183,8 +183,8 @@ def main():
         step["sandbox_check"]["operation"] = "unrequested-operation"
         check("wrong_operation", broken, ("expected sandbox_check.operation=",))
         broken, step = mutate()
-        step["sandbox_check"]["effective_filter_value"] = "unrequested-filter-value"
-        check("wrong_filter_value", broken, ("expected sandbox_check.effective_filter_value=",))
+        step["sandbox_check"]["filter_value"] = "unrequested-filter-value"
+        check("wrong_filter_value", broken, ("expected sandbox_check.filter_value=",))
         broken, step = mutate()
         step["sandbox_check"].update(outcome="allow", rc=0, filter_type_id=1)
         check("wrong_prediction", broken, ("expected sandbox_check prediction_unavailable",))

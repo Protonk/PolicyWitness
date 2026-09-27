@@ -497,7 +497,7 @@ private func buildSandboxCheckResult(
     if let reason = exclusionReason {
         return PWRunnerSandboxCheckResult(rc: -1, outcome: SandboxCheckOutcome.predictionUnavailable,
             pid: sandboxCheckPid, operation: step.sandbox_check.operation, scope: scope,
-            filter_kind: kind, filter_value: value, effective_filter_value: value, error: reason)
+            filter_kind: kind, filter_value: value, error: reason)
     }
 
     // Validator didn't return a verdict for this step (validator never
@@ -512,7 +512,6 @@ private func buildSandboxCheckResult(
             scope: scope,
             filter_kind: kind,
             filter_value: value,
-            effective_filter_value: value,
             filter_type_id: nil,
             errno: nil,
             error: "no validator verdict for this step",
@@ -528,7 +527,6 @@ private func buildSandboxCheckResult(
         scope: scope,
         filter_kind: kind,
         filter_value: value,
-        effective_filter_value: value,
         filter_type_id: v.filterTypeId,
         errno: v.errnoVal,
         error: v.error,

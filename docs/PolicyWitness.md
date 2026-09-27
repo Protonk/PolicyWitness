@@ -385,7 +385,7 @@ Values are maxima unless labelled as defaults.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. | Fixed; no public override. |
-| Controller subprocess output (`controller_output`) | 1,048,576 bytes | Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
+| Controller subprocess output (`controller_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Raw prefix of the first rejected frame, before base64 encoding. The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss. | Fixed; no public override. |
 
 ### Evidence capture
@@ -422,7 +422,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -584,7 +584,7 @@ debugger attach (see [Debug-attach to the worker](#debug-attach-to-the-worker)).
 
 The runner echoes step results with additional context:
 
-- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, effective_filter_value, filter_type_id, errno, error, path_diagnostics? }`
+- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, filter_type_id, errno, error, path_diagnostics? }`
 - `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_kind, requested_action, requested_path, normalized_path, observed_path }`
 - `steps[].drift`: `bool | null` — see the field description above.
 
@@ -598,7 +598,6 @@ Notes:
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
   request unchanged for cross-referencing with the specimen.
-- `effective_filter_value` is a canonicalized/realpath form used for reporting only.
 - `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
   (mach-lookup local). The global-name ID was previously documented
   as `16` based on a now-invalidated external reference; empirical
@@ -699,10 +698,9 @@ Notes:
 `path_diagnostics` is emitted on every path-filter `sandbox_check`
 result with a nonempty submitted path. It carries later host-resolved path forms
 for diagnostic inspection; it cannot identify which form an earlier native check
-used. Fields: `{ observer, phase, input, realpath_resolved,
-firmlink_resolved, data_volume_form }`. The runner still passes
-the raw `filter_value` to `sandbox_check` — this block is
-observation only.
+used. Fields: `{ observer, phase, input, same_as_input, realpath_resolved?,
+firmlink_resolved? }`. The runner still passes the raw `filter_value` to
+`sandbox_check` — this block is observation only.
 
 Producer: `path_diagnostics` is computed by the unsandboxed runner
 host (`PWRunnerService.enrichPathDiagnostics`) after orchestration returns,
@@ -711,16 +709,29 @@ and `phase="after_orchestration"` identify that provenance. The host's resolutio
 is independent of the worker's sandbox and can see a path changed by an attempt.
 Neither a resolved path nor null establishes what the validator saw earlier.
 
-At v2+ all four keys are always emitted: a string when computed, an
-explicit `null` when the computation didn't produce a value. Consumers
-can therefore distinguish "computed and the result was null" (key
-present, value `null`) from "diagnostic was not emitted at all" (key
-absent or the entire `path_diagnostics` object absent).
+Each form is in exactly one of three states, so a reader never guesses:
+
+- listed by name in `same_as_input` and its key omitted: the host derived
+  the form with exactly the same UTF-8 bytes as `input`, so the path is carried once;
+- present as a string: the host derived a different form;
+- present as an explicit `null`: the host could not derive the form.
+
+`same_as_input` is required in response 9 and contains unique names drawn
+from `realpath_resolved` and `firmlink_resolved`. A form both listed and
+present, or neither listed nor present, is malformed. A carried string
+must differ from `input` in UTF-8 bytes. Canonically equivalent Unicode
+spellings with different bytes remain separate strings.
+
+Earlier replies use string/null keys without `same_as_input`. A missing
+legacy form remains unreported, distinct from explicit null; decoding and
+re-encoding it preserves that omission. Legacy replies may also contain the
+retired `data_volume_form` heuristic for `/private` paths.
+
 - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
   Computed in the unsandboxed host; under normal conditions this is
   populated whenever the file exists. Null only when the host's own
   `realpath` fails (path doesn't exist, permission denied at the
-  host level, etc.). The other forms below remain computable in that
+  host level, etc.). The other form below remains computable in that
   case.
 - `firmlink_resolved`: the realpath result rewritten through
   `/usr/share/firmlinks`. When realpath returned null, the host
@@ -731,15 +742,11 @@ absent or the entire `path_diagnostics` object absent).
   host's `realpath` fails. The firmlinks map is loaded eagerly and
   has a built-in fallback mirroring the standard mappings on
   Catalina+.
-- `data_volume_form`: heuristic shortcut that prepends
-  `/System/Volumes/Data` to paths under `/private/`. Computed from the
-  same fallback basis as `firmlink_resolved`, so it is populated for the
-  common case even when realpath is unavailable.
 
 Capture the sandbox_check argument quickly (no interpose needed):
 
 ```sh
-jq '.data.runner_result.steps[].sandbox_check | {filter_value, effective_filter_value, filter_type_id, outcome, path_diagnostics}' run.json
+jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, outcome, path_diagnostics}' run.json
 ```
 
 ### normalized_outcome catalog

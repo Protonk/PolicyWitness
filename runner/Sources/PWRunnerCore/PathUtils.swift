@@ -155,21 +155,6 @@ func firmlinkResolved(_ input: String) -> String? {
     return FirmlinkMap.shared.resolve(input)
 }
 
-/// Heuristic shortcut for the most common firmlinked subtree: paths under
-/// `/private/` get the `/System/Volumes/Data` prefix. Returns nil for paths
-/// that don't start with `/private`. Useful as a sanity check when
-/// firmlinkResolved is unavailable (e.g. on systems where the file is
-/// missing) and for highlighting the most common Q2-class divergence.
-func dataVolumeForm(_ input: String) -> String? {
-    if input == "/private" {
-        return "/System/Volumes/Data/private"
-    }
-    if input.hasPrefix("/private/") {
-        return "/System/Volumes/Data\(input)"
-    }
-    return nil
-}
-
 /// Pure-string substitution for the three standard userspace symlinks that
 /// exist on every shipped macOS: `/etc`, `/tmp`, `/var` -> `/private/etc`,
 /// `/private/tmp`, `/private/var`. Returns the input unchanged when no

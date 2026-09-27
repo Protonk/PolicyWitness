@@ -36,6 +36,8 @@ runAttemptOutcomeMappingTests(tk)
 runLimitsContractTests(tk)
 // Wire contract versions in docs/contract.json against the generated Swift copies.
 runContractVersionTests(tk)
+// Shared path-wire fixtures, strict compact states, legacy omissions and UTF-8 identity.
+runPathDiagnosticsTests(tk)
 // CWorker driver with a real worker: shm setup, sentinel polling, publication.
 runCWorkerTests(tk)
 // Production host driver against the separately built ABI fixture with

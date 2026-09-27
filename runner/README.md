@@ -213,7 +213,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Legacy replies remain decodable. Typed readers that require a signal object must migrate
@@ -236,7 +236,7 @@ Per-step fields under `steps[]`:
   null when no result supports them.
 
 - `sandbox_check` includes `scope` (`post_sandbox`) plus the original
-  `filter_value` and the submitted `effective_filter_value`. It also reports `pid`,
+  `filter_value` (the exact string passed to the check). It also reports `pid`,
   `operation`, `filter_type_id`, and `errno`/`error` when the check
   call fails.
 - `attempt` always includes `exit_code` and `syscall_errno` (explicit

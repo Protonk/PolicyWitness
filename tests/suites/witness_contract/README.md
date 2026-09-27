@@ -173,6 +173,21 @@ by literal, and independently checks every file's bytes before decoding.
 Both require eligible predictions to be `query_first`; allow/success is limited
 agreement, and deny/permission failure is directional consistency with null drift.
 
+`max_targets_reply_survives` measures five 256-step workloads with 511-byte
+attempt targets: denied ASCII reads with log capture, successful reads of
+JSON-escaped paths with observed paths, independent query/attempt targets,
+32 execs with stdout/stderr plus 224 file reads, and an admitted plan whose independent 32,768-byte query
+filters exceed the controller cap. The first four require complete replies
+and exact targets, outcomes and applicable output. The fifth requires explicit
+receiver loss and separately invokes the raw client to verify a complete,
+admitted runner reply with successful attempts. Every variant records its reply
+size. These are workload guarantees; target admission does not bound all
+serialized reply fields. The exec case uses the independently controlled
+`tests/fixtures/exec` helper and requires clang.
+Its bounded exec count leaves room for the four pipe descriptors prepared per
+exec before sandbox application; the 256-step admission limit does not guarantee
+enough process descriptors for 256 simultaneous sets of capture pipes.
+
 The bridge is test equipment selected through the existing executable override;
 its direct protocol/native controls live in `validator_bridge`. The opt-in
 `order_barrier_mutations` case builds unmodified and patched workers and hosts

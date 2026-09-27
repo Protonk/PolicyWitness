@@ -477,11 +477,11 @@ identifies I/O failure. Worker summary precedence does not discard the validator
 subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
-The controller collects full `Command::output()` buffers before retaining a
-1 MiB prefix per stream for runner-client, sbpl-check and log-observer replies.
+The controller collects full `Command::output()` buffers before retaining an
+8 MiB prefix per stream for runner-client, sbpl-check and log-observer replies.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
-before lossy text conversion; `capture_limit_bytes` is 1048576. Locally truncated
+before lossy text conversion; `capture_limit_bytes` is 8388608. Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -531,7 +531,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same 1 MiB retained-prefix cap and original-byte JSON parser. Exact stdout
+the same 8 MiB retained-prefix cap and original-byte JSON parser. Exact stdout
 and stderr received/retained byte counts precede lossy context conversion.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper

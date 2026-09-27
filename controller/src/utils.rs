@@ -4,8 +4,12 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// Bound captured output to keep envelopes predictable when tools are noisy.
-pub const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
+// Bound retained output to keep envelopes predictable when tools are noisy.
+// Retention only: Command::output has already buffered the whole stream, so
+// this caps what the envelope carries, not peak memory. Tested with 256-step
+// long-target workloads; admission does not bound every echoed query field,
+// so other admitted plans can still exceed this retention cap.
+pub const MAX_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
 
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()
@@ -109,13 +113,13 @@ pub fn receiver_fixture(valid: &str, mode: &str) -> std::process::Output {
     let script = r#"import sys
 p = sys.argv[1].encode()
 m = sys.argv[2]
-if m == 'oversized': p = p[:-1] + b',"detail":"' + b'x'*1048576 + b'"}'
+if m == 'oversized': p = p[:-1] + b',"detail":"' + b'x'*8388608 + b'"}'
 if m == 'utf8': p = p[:-1] + b',"detail":"' + bytes([255]) + b'"}'
 if m == 'malformed': p = b'{'
 if m == 'empty': p = b''
 if m == 'missing': p = b'{"data":{"diagnostic":"future diagnostic","code":97319}}'
 sys.stdout.buffer.write(p)
-sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*349526)
+sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*2796203)
 "#;
     let output = std::process::Command::new("/usr/bin/python3")
         .args(["-c", script, valid, mode])

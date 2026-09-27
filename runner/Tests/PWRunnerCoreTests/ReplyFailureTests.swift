@@ -6,7 +6,7 @@ import Foundation
 func replyFixture() throws -> PWRunnerRunResult {
     let json = #"""
     {
-      "schema_version":8,"specimen_id":"reply-\"é\"","run_kind":"unit",
+      "schema_version":9,"specimen_id":"reply-\"é\"","run_kind":"unit",
       "rc":1,"normalized_outcome":"runner_failed","error":"original cleanup fault",
       "pid":42,"bundle_id":"test.bundle","policy_format":"sbpl","policy_sha256":"hash",
       "applied_profile":{"schema_version":1,"status":"unavailable","reason":"constructed","worker_pid":42},
@@ -17,7 +17,7 @@ func replyFixture() throws -> PWRunnerRunResult {
         "sandbox_check":{"rc":0,"native_rc":0,"errno":0,"outcome":"allow","pid":42,
           "operation":"file-read-data","scope":"post_sandbox","filter_kind":"path",
           "filter_value":"/owned","result_source":"validator",
-          "path_diagnostics":{"input":"/owned","realpath_resolved":"/owned",
+          "path_diagnostics":{"input":"/owned","same_as_input":["realpath_resolved"],"firmlink_resolved":null,
             "observer":"runner_host","phase":"after_orchestration"}},
         "attempt":{"rc":0,"outcome":"ok","requested_kind":"file","requested_action":"open_read",
           "requested_path":"/owned","result_source":"worker","native_rc":null},

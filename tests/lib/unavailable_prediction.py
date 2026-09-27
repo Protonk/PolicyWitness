@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from blackbox import validate_run_shape, validate_step
+from blackbox import submitted_filter_value, validate_run_shape, validate_step
 from consumer import recover_evidence
 
 
@@ -26,9 +26,9 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract, *, min
         if isinstance(sb, dict) and sb.get("operation") != operation:
             errors.append(f"{step_id}: expected sandbox_check.operation={operation!r} "
                           f"(got {sb.get('operation')!r})")
-        if isinstance(sb, dict) and sb.get("effective_filter_value") != filter_value:
-            errors.append(f"{step_id}: expected sandbox_check.effective_filter_value={filter_value!r} "
-                          f"(got {sb.get('effective_filter_value')!r})")
+        if isinstance(sb, dict) and submitted_filter_value(sb) != filter_value:
+            errors.append(f"{step_id}: expected sandbox_check.filter_value={filter_value!r} "
+                          f"(got {submitted_filter_value(sb)!r})")
         attempt = step.get("attempt")
         if not isinstance(attempt, dict):
             continue  # validate_step has reported the missing channel.

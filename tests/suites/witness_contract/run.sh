@@ -35,6 +35,7 @@ scripts=(
   "${SUITE_DIR}/query_interval_is_not_a_snapshot.sh"
   "${SUITE_DIR}/external_mutation_between_query_and_attempt.sh"
   "${SUITE_DIR}/max_steps_ordered.sh"
+  "${SUITE_DIR}/max_targets_reply_survives.sh"
   "${SUITE_DIR}/deny_default_ordered.sh"
   "${SUITE_DIR}/unfamiliar_diagnostic_transport.sh"
   "${SUITE_DIR}/worker_progress_and_failure.sh"

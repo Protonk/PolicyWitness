@@ -1166,6 +1166,18 @@
           ]
         },
         {
+          "id": "max_targets_reply_survives",
+          "description": "Four 256-step long-target workloads return intact; an admitted over-cap query plan reports receiver loss",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/max_targets_reply_survives.sh"
+          ],
+          "requires": [
+            "app",
+            "clang"
+          ]
+        },
+        {
           "id": "deny_default_ordered",
           "description": "Allowed and denied reads retain ordered native predictions under a deny-default policy",
           "command": [

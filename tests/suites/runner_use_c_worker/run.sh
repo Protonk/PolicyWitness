@@ -1280,8 +1280,9 @@ assert ab["attempt"].get("errno") == 2, \
 # can see realpath_resolved=null for the absent path as a second
 # tell about WHY the gate fired.
 ab_diag = sb.get("path_diagnostics") or {}
-assert ab_diag.get("realpath_resolved") is None, \
-    "absent path's realpath_resolved should be null; got {0!r}".format(ab_diag.get("realpath_resolved"))
+assert "realpath_resolved" not in (ab_diag.get("same_as_input") or []) and \
+    "realpath_resolved" in ab_diag and ab_diag["realpath_resolved"] is None, \
+    "absent path's realpath_resolved should be an explicit null; got {0!r}".format(ab_diag)
 
 print("ok: resolvable path unchanged; absent path → prediction_unavailable with populated reason")
 PY

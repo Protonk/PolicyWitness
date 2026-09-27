@@ -6,6 +6,50 @@ Scenario expectations belong to callers. Legacy absences remain unreported.
 from copy import deepcopy
 
 
+PATH_FORMS = ('realpath_resolved', 'firmlink_resolved')
+
+
+def validate_path_diagnostics(path, *, require_compact=False):
+    """Validate representation without inferring whether a path resolved."""
+    if not isinstance(path, dict) or not isinstance(path.get('input'), str):
+        return ['path diagnostics require a string input']
+    compact = 'same_as_input' in path
+    if require_compact and not compact:
+        return ['response 9 path diagnostics require same_as_input']
+    same = path.get('same_as_input', [])
+    if not isinstance(same, list) or any(not isinstance(x, str) for x in same) or \
+            len(set(same)) != len(same) or any(x not in PATH_FORMS for x in same):
+        return ['same_as_input must contain unique supported form names']
+    errors = []
+    for name in PATH_FORMS:
+        if compact and (name in same) == (name in path):
+            errors.append(f'{name} must be either listed in same_as_input or present, exclusively')
+        if name in path and path[name] is not None:
+            if not isinstance(path[name], str):
+                errors.append(f'{name} must be a string or null')
+            elif compact and path[name] == path['input']:
+                errors.append(f'{name} with identical UTF-8 bytes must be listed in same_as_input')
+    return errors
+
+
+def path_form(path, name):
+    """How a host path form relates to the diagnostics' input, by the reply's own rules.
+
+    Response 9 lists forms equal to the input by name in `same_as_input` and
+    omits their keys; earlier replies carried every form as a string or null.
+    Returns 'same_as_input', 'resolved', 'unavailable', 'not_reported' or
+    'invalid'. Contradictory evidence is never interpreted as a resolution.
+    """
+    if validate_path_diagnostics(path):
+        return 'invalid'
+    same = path.get('same_as_input')
+    if isinstance(same, list) and name in same:
+        return 'same_as_input'
+    if name not in path:
+        return 'not_reported'
+    return 'unavailable' if path[name] is None else 'resolved'
+
+
 def recover_evidence(envelope):
     data = envelope.get('data') or {}
     runner = data.get('runner_result')
@@ -160,6 +204,9 @@ def validate_evidence_shape(envelope):
         if path is not None and (not isinstance(path, dict) or
                 (path.get('observer'), path.get('phase')) != ('runner_host', 'after_orchestration')):
             errors.append(f'{sid}: path diagnostics lack host/phase provenance')
+        if path is not None:
+            errors.extend(f'{sid}: {error}' for error in validate_path_diagnostics(
+                path, require_compact=runner['schema_version'] >= 9))
     if runner['schema_version'] >= 8 and not failed_reporting:
         errors.extend(validate_ordering(runner))
     return errors
@@ -211,7 +258,7 @@ def validate_current_build_evidence(envelope):
         path = query.get('path_diagnostics')
         host_nonresolution = planned_path and isinstance(path, dict) and \
             (path.get('observer'), path.get('phase')) == ('runner_host', 'after_orchestration') and \
-            path.get('realpath_resolved') is None
+            path_form(path, 'realpath_resolved') == 'unavailable'
         if 'host_path_resolution_changed' in limits and not host_nonresolution:
             errors.append(f'{sid}: unsupported host_path_resolution_changed')
         if host_nonresolution and 'host_path_resolution_changed' not in limits:

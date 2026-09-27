@@ -369,7 +369,6 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
             input: value,
             realpath_resolved: canonical.resolved,
             firmlink_resolved: firmlinkResolved(basis),
-            data_volume_form: dataVolumeForm(basis),
             observer: "runner_host",
             phase: "after_orchestration"
         )

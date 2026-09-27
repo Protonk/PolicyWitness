@@ -22,7 +22,7 @@ and `errno`, and explicitly null step `drift`. Nullable evidence fields must
 remain present, including `sandbox_check.error` and the attempt path fields.
 
 The adapter checks the requested operation and the literal IOKit class or sysctl
-name in `effective_filter_value`, and requires a populated integer
+name in `filter_value`, and requires a populated integer
 `attempt.rc` agreeing with `exit_code`. Each caller selects its attempt check:
 this suite requires the sysctl denial described above; the IOKit suites require
 a supported file-open result. Prediction and attempt errors accumulate, so a

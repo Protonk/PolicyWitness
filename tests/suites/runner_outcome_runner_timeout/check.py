@@ -65,7 +65,7 @@ def check_envelope(envelope, rc, specimen, expected):
         assert prediction['operation'] == 'file-write-data', prediction
         assert prediction['filter_kind'] == 'path' and prediction['filter_type_id'] == 1, prediction
         assert prediction['filter_value'] == target, prediction
-        assert prediction['effective_filter_value'] == target, prediction
+        assert 'effective_filter_value' not in prediction, prediction
         assert type(prediction['rc']) is int, prediction
         assert prediction['rc'] == (0 if expectation['attempt_ok'] else 1), prediction
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction

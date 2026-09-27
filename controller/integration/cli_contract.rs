@@ -298,6 +298,9 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
         diag.get("input").and_then(|v| v.as_str()),
         Some("/etc/hosts")
     );
+    // Both forms differ from the input here, so both are present as strings
+    // and nothing is listed as equal to the input.
+    assert_eq!(diag.get("same_as_input"), Some(&serde_json::json!([])));
     assert_eq!(
         diag.get("realpath_resolved").and_then(|v| v.as_str()),
         Some("/private/etc/hosts"),
@@ -311,11 +314,125 @@ fn sandbox_check_emits_path_diagnostics_for_etc_hosts() {
         Some("/System/Volumes/Data/private/etc/hosts"),
         "firmlink resolution should land on the Data volume"
     );
-    assert_eq!(
-        diag.get("data_volume_form").and_then(|v| v.as_str()),
-        Some("/System/Volumes/Data/private/etc/hosts"),
-        "data_volume_form should apply the /private heuristic"
+    assert!(
+        diag.get("data_volume_form").is_none(),
+        "data_volume_form was retired with response 9"
     );
+}
+
+#[test]
+fn sandbox_check_path_diagnostics_lists_forms_equal_to_input() {
+    // A canonical path resolves to itself: the equal form is named in
+    // same_as_input and its key is omitted, so the path is carried once.
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let dir = std::env::temp_dir().join(format!("pw-same-as-input-{}", std::process::id()));
+    let target = std::path::Path::new("/private/tmp")
+        .join(dir.file_name().unwrap())
+        .join("target");
+    std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+    std::fs::write(&target, b"x").unwrap();
+    let specimen = dir.join("specimen.json");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        &specimen,
+        serde_json::json!({
+            "schema_version": 1, "specimen_id": "same-as-input",
+            "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+            "probe_plan": [{"step_id": "s",
+                "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": target}},
+                "attempt": {"kind": "file", "action": "open_read", "target": target}}]
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = run_pw(
+        &bin,
+        &["run", specimen.to_str().unwrap(), "--no-log-capture"],
+    );
+    assert!(out.status.success(), "specimen failed");
+    let envelope: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
+    let sb = envelope
+        .pointer("/data/runner_result/steps/0/sandbox_check")
+        .cloned()
+        .expect("missing sandbox_check");
+    assert!(
+        sb.get("effective_filter_value").is_none(),
+        "effective_filter_value was retired with response 9"
+    );
+    let diag = sb
+        .get("path_diagnostics")
+        .and_then(|v| v.as_object())
+        .cloned()
+        .expect("missing path_diagnostics");
+    assert_eq!(diag.get("input").and_then(|v| v.as_str()), target.to_str());
+    assert_eq!(
+        diag.get("same_as_input"),
+        Some(&serde_json::json!(["realpath_resolved"]))
+    );
+    assert!(
+        !diag.contains_key("realpath_resolved"),
+        "a form equal to the input must not repeat it: {diag:?}"
+    );
+    assert_eq!(
+        diag.get("firmlink_resolved").and_then(|v| v.as_str()),
+        Some(format!("/System/Volumes/Data{}", target.display()).as_str())
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+    let _ = std::fs::remove_dir_all(target.parent().unwrap());
+}
+
+#[test]
+fn path_diagnostics_preserves_native_unicode_spelling() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let dir = std::path::Path::new("/private/tmp")
+        .join(format!("pw-unicode-path-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let observed = dir.join("cafe\u{301}");
+    let submitted = dir.join("caf\u{e9}");
+    std::fs::write(&observed, b"unicode path witness").unwrap();
+    // Independent native realpath observation on the same file. This requires
+    // the normalization-insensitive filesystem used by the supported macOS host.
+    let native = std::fs::canonicalize(&submitted).unwrap();
+    assert_ne!(native.as_os_str(), submitted.as_os_str());
+    let request = dir.join("specimen.json");
+    std::fs::write(
+        &request,
+        serde_json::json!({
+            "schema_version": 1, "specimen_id": "unicode-path",
+            "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
+            "probe_plan": [{"step_id": "unicode", "sandbox_check": {
+                "operation": "file-read-data", "filter": {"kind": "path", "value": submitted}},
+                "attempt": {"kind": "file", "action": "open_read", "target": submitted}}]
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let output = run_pw(
+        &bin,
+        &["run", request.to_str().unwrap(), "--no-log-capture"],
+    );
+    assert!(output.status.success());
+    let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let step = &envelope["data"]["runner_result"]["steps"][0];
+    assert_eq!(step["attempt"]["outcome"], "ok");
+    let path = &step["sandbox_check"]["path_diagnostics"];
+    assert_eq!(
+        path["input"].as_str().unwrap().as_bytes(),
+        submitted.to_str().unwrap().as_bytes()
+    );
+    assert_eq!(
+        path["realpath_resolved"].as_str().unwrap().as_bytes(),
+        native.to_str().unwrap().as_bytes()
+    );
+    assert_eq!(path["same_as_input"], serde_json::json!([]));
+    std::fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]
@@ -370,39 +487,39 @@ fn sandbox_check_path_diagnostics_survives_strict_sandbox() {
         .cloned()
         .expect("missing path_diagnostics on path-filter check");
 
-    // All four documented keys must be present (string or explicit null) so
-    // consumers can distinguish "computed and the result was null" from
-    // "field was not emitted at all".
-    for key in [
-        "input",
-        "realpath_resolved",
-        "firmlink_resolved",
-        "data_volume_form",
-    ] {
+    // Every form is in exactly one state: named in same_as_input, present as a
+    // string, or present as an explicit null. A missing key that is not listed
+    // would leave a consumer unable to tell "unavailable" from "not emitted".
+    let same: Vec<&str> = diag
+        .get("same_as_input")
+        .and_then(|v| v.as_array())
+        .expect("same_as_input must be a list")
+        .iter()
+        .filter_map(|v| v.as_str())
+        .collect();
+    for key in ["realpath_resolved", "firmlink_resolved"] {
         assert!(
-            diag.contains_key(key),
-            "path_diagnostics missing key {key:?}; got {diag:?}"
+            same.contains(&key) != diag.contains_key(key),
+            "path_diagnostics form {key:?} must be either listed as equal or carried; got {diag:?}"
         );
     }
+    assert!(
+        !diag.contains_key("data_volume_form"),
+        "data_volume_form was retired with response 9"
+    );
 
     assert_eq!(
         diag.get("input").and_then(|v| v.as_str()),
         Some("/etc/hosts")
     );
     // Whether realpath_resolved is populated is sandbox-dependent and not the
-    // load-bearing assertion here — the derived forms must be present.
+    // load-bearing assertion here — the derived form must be present.
     assert_eq!(
         diag.get("firmlink_resolved").and_then(|v| v.as_str()),
         Some("/System/Volumes/Data/private/etc/hosts"),
         "firmlink_resolved must be derivable from the well-known symlink \
          substitution even when realpath(3) is blocked by the sandbox \
          (firmlinks map is warmed pre-sandbox and has a built-in fallback)"
-    );
-    assert_eq!(
-        diag.get("data_volume_form").and_then(|v| v.as_str()),
-        Some("/System/Volumes/Data/private/etc/hosts"),
-        "data_volume_form must be populated for /etc paths via the \
-         well-known symlink fallback"
     );
 }
 

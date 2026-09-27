@@ -163,7 +163,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 1
-    public static let responseSchema: Int = 8
+    public static let responseSchema: Int = 9
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -381,19 +381,31 @@ public struct PWRunnerProbeStep: Codable {
 // Path forms observed by the unsandboxed runner host after orchestration.
 // They are not historical validator/worker resolutions or comparison inputs.
 // Legacy decoding preserves absent provenance as unknown.
+//
+// Wire form: `input` plus the two forms named in `formNames`. A form with the
+// same UTF-8 bytes as `input` is listed in `same_as_input` and its key omitted; a form
+// that differs is a string; a form the host could not derive is an explicit
+// null. Each form is therefore in exactly one of those three states. Replies
+// before response 9 carried every form as a string or null, never listed
+// equality, and also carried a `data_volume_form` heuristic that duplicated
+// `firmlink_resolved`; decoding reads either shape into the same values.
 public struct PWRunnerPathDiagnostics: Codable {
+    public static let formNames = ["realpath_resolved", "firmlink_resolved"]
+
     public var observer: String?
     public var phase: String?
     public var input: String
     public var realpath_resolved: String?
     public var firmlink_resolved: String?
-    public var data_volume_form: String?
+
+    // A legacy omission is unknown, not an observed resolution failure. Keep
+    // the old shape when re-encoding it instead of inventing explicit nulls.
+    fileprivate var legacyAbsentForms: Set<String>? = nil
 
     public init(
         input: String,
         realpath_resolved: String? = nil,
         firmlink_resolved: String? = nil,
-        data_volume_form: String? = nil,
         observer: String? = nil,
         phase: String? = nil
     ) {
@@ -402,40 +414,44 @@ public struct PWRunnerPathDiagnostics: Codable {
         self.input = input
         self.realpath_resolved = realpath_resolved
         self.firmlink_resolved = firmlink_resolved
-        self.data_volume_form = data_volume_form
     }
 
     enum CodingKeys: String, CodingKey {
         case observer, phase
         case input
+        case same_as_input
         case realpath_resolved
         case firmlink_resolved
-        case data_volume_form
     }
 
-    // Always emit all four keys at schema_version >= 2 so a consumer can
-    // distinguish "computed and the result was null" from "not emitted at
-    // all". The default Swift Codable behavior would omit keys whose values
-    // are nil, conflating both states.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(observer, forKey: .observer)
         try container.encodeIfPresent(phase, forKey: .phase)
         try container.encode(input, forKey: .input)
-        if let realpath_resolved {
-            try container.encode(realpath_resolved, forKey: .realpath_resolved)
-        } else {
-            try container.encodeNil(forKey: .realpath_resolved)
+        var sameAsInput: [String] = []
+        let forms: [(String, CodingKeys, String?)] = [
+            ("realpath_resolved", .realpath_resolved, realpath_resolved),
+            ("firmlink_resolved", .firmlink_resolved, firmlink_resolved),
+        ]
+        for (name, key, value) in forms {
+            if let absent = legacyAbsentForms {
+                if let value {
+                    try container.encode(value, forKey: key)
+                } else if !absent.contains(name) {
+                    try container.encodeNil(forKey: key)
+                }
+            } else if let value, value.utf8.elementsEqual(input.utf8) {
+                sameAsInput.append(name)
+            } else if let value {
+                try container.encode(value, forKey: key)
+            } else {
+                // Explicit null: the host computed this form and got nothing.
+                try container.encodeNil(forKey: key)
+            }
         }
-        if let firmlink_resolved {
-            try container.encode(firmlink_resolved, forKey: .firmlink_resolved)
-        } else {
-            try container.encodeNil(forKey: .firmlink_resolved)
-        }
-        if let data_volume_form {
-            try container.encode(data_volume_form, forKey: .data_volume_form)
-        } else {
-            try container.encodeNil(forKey: .data_volume_form)
+        if legacyAbsentForms == nil {
+            try container.encode(sameAsInput, forKey: .same_as_input)
         }
     }
 
@@ -444,9 +460,33 @@ public struct PWRunnerPathDiagnostics: Codable {
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
         phase = try container.decodeIfPresent(String.self, forKey: .phase)
         input = try container.decode(String.self, forKey: .input)
-        realpath_resolved = try container.decodeIfPresent(String.self, forKey: .realpath_resolved)
-        firmlink_resolved = try container.decodeIfPresent(String.self, forKey: .firmlink_resolved)
-        data_volume_form = try container.decodeIfPresent(String.self, forKey: .data_volume_form)
+        let compact = container.contains(.same_as_input)
+        let sameAsInput = compact ? try container.decode([String].self, forKey: .same_as_input) : []
+        if Set(sameAsInput).count != sameAsInput.count || !Set(sameAsInput).isSubset(of: Set(Self.formNames)) {
+            throw DecodingError.dataCorruptedError(forKey: .same_as_input, in: container,
+                debugDescription: "same_as_input must contain unique supported form names")
+        }
+        let submitted = input
+        func form(_ key: CodingKeys) throws -> String? {
+            let listed = sameAsInput.contains(key.rawValue)
+            if compact && listed == container.contains(key) {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container,
+                    debugDescription: "form must be either listed in same_as_input or present, exclusively")
+            }
+            if listed { return submitted }
+            let value = try container.decodeIfPresent(String.self, forKey: key)
+            if compact, let value, value.utf8.elementsEqual(submitted.utf8) {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container,
+                    debugDescription: "a form with identical UTF-8 bytes must be listed in same_as_input")
+            }
+            return value
+        }
+        realpath_resolved = try form(.realpath_resolved)
+        firmlink_resolved = try form(.firmlink_resolved)
+        if !compact {
+            legacyAbsentForms = Set([CodingKeys.realpath_resolved, .firmlink_resolved]
+                .filter { !container.contains($0) }.map { $0.rawValue })
+        }
     }
 }
 
@@ -464,7 +504,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
     public var scope: String
     public var filter_kind: String
     public var filter_value: String?
-    public var effective_filter_value: String?
     public var filter_type_id: Int?
     public var errno: Int?
     public var error: String?
@@ -478,7 +517,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         scope: String,
         filter_kind: String,
         filter_value: String? = nil,
-        effective_filter_value: String? = nil,
         filter_type_id: Int? = nil,
         errno: Int? = nil,
         error: String? = nil,
@@ -491,7 +529,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         self.scope = scope
         self.filter_kind = filter_kind
         self.filter_value = filter_value
-        self.effective_filter_value = effective_filter_value
         self.filter_type_id = filter_type_id
         self.errno = errno
         self.error = error
@@ -507,7 +544,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         case scope
         case filter_kind
         case filter_value
-        case effective_filter_value
         case filter_type_id
         case errno
         case error
@@ -529,11 +565,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
             try container.encode(filter_value, forKey: .filter_value)
         } else {
             try container.encodeNil(forKey: .filter_value)
-        }
-        if let effective_filter_value {
-            try container.encode(effective_filter_value, forKey: .effective_filter_value)
-        } else {
-            try container.encodeNil(forKey: .effective_filter_value)
         }
         if let filter_type_id {
             try container.encode(filter_type_id, forKey: .filter_type_id)
@@ -570,7 +601,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         scope = try container.decode(String.self, forKey: .scope)
         filter_kind = try container.decode(String.self, forKey: .filter_kind)
         filter_value = try container.decodeIfPresent(String.self, forKey: .filter_value)
-        effective_filter_value = try container.decodeIfPresent(String.self, forKey: .effective_filter_value)
         filter_type_id = try container.decodeIfPresent(Int.self, forKey: .filter_type_id)
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
         error = try container.decodeIfPresent(String.self, forKey: .error)
@@ -1222,7 +1252,38 @@ public struct PWRunnerRunResult: Codable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schema_version = try c.decode(Int.self, forKey: .schema_version)
+        specimen_id = try c.decode(String.self, forKey: .specimen_id)
+        run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
+        rc = try c.decode(Int.self, forKey: .rc)
+        normalized_outcome = try c.decode(String.self, forKey: .normalized_outcome)
+        error = try c.decodeIfPresent(String.self, forKey: .error)
+        pid = try c.decode(Int.self, forKey: .pid)
+        bundle_id = try c.decodeIfPresent(String.self, forKey: .bundle_id)
+        policy_format = try c.decode(String.self, forKey: .policy_format)
+        policy_sha256 = try c.decodeIfPresent(String.self, forKey: .policy_sha256)
+        applied_profile = try c.decodeIfPresent(AppliedProfileCapture.self, forKey: .applied_profile)
+        sandboxed_after_apply = try c.decodeIfPresent(Bool.self, forKey: .sandboxed_after_apply)
+        deny_signal_total = try c.decodeIfPresent(PWRunnerSignalResult.self, forKey: .deny_signal_total)
+        steps = try c.decode([PWRunnerStepResult].self, forKey: .steps)
+        runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
+        admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
+        validator_subprocess = try c.decodeIfPresent(PWRunnerValidatorSubprocess.self, forKey: .validator_subprocess)
+        validator_spawn_failure = try c.decodeIfPresent(PWRunnerSpawnFailure.self, forKey: .validator_spawn_failure)
+        test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
+        reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
+        if schema_version >= 9 && steps.contains(where: { $0.sandbox_check.path_diagnostics?.legacyAbsentForms != nil }) {
+            throw DecodingError.dataCorruptedError(forKey: .steps, in: c,
+                debugDescription: "response 9 path diagnostics require same_as_input")
+        }
+    }
     public func encode(to encoder: Encoder) throws {
+        if schema_version >= 9 && steps.contains(where: { $0.sandbox_check.path_diagnostics?.legacyAbsentForms != nil }) {
+            throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                debugDescription: "response 9 path diagnostics require same_as_input"))
+        }
         // Reporting-failure diagnostics and ordered comparisons are required from
         // response 8 onward; a stored older reply re-encodes without them.
         if let failure = reporting_failure {

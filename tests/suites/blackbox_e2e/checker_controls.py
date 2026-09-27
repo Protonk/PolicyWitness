@@ -12,6 +12,7 @@ FIXTURES = ROOT / "tests/fixtures/blackbox_e2e"
 CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from consumer import recover_evidence, validate_evidence_shape, validate_current_build_evidence
+from path_diagnostics_contract import check_cases
 
 
 def consumer_controls(artifacts, baseline, current):
@@ -78,7 +79,7 @@ def consumer_controls(artifacts, baseline, current):
         s = removed['data']['runner_result']['steps'][0]
         s['sandbox_check'].update(operation='file-write-unlink', filter_kind='path', filter_value='/owned/A',
             outcome=prediction, rc=0 if prediction == 'allow' else 1, native_rc=0 if prediction == 'allow' else 1,
-            path_diagnostics={'input':'/owned/A', 'realpath_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
+            path_diagnostics={'input':'/owned/A', 'same_as_input':[], 'realpath_resolved':None, 'firmlink_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
         s['attempt'].update(requested_action='unlink', requested_path='/owned/A', outcome='ok', rc=0)
         s['comparison'].update(prediction=prediction)
         s['comparison']['limitations'] += ['attempt_mutation_order_unestablished', 'host_path_resolution_changed']
@@ -92,7 +93,8 @@ def consumer_controls(artifacts, baseline, current):
             ('different_target', lambda s: s['attempt'].update(requested_path='/owned/B'), 'unsupported attempt_mutation_order_unestablished'),
             ('failed_unlink', lambda s: s['attempt'].update(outcome='unlink_failed', rc=1), 'unsupported attempt_mutation_order_unestablished'),
             ('synthetic_attempt', lambda s: s['attempt'].update(result_source='synthetic'), 'unsupported attempt_mutation_order_unestablished'),
-            ('later_resolves', lambda s: s['sandbox_check']['path_diagnostics'].update(realpath_resolved='/owned/A'), 'unsupported host_path_resolution_changed'),
+            ('later_resolves', lambda s: (s['sandbox_check']['path_diagnostics'].update(same_as_input=['realpath_resolved']), s['sandbox_check']['path_diagnostics'].pop('realpath_resolved')), 'unsupported host_path_resolution_changed'),
+            ('later_resolves_elsewhere', lambda s: s['sandbox_check']['path_diagnostics'].update(realpath_resolved='/private/owned/A'), 'unsupported host_path_resolution_changed'),
             ('excluded', lambda s: s['sandbox_check'].update(outcome='prediction_unavailable'), 'unsupported host_path_resolution_changed'),
             ('dropped_resolution_change', lambda s: s['comparison']['limitations'].remove('host_path_resolution_changed'), 'missing host_path_resolution_changed'),
         ]:
@@ -101,7 +103,8 @@ def consumer_controls(artifacts, baseline, current):
             conformance('removed_' + prediction + '_' + name, bad, diagnostic)
         # Recreation changes only the later-resolution observation; it cannot
         # erase the worker's mutation or certify runtime target identity.
-        s['sandbox_check']['path_diagnostics']['realpath_resolved'] = '/owned/A'
+        s['sandbox_check']['path_diagnostics']['same_as_input'] = ['realpath_resolved']
+        del s['sandbox_check']['path_diagnostics']['realpath_resolved']
         s['comparison']['limitations'].remove('host_path_resolution_changed')
         conformance('recreated_' + prediction, removed)
 
@@ -113,7 +116,7 @@ def consumer_controls(artifacts, baseline, current):
         s.update(step_id=step_id, drift=drift)
         s['sandbox_check'].update(operation=operation, filter_kind='path', filter_value='/owned/A',
             outcome=prediction, rc=0 if prediction == 'allow' else 1, native_rc=0 if prediction == 'allow' else 1,
-            path_diagnostics={'input':'/owned/A', 'realpath_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
+            path_diagnostics={'input':'/owned/A', 'same_as_input':[], 'realpath_resolved':None, 'firmlink_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
         s['attempt'].update(requested_kind='file', requested_action=action, requested_path='/owned/A', outcome='ok', rc=0)
         s['comparison'].update(prediction=prediction, observation='succeeded', conclusion=conclusion,
             limitations=['query_attempt_order_unestablished', 'state_stability_unestablished',
@@ -398,6 +401,7 @@ def ordering_controls(artifacts):
 def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
+    check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
     baseline = json.loads((FIXTURES / "checker/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"

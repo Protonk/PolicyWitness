@@ -8,6 +8,12 @@ tests. Errors accumulate so a broken channel cannot conceal another failure.
 from consumer import validate_evidence_shape
 
 
+def submitted_filter_value(sb):
+    """The value the runner passed to the check. Replies before response 9 also
+    echoed it as `effective_filter_value`; stored ones may carry only that key."""
+    return sb.get("filter_value") if "filter_value" in sb else sb.get("effective_filter_value")
+
+
 def validate_run_shape(run, expected_steps, *, policy_format=None,
                        require_sandboxed_after_apply=False, require_policy_sha256=False):
     """Return (errors, [(actual_step, expected_step), ...]) in received order.
@@ -86,9 +92,11 @@ def validate_step(step, expected):
         fail(f"missing sandbox_check for {step_id}")
         sb = {}
     else:
-        for key in ("scope", "effective_filter_value", "pid", "operation", "filter_type_id", "errno", "error"):
+        for key in ("scope", "pid", "operation", "filter_type_id", "errno", "error"):
             if key not in sb:
                 fail(f"{step_id}: missing sandbox_check.{key}")
+        if "filter_value" not in sb and "effective_filter_value" not in sb:
+            fail(f"{step_id}: missing sandbox_check.filter_value")
         if type(sb.get("pid")) is not int:
             fail(f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
         if not isinstance(sb.get("operation"), str) or not sb.get("operation"):

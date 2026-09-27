@@ -22,6 +22,12 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
 - Exec-child environment and descriptor isolation are covered by
   `runner_exec_inheritance`, with explicit child observations and controlled
   worker launch resources.
+- `PathDiagnosticsTests` pins all nine combinations of compact path states,
+  UTF-8 identity, rejection of conflicting/missing representations, and legacy
+  omission preservation. `tests/fixtures/contract/path_diagnostics.json` supplies
+  shared cases to Swift decoding/encoding, Rust receiver forwarding and Python
+  consumer checks. CLI integration separately checks native Unicode realpath
+  spelling through the signed app.
 
 ## Success criteria
 

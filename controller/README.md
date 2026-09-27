@@ -120,7 +120,7 @@ Exit codes:
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Every step contains `deny_signal: null` because that channel is unobserved. Legacy signal objects remain readable by the Swift
@@ -145,7 +145,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `build`: the build stamp described under the CLI surface
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing, exact received/retained
-  stream byte counts and `capture_limit_bytes` (1 MiB). `stdout_capture_error`
+  stream byte counts and `capture_limit_bytes` (8 MiB). `stdout_capture_error`
   identifies controller prefix loss; `stdout_parse_error` identifies malformed
   untruncated JSON/UTF-8. Full output is collected first; this is not a streaming
   allocation bound. Synthetic non-invocations have null byte counts.

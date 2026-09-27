@@ -11,6 +11,9 @@ deterministic, and checked into the repo so tests are hermetic.
   comparison writes a candidate into the case artifacts; replace the golden
   after review, and bump the number in `docs/contract.json` first when the
   failure says so. See `docs/CONTRACT.md`.
+  `path_diagnostics.json` contains independent compact/legacy path states,
+  Unicode byte distinctions and malformed representations shared by Swift
+  encoding/decoding, Rust forwarding and Python consumer checks.
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
   through the real `tests/run.sh` in isolated fixture repositories.
 - `release/`: independent Apple/tool responses and execution receipts for release

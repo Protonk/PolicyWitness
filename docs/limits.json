@@ -683,7 +683,7 @@
       "id": "controller_output",
       "section": "transport",
       "title": "Controller subprocess output",
-      "value": 1048576,
+      "value": 8388608,
       "unit": "bytes",
       "counting": "Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap.",
       "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
@@ -704,9 +704,14 @@
           "path": "controller/src/runner_client.rs",
           "symbol": "mod tests",
           "kind": "path"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_max_target_reply.py",
+          "symbol": "main",
+          "kind": "path"
         }
       ],
-      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit."
+      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit. The witness_contract max-target case measures four 256-step, 511-byte-target workloads that fit, plus an admitted independent-query workload that exceeds the cap. Attempt-target admission does not bound query strings or total serialized reply size."
     },
     {
       "id": "validator_fault_context",

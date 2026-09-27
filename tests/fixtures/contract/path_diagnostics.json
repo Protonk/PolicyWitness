@@ -1,0 +1,446 @@
+[
+  {
+    "name": "same_as_input_same_as_input",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved",
+        "firmlink_resolved"
+      ]
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "same_as_input",
+      "firmlink_resolved": "same_as_input"
+    },
+    "values": {
+      "realpath_resolved": "/submitted",
+      "firmlink_resolved": "/submitted"
+    }
+  },
+  {
+    "name": "same_as_input_resolved",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": "/host/firmlink_resolved"
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "same_as_input",
+      "firmlink_resolved": "resolved"
+    },
+    "values": {
+      "realpath_resolved": "/submitted",
+      "firmlink_resolved": "/host/firmlink_resolved"
+    }
+  },
+  {
+    "name": "same_as_input_unavailable",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "same_as_input",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/submitted",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "resolved_same_as_input",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "firmlink_resolved"
+      ],
+      "realpath_resolved": "/host/realpath_resolved"
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "same_as_input"
+    },
+    "values": {
+      "realpath_resolved": "/host/realpath_resolved",
+      "firmlink_resolved": "/submitted"
+    }
+  },
+  {
+    "name": "resolved_resolved",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "realpath_resolved": "/host/realpath_resolved",
+      "firmlink_resolved": "/host/firmlink_resolved"
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "resolved"
+    },
+    "values": {
+      "realpath_resolved": "/host/realpath_resolved",
+      "firmlink_resolved": "/host/firmlink_resolved"
+    }
+  },
+  {
+    "name": "resolved_unavailable",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "realpath_resolved": "/host/realpath_resolved",
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/host/realpath_resolved",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "unavailable_same_as_input",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "firmlink_resolved"
+      ],
+      "realpath_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "unavailable",
+      "firmlink_resolved": "same_as_input"
+    },
+    "values": {
+      "realpath_resolved": null,
+      "firmlink_resolved": "/submitted"
+    }
+  },
+  {
+    "name": "unavailable_resolved",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "realpath_resolved": null,
+      "firmlink_resolved": "/host/firmlink_resolved"
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "unavailable",
+      "firmlink_resolved": "resolved"
+    },
+    "values": {
+      "realpath_resolved": null,
+      "firmlink_resolved": "/host/firmlink_resolved"
+    }
+  },
+  {
+    "name": "unavailable_unavailable",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "realpath_resolved": null,
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "unavailable",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": null,
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "nfc_to_nfd",
+    "schema_version": 9,
+    "path": {
+      "input": "/café",
+      "same_as_input": [],
+      "realpath_resolved": "/café",
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/café",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "nfd_to_nfc",
+    "schema_version": 9,
+    "path": {
+      "input": "/café",
+      "same_as_input": [],
+      "realpath_resolved": "/café",
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/café",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "escaped",
+    "schema_version": 9,
+    "path": {
+      "input": "/quote\"\\\n",
+      "same_as_input": [],
+      "realpath_resolved": "/other\"\\\t",
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/other\"\\\t",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "legacy_equal",
+    "schema_version": 8,
+    "path": {
+      "input": "/old",
+      "realpath_resolved": "/old",
+      "firmlink_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "resolved",
+      "firmlink_resolved": "unavailable"
+    },
+    "values": {
+      "realpath_resolved": "/old",
+      "firmlink_resolved": null
+    }
+  },
+  {
+    "name": "legacy_missing",
+    "schema_version": 2,
+    "path": {
+      "input": "/old"
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "not_reported",
+      "firmlink_resolved": "not_reported"
+    },
+    "values": {}
+  },
+  {
+    "name": "legacy_partial",
+    "schema_version": 8,
+    "path": {
+      "input": "/old",
+      "realpath_resolved": null
+    },
+    "valid": true,
+    "states": {
+      "realpath_resolved": "unavailable",
+      "firmlink_resolved": "not_reported"
+    },
+    "values": {
+      "realpath_resolved": null
+    }
+  },
+  {
+    "name": "conflicting_null",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": null,
+      "realpath_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "conflicting_value",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": null,
+      "realpath_resolved": "/different"
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "duplicate_name",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved",
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "unknown_name",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved",
+        "future_form"
+      ],
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "null_list",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": null,
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "string_list",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": "realpath_resolved",
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "nonstring_member",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        1
+      ],
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "bad_input",
+    "schema_version": 9,
+    "path": {
+      "input": null,
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "bad_form_type",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ],
+      "firmlink_resolved": false
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "unlisted_missing",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "missing_second_form",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [
+        "realpath_resolved"
+      ]
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  },
+  {
+    "name": "uncompressed_equal",
+    "schema_version": 9,
+    "path": {
+      "input": "/submitted",
+      "same_as_input": [],
+      "realpath_resolved": "/submitted",
+      "firmlink_resolved": null
+    },
+    "valid": false,
+    "states": null,
+    "values": null
+  }
+]

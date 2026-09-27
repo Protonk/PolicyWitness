@@ -7,14 +7,14 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 8, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 1, response schema 9, worker ABI 7, controller envelope 2. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 1 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 8 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 9 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 2 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
@@ -76,6 +76,7 @@ which of these rules apply; every later number keeps the earlier rows.
 | 6 | Nullable `steps[].sandbox_check.pid` when no worker was spawned, and `runner_subprocess.worker_evidence`. |
 | 7 | Per-step `comparison` with scope and limitations, submitted attempt intent (`requested_kind`, `requested_action`) and host path provenance. Older replies keep their original `drift` and lack these derivations. |
 | 8 | Ordered comparisons (`comparison.order`, `runner_subprocess.ordering`), the `runner_reporting_failed` reply with `reporting_failure`, and optional `validator_spawn_failure`. Absence of the spawn record in older replies is unknown, not a successful spawn. |
+| 9 | `sandbox_check.effective_filter_value` is gone; it always equaled `filter_value`. `path_diagnostics` names the forms equal to `input` in `same_as_input` and omits their keys, carries `realpath_resolved` and `firmlink_resolved` only when they differ (a string) or could not be derived (null), and no longer carries the `data_volume_form` heuristic. Each form is in exactly one of those states; equality means identical UTF-8 bytes. Conflicting or missing states are malformed; legacy omissions remain unreported. |
 
 | Worker ABI | Introduced |
 | --- | --- |

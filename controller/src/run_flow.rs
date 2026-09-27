@@ -680,11 +680,12 @@ mod tests {
         ]);
         assert_eq!(owned, actual);
         // The behavioral oracle is independent of the documented value.
-        for len in [1_048_575, 1_048_576, 1_048_577] {
+        let cap = crate::utils::MAX_CAPTURE_BYTES;
+        for len in [cap - 1, cap, cap + 1] {
             let bytes = vec![b'x'; len];
             let (text, truncated) = crate::utils::truncate_output(&bytes);
-            assert_eq!(text.len(), len.min(1_048_576));
-            assert_eq!(truncated, len > 1_048_576);
+            assert_eq!(text.len(), len.min(cap));
+            assert_eq!(truncated, len > cap);
         }
     }
 

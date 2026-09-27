@@ -1,5 +1,5 @@
 {
-  "response_schema" : 8,
+  "response_schema" : 9,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -116,7 +116,6 @@
       "target_relation" : "string"
     },
     "reply.steps[].sandbox_check" : {
-      "effective_filter_value" : "null",
       "errno" : "number",
       "error" : "null",
       "filter_kind" : "string",
@@ -132,12 +131,11 @@
       "scope" : "string"
     },
     "reply.steps[].sandbox_check.path_diagnostics" : {
-      "data_volume_form" : "null",
       "firmlink_resolved" : "null",
       "input" : "string",
       "observer" : "string",
       "phase" : "string",
-      "realpath_resolved" : "string"
+      "same_as_input" : "array"
     },
     "reply.test_overrides" : {
       "validator_io_timeout_ms" : "number"

@@ -165,7 +165,6 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
     let filterKind = check.filter.kind
     let filterValue = check.filter.value
     let pid = Int(getpid())
-    var effectiveFilterValue = filterValue
 
     let opFilterPair = PredictionUnavailablePair(operation: op, filterKind: filterKind)
     if predictionUnavailableOpFilters.contains(opFilterPair) {
@@ -188,7 +187,6 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
             scope: PWRunnerWire.sandboxCheckScopePost,
             filter_kind: filterKind,
             filter_value: filterValue,
-            effective_filter_value: filterValue,
             filter_type_id: nil,
             errno: nil,
             error: nil,
@@ -196,22 +194,11 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         )
     }
 
-    if filterKind == PWRunnerWire.sandboxFilterPath, let value = filterValue, !value.isEmpty {
-        // effective_filter_value is the worker's canonicalized form of
-        // the filter value; sandbox_check still gets the raw filterValue
-        // below (the worker passes the user-authored string through to
-        // libsandbox so policy matching matches whatever the user
-        // wrote).
-        let canonical = canonicalizePath(value)
-        effectiveFilterValue = canonical.normalized
-        // path_diagnostics was previously computed here. It now lands
-        // on the response via host-side enrichment in
-        // PWRunnerService.runSpecimen — the host is unsandboxed, so
-        // realpath(3) is reliable there even under a worker (deny
-        // default) policy that would block the stat. See
-        // docs/PolicyWitness.md "path_diagnostics" for the producer change
-        // and the more-reliable realpath_resolved semantics.
-    }
+    // sandbox_check receives the raw filterValue: the user-authored string
+    // goes through to libsandbox so policy matching sees what the user wrote.
+    // path_diagnostics lands on the response via host-side enrichment in
+    // PWRunnerService.runSpecimen, where realpath(3) is not subject to the
+    // worker's policy.
 
     let (filterTypeId, argValue): (Int32, String?) = {
         switch filterKind {
@@ -261,7 +248,6 @@ func runSandboxCheck(_ check: PWRunnerSandboxCheck) -> PWRunnerSandboxCheckResul
         scope: PWRunnerWire.sandboxCheckScopePost,
         filter_kind: filterKind,
         filter_value: filterValue,
-        effective_filter_value: effectiveFilterValue,
         filter_type_id: Int(filterTypeId),
         errno: errNoOut,
         error: errMsg,
