@@ -9,13 +9,14 @@ import json
 from pathlib import Path
 import shutil
 import sys
-import tempfile
 import uuid
+import zipfile
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'tests/lib'))
 from artifact import digest
 from release_commands import command, save
+import release_evidence
 
 
 def response(path):
@@ -83,13 +84,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument('archive', type=Path)
     parser.add_argument('keychain_profile')
+    parser.add_argument('--evidence-dir', type=Path, help='existing release attempt from release_evidence.py')
     args = parser.parse_args()
     archive = args.archive.resolve()
     if not archive.is_file() or not args.keychain_profile.strip():
         parser.error('provide an existing ZIP and an explicit keychain profile')
-    out = Path(tempfile.mkdtemp(prefix='notarization-', dir=archive.parent))
+    try:
+        session = args.evidence_dir.resolve() if args.evidence_dir else release_evidence.create(archive)
+        record = release_evidence.check_archive(session, archive)
+        if digest(archive) != record['submitted_sha256']:
+            raise ValueError('archive changed since release evidence was created')
+        out = session / 'notarization'
+        out.mkdir()  # Never overwrite an earlier submission or retry it implicitly.
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
+        parser.error(str(exc))
     print(f'Notarization evidence: {out}', flush=True)
-    return submit(archive, args.keychain_profile, out)
+    try:
+        return submit(archive, args.keychain_profile, out)
+    finally:
+        release_evidence.summarize(session)
 
 
 if __name__ == '__main__':

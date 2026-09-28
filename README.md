@@ -44,6 +44,8 @@ This repo builds a single distributable app bundle:
   - `Contents/Resources/Evidence/*` (generated manifests: hashes/entitlements, `symbols.json`)
 
 Build the app bundle with `./build.sh` (sign with `IDENTITY=...`; see [docs/SIGNING.md](docs/SIGNING.md)).
+The [distribution directory](dist/README.md) describes the current deliverables,
+release evidence, and preserved archives.
 
 ## How this is built
 

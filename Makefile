@@ -33,15 +33,12 @@ notarize:
 		exit 2; \
 	fi
 	@$(MAKE) build
-	@echo "==> [notarize] submit $(DIST_DIR)/PolicyWitness.zip"
-	@/usr/bin/python3 -B notarize.py "$(DIST_DIR)/PolicyWitness.zip" "$(NOTARY_KEYCHAIN_PROFILE)"
-	@echo "==> [notarize] staple $(DIST_DIR)/PolicyWitness.app"
-	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/bin/xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"
-	@echo "==> [notarize] validate $(DIST_DIR)/PolicyWitness.app"
-	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/bin/xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"
-	@/usr/bin/python3 -B tests/lib/release_commands.py "$(DIST_DIR)" 60 /usr/sbin/spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"
-	@echo "==> [notarize] re-zip stapled app"
-	@rm -f "$(DIST_DIR)/PolicyWitness.zip"
-	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"
-	@echo "==> [notarize] accept the final ZIP"
-	@bash tests/accept-release.sh "$(DIST_DIR)/PolicyWitness.zip"
+	@set -eu; \
+	  release_evidence="$$(/usr/bin/python3 -B tests/lib/release_evidence.py "$(DIST_DIR)/PolicyWitness.zip")"; \
+	  /usr/bin/python3 -B notarize.py "$(DIST_DIR)/PolicyWitness.zip" "$(NOTARY_KEYCHAIN_PROFILE)" --evidence-dir "$$release_evidence"; \
+	  /usr/bin/python3 -B tests/lib/release_commands.py --step staple "$$release_evidence" 60 /usr/bin/xcrun stapler staple "$(DIST_DIR)/PolicyWitness.app"; \
+	  /usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation "$$release_evidence" 60 /usr/bin/xcrun stapler validate -v "$(DIST_DIR)/PolicyWitness.app"; \
+	  /usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper "$$release_evidence" 60 /usr/sbin/spctl -a -vv --type execute "$(DIST_DIR)/PolicyWitness.app"; \
+	  rm -f "$(DIST_DIR)/PolicyWitness.zip"; \
+	  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip "$$release_evidence" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"; \
+	  bash tests/accept-release.sh "$(DIST_DIR)/PolicyWitness.zip" --evidence-dir "$$release_evidence"

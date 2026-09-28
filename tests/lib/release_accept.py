@@ -12,6 +12,7 @@ import uuid
 import retention
 
 import artifact
+import release_evidence
 from release_commands import command, save
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -118,6 +119,7 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument('archive', type=Path, help='final stapled release ZIP; resolved from the current directory')
+    parser.add_argument('--evidence-dir', type=Path, help='release attempt to receive an acceptance pointer')
     args = parser.parse_args()
     archive = args.archive.resolve()
     if not archive.is_file():
@@ -128,10 +130,15 @@ def main():
         parser.error('release output must be a real directory separate from the input archive')
     out = base / ('run-' + uuid.uuid4().hex)
     try:
+        if args.evidence_dir:
+            release_evidence.check_archive(args.evidence_dir, archive)
         retention.replacement_allowed(ROOT, out, retention.load_index(ROOT))
         out.mkdir(parents=True)
-        return accept(archive, out)
-    except (ValueError, OSError) as exc:
+        result = accept(archive, out)
+        if args.evidence_dir:
+            release_evidence.record_acceptance(args.evidence_dir, out / 'acceptance.json')
+        return result
+    except (ValueError, OSError, KeyError) as exc:
         parser.error(str(exc))
 
 

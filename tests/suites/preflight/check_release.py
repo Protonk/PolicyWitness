@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import plistlib
 import subprocess
 import sys
 from unittest.mock import patch
@@ -12,6 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import artifact
+import release_evidence
 from release_accept import accept
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from artifacts import bundle, fingerprint
@@ -22,8 +24,89 @@ notarization = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(notarization)
 
 
+def check_evidence(out):
+    work = out / 'evidence_layout'
+    work.mkdir()
+    distribution = work / 'Custom dist with spaces'
+    distribution.mkdir()
+    archive = distribution / 'PolicyWitness.zip'
+    info = dict(CFBundleShortVersionString='0.2.3', CFBundleVersion='268', PWBuildCommit='a' * 40)
+    with zipfile.ZipFile(archive, 'w') as zipped:
+        zipped.writestr('PolicyWitness.app/Contents/Info.plist', plistlib.dumps(info))
+    original = archive.read_bytes()
+    session = release_evidence.create(archive)
+    assert session.parent == distribution / 'evidence'
+    assert set(p.name for p in distribution.iterdir()) == {'PolicyWitness.zip', 'evidence'}
+    assert json.loads((session / 'release.json').read_text())['submitted_sha256'] == artifact.digest(archive)
+    tools = Tools('accepted', work / 'notary-receipts.jsonl')
+    real_submit = notarization.submit
+
+    def submit(archive, profile, out):
+        return real_submit(archive, profile, out, invoke=tools)
+
+    argv = ['notarize.py', str(archive), 'fixture-profile', '--evidence-dir', str(session)]
+    with (work / 'notary.log').open('w') as log, redirect_stdout(log), redirect_stderr(log):
+        with patch.object(sys, 'argv', argv), patch.object(notarization, 'submit', side_effect=submit):
+            assert notarization.main() == 0
+            for mode in ('duplicate', 'changed_archive', 'wrong_archive'):
+                if mode == 'changed_archive':
+                    archive.write_bytes(original + b'changed')
+                elif mode == 'wrong_archive':
+                    archive.write_bytes(original)
+                    other = distribution / 'other.zip'
+                    other.write_bytes(original)
+                    argv[1] = str(other)
+                try:
+                    notarization.main()
+                except SystemExit as exc:
+                    assert exc.code == 2, (mode, exc)
+                else:
+                    raise AssertionError(f'{mode} submission was allowed')
+    assert len(tools.calls) == 2, 'refused submission made an Apple call'
+    assert (session / 'notarization/submitted.zip').read_bytes() == original
+
+    # The actual command CLI must share the attempt, preserve failed receipts,
+    # and refuse duplicate/path-escaping steps before invoking any process.
+    receipt = work / 'executions'
+    command = [sys.executable, '-B', '-c',
+               'import pathlib,sys; p=pathlib.Path(sys.argv[1]); '
+               'p.write_text(p.read_text()+"called\\n" if p.exists() else "called\\n"); '
+               'print("partial receipt"); sys.exit(7)', str(receipt)]
+    wrapper = [sys.executable, '-B', str(ROOT / 'tests/lib/release_commands.py')]
+    def call(step):
+        return subprocess.run([*wrapper, '--step', step, str(session), '10', *command],
+                              capture_output=True, text=True, timeout=20)
+    assert call('gatekeeper').returncode == 1
+    assert receipt.read_text() == 'called\n'
+    before = fingerprint(session / 'gatekeeper')
+    assert call('gatekeeper').returncode == 1
+    assert call('../escape').returncode == 2
+    assert receipt.read_text() == 'called\n', 'refused step executed again'
+    assert fingerprint(session / 'gatekeeper') == before, 'old command receipt changed'
+    assert (session / 'gatekeeper/stdout').read_text() == 'partial receipt\n'
+    assert 'exit 7' in (session / 'README.md').read_text()
+    assert 'Notarization | accepted' in (session / 'README.md').read_text()
+
+    acceptance = work / 'acceptance.json'
+    acceptance.write_text(json.dumps(dict(archive=str(archive), ok=False,
+                                         sha256_after=artifact.digest(archive))))
+    release_evidence.record_acceptance(session, acceptance)
+    pointer = json.loads((session / 'acceptance.json').read_text())
+    assert pointer == dict(path=str(acceptance), ok=False, sha256=artifact.digest(archive))
+    assert 'Archive acceptance | failed' in (session / 'README.md').read_text()
+    acceptance.write_text(json.dumps(dict(archive=str(other), ok=True)))
+    try:
+        release_evidence.record_acceptance(session, acceptance)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('foreign archive acceptance attached to session')
+    assert json.loads((session / 'acceptance.json').read_text()) == pointer
+
+
 def check(out):
-    completed = []
+    check_evidence(out)
+    completed = ['evidence_layout']
     for mode in ('accepted', 'agreement', 'unknown_submit', 'pending', 'rejected',
                  'unknown_status', 'wrong_id', 'ambiguous_response', 'wait_timeout', 'changed_archive'):
         work = out / ('notary_' + mode)

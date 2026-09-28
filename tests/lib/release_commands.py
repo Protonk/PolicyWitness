@@ -7,7 +7,8 @@ import subprocess
 import time
 import os
 import argparse
-import tempfile
+import re
+import release_evidence
 
 
 def save(path, value):
@@ -69,14 +70,23 @@ def command(out, argv, *, timeout, env=None, cwd=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    parser.add_argument('--step', help='unique step name inside an existing release attempt')
     parser.add_argument('evidence_parent', type=Path)
     parser.add_argument('timeout_seconds', type=int)
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.timeout_seconds <= 0 or not args.command or not args.evidence_parent.is_dir():
         parser.error('provide an existing evidence directory, a positive timeout, and a command')
-    out = Path(tempfile.mkdtemp(prefix='release-step-', dir=args.evidence_parent.resolve()))
+    if args.step and not re.fullmatch(r'[a-z][a-z0-9_-]{0,63}', args.step):
+        parser.error('step must be a simple lowercase directory name')
     try:
-        command(out / 'command', args.command, timeout=args.timeout_seconds)
-    except (OSError, RuntimeError, KeyboardInterrupt) as exc:
+        session = (args.evidence_parent.resolve() if args.step
+                   else release_evidence.create(parent=args.evidence_parent))
+        if not (session / 'release.json').is_file():
+            parser.error('step requires an existing release attempt from release_evidence.py')
+        try:
+            command(session / (args.step or 'command'), args.command, timeout=args.timeout_seconds)
+        finally:
+            release_evidence.summarize(session)
+    except (OSError, ValueError, RuntimeError, KeyboardInterrupt) as exc:
         parser.exit(1, f'STOP: {exc}\n')

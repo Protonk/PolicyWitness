@@ -61,7 +61,7 @@ def exercise(out, name):
                 observation['process_groups'] = groups
                 assert groups['P'] == peers['P'] == groups['C'], 'wrapper did not own the command group'
                 assert groups['P'] != os.getpgid(process.pid), 'command shares wrapper process group'
-                captures = list(evidence.glob('release-step-*/command'))
+                captures = list(evidence.glob('evidence/*/command'))
                 assert len(captures) == 1, captures
                 capture = captures[0]
                 assert (capture / 'stdout').read_bytes() == stdout_bytes, 'partial stdout not flushed/captured'
@@ -78,7 +78,7 @@ def exercise(out, name):
 
             invocations = [json.loads(line) for line in receipts.read_text().splitlines()]
             assert invocations == [dict(pid=peers['P'], argv=argv[3:])], 'command was retried or arguments changed'
-            assert list(evidence.glob('release-step-*/command')) == captures, 'extra command captures'
+            assert list(evidence.glob('evidence/*/command')) == captures, 'extra command captures'
             assert (capture / 'stdout').read_bytes() == stdout_bytes, 'raw stdout changed on finalization'
             assert (capture / 'stderr').read_bytes() == stderr_bytes, 'raw stderr changed on finalization'
             record = json.loads((capture / 'command.json').read_text())

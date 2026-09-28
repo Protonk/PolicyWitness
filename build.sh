@@ -248,6 +248,11 @@ fi
 
 echo "==> Assembling app bundle: ${APP_BUNDLE}"
 mkdir -p "${DIST_DIR}"
+for document in README.md AGENTS.md; do
+  if [[ ! "${ROOT_DIR}/dist/${document}" -ef "${DIST_DIR}/${document}" ]]; then
+    cp "${ROOT_DIR}/dist/${document}" "${DIST_DIR}/${document}"
+  fi
+done
 rm -rf "${APP_BUNDLE}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 
@@ -520,12 +525,6 @@ DONE:
 
 Next (see docs/SIGNING.md; make notarize builds again):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
-  # Or submit this existing ZIP once and wait for explicit acceptance:
-  /usr/bin/python3 -B notarize.py "${ZIP_NAME}" entitlement-jail
-  # Only after that command succeeds:
-  xcrun stapler staple "${APP_BUNDLE}"
-  xcrun stapler validate -v "${APP_BUNDLE}"
-  spctl -a -vv --type execute "${APP_BUNDLE}"
-  /usr/bin/ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
-  bash tests/accept-release.sh "${ZIP_NAME}"
+  # For this existing ZIP, follow the individual steps in docs/SIGNING.md.
+  # Keep their receipts in one ${DIST_DIR}/evidence/<attempt>/ directory.
 EOF

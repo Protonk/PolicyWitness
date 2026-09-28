@@ -31,6 +31,9 @@ Offline release controls also exercise the release procedure's decision points.
   skipped cases, wrong runner provenance, mutation, and corrupt ZIPs, while a
   usable local source app remains untouched. Real signature semantics are covered
   separately by `signed_artifact_controls`.
+  Evidence controls exercise custom distribution paths, shared named steps,
+  archive identity, refusal of repeated submissions/commands, preservation of
+  failed receipts, and links to the separate archive-acceptance output.
 - `release_deadline_controls` runs the actual release command CLI against a
   parent/child fixture that flushes partial stdout and stderr, then waits on a
   test-owned socket. Each process configured to ignore SIGINT must survive a

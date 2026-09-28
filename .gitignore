@@ -1,5 +1,7 @@
-# build artifacts
-dist/
+# Distribution documentation is tracked; generated output stays local.
+/dist/*
+!/dist/README.md
+!/dist/AGENTS.md
 
 # da mac
 .DS_Store

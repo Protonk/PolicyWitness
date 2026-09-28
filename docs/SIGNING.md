@@ -8,6 +8,8 @@ compilation and again before copying the guide from `docs/PolicyWitness.md`.
 Stale documentation stops the build; regenerate it with
 `python3 docs/generate_limits.py` and review the changes before building.
 Distribute that staged guide with the release ZIP from the same build.
+The tracked [dist README](../dist/README.md) describes the output directory;
+builds also copy its README and AGENTS.md into a custom `DIST_DIR`.
 
 ## Build
 
@@ -71,7 +73,12 @@ make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Ap
 It is an explicit input, not a built-in default. Other machines need their own
 configured profile and Developer ID identity.
 
-The Makefile keeps these steps in order and stops on any failure:
+The Makefile keeps these steps in order and stops on any failure. After the
+build, it creates one `dist/evidence/<UTC timestamp>-<unique suffix>/` attempt
+(or `evidence/` under a custom `DIST_DIR`). Its `release.json` records the input
+ZIP hash and embedded build stamp; its README indexes the results as steps finish.
+Named `notarization/`, `staple/`, `staple-validation/`, `gatekeeper/`, and `re-zip/`
+directories hold raw receipts. Missing steps have no recorded result.
 
 | Step | Changes | Evidence of success |
 | --- | --- | --- |
@@ -84,7 +91,7 @@ The Makefile keeps these steps in order and stops on any failure:
 | Accept archive | Extracts a disposable copy and runs checks | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 |
 
 `notarize.py` owns only submission and one bounded wait. It preserves the input
-as `dist/notarization-*/submitted.zip` (or beside the ZIP in a custom `DIST_DIR`).
+as `evidence/<attempt>/notarization/submitted.zip` beside the input ZIP.
 That directory also holds `result.json`, the submission ID, the archive hash,
 and raw stdout/stderr plus command/exit/timing records for both calls. A zero
 exit requires recognized acceptance; process success alone is insufficient.
@@ -98,7 +105,7 @@ once with `--timeout 5m`, with a 330-second local backstop. The tool does its ow
 waiting; our code adds no polling loop, retry, resubmission, or resume state
 machine. Stapling and assessment commands also have 60-second local deadlines
 through `tests/lib/release_commands.py`, which prints the exact command and
-retains its outputs under `dist/release-step-*`. These deadlines stop local work;
+retains its outputs under that attempt's named step directory. These deadlines stop local work;
 they do not cancel or classify work at Apple.
 
 ### Individual steps and manual equivalent
@@ -107,14 +114,21 @@ Build once with `make build YOLO=1` (or an explicit `IDENTITY`). Then submit the
 existing ZIP with the bounded helper:
 
 ```sh
-/usr/bin/python3 -B notarize.py dist/PolicyWitness.zip entitlement-jail
+RELEASE_EVIDENCE="$(/usr/bin/python3 -B tests/lib/release_evidence.py dist/PolicyWitness.zip)"
+/usr/bin/python3 -B notarize.py dist/PolicyWitness.zip entitlement-jail --evidence-dir "$RELEASE_EVIDENCE"
 ```
+
+Without `--evidence-dir`, `notarize.py` creates a new attempt and prints its
+notarization directory. An existing attempt must identify the same archive and
+input hash; its notarization directory cannot be reused for a second submission.
 
 To perform its two Apple calls yourself, retain the submitted ZIP and their raw
 responses in a new evidence directory first. A successful upload is not approval:
 
 ```sh
-NOTARY_EVIDENCE="$(mktemp -d "$PWD/dist/notarization-manual-XXXXXX")"
+RELEASE_EVIDENCE="$(/usr/bin/python3 -B tests/lib/release_evidence.py dist/PolicyWitness.zip)"
+NOTARY_EVIDENCE="$RELEASE_EVIDENCE/notarization"
+mkdir "$NOTARY_EVIDENCE"
 cp dist/PolicyWitness.zip "$NOTARY_EVIDENCE/submitted.zip"
 shasum -a 256 "$NOTARY_EVIDENCE/submitted.zip" > "$NOTARY_EVIDENCE/sha256.txt"
 xcrun notarytool submit "$NOTARY_EVIDENCE/submitted.zip" --keychain-profile entitlement-jail --no-wait --output-format json > "$NOTARY_EVIDENCE/submit.stdout" 2> "$NOTARY_EVIDENCE/submit.stderr"
@@ -134,17 +148,20 @@ the direct commands above rely on your supervision if the tool itself stalls.
 After acceptance, with the same app that was submitted:
 
 ```sh
-xcrun stapler staple dist/PolicyWitness.app
-xcrun stapler validate -v dist/PolicyWitness.app
-spctl -a -vv --type execute dist/PolicyWitness.app
+/usr/bin/python3 -B tests/lib/release_commands.py --step staple "$RELEASE_EVIDENCE" 60 xcrun stapler staple dist/PolicyWitness.app
+/usr/bin/python3 -B tests/lib/release_commands.py --step staple-validation "$RELEASE_EVIDENCE" 60 xcrun stapler validate -v dist/PolicyWitness.app
+/usr/bin/python3 -B tests/lib/release_commands.py --step gatekeeper "$RELEASE_EVIDENCE" 60 spctl -a -vv --type execute dist/PolicyWitness.app
 rm -f dist/PolicyWitness.zip
-ditto -c -k --sequesterRsrc --keepParent dist/PolicyWitness.app dist/PolicyWitness.zip
-bash tests/accept-release.sh dist/PolicyWitness.zip
+/usr/bin/python3 -B tests/lib/release_commands.py --step re-zip "$RELEASE_EVIDENCE" 60 ditto -c -k --sequesterRsrc --keepParent dist/PolicyWitness.app dist/PolicyWitness.zip
+bash tests/accept-release.sh dist/PolicyWitness.zip --evidence-dir "$RELEASE_EVIDENCE"
 ```
 
-Run these one at a time and stop if any command fails. For the same local deadline
-and retained output as the Makefile, prefix an Apple command with
-`/usr/bin/python3 -B tests/lib/release_commands.py dist 60`.
+Run these one at a time and stop if any command fails. A named step cannot
+overwrite an earlier receipt. For a standalone command, omit `--step` and pass
+the distribution directory: `/usr/bin/python3 -B tests/lib/release_commands.py
+dist 60 COMMAND ...` creates a separate dated attempt under `dist/evidence/`.
+Manually issued Apple calls retain raw replies but do not synthesize the
+helper's `result.json`; their status must be read from those replies.
 Stapling intentionally changes the app after submission, and re-zipping changes
 the archive hash. The submitted and final ZIPs therefore have separate evidence.
 
@@ -202,5 +219,22 @@ The input ZIP and extracted app must remain unchanged throughout acceptance.
 The temporary extraction is removed; reports, command outputs, and inventories
 remain in a fresh `tests/out/release-acceptance/run-*` directory. That directory
 is printed, and `acceptance.json` binds the result to the final archive hash.
+With `--evidence-dir`, a small `acceptance.json` pointer in the release attempt
+records that report's location, result and final hash; test evidence stays under
+`tests/out/release-acceptance/` and follows the existing retention rules.
 Only distribute the ZIP matching a successful report. This is a local macOS
 assessment, not a claim about every recipient's machine or Gatekeeper cache.
+
+## Preserved release archives
+
+`dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
+`release.json` provenance record, and supporting `evidence/`. The two retained
+examples are `v2.3.0` and `v0.2.3`, spanning the version reset. The guide is
+included when it was distributed. Provenance records distinguish a verified
+published asset from locally retained material; unknown source commits remain
+null. An archive's directory name is not evidence that a corresponding Git tag
+is available. Original command receipts retain their original paths.
+
+These artifacts are ignored and local. Recover published assets from their
+recorded release URL and verify their checksums; a rebuild of a tag does not
+recover the original signed release bytes.
