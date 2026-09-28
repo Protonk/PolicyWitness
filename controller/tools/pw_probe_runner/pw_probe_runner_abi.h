@@ -197,7 +197,11 @@ enum {
     PW_FAILURE_NATIVE = 1, PW_FAILURE_SOURCE_LIMIT = 2, PW_FAILURE_POLICY_READ = 3,
     PW_FAILURE_STEP_LIMIT = 4, PW_FAILURE_PARAM_LIMIT = 5,
     PW_FAILURE_PARAM_ENCODING = 6, PW_FAILURE_UNPREPARED = 7,
-    PW_FAILURE_PROCEED_TIMEOUT = 8
+    PW_FAILURE_PROCEED_TIMEOUT = 8,
+    /* Embedded NUL in the policy text; detail is the byte offset. The host
+     * refuses this at admission, and the reader refuses it again rather than
+     * compile a prefix of the source the reply's policy_sha256 describes. */
+    PW_FAILURE_SOURCE_NUL = 9
 };
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };

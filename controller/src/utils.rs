@@ -4,16 +4,15 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-// Bound retained output to keep envelopes predictable when tools are noisy.
-// Retention only: Command::output has already buffered the whole stream, so
-// this caps what the envelope carries, not peak memory. The runner
-// admission-bounds every echoed request string, and the measured worst-case
-// admitted reply (256 exec steps with fully escaped 511-byte queries and
-// 1,023-byte control-character streams, plus a maximal compiled-profile
-// capture) stays under 10 MiB, so a complete reply keeps a threefold margin.
-// The cap still governs helper and log-observer streams and any tool that
-// bypasses admission.
-pub const MAX_CAPTURE_BYTES: usize = 32 * 1024 * 1024;
+// Per-receiver retention budgets, not peak-memory limits: Command::output
+// has already collected both streams. The runner budget is derived, not tuned:
+// three times the synthesized maximal reply (docs/limits.json
+// runner_reply_maximum, computed by runner_unit from the field-complete reply
+// fixture with every string at its limit), rounded up to a whole 4 MiB.
+// Helper and observer output retain their independent budgets.
+pub const RUNNER_CAPTURE_BYTES: usize = 64 * 1024 * 1024;
+pub const HELPER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
+pub const OBSERVER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
 
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()
@@ -22,14 +21,11 @@ pub fn now_unix_ms() -> u64 {
         .as_millis() as u64
 }
 
-pub fn truncate_output(bytes: &[u8]) -> (String, bool) {
-    if bytes.len() <= MAX_CAPTURE_BYTES {
+pub fn truncate_output(bytes: &[u8], limit: usize) -> (String, bool) {
+    if bytes.len() <= limit {
         return (String::from_utf8_lossy(bytes).to_string(), false);
     }
-    (
-        String::from_utf8_lossy(&bytes[..MAX_CAPTURE_BYTES]).to_string(),
-        true,
-    )
+    (String::from_utf8_lossy(&bytes[..limit]).to_string(), true)
 }
 
 /// Capture metadata is shared by all controller JSON receivers. Counts refer to
@@ -50,7 +46,7 @@ pub struct JsonOutputCapture {
 }
 
 impl JsonOutputCapture {
-    pub fn unavailable(note: String) -> Self {
+    pub fn unavailable(note: String, limit: usize) -> Self {
         Self {
             stdout_parse_error: None,
             stdout_truncated: false,
@@ -59,7 +55,7 @@ impl JsonOutputCapture {
             stdout_bytes_retained: None,
             stderr_bytes_received: None,
             stderr_bytes_retained: None,
-            capture_limit_bytes: MAX_CAPTURE_BYTES,
+            capture_limit_bytes: limit,
             stdout_raw: None,
             stderr: note,
             stderr_truncated: false,
@@ -70,17 +66,18 @@ impl JsonOutputCapture {
 pub fn capture_json_output(
     out: &std::process::Output,
     producer: &str,
+    limit: usize,
 ) -> (JsonOutputCapture, Option<serde_json::Value>) {
-    let (stdout, stdout_truncated) = truncate_output(&out.stdout);
-    let (stderr, stderr_truncated) = truncate_output(&out.stderr);
+    let (stdout, stdout_truncated) = truncate_output(&out.stdout, limit);
+    let (stderr, stderr_truncated) = truncate_output(&out.stderr, limit);
     // Command::output collected all bytes: this is a retention cap, not a
     // streaming memory limit. A truncated prefix is never parsed as evidence.
     let stdout_capture_error = stdout_truncated.then(|| {
         format!(
             "controller truncated {producer} stdout: received {} bytes, retained {} bytes (cap {})",
             out.stdout.len(),
-            out.stdout.len().min(MAX_CAPTURE_BYTES),
-            MAX_CAPTURE_BYTES
+            out.stdout.len().min(limit),
+            limit
         )
     });
     let mut parsed = None;
@@ -98,10 +95,10 @@ pub fn capture_json_output(
             stdout_truncated,
             stdout_capture_error,
             stdout_bytes_received: Some(out.stdout.len()),
-            stdout_bytes_retained: Some(out.stdout.len().min(MAX_CAPTURE_BYTES)),
+            stdout_bytes_retained: Some(out.stdout.len().min(limit)),
             stderr_bytes_received: Some(out.stderr.len()),
-            stderr_bytes_retained: Some(out.stderr.len().min(MAX_CAPTURE_BYTES)),
-            capture_limit_bytes: MAX_CAPTURE_BYTES,
+            stderr_bytes_retained: Some(out.stderr.len().min(limit)),
+            capture_limit_bytes: limit,
             stdout_raw,
             stderr,
             stderr_truncated,
@@ -111,11 +108,11 @@ pub fn capture_json_output(
 }
 
 #[cfg(test)]
-pub fn receiver_fixture(valid: &str, mode: &str) -> std::process::Output {
+pub fn receiver_fixture(valid: &str, mode: &str, limit: usize) -> std::process::Output {
     // Independent child emits original bytes, including invalid bytes that
     // cannot be produced by a normal serde String envelope.
     // argv[3] is the cap: the oversized stdout exceeds it by construction and
-    // the multibyte stderr exceeds it by one byte (three-byte characters).
+    // the multibyte stderr exceeds it by one to three bytes.
     let script = r#"import sys
 p = sys.argv[1].encode()
 m = sys.argv[2]
@@ -128,7 +125,7 @@ if m == 'missing': p = b'{"data":{"diagnostic":"future diagnostic","code":97319}
 sys.stdout.buffer.write(p)
 sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*(cap//3+1))
 "#;
-    let cap = MAX_CAPTURE_BYTES.to_string();
+    let cap = limit.to_string();
     let output = std::process::Command::new("/usr/bin/python3")
         .args(["-c", script, valid, mode, &cap])
         .output()
@@ -144,4 +141,64 @@ pub fn transport_diagnostics() -> serde_json::Value {
     ))
     .unwrap();
     inputs["diagnostics"].clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::process::ExitStatusExt;
+
+    #[test]
+    fn arbitrary_budgets_preserve_counts_at_every_unicode_cut() {
+        for scalar in ["é", "€", "😀"] {
+            let bytes = format!("\"{scalar}\"").into_bytes();
+            let out = std::process::Output {
+                status: std::process::ExitStatus::from_raw(0),
+                stdout: bytes.clone(),
+                stderr: scalar.as_bytes().to_vec(),
+            };
+            for limit in 0..=bytes.len() + 1 {
+                let (capture, parsed) = capture_json_output(&out, "fixture", limit);
+                assert_eq!(capture.capture_limit_bytes, limit);
+                assert_eq!(capture.stdout_bytes_received, Some(bytes.len()));
+                assert_eq!(capture.stdout_bytes_retained, Some(bytes.len().min(limit)));
+                assert_eq!(capture.stderr_bytes_received, Some(scalar.len()));
+                assert_eq!(capture.stderr_bytes_retained, Some(scalar.len().min(limit)));
+                assert_eq!(
+                    capture.stderr,
+                    String::from_utf8_lossy(&scalar.as_bytes()[..scalar.len().min(limit)])
+                );
+                assert!(capture.stdout_parse_error.is_none());
+                assert_eq!(capture.stdout_capture_error.is_some(), limit < bytes.len());
+                if limit < bytes.len() {
+                    assert!(parsed.is_none());
+                    assert_eq!(
+                        capture.stdout_raw.as_deref(),
+                        Some(String::from_utf8_lossy(&bytes[..limit]).as_ref())
+                    );
+                } else {
+                    assert_eq!(parsed, Some(serde_json::json!(scalar)));
+                    assert!(capture.stdout_raw.is_none());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn producer_and_receiver_budgets_are_independent() {
+        for limit in [15, 16, 17] {
+            let raw = receiver_fixture("{}", "valid", limit);
+            assert_eq!(raw.stderr.len(), 3 * (limit / 3 + 1));
+            let (capture, parsed) = capture_json_output(&raw, "fixture", limit);
+            assert_eq!(parsed, Some(serde_json::json!({})));
+            assert_eq!(capture.stderr_bytes_retained, Some(limit));
+            assert!(capture.stderr_truncated);
+            let (complete, _) = capture_json_output(&raw, "fixture", raw.stderr.len());
+            assert!(!complete.stderr_truncated);
+            assert_eq!(
+                JsonOutputCapture::unavailable("unavailable".into(), limit).capture_limit_bytes,
+                limit
+            );
+        }
+    }
 }

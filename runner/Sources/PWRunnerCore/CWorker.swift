@@ -504,8 +504,37 @@ public enum CWorkerRunResult {
     case failure(CWorkerRunError, CWorkerOutput? = nil)
 }
 
-/// Capacity checks are local to the host's ABI writer. The C source reader
-/// retains its independent defensive guard. Units always exclude string NULs.
+/// One string's admission and safe echo policy. Host-only metadata may contain
+/// NUL; native C strings must reject it rather than silently use a prefix.
+struct AdmissionStringRule {
+    let field: String
+    let maximum: Int
+    var requiresCString: Bool = false
+
+    func failure(_ value: String?) -> PWRunnerAdmissionFailure? {
+        guard let value else { return nil }
+        if value.utf8.count > maximum {
+            return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count,
+                maximum: maximum, unit: "utf8_bytes")
+        }
+        if requiresCString {
+            let nuls = value.utf8.filter { $0 == 0 }.count
+            if nuls > 0 {
+                return PWRunnerAdmissionFailure(field: field, actual: nuls, maximum: 0, unit: "nul_bytes")
+            }
+        }
+        return nil
+    }
+
+    func safeEcho(_ value: String?) -> String? {
+        failure(value) == nil ? value : nil
+    }
+}
+
+let stepIdAdmission = AdmissionStringRule(field: "step_id", maximum: PWShmLayout.stepIdMax - 1, requiresCString: true)
+let parameterKeyAdmission = AdmissionStringRule(field: "key", maximum: PWShmLayout.paramKeyMax - 1, requiresCString: true)
+
+/// Checks local to the ABI writer. The C reader retains its defensive guard.
 func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? {
     func check(_ field: String, _ actual: Int, _ maximum: Int, _ unit: String,
                step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
@@ -513,24 +542,33 @@ func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? 
         return PWRunnerAdmissionFailure(field: field, actual: actual, maximum: maximum,
             unit: unit, step_id: step, step_index: position, parameter_key: key, index: index)
     }
-    if let r = check("policy.sbpl_source", input.policy.utf8.count, PWShmLayout.policyBytes - 1, "utf8_bytes") { return r }
+    func string(_ field: String, _ value: String, _ maximum: Int,
+                step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
+        guard var r = AdmissionStringRule(field: field, maximum: maximum, requiresCString: true).failure(value) else { return nil }
+        r.step_id = stepIdAdmission.safeEcho(step)
+        r.step_index = position
+        r.parameter_key = parameterKeyAdmission.safeEcho(key)
+        r.index = index
+        return r
+    }
+    if let r = string("policy.sbpl_source", input.policy, PWShmLayout.policyBytes - 1) { return r }
     if let r = check("probe_plan", input.slots.count, PWShmLayout.maxSteps, "items") { return r }
     if let r = check("policy.params", input.params.count, PWShmLayout.maxParams, "items") { return r }
     for (position, slot) in input.slots.enumerated() {
         // A refused step ID or parameter key is identified by position or by
         // field and byte count, never echoed: the record must stay small.
-        if let r = check("step_id", slot.stepId.utf8.count, PWShmLayout.stepIdMax - 1, "utf8_bytes", position: position) { return r }
-        if let r = check("target", slot.target.utf8.count, PWShmLayout.targetMax - 1, "utf8_bytes", step: slot.stepId, position: position) { return r }
+        if let r = string("step_id", slot.stepId, stepIdAdmission.maximum, position: position) { return r }
+        if let r = string("target", slot.target, PWShmLayout.targetMax - 1, step: slot.stepId, position: position) { return r }
         if slot.attemptKind == .execSpawn {
             if let r = check("args", slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId, position: position) { return r }
             for (i, arg) in slot.args.enumerated() {
-                if let r = check("args", arg.utf8.count, PWShmLayout.argvBytes - 1, "utf8_bytes", step: slot.stepId, position: position, index: i) { return r }
+                if let r = string("args", arg, PWShmLayout.argvBytes - 1, step: slot.stepId, position: position, index: i) { return r }
             }
         }
     }
     for p in input.params {
-        if let r = check("key", p.key.utf8.count, PWShmLayout.paramKeyMax - 1, "utf8_bytes") { return r }
-        if let r = check("value", p.value.utf8.count, PWShmLayout.paramValueMax - 1, "utf8_bytes", key: p.key) { return r }
+        if let r = string("key", p.key, parameterKeyAdmission.maximum) { return r }
+        if let r = string("value", p.value, PWShmLayout.paramValueMax - 1, key: p.key) { return r }
     }
     return nil
 }

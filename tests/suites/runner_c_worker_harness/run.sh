@@ -93,6 +93,10 @@ if r['scenario'] == 'policy_overflow':
     assert r['failure_published'] == 1, r
     assert r['failure'] == {'operation': 2, 'code': 2, 'detail': 262143,
                             'native_kind': 0, 'errno_present': 0}, r
+if r['scenario'] == 'policy_nul':
+    assert r['failure_published'] == 1, r
+    assert r['failure'] == {'operation': 2, 'code': 9, 'detail': 26,
+                            'native_kind': 0, 'errno_present': 0}, r
 print(f"ok: worker refused with exit_code={want}; no ready/applied/done")
 PY
   local arc=$?
@@ -433,6 +437,8 @@ run_refusal_case "step_count_overflow_refused" "step_count_overflow" 6 \
   "header step_count > PW_SHM_MAX_STEPS → exit 6"
 run_refusal_case "policy_overflow_refused"     "policy_overflow"     7 \
   "policy exceeds the 256 KiB cap → exit 7"
+run_refusal_case "policy_nul_refused"          "policy_nul"          9 \
+  "policy carries an embedded NUL → exit 9, no prefix compiled"
 run_refusal_case "param_count_overflow_refused" "param_count_overflow" 8 \
   "header param_count > PW_SHM_MAX_PARAMS → exit 8"
 

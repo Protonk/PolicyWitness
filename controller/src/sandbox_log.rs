@@ -316,6 +316,7 @@ pub fn capture_sandbox_logs(
             blocked_reason: None,
             output: JsonOutputCapture::unavailable(
                 "runner client wall clock moved backwards; deny-log scan not attempted".into(),
+                crate::utils::OBSERVER_CAPTURE_BYTES,
             ),
             observer: None,
             observed_deny: None,
@@ -356,7 +357,11 @@ pub(crate) fn parse_observer_output(
 ) -> SandboxLogCapture {
     let exit_code = out.status.code().unwrap_or(1);
 
-    let (output, parsed) = capture_json_output(out, "sandbox-log-observer");
+    let (output, parsed) = capture_json_output(
+        out,
+        "sandbox-log-observer",
+        crate::utils::OBSERVER_CAPTURE_BYTES,
+    );
 
     let observed_deny = parsed
         .as_ref()
@@ -414,7 +419,11 @@ mod tests {
         let original = serde_json::json!({"data": {"diagnostics": records,
             "observed_deny": false, "deny_events": [], "log_error": "independent collection failure"}});
         for mode in ["valid", "oversized"] {
-            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let output = crate::utils::receiver_fixture(
+                &original.to_string(),
+                mode,
+                crate::utils::OBSERVER_CAPTURE_BYTES,
+            );
             let capture =
                 parse_observer_output(&output, SandboxLogWindow::runner_client_span(0, 1));
             let wire = serde_json::to_value(&capture).unwrap();
@@ -435,7 +444,7 @@ mod tests {
 
     #[test]
     fn observer_receiver_uses_original_bytes_and_reports_local_loss() {
-        use crate::utils::{MAX_CAPTURE_BYTES, receiver_fixture};
+        use crate::utils::{OBSERVER_CAPTURE_BYTES, receiver_fixture};
         for (mode, expected) in [
             ("valid", "captured"),
             ("oversized", "capture_error"),
@@ -448,6 +457,7 @@ mod tests {
                 r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319,
                     "start":"1970-01-01 00:00:00+0000","end":"1970-01-01 00:00:01+0000","last":null}}"#,
                 mode,
+                crate::utils::OBSERVER_CAPTURE_BYTES,
             );
             let capture =
                 parse_observer_output(&original, SandboxLogWindow::runner_client_span(0, 1));
@@ -456,10 +466,10 @@ mod tests {
             assert_eq!(wire["stdout_bytes_received"], original.stdout.len());
             assert_eq!(
                 wire["stdout_bytes_retained"],
-                original.stdout.len().min(MAX_CAPTURE_BYTES)
+                original.stdout.len().min(OBSERVER_CAPTURE_BYTES)
             );
-            assert_eq!(wire["stderr_bytes_received"], MAX_CAPTURE_BYTES + 1);
-            assert_eq!(wire["stderr_bytes_retained"], MAX_CAPTURE_BYTES);
+            assert_eq!(wire["stderr_bytes_received"], original.stderr.len());
+            assert_eq!(wire["stderr_bytes_retained"], OBSERVER_CAPTURE_BYTES);
             assert_eq!(
                 capture.observed_deny,
                 if mode == "valid" { Some(true) } else { None }
@@ -784,7 +794,10 @@ mod tests {
         ] {
             let body =
                 format!(r#"{{"data":{{"observed_deny":true,"deny_events":[{event}],{reply}}}}}"#);
-            let capture = parse_observer_output(&receiver_fixture(&body, "valid"), window.clone());
+            let capture = parse_observer_output(
+                &receiver_fixture(&body, "valid", crate::utils::OBSERVER_CAPTURE_BYTES),
+                window.clone(),
+            );
             assert_eq!(capture.capture_status, expected, "{reply}");
             // Raw evidence survives either way; only its standing changes.
             assert_eq!(capture.deny_events.as_ref().unwrap().len(), 1, "{reply}");

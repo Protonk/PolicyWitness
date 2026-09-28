@@ -213,7 +213,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 2, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Legacy replies remain decodable. Typed readers that require a signal object must migrate
@@ -363,13 +363,15 @@ reply. Policy-write errors retain partial output and host byte/errno evidence in
 pipe descriptors make closed-input failure observable. An undrained open pipe
 still blocks before sentinel polling. Early stderr capture is not implemented.
 
-Host capacity refusals share `admission_failure` on the runner result, with field,
-actual/maximum and UTF-8-byte or item units. The service checks every bound first,
-from the decoded request and before any other validation: the shared-memory
-bounds, the host-only query strings and labels, and the top-level strings
-including the three `_test_overrides` executable paths (1023 bytes each). The
-driver keeps the shared-memory bounds as its own guard. A refusal never echoes
-the refused string. Both child drivers share the finite
+Host admission refusals share `admission_failure` with field, actual/maximum and
+`utf8_bytes`, `items` or `nul_bytes` units. Service and direct orchestration use
+the same check before semantic validation, path planning or process work. It
+covers shared-memory bounds, host query fields, top-level metadata and the
+three test-override paths. Native C-string fields forbid embedded NUL; other
+valid Unicode and control characters survive transport. The driver retains its
+local ABI checks. A shared refusal builder independently sanitizes every echoed
+metadata field, including simultaneous violations. Decoder errors carry bounded
+category/path diagnostics. Both child drivers share the finite
 `ChildProcessState` wait/termination observer; parsed validator records survive
 failed cleanup. Validator replies are byte-framed, strictly decoded, structurally
 validated, then associated by unique requested ID. Allow/deny records require

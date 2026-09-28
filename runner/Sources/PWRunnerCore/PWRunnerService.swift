@@ -153,6 +153,26 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
     }
 }
 
+/// A decoder error can contain an unbounded dictionary key in its coding path.
+/// Report the category and bounded path, never arbitrary decoder prose/input.
+func requestDecodeDiagnostic(_ error: Error) -> String {
+    let kind: String
+    let path: [CodingKey]
+    switch error {
+    case DecodingError.typeMismatch(_, let context): kind = "type_mismatch"; path = context.codingPath
+    case DecodingError.valueNotFound(_, let context): kind = "value_missing"; path = context.codingPath
+    case DecodingError.keyNotFound(let key, let context): kind = "key_missing"; path = context.codingPath + [key]
+    case DecodingError.dataCorrupted(let context): kind = "data_corrupted"; path = context.codingPath
+    default: return "request decode failed"
+    }
+    let rule = AdmissionStringRule(field: "coding_path", maximum: 63)
+    var parts = path.prefix(8).map { key in
+        key.intValue.map { "[\($0)]" } ?? rule.safeEcho(key.stringValue) ?? "<unreported_key>"
+    }
+    if path.count > 8 { parts.append("<remaining_path_omitted>") }
+    return "request decode failed: \(kind) at \(parts.isEmpty ? "<root>" : parts.joined(separator: "."))"
+}
+
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
     private var didRun = false
 
@@ -212,7 +232,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 run_kind: nil,
                 rc: 1,
                 normalized_outcome: NormalizedOutcome.badRequest,
-                error: "request decode failed: \(error)",
+                error: requestDecodeDiagnostic(error),
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: "unknown",
@@ -222,34 +242,10 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        // Capacity refusals come first, from the decoded request alone, so no
-        // later diagnostic (empty operation, duplicate step ID, dlopen or spawn
-        // failure) can echo an unbounded string. The record identifies the
-        // field, step position or parameter without repeating a refused value:
-        // placeholders stand in for a refused specimen ID, run kind or policy
-        // format, and a refused test-seam path is dropped from the mirror.
+        // Admission and refusal projection are shared with direct orchestration.
         if let refused = CWorkerOrchestrator.admissionFailure(for: parsed) {
-            var mirrored = parsed._test_overrides
-            switch refused.field {
-            case "_test_overrides.libsandbox_path": mirrored?.libsandbox_path = nil
-            case "_test_overrides.worker_executable_path": mirrored?.worker_executable_path = nil
-            case "_test_overrides.validator_executable_path": mirrored?.validator_executable_path = nil
-            default: break
-            }
-            let resp = PWRunnerRunResult(
-                specimen_id: refused.field == "specimen_id" ? "<admission_refused>" : parsed.specimen_id,
-                run_kind: refused.field == "run_kind" ? nil : parsed.run_kind,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.badRequest,
-                error: CWorkerRunError.admissionFailed(refused).description,
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: refused.field == "policy.format" ? "unknown" : parsed.policy.format,
-                steps: [],
-                test_overrides: mirrored,
-                admission_failure: refused
-            )
-            replyAndExit(resp)
+            replyAndExit(admissionRefusalReply(parsed: parsed, refused: refused,
+                bundleId: bundleString("CFBundleIdentifier")))
             return
         }
 

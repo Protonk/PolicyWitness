@@ -61,6 +61,19 @@ impl AugmentResolution {
     }
 }
 
+/// Augment names are the one request string the controller itself echoes into
+/// an envelope diagnostic. Bound the echo like the runner's labels (127 bytes)
+/// so a refusal never repeats an unbounded value; the length still identifies it.
+pub(crate) const MAX_REPORTED_AUGMENT_NAME_BYTES: usize = 127;
+
+fn reportable_name(name: &str) -> String {
+    if name.len() <= MAX_REPORTED_AUGMENT_NAME_BYTES {
+        format!("{name:?}")
+    } else {
+        format!("<unreported: {} bytes>", name.len())
+    }
+}
+
 fn is_valid_augment_name(name: &str) -> bool {
     // Restricted to ASCII alphanumeric + underscore so the name maps
     // unambiguously to a filename component and resists traversal via
@@ -131,7 +144,8 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
     for name in &names {
         if !is_valid_augment_name(name) {
             return AugmentResolution::BadRequest(format!(
-                "invalid augment name {name:?} (must be ASCII alphanumeric or underscore)"
+                "invalid augment name {} (must be ASCII alphanumeric or underscore)",
+                reportable_name(name)
             ));
         }
     }
@@ -144,7 +158,10 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         let contents = match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(_) => {
-                return AugmentResolution::BadRequest(format!("unknown augment {name:?}"));
+                return AugmentResolution::BadRequest(format!(
+                    "unknown augment {}",
+                    reportable_name(name)
+                ));
             }
         };
         // Always splice with a leading newline so we never accidentally

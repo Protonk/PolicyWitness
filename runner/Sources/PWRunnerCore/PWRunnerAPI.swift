@@ -162,7 +162,7 @@ public enum SandboxCheckOutcome {
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
-    public static let requestSchema: Int = 2
+    public static let requestSchema: Int = 3
     public static let responseSchema: Int = 10
 }
 // END GENERATED CONTRACT VERSIONS
@@ -1578,7 +1578,8 @@ public struct PWRunnerValidatorSubprocess: Codable {
 }
 
 /// Host admission: no worker publication or child process is implied.
-/// UTF-8 lengths are payload bytes excluding NUL; item counts use `items`.
+/// UTF-8 lengths count payload bytes; item counts use `items`. `nul_bytes`
+/// counts embedded NULs in native C strings, whose maximum is zero.
 public struct PWRunnerAdmissionFailure: Codable {
     public var origin: String = "runner_host"
     public var field: String

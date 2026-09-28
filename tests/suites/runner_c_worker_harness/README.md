@@ -120,6 +120,11 @@ sentinel and no ready byte (except compile_failure, which flips `done`).
 13. **step_count_overflow** — header `step_count > PW_SHM_MAX_STEPS` → exit 6.
 14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7.
 15. **param_count_overflow** — header `param_count > PW_SHM_MAX_PARAMS` → exit 8.
+16. **policy_nul** — the policy bytes carry an embedded NUL after an
+    allow-default prefix and before a deny-default tail → exit 9, failure
+    record operation 2, code 9, detail 26 (the NUL's offset). A C-string reader
+    would otherwise compile only the prefix while `policy_sha256` described the
+    whole source. The host refuses NUL at admission; this is the reader's own guard.
 
 The host-side harness logic (shm setup, full-region pre-touch,
 posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated in

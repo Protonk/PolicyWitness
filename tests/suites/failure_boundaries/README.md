@@ -50,3 +50,12 @@ loss. Swift driver tests cover failed kill/reap, abnormal disposition, delayed
 multibyte pipe writes, malformed/empty replies and competing I/O/decode faults.
 These fixtures establish receiver handling, not claims about normal validator
 behavior or policy causes. See the failure routing inventory for acceptance.
+
+Admission also checks every pair of invalid top-level/override fields through
+the CLI, preserving a write target and requiring a refusal below 4 KiB. Tests
+inspect decoded string values so JSON escaping cannot hide a repeated value.
+Native-string NUL cases place a valid write before the invalid step and require
+no file effects, no children and `nul_bytes` against maximum zero. Direct Swift
+controls vary rejected input sizes and compare service/direct refusal encoding.
+The native validator corpus covers raw and escaped Unicode, malformed UTF-8,
+control bytes, surrogate pairs, raw NUL framing and recovery after each failure.

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -55,36 +56,48 @@ def query_boundary(validator):
 
 
 def control_character_round_trip(validator):
-    # Foundation escapes every control character as \uXXXX and non-BMP text as a
-    # surrogate pair; json.dumps with ensure_ascii does the same. The verdict must
-    # decode as strict JSON with the submitted strings intact and no raw control
-    # byte. Malformed escapes are per-probe parse errors that do not stop later
-    # probes. The unsandboxed test process itself is the checked pid.
-    import tempfile
+    # Independent JSON encoder supplies raw UTF-8 and escaped representations
+    # of the same Unicode scalars. Decode the native output and require identity.
+    scalars = ''.join(map(chr, range(1, 32))) + '\x7f\u0080\u07ff\u0800\ud7ff\ue000\uffff\U00010000\U0010ffff' + 'e\u0301é'
+    probe = {'step_id': scalars, 'operation': 'file-read-data', 'filter_type': 'NONE'}
+    lines = [json.dumps(probe, ensure_ascii=ascii_only, separators=(',', ':')).encode()
+             for ascii_only in (False, True)]
+    expected = [scalars, scalars]
+    invalid = [b'"raw\x01"', b'"raw\t"', b'"raw\r"', b'"raw\x00"',
+               b'"\xff"', b'"\xc0\xaf"', b'"\xe2\x82"', b'"\xed\xa0\x80"', b'"\xf4\x90\x80\x80"',
+               br'"\u0000"', br'"\ud800"', br'"\udc00"', br'"\ud800\u0041"',
+               br'"\ud800\u"', br'"\u12"', br'"\uXY00"', br'"\x01"']
+    base = b'{"step_id":%s,"operation":"file-read-data","filter_type":"NONE"}'
+    for index, literal in enumerate(invalid):
+        lines.extend([base % literal, base % json.dumps(f'after-{index}').encode()])
+        expected.extend([None, f'after-{index}'])
+    # A raw NUL after otherwise valid JSON must not hide trailing bytes or make
+    # an overlong physical line appear short. A following line remains usable.
+    lines.extend([base % b'"prefix"' + b'\x00garbage',
+                  base % b'"prefix"' + b'\x00' + b'x' * 65536, base % b'"last"'])
+    expected.extend([None, None, 'last'])
+    result = subprocess.run([str(validator), '--batch', str(os.getpid())],
+                            input=b'\n'.join(lines) + b'\n', capture_output=True, timeout=10, check=True)
+    raw = result.stdout.split(b'\n')
+    assert raw.pop() == b'', 'missing final frame delimiter'
+    assert len(raw) == len(expected), (len(raw), len(expected))
+    assert all(byte >= 0x20 for line in raw for byte in line), 'raw control in emitted JSON'
+    rows = [json.loads(line) for line in raw]
+    for row, identity in zip(rows, expected):
+        assert row['step_id'] == identity, row
+        assert row['outcome'] == ('parse_error' if identity is None else 'allow'), row
+
+    # Preserve the real native path control as well as the string-parser corpus.
     with tempfile.TemporaryDirectory(prefix='pw-control-', dir='/private/tmp') as temp:
-        path = Path(temp) / 'f\x01\x08\x1f\U0001F600\u2028'
+        path = Path(temp) / 'f\x01\x08\x1f\U0001f600\u2028'
         path.write_bytes(b'x')
-        probes = [
-            {'step_id': 'id\x01\x08\x0c\x1b', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
-            {'step_id': 'nul', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
-            {'step_id': 'lone', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
-            {'step_id': 'after', 'operation': 'file-read-data', 'filter_type': 'NONE'},
-        ]
-        lines = [json.dumps(probe, separators=(',', ':')).encode() for probe in probes]
-        assert b'\\u0001' in lines[0] and b'\\ud83d' in lines[0].lower(), lines[0]
-        lines[1] = lines[1].replace(b'"nul"', b'"n\\u0000l"')
-        lines[2] = lines[2].replace(b'"lone"', b'"l\\ud83dne"')
+        probe = dict(step_id='path', operation='file-read-data', filter_type='PATH', filter_value=str(path))
+        lines = [json.dumps(probe, ensure_ascii=escaped).encode() for escaped in (False, True)]
         result = subprocess.run([str(validator), '--batch', str(os.getpid())],
                                 input=b'\n'.join(lines) + b'\n', capture_output=True, timeout=10, check=True)
-        raw = result.stdout.splitlines()
-        assert len(raw) == 4, raw
-        assert all(b < 0x20 for line in raw for b in []) or all(byte >= 0x20 for line in raw for byte in line), raw
-        rows = [json.loads(line) for line in raw]
-        assert rows[0]['step_id'] == probes[0]['step_id'] and rows[0]['filter_value'] == str(path), rows[0]
-        assert rows[0]['outcome'] == 'allow', rows[0]
-        assert rows[1]['step_id'] is None and rows[1]['outcome'] == 'parse_error', rows[1]
-        assert rows[2]['step_id'] is None and rows[2]['outcome'] == 'parse_error', rows[2]
-        assert rows[3]['step_id'] == 'after' and rows[3]['outcome'] == 'allow', rows[3]
+        rows = [json.loads(line) for line in result.stdout.split(b'\n') if line]
+        assert len(rows) == 2, rows
+        assert all(row['outcome'] == 'allow' and row['filter_value'] == str(path) for row in rows), rows
 
 
 def main():

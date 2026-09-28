@@ -1307,6 +1307,21 @@ int main(int argc, char **argv) {
         }
         return 7;
     }
+    /* The reader's own guard for the one native string that arrives with an
+     * explicit length. sandbox_compile_string takes a C string, so an embedded
+     * NUL would silently compile a prefix of the source while the reply's
+     * policy_sha256 described the whole submission. The host refuses NUL at
+     * admission; this refusal does not depend on it. */
+    {
+        size_t visible = strnlen(policy_buf, (size_t)plen);
+        if (visible != (size_t)plen) {
+            pw_failure(evidence, PW_OP_POLICY_READ, PW_FAILURE_SOURCE_NUL, PW_NATIVE_NONE,
+                       0, 0, 0, UINT32_MAX, (uint32_t)visible);
+            pw_diagnostic(evidence, "policy contains an embedded NUL (byte offset in detail)");
+            fprintf(stderr, "pw-probe-runner: policy contains an embedded NUL at byte %zu\n", visible);
+            return 9;
+        }
+    }
 
     /* Build SandboxParams from the host-populated params region. The
      * worker only allocates a params object when param_count > 0; an

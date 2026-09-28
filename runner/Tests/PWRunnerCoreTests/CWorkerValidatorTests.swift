@@ -215,6 +215,42 @@ func runCWorkerValidatorTests(_ tk: TestKit) {
         // structural ("everything completed") rather than verdict
         // count because the test target is the I/O harness, not the
         // validator's filter coverage.
+        tk.run("Foundation-encoded control characters and Unicode round-trip through the real validator") {
+            // The native corpus in runner_abi_layout uses an independent encoder.
+            // This drives the production serializer (JSONSerialization: escaped
+            // slashes, \b and \f short forms, raw U+2028, surrogate-free UTF-8)
+            // through the shipped validator and back through the production decoder.
+            guard bothBinariesExist() else {
+                throw TestFailure(message: "required equipment: sb_api_validator missing")
+            }
+            let controls = String((1...31).map { Character(UnicodeScalar(UInt8($0))) })
+            // The file name omits U+D7FF, U+FFFF and U+10FFFF, which the file
+            // system representation refuses; the step ID carries the full corpus.
+            let nameSafe = controls + "\u{7f}\u{80}\u{7ff}\u{800}\u{e000}\u{10000}e\u{301}é\u{2028}\\\""
+            let scalars = nameSafe + "\u{d7ff}\u{ffff}\u{10ffff}"
+            let path = NSTemporaryDirectory() + "pw-scalars-\(getpid())-" + nameSafe
+            guard FileManager.default.createFile(atPath: path, contents: Data("x".utf8)) else {
+                throw TestFailure(message: "could not create the control-character file")
+            }
+            defer { try? FileManager.default.removeItem(atPath: path) }
+            let probes = [
+                ValidatorProbe(stepId: "id" + scalars, operation: "file-read-data", filterType: "PATH", filterValue: path),
+                ValidatorProbe(stepId: scalars, operation: "file-read-data", filterType: "NONE"),
+            ]
+            let result = runValidator(ValidatorClientInput(
+                executablePath: validatorPathForCV(), targetPid: getpid(), probes: probes,
+                verdictReadTimeoutMs: 10_000, exitGraceMs: 2_000))
+            guard case .success(let out) = result else {
+                throw TestFailure(message: "validator run failed: \(result)")
+            }
+            try expectEqual(out.verdicts.count, probes.count)
+            for (verdict, probe) in zip(out.verdicts, probes) {
+                try expectEqual(verdict.stepId, Optional(probe.stepId))
+                try expectEqual(verdict.filterValue, probe.filterValue)
+                try expectEqual(verdict.outcome, "allow", probe.stepId)
+            }
+        }
+
         tk.run("256 probes with long paths drive both pipes without deadlock") {
             guard bothBinariesExist() else {
                 throw TestFailure(message: "required equipment: sb_api_validator missing")

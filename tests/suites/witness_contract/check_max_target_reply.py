@@ -5,8 +5,9 @@ limits. These cases exercise long ASCII/escaped paths, observed paths,
 maximal independent query paths, exec output and the worst admitted JSON
 escaping (control characters in every query path and child stream), and
 require 32,768-byte query values and filter/attempt labels to be refused
-before any process work. They measure reply sizes against the receiver cap;
-the largest is the bound the cap's margin is set against.
+before any process work. They measure reply sizes against the synthesized
+maximal reply recorded in docs/limits.json, from which the receiver budget is
+derived; the corpus is evidence that real replies stay inside that bound.
 """
 import errno
 import json
@@ -20,6 +21,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from consumer import validate_current_build_evidence
 from run_capture import RunCapture
+
+def documented_limit(ident):
+    manifest = json.loads((Path(__file__).resolve().parents[3] / 'docs/limits.json').read_text())
+    return next(row['value'] for row in manifest['limits'] if row['id'] == ident)
+
 
 STEPS = 256
 TARGET_BYTES = 511
@@ -63,7 +69,7 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
     assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
     assert runner['schema_version'] >= 9
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
-    assert [step['step_id'] for step in runner['steps']] == IDS
+    assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request['probe_plan']]
     errors = validate_current_build_evidence(dict(data=dict(runner_result=runner)))
     assert not errors, errors
     for step, planned in zip(runner['steps'], request['probe_plan']):
@@ -105,7 +111,7 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
     assert not errors, errors
 
 
-def run_case(pw, out, name, request, *, refused=False, capture_logs=False, **expectations):
+def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measure_margin=False, **expectations):
     run = RunCapture(pw, out / name, request,
                      cli_args=['--timeout-ms', '120000'] + ([] if capture_logs else ['--no-log-capture']))
     with run:
@@ -115,7 +121,11 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, **exp
     client = data['runner_client']
     # Both the admitted workloads and the refusals must survive the receiver cap.
     assert client['stdout_parse_error'] is None, client['stdout_parse_error']
-    assert client['capture_limit_bytes'] == 32 * 1024 * 1024
+    # The budget is derived from the synthesized maximal reply; both come from the
+    # manifest here, and the relation is asserted independently of either number.
+    maximum, budget = documented_limit('runner_reply_maximum'), documented_limit('controller_output')
+    assert client['capture_limit_bytes'] == budget, client['capture_limit_bytes']
+    assert 3 * maximum <= budget < 3 * maximum + 4 * 1024 * 1024 and budget % (4 * 1024 * 1024) == 0, (maximum, budget)
     assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
     assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
     observation = dict(case=name, steps=STEPS, target_bytes=TARGET_BYTES,
@@ -130,6 +140,22 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, **exp
     else:
         assert rc == 0, result
         check_reply(data['runner_result'], request, **expectations)
+        # Every admitted workload stays under the synthesized maximum, which is
+        # the bound the budget is derived from; the measured ratio is evidence.
+        assert client['stdout_bytes_received'] <= maximum, (client['stdout_bytes_received'], maximum)
+        observation.update(synthesized_maximum_bytes=maximum,
+                           fraction_of_maximum=round(client['stdout_bytes_received'] / maximum, 4))
+        if measure_margin:
+            # Live capture must be present in the maximal-metadata workload; the
+            # conservative receipt allowance (base64 with every slash escaped plus
+            # metadata) is recorded beside it. The capture size is the manifest's.
+            capture_bytes = documented_limit('applied_profile')
+            profile_allowance = 2 * 4 * ((capture_bytes + 2) // 3) + 4096
+            capture = data['runner_result']['applied_profile']
+            assert capture['status'] == 'captured' and capture['bytecode_length'] > 0, capture
+            assert client['stdout_bytes_received'] + profile_allowance <= maximum, 'reply plus a maximal receipt exceeds the synthesized maximum'
+            observation.update(profile_allowance_bytes=profile_allowance,
+                               budget_over_reply=round(client['capture_limit_bytes'] / client['stdout_bytes_received'], 3))
         if capture_logs:
             capture = data['sandbox_log_capture']
             assert isinstance(capture, dict), 'known worker PID must request capture'
@@ -174,14 +200,26 @@ def main():
         # complete reply must fit the receiver with the documented margin.
         control = targets_under(root / 'control', control=True)
         assert all(len(query.encode()) == QUERY_FILTER_BYTES for query in control)
-        stream = "head -c 1023 /dev/zero | tr '\\0' '\\1'"
-        shell_args = ['-c', f'{stream}; {stream} >&2']
-        observation = run_case(pw, out, 'control_character_exec',
-                               specimen(['/bin/sh'] * STEPS, control, exec_args=shell_args),
-                               exec_args=shell_args, exec_output=('\x01' * 1023, '\x01' * 1023))
+        # Use a maximal escaped exec target as well as independent query paths.
+        stream_helper = Path(control[0])
+        subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-Wall', '-Wextra', '-Werror',
+                        '-std=c11', str(repo / 'tests/fixtures/exec/streams.c'), '-o', str(stream_helper)], check=True)
+        # Check the equipment independently before relying on PW's observations.
+        for byte in [0, 1, 34, 92, 255]:
+            direct = subprocess.run([str(stream_helper), '1023', '17', str(byte)], capture_output=True, timeout=5, check=True)
+            assert direct.stdout == bytes([byte]) * 1023 and direct.stderr == bytes([byte]) * 17
+        stream_args = ['1023', '1023', '1']
+        request = specimen([str(stream_helper)] * STEPS, control, exec_args=stream_args)
+        request['specimen_id'] = '\x01' * 255
+        request['run_kind'] = '\x01' * 63
+        request['policy'].update(capture_applied_profile=True, capture_nonce=secrets.token_hex(16))
+        for index, step in enumerate(request['probe_plan']):
+            step['step_id'] = '\x01' * 59 + f'{index:04d}'
+        observation = run_case(pw, out, 'control_character_exec', request, measure_margin=True,
+                               exec_args=stream_args, exec_output=('\x01' * 1023, '\x01' * 1023))
         observation['exec_steps'] = EXEC_STEPS
         observations.append(observation)
-        # Echoing 256 x 32 KiB filters would exceed the controller cap.
+        # Oversized fields must remain refused even with a larger receiver budget.
         queries = ['q' * OVER_CAP_QUERY_BYTES] * STEPS
         observations.append(run_case(pw, out, 'refused_over_cap_query', specimen(plain, queries, large_filter=True),
                                      refused=True))

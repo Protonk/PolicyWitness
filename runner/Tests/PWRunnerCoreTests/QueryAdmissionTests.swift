@@ -15,6 +15,16 @@ private func queryStep(_ id: String, operation: String = "file-read-data",
         attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts"))
 }
 
+/// Every string leaf and dictionary key of a decoded JSON value.
+func stringLeaves(_ value: Any) -> [String] {
+    if let text = value as? String { return [text] }
+    if let array = value as? [Any] { return array.flatMap(stringLeaves) }
+    if let object = value as? [String: Any] {
+        return object.flatMap { [$0.key] + stringLeaves($0.value) }
+    }
+    return []
+}
+
 func runQueryAdmissionTests(_ tk: TestKit) {
     tk.group("sandbox_check query admission") {
         tk.run("echoed filter and attempt labels cannot bypass admission") {
@@ -184,6 +194,69 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             PWRunnerRunSpec(specimen_id: specimenId, run_kind: runKind,
                 policy: PWRunnerPolicySpec(format: format, sbpl_source: "(version 1)(allow default)", params: params),
                 probe_plan: plan, _test_overrides: overrides)
+        }
+        tk.run("every pair of oversized metadata fields has a bounded shared refusal") {
+            let fields: [(String, (inout PWRunnerRunSpec, String) -> Void)] = [
+                ("specimen_id", { $0.specimen_id = $1 }),
+                ("run_kind", { $0.run_kind = $1 }),
+                ("policy.format", { $0.policy.format = $1 }),
+                ("_test_overrides.libsandbox_path", { $0._test_overrides!.libsandbox_path = $1 }),
+                ("_test_overrides.worker_executable_path", { $0._test_overrides!.worker_executable_path = $1 }),
+                ("_test_overrides.validator_executable_path", { $0._test_overrides!.validator_executable_path = $1 }),
+            ]
+            for size in [2048, 32_768, 131_072] {
+                let rejected = String(repeating: "é", count: size / 2)
+                for i in fields.indices {
+                    for j in fields.indices where j > i {
+                        var parsed = spec(overrides: PWRunnerTestOverrides(worker_timeout_ms: 73))
+                        fields[i].1(&parsed, rejected); fields[j].1(&parsed, rejected)
+                        let result = CWorkerOrchestrator.run(parsed: parsed, policyHash: "fixture", bundleId: nil,
+                            workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
+                        try expectEqual(result.normalized_outcome, NormalizedOutcome.badRequest)
+                        try expectEqual(result.admission_failure?.field, fields[i].0)
+                        try expectNil(result.runner_subprocess); try expectNil(result.validator_subprocess)
+                        try expectTrue(result.steps.isEmpty)
+                        try expectEqual(result.test_overrides?.worker_timeout_ms, 73)
+                        let data = pwRunnerReplyData(result)
+                        try expectTrue(data.count < 4096, "refusal grew with rejected values: \(data.count)")
+                        // Containment over every decoded string leaf, not equality on
+                        // named fields: prose diagnostics embed values too.
+                        let leaves = stringLeaves(try JSONSerialization.jsonObject(with: data))
+                        try expectFalse(leaves.contains { $0.contains(rejected) }, "\(fields[i].0)+\(fields[j].0)")
+                        let serviceResult = admissionRefusalReply(parsed: parsed,
+                            refused: CWorkerOrchestrator.admissionFailure(for: parsed)!, bundleId: nil, policyHash: "fixture")
+                        try expectEqual(pwRunnerReplyData(serviceResult), data, "service and direct orchestration share refusal projection")
+                    }
+                }
+            }
+        }
+        tk.run("direct orchestration checks worker identity before query diagnostics") {
+            var step = queryStep(String(repeating: "i", count: 32_768), operation: String(repeating: "o", count: 128))
+            let result = CWorkerOrchestrator.run(parsed: spec(plan: [step]), policyHash: "fixture", bundleId: nil,
+                workerExecutablePath: "/nonexistent-worker", validatorExecutablePath: "/nonexistent-validator")
+            try expectEqual(result.admission_failure?.field, "step_id")
+            try expectNil(result.admission_failure?.step_id)
+            try expectEqual(result.admission_failure?.step_index, 0)
+            try expectTrue(pwRunnerReplyData(result).count < 4096)
+            try expectNil(queryAdmissionFailure([step])?.step_id)
+            step.step_id = "nul\0id"
+            let failure = CWorkerOrchestrator.admissionFailure(for: spec(plan: [step]))
+            try expectEqual(failure?.field, "step_id")
+            try expectEqual(failure?.unit, "nul_bytes")
+            try expectEqual(failure?.actual, 1); try expectEqual(failure?.maximum, 0)
+        }
+        tk.run("native strings reject NUL while host-only metadata preserves it") {
+            var step = queryStep("s", operation: "file-read-data\0suffix")
+            try expectEqual(queryAdmissionFailure([step])?.unit, "nul_bytes")
+            step = queryStep("s", value: "/etc/hosts\0suffix")
+            try expectEqual(queryAdmissionFailure([step])?.unit, "nul_bytes")
+            let worker = CWorkerInput(workerExecutablePath: "unused", policy: "(version 1)\0", slots: [])
+            try expectEqual(workerAdmissionFailure(worker)?.unit, "nul_bytes")
+            let parsed = spec(specimenId: "s\0id", runKind: "run\0kind")
+            try expectNil(CWorkerOrchestrator.admissionFailure(for: parsed))
+            let rule = AdmissionStringRule(field: "example", maximum: 63, requiresCString: true)
+            try expectNil(rule.safeEcho("native\0suffix"))
+            try expectEqual(rule.safeEcho("é😀"), "é😀")
         }
         tk.run("top-level strings are bounded once, without step or parameter identity") {
             let cases: [(String, Int, (String) -> PWRunnerRunSpec)] = [

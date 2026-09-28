@@ -8,7 +8,7 @@
       "value": 262143,
       "unit": "UTF-8 bytes",
       "counting": "Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -46,7 +46,7 @@
       "value": 256,
       "unit": "items",
       "counting": "Entries in probe_plan.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -84,7 +84,7 @@
       "value": 1024,
       "unit": "items",
       "counting": "Entries in the policy parameter dictionary.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -122,7 +122,7 @@
       "value": 63,
       "unit": "UTF-8 bytes",
       "counting": "Each step_id, excluding terminating NUL. A refused step ID is identified by step_index only, never echoed.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -160,7 +160,7 @@
       "value": 511,
       "unit": "UTF-8 bytes",
       "counting": "Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0].",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -198,7 +198,7 @@
       "value": 15,
       "unit": "items",
       "counting": "Arguments supplied in attempt.args; the target occupies the additional argv[0] slot.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -236,7 +236,7 @@
       "value": 127,
       "unit": "UTF-8 bytes",
       "counting": "Each supplied argument, excluding terminating NUL; the target has its own larger limit.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -274,7 +274,7 @@
       "value": 127,
       "unit": "UTF-8 bytes",
       "counting": "Each key, excluding terminating NUL. A refused key is identified by field and byte count only, never echoed.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -312,7 +312,7 @@
       "value": 383,
       "unit": "UTF-8 bytes",
       "counting": "Each value, excluding terminating NUL.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -350,7 +350,7 @@
       "value": 127,
       "unit": "UTF-8 bytes",
       "counting": "Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -388,7 +388,7 @@
       "value": 511,
       "unit": "UTF-8 bytes",
       "counting": "Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -426,7 +426,7 @@
       "value": 127,
       "unit": "UTF-8 bytes",
       "counting": "Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -464,7 +464,7 @@
       "value": 255,
       "unit": "UTF-8 bytes",
       "counting": "The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -502,7 +502,7 @@
       "value": 63,
       "unit": "UTF-8 bytes",
       "counting": "Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -539,8 +539,8 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "counting": "Each of _test_overrides.libsandbox_path, worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; a refused path is dropped from the mirror.",
-      "effect": "Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure.",
+      "counting": "Each of _test_overrides.libsandbox_path, worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first.",
+      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -951,7 +951,7 @@
       "title": "Validator query payload",
       "value": 65534,
       "unit": "bytes",
-      "counting": "Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL.",
+      "counting": "Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line.",
       "effect": "An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB.",
       "control": "Fixed; no public override.",
       "sources": [
@@ -981,21 +981,59 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact payload boundary and over-limit drain/recovery controls in the native validator. Through the CLI, an overlong query is refused at admission before any attempt, and the largest admitted probe line is measured against the cap."
+      "behavior": "Exact payload boundary, over-limit drain/recovery, valid raw and escaped Unicode, malformed escapes/UTF-8/raw controls and raw-NUL physical framing. Every rejected probe is followed by a valid recovery probe."
+    },
+    {
+      "id": "runner_reply_maximum",
+      "section": "transport",
+      "title": "Synthesized maximal reply",
+      "value": 21660314,
+      "unit": "bytes",
+      "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present.",
+      "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",
+      "control": "Recomputed by runner_unit; edit the manifest when the synthesizer's number moves.",
+      "sources": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+          "symbol": "maximalReplyEncodedSize"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift",
+          "symbol": "pwRunnerEncodeJSON"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
+          "symbol": "runReplyMaximumTests",
+          "kind": "boundary"
+        },
+        {
+          "path": "tests/suites/witness_contract/check_max_target_reply.py",
+          "symbol": "main",
+          "kind": "path"
+        }
+      ],
+      "behavior": "The synthesizer's value is compared with the manifest; the budget relation is asserted; an injected unclassified key is detected. Live 256-step workloads are measured against this bound."
     },
     {
       "id": "controller_output",
       "section": "transport",
-      "title": "Controller subprocess output",
-      "value": 33554432,
+      "title": "Runner client output",
+      "value": 67108864,
       "unit": "bytes",
-      "counting": "Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Retention only: the whole stream is already buffered.",
+      "counting": "Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap.",
       "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
-      "control": "Fixed; no public override.",
+      "control": "Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override.",
       "sources": [
         {
           "path": "controller/src/utils.rs",
-          "symbol": "MAX_CAPTURE_BYTES"
+          "symbol": "RUNNER_CAPTURE_BYTES"
         }
       ],
       "checks": [
@@ -1015,7 +1053,65 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit. The witness_contract max-target case measures five 256-step workloads at the admitted maxima, including worst-case JSON escaping (control characters in every 511-byte query path and 1,023-byte child stream), and requires oversized query values and labels to be refused before any attempt. Every echoed request string is admission-bounded, and the largest measured admitted reply is what the cap's margin is set against; compiled-profile capture adds at most about 1.4 MiB."
+      "behavior": "Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Five admitted 256-step CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
+    },
+    {
+      "id": "log_observer_output",
+      "section": "transport",
+      "title": "Log observer output",
+      "value": 8388608,
+      "unit": "bytes",
+      "counting": "Per stdout or stderr stream captured from sandbox-log-observer. Byte prefix before lossy text decoding; independent of the runner reply budget.",
+      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "control": "Fixed; no public override. Unlike the runner reply, the observer's output is log volume over the client span, not admitted request strings, so no admission bound derives this budget.",
+      "sources": [
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "OBSERVER_CAPTURE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "documented_controller_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "arbitrary_budgets_preserve_counts_at_every_unicode_cut",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Exceeding it loses the whole deny-log channel for the run (capture_error), while worker attempts, predictions and attribution are unaffected; a per-event truncation that keeps the captured prefix usable would be the next step if that loss is observed in practice."
+    },
+    {
+      "id": "policy_helper_output",
+      "section": "transport",
+      "title": "Policy helper output",
+      "value": 8388608,
+      "unit": "bytes",
+      "counting": "Per stdout or stderr stream captured from sbpl-check. Byte prefix before lossy text decoding; independent of the runner reply budget.",
+      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "HELPER_CAPTURE_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "documented_controller_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/utils.rs",
+          "symbol": "arbitrary_budgets_preserve_counts_at_every_unicode_cut",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget."
     },
     {
       "id": "validator_fault_context",

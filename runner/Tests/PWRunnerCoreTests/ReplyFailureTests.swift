@@ -72,6 +72,42 @@ private func replyObject(_ data: Data) throws -> [String: Any] {
 
 func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
+        tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
+            let key = String(repeating: "é", count: 32_768)
+            let malformed: [String: Any] = ["schema_version": 3, "specimen_id": "decode",
+                "policy": ["format": "sbpl", "sbpl_source": "(version 1)", "params": [key: [1, 2]]],
+                "probe_plan": []]
+            let data = try JSONSerialization.data(withJSONObject: malformed)
+            do {
+                _ = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: data)
+                throw TestFailure(message: "malformed parameter value decoded")
+            } catch let error as DecodingError {
+                let diagnostic = requestDecodeDiagnostic(error)
+                try expectContains(diagnostic, "type_mismatch")
+                try expectContains(diagnostic, "<unreported_key>")
+                try expectTrue(diagnostic.utf8.count < 512)
+                try expectFalse(diagnostic.contains(key))
+            }
+        }
+        tk.run("maximal slash-heavy profile capture fits the documented encoding allowance") {
+            // Constructed bytes test serialization only, not a compiler result.
+            // Base64 of 0xff maximizes '/' escaping in Foundation JSON.
+            let bytes = Data(repeating: 0xff, count: PWShmLayout.captureBytes)
+            let receipt = AppliedProfileCapture(status: "captured", worker_pid: 42,
+                request_nonce: String(repeating: "f", count: 32), profile_type: 0,
+                bytecode_length: bytes.count, bytecode_sha256: String(repeating: "f", count: 64),
+                bytecode_b64: bytes.base64EncodedString(), source_sha256: String(repeating: "f", count: 64),
+                source_length: 262_143, params_sha256: String(repeating: "f", count: 64), parameter_count: 1024)
+            let allowance = 2 * 4 * ((bytes.count + 2) / 3) + 4096
+            let encoded = try pwRunnerEncodeJSON(receipt)
+            try expectTrue(encoded.count <= allowance)
+            let decoded = try pwRunnerDecodeJSON(AppliedProfileCapture.self, from: encoded)
+            try expectEqual(Data(base64Encoded: decoded.bytecode_b64!), bytes)
+            var result = try replyFixture()
+            let baseline = try pwRunnerEncodeJSON(result).count
+            result.applied_profile = receipt
+            try expectTrue(try pwRunnerEncodeJSON(result).count <= baseline + allowance)
+        }
         tk.run("valid and legacy replies use the normal encoder unchanged") {
             for version in [4, 7, PWContract.responseSchema] {
                 var result = try replyFixture(); result.schema_version = version

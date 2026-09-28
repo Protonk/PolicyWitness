@@ -1,6 +1,7 @@
 """Independent CLI assertions for admission, framing, structure and association."""
 import base64
 import copy
+import itertools
 import json
 from pathlib import Path
 import shutil
@@ -26,6 +27,34 @@ def run(pw, out, request):
         envelope = capture.load_json()
     assert envelope['data']['runner_result'] is not None, envelope
     return rc, envelope['data']['runner_result']
+
+
+def echoes(value, needle):
+    """True when any decoded string leaf or key contains the needle. Containment,
+    not equality: prose fields embed values (paths in spawn and dlopen diagnostics,
+    IDs in duplicate-step messages), so a whole-field comparison would miss them."""
+    return any(needle in text for text in string_values(value))
+
+
+def string_values(value):
+    """Decoded string leaves and dictionary keys, independent of JSON escaping."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            yield key
+            yield from string_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from string_values(child)
+
+
+def set_field(request, field, value):
+    obj = request
+    parts = field.split('.')
+    for part in parts[:-1]:
+        obj = obj.setdefault(part, {})
+    obj[parts[-1]] = value
 
 
 def admission(pw, out):
@@ -99,7 +128,7 @@ def admission(pw, out):
                 # Nothing ran and nothing is echoed: a refusal reply carries no steps,
                 # and the record never repeats the refused string itself.
                 assert runner['steps'] == [], runner
-                assert text not in json.dumps(runner), 'refusal echoed the refused string'
+                assert not echoes(runner, text), 'refusal echoed the refused string'
                 if field in ('target', 'args_count', 'args_bytes',
                              'sandbox_check.operation', 'sandbox_check.filter.value',
                              'sandbox_check.filter.kind', 'attempt.kind', 'attempt.action'):
@@ -142,16 +171,58 @@ def admission(pw, out):
     huge = 'x' * 4096
     empty = specimen(); empty['probe_plan'][0]['step_id'] = huge; empty['probe_plan'][0]['sandbox_check']['operation'] = ''
     duplicate = specimen(); duplicate['probe_plan'] = [copy.deepcopy(duplicate['probe_plan'][0]) for _ in range(2)]
-    for name, request, expected in (('empty_operation', empty, ('step_id', 4096, 63)),
-                                    ('duplicate_step_id', duplicate, None)):
-        for step in duplicate['probe_plan']: step['step_id'] = huge
+    for step in duplicate['probe_plan']: step['step_id'] = huge
+    for name, request in [('empty_operation', empty), ('duplicate_step_id', duplicate)]:
         rc, runner = run(pw, out / f'precedence-{name}', request)
         assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
         failure = runner['admission_failure']
         assert (failure['field'], failure['actual'], failure['maximum']) == ('step_id', 4096, 63), failure
         assert failure.get('step_id') is None and failure['step_index'] == 0, failure
-        assert huge not in json.dumps(runner), 'validation diagnostic echoed an unbounded string'
+        assert not echoes(runner, huge), 'validation diagnostic echoed an unbounded string'
         print('PASS admission precedence', name, flush=True)
+
+    # A refusal must sanitize every echoed field, not only the first violation.
+    fields = ['specimen_id', 'run_kind', 'policy.format', '_test_overrides.libsandbox_path',
+              '_test_overrides.worker_executable_path', '_test_overrides.validator_executable_path']
+    with tempfile.TemporaryDirectory(prefix='pw-admission-', dir='/private/tmp') as temp:
+        target = Path(temp) / 'write-target'
+        target.write_bytes(b'before')
+        for i, (first, second) in enumerate(itertools.combinations(fields, 2)):
+            request = specimen()
+            request['probe_plan'][0]['attempt'].update(action='open_write', target=str(target))
+            rejected = 'é' * 32768
+            for field in [first, second]: set_field(request, field, rejected)
+            rc, runner = run(pw, out / f'combined-{i}', request)
+            assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
+            assert runner['admission_failure']['field'] == first, runner
+            assert not echoes(runner, rejected), 'secondary oversized field escaped refusal projection'
+            assert len(json.dumps(runner).encode()) < 4096, 'refusal size grew with rejected inputs'
+            assert runner['steps'] == [] and runner.get('runner_subprocess') is None, runner
+            assert target.read_bytes() == b'before', 'attempt ran despite refusal'
+        # Native C strings must not silently change meaning at the first NUL.
+        native = ['step_id', 'target', 'args', 'key', 'value', 'policy.sbpl_source',
+                  'sandbox_check.operation', 'sandbox_check.filter.value'] + fields[3:]
+        for i, field in enumerate(native):
+            request = specimen()
+            good = request['probe_plan'][0]
+            good['attempt'].update(action='open_write', target=str(target))
+            bad = copy.deepcopy(good); bad['step_id'] = 'bad'
+            request['probe_plan'].append(bad)
+            text = 'prefix\0suffix'
+            if field == 'step_id': bad['step_id'] = text
+            elif field == 'target': bad['attempt']['target'] = text
+            elif field == 'args': bad['attempt'] = dict(kind='exec', action='spawn', target='/usr/bin/true', args=[text])
+            elif field in ('key', 'value'): request['policy']['params'] = {text: 'v'} if field == 'key' else {'K': text}
+            elif field.startswith('sandbox_check.'): set_field(bad, field, text)
+            else: set_field(request, field, text)
+            rc, runner = run(pw, out / f'nul-{i}', request)
+            assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
+            failure = runner['admission_failure']
+            assert (failure['field'], failure['unit'], failure['actual'], failure['maximum']) == (field, 'nul_bytes', 1, 0), failure
+            assert not echoes(runner, text), runner
+            assert runner['steps'] == [] and runner.get('runner_subprocess') is None, runner
+            assert target.read_bytes() == b'before', 'earlier write ran before invalid native argument was rejected'
+        print('PASS combined refusals and native NUL admission', flush=True)
 
 
 def validator(pw, out, mode):

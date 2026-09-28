@@ -114,6 +114,10 @@ typedef struct {
      * right before spawn; 0 keeps the inherited value. Lowering the hard
      * limit is irreversible for this process, which runs one scenario. */
     unsigned rlimit_soft, rlimit_hard;
+
+    /* Pipe "(version 1)(allow default)" NUL "(deny default)" → worker exits 9.
+     * Last so the positional rows above keep their meaning. */
+    int nul_policy;
 } scenario_t;
 
 static void populate_happy(pw_shm_slot_t *slots) {
@@ -262,45 +266,47 @@ static const char SCEN_POLICY_OVERFLOW_PLACEHOLDER[] =
     "(version 1)\n(allow default)\n";
 
 static scenario_t SCENARIOS[] = {
-    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0 },
-    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0 },
-    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0 },
-    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0 },
-    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0 },
-    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0 },
-    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0 },
-    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0 },
-    { "host_lost_while_waiting", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0 },
-    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0 },
+    { "proceed_never_set", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0 },
+    { "proceed_late_after_expiry", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 1, 100 , 0, 0, 0 },
+    { "proceed_before_applied", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 1, 0, 2000 , 0, 0, 0 },
+    { "proceed_delayed_observed_quiescence", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0 },
+    { "proceed_under_bare_deny_default", SCEN_DENY_DEFAULT_POLICY, 1, 1, populate_deny_default, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0 },
+    { "proceed_wait_budget_short", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 1, 100 , 0, 0, 0 },
+    { "proceed_wait_budget_long", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0 },
+    { "proceed_expiry_release_boundary", SCEN_ALLOW_DEFAULT_POLICY, 1, 1, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 100, 0, 1, 100 , 0, 0, 0 },
+    { "host_lost_while_waiting", SCEN_ALLOW_DEFAULT_POLICY, 1, 0, populate_happy, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 1, 0, 0, 0, 100 , 0, 0, 0 },
+    { "max_slots_proceed", SCEN_ALLOW_DEFAULT_POLICY, 256, 1, populate_max_slots, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 500, 0, 0, 2000 , 0, 0, 0 },
 
     /* name, policy, step_count, request_exit, populate_slots, populate_params,
      * corrupt_abi, skip_prepared, override_step_count, override_param_count,
      * oversize_policy, temp_target */
-    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
+    { "happy_default_allow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "exec_inheritance",       SCEN_ALLOW_DEFAULT_POLICY, 3,                1, populate_exec_inheritance, NULL,               0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "bare_deny_default",      SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_deny_default, NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "exit_byte_clean",        SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "max_slots_deny_default", SCEN_DENY_DEFAULT_POLICY,  PW_SHM_MAX_STEPS, 1, populate_max_slots,    NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "sigkill_fallback",       SCEN_ALLOW_DEFAULT_POLICY, 1,                0, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "params_round_trip",      SCEN_PARAMS_ROUND_TRIP_POLICY, 1,            1, populate_params_slot,  populate_params_target, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
 
     /* #1 — file attempt kinds with no other execution coverage. */
-    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0 },
+    { "unlink_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "unlink_deny",            SCEN_DENY_DEFAULT_POLICY,  1,                1, populate_unlink,       NULL,                   0, 0, 0, 0, 0, TEMP_PRECREATE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "create_allow",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_create,       NULL,                   0, 0, 0, 0, 0, TEMP_ENSURE_ABSENT, 0, 0, 0, 0, 0 , 0, 0, 0 },
 
     /* #2 — pre-apply self-defense / refusal branches. */
-    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
-    { "policy_overflow",        SCEN_POLICY_OVERFLOW_PLACEHOLDER, 1,         1, populate_happy,        NULL,                   0, 0, 0, 0, 1, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0 },
+    { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { "policy_overflow",        SCEN_POLICY_OVERFLOW_PLACEHOLDER, 1,         1, populate_happy,        NULL,                   0, 0, 0, 0, 1, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0 },
+    { .name = "policy_nul", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
+      .populate_slots = populate_happy, .nul_policy = 1 },
 
     /* #3 — exec descriptor budget. Capped mixed plans import a real system
      * profile and read files before/after execs. Adjacent ceilings vary the
      * number of descriptors left over after four-descriptor pipe groups. */
-    { "exec_descriptor_limit_raised", SCEN_ALLOW_DEFAULT_POLICY, EXEC_TRUE_SLOTS, 1, populate_exec_true, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0, 64, 0 },
+    { "exec_descriptor_limit_raised", SCEN_ALLOW_DEFAULT_POLICY, EXEC_TRUE_SLOTS, 1, populate_exec_true, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0, 64, 0, 0 },
     { .name = "exec_descriptor_limit_capped", .policy = "(version 1)(allow default)(import \"system.sb\")",
       .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
       .rlimit_soft = 64, .rlimit_hard = 64 },
@@ -588,6 +594,14 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
             memcpy(big, "(version 1)\n", 12);   /* harmless prefix; never compiles */
             policy_data = big;
             policy_len = n;
+        }
+        /* The policy_nul scenario sends an allow-default source, a NUL at byte
+         * 26, then a deny-default tail: a C-string reader would compile only
+         * the prefix. The worker must refuse instead (exit 9, detail 26). */
+        static const char nul_policy[] = "(version 1)(allow default)\0(deny default)";
+        if (scen->nul_policy) {
+            policy_data = nul_policy;
+            policy_len = sizeof(nul_policy) - 1u;
         }
         if (write_all_tolerant(policy_pipe[1], policy_data, policy_len) != 0) {
             fprintf(stderr, "harness: write policy: %s\n", strerror(errno));

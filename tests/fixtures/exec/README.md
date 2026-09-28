@@ -81,3 +81,12 @@ least 200, and stdin data. It requires the corresponding clean-state assertions
 to reject each contaminated state, and rejects missing, stale, and incomplete
 reports. `runner_exec_inheritance` applies the same assertions through the CLI
 and the controlled worker harness.
+
+## Exact byte streams
+
+`streams.c` is a separate minimal producer used by the large-reply control. Its
+three arguments select stdout count, stderr count (each 0..1048576) and a fill
+byte (0..255). It performs no sandbox calls and launches no children. The case
+compiles it at a maximal escaped target path and independently checks raw bytes
+before using it through PolicyWitness. This keeps JSON expansion measurements
+independent of shell behavior or relocating platform binaries.

@@ -7,13 +7,13 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 2, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
-| request schema (`request_schema`) | 2 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
+| request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 10 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 3 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
@@ -79,6 +79,12 @@ which of these rules apply; every later number keeps the earlier rows.
 | 9 | `sandbox_check.effective_filter_value` is gone; it always equaled `filter_value`. `path_diagnostics` names the forms equal to `input` in `same_as_input` and omits their keys, carries `realpath_resolved` and `firmlink_resolved` only when they differ (a string) or could not be derived (null), and no longer carries the `data_volume_form` heuristic. Each form is in exactly one of those states; equality means identical UTF-8 bytes. Conflicting or missing states are malformed; legacy omissions remain unreported. |
 | 10 | `runner_subprocess.disposition`, the worker disposition record, is mandatory beside a worker subprocess, with the host facts `cleanup_trigger`, `grace_end` and `collection_basis`, and `steps[].attempt.lifecycle` with its `attempt:*` lifecycle limitations. Readers validate the record against the raw facts it cites and project from it; a subprocess without the record at this version is invalid, not a legacy omission. Omission in older replies is unreported. See tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record". |
 
+Response 10 replies produced from request 3 onward may carry `unit: "nul_bytes"`
+in `admission_failure`, with `maximum` 0 and `actual` the count of embedded NULs
+in a native C-string field. This widens a documented two-valued field without a
+bump: a reader that switches on `unit` should treat an unfamiliar unit as a
+refusal it cannot quantify, never as an accepted request.
+
 | Worker ABI | Introduced |
 | --- | --- |
 | 1 | Initial shared-memory header, step slots and policy text. |
@@ -98,7 +104,8 @@ which of these rules apply; every later number keeps the earlier rows.
 | Request | Introduced |
 | --- | --- |
 | 1 | Initial shape. |
-| 2 | `probe_plan[].sandbox_check.operation`, `sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action` are admission-bounded like the attempt target, and so are `specimen_id`, `run_kind`, `policy.format` and the `_test_overrides` executable paths (see `query_operation`, `query_filter_value`, `probe_plan_label`, `specimen_id`, `request_label` and `test_override_path` in [LIMITS.md](LIMITS.md)). Capacity is checked immediately after decoding, before any other validation. An oversize string is refused before any process work as `bad_request` with `admission_failure` naming that field and no steps, like every other `bad_request`; the record carries `step_index` for per-step refusals, omits `step_id` or `parameter_key` when that is the refused field, and the reply substitutes `<admission_refused>`, a missing `run_kind` or the format `unknown` for a refused top-level string. Before this number, an admitted plan with long query strings could run to completion and lose its whole reply at the controller's output cap, or lose one prediction at the validator line cap, and a refusal could echo the string it refused. The runner applies the bounds to every request it receives; a specimen inside them behaves as before whichever number it carries. |
+| 2 | `probe_plan[].sandbox_check.operation`, `sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action` are admission-bounded like the attempt target (see `query_operation`, `query_filter_value` and `probe_plan_label` in [LIMITS.md](LIMITS.md)). An oversize string is refused before any process work as `bad_request` with `admission_failure` naming that field and no steps, like every other `bad_request`. Before this number, an admitted plan with long query strings could run to completion and lose its whole reply at the controller's output cap, or lose one prediction at the validator line cap. The runner applies the bound to every request it receives; a specimen inside the bounds behaves as before whichever number it carries. |
+| 3 | Top-level specimen/run/format strings and test-override paths are bounded. Service and direct orchestration share admission and independently sanitize every echoed metadata field in a refusal, including simultaneous violations. Native C-string fields reject embedded NUL before process work; `admission_failure.unit="nul_bytes"` counts these forbidden bytes against maximum zero. Per-step refusals carry `step_index`; refused step IDs and parameter keys are omitted from identity fields. The bounds apply regardless of the submitted request version. |
 
 ## Shape goldens
 

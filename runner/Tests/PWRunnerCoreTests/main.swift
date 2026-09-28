@@ -39,6 +39,9 @@ runLimitsContractTests(tk)
 runQueryAdmissionTests(tk)
 // Wire contract versions in docs/contract.json against the generated Swift copies.
 runContractVersionTests(tk)
+// Synthesized maximal reply (256 steps, every string at its limit) and the
+// runner client budget derived from it; unclassified reply keys fail here.
+runReplyMaximumTests(tk)
 // Shared path-wire fixtures, strict compact states, legacy omissions and UTF-8 identity.
 runPathDiagnosticsTests(tk)
 // CWorker driver with a real worker: shm setup, sentinel polling, publication.

@@ -471,6 +471,10 @@
           "description": "worker refused with exit_code=7; no ready/applied/done"
         },
         {
+          "id": "policy_nul_refused",
+          "description": "worker refused an embedded NUL in the policy with exit_code=9 and published the byte offset; no prefix compiled"
+        },
+        {
           "id": "prepared_unset_refused",
           "description": "worker refused with exit_code=5; no ready/applied/done"
         },
@@ -1427,7 +1431,7 @@
       "cases": [
         {
           "id": "admission",
-          "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports host-owned limits and UTF-8 units before any other validation, without echoing the refused string"
+          "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports capacity or native-NUL limits before semantic validation; simultaneous violations produce bounded refusals"
         },
         {
           "id": "validator_frames",

@@ -31,7 +31,7 @@ impl PolicyCheckCapture {
         PolicyCheckCapture {
             status: "unavailable".to_string(),
             tool_exit_code: 1,
-            output: JsonOutputCapture::unavailable(error),
+            output: JsonOutputCapture::unavailable(error, crate::utils::HELPER_CAPTURE_BYTES),
             envelope: None,
             policy_format: None,
             policy_sha256: None,
@@ -82,7 +82,8 @@ pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, Strin
 
 fn parse_policy_check_output(out: &std::process::Output) -> PolicyCheckCapture {
     let exit_code = out.status.code().unwrap_or(1);
-    let (output, parsed) = capture_json_output(out, "sbpl-check");
+    let (output, parsed) =
+        capture_json_output(out, "sbpl-check", crate::utils::HELPER_CAPTURE_BYTES);
 
     let (compiled, policy_format, policy_sha256, compile_error, normalized_outcome) =
         if let Some(env) = parsed.as_ref() {
@@ -132,7 +133,7 @@ fn parse_policy_check_output(out: &std::process::Output) -> PolicyCheckCapture {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{MAX_CAPTURE_BYTES, receiver_fixture};
+    use crate::utils::{HELPER_CAPTURE_BYTES, receiver_fixture};
     #[test]
     fn unfamiliar_diagnostics_survive_helper_capture() {
         let records = crate::utils::transport_diagnostics();
@@ -140,7 +141,11 @@ mod tests {
             "compiled": false, "compile_error": "independent helper diagnostic"},
             "result": {"normalized_outcome": "compile_error"}});
         for mode in ["valid", "oversized"] {
-            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let output = crate::utils::receiver_fixture(
+                &original.to_string(),
+                mode,
+                crate::utils::HELPER_CAPTURE_BYTES,
+            );
             let capture = parse_policy_check_output(&output);
             let wire = serde_json::to_value(&capture).unwrap();
             if mode == "valid" {
@@ -171,18 +176,22 @@ mod tests {
             ("empty", "tool_error"),
             ("missing", "invalid_reply"),
         ] {
-            let original = receiver_fixture(r#"{"data":{"compiled":true}}"#, mode);
+            let original = receiver_fixture(
+                r#"{"data":{"compiled":true}}"#,
+                mode,
+                crate::utils::HELPER_CAPTURE_BYTES,
+            );
             let capture = parse_policy_check_output(&original);
             let wire = serde_json::to_value(&capture).unwrap();
             assert_eq!(capture.status, expected, "{mode}");
             assert_eq!(wire["stdout_bytes_received"], original.stdout.len());
             assert_eq!(
                 wire["stdout_bytes_retained"],
-                original.stdout.len().min(MAX_CAPTURE_BYTES)
+                original.stdout.len().min(HELPER_CAPTURE_BYTES)
             );
-            assert_eq!(wire["stderr_bytes_received"], MAX_CAPTURE_BYTES + 1);
-            assert_eq!(wire["stderr_bytes_retained"], MAX_CAPTURE_BYTES);
-            assert_eq!(wire["capture_limit_bytes"], MAX_CAPTURE_BYTES);
+            assert_eq!(wire["stderr_bytes_received"], original.stderr.len());
+            assert_eq!(wire["stderr_bytes_retained"], HELPER_CAPTURE_BYTES);
+            assert_eq!(wire["capture_limit_bytes"], HELPER_CAPTURE_BYTES);
             assert_eq!(
                 capture.compiled,
                 if mode == "valid" { Some(true) } else { None }

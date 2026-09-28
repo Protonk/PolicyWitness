@@ -60,15 +60,14 @@ public enum CWorkerOrchestrator {
         validatorExecutablePath: String,
         validatorSpawn: @escaping ValidatorSpawnCall
     ) -> PWRunnerRunResult {
-        let stepCount = parsed.probe_plan.count
+        if let refused = admissionFailure(for: parsed) {
+            return admissionRefusalReply(parsed: parsed, refused: refused, bundleId: bundleId, policyHash: policyHash)
+        }
 
         // ---- translation: request → driver inputs ------------------------
         let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
         let workerParams = workerParamsFromPolicy(parsed.policy)
-        let queryRefusal = queryAdmissionFailure(parsed.probe_plan)
-        // Admission precedes path resolution and query construction as well as
-        // child launch; rejected strings need no derived host observations.
-        let queryPlan = queryRefusal == nil ? planValidatorQueries(parsed.probe_plan) : []
+        let queryPlan = planValidatorQueries(parsed.probe_plan)
         let validatorProbes = queryPlan.compactMap { $0.probe }
 
         // _test_overrides.worker_timeout_ms drives the sentinel
@@ -93,28 +92,19 @@ public enum CWorkerOrchestrator {
 
         // ---- run worker + validator together via postApplied hook --------
         var validatorResult: ValidatorClientResult? = nil
-        let workerResult: CWorkerRunResult
-        if let refused = queryRefusal {
-            // These host-only plan strings never reach shared memory, so the
-            // driver's capacity checks cannot see them. Refuse here with the
-            // same host-owned record and the same downstream classification,
-            // before any shm, pipe or process work.
-            workerResult = .failure(.admissionFailed(refused))
-        } else {
-            workerResult = runCWorker(workerInput) { workerPid in
-                // Skip validator entirely when every step's (op, filter) is
-                // in the prediction_unavailable set: no probes to send means
-                // no useful validator work. Avoids spawning a child only to
-                // immediately reap it.
-                if validatorProbes.isEmpty { return }
-                let vInput = ValidatorClientInput(
-                    executablePath: validatorExecutablePath,
-                    targetPid: workerPid,
-                    probes: validatorProbes,
-                    verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
-                )
-                validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
-            }
+        let workerResult = runCWorker(workerInput) { workerPid in
+            // Skip validator entirely when every step's (op, filter) is
+            // in the prediction_unavailable set: no probes to send means
+            // no useful validator work. Avoids spawning a child only to
+            // immediately reap it.
+            if validatorProbes.isEmpty { return }
+            let vInput = ValidatorClientInput(
+                executablePath: validatorExecutablePath,
+                targetPid: workerPid,
+                probes: validatorProbes,
+                verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
+            )
+            validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
         }
 
         // ---- assemble + classify -----------------------------------------
@@ -157,8 +147,6 @@ public enum CWorkerOrchestrator {
         let validatorSpawnFailure: PWRunnerSpawnFailure?
         if case .failure(.spawnFailed(let failure), _) = validatorResult { validatorSpawnFailure = failure }
         else { validatorSpawnFailure = nil }
-
-        _ = stepCount  // referenced for future partial-step logic; silence unused warning
 
         return PWRunnerRunResult(
             specimen_id: parsed.specimen_id,
@@ -221,14 +209,22 @@ public enum CWorkerOrchestrator {
     // ---- validation -----------------------------------------------------
 
     /// Every capacity refusal, decided from the decoded request alone. The
-    /// service runs this before any other validation so that no later
+    /// service runs this before semantic validation so that no later
     /// diagnostic can echo an unbounded string: top-level strings first, then
     /// the worker's shared-memory bounds in plan order, then the host-only
-    /// query strings and labels. The driver keeps its own check as the guard
-    /// local to the ABI writer, and `run` keeps the query gate for callers
-    /// that bypass the service.
+    /// query strings and labels. Both service and direct orchestration use this
+    /// gate; the driver also retains its checks local to the ABI writer.
     public static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
         if let refused = requestAdmissionFailure(parsed) { return refused }
+        // Count checks precede translating an unbounded plan or sorting params.
+        if parsed.probe_plan.count > PWShmLayout.maxSteps {
+            return PWRunnerAdmissionFailure(field: "probe_plan", actual: parsed.probe_plan.count,
+                maximum: PWShmLayout.maxSteps, unit: "items")
+        }
+        if let count = parsed.policy.params?.count, count > PWShmLayout.maxParams {
+            return PWRunnerAdmissionFailure(field: "policy.params", actual: count,
+                maximum: PWShmLayout.maxParams, unit: "items")
+        }
         let capacity = CWorkerInput(workerExecutablePath: "", policy: parsed.policy.sbpl_source ?? "",
             params: workerParamsFromPolicy(parsed.policy), slots: workerSlotsFromProbePlan(parsed.probe_plan))
         if let refused = workerAdmissionFailure(capacity) { return refused }
@@ -394,20 +390,18 @@ let probePlanLabelMaxBytes = 127
 /// operation then value then labels within a step, and report the first excess.
 func queryAdmissionFailure(_ plan: [PWRunnerProbeStep]) -> PWRunnerAdmissionFailure? {
     for (position, step) in plan.enumerated() {
-        let operation = step.sandbox_check.operation.utf8.count
-        if operation > sandboxCheckOperationMaxBytes {
-            return PWRunnerAdmissionFailure(field: "sandbox_check.operation", actual: operation,
-                maximum: sandboxCheckOperationMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
-        }
-        if let value = step.sandbox_check.filter.value, value.utf8.count > sandboxCheckFilterValueMaxBytes {
-            return PWRunnerAdmissionFailure(field: "sandbox_check.filter.value", actual: value.utf8.count,
-                maximum: sandboxCheckFilterValueMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
-        }
-        for (field, value) in [("sandbox_check.filter.kind", step.sandbox_check.filter.kind),
-                               ("attempt.kind", step.attempt.kind), ("attempt.action", step.attempt.action)] {
-            if value.utf8.count > probePlanLabelMaxBytes {
-                return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count,
-                    maximum: probePlanLabelMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
+        let fields: [(AdmissionStringRule, String?)] = [
+            (AdmissionStringRule(field: "sandbox_check.operation", maximum: sandboxCheckOperationMaxBytes, requiresCString: true), step.sandbox_check.operation),
+            (AdmissionStringRule(field: "sandbox_check.filter.value", maximum: sandboxCheckFilterValueMaxBytes, requiresCString: true), step.sandbox_check.filter.value),
+            (AdmissionStringRule(field: "sandbox_check.filter.kind", maximum: probePlanLabelMaxBytes), step.sandbox_check.filter.kind),
+            (AdmissionStringRule(field: "attempt.kind", maximum: probePlanLabelMaxBytes), step.attempt.kind),
+            (AdmissionStringRule(field: "attempt.action", maximum: probePlanLabelMaxBytes), step.attempt.action),
+        ]
+        for (rule, value) in fields {
+            if var refused = rule.failure(value) {
+                refused.step_id = stepIdAdmission.safeEcho(step.step_id)
+                refused.step_index = position
+                return refused
             }
         }
     }
@@ -424,23 +418,52 @@ let specimenIdMaxBytes = 255
 let requestLabelMaxBytes = 63
 let testOverridePathMaxBytes = 1023
 
-/// Capacity check for the top-level request strings, using the same record.
-/// No step or parameter identity applies; the field name is the identity.
+// The same rules select refusals and decide which metadata may be echoed.
+// Adding a field requires an entry here and an explicit projection below.
+let specimenIdAdmission = AdmissionStringRule(field: "specimen_id", maximum: specimenIdMaxBytes)
+let runKindAdmission = AdmissionStringRule(field: "run_kind", maximum: requestLabelMaxBytes)
+let policyFormatAdmission = AdmissionStringRule(field: "policy.format", maximum: requestLabelMaxBytes)
+let overridePathAdmissions: [(key: WritableKeyPath<PWRunnerTestOverrides, String?>, rule: AdmissionStringRule)] = [
+    (\.libsandbox_path, AdmissionStringRule(field: "_test_overrides.libsandbox_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
+    (\.worker_executable_path, AdmissionStringRule(field: "_test_overrides.worker_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
+    (\.validator_executable_path, AdmissionStringRule(field: "_test_overrides.validator_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
+]
+
 func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
-    func check(_ field: String, _ value: String?, _ maximum: Int) -> PWRunnerAdmissionFailure? {
-        guard let value, value.utf8.count > maximum else { return nil }
-        return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count, maximum: maximum, unit: "utf8_bytes")
+    for (rule, value) in [(specimenIdAdmission, parsed.specimen_id),
+                           (runKindAdmission, parsed.run_kind), (policyFormatAdmission, parsed.policy.format)] {
+        if let refused = rule.failure(value) { return refused }
     }
-    if let r = check("specimen_id", parsed.specimen_id, specimenIdMaxBytes) { return r }
-    if let r = check("run_kind", parsed.run_kind, requestLabelMaxBytes) { return r }
-    if let r = check("policy.format", parsed.policy.format, requestLabelMaxBytes) { return r }
-    let overrides = parsed._test_overrides
-    for (field, value) in [("_test_overrides.libsandbox_path", overrides?.libsandbox_path),
-                           ("_test_overrides.worker_executable_path", overrides?.worker_executable_path),
-                           ("_test_overrides.validator_executable_path", overrides?.validator_executable_path)] {
-        if let r = check(field, value, testOverridePathMaxBytes) { return r }
+    if let overrides = parsed._test_overrides {
+        for (key, rule) in overridePathAdmissions {
+            if let refused = rule.failure(overrides[keyPath: key]) { return refused }
+        }
     }
     return nil
+}
+
+/// Failure selection and safe echo are independent: every metadata field is
+/// checked even when a different field won admission precedence. No rejected
+/// value is shortened into an apparent submitted identity.
+func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFailure,
+                           bundleId: String?, policyHash: String? = nil) -> PWRunnerRunResult {
+    var mirrored = parsed._test_overrides
+    if var overrides = mirrored {
+        for (key, rule) in overridePathAdmissions {
+            overrides[keyPath: key] = rule.safeEcho(overrides[keyPath: key])
+        }
+        mirrored = overrides
+    }
+    var record = refused
+    record.step_id = stepIdAdmission.safeEcho(record.step_id)
+    record.parameter_key = parameterKeyAdmission.safeEcho(record.parameter_key)
+    return PWRunnerRunResult(
+        specimen_id: specimenIdAdmission.safeEcho(parsed.specimen_id) ?? "<admission_refused>",
+        run_kind: runKindAdmission.safeEcho(parsed.run_kind), rc: 1,
+        normalized_outcome: NormalizedOutcome.badRequest,
+        error: CWorkerRunError.admissionFailed(record).description, pid: Int(getpid()),
+        bundle_id: bundleId, policy_format: policyFormatAdmission.safeEcho(parsed.policy.format) ?? "unknown",
+        policy_sha256: policyHash, steps: [], test_overrides: mirrored, admission_failure: record)
 }
 
 func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecision] {

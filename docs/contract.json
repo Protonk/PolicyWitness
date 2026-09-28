@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "versions": {
-    "request_schema": 2,
+    "request_schema": 3,
     "response_schema": 10,
     "worker_abi": 7,
     "controller_envelope": 3

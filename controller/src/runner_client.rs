@@ -11,7 +11,7 @@ use std::process::{Command, Stdio};
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
 #[cfg(test)]
-use crate::utils::MAX_CAPTURE_BYTES;
+use crate::utils::RUNNER_CAPTURE_BYTES;
 use crate::utils::{JsonOutputCapture, capture_json_output, now_unix_ms};
 
 #[derive(Serialize)]
@@ -30,7 +30,7 @@ fn parse_runner_client_output(
     ended: u64,
     out: &std::process::Output,
 ) -> (RunnerClientRun, Option<Value>) {
-    let (output, parsed) = capture_json_output(out, "runner");
+    let (output, parsed) = capture_json_output(out, "runner", crate::utils::RUNNER_CAPTURE_BYTES);
 
     let runner_client = RunnerClientRun {
         argv: argv
@@ -190,7 +190,11 @@ mod tests {
                     "executable_path": "/unknown/validator-\"é\"", "return_code": 2147483647,
                     "diagnostic": "unfamiliar native launch diagnostic"});
             }
-            let output = crate::utils::receiver_fixture(&original.to_string(), "valid");
+            let output = crate::utils::receiver_fixture(
+                &original.to_string(),
+                "valid",
+                crate::utils::RUNNER_CAPTURE_BYTES,
+            );
             let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
             assert!(capture.output.stdout_capture_error.is_none());
             assert_eq!(received, Some(original));
@@ -203,7 +207,11 @@ mod tests {
         let original = serde_json::json!({"data": {"diagnostics": records},
             "result": {"ok": false, "normalized_outcome": "runner_failed", "rc": 1}});
         for mode in ["valid", "oversized"] {
-            let output = crate::utils::receiver_fixture(&original.to_string(), mode);
+            let output = crate::utils::receiver_fixture(
+                &original.to_string(),
+                mode,
+                crate::utils::RUNNER_CAPTURE_BYTES,
+            );
             let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
             if mode == "valid" {
                 assert_eq!(received, Some(original.clone()));
@@ -274,7 +282,7 @@ mod tests {
     fn valid_oversized_producer_is_receiver_loss_not_malformed_json() {
         let (capture, parsed, full) = producer(&format!(
             "import sys; sys.stdout.write('{{\"value\":\"' + 'x'*{} + '\"}}')",
-            MAX_CAPTURE_BYTES
+            RUNNER_CAPTURE_BYTES
         ));
         assert!(
             serde_json::from_slice::<Value>(&full).is_ok(),
@@ -282,8 +290,8 @@ mod tests {
         );
         assert!(parsed.is_none());
         let wire = serde_json::to_value(&capture).unwrap();
-        assert_eq!(wire["stdout_bytes_received"], MAX_CAPTURE_BYTES + 12);
-        assert_eq!(wire["stdout_bytes_retained"], MAX_CAPTURE_BYTES);
+        assert_eq!(wire["stdout_bytes_received"], RUNNER_CAPTURE_BYTES + 12);
+        assert_eq!(wire["stdout_bytes_retained"], RUNNER_CAPTURE_BYTES);
         assert!(
             wire["stdout_capture_error"]
                 .as_str()
@@ -292,13 +300,13 @@ mod tests {
         );
         assert_eq!(
             capture.output.stdout_bytes_received,
-            Some(MAX_CAPTURE_BYTES + 12)
+            Some(RUNNER_CAPTURE_BYTES + 12)
         );
         assert_eq!(
             capture.output.stdout_bytes_retained,
-            Some(MAX_CAPTURE_BYTES)
+            Some(RUNNER_CAPTURE_BYTES)
         );
-        assert_eq!(capture.output.capture_limit_bytes, MAX_CAPTURE_BYTES);
+        assert_eq!(capture.output.capture_limit_bytes, RUNNER_CAPTURE_BYTES);
         assert!(capture.output.stdout_truncated);
         assert!(capture.output.stdout_parse_error.is_none());
         assert!(
@@ -337,33 +345,33 @@ mod tests {
     #[test]
     fn multibyte_cut_counts_bytes_before_lossy_conversion() {
         // stdout: the cap falls inside a three-byte character; stderr exceeds the
-        // cap by exactly one byte with whole three-byte characters.
+        // cap with whole three-byte characters, regardless of the cap modulo three.
         let (capture, parsed, full) = producer(&format!(
             "import sys; sys.stdout.buffer.write(b'{{\"v\":\"' + b'x'*({} - 7) + bytes([0xe2,0x82,0xac]) + b'\"}}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*{})",
-            MAX_CAPTURE_BYTES,
-            MAX_CAPTURE_BYTES / 3 + 1
+            RUNNER_CAPTURE_BYTES,
+            RUNNER_CAPTURE_BYTES / 3 + 1
         ));
         assert!(serde_json::from_slice::<Value>(&full).is_ok());
         assert!(parsed.is_none());
         assert_eq!(
             capture.output.stdout_bytes_received,
-            Some(MAX_CAPTURE_BYTES + 4)
+            Some(RUNNER_CAPTURE_BYTES + 4)
         );
         assert_eq!(
             capture.output.stdout_bytes_retained,
-            Some(MAX_CAPTURE_BYTES)
+            Some(RUNNER_CAPTURE_BYTES)
         );
         assert_eq!(
             capture.output.stderr_bytes_received,
-            Some(MAX_CAPTURE_BYTES + 1)
+            Some(3 * (RUNNER_CAPTURE_BYTES / 3 + 1))
         );
         assert_eq!(
             capture.output.stderr_bytes_retained,
-            Some(MAX_CAPTURE_BYTES)
+            Some(RUNNER_CAPTURE_BYTES)
         );
         let text = capture.output.stdout_raw.unwrap();
         assert!(text.ends_with('\u{fffd}'));
-        assert_eq!(text.len(), MAX_CAPTURE_BYTES + 2);
+        assert_eq!(text.len(), RUNNER_CAPTURE_BYTES + 2);
         assert!(capture.output.stdout_capture_error.is_some());
         assert!(capture.output.stdout_parse_error.is_none());
     }

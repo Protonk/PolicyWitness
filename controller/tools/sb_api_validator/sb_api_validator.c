@@ -152,6 +152,19 @@ static size_t utf8_append(unsigned cp, char *w) {
     w[2] = (char)(0x80 | ((cp >> 6) & 0x3F)); w[3] = (char)(0x80 | (cp & 0x3F)); return 4;
 }
 
+/* Validate one raw UTF-8 scalar without reading beyond the closing quote.
+ * Reject overlong encodings, surrogate encodings and values above U+10FFFF. */
+static size_t utf8_scalar_bytes(const unsigned char *p, size_t available) {
+    unsigned c = p[0];
+    size_t n = c >= 0xC2 && c <= 0xDF ? 2 : c >= 0xE0 && c <= 0xEF ? 3
+             : c >= 0xF0 && c <= 0xF4 ? 4 : 0;
+    if (!n || available < n) return 0;
+    for (size_t i = 1; i < n; ++i) if ((p[i] & 0xC0) != 0x80) return 0;
+    if ((c == 0xE0 && p[1] < 0xA0) || (c == 0xED && p[1] >= 0xA0)
+        || (c == 0xF0 && p[1] < 0x90) || (c == 0xF4 && p[1] >= 0x90)) return 0;
+    return n;
+}
+
 /* Parse a JSON string starting at **p (pointing at the opening "). On
  * success, returns a malloc'd null-terminated string and advances *p
  * past the closing ". Returns NULL on malformed input. Recognized
@@ -216,8 +229,13 @@ static char *parse_json_string(const char **p) {
             }
             (*p)++;
         } else {
-            *w++ = **p;
-            (*p)++;
+            unsigned char c = (unsigned char)**p;
+            if (c < 0x20) { free(out); return NULL; }
+            size_t n = c < 0x80 ? 1 : utf8_scalar_bytes((const unsigned char *)*p, (size_t)(scan - *p));
+            if (!n) { free(out); return NULL; }
+            memcpy(w, *p, n);
+            w += n;
+            *p += n;
         }
     }
     (*p)++;
@@ -440,19 +458,23 @@ static int run_batch(int pid) {
     char *line = (char *)malloc(LINE_MAX_BYTES);
     if (!line) return 2;
 
-    while (fgets(line, LINE_MAX_BYTES, stdin)) {
-        /* If the read filled the buffer without seeing a newline, the
-         * physical line is longer than the cap. Emit one verdict and
-         * drain the rest before reading the next probe. EOF
-         * mid-overlong-line is treated as a valid drain endpoint. */
-        size_t len = strlen(line);
-        bool overlong = (len == LINE_MAX_BYTES - 1) && line[len - 1] != '\n';
-        if (overlong) {
-            emit_failure(NULL, "parse_error", "probe line exceeds 64 KiB cap");
-            int c;
-            while ((c = fgetc(stdin)) != EOF && c != '\n') {
-                /* discard */
-            }
+    for (;;) {
+        /* Read a physical line with an explicit length. strlen/fgets would
+         * hide a raw NUL and could accept a valid prefix of malformed input.
+         * Keep the existing payload cap, draining overlong lines in place. */
+        size_t len = 0;
+        bool overlong = false, has_nul = false, received = false;
+        int c;
+        while ((c = fgetc(stdin)) != EOF && c != '\n') {
+            received = true;
+            if (c == 0) has_nul = true;
+            if (len < LINE_MAX_BYTES - 2) line[len++] = (char)c;
+            else overlong = true;
+        }
+        if (!received && c == EOF) break;
+        line[len] = '\0';
+        if (overlong || has_nul) {
+            emit_failure(NULL, "parse_error", overlong ? "probe line exceeds 64 KiB cap" : "raw NUL in probe line");
             continue;
         }
 

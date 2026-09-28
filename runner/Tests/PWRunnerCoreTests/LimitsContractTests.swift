@@ -70,6 +70,7 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "applied_profile": PWShmLayout.captureBytes,
                 "observed_path": PWShmLayout.observedPathMax - 1,
                 "attempt_error": PWShmLayout.errorMax - 1,
+                "runner_reply_maximum": try maximalReplyEncodedSize(),
             ]
             try expectTrue(observed["worker_proceed_wait"]! > validator.verdictReadTimeoutMs
                 + validator.exitGraceMs + validatorReleaseMarginMs)

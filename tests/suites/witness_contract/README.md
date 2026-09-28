@@ -176,13 +176,21 @@ agreement, and deny/permission failure is directional consistency with null drif
 `max_targets_reply_survives` measures five admitted 256-step workloads: denied
 ASCII reads of 511-byte targets with log capture, successful reads of
 JSON-escaped paths with observed paths, independent 511-byte query paths
-against plain attempt targets, 256 execs with stdout/stderr, and 256 shell
-execs whose independent 511-byte query paths and 1,023-byte stdout/stderr
-streams are made of U+0001, the worst admitted escaping (six bytes per byte).
+against plain attempt targets, 256 execs with stdout/stderr, and 256 native
+execs with 511-byte escaped executable targets and independent query paths,
+63-byte step IDs, maximal metadata, live profile capture and 1,023-byte
+stdout/stderr streams made of U+0001 (six JSON bytes per input byte).
 These require complete replies and exact targets, outcomes and applicable
 output; the control-character workload also requires every prediction to
-round-trip through the real validator. Its reply is the largest admitted reply
-this suite measures and the evidence behind the receiver cap's margin.
+round-trip through the real validator. Every admitted workload must stay under
+the synthesized maximal reply recorded in `docs/limits.json`
+(`runner_reply_maximum`, computed by `runner_unit` from the field-complete reply
+fixture with every string at its limit), and the receiver budget must equal three
+times that bound rounded up to 4 MiB. The maximal-metadata workload also adds a
+conservative receipt allowance (`2 * 4 * ceil(capture / 3) + 4096`, capture from
+the manifest) and must still fit under the bound; Swift independently tests that
+allowance with maximal slash-heavy bytes. The corpus is evidence that real
+replies stay inside a bound that follows the schema, not the source of the bound.
 
 Four refusal workloads submit 32,768-byte query values or filter/attempt labels.
 Each requires a host-owned `admission_failure` naming the field, no steps and no
@@ -191,9 +199,9 @@ the invalid label and independently require every target to remain unchanged.
 Every workload records its reply size and requires an untruncated receiver;
 refusal replies must be smaller than 4 KiB. Every echoed request string is
 admission-bounded, so these measurements are the evidence for the cap's margin
-rather than a closed-form maximum; optional profile capture adds at most about
-1.4 MiB. The exec cases use the independently controlled
-`tests/fixtures/exec` helper and requires clang. Every step execs: the worker
+rather than a closed-form maximum. The exec cases use the independently controlled
+`tests/fixtures/exec` helpers and require clang. The byte-stream helper is
+checked directly for several fill bytes before the stress workload. Every step execs: the worker
 raises its soft descriptor limit pre-apply to fit the four pipe descriptors
 each exec step prepares (see `exec_step_descriptors` in `docs/LIMITS.md`).
 

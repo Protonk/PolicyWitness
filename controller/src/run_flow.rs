@@ -146,7 +146,10 @@ fn synthetic_runner_client(note: &str) -> RunnerClientRun {
         started_at_unix_ms: now,
         ended_at_unix_ms: now,
         exit_code: 2,
-        output: crate::utils::JsonOutputCapture::unavailable(note.to_string()),
+        output: crate::utils::JsonOutputCapture::unavailable(
+            note.to_string(),
+            crate::utils::RUNNER_CAPTURE_BYTES,
+        ),
     }
 }
 
@@ -368,7 +371,10 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     capture_status: "requested_unavailable".to_string(),
                     tool_exit_code: 1,
                     blocked_reason: None,
-                    output: crate::utils::JsonOutputCapture::unavailable(err),
+                    output: crate::utils::JsonOutputCapture::unavailable(
+                        err,
+                        crate::utils::OBSERVER_CAPTURE_BYTES,
+                    ),
                     observer: None,
                     observed_deny: None,
                     deny_events: None,
@@ -1531,14 +1537,25 @@ mod tests {
             .collect();
         let actual = std::collections::BTreeMap::from([
             ("client_rpc_wait", DEFAULT_TIMEOUT_MS),
-            ("controller_output", crate::utils::MAX_CAPTURE_BYTES as u64),
+            (
+                "controller_output",
+                crate::utils::RUNNER_CAPTURE_BYTES as u64,
+            ),
+            (
+                "policy_helper_output",
+                crate::utils::HELPER_CAPTURE_BYTES as u64,
+            ),
+            (
+                "log_observer_output",
+                crate::utils::OBSERVER_CAPTURE_BYTES as u64,
+            ),
         ]);
         assert_eq!(owned, actual);
         // The behavioral oracle is independent of the documented value.
-        let cap = crate::utils::MAX_CAPTURE_BYTES;
+        let cap = crate::utils::RUNNER_CAPTURE_BYTES;
         for len in [cap - 1, cap, cap + 1] {
             let bytes = vec![b'x'; len];
-            let (text, truncated) = crate::utils::truncate_output(&bytes);
+            let (text, truncated) = crate::utils::truncate_output(&bytes, cap);
             assert_eq!(text.len(), len.min(cap));
             assert_eq!(truncated, len > cap);
         }
@@ -1571,7 +1588,10 @@ mod tests {
             capture_status: status.into(),
             tool_exit_code: 0,
             blocked_reason: None,
-            output: crate::utils::JsonOutputCapture::unavailable(String::new()),
+            output: crate::utils::JsonOutputCapture::unavailable(
+                String::new(),
+                crate::utils::OBSERVER_CAPTURE_BYTES,
+            ),
             observer: None,
             observed_deny: Some(!events.is_empty()),
             deny_events: Some(events),
