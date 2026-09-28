@@ -1,8 +1,6 @@
 # Best-effort deny-log evidence
 
-Status: draft for review. This plan proposes implementation and test changes;
-none of those changes has been made. The background is the associated
-[sandbox-log investigation](records/SANDBOX-LOG-ISOLATION-INVESTIGATION.md).
+Status: Ready to run. 
 
 ## Promise and scope
 
