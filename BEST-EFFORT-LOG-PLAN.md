@@ -159,14 +159,38 @@ must not require gitignored evidence or refer back to the investigation record.
   explicit unavailable result honestly. Empty, partial or unavailable evidence
   must not be conflated. Real software/equipment contract failures must remain
   failures rather than being swallowed by a blanket “best effort” exception.
-- Audit the rest of the default battery for mandatory live-log presence or
-  assumptions that displayed timestamps equal attempt times. Update the case
-  descriptions, suite documentation and coverage claims along with assertions.
 
 Keep real record-availability measurements separate from the default correctness
 gate. If a registered OS-behavior probe is retained, make it explicitly opt-in,
 retain every initial result, and report its sample and environment. It must not
 serve as a required dependency of the default case or retry until green.
+
+#### Audit of the default battery for live-log dependence and timestamp assumptions
+
+Scope: the 163 cases `tests/run.sh --list` selects by default, the Rust unit
+batch (`cargo test --bins`), the Rust CLI integration batch
+([cli_contract.rs](controller/integration/cli_contract.rs)), and the libraries
+and fixtures under `tests/lib` and `tests/fixtures`. Method: every reference to a
+log-evidence field, the observer, the `log show` tool or the `--no-log-capture`
+flag was located and read; catalog descriptions, suite READMEs and the evidence
+documentation were read for coverage claims. Result: one default case requires a
+live record; one default case parses displayed timestamps; no unit, integration
+or fixture test does either.
+
+| Relationship to the log channel | Default cases | What holds today |
+| --- | --- | --- |
+| Requires the OS store to hold a record | `witness_contract/deny_capture_covers_the_run` | Covered by the preceding bullet. It is also the only test that parses `raw_line` timestamps ([check_deny_capture_window.py](tests/suites/witness_contract/check_deny_capture_window.py) lines 49–56): every worker read must satisfy `start_s <= at <= end_s`, and reads displayed before the retired interval must be disjoint from the retired replay. With the measured +10 to +36 ms display offset, a record of an attempt in the run's final tens of milliseconds can display past `end_s` and fail the membership assertion while present, a second failure path independent of omission. |
+| Capture enabled, channel asserted, no record required | `witness_contract/worker_termination_and_log_correlation`, `witness_contract/max_targets_reply_survives` | [check_termination_correlation.py](tests/suites/witness_contract/check_termination_correlation.py) requires the observer to be invoked and the window mirrored, then branches: `captured` with an events list checks presence-dependent status, `permission_failures_without_record == ([] if matches else ids)` and ambiguous associations; every other status only requires `correlation_status == "unavailable"` (lines 171–174), so an equipment or observer failure passes silently there. [check_max_target_reply.py](tests/suites/witness_contract/check_max_target_reply.py) lines 159–165 require `capture_status != "capture_error"` and an untruncated observer reply for 256-step workloads; a bounded-retention policy from section 2 must keep that reply inside its budget or this assertion changes. Neither parses timestamps. |
+| Capture enabled, nothing asserted about it | `smoke/*` (2), `blackbox_e2e/BBX-001`, `BBX-002`, `runner_apply_isolation_v2/*`, `runner_apply_isolation_v3/*`, the eight live `blackbox_menagerie/*` cases ([run_case.py](tests/suites/blackbox_menagerie/run_case.py)), and the `cli_contract` functions that omit the flag | They pay the `log show` cost and depend on the channel only through the CLI exit status, which [run_flow.rs](controller/src/run_flow.rs) derives before capture. A stalled collector delays their envelopes; an absent record cannot fail them. |
+| Capture disabled with `--no-log-capture` | 26 case scripts: twelve in `witness_contract` (including the drift seam script), three in `run_effects`, two each in `runner_exec_dac`, `runner_exec_lifecycle` and `runner_validator_failure`, and one each in `runner_exec_inheritance`, `runner_live_worker_identity`, `runner_outcome_runner_timeout`, `runner_outcome_validator_no_reply`, `runner_specimen_isolation`, `sbpl_allowdeny_consistency` and `failure_boundaries` | Log-independent by construction. `check_pre_apply_failure.py` asserts `sandbox_log_capture is None`; [lifecycle_oracle.py](tests/lib/lifecycle_oracle.py) expects the disabled projection (`disabled`, `not_attempted`, null list). |
+| Constructed evidence, no live log | `blackbox_e2e/checker_controls`, `unit/rust.unit`, `unit/rust.disposition_reds` | [checker_controls.py](tests/suites/blackbox_e2e/checker_controls.py) drives the consumer with captured/no_match, blocked/unavailable and disabled envelopes, a dropped `operation_source` and a forged `exact_run_membership`. `sandbox_log::tests` run the real argv against [observer.py](tests/fixtures/deny_capture/observer.py), whose fixed event times are independent of the requested bounds (window selection, not attempt timing). The observer's parser test asserts that a parsed event carries no timestamp field. These are the base for the replay and positive controls above. |
+
+Other findings:
+
+- The remaining `raw_line` references ([failure_boundaries/check.py](tests/suites/failure_boundaries/check.py), [check_diagnostic_transport.py](tests/suites/witness_contract/check_diagnostic_transport.py)) are validator transcript records, unrelated to the log channel.
+- `tests/lib/testlib.sh` defines `skip_sandbox_log_observer_unavailable`, but no case calls it; a missing observer binary is a preflight failure through `EXECUTABLES` in [artifact.py](tests/lib/artifact.py).
+- Text that states the mandatory-presence or timing claim and must change with the case: the `deny_capture_covers_the_run` description in [tests/catalog.json](tests/catalog.json), the "Deny capture covers the run" section of [tests/suites/witness_contract/README.md](tests/suites/witness_contract/README.md) ("the final denied read is the minimum witness … fails the case with a named reason"; "test-only parsing of raw event timestamps checks membership in both intervals"), and the case's module docstring.
+- [docs/PolicyWitness.md](docs/PolicyWitness.md#denial-log-correlation) and [controller/README.md](controller/README.md) already state that `captured` does not certify every denial was logged, that parsed events have no structured timestamps and that a complete interval does not guarantee delivery. No permanent documentation claims record presence. The window wording in [docs/LIMITS.md](docs/LIMITS.md) and the user guide ("widened to whole seconds") changes only if section 3 adopts padding.
 
 ### 5. Document and validate the resulting contract
 
