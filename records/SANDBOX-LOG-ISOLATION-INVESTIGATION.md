@@ -1,8 +1,8 @@
 # Sandbox log isolation: problem and troubleshooting evidence
 
-Investigation record, 2026-09-28, macOS 14.8.3 (23J220), arm64, two rounds the
-same day. This is a temporary investigation record. No remediation has been selected or
-implemented. Production code and registered tests remain unchanged.
+Investigation record, 2026-09-28, macOS 14.8.3 (23J220), arm64. This record
+contains live observations and source/test audits; remediation is planned
+separately. These investigations changed no production code or registered tests.
 
 ## Problem
 
@@ -411,18 +411,140 @@ replay lost its first four consecutive runs; both matrix losses were in the
 reads after the 20 s hold. The control adds a trailing run of losses (idle runs
 2 to 7), so contiguity in time, not leading position, is the shared shape.
 
-**Offset mechanism and a third measurement (18:27 UTC).** Six userland `os_log`
-markers carrying their own `CLOCK_REALTIME` displayed +59.10 to +61.68 ms late,
-against +35.41 to +36.10 ms on the kernel channel at 17:25 and about +10 ms at
-16:34; six interleaved `sandbox-exec` denials recorded none, so the kext
-omission was total in that run. `timed` logged a −68 ms residual slew in
-progress at 18:29 and three clock steps of 63 to 73 ms over the day, each
-accompanied within 10 ms by a logd `=== system wallclock time adjusted`
-timesync event (35 timesync events in 24 h, roughly hourly otherwise). The
-machine had been up 147 days, so the offset does not accumulate over uptime: it
-is the wall-clock correction applied since logd's last re-map, and the scan
-padding decision in the associated plan rests on that bound. `eventType ==
-timesyncEvent` needs no extra flag.
+### Clock conversion and scan-padding evidence
+
+**What the offset is.** `log show` converts a record's `machTimestamp` to wall
+time through logd's timesync mapping, while the client span comes from
+`CLOCK_REALTIME`. Between re-maps `timed` disciplines the wall clock, slewing
+through `adjtime` and stepping through `settimeofday`, so displayed times drift
+from the client's clock by the correction applied since the last re-map. On
+2026-09-28 logd re-mapped at every clock step (three steps of 63 to 73 ms, each
+accompanied within 10 ms by a `=== system wallclock time adjusted` timesync
+event) and roughly hourly otherwise (35 timesync events in 24 h). The machine
+had been up 147 days with the offset at 60 ms, so the offset does not
+accumulate over uptime. Records are stamped inside the denied syscall (mach
+latency −2 to −10 µs), so this offset is the only timing error between a record
+and the client span.
+
+| Measured at (UTC) | Displayed minus `CLOCK_REALTIME` | Source |
+| --- | --- | --- |
+| 16:34 | about +10 ms | stream-versus-archive comparison, first round |
+| 17:25 to 17:28 | +35.41 to +36.10 ms | kernel deny lines of the instrumented control, 9 records |
+| 18:27 | +59.10 to +61.68 ms | userland `os_log` marker, 6 records; the kernel channel recorded none of six denials in the same run; `timed` reported a −68 ms residual in progress |
+
+**Boundary exposure without padding.** The window floors the client start and
+ceils the client end to whole seconds, so each bound carries 0 to 1,000 ms of
+slack. A last-step denial displayed `offset` ms after the client end is excluded
+when the end falls within `offset` of the next whole second: probability
+`offset / 1000` per such denial, about 2% at the measured last-record/client-end
+offset for a one-rule specimen and 0% for the 64-rule cohorts, whose teardown
+places the last record 7 to 55 ms before the client end. A negative offset
+(clock slewed forward) moves records earlier and exposes the start bound the
+same way. None of the observed omissions was a slack exclusion; the ±60 s scans
+lack them too.
+
+**Padding alternatives considered during investigation.**
+
+1. No pad. Keeps the window derivation; leaves a measured 0 to 2% exclusion of
+   real records that grows with the offset, and the case cannot tell that
+   exclusion from OS omission.
+2. Fixed symmetric pad of N whole seconds. `log show` accepts nothing finer than
+   a second, so N is an integer. Cost measured at zero: the original interval's
+   PID-predicate scan took 0.03 s at 21 s and at 23 s. Wider bounds admit only
+   lines naming the worker PID; PID reuse within seconds does not occur in
+   practice and the window already disclaims protection against it.
+3. Runtime measurement: emit a controller-side `os_log` marker carrying
+   `CLOCK_REALTIME` before the scan and read its displayed time back in the
+   same scan, then pad by or report the measured offset. Exact, but it adds a
+   marker whose visibility has only been checked at 5 s, a second parse path
+   and a dependency on userland log persistence; not selected for the initial
+   scope.
+4. End-only pad. Covers the observed sign only; a forward slew or a step would
+   expose the start bound.
+
+The two-second symmetric pad was selected from these alternatives. The sizing
+rationale was that one second already exceeded every observed offset by 16×
+and the observed clock-step sizes (63 to 73 ms), with roughly hourly re-maps;
+the second allowed for a maximum-rate slew hour. These measurements cover one
+machine's `timed` behaviour over one day. A machine without network time or
+with a different step threshold could differ, so this is an allowance rather
+than a general bound. The retained `offset_probe.py` re-measures both channels
+in about ten seconds; its route is in the evidence table below.
+
+The third measurement's `timed` residual was logged at 18:29 UTC.
+`eventType == timesyncEvent` needs no extra flag.
+
+### Source audit: authority and collection boundaries
+
+The source review found substantial semantic separation:
+[run_flow.rs](../controller/src/run_flow.rs) obtains the runner reply and derives
+`runner_outcome` and `ok` before invoking the collector. Association and log
+diagnostics subsequently read the runner result. The Python consumer exposes
+denial evidence separately.
+
+The same review found a resource-isolation gap.
+[sandbox_log.rs](../controller/src/sandbox_log.rs) waits for the observer using
+`Command::output()`, and the observer's normal `log show` path does likewise in
+[sandbox-log-observer.rs](../controller/src/bin/sandbox-log-observer.rs). Neither
+call supplies a collection deadline. The 8 MiB observer retention cap in
+[utils.rs](../controller/src/utils.rs) applies after complete output buffering;
+it does not bound collection memory. The final envelope is printed afterward.
+Consequently, semantic independence alone does not protect delivery of the
+execution result from a stalled or excessively verbose logging subprocess.
+
+Scouting found a clean field-level split with one shared object:
+[run_flow.rs](../controller/src/run_flow.rs) derives `result` (`ok`,
+`exit_code`, `normalized_outcome`, `error`) from the runner reply and the runner
+client's own output capture alone; `data.sandbox_log_capture` is written only by
+collector processing; `data.runner_sandbox_diagnostics` mixes six disposition
+fields projected from the runner reply (`worker_pid`, `process_disposition`,
+`termination_cause`, `stop_reason`, `disposition_integrity`,
+`disposition_issues`) with four correlation fields derived from the capture
+(`capture_status`, `correlation_status`, `first_deny`,
+`permission_failures_without_record`), all built by one function from both
+inputs. Log processing reads the reply (steps, submitted plan, disposition
+record) but no execution field reads the capture.
+
+The in-repository consumer review covered [consumer.py](../tests/lib/consumer.py),
+whose `denials` block is separate from its comparison and failure groups; the
+lifecycle oracle, adapter and contract modules, which read only the disposition
+fields out of the shared object; the blackbox checker and disposition controls;
+the witness cases that assert on capture; and the disposition fixtures.
+Consumers outside this checkout were not audited.
+
+Existing controls cover five states at the diagnostics function
+(`capture_conditions_do_not_change_execution_status_or_cause`) and the window
+and no-match states through serialization. The disposable ten-state replay
+above exercised the broader assembly boundary without becoming a registered
+test. These observations identify the existing seams and coverage; they are
+not an exhaustive audit of field writes and readers.
+
+### Default-battery audit: live-log dependence and timestamp assumptions
+
+Scope: the 163 cases `tests/run.sh --list` selects by default, the Rust unit
+batch (`cargo test --bins`), the Rust CLI integration batch
+([cli_contract.rs](../controller/integration/cli_contract.rs)), and the libraries
+and fixtures under `tests/lib` and `tests/fixtures`. Method: every reference to a
+log-evidence field, the observer, the `log show` tool or the `--no-log-capture`
+flag was located and read; catalog descriptions, suite READMEs and the evidence
+documentation were read for coverage claims. Result: one default case requires a
+live record; one default case parses displayed timestamps; no unit, integration
+or fixture test does either.
+
+| Relationship to the log channel | Default cases | Observed behavior |
+| --- | --- | --- |
+| Requires the OS store to hold a record | `witness_contract/deny_capture_covers_the_run` | It requires the final denied read to have a captured record and is the only test that parses `raw_line` timestamps ([check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) lines 49–56): every worker read must satisfy `start_s <= at <= end_s`, and reads displayed before the retired interval must be disjoint from the retired replay. With the measured +10 to +36 ms display offset, a record of an attempt in the run's final tens of milliseconds can display past `end_s` and fail the membership assertion while present, a second failure path independent of omission. |
+| Capture enabled, channel asserted, no record required | `witness_contract/worker_termination_and_log_correlation`, `witness_contract/max_targets_reply_survives` | [check_termination_correlation.py](../tests/suites/witness_contract/check_termination_correlation.py) requires the observer to be invoked and the window mirrored, then branches: `captured` with an events list checks presence-dependent status, `permission_failures_without_record == ([] if matches else ids)` and ambiguous associations; every other status only requires `correlation_status == "unavailable"` (lines 171–174), so an equipment or observer failure passes silently there. [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py) lines 159–165 require `capture_status != "capture_error"` and an untruncated observer reply for 256-step workloads; any bounded-retention policy must account for that existing assertion. Neither parses timestamps. |
+| Capture enabled, nothing asserted about it | `smoke/*` (2), `blackbox_e2e/BBX-001`, `BBX-002`, `runner_apply_isolation_v2/*`, `runner_apply_isolation_v3/*`, the eight live `blackbox_menagerie/*` cases ([run_case.py](../tests/suites/blackbox_menagerie/run_case.py)), and the `cli_contract` functions that omit the flag | They pay the `log show` cost and depend on the channel only through the CLI exit status, which [run_flow.rs](../controller/src/run_flow.rs) derives before capture. A stalled collector delays their envelopes; an absent record cannot fail them. |
+| Capture disabled with `--no-log-capture` | 26 case scripts: twelve in `witness_contract` (including the drift seam script), three in `run_effects`, two each in `runner_exec_dac`, `runner_exec_lifecycle` and `runner_validator_failure`, and one each in `runner_exec_inheritance`, `runner_live_worker_identity`, `runner_outcome_runner_timeout`, `runner_outcome_validator_no_reply`, `runner_specimen_isolation`, `sbpl_allowdeny_consistency` and `failure_boundaries` | Log-independent by construction. `check_pre_apply_failure.py` asserts `sandbox_log_capture is None`; [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) expects the disabled projection (`disabled`, `not_attempted`, null list). |
+| Constructed evidence, no live log | `blackbox_e2e/checker_controls`, `unit/rust.unit`, `unit/rust.disposition_reds` | [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) drives the consumer with captured/no_match, blocked/unavailable and disabled envelopes, a dropped `operation_source` and a forged `exact_run_membership`. `sandbox_log::tests` run the real argv against [observer.py](../tests/fixtures/deny_capture/observer.py), whose fixed event times are independent of the requested bounds (window selection, not attempt timing). The observer's parser test asserts that a parsed event carries no timestamp field. These provide existing controlled-input coverage. |
+
+Other findings:
+
+- The remaining `raw_line` references ([failure_boundaries/check.py](../tests/suites/failure_boundaries/check.py), [check_diagnostic_transport.py](../tests/suites/witness_contract/check_diagnostic_transport.py)) are validator transcript records, unrelated to the log channel.
+- `tests/lib/testlib.sh` defines `skip_sandbox_log_observer_unavailable`, but no case calls it; a missing observer binary is a preflight failure through `EXECUTABLES` in [artifact.py](../tests/lib/artifact.py).
+- Text that states the mandatory-presence or timing claim: the `deny_capture_covers_the_run` description in [tests/catalog.json](../tests/catalog.json), the "Deny capture covers the run" section of [tests/suites/witness_contract/README.md](../tests/suites/witness_contract/README.md) ("the final denied read is the minimum witness … fails the case with a named reason"; "test-only parsing of raw event timestamps checks membership in both intervals"), and the case's module docstring.
+- [docs/PolicyWitness.md](../docs/PolicyWitness.md#denial-log-correlation) and [controller/README.md](../controller/README.md) already state that `captured` does not certify every denial was logged, that parsed events have no structured timestamps and that a complete interval does not guarantee delivery. No permanent documentation claims record presence. The window wording in [docs/LIMITS.md](../docs/LIMITS.md) and the user guide ("widened to whole seconds") describes the unpadded interval.
 
 ## Open questions
 
@@ -487,7 +609,7 @@ Open:
 ## Routes to existing gitignored evidence
 
 These are repository-relative **local** routes. `tests/out/` is gitignored;
-committing this plan does not commit its evidence, and a fresh clone will not
+committing this record does not commit its evidence, and a fresh clone will not
 contain these directories. They were left intact. The new investigation output
 is outside managed `tests/out/runs/`, so it is unmanaged retained scratch rather
 than a dispatcher-owned completed run.
