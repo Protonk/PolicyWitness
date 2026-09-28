@@ -19,10 +19,12 @@
  *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
  *   6. sandbox_apply(). Write apply_rc to header.
  *   7. Write applied sentinel (release ordering).
- *   8. For each populated slot: run the requested attempt. Slot
- *      output writes use regular stores; the slot's `completed` flag
- *      is written with release ordering so the host's acquire-load of
- *      completed pairs with all preceding writes.
+ *   8. For each populated slot: run the requested attempt. Exec
+ *      children are bounded per step by the exec deadline and per plan
+ *      by the exec attempt budget (see PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT).
+ *      Slot output writes use regular stores; the slot's `completed`
+ *      flag is written with release ordering so the host's acquire-load
+ *      of completed pairs with all preceding writes.
  *   9. Write done sentinel.
  *  10. Spin loop: poll exit_requested with acquire ordering, _exit(0)
  *      when set. The spin is bounded by
@@ -66,13 +68,32 @@
  * the host's worker-level sentinel timeout (which would also lose
  * the per-step error attribution). When the deadline fires the
  * worker SIGKILLs the child's process group and records
- * "child exceeded N-second deadline" as the slot error. Capped
- * well under the host's default sentinelTimeoutMs (60s) so the
- * per-attempt failure has time to drain and surface before the
- * host gives up on the whole worker. Overridable per-run via the
- * `--exec-child-deadline-ms` test seam. */
+ * "child exceeded N ms deadline" as the slot error. The cap protects
+ * one step; the exec attempt budget below protects the plan, because
+ * a plan may hold 256 exec steps and each could spend a full deadline.
+ * Overridable per-run via the `--exec-child-deadline-ms` test seam. */
 #define PW_EXEC_CHILD_DEADLINE_MS_DEFAULT 10000L
 #define PW_EXEC_CHILD_DEADLINE_MS_MAX     60000L
+
+/*
+ * Exec attempt budget. The host gives the whole worker one publication
+ * window (worker_sentinel_wait, PW_WORKER_WINDOW_MS) that counts policy
+ * read, compilation, application, the release wait and every attempt;
+ * only the host's synchronous collection hook is outside its count. The
+ * worker mirrors that count as its host-visible elapsed time: since its
+ * own start, minus the release wait during which the host ran the hook.
+ * An exec child is spawned only while that time is below the budget,
+ * and its deadline is clamped to the remainder. A step reached with no
+ * remainder is refused before posix_spawn as per-step evidence (errno
+ * ETIMEDOUT), so `done` publishes inside the host window and no helper
+ * outlives a host-killed worker unrecorded. Non-exec attempts are not
+ * bounded here. The budget is the window minus a publication margin for
+ * the final kill/reap, remaining attempts, the done store and host
+ * observation. Documented as exec_attempt_budget in docs/limits.json;
+ * runner_unit asserts the derivation against the host default. */
+#define PW_WORKER_WINDOW_MS               120000L
+#define PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS  5000L
+#define PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT (PW_WORKER_WINDOW_MS - PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS)
 
 /* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
  * This is a worker observation deadline, not a bound on host scheduling/reap. */
@@ -94,6 +115,14 @@
 #define PW_EXEC_DESCRIPTOR_RESERVE 64
 
 static long g_exec_child_deadline_ms = PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
+static long g_exec_attempt_budget_ms = PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT;
+
+/* Worker start on CLOCK_MONOTONIC, and the release wait to exclude from the
+ * host-visible elapsed time. An unreadable start clock leaves the budget
+ * unknown, which refuses every exec spawn rather than guessing. */
+static struct timespec g_worker_start;
+static int g_worker_start_valid;
+static int64_t g_release_wait_ns;
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
@@ -149,6 +178,9 @@ typedef struct {
      * leave this at 0 to use PW_EXEC_CHILD_DEADLINE_MS_DEFAULT. */
     long exec_child_deadline_ms;
     long proceed_wait_ms;
+    /* Harness-only shortening of the exec attempt budget. 0 keeps the
+     * production default; the flag can never extend the budget. */
+    long exec_attempt_budget_ms;
 } pw_args_t;
 
 static void print_usage(FILE *to) {
@@ -185,8 +217,13 @@ static void print_usage(FILE *to) {
         "                         reports the deadline in error.\n"
         "\n"
         "  --proceed-wait-ms N     Harness-only release deadline (1..60000 ms).\n"
+        "  --exec-attempt-budget-ms N  Harness-only exec attempt budget\n"
+        "                         (1..%ld ms). Exec children spawn only while\n"
+        "                         the worker's host-visible elapsed time is\n"
+        "                         below it; later exec steps are refused.\n"
         "  --version              Print ABI version and exit.\n",
-        PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
+        PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT,
+        PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
 }
 
 static int parse_int_arg(const char *value, long *out) {
@@ -209,6 +246,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
     args->pre_ready_hang_ms      = 0;
     args->exec_child_deadline_ms = 0;
     args->proceed_wait_ms = PW_PROCEED_WAIT_MS_DEFAULT;
+    args->exec_attempt_budget_ms = 0;
 
     int i = 1;
     while (i < argc) {
@@ -219,6 +257,7 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
             strcmp(flag, "--post-apply-kill-signal") == 0 ||
             strcmp(flag, "--pre-ready-hang-ms") == 0 ||
             strcmp(flag, "--exec-child-deadline-ms") == 0 ||
+            strcmp(flag, "--exec-attempt-budget-ms") == 0 ||
             strcmp(flag, "--proceed-wait-ms") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "pw-probe-runner: %s requires a value\n", flag);
@@ -287,6 +326,16 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                     return -1;
                 }
                 args->exec_child_deadline_ms = v;
+            } else if (strcmp(flag, "--exec-attempt-budget-ms") == 0) {
+                /* Shorten only: a harness proves the budget with seconds of
+                 * helpers, never by granting more than production allows. */
+                if (v <= 0 || v > PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT) {
+                    fprintf(stderr,
+                            "pw-probe-runner: --exec-attempt-budget-ms %ld out of range (1..%ld)\n",
+                            v, PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
+                    return -1;
+                }
+                args->exec_attempt_budget_ms = v;
             } else {
                 if (v < 0 || (unsigned long)v > (unsigned long)PW_SHM_MAX_STEPS) {
                     fprintf(stderr, "pw-probe-runner: --step-count %ld out of range\n", v);
@@ -805,6 +854,22 @@ static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow)
     return (int)n;
 }
 
+/* Host-visible elapsed time is the time since worker start minus the release
+ * wait, mirroring the host's count, which excludes its synchronous hook.
+ * Returns 0 and stores the budget remainder in milliseconds (0 = exhausted),
+ * or -1 with errno set when CLOCK_MONOTONIC is unavailable; the caller then
+ * refuses to spawn rather than run a child without a working deadline. */
+static int exec_attempt_remaining_ms(long *remaining_ms) {
+    struct timespec now;
+    if (!g_worker_start_valid) { errno = EIO; return -1; }
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -1;
+    int64_t elapsed_ns = (int64_t)(now.tv_sec - g_worker_start.tv_sec) * 1000000000LL
+        + (now.tv_nsec - g_worker_start.tv_nsec) - g_release_wait_ns;
+    int64_t remaining = (int64_t)g_exec_attempt_budget_ms - elapsed_ns / 1000000LL;
+    *remaining_ms = remaining <= 0 ? 0L : (long)remaining;
+    return 0;
+}
+
 static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
     /* Sentinel conventions when no child runs (header documents these). */
     slot->child_pid          = 0;
@@ -829,6 +894,36 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
                  "exec slot: file_actions not prepared");
         return;
     }
+
+    /* Attempt budget admission. Refusal is per-step evidence with no spawn
+     * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
+     * not a permission result). Otherwise the child's deadline is the
+     * smaller of the per-step deadline and the budget remainder. */
+    long remaining_ms = 0;
+    if (exec_attempt_remaining_ms(&remaining_ms) != 0) {
+        int e = errno;
+        slot->rc = -1;
+        slot->errno_val = e ? e : EIO;
+        snprintf(slot->error, sizeof(slot->error),
+                 "exec attempt budget: CLOCK_MONOTONIC unavailable before spawn: %s",
+                 strerror(slot->errno_val));
+        return;
+    }
+    if (remaining_ms <= 0) {
+        slot->rc = -1;
+        slot->errno_val = ETIMEDOUT;
+        snprintf(slot->error, sizeof(slot->error),
+                 "exec attempt budget: %ld ms exhausted before spawn",
+                 g_exec_attempt_budget_ms);
+        return;
+    }
+    long deadline_ms_total = g_exec_child_deadline_ms;
+    int deadline_clamped = 0;
+    if (remaining_ms < deadline_ms_total) {
+        deadline_ms_total = remaining_ms;
+        deadline_clamped = 1;
+    }
+    const char *deadline_note = deadline_clamped ? " (exec attempt budget remainder)" : "";
 
     /* Build argv from slot->target + slot->argv[1..argv_count-1].
      * The host always writes argv[0] = target plus the caller's args,
@@ -890,7 +985,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
      * escalate into a worker-level sentinel timeout (host SIGKILLs
      * the worker, error attribution lost). The deadline gives us a
      * chance to surface "child exceeded deadline" cleanly while
-     * still under the host's larger budget. */
+     * still under the host's larger budget; deadline_ms_total was
+     * already clamped to the attempt budget remainder above. */
     struct timespec deadline_ts;
     if (clock_gettime(CLOCK_MONOTONIC, &deadline_ts) != 0) {
         /* Should not happen on any supported macOS. Fall back to a
@@ -898,7 +994,6 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
          * blocking forever. */
         deadline_ts.tv_sec = 0; deadline_ts.tv_nsec = 0;
     }
-    long deadline_ms_total = g_exec_child_deadline_ms;
     deadline_ts.tv_sec  += deadline_ms_total / 1000L;
     deadline_ts.tv_nsec += (deadline_ms_total % 1000L) * 1000000L;
     if (deadline_ts.tv_nsec >= 1000000000L) {
@@ -1043,8 +1138,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
              * the error string so a downstream consumer can see that
              * the run was bounded. */
             snprintf(slot->error, sizeof(slot->error),
-                     "child completed at the %ld-second deadline boundary",
-                     deadline_ms_total / 1000L);
+                     "child completed at the %ld ms deadline boundary%s",
+                     deadline_ms_total, deadline_note);
         }
     } else if (WIFSIGNALED(status)) {
         slot->child_exit_code   = -1;
@@ -1053,8 +1148,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
         slot->errno_val         = 0;
         if (deadline_expired && slot->child_term_signal == SIGKILL) {
             snprintf(slot->error, sizeof(slot->error),
-                     "child exceeded %ld-second deadline; SIGKILL'd",
-                     deadline_ms_total / 1000L);
+                     "child exceeded %ld ms deadline%s; SIGKILL'd",
+                     deadline_ms_total, deadline_note);
         } else {
             snprintf(slot->error, sizeof(slot->error),
                      "child signaled: signal=%d", slot->child_term_signal);
@@ -1157,6 +1252,9 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long bu
             break;
         }
         if (atomic_load_explicit(&hdr->proceed, memory_order_acquire) == 1u) {
+            /* The host excluded this interval from its window while it ran
+             * the collection hook; the exec attempt budget excludes it too. */
+            g_release_wait_ns = elapsed_ns;
             atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);
             pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, UINT32_MAX);
             return;
@@ -1182,6 +1280,10 @@ int main(int argc, char **argv) {
      * rather than dying of SIGPIPE before apply ever runs. Every write()
      * in this worker already checks its return value. */
     signal(SIGPIPE, SIG_IGN);
+
+    /* Worker start for the exec attempt budget. The host's window began no
+     * earlier than this, so counting from here is conservative. */
+    g_worker_start_valid = clock_gettime(CLOCK_MONOTONIC, &g_worker_start) == 0;
 
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
         printf("pw-probe-runner abi=%u region_bytes=%zu max_steps=%u slot_bytes=%u\n",
@@ -1275,6 +1377,9 @@ int main(int argc, char **argv) {
      * posix_spawn_file_actions_init(). */
     if (args.exec_child_deadline_ms > 0) {
         g_exec_child_deadline_ms = args.exec_child_deadline_ms;
+    }
+    if (args.exec_attempt_budget_ms > 0) {
+        g_exec_attempt_budget_ms = args.exec_attempt_budget_ms;
     }
     exec_resources_reset_all();
     uint32_t exec_count = 0;

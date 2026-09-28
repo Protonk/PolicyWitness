@@ -604,10 +604,10 @@
       "id": "worker_sentinel_wait",
       "section": "execution",
       "title": "Worker publication wait",
-      "value": 60000,
+      "value": 120000,
       "unit": "milliseconds",
-      "counting": "Nominal polling budget for worker sentinels. Synchronous validator work is outside this budget.",
-      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence.",
+      "counting": "Nominal polling budget for worker sentinels, from the end of the ready-byte wait until done: policy read, compilation, application, the release wait and every attempt count against it. Synchronous validator work is outside this budget.",
+      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence. The worker's exec_attempt_budget keeps exec spawning inside this window; other attempts are not bounded by it.",
       "control": "Production default; test-only controls are not a public tuning interface.",
       "sources": [
         {
@@ -809,8 +809,8 @@
       "title": "Exec child deadline",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Per-exec child observation deadline after successful spawn.",
-      "effect": "Worker attempts to kill/reap the child; the step records that the deadline fired.",
+      "counting": "Per-exec child observation deadline after successful spawn. The deadline is per step and shares the worker window: the effective deadline is the smaller of this value and the remaining exec_attempt_budget.",
+      "effect": "Worker attempts to kill/reap the child; the step records that the deadline fired, naming the budget remainder when that was the bound.",
       "control": "Production default; test-only controls are not a public tuning interface.",
       "sources": [
         {
@@ -830,7 +830,45 @@
           "kind": "path"
         }
       ],
-      "behavior": "Shortened deadline and cleanup controls; the production duration is source-inspected."
+      "behavior": "Shortened deadline and cleanup controls; the production duration is source-inspected. The harness attempt-budget controls pin the remainder-bounded deadline."
+    },
+    {
+      "id": "exec_attempt_budget",
+      "section": "execution",
+      "title": "Exec attempt budget",
+      "value": 115000,
+      "unit": "milliseconds",
+      "counting": "Host-visible elapsed CLOCK_MONOTONIC time since worker start, excluding the release wait (which the host also excludes from its window), within which an exec child may still be spawned. Each child's deadline is the smaller of exec_child_wait and the remainder.",
+      "effect": "An exec step reached with no remainder reports exec_failed with errno 60 (ETIMEDOUT) and an exec attempt budget diagnostic; no spawn is claimed and sandbox attribution stays unestablished. A child bounded by the remainder records that in its deadline error. Non-exec attempts are not bounded, so a blocking file open can still exhaust the worker window. An unreadable clock refuses every exec spawn.",
+      "control": "Derived: worker_sentinel_wait minus a 5,000 ms publication margin; runner_unit asserts the relation against the compiled worker constant. Harness-only shortening; no public override, and the test-only sentinel override does not move it.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT"
+        },
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "exec_attempt_remaining_ms"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "NATIVE_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/runner_c_worker_harness/run.sh",
+          "symbol": "run_exec_attempt_budget",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Value-checked against the compiled worker and the host default. Native harness controls shorten the budget: with the default deadline, exactly one helper spawns with the remainder as its deadline and five later exec steps are refused without spawning; with 500 ms deadlines, several helpers are killed at their own deadline before refusals begin. Both require the trailing read to succeed, every slot completed, done published within a second of the budget edge and a clean worker exit. The production duration is source-inspected."
     },
     {
       "id": "exec_step_descriptors",

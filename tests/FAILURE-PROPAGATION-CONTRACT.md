@@ -753,9 +753,10 @@ streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
 `policy_too_large` in both helper status and missing-reply note prose.
 
-Readiness, blocking policy transfer, the nominal 60s worker polling budget,
+Readiness, blocking policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
-phases. No end-to-end worker deadline was added. Failed cleanup can leave an
+phases. The worker bounds only its exec spawning inside that budget (the exec
+attempt budget in docs/LIMITS.md); no end-to-end worker deadline was added. Failed cleanup can leave an
 unreaped child; successful termination still uses blocking final wait. No early
 stderr capture is added: pre-mapping, direct dependency output and crashes in the
 reporting path may leave no diagnostic text. Optional compiled-object capture

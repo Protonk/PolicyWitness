@@ -13,8 +13,8 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Thirty-two scenarios, each driven by `harness.c`: six core lifecycle cases,
-sixteen attempt and pre-apply cases, and ten release controls listed below.
+Thirty-four scenarios, each driven by `harness.c`: six core lifecycle cases,
+eighteen attempt and pre-apply cases, and ten release controls listed below.
 
 ### Core lifecycle
 
@@ -99,6 +99,19 @@ All capped plans import `system.sb` and read `/etc/hosts` before and after the
 starve unrelated work. Every case requires completed slots and a clean worker
 exit. See `exec_step_descriptors` and `exec_descriptor_reserve` in
 `docs/LIMITS.md`.
+
+### Exec attempt budget
+
+`exec_attempt_budget_remainder` shortens the worker's exec attempt budget to
+one second and keeps the default ten-second deadline. Six `/bin/sleep 30`
+steps follow: exactly one spawns, its deadline is the budget remainder (its
+error says so), and the other five are refused before `posix_spawn` with
+errno 60 and no child. `exec_attempt_budget_sequence` grants 1.5 seconds with
+500 ms deadlines, so several helpers are killed at their own deadline before
+the refusals begin. Both plans end with a read of `/etc/hosts` that must
+succeed, and both require every slot completed, `done` published within a
+second of the budget edge (`done_after_applied_ms`) and a clean worker exit.
+See `exec_attempt_budget` in `docs/LIMITS.md`.
 
 ### Pre-apply self-defense
 

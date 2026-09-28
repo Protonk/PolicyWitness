@@ -506,6 +506,69 @@ for cap in 126 127 128 129; do
 done
 run_exec_descriptor_limit "exec_descriptor_inherited" "exec_descriptor_inherited" "inherited"
 
+# ---- test_id: exec_attempt_budget_{remainder,sequence} ---------------------
+# Six /bin/sleep helpers each outlive their deadline. The worker's exec attempt
+# budget clamps the last spawned child's deadline to the remainder, refuses
+# later exec steps before spawn, and the trailing read still runs; `done`
+# publishes near the budget edge instead of after six full deadlines.
+
+run_exec_attempt_budget() {
+  local test_id="$1" mode="$2"
+  run_harness_case "${test_id}" "${test_id}" \
+    "six deadline-hitting helpers under a shortened exec attempt budget (${mode})" || return 0
+  set +e
+  PW_MODE="${mode}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, os, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+mode = os.environ["PW_MODE"]
+budget = {"remainder": 1000, "sequence": 1500}[mode]
+assert r["ready_byte_received"] and r["applied"] and r["apply_rc"] == 0 and r["done"], r
+assert not r["sent_sigkill"] and r["exit_code"] == 0 and r["term_signal"] is None, r
+assert r["failure_published"] == 0, f"a budget refusal is per-step evidence, never a run failure: {r}"
+slots = r["slots"]
+assert all(s["completed"] == 1 for s in slots), slots
+execs = [s for s in slots if "child_pid" in s]
+reads = [s for s in slots if "child_pid" not in s]
+assert len(execs) == 6 and [s["step_id"] for s in reads] == ["read_after_budget"], slots
+read = reads[0]
+assert read["rc"] == 0 and read["errno"] == 0 and read["observed_path"] == "/private/etc/hosts", read
+spawned = [s for s in execs if s["child_pid"] > 0]
+refused = [s for s in execs if s["child_pid"] == 0]
+assert spawned and refused, execs
+assert [s["child_pid"] > 0 for s in execs] == [True] * len(spawned) + [False] * len(refused), \
+    "spawns must precede refusals: the budget only runs down"
+for s in spawned:
+    assert s["rc"] == -1 and s["errno"] == 0, s
+    assert s["child_exit_code"] == -1 and s["child_term_signal"] == 9, s
+    assert "deadline" in s["error"] and "SIGKILL'd" in s["error"], s
+for s in refused:
+    assert s["rc"] == -1 and s["errno"] == 60, s
+    assert s["child_exit_code"] == -1 and s["child_term_signal"] == 0, s
+    assert s["stdout"] == "" and s["stderr"] == "", s
+    assert s["error"] == f"exec attempt budget: {budget} ms exhausted before spawn", s
+if mode == "remainder":
+    # A ten-second default deadline never fits a one-second budget: exactly one
+    # child spawns with the remainder as its deadline; the rest are refused.
+    assert len(spawned) == 1 and "(exec attempt budget remainder)" in spawned[0]["error"], spawned
+else:
+    # Several 500 ms deadlines fit before the budget ends the sequence. Only the
+    # last spawned child can have been bounded by the remainder.
+    assert len(spawned) >= 2, spawned
+    assert all("(exec attempt budget remainder)" not in s["error"] for s in spawned[:-1]), spawned
+span = r["done_after_applied_ms"]
+assert 0 <= span < budget + 1000, f"done must publish near the budget edge, not after every deadline: {span} ms"
+print(f"ok: {mode}: {len(spawned)} helper(s) killed at a deadline, {len(refused)} exec steps refused before spawn, "
+      f"trailing read succeeded, done {span} ms after applied")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
+run_exec_attempt_budget "exec_attempt_budget_remainder" "remainder"
+run_exec_attempt_budget "exec_attempt_budget_sequence" "sequence"
+
 run_proceed_control() {
   local scenario="$1"
   run_harness_case "${scenario}" "${scenario}" "Exercise release, acknowledgement and attempt exclusion: ${scenario}" || return 0

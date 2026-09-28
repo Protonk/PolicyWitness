@@ -260,7 +260,7 @@ public struct CWorkerInput {
                 params: [CWorkerParam] = [],
                 slots: [CWorkerSlotInput],
                 readyByteTimeoutMs: Int = 1_000,
-                sentinelTimeoutMs: Int = 60_000,
+                sentinelTimeoutMs: Int = 120_000,
                 exitGraceMs: Int = 1_000,
                 postApplyHangMs: Int? = nil,
                 postApplyKillSignal: Int? = nil,

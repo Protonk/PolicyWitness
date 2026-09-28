@@ -131,7 +131,7 @@ unset.
 | --- | --- | --- | --- | --- |
 | `libsandbox_path` | string | `/usr/lib/libsandbox.dylib` | `SandboxLib.load(path:)` → `dlopen(path)` in the host's pre-spawn check | `libsandbox_unavailable` |
 | `worker_executable_path` | string | bundle-local `pw-probe-runner` | `posix_spawn(path, ...)` inside `CWorker.spawn` | `worker_spawn_failed` |
-| `worker_timeout_ms` | integer (ms, floored at 50) | 60000 | Host-side sentinel deadline in `CWorker.run` | `runner_timeout` |
+| `worker_timeout_ms` | integer (ms, floored at 50) | 120000 | Host-side sentinel deadline in `CWorker.run`; the C worker's exec attempt budget stays at its production value | `runner_timeout` |
 | `validator_io_timeout_ms` | integer (ms, floored at 50; no ceiling) | 30000 | Monotonic I/O deadline in `ValidatorClient.runValidator`; may intentionally exceed the worker release budget | `validator_no_reply` or earlier worker failure |
 | `validator_executable_path` | string | bundle-local `sb_api_validator` | `posix_spawn(path, ...)` inside `ValidatorClient.runValidator` | `validator_spawn_failed` |
 | `worker_post_apply_hang_ms` | integer (ms, 0..60000) | 0 (disabled) | Passed as `--post-apply-hang-ms` to `pw-probe-runner`; the C worker `nanosleep`s for N ms after slot results are durable but before flipping `done`, pushing the host past its sentinel deadline | `runner_timeout` |

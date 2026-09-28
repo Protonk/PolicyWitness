@@ -266,10 +266,11 @@ public enum CWorkerOrchestrator {
 /// Resolve the sentinel-timeout for the C worker from the request's
 /// `_test_overrides.worker_timeout_ms`. Floor at 50 ms because a
 /// smaller deadline fires before any real worker can complete its
-/// post-apply work. nil/absent → CWorkerInput default (60s — long
-/// enough for any real specimen).
+/// post-apply work. nil/absent → CWorkerInput default (120s, the worker
+/// window; the C worker's exec attempt budget keeps exec spawning inside it,
+/// see docs/LIMITS.md).
 func timeoutMsForCWorker(override: Int?) -> Int {
-    let cWorkerDefault = 60_000
+    let cWorkerDefault = 120_000
     guard let v = override else { return cWorkerDefault }
     return max(50, v)
 }

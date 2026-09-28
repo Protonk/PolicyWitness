@@ -34,8 +34,8 @@ func runLimitsContractTests(_ tk: TestKit) {
                     guard pair.count == 2, let value = Int(pair[1]) else { return nil }
                     return (String(pair[0]), value)
                 })
-            guard let proceedWait = native["worker_proceed_wait"] else {
-                throw TestFailure(message: "compiled C probe omitted worker_proceed_wait")
+            guard let proceedWait = native["worker_proceed_wait"], let attemptBudget = native["exec_attempt_budget"] else {
+                throw TestFailure(message: "compiled C probe omitted worker_proceed_wait or exec_attempt_budget")
             }
             let rejected = decodeValidatorFrames(Data(repeating: 0xff, count: 1024))
             guard let fault = rejected.fault else { throw TestFailure(message: "invalid frame accepted") }
@@ -60,6 +60,7 @@ func runLimitsContractTests(_ tk: TestKit) {
                 "worker_exit_grace": worker.exitGraceMs,
                 "validator_io_wait": validator.verdictReadTimeoutMs,
                 "worker_proceed_wait": proceedWait,
+                "exec_attempt_budget": attemptBudget,
                 "validator_release_margin": validatorReleaseMarginMs,
                 "validator_io_override_floor": timeoutMsForValidator(override: 0),
                 "validator_exit_grace": validator.exitGraceMs,
@@ -87,6 +88,10 @@ func runLimitsContractTests(_ tk: TestKit) {
             }
             try expectEqual(timeoutMsForCWorker(override: nil), worker.sentinelTimeoutMs,
                             "orchestrator and driver defaults agree")
+            // The C worker mirrors the host window; its exec attempt budget is that
+            // window minus the documented 5,000 ms publication margin.
+            try expectEqual(worker.sentinelTimeoutMs - attemptBudget, 5_000,
+                            "exec attempt budget leaves the publication margin inside the worker window")
         }
         tk.run("rejected-frame context boundary retains raw prefix and loss metadata") {
             // Independent of limits.json: changing the inventory cannot change this oracle.

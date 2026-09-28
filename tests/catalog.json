@@ -523,6 +523,14 @@
           "description": "32 execs spawn with 80 extra inherited descriptors and soft/hard limits 128/4096"
         },
         {
+          "id": "exec_attempt_budget_remainder",
+          "description": "A one-second exec attempt budget with the default deadline spawns one helper bounded by the remainder, refuses five exec steps before spawn, and still completes the trailing read"
+        },
+        {
+          "id": "exec_attempt_budget_sequence",
+          "description": "A 1.5-second exec attempt budget with 500 ms deadlines kills several helpers at their deadline, then refuses the rest before spawn; done publishes near the budget edge"
+        },
+        {
           "id": "proceed_never_set",
           "description": "Worker release barrier: proceed never set"
         },
