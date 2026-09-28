@@ -233,19 +233,53 @@ correctness, equipment failures and measured OS record availability.
 
 ## Acceptance
 
-- Logger-only variation preserves the same runner reply, execution result,
-  exit status, prediction/attempt/comparison evidence, disposition and cause.
-- A stalled or noisy collector is bounded by its documented supervision and
-  retention policy; its failures do not replace an available runner result.
-- For complete inputs within the declared budgets, every eligible supplied
-  event is retained and correlated correctly; invalid and ambiguous inputs do
-  not acquire stronger meaning. Partial collection follows its explicit policy.
-- Empty, partial, unavailable and disabled evidence remain distinguishable
-  through the public envelope and consumer.
-- No default correctness assertion depends on the OS emitting a selected
-  denial. Positive capture coverage remains mandatory through controlled input.
-- Actual query bounds, collection limits and observed cleanup are represented
-  honestly, including the two-second pad and the selected partial-capture policy.
-- Permanent tests and documentation stand on their own after this temporary
-  plan is deleted. Inbound links to the associated prose record remain confined
-  to associated `*-PLAN.md` files.
+- **Execution authority.** For a fixed runner reply and runner-client capture,
+  changing log contents, availability or collector behavior leaves the runner
+  reply, execution result, CLI exit status, predictions, native attempts,
+  comparisons, drift, disposition and termination cause unchanged. This holds
+  for matching records, no records and collector failures.
+- **Collection budgets.** Collection and cleanup have finite, documented and
+  enforced time and output budgets at both the observer and `log show`
+  boundaries. Output is bounded while being read. A stalled process, a pipe
+  held open or excessive output cannot make PW wait indefinitely to emit an
+  available runner result; truncating a buffer after an unbounded read does
+  not satisfy this condition.
+- **Record preservation.** For complete valid inputs within the declared
+  budgets, every supported deny record survives collection and parsing with
+  its raw evidence and provenance. Losing even one such supplied record fails
+  this condition, regardless of live OS record availability.
+- **Correlation.** Each retained record receives all and only the candidate
+  associations supported by the worker PID, operation and path evidence.
+  Ambiguity remains explicit. Unrelated PIDs, unsupported matches and invalid
+  candidate references cannot acquire worker or step attribution.
+- **Capture state.** The envelope and consumer distinguish successful empty
+  collection, partial collection, unavailable evidence and disabled collection.
+  A partial-collection policy is selected and applied consistently; incomplete
+  output never passes as complete. `permission_failures_without_record` is
+  null unless correlation reaches `pid_match` or `no_match` with per-step
+  comparisons present. When those conditions hold, it lists exactly the
+  permission-shaped steps without a captured candidate, or `[]` if none
+  qualify. That list makes no claim about the OS store.
+- **Scan bounds.** The reported query bounds equal those actually handed to
+  `log show`: `floor(client start) - 2 s` through `ceil(client end) + 2 s`.
+  Raw client timestamps remain separate, `pad_seconds` is 2, and its absence
+  in an older envelope means 0. Neither padding nor a successful scan asserts
+  complete delivery, exact run membership or protection against PID reuse.
+- **Cleanup evidence.** The logging operation accounts for both the observer
+  and its log child. A termination request, confirmed exit and unconfirmed
+  cleanup remain distinguishable in the reported evidence. Sending a signal
+  or observing only the observer's exit does not establish that both exited.
+- **OS-independent default battery.** No default correctness assertion requires
+  macOS to emit a selected denial, and passing does not depend on retries until
+  a record appears. Empty OS results are admissible without excusing software
+  or equipment contract failures as “best effort.”
+- **Positive capture coverage.** The default battery exercises the production
+  parser, receiver, correlation, serialization and consumer paths using
+  controlled input with required positive results. Dropping a supplied eligible
+  record, inventing an association or suppressing all capture must fail a
+  correctness assertion even when every live log query returns no records.
+- **Plan removal.** Permanent tests and contract documentation remain usable
+  after this plan is deleted and without gitignored investigation artifacts.
+  Implemented limits, field meanings and partial-collection behavior are
+  documented outside the plan. Repository links into the investigation record
+  occur only in associated `*-PLAN.md` files.
