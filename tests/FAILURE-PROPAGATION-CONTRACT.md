@@ -225,6 +225,17 @@ tokens resolve under `runner_subprocess`; step-scoped tokens resolve inside the
 record's own step entry. A token that does not resolve within the same retained
 reply invalidates the claim that uses it.
 
+References must be strings and must include a sufficient witness set for the
+answer, not merely a nonempty list of existing fields. Values (including all
+fields of a termination request) must equal the cited observation. Both exit
+and signal representations disqualify either supported status answer. A
+terminal collection fact without a successful reap is invalid; a reap alone
+never upgrades a live collection fact. The boundary/result copies in
+`attempt.lifecycle`, the aggregate publication flag and lifecycle limitations
+must agree with the carried record. Conflict issue references must identify
+the applicable rule, question, step and observations, not just an existing
+array element.
+
 | Token | Resolves to |
 | --- | --- |
 | `reaped`, `exit_code`, `term_signal` | the same-named `runner_subprocess` fields |
@@ -254,7 +265,10 @@ compilation 5, capture 6, readiness 7, application 8, proceed 11, then attempt
 9 for each step in plan order, then completion 10. An attempt word's item
 index names the step; a parameter word's names the parameter. An attempt index
 that names no submitted step, including any attempt index for an empty plan,
-is `invalid`; an unrecognized operation or phase code is `progress_unrecognized`
+is `invalid`; a mismatch between the encoded word and its decoded fields, or
+an item index on a non-indexed operation, is also `invalid`. An ambiguous slot
+identity supplies no associated slot, rather than selecting one duplicate.
+An unrecognized operation or phase code is `progress_unrecognized`
 and its raw word is retained. Progress at or beyond a step's boundary means a
 position at or after that step's `started` word.
 
@@ -336,7 +350,7 @@ answer from raw fields or prose.
 | `runner_sandbox_diagnostics.termination_cause` | The cause table above. |
 | `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. Null for a legacy reply; the raw `poll_stop_reason` remains readable there. |
 | `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid`, `invalid` or `not_reported` (legacy). Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record` or `malformed_record`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
-| `runner_subprocess.partial_steps` | True when any supported step's slot is not completed. Its legacy meaning is unchanged: it does not say an attempt never began. |
+| `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. Its legacy meaning is unchanged: it does not say an attempt never began. |
 | `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
 | `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. `attempt:slot_incomplete` stays as today. Lifecycle entries never change agreement, order, drift or sandbox attribution. |
 | `steps[].attempt.outcome`, `missing_reason`, `result_source` | Unchanged compatibility spellings. `not_run_worker_died` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |

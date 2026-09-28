@@ -106,19 +106,20 @@ public enum CWorkerOrchestrator {
         }
 
         // ---- assemble + classify -----------------------------------------
+        let workerOutput = unwrapWorkerOutput(workerResult)
+        let disposition = workerOutput.map { resolveDisposition($0, plan: parsed.probe_plan) }
         let runOutcome = classify(
             workerResult: workerResult,
             validatorResult: validatorResult,
-            expectedVerdictCount: validatorProbes.count
+            expectedVerdictCount: validatorProbes.count,
+            disposition: disposition
         )
 
-        let workerOutput = unwrapWorkerOutput(workerResult)
         let validatorOutput = unwrapValidatorOutput(validatorResult)
 
         let ordering = workerOutput.map {
             buildOrdering($0, validatorOutput: validatorOutput, hasQueries: !validatorProbes.isEmpty)
         }
-        let disposition = workerOutput.map { resolveDisposition($0, plan: parsed.probe_plan) }
         let stepResults = buildStepResults(
             probePlan: parsed.probe_plan,
             queryPlan: queryPlan,
@@ -419,9 +420,7 @@ func buildStepResults(
     // One resolved account for every lifecycle projection below.
     let account = disposition ?? workerOutput.map { resolveDisposition($0, plan: probePlan) }
     // Index outputs by step_id for the join.
-    let workerSlotsByStep: [String: CWorkerSlotResult] = Dictionary(
-        uniqueKeysWithValues: (workerOutput?.slots ?? []).map { ($0.stepId, $0) }
-    )
+    let workerSlotsByStep = uniquelyAssociatedWorkerSlots(workerOutput?.slots ?? [])
     let probes = queryPlan.compactMap { $0.probe }
     let decisions = Dictionary(uniqueKeysWithValues: queryPlan.map { ($0.stepId, $0) })
     let verdictsByStep = associateValidatorVerdicts(validatorOutput?.verdicts ?? [], expected: probes).byStep
@@ -458,15 +457,17 @@ func buildStepResults(
                 ? "query_not_requested" : validatorOutput == nil ? "validator_not_invoked" : "validator_no_verdict"
         }
         let slot = workerSlotsByStep[step.step_id]
-        let supported = mapAttemptKindOrNil(step.attempt) != nil
+        let recordStep = account?.steps.indices.contains(index) == true ? account?.steps[index] : nil
+        let supported = recordStep.map { $0.attempt_support == "supported" } ?? (mapAttemptKindOrNil(step.attempt) != nil)
+        let slotState = recordStep?.slot ?? (slot == nil ? "absent" : slot!.completed ? "completed" : "incomplete")
         attempt.requested_kind = step.attempt.kind
         attempt.requested_action = step.attempt.action
-        attempt.result_source = slot?.completed == true && supported ? "worker" : "synthetic"
+        attempt.result_source = slotState == "completed" && supported ? "worker" : "synthetic"
         // Slot rc is PW's attempt status (often 0/1), not the raw syscall
         // return (e.g. an open FD). ABI 7 does not carry that native return.
         attempt.native_rc = nil
         if attempt.result_source == "synthetic" {
-            attempt.missing_reason = !supported ? "attempt_not_supported" : slot == nil ? "slot_absent" : "slot_incomplete"
+            attempt.missing_reason = !supported ? "attempt_not_supported" : slotState == "absent" ? "slot_absent" : "slot_incomplete"
         }
         // The lifecycle object projects this step's two claims; the compatibility
         // triple above is unchanged.
@@ -901,7 +902,7 @@ func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecor
         pid: Int(out.workerPid),
         term_signal: out.termSignal.map { Int($0) },
         exit_code: out.exitCode.map { Int($0) },
-        partial_steps: record.steps.contains { $0.attempt_support == "supported" && $0.slot != "completed" },
+        partial_steps: record.steps.contains { $0.slot != "completed" },
         ready_byte_received: out.readyByteReceived,
         done_observed: out.done,
         poll_stop_reason: out.pollStopReason,
@@ -948,38 +949,8 @@ private func anySlotNotCompleted(_ slots: [CWorkerSlotResult]) -> Bool {
 // the submitted plan (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker
 // disposition record"). Every lifecycle conclusion below projects from it.
 
-private struct ProtocolPosition: Comparable {
-    let order: Int
-    let index: Int
-    let phase: Int
-    static func < (a: ProtocolPosition, b: ProtocolPosition) -> Bool {
-        (a.order, a.index, a.phase) < (b.order, b.index, b.phase)
-    }
-}
-
-private enum ProgressAssociation {
-    case none(ProtocolPosition)
-    case stepIndex(Int, ProtocolPosition)
-    case parameterIndex(Int, ProtocolPosition)
-    case invalid
-    case unrecognized
-}
-
-private func associateProgress(_ progress: PWWorkerProgress?, planCount: Int) -> ProgressAssociation? {
-    guard let progress else { return nil }
-    guard let order = PWDisposition.protocolOrder.firstIndex(of: progress.operation),
-          (1...2).contains(progress.phase) else { return .unrecognized }
-    let phase = Int(progress.phase)
-    switch progress.operation {
-    case 9:
-        guard let index = progress.index, Int(index) < planCount else { return .invalid }
-        return .stepIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
-    case 4:
-        guard let index = progress.index else { return .invalid }
-        return .parameterIndex(Int(index), ProtocolPosition(order: order, index: Int(index), phase: phase))
-    default:
-        return .none(ProtocolPosition(order: order, index: 0, phase: phase))
-    }
+private func uniquelyAssociatedWorkerSlots(_ slots: [CWorkerSlotResult]) -> [String: CWorkerSlotResult] {
+    Dictionary(grouping: slots, by: { $0.stepId }).compactMapValues { $0.count == 1 ? $0[0] : nil }
 }
 
 /// Resolve the account. Without a plan (constructed inputs) the steps come from
@@ -1070,10 +1041,9 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
         position = at
     }
 
-    let terminal = out.collectionBasis == "after_confirmed_reap"
+    let terminal = out.collectionBasis == "after_confirmed_reap" && out.reaped == true
     let attemptOrder = PWDisposition.protocolOrder.firstIndex(of: 9)!
-    var slotsById: [String: CWorkerSlotResult] = [:]
-    for slot in out.slots where slotsById[slot.stepId] == nil { slotsById[slot.stepId] = slot }
+    let slotsById = uniquelyAssociatedWorkerSlots(out.slots)
     var steps: [PWDispositionStep] = []
     for (i, step) in planSteps.enumerated() {
         let slot = slotsById[step.id]
@@ -1084,14 +1054,14 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
         var claims: [String: PWDispositionClaim] = [:]
         claims["step_requested_operation_applicability"] =
             supported(step.supported ? "supported" : "unsupported", basis: ["attempt_support"])
-        if let at = position, at >= boundary {
-            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
-        } else if completed && step.supported {
-            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
-        } else if position != nil && completed && terminal {
+        if let at = position, at < boundary && completed && terminal {
             claims["step_boundary_reached"] = conflict("D5", question: "step_boundary_reached", stepIndex: i,
                 observations: ["progress", "slot", "collection_basis"],
                 detail: "a completed slot beside valid terminal progress that never reached it")
+        } else if let at = position, at >= boundary {
+            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
+        } else if completed && step.supported {
+            claims["step_boundary_reached"] = supported("reached", basis: present(["progress", "slot", "attempt_support"]))
         } else if position != nil && !completed && terminal {
             claims["step_boundary_reached"] = supported("not_reached", basis: ["progress", "slot", "collection_basis"])
         } else if position != nil && !completed {
@@ -1120,19 +1090,6 @@ func resolveDisposition(_ out: CWorkerOutput, plan: [PWRunnerProbeStep]?) -> PWD
     return PWDispositionRecord(questions: questions, steps: steps, issues: issues)
 }
 
-/// The compact per-step summary: a registered projection of the two step claims.
-func lifecycleSummary(_ step: PWDispositionStep) -> String {
-    let boundary = step.questions["step_boundary_reached"]
-    let result = step.questions["step_result_published"]
-    if step.attempt_support == "unsupported" { return "unsupported" }
-    if result?.state == "supported" && result?.answer == "published" { return "completed" }
-    if boundary?.state == "conflicting" || result?.state == "conflicting" { return "conflicting" }
-    if result?.state == "supported" && boundary?.state == "supported" {
-        return boundary?.answer == "reached" ? "started_without_result" : "not_reached"
-    }
-    return "unresolved"
-}
-
 func attemptLifecycle(_ step: PWDispositionStep) -> PWAttemptLifecycle? {
     guard let boundary = step.questions["step_boundary_reached"],
           let result = step.questions["step_result_published"] else { return nil }
@@ -1158,7 +1115,8 @@ struct ClassifiedRun {
 func classify(
     workerResult: CWorkerRunResult,
     validatorResult: ValidatorClientResult?,
-    expectedVerdictCount: Int
+    expectedVerdictCount: Int,
+    disposition: PWDispositionRecord? = nil
 ) -> ClassifiedRun {
     // Worker side first — its failure modes are more severe (the
     // attempt channel is the load-bearing observation; without it the
@@ -1167,7 +1125,7 @@ func classify(
     case .failure(let err, let partial):
         if let partial, partial.workerEvidence?.failure != nil {
             let reported = classify(workerResult: .success(partial), validatorResult: validatorResult,
-                                    expectedVerdictCount: expectedVerdictCount)
+                                    expectedVerdictCount: expectedVerdictCount, disposition: disposition)
             return ClassifiedRun(outcome: reported.outcome, rc: 1,
                 error: (reported.error ?? "worker failure") + "; host " + err.description)
         }
@@ -1216,7 +1174,7 @@ func classify(
         // Lifecycle clauses render from the resolved account (the same account
         // the reply carries); worker, validator and setup diagnostics keep their
         // own owners and are composed with these clauses, not generated from them.
-        let account = resolveDisposition(out, plan: nil)
+        let account = disposition ?? resolveDisposition(out, plan: nil)
         let killRequested = account.questions["kill_request_and_result"]?.answer == "requested"
         if account.questions["stop_reason"]?.answer == "sentinel_deadline" {
             return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1,

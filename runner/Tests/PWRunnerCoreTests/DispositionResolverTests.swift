@@ -109,10 +109,11 @@ private func stepClaim(_ record: PWDispositionRecord, _ index: Int, _ name: Stri
 
 // MARK: - Python mirror
 
-private func pythonExport(_ root: URL) throws -> [String: Any] {
+private func pythonExport(_ root: URL, model: Bool = false) throws -> [String: Any] {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-    process.arguments = [root.appendingPathComponent("tests/lib/lifecycle_contract.py").path, "--json"]
+    process.arguments = [root.appendingPathComponent(model ? "tests/lib/lifecycle_oracle.py" : "tests/lib/lifecycle_contract.py").path,
+                         model ? "--model-json" : "--json"]
     let pipe = Pipe()
     process.standardOutput = pipe
     process.standardError = pipe
@@ -251,6 +252,72 @@ func runDispositionResolverTests(_ tk: TestKit) {
     }
 
     tk.group("disposition interpretation (constructed)") {
+        tk.run("ambiguous slot identity cannot select a result or crash the reply join") {
+            let out = constructed(slots: [slot("a", completed: true), slot("a", completed: false)], progress: nil)
+            let plan = [probe("a")]
+            let record = resolveDisposition(out, plan: plan)
+            try expectEqual(record.steps[0].slot, "absent")
+            try expectEqual(record.steps[0].questions["step_result_published"]?.reason, "slot_unavailable")
+            let steps = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
+                validatorOutput: nil, ordering: nil, disposition: record)
+            try expectEqual(steps[0].attempt.result_source, "synthetic")
+            try expectEqual(steps[0].attempt.missing_reason, "slot_absent")
+        }
+        tk.run("progress association checks the encoded word and non-indexed operation identity") {
+            var mismatched = progressWord(9, 1, index: 0)
+            mismatched.raw = progressWord(9, 1, index: 1).raw
+            for word in [mismatched, progressWord(8, 2, index: 0)] {
+                let out = constructed(slots: [slot("a", completed: false)], progress: word)
+                let record = resolveDisposition(out, plan: [probe("a")])
+                try expectEqual(record.questions["progress_association"]?.answer, "invalid")
+                try expectEqual(record.steps[0].questions["step_boundary_reached"]?.reason, "no_usable_progress")
+            }
+        }
+        tk.run("integrity: claims must cite sufficient observations and retain their values") {
+            let out = constructed(slots: [slot("a", completed: true)], progress: progressWord(10, 2),
+                                  stop: "sentinel_deadline", exitCode: nil, termSignal: 9,
+                                  request: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil))
+            let base = resolveDisposition(out, plan: [probe("a")])
+            let mutations: [(String, (inout PWDispositionRecord, inout PWRunnerSubprocess) -> Void)] = [
+                ("second status", { _, sub in sub.exit_code = 0 }),
+                ("kill return", { _, sub in sub.termination_request = PWRunnerTerminationRequest(signal: 9, rc: -1, errno: nil) }),
+                ("kill signal", { _, sub in sub.termination_request = PWRunnerTerminationRequest(signal: 15, rc: 0, errno: nil) }),
+                ("kill errno", { _, sub in sub.termination_request = PWRunnerTerminationRequest(signal: 9, rc: 0, errno: EPERM) }),
+                ("irrelevant basis", { record, _ in record.questions["final_status"]?.basis = ["exit_requested"] }),
+                ("missing reap basis", { record, _ in record.questions["final_status"]?.basis = ["term_signal"] }),
+                ("cited progress does not prove the completed slot's boundary", { record, sub in
+                    sub.worker_evidence?.progress = progressWord(200, 1)
+                    record.questions["progress_association"] = PWDispositionClaim(
+                        state: "unresolved", reason: "progress_unrecognized", basis: ["progress"])
+                    record.steps[0].questions["step_boundary_reached"]?.basis = ["progress"]
+                }),
+                ("unobserved basis", { record, sub in
+                    sub.worker_evidence = nil
+                    record.questions["final_status"]?.basis = ["reaped", "term_signal", "worker_failure"]
+                }),
+                ("terminal collection without reap", { record, sub in
+                    sub.reaped = false; sub.term_signal = nil
+                    record.questions["final_status"] = PWDispositionClaim(state: "unresolved", reason: "no_successful_reap")
+                }),
+                ("invented boundary", { record, sub in
+                    sub.worker_evidence?.progress = nil
+                    record.steps[0].slot = "incomplete"
+                    record.steps[0].questions["step_result_published"] = PWDispositionClaim(
+                        state: "supported", answer: "unpublished", basis: ["slot", "collection_basis"])
+                }),
+                ("invented issue", { record, _ in
+                    record.issues = [PWDispositionIssue(kind: "conflict", rule: "D5", question: "step_boundary_reached",
+                        step_index: 0, observations: ["progress", "slot", "collection_basis"], detail: "fabricated")]
+                    record.steps[0].questions["step_boundary_reached"] = PWDispositionClaim(state: "conflicting", issue: 0)
+                }),
+            ]
+            for (name, mutate) in mutations {
+                var record = base
+                var sub = buildWorkerSubprocess(out, disposition: base)
+                mutate(&record, &sub)
+                try expectFalse(dispositionIntegrityProblems(record, subprocess: sub, stepCount: 1).isEmpty, name)
+            }
+        }
         tk.run("B2: missing progress beside an incomplete slot is unresolved, not not_reached") {
             let out = constructed(slots: [slot("a", completed: false)], progress: nil, stop: "sentinel_deadline",
                                   exitCode: nil, termSignal: 9, request: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil))
@@ -394,10 +461,12 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(strings(export["run_references"]), PWDisposition.runReferences)
             try expectEqual(strings(export["step_references"]), PWDisposition.stepReferences)
         }
-        tk.run("the resolver reproduces every hand-reviewed example row") {
+        for model in [false, true] {
+        tk.run(model ? "the production resolver satisfies all 2880 finite-model rows" : "the resolver reproduces every hand-reviewed example row") {
             if export.isEmpty { export = try pythonExport(root) }
-            let examples = export["examples"] as? [[String: Any]] ?? []
-            try expectTrue(examples.count >= 18, "examples missing from the export")
+            let rows = model ? try pythonExport(root, model: true) : export
+            let examples = rows["examples"] as? [[String: Any]] ?? []
+            try expectTrue(model ? examples.count == 2880 : examples.count >= 20, "rows missing from the export")
             for example in examples {
                 let name = example["name"] as? String ?? "?"
                 let (out, plan) = inputs(from: example["observations"] as! [String: Any])
@@ -433,7 +502,12 @@ func runDispositionResolverTests(_ tk: TestKit) {
                 try expectEqual(record.steps.map(lifecycleSummary), strings(projections["summaries"]), name)
                 try expectEqual(buildWorkerSubprocess(out, disposition: record).partial_steps,
                                 projections["partial_steps"] as? Bool, name)
+                let sub = buildWorkerSubprocess(out, disposition: record)
+                let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: plan.count)
+                try expectEqual(!problems.isEmpty, example["invalid_basis"] as? Bool ?? false,
+                                "\(name): integrity \(problems)")
             }
+        }
         }
     }
 }

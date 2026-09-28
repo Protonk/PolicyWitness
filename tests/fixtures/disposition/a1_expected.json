@@ -254,10 +254,20 @@
             "lifecycle": {
               "boundary": {
                 "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
                 "state": "supported"
               },
               "result": {
                 "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
                 "state": "supported"
               },
               "summary": "started_without_result"
@@ -325,10 +335,20 @@
             "lifecycle": {
               "boundary": {
                 "answer": "not_reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "collection_basis"
+                ],
                 "state": "supported"
               },
               "result": {
                 "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
                 "state": "supported"
               },
               "summary": "not_reached"

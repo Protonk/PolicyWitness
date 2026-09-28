@@ -1302,7 +1302,14 @@ projection with `unknown` and `not_reported` for legacy replies.
 Every red is green and promoted: the witness case and the four controller
 tests run in the default battery, the Swift file's claims run without a gate,
 and its mirror group requires the resolver to reproduce every hand-reviewed
-row of the Python contract module. Re-running the STR chain against the
+row of the Python contract module and all 2,880 finite-model rows, including
+encoder rejection of impossible collection bases. Hand-reviewed rows include
+completed slots opposed by terminal progress and incomplete unsupported no-op
+slots; `partial_steps` covers every slot. Integrity controls require typed,
+resolving, sufficient references, exact request values, valid conflict scope
+and agreement between the record and its lifecycle copies and limitations.
+Current-schema record absence is invalid; only legacy replies use the
+raw-status fallback. Re-running the STR chain against the
 rebuilt app gives `termination_cause: host_sentinel_deadline`,
 `stop_reason: sentinel_deadline`, `disposition_integrity: valid`, and the two
 steps report `started_without_result` and `not_reached` with their

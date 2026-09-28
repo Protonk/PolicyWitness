@@ -53,6 +53,9 @@ def extract_observations(envelope, view):
         progress=(sub.get('worker_evidence') or {}).get('progress'),
         steps=tuple({'slot': entry['slot'], 'supported': entry['attempt_support'] == 'supported'}
                     for entry in view['steps']))
+    for name in ('wait_errors', 'done_observed'):
+        obs[name] = sub.get(name, MISSING)
+    obs['worker_failure'] = (sub.get('worker_evidence') or {}).get('failure', MISSING)
     return obs
 
 
@@ -85,11 +88,15 @@ def association(progress, plan_len):
     op, phase, index = progress.get('operation'), progress.get('phase'), progress.get('index')
     if op not in C.OPERATIONS or phase not in C.PHASES:
         return 'unrecognized', None
+    raw = progress.get('raw')
+    if type(raw) is not int or not 0 < raw <= 0xffffffff or raw >> 24 != op \
+            or (raw >> 20) & 15 != phase or (raw & 0xfffff) != (index + 1 if type(index) is int else 0):
+        return 'invalid', None
     if op in C.INDEXED_OPERATIONS:
         if type(index) is not int or index < 0 or (op == C.OP_ATTEMPT and index >= plan_len):
             return 'invalid', None
         return C.INDEXED_OPERATIONS[op], (ORDER[op], index, phase)
-    return 'none', (ORDER[op], 0, phase)
+    return ('invalid', None) if index is not None else ('none', (ORDER[op], 0, phase))
 
 
 def boundary(i):
@@ -142,7 +149,7 @@ def expected_claims(obs):
     basis = obs['collection_basis']
     claims['collection_basis'] = supported(basis) if isinstance(basis, str) and basis != MISSING \
         else unresolved(C.NOT_RECORDED)
-    terminal = basis == 'after_confirmed_reap'
+    terminal = basis == 'after_confirmed_reap' and reaped is True
 
     plan_len = len(obs['steps'])
     assoc, position = association(obs['progress'], plan_len)
@@ -160,14 +167,12 @@ def expected_claims(obs):
         slot, is_supported = entry['slot'], entry['supported']
         step = {'step_requested_operation_applicability': supported('supported' if is_supported else 'unsupported')}
         completed = slot == 'completed'
-        if position is not None and position >= boundary(i):
-            step['step_boundary_reached'] = supported('reached')
-        elif completed and is_supported:
-            step['step_boundary_reached'] = supported('reached')
-        elif position is not None and completed and terminal:
+        if position is not None and position < boundary(i) and completed and terminal:
             step['step_boundary_reached'] = CONFLICTING
             issues.append({'kind': 'conflict', 'rule': 'D5', 'question': 'step_boundary_reached', 'step_index': i,
                            'observations': ['progress', 'slot', 'collection_basis']})
+        elif (position is not None and position >= boundary(i)) or (completed and is_supported):
+            step['step_boundary_reached'] = supported('reached')
         elif position is not None and not completed and terminal:
             step['step_boundary_reached'] = supported('not_reached')
         elif position is not None and not completed:
@@ -226,8 +231,8 @@ def expected_projections(claims, steps, obs):
         else:
             summaries.append('unresolved')
     return {'process_disposition': disposition, 'termination_cause': cause,
-            'stop_reason': stop['answer'] if stop['state'] == 'supported' else None,
-            'partial_steps': any(e['supported'] and e['slot'] != 'completed' for e in obs['steps']),
+            'stop_reason': stop['answer'] if stop['state'] == 'supported' and stop['answer'] in C.POLL_STOP_REASONS else None,
+            'partial_steps': any(e['slot'] != 'completed' for e in obs['steps']),
             'summaries': summaries}
 
 
@@ -250,7 +255,7 @@ BASIS = {
     'stop_reason': ['poll_stop_reason'],
     'cleanup_trigger': ['cleanup_trigger', 'exit_requested'],
     'grace_end': ['grace_end', 'exit_requested'],
-    'kill_request_and_result': ['termination_request'],
+    'kill_request_and_result': {'requested': ['termination_request'], 'none': ['termination_request', 'exit_requested']},
     'collection_basis': ['collection_basis'],
     'progress_association': ['progress', 'plan'],
     'step_requested_operation_applicability': ['attempt_support'],
@@ -320,8 +325,8 @@ def build_envelope(obs, schema_version=C.RESPONSE_WITH_DISPOSITION, envelope_ver
                    'outcome': 'ok' if completed else C.COMPAT_MISSING_OUTCOME,
                    'result_source': 'worker' if completed else 'synthetic',
                    C.STEP_LIFECYCLE_KEY: {'summary': summary,
-                                          'boundary': deepcopy(steps[i]['step_boundary_reached']),
-                                          'result': deepcopy(steps[i]['step_result_published'])}}
+                                          'boundary': deepcopy(record['steps'][i]['questions']['step_boundary_reached']),
+                                          'result': deepcopy(record['steps'][i]['questions']['step_result_published'])}}
         if not completed:
             attempt['missing_reason'] = ('attempt_not_supported' if not entry['supported']
                                          else 'slot_absent' if entry['slot'] == 'absent' else 'slot_incomplete')
@@ -367,11 +372,30 @@ def _resolvable(token, obs, entry):
         return obs[token] is not MISSING
     if token == 'progress':
         return obs['progress'] is not None
-    if token == 'worker_failure':
-        return True
-    if token == 'wait_errors' or token == 'done_observed':
-        return True
-    return obs.get(token, MISSING) is not MISSING
+    return obs.get(token, MISSING) not in (MISSING, None)
+
+
+def sufficient_basis(name, answer, basis):
+    """Required references, separate from computing the answer from observations."""
+    tokens = set(basis)
+    if name == 'step_boundary_reached' and answer == 'reached':
+        return 'progress' in tokens or {'slot', 'attempt_support'} <= tokens
+    required = {
+        ('final_status', 'signal'): {'reaped', 'term_signal'},
+        ('final_status', 'exit_code'): {'reaped', 'exit_code'},
+        ('kill_request_and_result', 'none'): {'termination_request', 'exit_requested'},
+        ('kill_request_and_result', 'requested'): {'termination_request'},
+        ('progress_association', 'step_index'): {'progress', 'plan'},
+        ('progress_association', 'invalid'): {'progress', 'plan'},
+        ('step_boundary_reached', 'not_reached'): {'progress', 'slot', 'collection_basis'},
+        ('step_result_published', 'published'): {'slot', 'attempt_support'},
+        ('step_result_published', 'unpublished'): {'slot', 'collection_basis'},
+    }.get((name, answer), {
+        'stop_reason': {'poll_stop_reason'}, 'cleanup_trigger': {'cleanup_trigger', 'exit_requested'},
+        'grace_end': {'grace_end', 'exit_requested'}, 'collection_basis': {'collection_basis'},
+        'progress_association': {'progress'}, 'step_requested_operation_applicability': {'attempt_support'},
+    }.get(name, set()))
+    return required <= tokens
 
 
 def _compare_claim(name, expected, actual, findings, step_index, obs, entry):
@@ -400,6 +424,17 @@ def _compare_claim(name, expected, actual, findings, step_index, obs, entry):
                                      name, step_index))
         if not actual['basis']:
             findings.append(_finding('D7', 'missing_basis', 'supported claim without basis', name, step_index))
+        elif not sufficient_basis(name, actual.get('answer'), actual['basis']):
+            findings.append(_finding('D8', 'insufficient_basis', 'references do not include a sufficient witness set',
+                                     name, step_index))
+        if name == 'step_boundary_reached' and actual.get('answer') == 'reached':
+            _, position = association(obs['progress'], len(obs['steps']))
+            progress_proof = position is not None and position >= boundary(step_index) and 'progress' in actual['basis']
+            slot_proof = entry['slot'] == 'completed' and entry['attempt_support'] == 'supported' \
+                and {'slot', 'attempt_support'} <= set(actual['basis'])
+            if not (progress_proof or slot_proof):
+                findings.append(_finding('D8', 'insufficient_basis', 'the cited observations do not prove this boundary',
+                                         name, step_index))
         for token in actual['basis']:
             if token not in C.REFERENCES or (C.question(name).scope_kind == 'run' and token in C.STEP_REFERENCES):
                 findings.append(_finding('D8', 'unknown_reference', f'basis token {token!r}', name, step_index))
@@ -446,6 +481,8 @@ def check_record(envelope):
         return findings
 
     obs = extract_observations(envelope, view)
+    if obs['collection_basis'] == 'after_confirmed_reap' and obs['reaped'] is not True:
+        findings.append(_finding('D4', 'invalid_collection_basis', 'terminal collection requires a confirmed reap'))
     claims, steps, issues = expected_claims(obs)
     for name in C.RUN_QUESTIONS:
         _compare_claim(name, claims[name], view['questions'].get(name), findings, None, obs, None)
@@ -472,6 +509,14 @@ def check_record(envelope):
                                      step_index=i))
         for name in C.STEP_QUESTIONS:
             _compare_claim(name, steps[i][name], entry['questions'].get(name), findings, i, obs, entry)
+    # A conflict's pointer must reference the issue for this exact question and step.
+    for name, actual, index in [(n, c, None) for n, c in view['questions'].items()] + [
+            (n, c, i) for i, entry in enumerate(view['steps']) for n, c in entry['questions'].items()]:
+        if actual.get('state') == 'conflicting':
+            pointer = actual.get('issue')
+            issue = view['issues'][pointer] if type(pointer) is int and 0 <= pointer < len(view['issues']) else {}
+            if issue.get('question') != name or issue.get('step_index') != index:
+                findings.append(_finding('D8', 'invalid_issue_reference', 'conflict pointer does not resolve to its issue', name, index))
     # Issues: every expected conflict must appear with its rule and observations; no extra conflicts.
     actual_issues = view['issues']
     for issue in issues:
@@ -492,6 +537,10 @@ def check_record(envelope):
     for i, summary in enumerate(expected['summaries']):
         lifecycle = proj['step_lifecycle'][i] if i < len(proj['step_lifecycle']) else None
         actual_summary = lifecycle.get('summary') if isinstance(lifecycle, dict) else None
+        if isinstance(lifecycle, dict):
+            for key, question in [('boundary', 'step_boundary_reached'), ('result', 'step_result_published')]:
+                if lifecycle.get(key) != view['steps'][i]['questions'][question]['raw']:
+                    findings.append(_finding('D7', 'lifecycle_copy', f'{key} differs from its record claim', step_index=i))
         if actual_summary is None:
             findings.append(_finding('D7', 'missing_lifecycle', 'attempt.lifecycle absent', step_index=i))
         elif actual_summary != summary:
@@ -501,7 +550,10 @@ def check_record(envelope):
                 findings.append(_finding('D7', 'unrecognized_value', f'lifecycle summary {actual_summary!r}', step_index=i))
         limits = proj['step_limitations'][i] if i < len(proj['step_limitations']) else []
         required = C.LIMITATION_FOR_SUMMARY.get(summary)
-        if required and required not in limits:
+        runner = envelope['data']['runner_result']
+        withheld_comparison = runner.get('normalized_outcome') == 'runner_reporting_failed' \
+            and isinstance(runner.get('reporting_failure'), dict) and runner_steps[i].get('comparison') is None
+        if required and required not in limits and not withheld_comparison:
             findings.append(_finding('D7', 'limitation', f'comparison lacks {required}', step_index=i))
         for present in limits:
             if present in C.LIMITATION_FOR_SUMMARY.values() and present != required:
@@ -519,8 +571,14 @@ def check_record(envelope):
             for key in ('process_disposition', 'termination_cause', 'stop_reason'):
                 if proj.get(key) != expected[key]:
                     findings.append(_finding('D7', key, f'{key} {proj.get(key)!r}, expected {expected[key]!r}'))
-    error = proj.get('error') or ''
-    for clause in expected_error_clauses(claims):
+    runner = envelope['data']['runner_result']
+    failure = runner.get('reporting_failure') or {}
+    error = failure.get('original_error') if runner.get('normalized_outcome') == 'runner_reporting_failed' else proj.get('error')
+    error = error or ''
+    outcome = failure.get('original_normalized_outcome', runner.get('normalized_outcome'))
+    # Higher-priority worker/setup failures own their error text. The timeout
+    # branch renders these clauses; a degraded reply retains that original text.
+    for clause in expected_error_clauses(claims) if outcome == 'runner_timeout' else []:
         if clause not in error:
             findings.append(_finding('D7', 'error_clause', f'error lacks {clause!r}'))
     if claims['kill_request_and_result'].get('answer') == 'none' and C.KILL_CLAUSE in error:
@@ -592,6 +650,24 @@ def _mutations(example):
         return name, rule, copy
 
     out = []
+    def unknown_state(e, r, s, rec, d):
+        rec['questions']['stop_reason']['state'] = 'future_state'
+    out.append(mutate('unknown_claim_state', 'D8', unknown_state))
+    for bad_basis in ([17], [{}], 'reaped', ['exit_requested']):
+        def malformed_basis(e, r, s, rec, d, bad_basis=bad_basis):
+            rec['questions']['final_status']['basis'] = bad_basis
+        if record['questions']['final_status']['state'] == 'supported':
+            out.append(mutate('malformed_or_insufficient_basis', 'D8', malformed_basis))
+    if runner['steps']:
+        def wrong_copy(e, r, s, rec, d):
+            r['steps'][0]['attempt'][C.STEP_LIFECYCLE_KEY]['boundary'] = {'state': 'unresolved', 'reason': 'invented'}
+        out.append(mutate('lifecycle_copy_disagrees', 'D7', wrong_copy))
+    if record['issues']:
+        def dangling_issue(e, r, s, rec, d):
+            for q in list(rec['questions'].values()) + [q for step in rec['steps'] for q in step['questions'].values()]:
+                if q['state'] == 'conflicting':
+                    q['issue'] = 99
+        out.append(mutate('dangling_issue_reference', 'D8', dangling_issue))
     if sub.get('termination_request') and diagnostics['termination_cause'] in C.CAUSE_LABELS:
         def drop_request(e, r, s, rec, d):
             del s['termination_request']
@@ -719,6 +795,16 @@ def self_check():
         envelope = build_envelope(example.observations)
         accepted = check_record(envelope)
         assert not accepted, (example.name, accepted)
+        degraded = deepcopy(envelope)
+        runner = degraded['data']['runner_result']
+        runner['reporting_failure'] = {'origin': 'runner_host', 'evidence_retained': True,
+                                       'original_error': runner['error'],
+                                       'original_normalized_outcome': runner['normalized_outcome']}
+        runner['normalized_outcome'] = 'runner_reporting_failed'
+        runner['error'] = 'runner host could not encode its result: constructed control'
+        for step in runner['steps']:
+            step['comparison'] = None
+        assert not check_record(degraded), (example.name, check_record(degraded))
         legacy = build_envelope(example.observations, schema_version=9, envelope_version=2)
         del legacy['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
         legacy['data']['runner_sandbox_diagnostics'].update(termination_cause=C.CAUSE_UNKNOWN, stop_reason=None,
@@ -734,10 +820,29 @@ def self_check():
         for claim in list(claims.values()) + [c for st in steps for c in st.values()]:
             assert claim['state'] in C.CLAIM_STATES, (labels, claim)
         expected_projections(claims, steps, obs)
+        findings = check_record(build_envelope(obs))
+        invalid_basis = obs['collection_basis'] == 'after_confirmed_reap' and obs['reaped'] is not True
+        if invalid_basis:
+            assert any(f['kind'] == 'invalid_collection_basis' for f in findings), (labels, findings)
+        else:
+            assert not findings, (labels, findings)
         total += 1
     assert total == 5 * 6 * 8 * 4 * 3 == properties, (total, properties)
     return {'examples': len(C.EXAMPLES), 'model_rows': total, 'property_rows': properties}
 
 
 if __name__ == '__main__':
-    print(self_check())
+    import json
+    import sys
+    if '--model-json' in sys.argv:
+        # Inputs plus independently expected claims; the Swift test invokes the
+        # actual resolver on every row rather than testing this oracle against itself.
+        rows = []
+        for labels, obs in enumerate_model():
+            claims, steps, issues = expected_claims(obs)
+            rows.append({'name': '/'.join(labels), 'observations': obs, 'claims': claims, 'steps': steps,
+                         'issues': issues, 'projections': expected_projections(claims, steps, obs),
+                         'invalid_basis': obs['collection_basis'] == 'after_confirmed_reap' and obs['reaped'] is not True})
+        print(json.dumps({'examples': rows}))
+    else:
+        print(self_check())

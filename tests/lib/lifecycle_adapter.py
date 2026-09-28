@@ -32,21 +32,32 @@ def _claim(name, raw, malformed, where):
         malformed.append(f'{where}: claim is not an object')
         return {'state': None, 'recognized': False, 'raw': raw, 'basis': []}
     q = C.question(name)
-    claim = {'state': raw.get('state'), 'basis': list(raw.get('basis') or []), 'recognized': True,
+    basis = raw.get('basis', [])
+    if not isinstance(basis, list) or any(not isinstance(token, str) for token in basis):
+        malformed.append(f'{where}: basis must be an array of reference strings')
+        basis = []
+    claim = {'state': raw.get('state'), 'basis': basis, 'recognized': True,
              'raw': deepcopy(raw)}
     if claim['state'] not in C.CLAIM_STATES:
+        malformed.append(f'{where}: claim state is not one of the four contract states')
         claim['recognized'] = False
         return claim
     if claim['state'] == 'supported':
         claim['answer'] = raw.get('answer')
         if 'value' in raw:
             claim['value'] = raw['value']
-        if claim['answer'] not in {a.value for a in q.answers}:
+        if not isinstance(claim['answer'], str):
+            malformed.append(f'{where}: supported claim without a string answer')
+            claim['recognized'] = False
+        elif claim['answer'] not in {a.value for a in q.answers}:
             claim['recognized'] = False
     elif claim['state'] in ('unresolved', 'inapplicable'):
         claim['reason'] = raw.get('reason')
         allowed = C.reasons(name) if claim['state'] == 'unresolved' else (q.inapplicable,)
-        if claim['reason'] not in allowed:
+        if not isinstance(claim['reason'], str):
+            malformed.append(f'{where}: claim without a string reason')
+            claim['recognized'] = False
+        elif claim['reason'] not in allowed:
             claim['recognized'] = False
     else:  # conflicting
         claim['issue'] = raw.get('issue')
@@ -112,8 +123,10 @@ def read_lifecycle(envelope):
                 continue
             item = {'index': entry.get('index'), 'step_id': entry.get('step_id'), 'slot': entry.get('slot'),
                     'attempt_support': entry.get('attempt_support'), 'questions': {}}
-            if item['index'] != position:
+            if type(item['index']) is not int or item['index'] != position:
                 malformed.append(f'steps[{position}] carries index {item["index"]!r}')
+            if not isinstance(item['step_id'], str) or not item['step_id']:
+                malformed.append(f'steps[{position}] lacks a string step_id')
             if item['slot'] not in C.SLOT_STATES:
                 malformed.append(f'steps[{position}] slot {item["slot"]!r} unrecognized')
             if item['attempt_support'] not in C.ATTEMPT_SUPPORT:
@@ -134,8 +147,9 @@ def read_lifecycle(envelope):
     else:
         for position, issue in enumerate(issues):
             if not isinstance(issue, dict) or issue.get('kind') not in C.ISSUE_KINDS \
-                    or issue.get('rule') not in C.RULES \
-                    or not isinstance(issue.get('observations'), list) or not issue['observations']:
+                    or not isinstance(issue.get('rule'), str) or issue['rule'] not in C.RULES \
+                    or not isinstance(issue.get('observations'), list) or not issue['observations'] \
+                    or any(not isinstance(token, str) for token in issue['observations']):
                 malformed.append(f'issues[{position}] malformed')
             view['issues'].append(deepcopy(issue))
     view['reporting'] = 'malformed' if malformed else 'reported'

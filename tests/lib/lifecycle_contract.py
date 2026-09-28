@@ -218,7 +218,8 @@ QUESTIONS = (
          _answer('parameter_index', 'a parameter-indexed operation word', rules=('D3',), has_value=True),
          _answer('none', 'an operation word without an item index', rules=('D3',)),
          _answer('invalid', 'an attempt-operation word whose item index names no submitted step, '
-                            'including any attempt index for an empty plan', rules=('D3',))),
+                            'including any attempt index for an empty plan; a decoded identity inconsistent '
+                            'with the encoded word; or an index on a non-indexed operation', rules=('D3',))),
         None,
         (Unresolved('no_progress_published', 'no progress word published (raw zero)'),
          Unresolved('progress_unrecognized', 'unrecognized operation or phase code; the raw word is retained')),
@@ -333,7 +334,7 @@ PROJECTIONS = (
                {'positive': 'E1 valid record', 'negative': 'E1 contradicting basis, B1', 'transport': 'F3'}),
     Projection('runner_subprocess.partial_steps', 'runner',
                ('step_result_published',), ('slot', 'attempt_support'),
-               'legacy meaning retained: any supported slot not completed',
+               'legacy meaning retained: any slot not completed, including an unsupported no-op',
                {'positive': 'A3 (true), A4 (false)', 'negative': 'D-props adding a completed slot flips it',
                 'transport': 'F1 round trip'}),
     Projection('steps[].attempt.lifecycle', 'runner',
@@ -459,6 +460,21 @@ REACHED, NOT_REACHED = _supported('reached'), _supported('not_reached')
 PUBLISHED, UNPUBLISHED = _supported('published'), _supported('unpublished')
 
 EXAMPLES = (
+    Example('completed_slot_before_terminal_boundary',
+            observations(progress=progress(8, 2), steps=(step('completed'),), **CLEAN_DONE),
+            dict(DONE_CLAIMS, progress_association=_supported('none')),
+            [_step(CONFLICTING, PUBLISHED)],
+            [{'kind': 'conflict', 'rule': 'D5', 'question': 'step_boundary_reached', 'step_index': 0,
+              'observations': ['progress', 'slot', 'collection_basis']}],
+            {'process_disposition': 'clean_exit', 'termination_cause': None, 'stop_reason': 'done',
+             'partial_steps': False, 'summaries': ['completed']}),
+    Example('unsupported_incomplete_slot_remains_partial',
+            observations(progress=progress(9, 1, 0), steps=(step('incomplete', supported=False),), **TERMINAL_KILL),
+            dict(KILL_CLAIMS, progress_association=_supported('step_index', 0)),
+            [{'step_boundary_reached': REACHED, 'step_result_published': _inapplicable('unsupported_attempt'),
+              'step_requested_operation_applicability': _supported('unsupported')}], [],
+            {'process_disposition': 'signaled', 'termination_cause': HOST_SENTINEL_DEADLINE,
+             'stop_reason': 'sentinel_deadline', 'partial_steps': True, 'summaries': ['unsupported']}),
     Example('link1_control',
             observations(progress=progress(10, 2), steps=(step('completed'),), **CLEAN_DONE),
             dict(DONE_CLAIMS, progress_association=_supported('none')),
