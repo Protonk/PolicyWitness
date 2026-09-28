@@ -220,6 +220,21 @@ public enum CWorkerOrchestrator {
 
     // ---- validation -----------------------------------------------------
 
+    /// Every capacity refusal, decided from the decoded request alone. The
+    /// service runs this before any other validation so that no later
+    /// diagnostic can echo an unbounded string: top-level strings first, then
+    /// the worker's shared-memory bounds in plan order, then the host-only
+    /// query strings and labels. The driver keeps its own check as the guard
+    /// local to the ABI writer, and `run` keeps the query gate for callers
+    /// that bypass the service.
+    public static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
+        if let refused = requestAdmissionFailure(parsed) { return refused }
+        let capacity = CWorkerInput(workerExecutablePath: "", policy: parsed.policy.sbpl_source ?? "",
+            params: workerParamsFromPolicy(parsed.policy), slots: workerSlotsFromProbePlan(parsed.probe_plan))
+        if let refused = workerAdmissionFailure(capacity) { return refused }
+        return queryAdmissionFailure(parsed.probe_plan)
+    }
+
     /// Pre-spawn validation specific to the C-worker code path.
     /// Returns a human-readable error string when the plan is
     /// malformed; nil when it's safe to orchestrate. Callers map a
@@ -378,23 +393,52 @@ let probePlanLabelMaxBytes = 127
 /// the host and are echoed even when unrecognized. Checks run in plan order,
 /// operation then value then labels within a step, and report the first excess.
 func queryAdmissionFailure(_ plan: [PWRunnerProbeStep]) -> PWRunnerAdmissionFailure? {
-    for step in plan {
+    for (position, step) in plan.enumerated() {
         let operation = step.sandbox_check.operation.utf8.count
         if operation > sandboxCheckOperationMaxBytes {
             return PWRunnerAdmissionFailure(field: "sandbox_check.operation", actual: operation,
-                maximum: sandboxCheckOperationMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+                maximum: sandboxCheckOperationMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
         }
         if let value = step.sandbox_check.filter.value, value.utf8.count > sandboxCheckFilterValueMaxBytes {
             return PWRunnerAdmissionFailure(field: "sandbox_check.filter.value", actual: value.utf8.count,
-                maximum: sandboxCheckFilterValueMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+                maximum: sandboxCheckFilterValueMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
         }
         for (field, value) in [("sandbox_check.filter.kind", step.sandbox_check.filter.kind),
                                ("attempt.kind", step.attempt.kind), ("attempt.action", step.attempt.action)] {
             if value.utf8.count > probePlanLabelMaxBytes {
                 return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count,
-                    maximum: probePlanLabelMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+                    maximum: probePlanLabelMaxBytes, unit: "utf8_bytes", step_id: step.step_id, step_index: position)
             }
         }
+    }
+    return nil
+}
+
+/// Bounds for the request strings echoed once per reply rather than per step:
+/// the specimen ID, the run kind and policy format labels, and the test-seam
+/// executable paths mirrored back in `test_overrides` and named in dlopen and
+/// spawn diagnostics. Amplification is one, so these matter only for a request
+/// about as large as the reply cap; they complete the rule that every echoed
+/// request string is admission-bounded. PATH_MAX is 1024 including the NUL.
+let specimenIdMaxBytes = 255
+let requestLabelMaxBytes = 63
+let testOverridePathMaxBytes = 1023
+
+/// Capacity check for the top-level request strings, using the same record.
+/// No step or parameter identity applies; the field name is the identity.
+func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
+    func check(_ field: String, _ value: String?, _ maximum: Int) -> PWRunnerAdmissionFailure? {
+        guard let value, value.utf8.count > maximum else { return nil }
+        return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count, maximum: maximum, unit: "utf8_bytes")
+    }
+    if let r = check("specimen_id", parsed.specimen_id, specimenIdMaxBytes) { return r }
+    if let r = check("run_kind", parsed.run_kind, requestLabelMaxBytes) { return r }
+    if let r = check("policy.format", parsed.policy.format, requestLabelMaxBytes) { return r }
+    let overrides = parsed._test_overrides
+    for (field, value) in [("_test_overrides.libsandbox_path", overrides?.libsandbox_path),
+                           ("_test_overrides.worker_executable_path", overrides?.worker_executable_path),
+                           ("_test_overrides.validator_executable_path", overrides?.validator_executable_path)] {
+        if let r = check(field, value, testOverridePathMaxBytes) { return r }
     }
     return nil
 }

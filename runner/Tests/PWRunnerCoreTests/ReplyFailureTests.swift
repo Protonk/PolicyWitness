@@ -54,7 +54,7 @@ func replyFixture() throws -> PWRunnerRunResult {
           "validator_disposition":"reaped","worker_lifetime_established":true,"protocol_violations":[]},
         "worker_evidence":{"abi_version":7,"failure_publication":0,"failure_state":"absent",
           "diagnostic":{"state":0,"status":"absent"}}},
-      "admission_failure":{"origin":"runner_host","field":"constructed","actual":2,"maximum":1,"unit":"items"},
+      "admission_failure":{"origin":"runner_host","field":"constructed","actual":2,"maximum":1,"unit":"items","step_id":"s","step_index":0,"parameter_key":"K","index":0},
       "validator_spawn_failure":{"origin":"runner_host","operation":"posix_spawn",
         "executable_path":"/constructed/validator","return_code":123456,"diagnostic":"unfamiliar native failure"},
       "validator_subprocess":{"pid":43,"exit_code":0,"reaped":true,"stdout_collection_stop":"eof",

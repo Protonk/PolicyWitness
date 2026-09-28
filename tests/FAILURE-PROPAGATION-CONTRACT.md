@@ -651,18 +651,24 @@ An open, undrained pipe is still a blocking pre-sentinel transfer with no deadli
 
 ## Admission and validator/controller receiver contract
 
-Worker admission limits use `runner_result.admission_failure`, observed by the
-runner host before shared-memory setup/spawn. Its fields are `origin=runner_host`,
-`field`, `actual`, `maximum`, `unit`, and optional `step_id`, `parameter_key`,
-`index`. `utf8_bytes` excludes NUL; `items` counts entries. Limits remain source
-262143 bytes, steps 256, parameters 1024, step ID 63 bytes, target 511, parameter
-key/value 127/383, supplied exec args 15 of 127 bytes each, and the host-only
-`sandbox_check.operation`/`sandbox_check.filter.value` strings 127/511, which the
-orchestrator refuses with the same record because they never enter shared memory
-(they reach the validator line and the reply). The host-only filter kind and
-attempt kind/action labels are each bounded to 127 UTF-8 bytes, including
-unrecognized labels. A refusal reply carries no steps:
-nothing ran, and echoing the plan would repeat the refused strings. `PW_SHM_POLICY_BYTES`
+Capacity limits use `runner_result.admission_failure`, decided by the runner
+host from the decoded request before any other validation and before
+shared-memory setup/spawn, so no later diagnostic (empty operation, duplicate
+step ID, dlopen or spawn failure) quotes an unbounded string. Its fields are
+`origin=runner_host`, `field`, `actual`, `maximum`, `unit`, and optional
+`step_id`, `step_index`, `parameter_key`, `index`. `utf8_bytes` excludes NUL;
+`items` counts entries. Limits remain source 262143 bytes, steps 256, parameters
+1024, step ID 63 bytes, target 511, parameter key/value 127/383, supplied exec
+args 15 of 127 bytes each, the host-only `sandbox_check.operation` and
+`sandbox_check.filter.value` strings 127/511, the filter kind and attempt
+kind/action labels 127 each (unrecognized labels included), `specimen_id` 255,
+`run_kind` and `policy.format` 63 each, and the three `_test_overrides`
+executable paths 1023 each. A refusal never repeats the string it refused: the
+reply carries no steps, `step_index` names the position of a refused step ID
+and `step_id` is omitted, a refused parameter key is omitted, a refused
+`specimen_id` reads `<admission_refused>`, a refused `run_kind` is omitted, a
+refused format reads `unknown`, and a refused seam path is dropped from the
+mirrored `test_overrides`. `PW_SHM_POLICY_BYTES`
 and its Swift mirror include the source NUL. The C reader independently refuses
 oversized source when driven directly; normal CLI oversized source is a host
 `bad_request` with no subprocess. Policy-write interruption controls use admitted
@@ -724,11 +730,11 @@ identifies I/O failure. Worker summary precedence does not discard the validator
 subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
-The controller collects full `Command::output()` buffers before retaining an
-8 MiB prefix per stream for runner-client, sbpl-check and log-observer replies.
+The controller collects full `Command::output()` buffers before retaining a
+32 MiB prefix per stream for runner-client, sbpl-check and log-observer replies.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
-before lossy text conversion; `capture_limit_bytes` is 8388608. Locally truncated
+before lossy text conversion; `capture_limit_bytes` is 33554432. Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -778,7 +784,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same 8 MiB retained-prefix cap and original-byte JSON parser. Exact stdout
+the same 32 MiB retained-prefix cap and original-byte JSON parser. Exact stdout
 and stderr received/retained byte counts precede lossy context conversion.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper

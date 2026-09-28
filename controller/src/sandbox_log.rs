@@ -458,7 +458,7 @@ mod tests {
                 wire["stdout_bytes_retained"],
                 original.stdout.len().min(MAX_CAPTURE_BYTES)
             );
-            assert_eq!(wire["stderr_bytes_received"], 8388609);
+            assert_eq!(wire["stderr_bytes_received"], MAX_CAPTURE_BYTES + 1);
             assert_eq!(wire["stderr_bytes_retained"], MAX_CAPTURE_BYTES);
             assert_eq!(
                 capture.observed_deny,

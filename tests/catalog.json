@@ -1214,7 +1214,7 @@
         },
         {
           "id": "max_targets_reply_survives",
-          "description": "Four 256-step long-target, long-query workloads return intact; oversized query values and filter/attempt labels are refused at admission",
+          "description": "Five 256-step long-target, long-query workloads return intact, including worst-case control-character escaping; oversized query values and filter/attempt labels are refused at admission",
           "command": [
             "bash",
             "tests/suites/witness_contract/max_targets_reply_survives.sh"
@@ -1427,7 +1427,7 @@
       "cases": [
         {
           "id": "admission",
-          "description": "Every capacity limit, worker shared-memory and host-only query strings and filter/attempt labels, reports host-owned limits and UTF-8 units"
+          "description": "Every capacity limit (worker shared-memory, host-only query strings and labels, top-level and test-seam strings) reports host-owned limits and UTF-8 units before any other validation, without echoing the refused string"
         },
         {
           "id": "validator_frames",
@@ -1448,6 +1448,10 @@
         {
           "id": "validator_removed_target",
           "description": "Received prediction survives completed unlink; step association uses submitted IDs"
+        },
+        {
+          "id": "validator_control_characters",
+          "description": "Control characters in paths and step IDs round-trip through the real validator as escaped JSON; every prediction and file effect survives"
         }
       ]
     },

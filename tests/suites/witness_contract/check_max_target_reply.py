@@ -2,10 +2,11 @@
 
 Attempt targets and independent query filter values have separate admission
 limits. These cases exercise long ASCII/escaped paths, observed paths,
-maximal independent query paths and exec output, and require 32,768-byte
-query values and filter/attempt labels to be refused before any process work.
-They measure reply sizes;
-they do not claim a maximum possible serialized reply size.
+maximal independent query paths, exec output and the worst admitted JSON
+escaping (control characters in every query path and child stream), and
+require 32,768-byte query values and filter/attempt labels to be refused
+before any process work. They measure reply sizes against the receiver cap;
+the largest is the bound the cap's margin is set against.
 """
 import errno
 import json
@@ -28,13 +29,15 @@ EXEC_STEPS = STEPS  # The worker raises its soft descriptor limit to fit every e
 IDS = [f's{i:03d}' for i in range(STEPS)]
 
 
-def targets_under(root, *, escaped=False):
-    component = ('a"\\\t' * 50) if escaped else ('a' * 200)
-    parent = root / component / ('b' * 200)
+def targets_under(root, *, escaped=False, control=False):
+    # escaped: quote, backslash and tab (short JSON escapes, about 1.5x).
+    # control: U+0001, which every JSON encoder escapes as six bytes (6x).
+    component = ('\x01' * 200) if control else ('a"\\\t' * 50) if escaped else ('a' * 200)
+    parent = root / component / (('\x01' if control else 'b') * 200)
     parent.mkdir(parents=True)
     leaf_len = TARGET_BYTES - len(str(parent).encode()) - 1
     assert leaf_len > 8, leaf_len
-    targets = [parent / (f'{i:03d}-' + 'c' * (leaf_len - 4)) for i in range(STEPS)]
+    targets = [parent / (f'{i:03d}-' + ('\x01' if control else 'c') * (leaf_len - 4)) for i in range(STEPS)]
     for target in targets:
         assert len(str(target).encode()) == TARGET_BYTES
         target.write_bytes(b'x')
@@ -56,7 +59,7 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
                 probe_plan=steps)
 
 
-def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False):
+def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False, exec_output=None):
     assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
     assert runner['schema_version'] >= 9
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
@@ -82,8 +85,9 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
                 assert attempt['observed_path'] == str(Path(target).resolve()), attempt
             else:
                 assert attempt['child_exit_code'] == 0
-                assert attempt['stdout'] == 'A' * 1023
-                assert attempt['stderr'] == exec_args[-1] + '\n'
+                stdout, stderr = exec_output or ('A' * 1023, exec_args[-1] + '\n')
+                assert attempt['stdout'] == stdout
+                assert attempt['stderr'] == stderr
 
 
 def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_FILTER_BYTES, step_index=0):
@@ -111,7 +115,7 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, **exp
     client = data['runner_client']
     # Both the admitted workloads and the refusals must survive the receiver cap.
     assert client['stdout_parse_error'] is None, client['stdout_parse_error']
-    assert client['capture_limit_bytes'] == 8 * 1024 * 1024
+    assert client['capture_limit_bytes'] == 32 * 1024 * 1024
     assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
     assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
     observation = dict(case=name, steps=STEPS, target_bytes=TARGET_BYTES,
@@ -162,6 +166,19 @@ def main():
         args = ['--stdout-bytes', '1023', '--stderr', '"\\\t' * 40]
         observation = run_case(pw, out, 'exec_output', specimen(exec_targets, exec_targets, exec_args=args),
                                exec_args=args)
+        observation['exec_steps'] = EXEC_STEPS
+        observations.append(observation)
+        # Worst admitted escaping: 511-byte independent query paths and 1,023-byte
+        # child streams made of U+0001, six bytes each once serialized, on every
+        # step. Predictions must round-trip through the validator, and the
+        # complete reply must fit the receiver with the documented margin.
+        control = targets_under(root / 'control', control=True)
+        assert all(len(query.encode()) == QUERY_FILTER_BYTES for query in control)
+        stream = "head -c 1023 /dev/zero | tr '\\0' '\\1'"
+        shell_args = ['-c', f'{stream}; {stream} >&2']
+        observation = run_case(pw, out, 'control_character_exec',
+                               specimen(['/bin/sh'] * STEPS, control, exec_args=shell_args),
+                               exec_args=shell_args, exec_output=('\x01' * 1023, '\x01' * 1023))
         observation['exec_steps'] = EXEC_STEPS
         observations.append(observation)
         # Echoing 256 x 32 KiB filters would exceed the controller cap.

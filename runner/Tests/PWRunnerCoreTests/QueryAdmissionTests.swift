@@ -1,7 +1,7 @@
 import Foundation
 @testable import PWRunnerCore
 
-// Query strings and filter/attempt labels are host-only: they reach the reply
+// Query strings, filter/attempt labels and the top-level request strings are host-only: they reach the reply
 // (and queries the validator), never shared memory, so the driver cannot refuse them. The
 // orchestrator bounds them with the same host-owned record before any process
 // work. Every oracle here is a constructed string; nothing about sandbox
@@ -97,6 +97,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(refusedOperation.maximum, sandboxCheckOperationMaxBytes)
             try expectEqual(refusedOperation.unit, "utf8_bytes")
             try expectEqual(refusedOperation.step_id, "long-op")
+            try expectEqual(refusedOperation.step_index, 1)
             try expectNil(refusedOperation.parameter_key)
             try expectNil(refusedOperation.index)
 
@@ -110,6 +111,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(refusedValue.maximum, sandboxCheckFilterValueMaxBytes)
             try expectEqual(refusedValue.unit, "utf8_bytes")
             try expectEqual(refusedValue.step_id, "long-value")
+            try expectEqual(refusedValue.step_index, 0)
         }
 
         tk.run("operation precedes value within a step; plan order across steps") {
@@ -160,6 +162,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(refused.maximum, sandboxCheckFilterValueMaxBytes)
             try expectEqual(refused.unit, "utf8_bytes")
             try expectEqual(refused.step_id, "s000")
+            try expectEqual(refused.step_index, 0)
             // Nothing ran, so no steps: echoing the plan would repeat the refused
             // 32 KiB strings, and 256 of them outgrow the reply cap on their own.
             try expectTrue(result.steps.isEmpty)
@@ -171,6 +174,95 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(reply.admission_failure?.field, "sandbox_check.filter.value")
             try expectEqual(reply.admission_failure?.actual, 32_768)
             try expectTrue(reply.steps.isEmpty)
+        }
+    }
+
+    tk.group("request-level admission") {
+        func spec(specimenId: String = "s", runKind: String? = nil, format: String = "sbpl",
+                  overrides: PWRunnerTestOverrides? = nil, plan: [PWRunnerProbeStep] = [queryStep("s")],
+                  params: [String: String]? = nil) -> PWRunnerRunSpec {
+            PWRunnerRunSpec(specimen_id: specimenId, run_kind: runKind,
+                policy: PWRunnerPolicySpec(format: format, sbpl_source: "(version 1)(allow default)", params: params),
+                probe_plan: plan, _test_overrides: overrides)
+        }
+        tk.run("top-level strings are bounded once, without step or parameter identity") {
+            let cases: [(String, Int, (String) -> PWRunnerRunSpec)] = [
+                ("specimen_id", specimenIdMaxBytes, { spec(specimenId: $0) }),
+                ("run_kind", requestLabelMaxBytes, { spec(runKind: $0) }),
+                ("policy.format", requestLabelMaxBytes, { spec(format: $0) }),
+                ("_test_overrides.libsandbox_path", testOverridePathMaxBytes,
+                 { spec(overrides: PWRunnerTestOverrides(libsandbox_path: $0)) }),
+                ("_test_overrides.worker_executable_path", testOverridePathMaxBytes,
+                 { spec(overrides: PWRunnerTestOverrides(worker_executable_path: $0)) }),
+                ("_test_overrides.validator_executable_path", testOverridePathMaxBytes,
+                 { spec(overrides: PWRunnerTestOverrides(validator_executable_path: $0)) }),
+            ]
+            for (field, maximum, make) in cases {
+                let exact = String(repeating: "é", count: maximum / 2) + String(repeating: "x", count: maximum % 2)
+                try expectEqual(exact.utf8.count, maximum, field)
+                try expectNil(requestAdmissionFailure(make(exact)), field)
+                try expectNil(CWorkerOrchestrator.admissionFailure(for: make(exact)), field)
+                guard let refused = requestAdmissionFailure(make(exact + "x")) else {
+                    throw TestFailure(message: "over-limit \(field) admitted")
+                }
+                try expectEqual(refused.origin, "runner_host")
+                try expectEqual(refused.field, field)
+                try expectEqual(refused.actual, maximum + 1)
+                try expectEqual(refused.maximum, maximum)
+                try expectEqual(refused.unit, "utf8_bytes")
+                try expectNil(refused.step_id); try expectNil(refused.step_index)
+                try expectNil(refused.parameter_key); try expectNil(refused.index)
+            }
+            try expectNil(requestAdmissionFailure(spec()))
+        }
+        tk.run("a refused step ID or parameter key is identified, never echoed") {
+            let longId = String(repeating: "i", count: PWShmLayout.stepIdMax + 16)
+            let plan = [queryStep("first"), PWRunnerProbeStep(step_id: longId,
+                sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                    filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")),
+                attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: "/etc/hosts"))]
+            guard let refusedId = CWorkerOrchestrator.admissionFailure(for: spec(plan: plan)) else {
+                throw TestFailure(message: "oversized step_id admitted")
+            }
+            try expectEqual(refusedId.field, "step_id")
+            try expectEqual(refusedId.actual, longId.utf8.count)
+            try expectNil(refusedId.step_id, "the refused string is not echoed")
+            try expectEqual(refusedId.step_index, 1)
+            let longKey = String(repeating: "k", count: PWShmLayout.paramKeyMax + 4)
+            guard let refusedKey = CWorkerOrchestrator.admissionFailure(for: spec(params: [longKey: "v"])) else {
+                throw TestFailure(message: "oversized parameter key admitted")
+            }
+            try expectEqual(refusedKey.field, "key")
+            try expectNil(refusedKey.parameter_key, "the refused string is not echoed")
+            let longValue = String(repeating: "v", count: PWShmLayout.paramValueMax + 4)
+            let refusedValue = CWorkerOrchestrator.admissionFailure(for: spec(params: ["K": longValue]))
+            try expectEqual(refusedValue?.field, "value")
+            try expectEqual(refusedValue?.parameter_key, "K")
+            // Every other per-step refusal names the step both ways.
+            let longTarget = String(repeating: "t", count: PWShmLayout.targetMax + 4)
+            let targetPlan = [queryStep("a"), PWRunnerProbeStep(step_id: "b",
+                sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                    filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")),
+                attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: longTarget))]
+            let refusedTarget = CWorkerOrchestrator.admissionFailure(for: spec(plan: targetPlan))
+            try expectEqual(refusedTarget?.field, "target")
+            try expectEqual(refusedTarget?.step_id, "b")
+            try expectEqual(refusedTarget?.step_index, 1)
+        }
+        tk.run("the service entry point orders top-level, worker and query bounds") {
+            let longValue = String(repeating: "q", count: sandboxCheckFilterValueMaxBytes + 1)
+            let longTarget = String(repeating: "t", count: PWShmLayout.targetMax + 4)
+            let step = PWRunnerProbeStep(step_id: "s",
+                sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                    filter: PWRunnerSandboxFilter(kind: "path", value: longValue)),
+                attempt: PWRunnerAttempt(kind: "file", action: "open_read", target: longTarget))
+            let all = spec(specimenId: String(repeating: "s", count: specimenIdMaxBytes + 1), plan: [step])
+            try expectEqual(CWorkerOrchestrator.admissionFailure(for: all)?.field, "specimen_id")
+            try expectEqual(CWorkerOrchestrator.admissionFailure(for: spec(plan: [step]))?.field, "target")
+            var queryOnly = step; queryOnly.attempt.target = "/etc/hosts"
+            try expectEqual(CWorkerOrchestrator.admissionFailure(for: spec(plan: [queryOnly]))?.field,
+                            "sandbox_check.filter.value")
+            try expectNil(CWorkerOrchestrator.admissionFailure(for: spec()))
         }
     }
 }

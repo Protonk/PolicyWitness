@@ -1,14 +1,22 @@
 # Observer boundaries
 
-`admission` exercises all fourteen capacity checks through the signed CLI: the
-nine worker shared-memory bounds and five host-only fields (`sandbox_check.operation`,
-`sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and
-`attempt.action`), which the orchestrator refuses with the same record.
+`admission` exercises all twenty capacity checks through the signed CLI: the
+nine worker shared-memory bounds, five host-only plan fields
+(`sandbox_check.operation`, `sandbox_check.filter.value`,
+`sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`) and six
+top-level strings (`specimen_id`, `run_kind`, `policy.format` and the three
+`_test_overrides` executable paths), all refused with the same record.
 Every byte-limited field has exact, over, multibyte-exact and multibyte-over
 controls; counts have exact/over controls. Refusals assert the same structured
 host record, offending identity, units, absence of both children and an empty
-`steps` array: a refusal echoes none of the plan. Accepted
-boundaries require actual child completion.
+`steps` array, and that the refused string appears nowhere in the reply: a
+refused step ID is named by `step_index` alone, a refused key by field alone,
+and a refused top-level string is replaced or dropped. Accepted boundaries
+require actual child completion, except the at-limit format and seam paths,
+which pass admission and fail as `bad_policy` or their own spawn/dlopen
+outcome. Two precedence controls submit an oversized step ID beside an empty
+operation and beside a duplicate ID: capacity is refused first, so the shape
+diagnostics that quote step IDs never see an unbounded one.
 
 `validator_frames` uses checked-in transcripts for valid replies followed by
 invalid UTF-8, incomplete allow/deny, and a valid unfamiliar diagnostic. File
@@ -28,6 +36,13 @@ guard's null-ID diagnostic and drain/recovery remain owned by the native
 `validator_removed_target` uses the real validator and a completed unlink to
 check that the join uses the submitted query even when a path no longer resolves.
 Mixed and all-excluded create plans keep their pre-attempt exclusion decisions.
+`validator_control_characters` writes three files whose names and step IDs carry
+U+0001, backspace, escape and U+001F, which Foundation sends to the validator as
+`\uXXXX` escapes. The real validator must decode them, check the exact path and
+echo them escaped: every prediction is `allow` from the validator, every
+record's raw line is strict JSON without a raw control byte, association is
+clean and every write completes. The native `runner_abi_layout` boundary owns
+the parser controls, including surrogate pairs and malformed escapes.
 
 `fallback_helper` observes the shipped helper's separate 4 MiB admission refusal.
 Rust tests separately check startup-note forwarding without fabricating an XPC

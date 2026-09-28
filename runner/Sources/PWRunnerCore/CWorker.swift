@@ -508,26 +508,28 @@ public enum CWorkerRunResult {
 /// retains its independent defensive guard. Units always exclude string NULs.
 func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? {
     func check(_ field: String, _ actual: Int, _ maximum: Int, _ unit: String,
-               step: String? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
+               step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
         guard actual > maximum else { return nil }
         return PWRunnerAdmissionFailure(field: field, actual: actual, maximum: maximum,
-            unit: unit, step_id: step, parameter_key: key, index: index)
+            unit: unit, step_id: step, step_index: position, parameter_key: key, index: index)
     }
     if let r = check("policy.sbpl_source", input.policy.utf8.count, PWShmLayout.policyBytes - 1, "utf8_bytes") { return r }
     if let r = check("probe_plan", input.slots.count, PWShmLayout.maxSteps, "items") { return r }
     if let r = check("policy.params", input.params.count, PWShmLayout.maxParams, "items") { return r }
-    for slot in input.slots {
-        if let r = check("step_id", slot.stepId.utf8.count, PWShmLayout.stepIdMax - 1, "utf8_bytes", step: slot.stepId) { return r }
-        if let r = check("target", slot.target.utf8.count, PWShmLayout.targetMax - 1, "utf8_bytes", step: slot.stepId) { return r }
+    for (position, slot) in input.slots.enumerated() {
+        // A refused step ID or parameter key is identified by position or by
+        // field and byte count, never echoed: the record must stay small.
+        if let r = check("step_id", slot.stepId.utf8.count, PWShmLayout.stepIdMax - 1, "utf8_bytes", position: position) { return r }
+        if let r = check("target", slot.target.utf8.count, PWShmLayout.targetMax - 1, "utf8_bytes", step: slot.stepId, position: position) { return r }
         if slot.attemptKind == .execSpawn {
-            if let r = check("args", slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId) { return r }
+            if let r = check("args", slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId, position: position) { return r }
             for (i, arg) in slot.args.enumerated() {
-                if let r = check("args", arg.utf8.count, PWShmLayout.argvBytes - 1, "utf8_bytes", step: slot.stepId, index: i) { return r }
+                if let r = check("args", arg.utf8.count, PWShmLayout.argvBytes - 1, "utf8_bytes", step: slot.stepId, position: position, index: i) { return r }
             }
         }
     }
     for p in input.params {
-        if let r = check("key", p.key.utf8.count, PWShmLayout.paramKeyMax - 1, "utf8_bytes", key: p.key) { return r }
+        if let r = check("key", p.key.utf8.count, PWShmLayout.paramKeyMax - 1, "utf8_bytes") { return r }
         if let r = check("value", p.value.utf8.count, PWShmLayout.paramValueMax - 1, "utf8_bytes", key: p.key) { return r }
     }
     return nil

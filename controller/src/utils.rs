@@ -6,11 +6,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 // Bound retained output to keep envelopes predictable when tools are noisy.
 // Retention only: Command::output has already buffered the whole stream, so
-// this caps what the envelope carries, not peak memory. Tested with 256-step
-// long-target, long-query workloads. Per-step query and attempt labels are
-// admission-bounded; top-level metadata and optional compiled-profile capture
-// can still exceed this cap, so it is not a guarantee that every reply fits.
-pub const MAX_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
+// this caps what the envelope carries, not peak memory. The runner
+// admission-bounds every echoed request string, and the measured worst-case
+// admitted reply (256 exec steps with fully escaped 511-byte queries and
+// 1,023-byte control-character streams, plus a maximal compiled-profile
+// capture) stays under 10 MiB, so a complete reply keeps a threefold margin.
+// The cap still governs helper and log-observer streams and any tool that
+// bypasses admission.
+pub const MAX_CAPTURE_BYTES: usize = 32 * 1024 * 1024;
 
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()
@@ -111,19 +114,23 @@ pub fn capture_json_output(
 pub fn receiver_fixture(valid: &str, mode: &str) -> std::process::Output {
     // Independent child emits original bytes, including invalid bytes that
     // cannot be produced by a normal serde String envelope.
+    // argv[3] is the cap: the oversized stdout exceeds it by construction and
+    // the multibyte stderr exceeds it by one byte (three-byte characters).
     let script = r#"import sys
 p = sys.argv[1].encode()
 m = sys.argv[2]
-if m == 'oversized': p = p[:-1] + b',"detail":"' + b'x'*8388608 + b'"}'
+cap = int(sys.argv[3])
+if m == 'oversized': p = p[:-1] + b',"detail":"' + b'x'*cap + b'"}'
 if m == 'utf8': p = p[:-1] + b',"detail":"' + bytes([255]) + b'"}'
 if m == 'malformed': p = b'{'
 if m == 'empty': p = b''
 if m == 'missing': p = b'{"data":{"diagnostic":"future diagnostic","code":97319}}'
 sys.stdout.buffer.write(p)
-sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*2796203)
+sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*(cap//3+1))
 "#;
+    let cap = MAX_CAPTURE_BYTES.to_string();
     let output = std::process::Command::new("/usr/bin/python3")
-        .args(["-c", script, valid, mode])
+        .args(["-c", script, valid, mode, &cap])
         .output()
         .unwrap();
     assert!(output.status.success());

@@ -47,7 +47,16 @@ static void print_json_string(const char *s) {
             case '\n': fputs("\\n", stdout); break;
             case '\r': fputs("\\r", stdout); break;
             case '\t': fputs("\\t", stdout); break;
-            default: putchar(*p); break;
+            case '\b': fputs("\\b", stdout); break;
+            case '\f': fputs("\\f", stdout); break;
+            default:
+                /* JSON forbids raw control characters inside strings; the host
+                 * decodes strictly and a raw byte here would cost every later
+                 * frame. Everything else, DEL and UTF-8 sequences included,
+                 * passes through so the host reads the exact submitted bytes. */
+                if (*p < 0x20) printf("\\u%04x", *p);
+                else putchar(*p);
+                break;
         }
     }
     putchar('"');
@@ -112,36 +121,68 @@ static void skip_ws(const char **p) {
     while (**p == ' ' || **p == '\t' || **p == '\r' || **p == '\n') (*p)++;
 }
 
+/* Decode four hex digits at s into *out. False unless all four are hex. */
+static bool parse_hex4(const char *s, unsigned *out) {
+    unsigned value = 0;
+    for (int i = 0; i < 4; ++i) {
+        char c = s[i];
+        unsigned digit;
+        if (c >= '0' && c <= '9') digit = (unsigned)(c - '0');
+        else if (c >= 'a' && c <= 'f') digit = (unsigned)(c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F') digit = (unsigned)(c - 'A' + 10);
+        else return false;
+        value = (value << 4) | digit;
+    }
+    *out = value;
+    return true;
+}
+
+/* Append the UTF-8 encoding of an already validated code point (nonzero,
+ * not a surrogate, at most U+10FFFF). Returns the bytes written. */
+static size_t utf8_append(unsigned cp, char *w) {
+    if (cp < 0x80) { w[0] = (char)cp; return 1; }
+    if (cp < 0x800) {
+        w[0] = (char)(0xC0 | (cp >> 6)); w[1] = (char)(0x80 | (cp & 0x3F)); return 2;
+    }
+    if (cp < 0x10000) {
+        w[0] = (char)(0xE0 | (cp >> 12)); w[1] = (char)(0x80 | ((cp >> 6) & 0x3F));
+        w[2] = (char)(0x80 | (cp & 0x3F)); return 3;
+    }
+    w[0] = (char)(0xF0 | (cp >> 18)); w[1] = (char)(0x80 | ((cp >> 12) & 0x3F));
+    w[2] = (char)(0x80 | ((cp >> 6) & 0x3F)); w[3] = (char)(0x80 | (cp & 0x3F)); return 4;
+}
+
 /* Parse a JSON string starting at **p (pointing at the opening "). On
  * success, returns a malloc'd null-terminated string and advances *p
  * past the closing ". Returns NULL on malformed input. Recognized
- * escapes: \" \\ \/ \n \r \t \b \f. \uXXXX is NOT recognized — the
- * controller does not emit unicode escapes in probe lines.
+ * escapes: \" \\ \/ \n \r \t \b \f and \uXXXX including surrogate pairs,
+ * decoded to UTF-8. The host serializes probes with Foundation, which
+ * emits \uXXXX for every control character without a short form, so a
+ * path or step ID carrying such a byte depends on this. \u0000 and lone
+ * surrogates are malformed here: a NUL cannot live in a C string and
+ * neither reaches sandbox_check as a meaningful argument.
  *
  * Caller frees the returned buffer. */
 static char *parse_json_string(const char **p) {
     if (**p != '"') return NULL;
     (*p)++;
-    /* Two passes: size first, then copy. Keeps the buffer tight without
-     * a realloc loop. */
+    /* Two passes: find the closing quote, then decode. The raw escaped
+     * length bounds the decoded length (\uXXXX is six bytes for at most
+     * three, a surrogate pair twelve for four), so one allocation fits
+     * without a realloc loop. */
     const char *scan = *p;
-    size_t len = 0;
     while (*scan && *scan != '"') {
         if (*scan == '\\') {
             scan++;
             if (!*scan) return NULL;
-            len++;
-            scan++;
-        } else {
-            len++;
-            scan++;
         }
+        scan++;
     }
     if (*scan != '"') return NULL;
-    char *out = (char *)malloc(len + 1);
+    char *out = (char *)malloc((size_t)(scan - *p) + 1);
     if (!out) return NULL;
     char *w = out;
-    while (**p && **p != '"') {
+    while (**p != '"') {
         if (**p == '\\') {
             (*p)++;
             switch (**p) {
@@ -153,6 +194,24 @@ static char *parse_json_string(const char **p) {
                 case 't':  *w++ = '\t'; break;
                 case 'b':  *w++ = '\b'; break;
                 case 'f':  *w++ = '\f'; break;
+                case 'u': {
+                    /* parse_hex4 stops at the first non-hex byte, so it never
+                     * reads past the closing quote or the terminating NUL. */
+                    unsigned cp;
+                    if (!parse_hex4(*p + 1, &cp)) { free(out); return NULL; }
+                    *p += 4;
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
+                        unsigned low;
+                        if ((*p)[1] != '\\' || (*p)[2] != 'u' || !parse_hex4(*p + 3, &low)
+                            || low < 0xDC00 || low > 0xDFFF) { free(out); return NULL; }
+                        *p += 6;
+                        cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
+                    } else if ((cp >= 0xDC00 && cp <= 0xDFFF) || cp == 0) {
+                        free(out); return NULL;
+                    }
+                    w += utf8_append(cp, w);
+                    break;
+                }
                 default:   free(out); return NULL;
             }
             (*p)++;
@@ -161,7 +220,6 @@ static char *parse_json_string(const char **p) {
             (*p)++;
         }
     }
-    if (**p != '"') { free(out); return NULL; }
     (*p)++;
     *w = '\0';
     return out;

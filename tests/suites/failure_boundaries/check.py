@@ -35,7 +35,16 @@ def admission(pw, out):
     caps = {'policy.sbpl_source': 262143, 'probe_plan': 256, 'policy.params': 1024,
             'step_id': 63, 'target': 511, 'key': 127, 'value': 383, 'args_count': 15, 'args_bytes': 127,
             'sandbox_check.operation': 127, 'sandbox_check.filter.value': 511,
-            'sandbox_check.filter.kind': 127, 'attempt.kind': 127, 'attempt.action': 127}
+            'sandbox_check.filter.kind': 127, 'attempt.kind': 127, 'attempt.action': 127,
+            'specimen_id': 255, 'run_kind': 63, 'policy.format': 63,
+            '_test_overrides.libsandbox_path': 1023, '_test_overrides.worker_executable_path': 1023,
+            '_test_overrides.validator_executable_path': 1023}
+    # At-limit strings that pass admission but cannot run: the format is not sbpl
+    # and the seam paths do not exist. Each fails later, in its own way.
+    later = {'policy.format': 'bad_policy', '_test_overrides.libsandbox_path': 'libsandbox_unavailable',
+             '_test_overrides.worker_executable_path': 'worker_spawn_failed',
+             '_test_overrides.validator_executable_path': 'validator_spawn_failed'}
+    top_level = ('specimen_id', 'run_kind', 'policy.format') + tuple(f for f in caps if f.startswith('_test_overrides.'))
     for field, maximum in caps.items():
         is_count = field in ('probe_plan', 'policy.params', 'args_count')
         variants = ['exact', 'over'] if is_count else ['exact', 'over', 'unicode_exact', 'unicode_over']
@@ -64,11 +73,18 @@ def admission(pw, out):
             elif field == 'sandbox_check.operation': step['sandbox_check']['operation'] = text
             elif field == 'sandbox_check.filter.kind': step['sandbox_check']['filter']['kind'] = text
             elif field in ('attempt.kind', 'attempt.action'): step['attempt'][field.split('.')[1]] = text
-            elif field == 'sandbox_check.filter.value':
+            elif field == 'sandbox_check.filter.value' or field.startswith('_test_overrides.'):
                 remaining = actual - 1
                 tail = ('é' * (remaining // 2) + 'x' * (remaining % 2)) if variant.startswith('unicode') else 'x' * remaining
-                step['sandbox_check']['filter']['value'] = '/' + tail
-                assert len(step['sandbox_check']['filter']['value'].encode()) == actual
+                if field.startswith('_test_overrides.'):
+                    request['_test_overrides'] = {field.split('.')[1]: '/' + tail}
+                    assert len(request['_test_overrides'][field.split('.')[1]].encode()) == actual
+                else:
+                    step['sandbox_check']['filter']['value'] = '/' + tail
+                    assert len(step['sandbox_check']['filter']['value'].encode()) == actual
+            elif field == 'specimen_id': request['specimen_id'] = text
+            elif field == 'run_kind': request['run_kind'] = text
+            elif field == 'policy.format': request['policy']['format'] = text
             else:
                 step['attempt'] = {'kind': 'exec', 'action': 'spawn', 'target': '/usr/bin/true',
                                    'args': ['x'] * actual if field == 'args_count' else [text]}
@@ -80,20 +96,39 @@ def admission(pw, out):
                 assert failure['field'] == ('args' if field.startswith('args_') else field), failure
                 assert (failure['actual'], failure['maximum'], failure['unit']) == (actual, maximum, unit), failure
                 assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
-                # Nothing ran and nothing is echoed: a refusal reply carries no steps.
+                # Nothing ran and nothing is echoed: a refusal reply carries no steps,
+                # and the record never repeats the refused string itself.
                 assert runner['steps'] == [], runner
-                if field in ('step_id', 'target', 'args_count', 'args_bytes',
+                assert text not in json.dumps(runner), 'refusal echoed the refused string'
+                if field in ('target', 'args_count', 'args_bytes',
                              'sandbox_check.operation', 'sandbox_check.filter.value',
                              'sandbox_check.filter.kind', 'attempt.kind', 'attempt.action'):
-                    assert failure['step_id'] == step['step_id'], failure
+                    assert failure['step_id'] == step['step_id'] and failure['step_index'] == 0, failure
+                if field == 'step_id':
+                    assert failure.get('step_id') is None and failure['step_index'] == 0, failure
                 if field.startswith(('sandbox_check.', 'attempt.')):
                     assert failure.get('parameter_key') is None and failure.get('index') is None, failure
                 if field == 'args_bytes': assert failure['index'] == 0, failure
-                if field in ('key', 'value'): assert failure['parameter_key'] == next(iter(request['policy']['params'])), failure
+                if field == 'key': assert failure.get('parameter_key') is None, failure
+                if field == 'value': assert failure['parameter_key'] == next(iter(request['policy']['params'])), failure
+                if field in top_level:
+                    assert failure.get('step_id') is None and failure.get('step_index') is None, failure
+                if field == 'specimen_id': assert runner['specimen_id'] == '<admission_refused>', runner
+                if field == 'run_kind': assert runner.get('run_kind') is None, runner
+                if field == 'policy.format': assert runner['policy_format'] == 'unknown', runner
+                if field.startswith('_test_overrides.'):
+                    assert (runner.get('test_overrides') or {}).get(field.split('.')[1]) is None, runner
+            elif field in later:
+                assert runner.get('admission_failure') is None, runner
+                assert rc == 1 and runner['normalized_outcome'] == later[field], runner
+                if field.startswith('_test_overrides.'):
+                    assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
             else:
                 assert runner.get('admission_failure') is None, runner
                 assert runner['normalized_outcome'] == 'ok' and rc == 0, runner
                 assert runner['runner_subprocess']['reaped'] is True, runner
+                if field == 'specimen_id': assert runner['specimen_id'] == text, runner
+                if field == 'run_kind': assert runner['run_kind'] == text, runner
                 if field == 'sandbox_check.filter.kind':
                     assert runner['steps'][0]['sandbox_check']['outcome'] == 'prediction_unavailable', runner
                     assert runner['steps'][0]['sandbox_check']['filter_kind'] == text, runner
@@ -101,22 +136,43 @@ def admission(pw, out):
                     assert runner['steps'][0]['attempt']['outcome'] == 'unsupported', runner
                     assert runner['steps'][0]['attempt']['requested_' + field.split('.')[1]] == text, runner
             print('PASS admission', field, variant, actual, maximum, unit, flush=True)
+    # Capacity precedes shape: an empty operation and a duplicate step ID are
+    # reported by later validators that quote the step ID verbatim, so an
+    # oversized ID must be refused first and never appear in the reply.
+    huge = 'x' * 4096
+    empty = specimen(); empty['probe_plan'][0]['step_id'] = huge; empty['probe_plan'][0]['sandbox_check']['operation'] = ''
+    duplicate = specimen(); duplicate['probe_plan'] = [copy.deepcopy(duplicate['probe_plan'][0]) for _ in range(2)]
+    for name, request, expected in (('empty_operation', empty, ('step_id', 4096, 63)),
+                                    ('duplicate_step_id', duplicate, None)):
+        for step in duplicate['probe_plan']: step['step_id'] = huge
+        rc, runner = run(pw, out / f'precedence-{name}', request)
+        assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
+        failure = runner['admission_failure']
+        assert (failure['field'], failure['actual'], failure['maximum']) == ('step_id', 4096, 63), failure
+        assert failure.get('step_id') is None and failure['step_index'] == 0, failure
+        assert huge not in json.dumps(runner), 'validation diagnostic echoed an unbounded string'
+        print('PASS admission precedence', name, flush=True)
 
 
 def validator(pw, out, mode):
     modes = {'validator_frames': ['invalid_utf8', 'incomplete_allow', 'incomplete_deny', 'diagnostic'],
-             'validator_association': ['duplicate', 'unexpected', 'wrong_operation', 'wrong_filter_type', 'wrong_filter_value', 'missing_filter_value'], 'validator_overlong_request': ['real_overlong'], 'validator_removed_target': ['real_removed']}[mode]
+             'validator_association': ['duplicate', 'unexpected', 'wrong_operation', 'wrong_filter_type', 'wrong_filter_value', 'missing_filter_value'], 'validator_overlong_request': ['real_overlong'], 'validator_removed_target': ['real_removed'],
+             'validator_control_characters': ['real_control']}[mode]
     for case in modes:
         case_out = out / case
         case_out.mkdir(parents=True)
         with tempfile.TemporaryDirectory(prefix='pw-validator-boundary-', dir='/private/tmp') as temp:
-            paths = [Path(temp) / name for name in ['first', 'middle', 'last']]
+            # Control characters are legal in file names and in step IDs. Foundation
+            # sends them to the validator as \uXXXX escapes and the validator must
+            # echo them escaped; one raw byte would cost every later prediction.
+            names = ['first\x01', 'mid\x08dle', 'la\x1bst\x1f'] if case == 'real_control' else ['first', 'middle', 'last']
+            paths = [Path(temp) / name for name in names]
             for path in paths: path.write_bytes(b'before')
             request = specimen()
             request['probe_plan'] = [{'step_id': name, 'sandbox_check': {'operation': 'file-write-data',
                 'filter': {'kind': 'path', 'value': str(path)}},
                 'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(path)}}
-                for name, path in zip(['first', 'middle', 'last'], paths)]
+                for name, path in zip(names, paths)]
             if case == 'real_overlong':
                 request['probe_plan'][1]['sandbox_check']['operation'] = 'x' * 65536
                 probes = [{'step_id': s['step_id'], 'operation': s['sandbox_check']['operation'],
@@ -129,6 +185,8 @@ def validator(pw, out, mode):
                 assert len(lines[0]) < 65536 < len(lines[1]) and len(lines[2]) < 65536
             elif case == 'real_removed':
                 request['probe_plan'][2]['attempt']['action'] = 'unlink'
+            elif case == 'real_control':
+                pass  # the real validator and an unmodified plan; the names carry the control characters
             else:
                 fixture = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
                 executable = case_out / 'validator.py'
@@ -137,6 +195,24 @@ def validator(pw, out, mode):
                 request['_test_overrides'] = {'validator_executable_path': str(executable.resolve())}
             rc, runner = run(pw, case_out, request)
             assert runner.get('test_overrides') == request.get('_test_overrides'), runner
+            if case == 'real_control':
+                assert rc == 0 and runner['normalized_outcome'] == 'ok', runner
+                assert all(path.read_bytes() != b'before' for path in paths), 'completed file effects absent'
+                process = runner['validator_subprocess']
+                assert process['reaped'] is True and process['exit_code'] == 0, process
+                assert process['association_issues'] == [] and process.get('decode_fault') is None, process
+                assert [v['step_id'] for v in process['records']] == names, process
+                for record, path in zip(process['records'], paths):
+                    line = record['raw_line']
+                    assert all(ord(ch) >= 0x20 for ch in line), 'validator echoed a raw control byte'
+                    assert json.loads(line)['filter_value'] == str(path), line
+                steps = runner['steps']
+                assert [s['step_id'] for s in steps] == names, steps
+                assert all(s['sandbox_check']['outcome'] == 'allow' and s['sandbox_check']['result_source'] == 'validator'
+                           and s['sandbox_check']['filter_value'] == str(path) for s, path in zip(steps, paths)), steps
+                assert all(s['attempt']['result_source'] == 'worker' and s['attempt']['rc'] == 0 for s in steps), steps
+                print('PASS validator', case, 'control characters round-tripped in', len(steps), 'steps', flush=True)
+                continue
             if case == 'real_overlong':
                 # Query admission closes the CLI route to the validator's line cap:
                 # the overlong operation is refused before any process work, and the

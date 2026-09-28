@@ -298,8 +298,10 @@ Each step has:
 - `sandbox_check`: `{ operation, filter }`
 - `attempt`: `{ kind, action, target }`
 
-Step IDs, query strings, filter/attempt labels and attempt targets have
-separate admission limits (see [Limits](#limits)).
+Step IDs, query strings, filter/attempt labels, attempt targets and the
+top-level strings have separate admission limits (see [Limits](#limits)).
+Control characters are legal in all of them and reach the validator and the
+reply as JSON escapes.
 
 Example:
 
@@ -336,19 +338,24 @@ import resolution or compilation.
   worker policy transfer precedes polling, synchronous validator work is outside
   the worker polling budget, and cleanup/reaping can take additional time.
 - The controller collects subprocess output before retaining a bounded prefix.
-  Its output cap does not bound peak memory. A valid raw compiled-object capture
-  can exceed that cap after base64 encoding and envelope overhead, leaving the
-  controller unable to parse the runner reply. Even smaller captures share the
-  reply with all other evidence; there is no independently guaranteed safe size.
+  Its output cap does not bound peak memory. Every request string the reply
+  echoes is admission-bounded, and the cap is set with a margin above the
+  largest measured admitted reply (256 exec steps with fully escaped 511-byte
+  query paths and 1,023-byte control-character child streams) plus a maximal
+  compiled-object capture. The measured workloads are the evidence for that
+  margin; the cap is not derived from a closed-form maximum.
 - The query operation and filter value have admission limits of their own,
   separate from the attempt target: a step may query one path and attempt
   another, and each string is bounded on its own. Both strings are echoed per
   step in the reply and serialized as one validator line per probe. Filter
-  kinds and attempt kind/action labels are also bounded, including unknown
-  labels. These limits keep each probe line inside the validator line cap and
-  bound the repeated request fields in measured 256-step replies. They do not
-  guarantee that every reply fits: top-level metadata, refusal identity fields
-  and optional compiled-profile capture can still exceed the controller cap.
+  kinds, attempt kind/action labels, the specimen ID, the run kind and policy
+  format labels and the test-seam paths are bounded too, so every echoed
+  request string has a limit. Capacity refusals are decided immediately after
+  decoding, before any other validation, and a refusal never repeats the
+  string it refused: the record names the field, the step position or the
+  parameter, and placeholders stand in for a refused specimen ID, run kind or
+  format. Control characters in any of these strings are legal; they travel to
+  the validator and back as JSON escapes.
 - Exec attempts spend descriptors before the sandbox applies, four per step,
   so the worker counts free descriptor slots and raises its soft limit to fit
   the plan plus reserved headroom before opening any pipe. Inherited descriptors
@@ -371,18 +378,21 @@ Values are maxima unless labelled as defaults.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Probe steps (`probe_steps`) | 256 items | Entries in probe_plan. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Policy parameters (`policy_parameters`) | 1,024 items | Entries in the policy parameter dictionary. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Step ID (`step_id`) | 63 UTF-8 bytes | Each step_id, excluding terminating NUL. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Attempt target (`attempt_target`) | 511 UTF-8 bytes | Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0]. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Supplied exec arguments (`exec_arguments`) | 15 items | Arguments supplied in attempt.args; the target occupies the additional argv[0] slot. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | Each supplied argument, excluding terminating NUL; the target has its own larger limit. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Parameter key (`parameter_key`) | 127 UTF-8 bytes | Each key, excluding terminating NUL. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Parameter value (`parameter_value`) | 383 UTF-8 bytes | Each value, excluding terminating NUL. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Query operation (`query_operation`) | 127 UTF-8 bytes | Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Query filter value (`query_filter_value`) | 511 UTF-8 bytes | Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Policy source (`policy_source`) | 262,143 UTF-8 bytes | Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Probe steps (`probe_steps`) | 256 items | Entries in probe_plan. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Policy parameters (`policy_parameters`) | 1,024 items | Entries in the policy parameter dictionary. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Step ID (`step_id`) | 63 UTF-8 bytes | Each step_id, excluding terminating NUL. A refused step ID is identified by step_index only, never echoed. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Attempt target (`attempt_target`) | 511 UTF-8 bytes | Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0]. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Supplied exec arguments (`exec_arguments`) | 15 items | Arguments supplied in attempt.args; the target occupies the additional argv[0] slot. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | Each supplied argument, excluding terminating NUL; the target has its own larger limit. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Parameter key (`parameter_key`) | 127 UTF-8 bytes | Each key, excluding terminating NUL. A refused key is identified by field and byte count only, never echoed. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Parameter value (`parameter_value`) | 383 UTF-8 bytes | Each value, excluding terminating NUL. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Query operation (`query_operation`) | 127 UTF-8 bytes | Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Query filter value (`query_filter_value`) | 511 UTF-8 bytes | Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Specimen ID (`specimen_id`) | 255 UTF-8 bytes | The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Request labels (`request_label`) | 63 UTF-8 bytes | Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | Each of _test_overrides.libsandbox_path, worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; a refused path is dropped from the mirror. Excess rejects the specimen before any other validation: bad_request with host-owned admission_failure. | Fixed; no public override. |
 
 ### Execution budgets
 
@@ -406,7 +416,7 @@ Values are maxima unless labelled as defaults.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
-| Controller subprocess output (`controller_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
+| Controller subprocess output (`controller_output`) | 33,554,432 bytes | Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Retention only: the whole stream is already buffered. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Raw prefix of the first rejected frame, before base64 encoding. The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss. | Fixed; no public override. |
 
 ### Evidence capture
@@ -818,12 +828,17 @@ are documented under SBPL check above):
   include: JSON decode failure, empty `sandbox_check.operation`
   (`validateSandboxChecks`), unsupported top-level field (e.g.
   `instrumentation`), duplicate `step_id`, or a capacity refusal: the worker's
-  shared-memory bounds or the host-only query strings and filter/attempt labels.
-  Capacity refusals carry host-owned
-  `admission_failure` with field, actual and maximum, `utf8_bytes` or `items`,
-  and applicable step/key/index. Every `bad_request` reply has `steps: []`:
-  nothing ran, so the refused probe plan is omitted. The admission record
-  still identifies the offending step or parameter when applicable.
+  shared-memory bounds, the host-only query strings and filter/attempt labels,
+  or the top-level and test-seam strings. Capacity is checked first, straight
+  after decoding, so no other diagnostic ever quotes an unbounded string.
+  Capacity refusals carry host-owned `admission_failure` with field, actual and
+  maximum, `utf8_bytes` or `items`, and applicable `step_id`, `step_index`,
+  `parameter_key` and `index`. Every `bad_request` reply has `steps: []`:
+  nothing ran, so the refused probe plan is omitted. A refusal never repeats
+  the string it refused: a refused step ID or parameter key is identified by
+  position or by field, and a refused `specimen_id`, `run_kind`, `policy.format`
+  or seam path is replaced by `<admission_refused>`, omitted, `unknown` or
+  dropped from the mirrored `test_overrides` respectively.
   Unknown `filter.kind` and unsupported `(attempt.kind,
   attempt.action)` combos within the admission limits downgrade to per-step
   `prediction_unavailable` and `unsupported`

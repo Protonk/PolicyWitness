@@ -25,8 +25,12 @@
     "reply.admission_failure" : {
       "actual" : "number",
       "field" : "string",
+      "index" : "number",
       "maximum" : "number",
       "origin" : "string",
+      "parameter_key" : "string",
+      "step_id" : "string",
+      "step_index" : "number",
       "unit" : "string"
     },
     "reply.applied_profile" : {

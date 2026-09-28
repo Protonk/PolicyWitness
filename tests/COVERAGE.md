@@ -18,7 +18,7 @@ column says why, and names the closest unit or harness coverage.
 | `bad_policy` | host structural-policy admission (`computePolicyHash`) | `runner_unit` (`EnvelopeInvariantTests`) | Missing source or wrong policy format. A published legacy compilation/setup/application failure instead maps to `runner_failed`. |
 | `sandbox_apply_failed` | Legacy/reserved; current producers summarize operation failures as runner_failed | `runner_unit` / `HostOutcomeClassifierTests`; `runner_c_worker_harness/compile_failure` protects real publication separately | ABI 7 publishes precise operation/native-result evidence under `runner_failed`; legacy ambiguous status also remains `runner_failed`. Unpublished storage supplies no result. Unused `SandboxApplyTests` has no production attribution credit. |
 | `libsandbox_unavailable` | host (PWRunnerService) pre-spawn check | `runner_outcome_libsandbox_unavailable` | Driven via `_test_overrides.libsandbox_path`. |
-| `bad_request` | host (PWRunnerService) — Swift decode + `validateSandboxChecks` + `CWorkerOrchestrator.validateProbePlanForCWorker` (duplicate step_id) | `runner_outcome_bad_request`, `runner_use_c_worker.duplicate_step_id_rejected` | Unknown filter kinds and unknown attempt combos do NOT produce `bad_request` — they downgrade to per-step `prediction_unavailable` / `unsupported` respectively. |
+| `bad_request` | host (PWRunnerService) — Swift decode + `CWorkerOrchestrator.admissionFailure(for:)` (every capacity limit, checked first) + `validateSandboxChecks` + `CWorkerOrchestrator.validateProbePlanForCWorker` (duplicate step_id) | `runner_outcome_bad_request`, `runner_use_c_worker.duplicate_step_id_rejected`, `failure_boundaries.admission` | Unknown filter kinds and unknown attempt combos do NOT produce `bad_request` — they downgrade to per-step `prediction_unavailable` / `unsupported` respectively. |
 | `already_ran` | host (PWRunnerService) | none (out of scope) | The XPC service exits ~50ms after the first reply, so a second request from the same connection is racy. |
 | `worker_spawn_failed` | host (PWRunnerService) | `runner_outcome_worker_spawn_failed` | Driven via `_test_overrides.worker_executable_path`. |
 | `runner_sandbox_denied` | Recognized legacy string; not currently emitted | `runner_unit` / classifier and legacy encoding controls; `witness_contract/worker_termination_and_log_correlation` | Signals and PID-matched denials do not establish a sandbox termination cause. The self-signal seam produces `runner_failed` and preserves independent denied-attempt evidence. |
@@ -88,9 +88,12 @@ broken pipe. `runner_abi_layout` checks the worker ABI sizes/offsets; incompatib
 rejection remains in `runner_c_worker_harness`. These controls do not establish
 kernel policy attribution from a signal or synthesize a native call from text.
 
-`failure_boundaries` checks every worker admission capacity (exact/over and UTF-8
-multibyte boundaries), independent sbpl-check admission, actual C validator line
-overflow between valid queries, and fixture reply UTF-8/structure/association.
+`failure_boundaries` checks every admission capacity, worker and host-only
+(exact/over and UTF-8 multibyte boundaries, capacity before shape, no echo of the
+refused string), independent sbpl-check admission, admission refusal of an
+overlong query with the largest admitted probe line measured against the native
+cap, control-character round trip through the real validator, and fixture reply
+UTF-8/structure/association.
 `ValidatorEvidenceTests` covers actual driver kill/wait failures and abnormal exits
 after verdicts, byte framing across delayed multibyte writes, bounded rejected
 context, and independent I/O plus decode faults. Rust receiver tests use real

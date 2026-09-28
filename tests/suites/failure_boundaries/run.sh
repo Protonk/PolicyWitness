@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/case.sh"
-for case_id in admission fallback_helper validator_frames validator_association validator_overlong_request validator_removed_target; do
+for case_id in admission fallback_helper validator_frames validator_association validator_overlong_request validator_removed_target validator_control_characters; do
   test_selected "${case_id}" || continue
   test_begin failure_boundaries "${case_id}"
   test_require_pw

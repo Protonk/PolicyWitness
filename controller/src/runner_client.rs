@@ -272,8 +272,10 @@ mod tests {
 
     #[test]
     fn valid_oversized_producer_is_receiver_loss_not_malformed_json() {
-        let (capture, parsed, full) =
-            producer("import sys; sys.stdout.write('{\"value\":\"' + 'x'*8388608 + '\"}')");
+        let (capture, parsed, full) = producer(&format!(
+            "import sys; sys.stdout.write('{{\"value\":\"' + 'x'*{} + '\"}}')",
+            MAX_CAPTURE_BYTES
+        ));
         assert!(
             serde_json::from_slice::<Value>(&full).is_ok(),
             "producer emitted valid complete JSON"
@@ -296,7 +298,7 @@ mod tests {
             capture.output.stdout_bytes_retained,
             Some(MAX_CAPTURE_BYTES)
         );
-        assert_eq!(capture.output.capture_limit_bytes, 8388608);
+        assert_eq!(capture.output.capture_limit_bytes, MAX_CAPTURE_BYTES);
         assert!(capture.output.stdout_truncated);
         assert!(capture.output.stdout_parse_error.is_none());
         assert!(
@@ -334,9 +336,13 @@ mod tests {
 
     #[test]
     fn multibyte_cut_counts_bytes_before_lossy_conversion() {
-        let (capture, parsed, full) = producer(
-            "import sys; sys.stdout.buffer.write(b'{\"v\":\"' + b'x'*(8388608-7) + bytes([0xe2,0x82,0xac]) + b'\"}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*2796203)",
-        );
+        // stdout: the cap falls inside a three-byte character; stderr exceeds the
+        // cap by exactly one byte with whole three-byte characters.
+        let (capture, parsed, full) = producer(&format!(
+            "import sys; sys.stdout.buffer.write(b'{{\"v\":\"' + b'x'*({} - 7) + bytes([0xe2,0x82,0xac]) + b'\"}}'); sys.stderr.buffer.write(bytes([0xe2,0x82,0xac])*{})",
+            MAX_CAPTURE_BYTES,
+            MAX_CAPTURE_BYTES / 3 + 1
+        ));
         assert!(serde_json::from_slice::<Value>(&full).is_ok());
         assert!(parsed.is_none());
         assert_eq!(
@@ -347,7 +353,10 @@ mod tests {
             capture.output.stdout_bytes_retained,
             Some(MAX_CAPTURE_BYTES)
         );
-        assert_eq!(capture.output.stderr_bytes_received, Some(8388609));
+        assert_eq!(
+            capture.output.stderr_bytes_received,
+            Some(MAX_CAPTURE_BYTES + 1)
+        );
         assert_eq!(
             capture.output.stderr_bytes_retained,
             Some(MAX_CAPTURE_BYTES)

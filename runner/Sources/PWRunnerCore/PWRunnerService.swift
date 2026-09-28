@@ -222,6 +222,37 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
+        // Capacity refusals come first, from the decoded request alone, so no
+        // later diagnostic (empty operation, duplicate step ID, dlopen or spawn
+        // failure) can echo an unbounded string. The record identifies the
+        // field, step position or parameter without repeating a refused value:
+        // placeholders stand in for a refused specimen ID, run kind or policy
+        // format, and a refused test-seam path is dropped from the mirror.
+        if let refused = CWorkerOrchestrator.admissionFailure(for: parsed) {
+            var mirrored = parsed._test_overrides
+            switch refused.field {
+            case "_test_overrides.libsandbox_path": mirrored?.libsandbox_path = nil
+            case "_test_overrides.worker_executable_path": mirrored?.worker_executable_path = nil
+            case "_test_overrides.validator_executable_path": mirrored?.validator_executable_path = nil
+            default: break
+            }
+            let resp = PWRunnerRunResult(
+                specimen_id: refused.field == "specimen_id" ? "<admission_refused>" : parsed.specimen_id,
+                run_kind: refused.field == "run_kind" ? nil : parsed.run_kind,
+                rc: 1,
+                normalized_outcome: NormalizedOutcome.badRequest,
+                error: CWorkerRunError.admissionFailed(refused).description,
+                pid: Int(getpid()),
+                bundle_id: bundleString("CFBundleIdentifier"),
+                policy_format: refused.field == "policy.format" ? "unknown" : parsed.policy.format,
+                steps: [],
+                test_overrides: mirrored,
+                admission_failure: refused
+            )
+            replyAndExit(resp)
+            return
+        }
+
         do {
             try validateSandboxChecks(parsed.probe_plan)
         } catch {

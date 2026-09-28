@@ -54,6 +54,39 @@ def query_boundary(validator):
     assert rows[2]['step_id'] == 'boundary' and rows[2]['outcome'] != 'parse_error', rows
 
 
+def control_character_round_trip(validator):
+    # Foundation escapes every control character as \uXXXX and non-BMP text as a
+    # surrogate pair; json.dumps with ensure_ascii does the same. The verdict must
+    # decode as strict JSON with the submitted strings intact and no raw control
+    # byte. Malformed escapes are per-probe parse errors that do not stop later
+    # probes. The unsandboxed test process itself is the checked pid.
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='pw-control-', dir='/private/tmp') as temp:
+        path = Path(temp) / 'f\x01\x08\x1f\U0001F600\u2028'
+        path.write_bytes(b'x')
+        probes = [
+            {'step_id': 'id\x01\x08\x0c\x1b', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
+            {'step_id': 'nul', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
+            {'step_id': 'lone', 'operation': 'file-read-data', 'filter_type': 'PATH', 'filter_value': str(path)},
+            {'step_id': 'after', 'operation': 'file-read-data', 'filter_type': 'NONE'},
+        ]
+        lines = [json.dumps(probe, separators=(',', ':')).encode() for probe in probes]
+        assert b'\\u0001' in lines[0] and b'\\ud83d' in lines[0].lower(), lines[0]
+        lines[1] = lines[1].replace(b'"nul"', b'"n\\u0000l"')
+        lines[2] = lines[2].replace(b'"lone"', b'"l\\ud83dne"')
+        result = subprocess.run([str(validator), '--batch', str(os.getpid())],
+                                input=b'\n'.join(lines) + b'\n', capture_output=True, timeout=10, check=True)
+        raw = result.stdout.splitlines()
+        assert len(raw) == 4, raw
+        assert all(b < 0x20 for line in raw for b in []) or all(byte >= 0x20 for line in raw for byte in line), raw
+        rows = [json.loads(line) for line in raw]
+        assert rows[0]['step_id'] == probes[0]['step_id'] and rows[0]['filter_value'] == str(path), rows[0]
+        assert rows[0]['outcome'] == 'allow', rows[0]
+        assert rows[1]['step_id'] is None and rows[1]['outcome'] == 'parse_error', rows[1]
+        assert rows[2]['step_id'] is None and rows[2]['outcome'] == 'parse_error', rows[2]
+        assert rows[3]['step_id'] == 'after' and rows[3]['outcome'] == 'allow', rows[3]
+
+
 def main():
     artifacts = Path(sys.argv[1])
     printer = values((artifacts / 'printer.out').read_text())
@@ -75,7 +108,8 @@ def main():
     else:
         raise AssertionError('changed manifest value escaped compiled-value check')
     query_boundary(artifacts / 'validator_limits')
-    print(f'ok: {len(observed)} compiled C limits; exact query boundary and drain/recovery')
+    control_character_round_trip(artifacts / 'validator_limits')
+    print(f'ok: {len(observed)} compiled C limits; exact query boundary, drain/recovery and control-character round trip')
 
 
 if __name__ == '__main__':

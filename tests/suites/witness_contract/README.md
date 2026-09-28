@@ -173,20 +173,26 @@ by literal, and independently checks every file's bytes before decoding.
 Both require eligible predictions to be `query_first`; allow/success is limited
 agreement, and deny/permission failure is directional consistency with null drift.
 
-`max_targets_reply_survives` measures four admitted 256-step workloads with
-511-byte attempt targets: denied ASCII reads with log capture, successful reads
-of JSON-escaped paths with observed paths, independent 511-byte query paths
-against plain attempt targets, and 256 execs with stdout/stderr. These require
-complete replies and exact targets, outcomes and applicable output.
+`max_targets_reply_survives` measures five admitted 256-step workloads: denied
+ASCII reads of 511-byte targets with log capture, successful reads of
+JSON-escaped paths with observed paths, independent 511-byte query paths
+against plain attempt targets, 256 execs with stdout/stderr, and 256 shell
+execs whose independent 511-byte query paths and 1,023-byte stdout/stderr
+streams are made of U+0001, the worst admitted escaping (six bytes per byte).
+These require complete replies and exact targets, outcomes and applicable
+output; the control-character workload also requires every prediction to
+round-trip through the real validator. Its reply is the largest admitted reply
+this suite measures and the evidence behind the receiver cap's margin.
 
 Four refusal workloads submit 32,768-byte query values or filter/attempt labels.
 Each requires a host-owned `admission_failure` naming the field, no steps and no
 worker or validator subprocess. The label controls place a valid write before
 the invalid label and independently require every target to remain unchanged.
 Every workload records its reply size and requires an untruncated receiver;
-refusal replies must be smaller than 4 KiB. These are workload guarantees, not a
-maximum reply size: top-level metadata and optional profile capture remain
-independent contributors. The exec case uses the independently controlled
+refusal replies must be smaller than 4 KiB. Every echoed request string is
+admission-bounded, so these measurements are the evidence for the cap's margin
+rather than a closed-form maximum; optional profile capture adds at most about
+1.4 MiB. The exec cases use the independently controlled
 `tests/fixtures/exec` helper and requires clang. Every step execs: the worker
 raises its soft descriptor limit pre-apply to fit the four pipe descriptors
 each exec step prepares (see `exec_step_descriptors` in `docs/LIMITS.md`).
