@@ -79,18 +79,62 @@ execution result from a stalled or excessively verbose logging subprocess.
 
 ### 1. Pin the authority and availability contracts
 
-Audit the collector-to-controller-to-consumer path and record which fields log
-processing may change. Preserve the runner reply, native classifications and
-execution result exactly. Make structural changes only where the audit finds
-an actual dependency or where an explicit boundary makes the resource guarantee
-enforceable.
+**Diagnosis.** Audit which envelope fields the log channel writes and which
+fields read from it, then record the result as a field-ownership table in the
+controller contract. Scouting found a clean field-level split with one shared
+object: [run_flow.rs](controller/src/run_flow.rs) derives `result` (`ok`,
+`exit_code`, `normalized_outcome`, `error`) from the runner reply and the runner
+client's own output capture alone; `data.sandbox_log_capture` is written only by
+collector processing; `data.runner_sandbox_diagnostics` mixes six disposition
+fields projected from the runner reply (`worker_pid`, `process_disposition`,
+`termination_cause`, `stop_reason`, `disposition_integrity`,
+`disposition_issues`) with four correlation fields derived from the capture
+(`capture_status`, `correlation_status`, `first_deny`,
+`permission_failures_without_record`), all built by one function from both
+inputs. Log processing reads the reply (steps, submitted plan, disposition
+record) but no execution field reads the capture. Confirm this by tracing every
+write to those fields and every reader in the repository.
 
-Keep successful empty capture separate from unavailable or disabled capture.
-`permission_failures_without_record` refers to permission-shaped attempts with
-no captured candidate, not to a global statement about the OS store. Preserve
-its null-versus-list meaning. Valid matching events remain optional corroboration,
-not an automatic rewrite of `comparison`, `drift`, failure attribution or cause.
-Audit in-repository consumers and document the scope of that audit.
+**Design.** The invariant to enforce is field-level single ownership across two
+channels in one envelope. The execution channel (runner reply, native
+classifications, client capture, disposition projection, result and exit
+status) is complete before collection starts and is never rewritten by it. The
+log channel may write only `sandbox_log_capture` and the four correlation
+fields. Within those, successful empty capture, unavailable capture and
+disabled capture stay distinct; `permission_failures_without_record` names
+permission-shaped attempts with no captured candidate, is null unless
+correlation reached `pid_match` or `no_match` with per-step comparisons
+present, and says nothing about the OS store; matching events corroborate and
+never rewrite `comparison`, `drift`, failure attribution or termination cause.
+
+**Remediation.** Make the boundary structural where the audit finds the two
+channels assembled together: finish the execution half, including the
+disposition projection, as a value before the collector runs, then attach
+collector output through a step whose only outputs are the log-channel fields,
+merged into the existing wire shape without moving or renaming a field. That
+step is the seam section 2 bounds. Add a permanent control on the production
+assembly path that serializes one runner reply under every collector state
+(captured with events, captured empty, blocked, error, parse_error,
+window_mismatch, invalid_window, requested_unavailable, disabled and, after
+section 2, timeout and overflow) and requires a byte-identical execution half
+beside the expected correlation fields. Existing controls cover five states at
+the diagnostics function
+(`capture_conditions_do_not_change_execution_status_or_cause`) and the window
+and no-match states through serialization; the investigation's disposable
+ten-state replay is the template. Make no other structural change without an
+audit finding of an actual dependency.
+
+**Scope.** This step touches envelope assembly in
+[run_flow.rs](controller/src/run_flow.rs), its tests and the contract
+documentation. It changes no wire field, status value or contract number, and
+it does not depend on sections 2 to 4, which reuse its seam and its control.
+The consumer audit covers in-repository readers only:
+[consumer.py](tests/lib/consumer.py), whose `denials` block is separate from its
+comparison and failure groups; the lifecycle oracle, adapter and contract
+modules, which read only the disposition fields out of the shared object; the
+blackbox checker and disposition controls; the witness cases that assert on
+capture; and the disposition fixtures. Document that scope and that consumers
+outside this checkout were not audited.
 
 ### 2. Bound and contain collection
 
