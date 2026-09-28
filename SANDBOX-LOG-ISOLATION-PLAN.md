@@ -1,7 +1,7 @@
 # Sandbox log isolation: problem and troubleshooting evidence
 
-Investigation completed 2026-09-28 on macOS 14.8.3 (23J220), arm64.
-This is a temporary investigation record. No remediation has been selected or
+Investigation record, 2026-09-28, macOS 14.8.3 (23J220), arm64, two rounds the
+same day. This is a temporary investigation record. No remediation has been selected or
 implemented. Production code and registered tests remain unchanged.
 
 ## Problem
@@ -21,10 +21,12 @@ also requires the late read's record to exist in the returned unified-log data.
 
 The missing-record symptom is independently reproduced. It occurs with native
 EPERM results, successful worker completion, a successful log query, and correct
-missing-record diagnostics. Wider raw searches outside PolicyWitness also lack
-the selected records. The reporting stage responsible for the omission is not
-established; neither platform status nor a particular rate limit is a proven
-selector.
+missing-record diagnostics. Wider raw searches outside PolicyWitness also lack the selected records, in every
+channel. The follow-up round localizes the omission to the Sandbox kernel
+extension's violation reporting and reproduces it with an unconfined
+`sandbox-exec` control, so process identity, signing, ancestry, policy rule count
+and the worker's self-apply path are excluded as selectors, as is log transport.
+The rule that drops a line is not identified.
 
 The immediate production consequence observed here is incomplete supporting
 log evidence. The worker's attempts and successful execution remain reported.
@@ -49,6 +51,20 @@ live investigation commands were rerun with escalation as described in
 [tests/README.md](tests/README.md#sandboxed-automation-harnesses). Missing
 equipment or blocked capture is distinct from a successful query with no record.
 Preserve each execution and scan; these steps do not retry a failure until green.
+
+`log show` omits loss events unless `--loss` is passed. A
+`--predicate 'eventType == lossEvent'` query without that flag returns nothing
+however many losses the store holds, so every scan below passes `--loss`.
+`log stats --overview` needs no root and prints the archive-wide loss count; run
+it once to confirm loss events are visible at all. A loss event reads
+`lost N unreliable messages from A-B`; `A-B` is a mach-continuous range, and every
+record's `machTimestamp` is on the same clock (24 MHz here, `mach_timebase_info`
+125/3), so any recorded event's `timestamp`/`machTimestamp` pair converts a range
+to wall time. Kernel deny lines are `processID` 0 events from the `Sandbox`
+sender; the worker PID exists only inside `eventMessage`, so PID selection must
+match the message text, never `processID`. Displayed wall timestamps in the
+archive carried a conversion offset of +10 to +36 ms relative to `CLOCK_REALTIME`
+during this investigation; treat them as later than the attempt by that much.
 
 1. **Original intermittent case.** Select a fresh output name:
 
@@ -75,9 +91,13 @@ Preserve each execution and scan; these steps do not retry a failure until green
 
    Retain the envelope, worker PID, path and start/end times. Verify native EPERM
    and worker completion independently of logging. Search the enclosing interval
-   using raw `/usr/bin/log show --info --debug --style ndjson`, first by worker
-   PID and then by the unique target directory without a process filter. Use
-   explicit whole-second UTC bounds. Missing records are intermittent; neither
+   using raw `/usr/bin/log show --loss --info --debug --style ndjson`, first by
+   worker PID (`eventMessage CONTAINS "pw-probe-runner(<pid>)"`), then by the
+   unique target directory without a process filter, then channel-agnostic by
+   `eventMessage CONTAINS "(<pid>)"` with bounds widened by 60 seconds; the last
+   also returns sandboxd's rate-limited `com.apple.sandbox.reporting` Violation
+   reports and, for `sandbox-exec` controls, the kext's `Sandbox apply:` line.
+   Use explicit whole-second UTC bounds. Missing records are intermittent; neither
    a fixed loss count nor an initial-burst pattern is an expected invariant.
 
 3. **Lifetime and process controls.** Repeat the worker specimens with a trailing
@@ -102,10 +122,36 @@ Preserve each execution and scan; these steps do not retry a failure until green
 5. **Follow-up observations.** Preserve initial scans, then search the same
    targets with bounds widened by 60 seconds at both ends. The current driver
    performs a delayed scan at least 60 seconds after a cohort's last run; actual
-   scan times are retained. Query `eventType == lossEvent` separately. Compare
-   target membership, not just total line counts. NDJSON's final `count/finished`
-   object is a footer, not an event. Zero loss notices do not prove lossless
-   delivery, and continued absence does not identify the responsible stage.
+   scan times are retained. Query loss events separately with `--loss --predicate 'eventType == lossEvent'`;
+   without `--loss` that query returns nothing however many losses the store holds.
+   Convert each `from A-B` range to wall time as described above and test it
+   against the missing attempt's interval. Compare target membership, not just
+   total line counts. NDJSON's final `count/finished` object is a footer, not an
+   event. Zero loss events exclude a counted transport loss over the interval;
+   they do not identify the stage that omitted an uncounted line.
+
+6. **Kext-side localization.** For each missing record, scan `sender == "Sandbox"`
+   within 3 seconds of the lost phase (client start for early or single-read
+   losses, client end for late losses) and list every line with its time relative
+   to the attempt. Other processes' deny lines show whether the kernel report path
+   was delivering at that instant. A `N duplicate reports for Sandbox: …` flush
+   line at the attempt's instant shows that the kext's duplicate tracking
+   processed an arrival there; it names the coalesced neighbour, not the missing
+   attempt. Retain the raw scans.
+
+7. **Instrumented unconfined control.** Build and ad-hoc sign `probe_latency.c`
+   (route below): it stamps `CLOCK_REALTIME`, `mach_absolute_time` and
+   `mach_continuous_time` immediately before and after one `open(2)` and prints
+   them with `getpid()` and `errno`. Run it under
+   `sandbox-exec -p '(version 1)(allow default)(deny file-read-data (literal "<path>"))'`
+   on a fresh file per run, in a back-to-back cell (0.25 s gaps) and an idle cell
+   (20 s before each run). Append a receipt per run before scanning. Scan 5 seconds
+   after the last run and again 60 seconds later with bounds widened by 60 seconds.
+   Join records to runs by path, check the record's PID against the probe's, and
+   compute `machTimestamp` minus the post-open `mach_continuous_time` (report
+   latency, no wall conversion involved) and `timestamp` minus the post-open
+   `CLOCK_REALTIME` (the archive's conversion offset). A child's record is not
+   worker evidence; this control measures the OS reporting path.
 
 ## Troubleshooting results
 
@@ -127,9 +173,11 @@ no truncation.
 
 Over 31 minutes later, independent raw queries still found only the early
 record. This held for the exact interval searched by worker PID and for a
-path-only query widened by 60 seconds on each side. No loss-event records were
-returned. The earlier notes' 357 ms and 631 ms figures are observer report
-generation minus client end; those fields do not establish scan start times.
+path-only query widened by 60 seconds on each side. The loss-event query returned
+nothing, but it lacked `--loss` and could not have returned a loss event; the
+follow-up round below re-queried with the flag. The earlier notes' 357 ms and
+631 ms figures are observer report generation minus client end; those fields do
+not establish scan start times.
 
 ### Independent initial cross-check
 
@@ -143,7 +191,8 @@ shapes without added pauses, using fresh paths. Each group recorded 3/5 denials:
 its first two were absent and its last three present. Every read returned EPERM;
 every trailing sleep exited 0. A wider path-only scan about 68 seconds later
 returned the same six records. A query for the first missing worker PID returned
-none, and a wider loss-event query returned none. All ten targets were readable
+none. A wider loss-event query returned none, but lacked `--loss` (see the
+follow-up round). All ten targets were readable
 outside the specimen sandbox.
 
 Historical path searches also recovered eight cat records, three C records, and
@@ -222,7 +271,8 @@ event-time and attempt-time claims.
 Delayed path-only queries used wider intervals and started approximately 370 s,
 98 s and 60 s after the matrix, long and stream cohorts' respective final runs.
 Their target membership exactly matched the initial queries. No missing record
-appeared. Each cohort's loss-event query returned zero records. These observations
+appeared. Each cohort's loss-event query returned zero records, but those queries
+lacked `--loss`; the follow-up round repeats them correctly. These observations
 exclude a short delay as the explanation over the measured waits, but do not
 prove that records were never emitted or rule out every suppression or loss path.
 
@@ -265,30 +315,160 @@ conditional on record availability, although the deterministic fidelity checks
 would still reject those tested regressions. The replay remains investigation
 evidence, not a newly registered test or a selected implementation.
 
+### Follow-up round: loss visibility, alternate channels, record timing and an unconfined control
+
+Same machine, boot and app inventory as above; checkout `290ee71` (plan only).
+Live commands ran unsandboxed. Nothing under `tests/out/` from the first round
+was modified; the new output is a fresh unmanaged directory (routes below). A
+read-only review of the first round's evidence preceded this round; its report
+is retained beside the new output.
+
+**Loss events were invisible to every earlier query.** `log show` returns no
+loss event unless `--loss` is passed, and no earlier loss query passed it.
+`log stats --overview` reports 257 loss events in the store; `log show --loss`
+returns 123 over five days, all of the form `lost N unreliable messages from A-B`.
+Re-queried with `--loss` over intervals widened by 60 seconds, the matrix, long,
+stream, replay and initial-crosscheck cohorts hold zero loss events. The
+registered interval holds 17, all between 15:37:52 and 15:38:04 UTC, 62 to 73
+seconds after the original client end; converted through the recorded early
+record's `machTimestamp`, none overlaps any missing attempt. The earlier
+conclusion stands, but the method could not have shown otherwise.
+
+**No channel holds the missing lines.** For all eleven missing workers (matrix
+`b2-17-n1-p0.5` PID 10039 and `b3-08-n32-p0.5` PID 10387; long `b0-n8` 11014,
+`b1-n1` 11054, `b1-n8` 11069, `b2-n32` 11099; replay 3503, 3510, 3518, 3525; the
+original 91533) a channel-agnostic query for `(<pid>)` over the client span
+widened by 60 seconds returned only the kernel lines already known, zero
+`com.apple.sandbox.reporting` (sandboxd) reports, zero other lines and zero loss
+events. Over five days the sandboxd channel carried 101 events for 50 worker
+PIDs against 18,943 kernel lines for 805 PIDs; it is rate limited and cannot
+serve as a fallback witness, though it must be checked.
+
+**The kernel report path was delivering for other processes at every loss.**
+Within 3 seconds of each lost phase, other processes' `Sandbox:` lines were
+recorded: for the original, logd_helper denials displayed 62 ms after the client
+end; for the replay, sixteen ContextStoreAgent lines within a second; for the
+matrix losses, hundreds of lines from neighbouring workers.
+
+**Records are stamped inside the syscall; displayed times run late.** The
+instrumented control (23 runs, below) gives `machTimestamp` minus the probe's
+post-open `mach_continuous_time` of −2 to −10 µs for every recorded run: the
+kernel stamps the deny line during `open(2)`, with no report latency. The same
+records' displayed `timestamp` ran +35.41 to +36.10 ms after the probe's
+`CLOCK_REALTIME`, drifting about 0.7 ms over 160 s; the first round's
+stream-versus-archive comparison implies about +10 ms at 16:34. Displayed times
+therefore postdate attempts by a session-dependent conversion offset, not by
+reporting delay. Against the client span, displayed last-step record times fall
+7 to 55 ms before the client end for the 64-rule workers (138 records) and up to
+21 ms after it for one-rule last-step workers (8 records); the registered
+two-rule late read displayed 13.5 ms before, 1.9 ms after and 4.5 ms after the
+client end in the three passing runs. The production window's ceiling leaves 0
+to 1,000 ms of trailing slack, so a last-step denial is excluded from production
+capture when the client end falls within the offset of the next whole second.
+None of the observed omissions is such a case: the ±60 s scans lack them too.
+
+**An unconfined control reproduces the omission.** The ad-hoc-signed
+`probe_latency` ran 23 times under `sandbox-exec`, each denying one fresh
+literal path; every run returned EPERM. Nine were recorded. The back-to-back
+cell lost runs 0 to 7 and recorded 8 to 14; the idle cell recorded runs 0 and 1
+and lost 2 to 7. The delayed scan returned the same nine. Zero loss events fell
+in the window widened by 60 seconds. The same morning's controls (eight `cat`,
+ten C, one 32-read C burst) had been complete, so the condition varies with
+time or system state, not with process identity, signing, ancestry, rule count
+or the worker's self-apply path.
+
+**The omission sits inside the kext's violation reporting.** For all 23 control
+PIDs, including the 14 without a deny line, the kext's own
+`Sandbox apply: sandbox-exec[<pid>]` line was recorded 33 to 37 ms (displayed)
+after the probe started. At five of the six lost idle-cell instants, a
+`N duplicate reports for Sandbox: mediaanalysisd(…) deny(1) mach-lookup …` flush
+line was recorded 36.4 to 38.1 ms after the probe's `open(2)` returned, i.e. at
+the denial's displayed instant, with no mediaanalysisd line beside it; the same
+flush accompanies recorded control lines (idle run 1, burst run 10). Among the
+first round's losses, the same signature precedes three of the four long-run
+late losses: `b0-n8` (flush 20.7 ms before client end, all eight late lines
+missing), `b1-n1` (14.5 ms before, the single late line missing) and `b2-n32`
+(flush at 16:33:08.373337, first recorded late line 254 µs later, three lines
+missing in between). It is absent at the matrix, `b1-n8`, replay and original
+losses, where no flush was pending. A flush is emitted when a different report
+arrives, so the missing attempt reached the kext's duplicate tracking and was
+then not logged, while a line from the same kext, the same instant and the same
+PID was. Over five days no throttle, rate-limit or suppression notice exists
+from the `Sandbox` sender; only `N duplicate reports for …` coalescing, which
+keys on the identical message (1,064 such lines name pw-probe-runner, all for
+repeated identical denials in other tests).
+
+**Review of the first round's evidence.** Every numeric claim the reviewer
+could locate matches its file. `experiment.py` was saved after its cohorts ran;
+the bytecode compiled before the matrix differs from the retained source only
+in the rescan wait loop. Four derived files (`cross-channel-checks.json`,
+`long-timing-checks.json`, `stream/timestamp-comparison.json`,
+`unconfined-read-controls.json`) have no retained generator; the first three
+were recomputed and match. No envelope carries per-attempt timestamps. Every
+receipted worker loss is a leading prefix of its phase (seven of seven), and the
+replay lost its first four consecutive runs; both matrix losses were in the
+0.5 s pause cells; three of four long-run losses and the original were the first
+reads after the 20 s hold. The control adds a trailing run of losses (idle runs
+2 to 7), so contiguity in time, not leading position, is the shared shape.
+
 ## Open questions
 
-- Does a fixed 32-read burst reliably provide at least one record in each
-  required phase across more blocks, sessions, system states and supported OS
-  versions? Current evidence is three long runs, with incomplete logging in one.
-  Per-attempt completeness and per-phase availability remain separate questions.
-- Which property selects omissions: process identity or ancestry, signing,
-  report cadence, time since previous activity, policy shape, or another state?
-  Neither a platform/non-platform explanation nor a specific rate limit has
-  been isolated. The new matrix holds 64 literal rules constant and therefore
-  does not compare that shape against the original one- or two-rule specimens.
-- When omissions occur with a live stream already active, are the same records
-  absent from stream and archive? Does activating the stream affect the outcome?
-  The current stream cohort was complete and does not resolve either question.
-- Can displayed timestamp differences or longer report delays cross the
-  whole-second scan slack? They did not explain the omissions found by wider
-  searches here, but exact attempt-time inference is not established.
+Closed by the follow-up round:
+
+- Displayed timestamp differences and report delays (former question 4). The
+  record is stamped inside the denied syscall; displayed archive times ran +10 to
+  +36 ms late in this session. That offset can push a last-step denial past the
+  production ceiling when the client end lands within the offset of a whole
+  second, and no observed omission was such a case.
+- Transport loss. With `--loss`, no loss event overlaps any missing attempt.
+- Alternate channels and formats. No sandboxd report, no other line and no
+  differently formatted kernel line exists for any of the eleven missing workers.
+- Process identity, signing, ancestry, rule count and the self-apply path as
+  selectors. One-rule (replay, control), two-rule (original) and 64-rule (matrix,
+  long) specimens all lose lines; an ad-hoc-signed `sandbox-exec` control loses
+  them while the kext's apply line and other processes' deny lines from the same
+  instants persist.
+
+Open:
+
+- Which rule inside the Sandbox kext's violation reporting drops a line after
+  duplicate tracking has processed it? Candidates consistent with the data: a
+  global or per-class budget consumed by other processes' arrivals, coalesced
+  repeats included (mediaanalysisd's mach-lookup denials were the coalesced
+  neighbour during the control's losses), or a suppression window keyed on the
+  preceding report. A discriminating run: the control while a helper generates
+  identical denials at a controlled rate (0, 1, 10, 100 per second), then the
+  same with distinct-path denials, correlating loss episodes with the flushed
+  duplicate counts.
+- Does a lost line also fail to appear in `log stream` (former question 3)? The
+  syscall-time stamp and the kext localization predict that it does; the control
+  reproduces losses cheaply enough to test with a stream attached, and to test
+  whether attaching the stream changes the loss rate.
+- Does a fixed 32-read burst reliably provide at least one record per phase
+  (former question 1)? Unchanged: three long runs, one incomplete. The control's
+  loss episodes of 8 and 6 consecutive runs, lasting about 2 s and 120 s, bound
+  how long a burst would have to span to guarantee one record; no fixed count
+  does.
+- Where does the worker's attempt sit relative to the client end? One-rule
+  last-step lines display up to 21 ms after the client end and 64-rule lines 7 to
+  55 ms before it; separating teardown duration from the conversion offset needs
+  per-attempt `mach_continuous_time` in the worker's evidence, which no schema
+  carries today.
+- How large can the archive's conversion offset become across a session (+10 ms
+  at 16:34, +36 ms at 17:25), and should the production window add trailing
+  slack beyond the whole-second ceiling? The exposure is the offset divided by
+  one second per last-step denial; a padded end changes the window contract.
 - What positive live guarantee can the default battery retain without treating
-  external absence as a PW correctness failure? The supplied-event controls are
-  strict, but do not alone establish a dependable source of real records.
-- Do any production consumers treat `captured` as complete, or treat a null
-  missing-record list as an empty list? The exercised controller and Python
-  consumer preserve the distinction; consumers outside this checkout were not
-  audited.
+  external absence as a PW correctness failure (former question 5)? Unchanged,
+  with the added fact that the omission is an OS-side kext behaviour
+  reproducible without PolicyWitness.
+- Do any production consumers treat `captured` as complete, or a null
+  missing-record list as empty (former question 6)? Unchanged; consumers outside
+  this checkout were not audited.
+- Are the first round's regularities (leading-prefix losses within a phase, both
+  matrix losses in the 0.5 s pause cells, losses after the 20 s hold) properties
+  of the kext rule or artefacts of small samples? The control's trailing-run loss
+  weakens the leading-prefix reading; the pause and idle readings are untested.
 
 ## Routes to existing gitignored evidence
 
@@ -311,6 +491,9 @@ than a dispatcher-owned completed run.
 | Delayed wider queries and exact comparisons | [rescan/](tests/out/sandbox-log-troubleshooting-20260928/rescan/): `*-path-wide.json` commands/results and `summaries.json`; [cross-channel-checks.json](tests/out/sandbox-log-troubleshooting-20260928/cross-channel-checks.json) records exact target-membership and app-inventory equality checks. |
 | Coverage audit and controlled replay | [COVERAGE-AUDIT.md](tests/out/sandbox-log-troubleshooting-20260928/COVERAGE-AUDIT.md), [replay.py](tests/out/sandbox-log-troubleshooting-20260928/replay.py), [replay_test.rs](tests/out/sandbox-log-troubleshooting-20260928/replay_test.rs), and [replay/](tests/out/sandbox-log-troubleshooting-20260928/replay/): input envelope/specimen, source hashes, receipts, baseline/restored consumer outputs and all three rejected-mutation logs. |
 | Provenance and fixture locations | [provenance.json](tests/out/sandbox-log-troubleshooting-20260928/provenance.json); each live cohort's `environment.json` names its retained `/private/tmp/pw-log-…` target tree, and its `app-before.json`, `app-after.json`, `completion.json` record integrity and timing. |
+| Evidence review of the first round | [EVIDENCE-REVIEW.md](tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
+| Follow-up archive checks | [archive/](tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
+| Instrumented unconfined control | [latency/](tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
 
 The new driver refuses to reuse an existing mode directory. To repeat it, copy
 `experiment.py` and `analyze.py` into a fresh direct child of `tests/out/`, then
@@ -319,3 +502,9 @@ run modes `matrix`, `long`, `stream`, `rescan` in that order, followed by
 unlinks the lock. Keep the original evidence directories intact. The replay
 driver likewise creates a fresh output directory and records its deliberate
 test-only source changes; its input currently references crosscheck A above.
+The follow-up round's `archive_checks.py`, `run_latency.py` and
+`analyze_latency.py` take an output directory argument; copy them into a fresh
+direct child of `tests/out/` before rerunning and leave the retained directory
+untouched. `archive_checks.py` reads the first round's retained rows and
+receipts by their current routes and requires the unified log store to still
+hold those intervals.
