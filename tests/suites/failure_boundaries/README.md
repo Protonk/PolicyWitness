@@ -1,9 +1,13 @@
 # Observer boundaries
 
-`admission` exercises all nine unchanged capacity checks through the signed CLI.
+`admission` exercises all fourteen capacity checks through the signed CLI: the
+nine worker shared-memory bounds and five host-only fields (`sandbox_check.operation`,
+`sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and
+`attempt.action`), which the orchestrator refuses with the same record.
 Every byte-limited field has exact, over, multibyte-exact and multibyte-over
 controls; counts have exact/over controls. Refusals assert the same structured
-host record, offending identity, units and absence of both children. Accepted
+host record, offending identity, units, absence of both children and an empty
+`steps` array: a refusal echoes none of the plan. Accepted
 boundaries require actual child completion.
 
 `validator_frames` uses checked-in transcripts for valid replies followed by
@@ -12,11 +16,15 @@ contents independently establish completed attempts. Rejected bytes are checked
 against bounded host context; only valid preceding records may supply predictions.
 `validator_association` tests duplicate/unexpected IDs and mismatched operation/filter type/value through the same route.
 
-`validator_overlong_request` uses the normal C validator with an operation of
-65536 bytes between two valid path-filter queries. The paths resolve at admission
-and attempts remain short. Retained serialized NDJSON includes JSON framing and
-its total is checked against the host's actual write/expected-byte counts. The
-C guard's null-ID diagnostic, both valid IDs and all file effects must survive.
+`validator_overlong_request` submits an operation of 65536 bytes between two
+valid path-filter queries. Query admission refuses it before any process work:
+the record names `sandbox_check.operation` on the middle step, the reply carries
+no steps, no child exists and the target files keep their original contents.
+Retained serialized NDJSON shows the middle line would have exceeded the
+validator's line cap, and the largest admitted probe (63, 127 and 511 bytes,
+every byte escaped) is measured to stay far inside it. The exact cap, the C
+guard's null-ID diagnostic and drain/recovery remain owned by the native
+`runner_abi_layout` boundary; the CLI can no longer reach them.
 `validator_removed_target` uses the real validator and a completed unlink to
 check that the join uses the submitted query even when a path no longer resolves.
 Mixed and all-excluded create plans keep their pre-attempt exclusion decisions.

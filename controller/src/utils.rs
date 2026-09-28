@@ -7,8 +7,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // Bound retained output to keep envelopes predictable when tools are noisy.
 // Retention only: Command::output has already buffered the whole stream, so
 // this caps what the envelope carries, not peak memory. Tested with 256-step
-// long-target workloads; admission does not bound every echoed query field,
-// so other admitted plans can still exceed this retention cap.
+// long-target, long-query workloads. Per-step query and attempt labels are
+// admission-bounded; top-level metadata and optional compiled-profile capture
+// can still exceed this cap, so it is not a guarantee that every reply fits.
 pub const MAX_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
 
 pub fn now_unix_ms() -> u64 {

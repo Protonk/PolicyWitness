@@ -7,13 +7,13 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 2, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
-| request schema (`request_schema`) | 1 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
+| request schema (`request_schema`) | 2 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 10 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 3 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
@@ -95,7 +95,10 @@ which of these rules apply; every later number keeps the earlier rows.
 | 2 | Deny-log capture requests the runner client's own span: `window` carries `kind: "runner_client_span"`, the client's start and end milliseconds and the whole-second UTC `start`/`end` strings handed to `log show`; `last` and `data.log_last` are gone. Reversed clock readings retain the milliseconds with null bounds and `capture_status: "invalid_window"`, without invoking the observer. `runner_sandbox_diagnostics.permission_failures_without_record` names the steps whose attempt reported a permission-shaped failure that no captured event records. A reply for different or missing bounds or a trailing lookback is `window_mismatch`; raw observer evidence survives without candidate or diagnostic correlation. |
 | 3 | `runner_sandbox_diagnostics` projects the worker disposition record: `termination_cause` names witnessed host cleanup (`host_sentinel_deadline`, `host_exit_grace_exhausted`, `host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`) instead of a blanket `unknown`, `stop_reason` carries the projected poll stop reason, `disposition_integrity` and `disposition_issues` report validation, and `process_disposition` adds `conflicting`, `withheld` and `unrecognized`. Legacy replies without the record keep the raw-status projection with `unknown` and `not_reported`. |
 
-Request schema has stayed at 1.
+| Request | Introduced |
+| --- | --- |
+| 1 | Initial shape. |
+| 2 | `probe_plan[].sandbox_check.operation`, `sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action` are admission-bounded like the attempt target (see `query_operation`, `query_filter_value` and `probe_plan_label` in [LIMITS.md](LIMITS.md)). An oversize string is refused before any process work as `bad_request` with `admission_failure` naming that field and no steps, like every other `bad_request`. Before this number, an admitted plan with long query strings could run to completion and lose its whole reply at the controller's output cap, or lose one prediction at the validator line cap. The runner applies the bound to every request it receives; a specimen inside the bounds behaves as before whichever number it carries. |
 
 ## Shape goldens
 

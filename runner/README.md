@@ -213,7 +213,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 2, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Legacy replies remain decodable. Typed readers that require a signal object must migrate
@@ -364,7 +364,8 @@ pipe descriptors make closed-input failure observable. An undrained open pipe
 still blocks before sentinel polling. Early stderr capture is not implemented.
 
 Host capacity refusals share `admission_failure` on the runner result, with field,
-actual/maximum and UTF-8-byte or item units. Both child drivers share the finite
+actual/maximum and UTF-8-byte or item units; the orchestrator applies it to the
+host-only query strings and filter/attempt labels, and the driver to every shared-memory bound. Both child drivers share the finite
 `ChildProcessState` wait/termination observer; parsed validator records survive
 failed cleanup. Validator replies are byte-framed, strictly decoded, structurally
 validated, then associated by unique requested ID. Allow/deny records require

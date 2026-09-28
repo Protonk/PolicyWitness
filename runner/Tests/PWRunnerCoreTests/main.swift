@@ -34,6 +34,9 @@ runHostOutcomeClassifierTests(tk)
 runAttemptOutcomeMappingTests(tk)
 // Documented limits in docs/limits.json against the Swift constants.
 runLimitsContractTests(tk)
+// Host-only query and attempt-label bounds: constructed at-limit/over-limit strings
+// and the orchestrator's refusal before any process work.
+runQueryAdmissionTests(tk)
 // Wire contract versions in docs/contract.json against the generated Swift copies.
 runContractVersionTests(tk)
 // Shared path-wire fixtures, strict compact states, legacy omissions and UTF-8 identity.

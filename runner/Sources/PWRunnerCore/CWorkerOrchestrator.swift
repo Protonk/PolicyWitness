@@ -65,7 +65,10 @@ public enum CWorkerOrchestrator {
         // ---- translation: request → driver inputs ------------------------
         let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
         let workerParams = workerParamsFromPolicy(parsed.policy)
-        let queryPlan = planValidatorQueries(parsed.probe_plan)
+        let queryRefusal = queryAdmissionFailure(parsed.probe_plan)
+        // Admission precedes path resolution and query construction as well as
+        // child launch; rejected strings need no derived host observations.
+        let queryPlan = queryRefusal == nil ? planValidatorQueries(parsed.probe_plan) : []
         let validatorProbes = queryPlan.compactMap { $0.probe }
 
         // _test_overrides.worker_timeout_ms drives the sentinel
@@ -90,19 +93,28 @@ public enum CWorkerOrchestrator {
 
         // ---- run worker + validator together via postApplied hook --------
         var validatorResult: ValidatorClientResult? = nil
-        let workerResult = runCWorker(workerInput) { workerPid in
-            // Skip validator entirely when every step's (op, filter) is
-            // in the prediction_unavailable set: no probes to send means
-            // no useful validator work. Avoids spawning a child only to
-            // immediately reap it.
-            if validatorProbes.isEmpty { return }
-            let vInput = ValidatorClientInput(
-                executablePath: validatorExecutablePath,
-                targetPid: workerPid,
-                probes: validatorProbes,
-                verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
-            )
-            validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
+        let workerResult: CWorkerRunResult
+        if let refused = queryRefusal {
+            // These host-only plan strings never reach shared memory, so the
+            // driver's capacity checks cannot see them. Refuse here with the
+            // same host-owned record and the same downstream classification,
+            // before any shm, pipe or process work.
+            workerResult = .failure(.admissionFailed(refused))
+        } else {
+            workerResult = runCWorker(workerInput) { workerPid in
+                // Skip validator entirely when every step's (op, filter) is
+                // in the prediction_unavailable set: no probes to send means
+                // no useful validator work. Avoids spawning a child only to
+                // immediately reap it.
+                if validatorProbes.isEmpty { return }
+                let vInput = ValidatorClientInput(
+                    executablePath: validatorExecutablePath,
+                    targetPid: workerPid,
+                    probes: validatorProbes,
+                    verdictReadTimeoutMs: timeoutMsForValidator(override: parsed._test_overrides?.validator_io_timeout_ms)
+                )
+                validatorResult = runValidator(vInput, processCalls: ChildProcessCalls(), spawn: validatorSpawn)
+            }
         }
 
         // ---- assemble + classify -----------------------------------------
@@ -120,13 +132,20 @@ public enum CWorkerOrchestrator {
         let ordering = workerOutput.map {
             buildOrdering($0, validatorOutput: validatorOutput, hasQueries: !validatorProbes.isEmpty)
         }
-        let stepResults = buildStepResults(
-            probePlan: parsed.probe_plan,
-            queryPlan: queryPlan,
-            workerOutput: workerOutput,
-            validatorOutput: validatorOutput, ordering: ordering,
-            disposition: disposition
-        )
+        // A pre-spawn refusal is a bad_request like the service's own: the
+        // reply carries the refusal record and no steps (see isPreSpawnRefusal).
+        let stepResults: [PWRunnerStepResult]
+        if case .failure(let error, nil) = workerResult, error.isPreSpawnRefusal {
+            stepResults = []
+        } else {
+            stepResults = buildStepResults(
+                probePlan: parsed.probe_plan,
+                queryPlan: queryPlan,
+                workerOutput: workerOutput,
+                validatorOutput: validatorOutput, ordering: ordering,
+                disposition: disposition
+            )
+        }
 
         let admissionFailure: PWRunnerAdmissionFailure?
         if case .failure(.admissionFailed(let record), _) = workerResult { admissionFailure = record }
@@ -332,6 +351,52 @@ struct ValidatorQueryDecision {
     let probe: ValidatorProbe?
     let exclusionReason: String?
     var exclusionCode: String? = nil
+}
+
+/// Admission bounds for request strings the worker never carries.
+/// `sandbox_check.operation` and `sandbox_check.filter.value` go to the
+/// validator as one JSON line per probe and come back echoed in every step of
+/// the reply; neither enters shared memory, so `workerAdmissionFailure` cannot
+/// bound them. Left unbounded, an admitted 256-step plan can outgrow the
+/// controller's reply capture after every attempt has already run, and one
+/// probe can exceed the validator's line buffer and lose its prediction while
+/// its attempt still runs. Bounded, a fully escaped probe line stays a few KiB
+/// and the per-step reply overhead is a sum of documented limits. The values
+/// match the attempt target (511) and the parameter key (127); no libsandbox
+/// operation name approaches 127 bytes and filter values are paths or names.
+/// Units are UTF-8 bytes excluding any terminating NUL, like the worker bounds.
+let sandboxCheckOperationMaxBytes = 127
+let sandboxCheckFilterValueMaxBytes = 511
+// Unknown labels remain supported as per-step unavailable/unsupported results
+// within this bound. They are echoed verbatim, sometimes in several fields.
+let probePlanLabelMaxBytes = 127
+
+/// Host-only capacity check for the sandbox_check strings, using the same
+/// record as the driver's shared-memory bounds. The value is bounded for every
+/// filter kind, including `none` and unrecognized kinds, because the reply
+/// echoes whatever was supplied. Filter kind and attempt labels also stay on
+/// the host and are echoed even when unrecognized. Checks run in plan order,
+/// operation then value then labels within a step, and report the first excess.
+func queryAdmissionFailure(_ plan: [PWRunnerProbeStep]) -> PWRunnerAdmissionFailure? {
+    for step in plan {
+        let operation = step.sandbox_check.operation.utf8.count
+        if operation > sandboxCheckOperationMaxBytes {
+            return PWRunnerAdmissionFailure(field: "sandbox_check.operation", actual: operation,
+                maximum: sandboxCheckOperationMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+        }
+        if let value = step.sandbox_check.filter.value, value.utf8.count > sandboxCheckFilterValueMaxBytes {
+            return PWRunnerAdmissionFailure(field: "sandbox_check.filter.value", actual: value.utf8.count,
+                maximum: sandboxCheckFilterValueMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+        }
+        for (field, value) in [("sandbox_check.filter.kind", step.sandbox_check.filter.kind),
+                               ("attempt.kind", step.attempt.kind), ("attempt.action", step.attempt.action)] {
+            if value.utf8.count > probePlanLabelMaxBytes {
+                return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count,
+                    maximum: probePlanLabelMaxBytes, unit: "utf8_bytes", step_id: step.step_id)
+            }
+        }
+    }
+    return nil
 }
 
 func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecision] {

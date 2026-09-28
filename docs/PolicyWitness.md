@@ -298,6 +298,9 @@ Each step has:
 - `sandbox_check`: `{ operation, filter }`
 - `attempt`: `{ kind, action, target }`
 
+Step IDs, query strings, filter/attempt labels and attempt targets have
+separate admission limits (see [Limits](#limits)).
+
 Example:
 
 ```json
@@ -337,9 +340,15 @@ import resolution or compilation.
   can exceed that cap after base64 encoding and envelope overhead, leaving the
   controller unable to parse the runner reply. Even smaller captures share the
   reply with all other evidence; there is no independently guaranteed safe size.
-- Probe query JSON has a wire-size limit independent of attempt-target admission.
-  A long operation or filter value can lose its prediction while the attempted
-  operation still runs. JSON escaping contributes to the query size.
+- The query operation and filter value have admission limits of their own,
+  separate from the attempt target: a step may query one path and attempt
+  another, and each string is bounded on its own. Both strings are echoed per
+  step in the reply and serialized as one validator line per probe. Filter
+  kinds and attempt kind/action labels are also bounded, including unknown
+  labels. These limits keep each probe line inside the validator line cap and
+  bound the repeated request fields in measured 256-step replies. They do not
+  guarantee that every reply fits: top-level metadata, refusal identity fields
+  and optional compiled-profile capture can still exceed the controller cap.
 - Exec attempts spend descriptors before the sandbox applies, four per step,
   so the worker counts free descriptor slots and raises its soft limit to fit
   the plan plus reserved headroom before opening any pipe. Inherited descriptors
@@ -371,6 +380,9 @@ Values are maxima unless labelled as defaults.
 | Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | Each supplied argument, excluding terminating NUL; the target has its own larger limit. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Parameter key (`parameter_key`) | 127 UTF-8 bytes | Each key, excluding terminating NUL. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Parameter value (`parameter_value`) | 383 UTF-8 bytes | Each value, excluding terminating NUL. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Query operation (`query_operation`) | 127 UTF-8 bytes | Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Query filter value (`query_filter_value`) | 511 UTF-8 bytes | Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior. Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure. | Fixed; no public override. |
 
 ### Execution budgets
 
@@ -393,7 +405,7 @@ Values are maxima unless labelled as defaults.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. | Fixed; no public override. |
+| Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
 | Controller subprocess output (`controller_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from the runner client, policy helper or log observer. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Raw prefix of the first rejected frame, before base64 encoding. The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss. | Fixed; no public override. |
 
@@ -431,7 +443,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 1, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 2, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -805,12 +817,16 @@ are documented under SBPL check above):
 - `bad_request` — request rejected before any worker spawn. Causes
   include: JSON decode failure, empty `sandbox_check.operation`
   (`validateSandboxChecks`), unsupported top-level field (e.g.
-  `instrumentation`), duplicate `step_id`, or a worker capacity refusal.
-  Capacity refusals carry host-owned `admission_failure` with field, actual and
-  maximum, `utf8_bytes` or `items`, and applicable step/key/index.
+  `instrumentation`), duplicate `step_id`, or a capacity refusal: the worker's
+  shared-memory bounds or the host-only query strings and filter/attempt labels.
+  Capacity refusals carry host-owned
+  `admission_failure` with field, actual and maximum, `utf8_bytes` or `items`,
+  and applicable step/key/index. Every `bad_request` reply has `steps: []`:
+  nothing ran, so the refused probe plan is omitted. The admission record
+  still identifies the offending step or parameter when applicable.
   Unknown `filter.kind` and unsupported `(attempt.kind,
-  attempt.action)` combos do NOT produce `bad_request` — they
-  downgrade to per-step `prediction_unavailable` and `unsupported`
+  attempt.action)` combos within the admission limits downgrade to per-step
+  `prediction_unavailable` and `unsupported`
   respectively (see the per-step sections above).
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).

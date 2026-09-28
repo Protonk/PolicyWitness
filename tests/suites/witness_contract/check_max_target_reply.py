@@ -1,8 +1,11 @@
-"""Measured reply-size workloads, including an admitted plan exceeding the cap.
+"""Measured reply-size workloads at the admitted maxima, plus refused over-cap plans.
 
-The target admission limit does not bound independent query filters. These
-cases exercise long ASCII/escaped paths, observed paths, independent queries,
-and exec output; they do not claim a maximum possible serialized reply size.
+Attempt targets and independent query filter values have separate admission
+limits. These cases exercise long ASCII/escaped paths, observed paths,
+maximal independent query paths and exec output, and require 32,768-byte
+query values and filter/attempt labels to be refused before any process work.
+They measure reply sizes;
+they do not claim a maximum possible serialized reply size.
 """
 import errno
 import json
@@ -19,6 +22,8 @@ from run_capture import RunCapture
 
 STEPS = 256
 TARGET_BYTES = 511
+QUERY_FILTER_BYTES = 511   # query_filter_value in docs/LIMITS.md; equal to the target limit
+OVER_CAP_QUERY_BYTES = 32768
 EXEC_STEPS = STEPS  # The worker raises its soft descriptor limit to fit every exec step.
 IDS = [f's{i:03d}' for i in range(STEPS)]
 
@@ -81,7 +86,22 @@ def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=F
                 assert attempt['stderr'] == exec_args[-1] + '\n'
 
 
-def run_case(pw, out, name, request, *, overflow=False, capture_logs=False, **expectations):
+def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_FILTER_BYTES, step_index=0):
+    # Host-owned admission record; nothing ran and nothing is echoed. A refusal
+    # that echoed 256 x 32 KiB filters would outgrow the reply cap by itself.
+    assert runner['normalized_outcome'] == 'bad_request', runner['normalized_outcome']
+    failure = runner['admission_failure']
+    assert failure['origin'] == 'runner_host', failure
+    assert failure['field'] == field, failure
+    assert (failure['actual'], failure['maximum'], failure['unit']) == (OVER_CAP_QUERY_BYTES, maximum, 'utf8_bytes'), failure
+    assert failure['step_id'] == IDS[step_index], failure
+    assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+    assert runner['steps'] == [], runner
+    errors = validate_current_build_evidence(dict(data=dict(runner_result=runner)))
+    assert not errors, errors
+
+
+def run_case(pw, out, name, request, *, refused=False, capture_logs=False, **expectations):
     run = RunCapture(pw, out / name, request,
                      cli_args=['--timeout-ms', '120000'] + ([] if capture_logs else ['--no-log-capture']))
     with run:
@@ -89,31 +109,22 @@ def run_case(pw, out, name, request, *, overflow=False, capture_logs=False, **ex
         envelope = run.load_json()
     data, result = envelope['data'], envelope['result']
     client = data['runner_client']
+    # Both the admitted workloads and the refusals must survive the receiver cap.
     assert client['stdout_parse_error'] is None, client['stdout_parse_error']
     assert client['capture_limit_bytes'] == 8 * 1024 * 1024
+    assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
+    assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
     observation = dict(case=name, steps=STEPS, target_bytes=TARGET_BYTES,
                        runner_reply_bytes=client['stdout_bytes_received'],
                        capture_limit_bytes=client['capture_limit_bytes'],
                        envelope_bytes=run.stdout_path.stat().st_size)
-    if overflow:
-        assert rc == 1 and result['normalized_outcome'] == 'runner_output_not_json', result
-        assert data['runner_result'] is None
-        assert client['stdout_truncated'] is True and client['stdout_capture_error']
-        assert client['stdout_bytes_received'] > client['capture_limit_bytes']
-        assert client['stdout_bytes_retained'] == client['capture_limit_bytes']
-        # Bypass only the controller receiver to prove this admitted read-only
-        # specimen has a complete, valid runner reply. Keep both artifacts.
-        raw_path = run.out / 'raw-client.json'
-        with raw_path.open('wb') as stream, (run.out / 'raw-client.stderr').open('wb') as errors:
-            raw = subprocess.run(client['argv'], stdout=stream, stderr=errors, timeout=150)
-        assert raw.returncode == 0, raw.returncode
-        assert raw_path.stat().st_size > client['capture_limit_bytes']
-        check_reply(json.loads(raw_path.read_text()), request, **expectations)
-        observation.update(expected_receiver_loss=True, raw_reply_bytes=raw_path.stat().st_size)
+    if refused:
+        assert rc == 1 and result['normalized_outcome'] == 'bad_request', result
+        check_refused(data['runner_result'], **expectations)
+        assert client['stdout_bytes_received'] < 4096
+        observation.update(refused_at_admission=True, query_bytes=OVER_CAP_QUERY_BYTES)
     else:
         assert rc == 0, result
-        assert client['stdout_truncated'] is False and client['stdout_capture_error'] is None
-        assert client['stdout_bytes_received'] == client['stdout_bytes_retained'] <= client['capture_limit_bytes']
         check_reply(data['runner_result'], request, **expectations)
         if capture_logs:
             capture = data['sandbox_log_capture']
@@ -122,7 +133,7 @@ def run_case(pw, out, name, request, *, overflow=False, capture_logs=False, **ex
             assert capture.get('stdout_truncated') is not True
             observation.update(observer_reply_bytes=capture.get('stdout_bytes_received'),
                                observer_capture_status=capture['capture_status'])
-    print(f"{name}: {client['stdout_bytes_received']} reply bytes; expected overflow={overflow}", flush=True)
+    print(f"{name}: {client['stdout_bytes_received']} reply bytes; refused at admission={refused}", flush=True)
     return observation
 
 
@@ -137,7 +148,10 @@ def main():
         observations.append(run_case(pw, out, 'denied_ascii', specimen(plain, plain, denied=True),
                                      denied=True, capture_logs=True))
         observations.append(run_case(pw, out, 'allowed_escaped', specimen(escaped, escaped)))
-        observations.append(run_case(pw, out, 'independent_query', specimen(plain, ['/etc/hosts'] * STEPS)))
+        # Maximal admitted independent queries: every 511-byte escaped path is an
+        # existing file, so predictions resolve, while the attempts read the plain set.
+        assert all(len(query.encode()) == QUERY_FILTER_BYTES for query in escaped)
+        observations.append(run_case(pw, out, 'independent_query', specimen(plain, escaped)))
         # The existing fixture has direct output/exit controls in exec_fixture.
         repo = Path(__file__).resolve().parents[3]
         helper = root / 'exec-fixture'
@@ -150,9 +164,27 @@ def main():
                                exec_args=args)
         observation['exec_steps'] = EXEC_STEPS
         observations.append(observation)
-        queries = ['q' * 32768] * STEPS
-        observations.append(run_case(pw, out, 'admitted_over_cap', specimen(plain, queries, large_filter=True),
-                                     overflow=True, large_filter=True))
+        # Echoing 256 x 32 KiB filters would exceed the controller cap.
+        queries = ['q' * OVER_CAP_QUERY_BYTES] * STEPS
+        observations.append(run_case(pw, out, 'refused_over_cap_query', specimen(plain, queries, large_filter=True),
+                                     refused=True))
+        # Keep a valid write as the first step: a later invalid label must reject
+        # the entire plan. Independent file contents prove no earlier attempt ran.
+        for target in plain:
+            Path(target).write_bytes(b'before')
+        for field in ['sandbox_check.filter.kind', 'attempt.kind', 'attempt.action']:
+            request = specimen(plain, plain)
+            for index, step in enumerate(request['probe_plan']):
+                step['attempt']['action'] = 'open_write'
+                if index:
+                    obj = step
+                    parts = field.split('.')
+                    for part in parts[:-1]:
+                        obj = obj[part]
+                    obj[parts[-1]] = 'x' * OVER_CAP_QUERY_BYTES
+            observations.append(run_case(pw, out, 'refused_' + field.replace('.', '_'), request,
+                                         refused=True, field=field, maximum=127, step_index=1))
+            assert all(Path(target).read_bytes() == b'before' for target in plain), 'attempt ran despite refusal'
     (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
 
 

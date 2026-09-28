@@ -471,6 +471,18 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     case spawnFailed(String)
     case policyWriteFailed(String)
 
+    /// Refusals decided from the request alone, before any shm, pipe or process
+    /// work: nothing ran and nothing was observed, so the reply carries the
+    /// refusal and no steps. Echoing the plan would repeat the strings a
+    /// capacity refusal rejected, and 256 refused queries can outgrow the
+    /// reply cap on their own.
+    public var isPreSpawnRefusal: Bool {
+        switch self {
+        case .captureNonceInvalid, .admissionFailed, .execTargetNotAbsolute: return true
+        case .shmSetupFailed, .pipeFailed, .spawnFailed, .policyWriteFailed: return false
+        }
+    }
+
     public var description: String {
         switch self {
         case .captureNonceInvalid:

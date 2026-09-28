@@ -162,7 +162,7 @@ public enum SandboxCheckOutcome {
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
-    public static let requestSchema: Int = 1
+    public static let requestSchema: Int = 2
     public static let responseSchema: Int = 10
 }
 // END GENERATED CONTRACT VERSIONS

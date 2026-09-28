@@ -30,8 +30,12 @@ def run(pw, out, request):
 
 def admission(pw, out):
     # Every production capacity check uses the same record, not just this checker.
+    # Query strings and filter/attempt labels are host-only (never shared memory);
+    # the orchestrator refuses them with the same record.
     caps = {'policy.sbpl_source': 262143, 'probe_plan': 256, 'policy.params': 1024,
-            'step_id': 63, 'target': 511, 'key': 127, 'value': 383, 'args_count': 15, 'args_bytes': 127}
+            'step_id': 63, 'target': 511, 'key': 127, 'value': 383, 'args_count': 15, 'args_bytes': 127,
+            'sandbox_check.operation': 127, 'sandbox_check.filter.value': 511,
+            'sandbox_check.filter.kind': 127, 'attempt.kind': 127, 'attempt.action': 127}
     for field, maximum in caps.items():
         is_count = field in ('probe_plan', 'policy.params', 'args_count')
         variants = ['exact', 'over'] if is_count else ['exact', 'over', 'unicode_exact', 'unicode_over']
@@ -54,6 +58,17 @@ def admission(pw, out):
             elif field == 'target': step['attempt']['target'] = text
             elif field == 'key': request['policy']['params'] = {text: 'v'}
             elif field == 'value': request['policy']['params'] = {'K': text}
+            # At-limit runs must still complete: an unrecognized operation name is a
+            # per-step unsupported_operation verdict and a nonexistent query path is a
+            # per-step prediction_unavailable, never a run-level failure.
+            elif field == 'sandbox_check.operation': step['sandbox_check']['operation'] = text
+            elif field == 'sandbox_check.filter.kind': step['sandbox_check']['filter']['kind'] = text
+            elif field in ('attempt.kind', 'attempt.action'): step['attempt'][field.split('.')[1]] = text
+            elif field == 'sandbox_check.filter.value':
+                remaining = actual - 1
+                tail = ('é' * (remaining // 2) + 'x' * (remaining % 2)) if variant.startswith('unicode') else 'x' * remaining
+                step['sandbox_check']['filter']['value'] = '/' + tail
+                assert len(step['sandbox_check']['filter']['value'].encode()) == actual
             else:
                 step['attempt'] = {'kind': 'exec', 'action': 'spawn', 'target': '/usr/bin/true',
                                    'args': ['x'] * actual if field == 'args_count' else [text]}
@@ -65,17 +80,26 @@ def admission(pw, out):
                 assert failure['field'] == ('args' if field.startswith('args_') else field), failure
                 assert (failure['actual'], failure['maximum'], failure['unit']) == (actual, maximum, unit), failure
                 assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
-                assert runner['schema_version'] >= 6, runner  # nullable sandbox_check.pid: response 6
-                assert all('pid' in s['sandbox_check'] and s['sandbox_check']['pid'] is None for s in runner['steps']), runner
-                assert all(s['attempt']['result_source'] == 'synthetic' and s['drift'] is None for s in runner['steps']), runner
-                if field in ('step_id', 'target', 'args_count', 'args_bytes'):
+                # Nothing ran and nothing is echoed: a refusal reply carries no steps.
+                assert runner['steps'] == [], runner
+                if field in ('step_id', 'target', 'args_count', 'args_bytes',
+                             'sandbox_check.operation', 'sandbox_check.filter.value',
+                             'sandbox_check.filter.kind', 'attempt.kind', 'attempt.action'):
                     assert failure['step_id'] == step['step_id'], failure
+                if field.startswith(('sandbox_check.', 'attempt.')):
+                    assert failure.get('parameter_key') is None and failure.get('index') is None, failure
                 if field == 'args_bytes': assert failure['index'] == 0, failure
                 if field in ('key', 'value'): assert failure['parameter_key'] == next(iter(request['policy']['params'])), failure
             else:
                 assert runner.get('admission_failure') is None, runner
                 assert runner['normalized_outcome'] == 'ok' and rc == 0, runner
                 assert runner['runner_subprocess']['reaped'] is True, runner
+                if field == 'sandbox_check.filter.kind':
+                    assert runner['steps'][0]['sandbox_check']['outcome'] == 'prediction_unavailable', runner
+                    assert runner['steps'][0]['sandbox_check']['filter_kind'] == text, runner
+                elif field in ('attempt.kind', 'attempt.action'):
+                    assert runner['steps'][0]['attempt']['outcome'] == 'unsupported', runner
+                    assert runner['steps'][0]['attempt']['requested_' + field.split('.')[1]] == text, runner
             print('PASS admission', field, variant, actual, maximum, unit, flush=True)
 
 
@@ -98,7 +122,8 @@ def validator(pw, out, mode):
                 probes = [{'step_id': s['step_id'], 'operation': s['sandbox_check']['operation'],
                            'filter_type': 'PATH', 'filter_value': s['attempt']['target']} for s in request['probe_plan']]
                 # Foundation sortedKeys encoding escapes '/' and uses compact ASCII
-                # JSON for these ASCII-only probes. Compare total to host measurement.
+                # JSON for these ASCII-only probes. Retained to show the middle line
+                # would exceed the validator line cap had admission let it through.
                 lines = [json.dumps(p, sort_keys=True, separators=(',', ':')).replace('/', '\\/').encode() + b'\n' for p in probes]
                 (case_out / 'serialized-probes.ndjson').write_bytes(b''.join(lines))
                 assert len(lines[0]) < 65536 < len(lines[1]) and len(lines[2]) < 65536
@@ -112,6 +137,30 @@ def validator(pw, out, mode):
                 request['_test_overrides'] = {'validator_executable_path': str(executable.resolve())}
             rc, runner = run(pw, case_out, request)
             assert runner.get('test_overrides') == request.get('_test_overrides'), runner
+            if case == 'real_overlong':
+                # Query admission closes the CLI route to the validator's line cap:
+                # the overlong operation is refused before any process work, and the
+                # unchanged file contents prove no attempt ran. The exact cap and its
+                # drain/recovery stay owned by the native runner_abi_layout boundary.
+                assert rc == 1 and runner['normalized_outcome'] == 'bad_request', runner
+                failure = runner['admission_failure']
+                assert failure['origin'] == 'runner_host' and failure['field'] == 'sandbox_check.operation', failure
+                assert (failure['actual'], failure['maximum'], failure['unit']) == (65536, 127, 'utf8_bytes'), failure
+                assert failure['step_id'] == 'middle', failure
+                assert all(path.read_bytes() == b'before' for path in paths), 'attempt ran despite refusal'
+                assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
+                assert runner['steps'] == [], runner  # a refusal echoes nothing
+                # The largest admitted probe, every byte escaped to six, stays far inside
+                # the 65,534-byte line; step_id 63, operation 127 and filter value 511 are
+                # the admission limits and IOKIT_REGISTRY_ENTRY_CLASS the longest type name.
+                worst = {'step_id': '\x01' * 63, 'operation': '\x01' * 127,
+                         'filter_type': 'IOKIT_REGISTRY_ENTRY_CLASS', 'filter_value': '\x01' * 511}
+                worst_line = json.dumps(worst, sort_keys=True, separators=(',', ':')).encode() + b'\n'
+                (case_out / 'largest-admitted-probe.ndjson').write_bytes(worst_line)
+                assert b'\\u0001' in worst_line and len(worst_line) < 8192, len(worst_line)
+                print('PASS validator', case, 'refused at admission; largest admitted probe line is',
+                      len(worst_line), 'bytes', flush=True)
+                continue
             if case == 'real_removed':
                 assert not paths[2].exists(), 'unlink effect absent'
                 assert all(path.read_bytes() != b'before' for path in paths[:2])
@@ -139,7 +188,7 @@ def validator(pw, out, mode):
                 assert steps[2]['sandbox_check']['native_rc'] is None and steps[2]['drift'] is None, steps[2]
             else:
                 assert rc == 1 and runner['normalized_outcome'] != 'ok', runner
-                missing = 1 if case == 'real_overlong' else 0 if case == 'duplicate' else 2
+                missing = 0 if case == 'duplicate' else 2
                 for i, step in enumerate(steps):
                     if i == missing or (case == 'duplicate' and i == 2):
                         assert step['sandbox_check']['native_rc'] is None and step['drift'] is None, step
@@ -157,13 +206,6 @@ def validator(pw, out, mode):
                     assert base64.b64decode(fault['context_b64']) == tail[:256], fault
                     assert fault['context_truncated'] == (len(tail) > 256), fault
                     assert len(process['records']) == 2, process
-                elif case == 'real_overlong':
-                    assert runner['normalized_outcome'] == 'validator_unavailable', runner
-                    assert process['probe_bytes_written'] == process['probe_bytes_expected'] == sum(map(len, lines)), process
-                    records = process['records']
-                    assert [v.get('step_id') for v in records] == ['first', None, 'last'], records
-                    assert records[1]['outcome'] == 'parse_error' and '64 KiB' in records[1]['error'], records
-                    assert {v['kind'] for v in process['association_issues']} == {'missing_id', 'unassociated'}, process
                 else:
                     assert runner['normalized_outcome'] == 'validator_unavailable', runner
                     kinds = {v['kind'] for v in process['association_issues']}

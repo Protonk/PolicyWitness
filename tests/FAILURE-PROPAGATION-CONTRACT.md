@@ -656,7 +656,13 @@ runner host before shared-memory setup/spawn. Its fields are `origin=runner_host
 `field`, `actual`, `maximum`, `unit`, and optional `step_id`, `parameter_key`,
 `index`. `utf8_bytes` excludes NUL; `items` counts entries. Limits remain source
 262143 bytes, steps 256, parameters 1024, step ID 63 bytes, target 511, parameter
-key/value 127/383, supplied exec args 15 of 127 bytes each. `PW_SHM_POLICY_BYTES`
+key/value 127/383, supplied exec args 15 of 127 bytes each, and the host-only
+`sandbox_check.operation`/`sandbox_check.filter.value` strings 127/511, which the
+orchestrator refuses with the same record because they never enter shared memory
+(they reach the validator line and the reply). The host-only filter kind and
+attempt kind/action labels are each bounded to 127 UTF-8 bytes, including
+unrecognized labels. A refusal reply carries no steps:
+nothing ran, and echoing the plan would repeat the refused strings. `PW_SHM_POLICY_BYTES`
 and its Swift mirror include the source NUL. The C reader independently refuses
 oversized source when driven directly; normal CLI oversized source is a host
 `bad_request` with no subprocess. Policy-write interruption controls use admitted

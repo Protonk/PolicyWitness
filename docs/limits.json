@@ -344,6 +344,120 @@
       "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
     },
     {
+      "id": "query_operation",
+      "section": "admission",
+      "title": "Query operation",
+      "value": 127,
+      "unit": "UTF-8 bytes",
+      "counting": "Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "sandboxCheckOperationMaxBytes"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "queryAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+          "symbol": "runQueryAdmissionTests",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
+    },
+    {
+      "id": "query_filter_value",
+      "section": "admission",
+      "title": "Query filter value",
+      "value": 511,
+      "unit": "UTF-8 bytes",
+      "counting": "Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "sandboxCheckFilterValueMaxBytes"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "queryAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+          "symbol": "runQueryAdmissionTests",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
+    },
+    {
+      "id": "probe_plan_label",
+      "section": "admission",
+      "title": "Probe filter and attempt labels",
+      "value": 127,
+      "unit": "UTF-8 bytes",
+      "counting": "Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior.",
+      "effect": "Excess rejects the specimen before worker launch: bad_request with host-owned admission_failure.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "probePlanLabelMaxBytes"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
+          "symbol": "queryAdmissionFailure"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "admission",
+          "kind": "boundary"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift",
+          "symbol": "runQueryAdmissionTests",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Exact, over-limit and multibyte boundaries through the CLI; 256-step oversized-label regressions require a small refusal and unchanged write targets."
+    },
+    {
       "id": "worker_ready_wait",
       "section": "execution",
       "title": "Worker readiness hint wait",
@@ -724,7 +838,7 @@
       "value": 65534,
       "unit": "bytes",
       "counting": "Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The 65536-byte fgets buffer reserves space for LF and NUL.",
-      "effect": "An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed.",
+      "effect": "An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -753,7 +867,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact payload boundary and over-limit drain/recovery controls in the native validator; overlong input also goes through the CLI."
+      "behavior": "Exact payload boundary and over-limit drain/recovery controls in the native validator. Through the CLI, an overlong query is refused at admission before any attempt, and the largest admitted probe line is measured against the cap."
     },
     {
       "id": "controller_output",
@@ -787,7 +901,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit. The witness_contract max-target case measures four 256-step, 511-byte-target workloads that fit, plus an admitted independent-query workload that exceeds the cap. Attempt-target admission does not bound query strings or total serialized reply size."
+      "behavior": "Exact prefix and truncation-boundary controls. Collection buffers the entire stream first; this is not a memory limit. The witness_contract max-target case measures four 256-step workloads with 511-byte targets and 511-byte independent query paths that fit, and requires oversized query values and filter/attempt labels to be refused before any attempt with no reply loss. These are measured workloads, not a bound on every reply: top-level metadata, refusal identity fields and optional compiled-profile capture can still outgrow the cap."
     },
     {
       "id": "validator_fault_context",
