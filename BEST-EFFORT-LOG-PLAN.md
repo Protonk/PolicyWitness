@@ -141,9 +141,12 @@ Require the query predicate to select supported Sandbox worker process/PID
 tokens. Remove bare-PID-digit matching that can admit unrelated messages;
 retain exact parsed-PID validation before association. Preserve supported worker
 message forms with controlled positive cases and reject unrelated PID digits
-in paths or other text. Keep filtering in the OS query so irrelevant records
-are excluded before they consume output budgets; a cap only on post-filter
-events would leave transport and parsing unbounded.
+in paths or other text. Exercise that selection through the real `log show`
+predicate engine against the committed archive fixture specified in section 4;
+parser replay and argv string assertions cannot establish this behavior. Keep
+filtering in the OS query so irrelevant records are excluded before they consume
+output budgets; a cap only on post-filter events would leave transport and
+parsing unbounded.
 
 Use controlled input volumes to establish capacity, including a representative
 256-step workload, and measure normal collection costs with the padded window.
@@ -319,6 +322,61 @@ invocation returned; checks of its contents do not prove that PW retrieved every
 record the OS could supply. Keep these claims separate in test assertions and
 coverage descriptions.
 
+#### Archive fixture for OS query selection
+
+Add `tests/fixtures/deny_capture/query_predicate.logarchive`, an independent
+`query_predicate.json` expectation manifest and a fixture README. Establish this
+fixture before crediting the query-selection change in section 2. The archive
+must be a real, small, self-contained archive readable by `/usr/bin/log show`,
+committed with all required metadata; saved JSON or syslog text is not a
+substitute. Create it once from controlled test messages in an isolated capture
+environment and inspect its contents before committing. Do not collect and
+commit an ambient developer-machine log store. Record the generation recipe,
+source macOS version, verified reader versions and file hashes in the fixture
+documentation. Regeneration is a maintenance operation, never a default-test
+setup step or a response to a failed assertion.
+
+The manifest specifies fixed worker names/PIDs, UTC query bounds, the complete
+test-message inventory and the exact selected message multiset for each query.
+Include every supported worker message form, multiple worker/PID queries, and
+negative records with another process name, a neighbouring or longer PID, or
+the requested PID's digits only in a path or unrelated deny text. Test-only
+user-space messages may reproduce the supported Sandbox message forms; include
+an actual emitting PID different from the worker PID embedded in the message.
+This fixture establishes query behavior for those forms, not kernel emission
+or authenticity. Derive expectations from the declared corpus, independently
+of PW's predicate, parser and captured output.
+
+Register a required default case, `witness_contract/log_query_predicate_archive`.
+Use a test harness that calls the production predicate and `log show` command
+builder, substituting only the archive source and the manifest's worker/window
+inputs. Keep the production selection and output flags; do not copy the
+predicate into the test, bypass generation with the observer's `--predicate`
+override, or evaluate it in a substitute engine. Expose archive input through
+an internal test seam, without adding a shipped controller flag or reading the
+current system store. Require the production observer to use that same builder.
+
+First query the archive without the predicate under test and require every
+positive and negative corpus record to be present. Then run the production
+query and compare the selected messages and multiplicities directly with the
+manifest, before PW's parser or PID filtering can hide missing or extra rows.
+Retain both queries' arguments, exit results and bounded raw output as case
+evidence. Also pass the selected output through the production parser and
+require the independently specified deny events. The positive set must be
+nonempty: replacing the production predicate with `FALSEPREDICATE` must fail
+this default case, as must restoring the bare-PID-digit alternative that admits
+the negative records.
+
+Give this fixed corpus a finite test budget with headroom and verify archive
+readability on supported macOS test hosts. Missing/unreadable fixture data,
+blocked tool access, nonzero exit, timeout, overflow and an empty or incorrect
+selection fail this case; none is an admissible live-availability outcome or an
+implicit skip. Use the repository's existing sandboxed-harness rerun procedure
+for a tool-access refusal. The test requires the OS query engine, but no new
+record emission, privileged collection, network download or later live query.
+
+#### Collection, correlation and live controls
+
 - Replay complete, early-only, late-only and empty inputs through the actual
   parser, receiver, correlation, serialization and consumer paths. Include
   disabled/unavailable capture, wrong bounds, malformed replies, unrelated PIDs,
@@ -345,10 +403,11 @@ coverage descriptions.
   allowance, and output caps and cleanup grace stay unchanged. A still-stalled
   collector must exhaust the larger finite allowance as well.
 - Require positive supplied-event cases to retain all eligible events and
-  associations. Deliberately dropping a line or supplied event, inventing an
-  association, suppressing every capture, or changing an execution answer must
-  cause a default correctness test to fail. Accepting empty OS output must not
-  make a broken collector pass these positive controls.
+  associations. The archive and replay controls must fail when the production
+  query excludes all records, a line or supplied event is dropped, an
+  association is invented, every capture is suppressed, or an execution answer
+  changes. Accepting empty live OS output must not make a broken collector pass
+  these positive controls.
 - Rework `witness_contract/deny_capture_covers_the_run`: preserve native-attempt,
   scan-contract and diagnostic checks; remove the requirement that the OS store
   the final denial. Check records returned by that capture invocation against
@@ -399,7 +458,11 @@ For `deny_capture_covers_the_run`, update its module docstring, the description
 in [tests/catalog.json](tests/catalog.json) and the case's section in
 [tests/suites/witness_contract/README.md](tests/suites/witness_contract/README.md)
 to describe conditional live-record checks and mandatory supplied-event
-coverage. Keep their scan-bound descriptions consistent with the padding.
+and archive-query coverage. Register and document the archive case's required
+equipment and strict positive/negative oracle; add its corpus, provenance and
+regeneration instructions to the permanent fixture documentation. Verify that
+the normal default selection includes the case. Keep scan-bound descriptions
+consistent with the padding.
 
 Update the CLI usage in [cli.rs](controller/src/cli.rs), the CLI surface in
 [controller/README.md](controller/README.md), argument handling in
@@ -417,10 +480,13 @@ policy and the distinct claims of live and controlled cases there so deletion
 of this plan leaves no implementation or test dependency on it. Keep repository
 links to the investigation record confined to associated `*-PLAN.md` files.
 
-Run the affected Rust/consumer checks and meaningful collector failure controls,
-then build and validate a signed app containing the implementation. Run the
-relevant live witness cases and the integrated default battery against that
-artifact, retaining all failures rather than crediting only a passing retry.
+Run the affected Rust/consumer checks, the real archive-query case and meaningful
+collector failure controls. Demonstrate that a production predicate selecting
+nothing and the removed bare-PID-digit alternative each make the archive case
+fail, then restore the implementation. Build and validate a signed app
+containing the implementation. Run the relevant live witness cases and the
+integrated default battery against that artifact, retaining all failures rather
+than crediting only a passing retry.
 The evidence must distinguish implementation correctness, equipment failures,
 documented collection-limit outcomes and measured OS record availability.
 
@@ -449,7 +515,11 @@ documented collection-limit outcomes and measured OS record availability.
 - **Query selection.** The OS query admits the supported Sandbox worker
   process/PID message forms. Unrelated messages containing the PID's digits in
   a different PID, path or other text do not qualify on that basis. Exact
-  parsed-PID checking remains required before association.
+  parsed-PID checking remains required before association. A required default
+  case runs real `log show` against a committed archive using the production
+  query builder and requires the manifest's nonempty positive set and exclusion
+  of its negative records before PW parsing. A predicate that selects nothing
+  or restores bare-digit matching fails; argv text checks alone do not qualify.
 - **Record preservation.** For complete valid inputs within the declared
   budgets, every supported deny record emitted by the query survives collection
   and parsing with its raw evidence and provenance. Losing even one such
@@ -490,18 +560,20 @@ documented collection-limit outcomes and measured OS record availability.
   ownership prevents further group signals.
 - **OS-independent default battery.** No default correctness assertion requires
   macOS to emit a selected denial, and passing does not depend on retries until
-  a record appears. Empty results and supported budget-exhaustion outcomes are
-  admissible; software or equipment contract failures cannot pass as generic
-  unavailable evidence. A later query cannot make record absence in an earlier
-  capture a correctness failure or establish its cause.
+  a record appears. Live captures may return empty results or supported
+  budget-exhaustion outcomes; the fixed archive must meet its manifest's exact
+  selection. Software or equipment contract failures cannot pass as generic
+  unavailable evidence. A later live query cannot make record absence in an
+  earlier capture a correctness failure or establish its cause.
 - **Positive capture coverage.** The default battery exercises the production
-  parser, receiver, correlation, serialization and consumer paths using
-  controlled input with independently specified positive results, including
-  query selection, pad-region records and declared capacity. Dropping a supplied
-  eligible record, inventing an association or suppressing all capture must fail
-  a correctness assertion even when every live query returns no records or
-  exhausts its collection budget. Live conditional checks alone cannot satisfy
-  this condition.
+  query through the real OS engine and the production parser, receiver,
+  correlation, serialization and consumer paths using controlled input with
+  independently specified positive results, including pad-region records and
+  declared capacity. Excluding all fixture records in the query, dropping a
+  supplied eligible record, inventing an association or suppressing all capture
+  must fail a correctness assertion even when every live query returns no
+  records or exhausts its collection budget. Live conditional checks alone
+  cannot satisfy this condition.
 - **Plan removal.** Permanent tests and contract documentation remain usable
   after this plan is deleted and without gitignored investigation artifacts.
   Implemented limits, field meanings and partial-collection behavior are
