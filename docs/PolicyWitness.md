@@ -371,19 +371,18 @@ import resolution or compilation.
   excess exec steps report a descriptor-budget refusal before opening pipes;
   compilation and other attempts keep their headroom. The refusal is per-step
   evidence and does not by itself fail the run.
-- Exec deadlines share one worker window. Each exec child gets at most
-  `exec_child_wait`, but `worker_sentinel_wait` covers compilation,
-  application, the release wait and every attempt, so 256 steps of full
-  deadlines cannot fit. The worker therefore spawns an exec child only while
-  its host-visible elapsed time (since its own start, excluding the release
-  wait the host also excludes) is below `exec_attempt_budget`, the window
-  minus a 5,000 ms publication margin, and clamps the child's deadline to the
-  remainder. A step reached with no remainder is refused before spawn as
-  per-step evidence, so `done` publishes inside the window and no helper
-  outlives a host-killed worker unrecorded. About eleven full deadlines fit
-  in one run. Non-exec attempts are not bounded by the budget: a blocking open
-  can still expire the window, and `runner_timeout` with partial evidence
-  follows.
+- Exec attempts share a local active-time budget as well as a per-child
+  deadline. The plan cutoff starts before worker setup, excludes the measured
+  release wait, and never restarts after spawn. This is separate from the host
+  polling budget; the nominal 5,000 ms margin is a configuration allowance,
+  not a guarantee against blocking calls or delayed scheduling.
+- Pipe EOF does not establish child exit. The worker retains the unreaped
+  leader while observing streams so deadline cleanup can still target its
+  process group after a leader exit. Kill/wait/clock errors remain errors;
+  final reaping uses a separate bounded, nonblocking observation window.
+  Group termination cannot cover descendants that leave that group. A worker
+  dying before slot completion leaves exec details unpublished, not proof
+  that no child spawned or that cleanup succeeded.
 - Deny-log capture has no fixed lookback limit. The requested interval is the
   runner client's wall-clock span, widened to whole seconds because `log show`
   accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
@@ -420,15 +419,16 @@ Values are maxima unless labelled as defaults.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Initial ready-byte polling budget. Expiry alone does not abort: the host still checks shared-memory publication. | Production default; test-only controls are not a public tuning interface. |
-| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal polling budget for worker sentinels, from the end of the ready-byte wait until done: policy read, compilation, application, the release wait and every attempt count against it. Synchronous validator work is outside this budget. Expiry can trigger worker cleanup and runner_timeout with partial evidence. The worker's exec_attempt_budget keeps exec spawning inside this window; other attempts are not bounded by it. | Production default; test-only controls are not a public tuning interface. |
+| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal host polling budget from the end of the ready-byte wait until done. Synchronous validator work is outside this count; policy transfer before polling and scheduler delays are separate. The worker uses a separate local active-time budget for exec attempts. Expiry can trigger worker cleanup and runner_timeout with partial evidence. The exec budget is configured below this window but does not guarantee an end-to-end deadline. | Production default; test-only controls are not a public tuning interface. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Polling grace after the host requests exit. Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported. | Production default; test-only controls are not a public tuning interface. |
 | Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement. Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host. | Production default and internal test equipment; not a public CLI tuning interface. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. | Production default and internal test equipment; not a public CLI tuning interface. |
 | Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective _test_overrides.validator_io_timeout_ms; request schema remains 1. Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply. | Production default and internal test equipment; not a public CLI tuning interface. |
 | Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Polling grace after closing validator pipes. Expiry triggers a SIGKILL attempt, then reaping; failures remain reported. | Production default; test-only controls are not a public tuning interface. |
-| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Per-exec child observation deadline after successful spawn. The deadline is per step and shares the worker window: the effective deadline is the smaller of this value and the remaining exec_attempt_budget. Worker attempts to kill/reap the child; the step records that the deadline fired, naming the budget remainder when that was the bound. | Production default; test-only controls are not a public tuning interface. |
-| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Host-visible elapsed CLOCK_MONOTONIC time since worker start, excluding the release wait (which the host also excludes from its window), within which an exec child may still be spawned. Each child's deadline is the smaller of exec_child_wait and the remainder. An exec step reached with no remainder reports exec_failed with errno 60 (ETIMEDOUT) and an exec attempt budget diagnostic; no spawn is claimed and sandbox attribution stays unestablished. A child bounded by the remainder records that in its deadline error. Non-exec attempts are not bounded, so a blocking file open can still exhaust the worker window. An unreadable clock refuses every exec spawn. | Derived: worker_sentinel_wait minus a 5,000 ms publication margin; runner_unit asserts the relation against the compiled worker constant. Harness-only shortening; no public override, and the test-only sentinel override does not move it. |
+| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped. | Production default; test-only controls are not a public tuning interface. |
+| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Local CLOCK_MONOTONIC active time starting before worker setup. Only the interval returned by the release barrier is excluded. An absolute cutoff is passed to exec attempts; this is not a reconstruction of the host polling clock. An exhausted budget refuses spawn with exec_failed and ETIMEDOUT, no child identity and no sandbox attribution. Clock failure before spawn refuses the attempt; clock failure after spawn triggers cleanup and is retained as an observation error. Blocking spawn and non-exec operations are not preemptible here. | Production default leaves a nominal 5,000 ms margin below worker_sentinel_wait. Internal test equipment may shorten it independently; the specimen worker_timeout_ms override does not move it. |
+| Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Local monotonic observation window for nonblocking waitpid after exec observation stops. Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling. | Fixed; no public override. |
 | Exec attempt descriptors (`exec_step_descriptors`) | 4 items | Descriptors opened before sandbox application per exec step: both ends of stdout and stderr pipes. Before opening any, the worker scans for free descriptor numbers, accounting for inherited descriptors, and raises its soft limit to fit the plan plus the descriptor reserve. Raises are capped at the hard limit and OPEN_MAX (10,240); an already higher soft limit is preserved. Only exec slots that fit without spending the reserve get pipes. Excess slots report exec_failed with errno 24 and an exec descriptor budget diagnostic naming the limit; no pipe syscall or child spawn is claimed. Actual pipe failures report their own syscall and errno. Budget refusal is per-step evidence, with sandbox attribution unestablished; imports and other attempts retain descriptor headroom. | Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it. |
 | Exec descriptor reserve (`exec_descriptor_reserve`) | 64 items | Free descriptor slots withheld from exec pipe setup, in addition to descriptors already open. The worker scans with fcntl(F_GETFD) to find room for this reserve plus four descriptors per exec step. Preserves headroom for policy compilation/imports, file probes, and spawn file actions. If the inherited/hard limit already leaves fewer free slots than the reserve, exec setup opens no pipes. This bounds exec pipe consumption; it does not guarantee that arbitrary imports or other resource users fit. | Fixed; no public override. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
@@ -478,7 +478,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 10, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 11, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -737,7 +737,9 @@ Notes:
 - `exec_failed` — `posix_spawn` was blocked, the target was
   missing, the helper exited non-zero, the helper was signaled,
   the per-exec deadline fired, or the worker's exec attempt budget
-  was exhausted before spawn (`child_pid` 0, errno 60). See
+  was exhausted before spawn (`child_pid` 0, errno 60), or observation/cleanup
+  failed after spawn. A leader exit of zero can coexist with a failed attempt
+  when descendants retain pipes beyond the deadline. See
   [Attempt kinds the runner implements](#attempt-kinds-the-runner-implements)
   → `("exec", "spawn")` for the `child_pid` sentinel rules that
   distinguish a sandbox-denied spawn from a helper that simply
@@ -969,11 +971,11 @@ combinations:
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
   | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are ambiguous permission failures: prediction allow yields `drift=null`, prediction deny can yield directional consistency with `drift=null` when submitted scope matches. A helper non-zero exit with `child_pid>0` still establishes successful spawning; the comparison separately accounts for query scope. |
-  | `child_exit_code` | child clean-exited | `-1` — child was signaled or no child ran | |
-  | `child_term_signal` | child killed by a signal | `0` — clean-exited or no child ran | |
+  | `child_exit_code` | child clean-exited | `-1` — signaled, no child ran, or final status unconfirmed | |
+  | `child_term_signal` | child killed by a signal | `0` — clean-exited, no child ran, or final status unconfirmed | |
   | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | |
-  | `rc` | always populated | (n/a) | Helper's exit code on spawn success (`rc==0` means the helper itself reported success); `-1` when spawn failed. |
-  | `outcome` | always populated | (n/a) | `"ok"` when spawn succeeded AND the helper exited 0; `"exec_failed"` for every other terminal state (spawn-blocked, target missing, helper non-zero exit, helper signaled). |
+  | `rc` | always populated | (n/a) | Helper's exit code after successful observation; `-1` on spawn, deadline, observation or cleanup failure. Consult `child_exit_code` for the leader's independently observed exit. |
+  | `outcome` | always populated | (n/a) | `"ok"` when spawn and observation completed successfully and the leader exited 0; `"exec_failed"` also covers deadline and cleanup errors. Neither a successful leader reap nor pipe EOF proves descendant cleanup. |
 
   A minimal `(deny default)` policy will block `posix_spawn` itself.
   Callers who want exec attempts to succeed under a deny-by-default

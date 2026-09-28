@@ -27,8 +27,8 @@ def replace_once(source, old, new):
 
 def worker_source(source):
     # Preserve acknowledgement and all ordinary attempts; only bypass the wait.
-    return replace_once(source, '    wait_for_proceed(hdr, evidence, args.proceed_wait_ms);',
-        '    (void)wait_for_proceed; /* required negative control: bypass wait */\n'
+    return replace_once(source, '    int64_t release_wait_ns = wait_for_proceed(hdr, evidence, args.proceed_wait_ms);',
+        '    int64_t release_wait_ns = 0; (void)wait_for_proceed; /* required negative control: bypass wait */\n'
         '    atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);')
 
 

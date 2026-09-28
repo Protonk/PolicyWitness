@@ -163,7 +163,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 3
-    public static let responseSchema: Int = 10
+    public static let responseSchema: Int = 11
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -636,8 +636,10 @@ public struct PWRunnerAttemptResult: Codable {
     /// entirely (when nil) so a sysctl/file/mach result envelope does
     /// not grow five new null fields it has no use for.
     ///
-    /// `child_pid > 0` means `posix_spawn` succeeded and a child was
-    /// reaped (even if it exited non-zero). `child_pid == 0` means
+    /// `child_pid > 0` means `posix_spawn` produced a child; it does not
+    /// establish reaping. Unconfirmed status keeps exit -1 / signal 0.
+    /// Attempt rc may fail independently of a natural leader exit.
+    /// `child_pid == 0` means
     /// spawn failed before producing a child (sandbox blocked spawn,
     /// target missing, etc.) — `errno` carries the spawn errno in
     /// that case. The orchestrator's drift classifier reads

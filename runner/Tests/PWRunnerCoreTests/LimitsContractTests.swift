@@ -88,8 +88,8 @@ func runLimitsContractTests(_ tk: TestKit) {
             }
             try expectEqual(timeoutMsForCWorker(override: nil), worker.sentinelTimeoutMs,
                             "orchestrator and driver defaults agree")
-            // The C worker mirrors the host window; its exec attempt budget is that
-            // window minus the documented 5,000 ms publication margin.
+            // Configuration allowance only: the C active-time budget and host polling
+            // budget have different epochs and accounting, not one shared clock.
             try expectEqual(worker.sentinelTimeoutMs - attemptBudget, 5_000,
                             "exec attempt budget leaves the publication margin inside the worker window")
         }

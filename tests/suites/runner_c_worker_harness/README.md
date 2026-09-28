@@ -198,3 +198,11 @@ attempt progress before release. Expiry forbids later attempts; the host-loss
 case owns final termination and establishes no worker self-exit guarantee.
 The native-clock substitution controls run in `runner_unit` against the real C
 producer companions. ABI mismatch remains a pre-application refusal.
+
+`exec_control_states` compiles the production exec helper with deterministic
+native-call equipment. It checks absolute deadlines across slow spawn, release
+exclusion and intervening work, early pipe EOF, an exited leader with open
+streams, semantic clock failures, interrupted waits and failed cleanup. Every
+reap must be nonblocking; absent status cannot become exit zero. No process or
+sandbox is created by this control; `runner_exec_lifecycle` supplies independent
+live-process evidence.

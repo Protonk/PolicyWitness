@@ -90,3 +90,8 @@ byte (0..255). It performs no sandbox calls and launches no children. The case
 compiles it at a maximal escaped target path and independently checks raw bytes
 before using it through PolicyWitness. This keeps JSON expansion measurements
 independent of shell behavior or relocating platform binaries.
+
+The tree rendezvous also accepts `c` (close stdout/stderr, acknowledge, continue
+responding) and `x` (exit immediately without waiting for descendants). Direct
+fixture controls verify EOF and descendant liveness independently of PW. These
+commands support the exec lifecycle tests without adding a specimen override.

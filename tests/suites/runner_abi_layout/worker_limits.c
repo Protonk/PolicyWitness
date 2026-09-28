@@ -10,6 +10,7 @@
 
 int main(void) {
     printf("exec_child_wait=%ld\n", PW_EXEC_CHILD_DEADLINE_MS_DEFAULT);
+    printf("exec_reap_grace=%ld\n", PW_EXEC_REAP_GRACE_MS);
     printf("exec_attempt_budget=%ld\n", PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
     printf("exec_step_descriptors=%d\n", PW_EXEC_DESCRIPTORS_PER_STEP);
     printf("exec_descriptor_reserve=%d\n", PW_EXEC_DESCRIPTOR_RESERVE);

@@ -115,7 +115,8 @@ static int inspect(const char *nonce, const char *key, int canary_fd, int forwar
 
 /* Each process announces its role. The observer obtains its PID from the
  * socket's kernel credentials. 'p' -> 'a' proves the process can still run;
- * 'q' asks it to exit. EOF/errors fail, and an alarm bounds even broken tests.
+ * 'q' asks it to exit; 'c' closes stdout/stderr and acknowledges; 'x' exits
+ * immediately without reaping its child. EOF/errors fail; an alarm bounds tests.
  * These processes retain stdout/stderr so leaking a child also leaks pipes.
  */
 static int controlled_process(const char *path, char role) {
@@ -138,6 +139,12 @@ static int controlled_process(const char *path, char role) {
         if (n < 0 && errno == EINTR) continue;
         if (n != 1) break;
         if (command == 'q') { result = 0; break; }
+        if (command == 'x') _exit(0);
+        if (command == 'c') {
+            close(STDOUT_FILENO); close(STDERR_FILENO);
+            if (write(fd, "a", 1) != 1) break;
+            continue;
+        }
         if (command != 'p' || write(fd, "a", 1) != 1) break;
     }
     close(fd);

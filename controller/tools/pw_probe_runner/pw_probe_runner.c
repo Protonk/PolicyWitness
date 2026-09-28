@@ -75,25 +75,53 @@
 #define PW_EXEC_CHILD_DEADLINE_MS_DEFAULT 10000L
 #define PW_EXEC_CHILD_DEADLINE_MS_MAX     60000L
 
-/*
- * Exec attempt budget. The host gives the whole worker one publication
- * window (worker_sentinel_wait, PW_WORKER_WINDOW_MS) that counts policy
- * read, compilation, application, the release wait and every attempt;
- * only the host's synchronous collection hook is outside its count. The
- * worker mirrors that count as its host-visible elapsed time: since its
- * own start, minus the release wait during which the host ran the hook.
- * An exec child is spawned only while that time is below the budget,
- * and its deadline is clamped to the remainder. A step reached with no
- * remainder is refused before posix_spawn as per-step evidence (errno
- * ETIMEDOUT), so `done` publishes inside the host window and no helper
- * outlives a host-killed worker unrecorded. Non-exec attempts are not
- * bounded here. The budget is the window minus a publication margin for
- * the final kill/reap, remaining attempts, the done store and host
- * observation. Documented as exec_attempt_budget in docs/limits.json;
- * runner_unit asserts the derivation against the host default. */
+/* Local active-time budget: starts before worker setup and excludes only the
+ * interval returned by the release barrier. It does not reconstruct the host's
+ * polling clock. The production default leaves room for cleanup/publication
+ * inside the nominal host window; blocking native calls and host scheduling
+ * are not made preemptible by this allowance. */
 #define PW_WORKER_WINDOW_MS               120000L
 #define PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS  5000L
 #define PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT (PW_WORKER_WINDOW_MS - PW_EXEC_ATTEMPT_BUDGET_MARGIN_MS)
+#define PW_EXEC_REAP_GRACE_MS              1000L
+
+/* Compile-time native-call seam. Tests select a semantic phase, never the
+ * ordinal of a clock call elsewhere in the worker. No request can select it. */
+enum pw_clock_phase {
+    PW_CLOCK_WORKER_START, PW_CLOCK_PROCEED_START, PW_CLOCK_PROCEED_OBSERVE,
+    PW_CLOCK_EXEC_ADMIT, PW_CLOCK_EXEC_OBSERVE, PW_CLOCK_EXEC_REAP
+};
+#ifndef PW_MONOTONIC_READ
+#define PW_MONOTONIC_READ(phase, out) clock_gettime(CLOCK_MONOTONIC, (out))
+#endif
+
+static int64_t timespec_ns(struct timespec time) {
+    return (int64_t)time.tv_sec * 1000000000LL + time.tv_nsec;
+}
+
+static int monotonic_ns(enum pw_clock_phase phase, int64_t *out) {
+    struct timespec time;
+    (void)phase;
+    if (PW_MONOTONIC_READ(phase, &time) != 0) return -1;
+    *out = timespec_ns(time);
+    return 0;
+}
+
+typedef struct {
+    int64_t deadline_ns;
+    long limit_ms;
+    int clock_error;
+} pw_attempt_budget_t;
+
+static pw_attempt_budget_t attempt_budget_start(long limit_ms) {
+    int64_t start = 0;
+    int error = monotonic_ns(PW_CLOCK_WORKER_START, &start) ? (errno ? errno : EIO) : 0;
+    return (pw_attempt_budget_t){start + (int64_t)limit_ms * 1000000LL, limit_ms, error};
+}
+
+static void attempt_budget_exclude(pw_attempt_budget_t *budget, int64_t interval_ns) {
+    budget->deadline_ns += interval_ns;
+}
 
 /* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
  * This is a worker observation deadline, not a bound on host scheduling/reap. */
@@ -113,16 +141,6 @@
  * actions still need descriptors. Documented as exec_descriptor_reserve in
  * docs/limits.json. */
 #define PW_EXEC_DESCRIPTOR_RESERVE 64
-
-static long g_exec_child_deadline_ms = PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
-static long g_exec_attempt_budget_ms = PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT;
-
-/* Worker start on CLOCK_MONOTONIC, and the release wait to exclude from the
- * host-visible elapsed time. An unreadable start clock leaves the budget
- * unknown, which refuses every exec spawn rather than guessing. */
-static struct timespec g_worker_start;
-static int g_worker_start_valid;
-static int64_t g_release_wait_ns;
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
@@ -219,7 +237,7 @@ static void print_usage(FILE *to) {
         "  --proceed-wait-ms N     Harness-only release deadline (1..60000 ms).\n"
         "  --exec-attempt-budget-ms N  Harness-only exec attempt budget\n"
         "                         (1..%ld ms). Exec children spawn only while\n"
-        "                         the worker's host-visible elapsed time is\n"
+        "                         the worker's local active time is\n"
         "                         below it; later exec steps are refused.\n"
         "  --version              Print ABI version and exit.\n",
         PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT,
@@ -789,9 +807,9 @@ static void setup_exec_resources(pw_shm_slot_t *slots, uint32_t step_count, uint
          *
          *   POSIX_SPAWN_SETPGROUP + setpgroup(0) — puts the child in
          *     its own process group with pgid == child_pid. Lets the
-         *     deadline path kill(-pgid, SIGKILL) the whole helper
-         *     tree (any sub-children the helper spawns) rather than
-         *     leaking grandchildren.
+         *     cleanup path request termination of members that remain
+         *     in this group. Descendants can leave the group; this is
+         *     not a general process-tree containment mechanism.
          */
         short flags = (short)(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP);
         if (posix_spawnattr_setflags(&r->attr, flags) != 0 ||
@@ -839,12 +857,7 @@ static void setup_exec_resources(pw_shm_slot_t *slots, uint32_t step_count, uint
  * poll loop can interleave both streams. */
 static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow) {
     char buf[256];
-    ssize_t n;
-    for (;;) {
-        n = read(fd, buf, sizeof(buf));
-        if (n < 0 && errno == EINTR) continue;
-        break;
-    }
+    ssize_t n = read(fd, buf, sizeof(buf));
     if (n <= 0) return (int)n;            /* 0 = EOF; <0 = error */
     size_t room = (cap > *used + 1u) ? (cap - 1u - *used) : 0u;
     size_t to_copy = ((size_t)n < room) ? (size_t)n : room;
@@ -854,23 +867,8 @@ static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow)
     return (int)n;
 }
 
-/* Host-visible elapsed time is the time since worker start minus the release
- * wait, mirroring the host's count, which excludes its synchronous hook.
- * Returns 0 and stores the budget remainder in milliseconds (0 = exhausted),
- * or -1 with errno set when CLOCK_MONOTONIC is unavailable; the caller then
- * refuses to spawn rather than run a child without a working deadline. */
-static int exec_attempt_remaining_ms(long *remaining_ms) {
-    struct timespec now;
-    if (!g_worker_start_valid) { errno = EIO; return -1; }
-    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return -1;
-    int64_t elapsed_ns = (int64_t)(now.tv_sec - g_worker_start.tv_sec) * 1000000000LL
-        + (now.tv_nsec - g_worker_start.tv_nsec) - g_release_wait_ns;
-    int64_t remaining = (int64_t)g_exec_attempt_budget_ms - elapsed_ns / 1000000LL;
-    *remaining_ms = remaining <= 0 ? 0L : (long)remaining;
-    return 0;
-}
-
-static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
+static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
+                               const pw_attempt_budget_t *budget, long child_deadline_ms) {
     /* Sentinel conventions when no child runs (header documents these). */
     slot->child_pid          = 0;
     slot->child_exit_code    = -1;
@@ -899,31 +897,24 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
      * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
      * not a permission result). Otherwise the child's deadline is the
      * smaller of the per-step deadline and the budget remainder. */
-    long remaining_ms = 0;
-    if (exec_attempt_remaining_ms(&remaining_ms) != 0) {
-        int e = errno;
+    int64_t before_spawn = 0;
+    int clock_error = budget->clock_error;
+    if (!clock_error && monotonic_ns(PW_CLOCK_EXEC_ADMIT, &before_spawn) != 0)
+        clock_error = errno ? errno : EIO;
+    if (clock_error) {
         slot->rc = -1;
-        slot->errno_val = e ? e : EIO;
+        slot->errno_val = clock_error;
         snprintf(slot->error, sizeof(slot->error),
-                 "exec attempt budget: CLOCK_MONOTONIC unavailable before spawn: %s",
-                 strerror(slot->errno_val));
+                 "exec attempt budget: CLOCK_MONOTONIC unavailable before spawn: %s", strerror(clock_error));
         return;
     }
-    if (remaining_ms <= 0) {
+    if (before_spawn >= budget->deadline_ns) {
         slot->rc = -1;
         slot->errno_val = ETIMEDOUT;
         snprintf(slot->error, sizeof(slot->error),
-                 "exec attempt budget: %ld ms exhausted before spawn",
-                 g_exec_attempt_budget_ms);
+                 "exec attempt budget: %ld ms exhausted before spawn", budget->limit_ms);
         return;
     }
-    long deadline_ms_total = g_exec_child_deadline_ms;
-    int deadline_clamped = 0;
-    if (remaining_ms < deadline_ms_total) {
-        deadline_ms_total = remaining_ms;
-        deadline_clamped = 1;
-    }
-    const char *deadline_note = deadline_clamped ? " (exec attempt budget remainder)" : "";
 
     /* Build argv from slot->target + slot->argv[1..argv_count-1].
      * The host always writes argv[0] = target plus the caller's args,
@@ -969,7 +960,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
     slot->child_pid = (int32_t)child;
     /* The child is now its own process-group leader (pgid == child)
      * thanks to POSIX_SPAWN_SETPGROUP. Stash the pgid so the deadline
-     * path can SIGKILL the whole tree. */
+     * path can request termination of that group. */
     pid_t child_pgid = child;
 
     /* Close the parent's copy of the write ends. The child holds them
@@ -981,78 +972,82 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
     if (r->stdout_wfd >= 0) { close(r->stdout_wfd); r->stdout_wfd = -1; }
     if (r->stderr_wfd >= 0) { close(r->stderr_wfd); r->stderr_wfd = -1; }
 
-    /* Compute a monotonic deadline. A hung helper would otherwise
-     * escalate into a worker-level sentinel timeout (host SIGKILLs
-     * the worker, error attribution lost). The deadline gives us a
-     * chance to surface "child exceeded deadline" cleanly while
-     * still under the host's larger budget; deadline_ms_total was
-     * already clamped to the attempt budget remainder above. */
-    struct timespec deadline_ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &deadline_ts) != 0) {
-        /* Should not happen on any supported macOS. Fall back to a
-         * permissive deadline so we still bound the run rather than
-         * blocking forever. */
-        deadline_ts.tv_sec = 0; deadline_ts.tv_nsec = 0;
+    /* The plan deadline is absolute: spawn/setup latency cannot restart its
+     * remainder. A blocking spawn itself cannot be interrupted here. */
+    int64_t now = 0;
+    int observation_errno = 0;
+    const char *observation_call = NULL;
+    int deadline_expired = 0, child_exited = 0, ownership_known = 1;
+    int64_t deadline_ns = budget->deadline_ns;
+    int deadline_clamped = 1;
+    if (monotonic_ns(PW_CLOCK_EXEC_OBSERVE, &now) != 0) {
+        observation_errno = errno ? errno : EIO;
+        observation_call = "clock";
+    } else if (now + (int64_t)child_deadline_ms * 1000000LL < deadline_ns) {
+        deadline_ns = now + (int64_t)child_deadline_ms * 1000000LL;
+        deadline_clamped = 0;
     }
-    deadline_ts.tv_sec  += deadline_ms_total / 1000L;
-    deadline_ts.tv_nsec += (deadline_ms_total % 1000L) * 1000000L;
-    if (deadline_ts.tv_nsec >= 1000000000L) {
-        deadline_ts.tv_sec += 1;
-        deadline_ts.tv_nsec -= 1000000000L;
-    }
+    const char *deadline_note = deadline_clamped ? "exec attempt budget deadline" : "exec child deadline";
 
-    /* Drain stdout + stderr interleaved, bounded by the deadline. */
+    /* Pipe EOF and leader exit are independent observations. WNOWAIT retains
+     * our unreaped child (and its PID) until group cleanup has been requested;
+     * an exited leader must not suppress termination of pipe-holding peers. */
     size_t stdout_n = 0, stderr_n = 0;
     int stdout_overflow = 0, stderr_overflow = 0;
     int stdout_open = 1, stderr_open = 1;
-    int deadline_expired = 0;
-
-    while (stdout_open || stderr_open) {
-        struct timespec now_ts;
-        clock_gettime(CLOCK_MONOTONIC, &now_ts);
-        long remaining_ms =
-            (long)(deadline_ts.tv_sec  - now_ts.tv_sec)  * 1000L +
-            (long)(deadline_ts.tv_nsec - now_ts.tv_nsec) / 1000000L;
-        if (remaining_ms <= 0) { deadline_expired = 1; break; }
+    while (!observation_errno) {
+        if (monotonic_ns(PW_CLOCK_EXEC_OBSERVE, &now) != 0) {
+            observation_errno = errno ? errno : EIO; observation_call = "clock"; break;
+        }
+        if (now >= deadline_ns) { deadline_expired = 1; break; }
+        if (!child_exited) {
+            siginfo_t info = {0};
+            if (waitid(P_PID, (id_t)child, &info, WEXITED | WNOHANG | WNOWAIT) != 0) {
+                if (errno == EINTR) continue; /* still subject to the deadline */
+                observation_errno = errno; observation_call = "waitid";
+                ownership_known = 0; break;
+            }
+            child_exited = info.si_pid == child;
+        }
+        if (child_exited && !stdout_open && !stderr_open) break;
 
         struct pollfd pfds[2];
         nfds_t npfds = 0;
         int stdout_idx = -1, stderr_idx = -1;
         if (stdout_open) {
-            pfds[npfds].fd = r->stdout_rfd;
-            pfds[npfds].events = POLLIN;
-            pfds[npfds].revents = 0;
-            stdout_idx = (int)npfds; npfds++;
+            stdout_idx = (int)npfds;
+            pfds[npfds++] = (struct pollfd){r->stdout_rfd, POLLIN, 0};
         }
         if (stderr_open) {
-            pfds[npfds].fd = r->stderr_rfd;
-            pfds[npfds].events = POLLIN;
-            pfds[npfds].revents = 0;
-            stderr_idx = (int)npfds; npfds++;
+            stderr_idx = (int)npfds;
+            pfds[npfds++] = (struct pollfd){r->stderr_rfd, POLLIN, 0};
         }
-        /* Cap each poll() at the remaining budget so we revisit the
-         * deadline check at least once per second. */
-        int poll_ms = (remaining_ms > 1000L) ? 1000 : (int)remaining_ms;
+        /* Also revisit leader status when no pipe is open. Round up sub-ms
+         * remainders so a near-boundary observation cannot busy-loop. */
+        int64_t left_ms = (deadline_ns - now + 999999LL) / 1000000LL;
+        int poll_ms = left_ms > 10 ? 10 : (int)left_ms;
         int pr = poll(pfds, npfds, poll_ms);
         if (pr < 0 && errno == EINTR) continue;
-        if (pr < 0) break;                /* poll error — abandon drain */
-        if (pr == 0) continue;            /* short poll, retry under deadline */
-
-        if (stdout_idx >= 0 && (pfds[stdout_idx].revents & (POLLIN | POLLHUP))) {
-            int n = drain_one(r->stdout_rfd, slot->child_stdout,
-                              sizeof(slot->child_stdout), &stdout_n, &stdout_overflow);
-            if (n <= 0) stdout_open = 0;
-        } else if (stdout_idx >= 0 &&
-                   (pfds[stdout_idx].revents & (POLLERR | POLLNVAL))) {
-            stdout_open = 0;
-        }
-        if (stderr_idx >= 0 && (pfds[stderr_idx].revents & (POLLIN | POLLHUP))) {
-            int n = drain_one(r->stderr_rfd, slot->child_stderr,
-                              sizeof(slot->child_stderr), &stderr_n, &stderr_overflow);
-            if (n <= 0) stderr_open = 0;
-        } else if (stderr_idx >= 0 &&
-                   (pfds[stderr_idx].revents & (POLLERR | POLLNVAL))) {
-            stderr_open = 0;
+        if (pr < 0) { observation_errno = errno; observation_call = "poll"; break; }
+        if (pr == 0) continue;
+        int indices[] = {stdout_idx, stderr_idx};
+        for (int stream = 0; stream < 2; stream++) {
+            int index = indices[stream];
+            if (index < 0) continue;
+            int *open = stream ? &stderr_open : &stdout_open;
+            if (pfds[index].revents & (POLLIN | POLLHUP)) {
+                int n = drain_one(pfds[index].fd,
+                    stream ? slot->child_stderr : slot->child_stdout,
+                    PW_SHM_CHILD_OUTPUT_BYTES,
+                    stream ? &stderr_n : &stdout_n,
+                    stream ? &stderr_overflow : &stdout_overflow);
+                if (n == 0) *open = 0;
+                else if (n < 0 && errno != EINTR && errno != EAGAIN) {
+                    observation_errno = errno; observation_call = "read";
+                }
+            } else if (pfds[index].revents & (POLLERR | POLLNVAL)) {
+                observation_errno = EIO; observation_call = "poll stream";
+            }
         }
     }
 
@@ -1081,55 +1076,58 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
     if (stderr_n >= sizeof(slot->child_stderr)) stderr_n = sizeof(slot->child_stderr) - 1u;
     slot->child_stderr[stderr_n] = '\0';
 
-    /* Reap. WNOHANG first to find out whether the drain loop exited
-     * because the child finished or because the deadline fired with
-     * the child still alive. */
-    int status = 0;
-    pid_t reaped = waitpid(child, &status, WNOHANG);
-    if (reaped == 0) {
-        /* Still alive — either deadline_expired is set, or the drain
-         * loop saw an error. In either case the child has to go now;
-         * a runaway helper must not be allowed to outlive its
-         * attempt slot. SIGKILL the whole process group to take down
-         * any sub-children too. */
+    int cleanup_errno = 0;
+    if ((deadline_expired || observation_errno) && ownership_known) {
         if (kill(-child_pgid, SIGKILL) != 0 && errno != ESRCH) {
-            /* Fall back to killing just the leader. ESRCH means the
-             * pgroup was already empty (e.g., the leader raced with
-             * us into exit) — harmless. */
+            cleanup_errno = errno;
+            /* A leader-only fallback cannot prove group cleanup. */
             (void)kill(child, SIGKILL);
-        }
-        /* Block until the kernel reports the signaled child. SIGKILL
-         * is uncatchable, so this completes promptly. */
-        do {
-            reaped = waitpid(child, &status, 0);
-        } while (reaped < 0 && errno == EINTR);
-    } else if (reaped < 0) {
-        if (errno == EINTR) {
-            /* Retry blocking, since WNOHANG retries on EINTR are
-             * unusual and most callers expect a final answer. */
-            do {
-                reaped = waitpid(child, &status, 0);
-            } while (reaped < 0 && errno == EINTR);
         }
     }
 
-    /* Read ends are no longer needed; close before recording the
-     * result. */
+    /* No blocking reap, even after a successful kill request. Keep raw status
+     * only after waitpid returns our child. Failed cleanup must neither hang
+     * the worker nor fabricate a clean exit from a zero-initialized status. */
+    int status = 0, reap_errno = 0;
+    pid_t reaped = 0;
+    int64_t reap_start = 0;
+    int reap_clock_ok = monotonic_ns(PW_CLOCK_EXEC_REAP, &reap_start) == 0;
+    int reap_clock_errno = reap_clock_ok ? 0 : (errno ? errno : EIO);
+    for (;;) {
+        reaped = waitpid(child, &status, WNOHANG);
+        if (reaped == child) break;
+        if (reaped < 0 && errno != EINTR) { reap_errno = errno; break; }
+        if (!ownership_known || cleanup_errno) break; /* pending, not a native wait failure */
+        if (!reap_clock_ok) { reap_errno = reap_clock_errno; break; }
+        if (monotonic_ns(PW_CLOCK_EXEC_REAP, &now) != 0) { reap_errno = errno ? errno : EIO; break; }
+        if (now - reap_start >= (int64_t)PW_EXEC_REAP_GRACE_MS * 1000000LL) {
+            reap_errno = ETIMEDOUT; break;
+        }
+        (void)poll(NULL, 0, 1);
+    }
+
     if (r->stdout_rfd >= 0) { close(r->stdout_rfd); r->stdout_rfd = -1; }
     if (r->stderr_rfd >= 0) { close(r->stderr_rfd); r->stderr_rfd = -1; }
 
-    if (reaped < 0) {
+    if (reaped == child) {
+        if (WIFEXITED(status)) slot->child_exit_code = WEXITSTATUS(status);
+        else if (WIFSIGNALED(status)) slot->child_term_signal = WTERMSIG(status);
+    }
+    if (observation_errno || cleanup_errno || reaped != child) {
         slot->rc = -1;
-        slot->errno_val = errno;
+        /* Post-spawn errno is never a claim that sandbox admission failed. */
+        slot->errno_val = observation_errno ? observation_errno : cleanup_errno ? cleanup_errno : reap_errno;
         snprintf(slot->error, sizeof(slot->error),
-                 "waitpid: %s", strerror(errno));
+                 "exec observation=%s errno=%d; group_cleanup_errno=%d; reaped=%d reap_errno=%d",
+                 observation_call ? observation_call : deadline_expired ? deadline_note : "complete",
+                 observation_errno, cleanup_errno, reaped == child, reap_errno);
         return;
     }
 
     if (WIFEXITED(status)) {
         slot->child_exit_code   = WEXITSTATUS(status);
         slot->child_term_signal = 0;
-        slot->rc                = slot->child_exit_code;
+        slot->rc                = deadline_expired ? -1 : slot->child_exit_code;
         slot->errno_val         = 0;
         if (deadline_expired) {
             /* Edge case: the helper happened to finish between the
@@ -1138,8 +1136,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
              * the error string so a downstream consumer can see that
              * the run was bounded. */
             snprintf(slot->error, sizeof(slot->error),
-                     "child completed at the %ld ms deadline boundary%s",
-                     deadline_ms_total, deadline_note);
+                     "child exit observed after %s expired", deadline_note);
         }
     } else if (WIFSIGNALED(status)) {
         slot->child_exit_code   = -1;
@@ -1148,8 +1145,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
         slot->errno_val         = 0;
         if (deadline_expired && slot->child_term_signal == SIGKILL) {
             snprintf(slot->error, sizeof(slot->error),
-                     "child exceeded %ld ms deadline%s; SIGKILL'd",
-                     deadline_ms_total, deadline_note);
+                     "%s expired; child SIGKILL'd", deadline_note);
         } else {
             snprintf(slot->error, sizeof(slot->error),
                      "child signaled: signal=%d", slot->child_term_signal);
@@ -1171,7 +1167,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r) {
  * The slot_idx parameter is required by PW_ATTEMPT_EXEC_SPAWN to find
  * its pre-apply-prepared pipe/file_actions resources; other kinds
  * ignore it. */
-static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx) {
+static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx,
+                        const pw_attempt_budget_t *budget, long child_deadline_ms) {
     slot->rc = 0;
     slot->errno_val = 0;
     slot->observed_path[0] = '\0';
@@ -1187,7 +1184,7 @@ static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx) {
     case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
     case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;
     case PW_ATTEMPT_EXEC_SPAWN:
-        attempt_exec_spawn(slot, &exec_resources[slot_idx]);
+        attempt_exec_spawn(slot, &exec_resources[slot_idx], budget, child_deadline_ms);
         break;
     default:
         slot->rc = -1;
@@ -1215,7 +1212,7 @@ static inline void cpu_relax(void) {
 /* Post-apply teardown cannot rely on sleep/yield syscalls surviving
  * hostile profiles. Keep this loop CPU-only: an atomic load, a small
  * processor-relax backoff, and _exit(0) once the host flips the byte. */
-static void spin_for_exit(pw_shm_header_t *hdr) {
+static _Noreturn void spin_for_exit(pw_shm_header_t *hdr) {
     for (;;) {
         if (atomic_load_explicit(&hdr->exit_requested, memory_order_acquire) != 0u) {
             _exit(0);
@@ -1228,10 +1225,10 @@ static void spin_for_exit(pw_shm_header_t *hdr) {
 
 /* No allocation, sleep or I/O after apply. CLOCK_MONOTONIC reads the macOS
  * commpage. An unusable clock fails closed even if release is already visible. */
-static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long budget_ms) {
+static int64_t wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long budget_ms) {
     pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_STARTED, UINT32_MAX);
     struct timespec start, now;
-    int rc = clock_gettime(CLOCK_MONOTONIC, &start);
+    int rc = PW_MONOTONIC_READ(PW_CLOCK_PROCEED_START, &start);
     int clock_errno = errno;
     for (;;) {
         if (rc != 0) {
@@ -1240,7 +1237,7 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long bu
             pw_diagnostic(e, "proceed wait: CLOCK_MONOTONIC failed");
             break;
         }
-        rc = clock_gettime(CLOCK_MONOTONIC, &now);
+        rc = PW_MONOTONIC_READ(PW_CLOCK_PROCEED_OBSERVE, &now);
         clock_errno = errno;
         if (rc != 0) continue;
         int64_t elapsed_ns = (int64_t)(now.tv_sec - start.tv_sec) * 1000000000LL
@@ -1252,12 +1249,9 @@ static void wait_for_proceed(pw_shm_header_t *hdr, pw_shm_evidence_t *e, long bu
             break;
         }
         if (atomic_load_explicit(&hdr->proceed, memory_order_acquire) == 1u) {
-            /* The host excluded this interval from its window while it ran
-             * the collection hook; the exec attempt budget excludes it too. */
-            g_release_wait_ns = elapsed_ns;
             atomic_store_explicit(&hdr->proceed_observed, 1u, memory_order_release);
             pw_progress(e, PW_OP_PROCEED, PW_PROGRESS_RETURNED, UINT32_MAX);
-            return;
+            return elapsed_ns;
         }
         for (uint32_t i = 0; i < 1000u; i++) cpu_relax();
     }
@@ -1281,10 +1275,6 @@ int main(int argc, char **argv) {
      * in this worker already checks its return value. */
     signal(SIGPIPE, SIG_IGN);
 
-    /* Worker start for the exec attempt budget. The host's window began no
-     * earlier than this, so counting from here is conservative. */
-    g_worker_start_valid = clock_gettime(CLOCK_MONOTONIC, &g_worker_start) == 0;
-
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
         printf("pw-probe-runner abi=%u region_bytes=%zu max_steps=%u slot_bytes=%u\n",
                PW_PROBE_RUNNER_ABI_VERSION,
@@ -1299,6 +1289,11 @@ int main(int argc, char **argv) {
         print_usage(stderr);
         return 2;
     }
+
+    pw_attempt_budget_t attempt_budget = attempt_budget_start(args.exec_attempt_budget_ms > 0
+        ? args.exec_attempt_budget_ms : PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
+    long child_deadline_ms = args.exec_child_deadline_ms > 0
+        ? args.exec_child_deadline_ms : PW_EXEC_CHILD_DEADLINE_MS_DEFAULT;
 
     void *base = map_region(args.shm_fd);
     if (!base) return 3;
@@ -1375,12 +1370,6 @@ int main(int argc, char **argv) {
      * read/waitpid so a sandbox-denied spawn surfaces cleanly rather
      * than being masked by a denied pipe() or denied
      * posix_spawn_file_actions_init(). */
-    if (args.exec_child_deadline_ms > 0) {
-        g_exec_child_deadline_ms = args.exec_child_deadline_ms;
-    }
-    if (args.exec_attempt_budget_ms > 0) {
-        g_exec_attempt_budget_ms = args.exec_attempt_budget_ms;
-    }
     exec_resources_reset_all();
     uint32_t exec_count = 0;
     for (uint32_t i = 0; i < step_count; i++) {
@@ -1572,13 +1561,14 @@ int main(int argc, char **argv) {
     }
     atomic_store_explicit(&hdr->applied, 1u, memory_order_release);
 
-    wait_for_proceed(hdr, evidence, args.proceed_wait_ms);
+    int64_t release_wait_ns = wait_for_proceed(hdr, evidence, args.proceed_wait_ms);
+    attempt_budget_exclude(&attempt_budget, release_wait_ns);
 
     /* Run attempts. Dispatch by attempt_kind; each helper writes
      * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
         pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
-        run_attempt(&slots[i], i);
+        run_attempt(&slots[i], i, &attempt_budget, child_deadline_ms);
         pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
     }
 

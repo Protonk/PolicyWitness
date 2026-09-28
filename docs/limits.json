@@ -606,8 +606,8 @@
       "title": "Worker publication wait",
       "value": 120000,
       "unit": "milliseconds",
-      "counting": "Nominal polling budget for worker sentinels, from the end of the ready-byte wait until done: policy read, compilation, application, the release wait and every attempt count against it. Synchronous validator work is outside this budget.",
-      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence. The worker's exec_attempt_budget keeps exec spawning inside this window; other attempts are not bounded by it.",
+      "counting": "Nominal host polling budget from the end of the ready-byte wait until done. Synchronous validator work is outside this count; policy transfer before polling and scheduler delays are separate. The worker uses a separate local active-time budget for exec attempts.",
+      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence. The exec budget is configured below this window but does not guarantee an end-to-end deadline.",
       "control": "Production default; test-only controls are not a public tuning interface.",
       "sources": [
         {
@@ -809,8 +809,8 @@
       "title": "Exec child deadline",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Per-exec child observation deadline after successful spawn. The deadline is per step and shares the worker window: the effective deadline is the smaller of this value and the remaining exec_attempt_budget.",
-      "effect": "Worker attempts to kill/reap the child; the step records that the deadline fired, naming the budget remainder when that was the bound.",
+      "counting": "Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget.",
+      "effect": "EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped.",
       "control": "Production default; test-only controls are not a public tuning interface.",
       "sources": [
         {
@@ -830,7 +830,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Shortened deadline and cleanup controls; the production duration is source-inspected. The harness attempt-budget controls pin the remainder-bounded deadline."
+      "behavior": "Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
     },
     {
       "id": "exec_attempt_budget",
@@ -838,9 +838,9 @@
       "title": "Exec attempt budget",
       "value": 115000,
       "unit": "milliseconds",
-      "counting": "Host-visible elapsed CLOCK_MONOTONIC time since worker start, excluding the release wait (which the host also excludes from its window), within which an exec child may still be spawned. Each child's deadline is the smaller of exec_child_wait and the remainder.",
-      "effect": "An exec step reached with no remainder reports exec_failed with errno 60 (ETIMEDOUT) and an exec attempt budget diagnostic; no spawn is claimed and sandbox attribution stays unestablished. A child bounded by the remainder records that in its deadline error. Non-exec attempts are not bounded, so a blocking file open can still exhaust the worker window. An unreadable clock refuses every exec spawn.",
-      "control": "Derived: worker_sentinel_wait minus a 5,000 ms publication margin; runner_unit asserts the relation against the compiled worker constant. Harness-only shortening; no public override, and the test-only sentinel override does not move it.",
+      "counting": "Local CLOCK_MONOTONIC active time starting before worker setup. Only the interval returned by the release barrier is excluded. An absolute cutoff is passed to exec attempts; this is not a reconstruction of the host polling clock.",
+      "effect": "An exhausted budget refuses spawn with exec_failed and ETIMEDOUT, no child identity and no sandbox attribution. Clock failure before spawn refuses the attempt; clock failure after spawn triggers cleanup and is retained as an observation error. Blocking spawn and non-exec operations are not preemptible here.",
+      "control": "Production default leaves a nominal 5,000 ms margin below worker_sentinel_wait. Internal test equipment may shorten it independently; the specimen worker_timeout_ms override does not move it.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -848,7 +848,7 @@
         },
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
-          "symbol": "exec_attempt_remaining_ms"
+          "symbol": "attempt_budget_start"
         }
       ],
       "checks": [
@@ -868,7 +868,36 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Value-checked against the compiled worker and the host default. Native harness controls shorten the budget: with the default deadline, exactly one helper spawns with the remainder as its deadline and five later exec steps are refused without spawning; with 500 ms deadlines, several helpers are killed at their own deadline before refusals begin. Both require the trailing read to succeed, every slot completed, done published within a second of the budget edge and a clean worker exit. The production duration is source-inspected."
+      "behavior": "Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, clock failures and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
+    },
+    {
+      "id": "exec_reap_grace",
+      "section": "execution",
+      "title": "Exec child reap grace",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Local monotonic observation window for nonblocking waitpid after exec observation stops.",
+      "effect": "Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
+          "symbol": "PW_EXEC_REAP_GRACE_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tests/suites/runner_abi_layout/limits.py",
+          "symbol": "NATIVE_LIMITS",
+          "kind": "value"
+        },
+        {
+          "path": "tests/fixtures/worker_lifecycle/exec_control.c",
+          "symbol": "main",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Controlled pending/EINTR waits exhaust the grace; kill, wait and clock failures retain missing status. Every wait is required to be nonblocking."
     },
     {
       "id": "exec_step_descriptors",

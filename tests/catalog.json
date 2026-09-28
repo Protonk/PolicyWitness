@@ -569,6 +569,10 @@
         {
           "id": "max_slots_proceed",
           "description": "Worker release barrier: max slots proceed"
+        },
+        {
+          "id": "exec_control_states",
+          "description": "deterministic deadline, independent pipe/exit and native cleanup-failure controls"
         }
       ]
     },
@@ -802,6 +806,18 @@
         {
           "id": "timeout_preserves_output_and_continues",
           "description": "timed-out process group stopped; output survived and the next write completed"
+        },
+        {
+          "id": "closed_streams_continue",
+          "description": "pipe EOF does not kill a live helper"
+        },
+        {
+          "id": "leader_exit_descendant",
+          "description": "an exited leader does not suppress deadline cleanup of descendants"
+        },
+        {
+          "id": "worker_dies_during_exec",
+          "description": "worker death preserves completed effects and leaves unpublished exec status unknown"
         }
       ]
     },

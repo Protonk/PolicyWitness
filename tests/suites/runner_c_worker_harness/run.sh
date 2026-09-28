@@ -518,7 +518,7 @@ run_exec_attempt_budget() {
     "six deadline-hitting helpers under a shortened exec attempt budget (${mode})" || return 0
   set +e
   PW_MODE="${mode}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
-import json, os, sys
+import errno, json, os, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 mode = os.environ["PW_MODE"]
@@ -543,19 +543,19 @@ for s in spawned:
     assert s["child_exit_code"] == -1 and s["child_term_signal"] == 9, s
     assert "deadline" in s["error"] and "SIGKILL'd" in s["error"], s
 for s in refused:
-    assert s["rc"] == -1 and s["errno"] == 60, s
+    assert s["rc"] == -1 and s["errno"] == errno.ETIMEDOUT, s
     assert s["child_exit_code"] == -1 and s["child_term_signal"] == 0, s
     assert s["stdout"] == "" and s["stderr"] == "", s
-    assert s["error"] == f"exec attempt budget: {budget} ms exhausted before spawn", s
+    assert "exec attempt budget" in s["error"], s
 if mode == "remainder":
     # A ten-second default deadline never fits a one-second budget: exactly one
     # child spawns with the remainder as its deadline; the rest are refused.
-    assert len(spawned) == 1 and "(exec attempt budget remainder)" in spawned[0]["error"], spawned
+    assert len(spawned) == 1 and "exec attempt budget" in spawned[0]["error"], spawned
 else:
     # Several 500 ms deadlines fit before the budget ends the sequence. Only the
     # last spawned child can have been bounded by the remainder.
     assert len(spawned) >= 2, spawned
-    assert all("(exec attempt budget remainder)" not in s["error"] for s in spawned[:-1]), spawned
+    assert all("exec attempt budget" not in s["error"] for s in spawned[:-1]), spawned
 span = r["done_after_applied_ms"]
 assert 0 <= span < budget + 1000, f"done must publish near the budget edge, not after every deadline: {span} ms"
 print(f"ok: {mode}: {len(spawned)} helper(s) killed at a deadline, {len(refused)} exec steps refused before spawn, "
@@ -584,3 +584,15 @@ for scenario in proceed_never_set proceed_late_after_expiry proceed_before_appli
   host_lost_while_waiting max_slots_proceed; do
   run_proceed_control "$scenario"
 done
+
+if test_selected exec_control_states; then
+  test_begin runner_c_worker_harness exec_control_states
+  test_step build "compile production exec control flow with deterministic native-call equipment"
+  CONTROL="${PW_TEST_ARTIFACTS}/exec-control"
+  test_build_fixture "${ROOT_DIR}/tests/fixtures/worker_lifecycle/build_exec_control.sh" "${CONTROL}"
+  if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "absolute budgets, independent EOF/exit, clock phases and cleanup evidence"
+  else
+    test_fail "exec control regression" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi

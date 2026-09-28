@@ -734,6 +734,69 @@ func runCWorkerTests(_ tk: TestKit) {
                 "error should mention the deadline; got \(s.error ?? "nil")")
         }
 
+        tk.run("exec budget refusal survives host assembly without erasing other attempts") {
+            guard workerExists() else { throw TestFailure(message: "required worker missing") }
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("pw-budget-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let first = directory.appendingPathComponent("before").path
+            let last = directory.appendingPathComponent("after").path
+            func step(_ id: String, _ kind: String, _ action: String, _ target: String, args: [String]? = nil) -> PWRunnerProbeStep {
+                PWRunnerProbeStep(step_id: id,
+                    sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                        filter: PWRunnerSandboxFilter(kind: "path", value: target)),
+                    attempt: PWRunnerAttempt(kind: kind, action: action, target: target, args: args))
+            }
+            let plan = [step("before", "file", "create", first)] + (0..<3).map {
+                step("exec\($0)", "exec", "spawn", "/bin/sleep", args: ["10"])
+            } + [step("after", "file", "create", last)]
+            let input = CWorkerInput(workerExecutablePath: workerPath(), policy: "(version 1)(allow default)",
+                slots: [CWorkerSlotInput(stepId: "before", attemptKind: .fileCreate, target: first)] + (0..<3).map {
+                    CWorkerSlotInput(stepId: "exec\($0)", attemptKind: .execSpawn, target: "/bin/sleep", args: ["10"])
+                } + [CWorkerSlotInput(stepId: "after", attemptKind: .fileCreate, target: last)],
+                sentinelTimeoutMs: 10_000, execAttemptBudgetMs: 500)
+            guard case .success(let out) = runCWorker(input) else { throw TestFailure(message: "budget worker failed") }
+            try expectTrue(out.done && out.reaped == true && out.slots.allSatisfy { $0.completed })
+            try expectEqual(out.exitCode, Int32(0))
+            try expectTrue(FileManager.default.fileExists(atPath: first) && FileManager.default.fileExists(atPath: last))
+            try expectEqual(classify(workerResult: .success(out), validatorResult: nil, expectedVerdictCount: 0).outcome, NormalizedOutcome.ok)
+            let steps = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan),
+                workerOutput: out, validatorOutput: nil)
+            let wire = try pwRunnerDecodeJSON([PWRunnerStepResult].self, from: pwRunnerEncodeJSON(steps))
+            try expectEqual(wire.first?.attempt.outcome, AttemptOutcome.ok)
+            try expectEqual(wire.last?.attempt.outcome, AttemptOutcome.ok)
+            try expectTrue(PWContract.responseSchema >= 11)
+            // Constructed producer rows establish forwarding/classification,
+            // separately from native cleanup controls. Unknown diagnostic prose
+            // must not couple child status to attempt success.
+            for childExit in [Int32(0), Int32(-1)] {
+                var altered = out
+                altered.slots[1].rc = -1
+                altered.slots[1].errnoVal = EIO
+                altered.slots[1].childPid = 42
+                altered.slots[1].childExitCode = childExit
+                altered.slots[1].childTermSignal = 0
+                altered.slots[1].error = "unfamiliar cleanup diagnostic"
+                let projected = buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan),
+                    workerOutput: altered, validatorOutput: nil)
+                let decoded = try pwRunnerDecodeJSON([PWRunnerStepResult].self, from: pwRunnerEncodeJSON(projected))[1]
+                try expectEqual(decoded.attempt.outcome, AttemptOutcome.execFailed)
+                try expectEqual(decoded.attempt.child_exit_code, Int(childExit))
+                try expectEqual(decoded.attempt.child_term_signal, 0)
+                try expectEqual(decoded.attempt.error, "unfamiliar cleanup diagnostic")
+                try expectTrue(decoded.comparison?.limitations.contains("sandbox_attribution_unestablished") == true)
+            }
+            let refusals = wire.filter { $0.attempt.errno == Int(ETIMEDOUT) }
+            try expectFalse(refusals.isEmpty)
+            for refused in refusals {
+                try expectEqual(refused.attempt.child_pid, 0)
+                try expectEqual(refused.attempt.child_exit_code, -1)
+                try expectEqual(refused.attempt.child_term_signal, 0)
+                try expectEqual(refused.attempt.outcome, AttemptOutcome.execFailed)
+                try expectTrue(refused.comparison?.limitations.contains("sandbox_attribution_unestablished") == true)
+            }
+        }
+
         // Process-group cleanup, captured output after a deadline, and plan
         // continuation are exercised through the public CLI by
         // tests/suites/runner_exec_lifecycle with the shared exec fixture.

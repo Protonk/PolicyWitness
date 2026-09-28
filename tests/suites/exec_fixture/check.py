@@ -138,6 +138,26 @@ def exercise_tree(helper, out, mode):
             if mode == 'release':
                 control.release()
                 expected_status = 0
+            elif mode == 'closed_streams':
+                import select
+                for role in ('P', 'C'): control.close_streams(role)
+                # Independently establish EOF while both processes still run.
+                for stream in (child.stdout, child.stderr):
+                    assert select.select([stream], [], [], 2)[0]
+                    if stream is child.stdout:
+                        assert stream.read() == b'exec_fixture: hello from helper\n'
+                    else:
+                        assert stream.read() == b''
+                control.assert_running()
+                control.release()
+                expected_status = 0
+            elif mode == 'leader_exit':
+                control.exit_leader()
+                assert child.wait(timeout=2) == 0
+                assert control.exits() == {pids['P']}
+                control.ping('C')
+                control.release()
+                expected_status = 0
             elif mode == 'group_kill':
                 os.killpg(child.pid, signal.SIGKILL)
                 expected_status = -signal.SIGKILL
@@ -154,7 +174,7 @@ def exercise_tree(helper, out, mode):
             control.assert_stopped()
             stdout, stderr = child.communicate(timeout=2)
             assert child.returncode == expected_status, child.returncode
-            assert stdout == b'exec_fixture: hello from helper\n' and stderr == b''
+            assert stdout == (b'' if mode == 'closed_streams' else b'exec_fixture: hello from helper\n') and stderr == b''
             (out / f"{mode}.json").write_text(json.dumps({
                 'pids': pids, 'groups': groups, 'exited': sorted(control.exited),
                 'returncode': child.returncode,
@@ -254,7 +274,7 @@ def main():
         assert result.stderr == (marker + '\n').encode(), result.stderr
         print(f"output bytes={len(expected)}, stderr nonce, exit={status}: correct", flush=True)
     exercise_write(helper, out)
-    for mode in ('release', 'group_kill', 'leader_kill'):
+    for mode in ('release', 'group_kill', 'leader_kill', 'closed_streams', 'leader_exit'):
         exercise_tree(helper, out, mode)
     exercise_independent_trees(helper, out)
     exercise_inspection(helper, out)

@@ -1,5 +1,5 @@
 {
-  "response_schema" : 10,
+  "response_schema" : 11,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",

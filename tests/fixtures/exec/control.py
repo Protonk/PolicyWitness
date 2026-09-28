@@ -100,6 +100,18 @@ class TreeControl:
         peer.sendall(b'p')
         assert peer.recv(1) == b'a', f"{role}: no live response"
 
+    def close_streams(self, role):
+        peer = self.peers[role]
+        peer.sendall(b'c')
+        assert peer.recv(1) == b'a', f"{role}: stream close not acknowledged"
+
+    def exit_leader(self):
+        self.peers['P'].sendall(b'x')
+        deadline = time.monotonic() + 2
+        while self.pids['P'] not in self.exits(0.05):
+            assert time.monotonic() < deadline, 'leader did not exit'
+        self.ping('C')
+
     def exits(self, timeout=0):
         return self.observer.exits(timeout)
 

@@ -755,9 +755,10 @@ outer envelope was lost. Independent `sbpl-check` admission remains
 
 Readiness, blocking policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
-phases. The worker bounds only its exec spawning inside that budget (the exec
-attempt budget in docs/LIMITS.md); no end-to-end worker deadline was added. Failed cleanup can leave an
-unreaped child; successful termination still uses blocking final wait. No early
+phases. The worker has a separate local exec attempt budget; no end-to-end
+worker deadline is implied. Failed cleanup can leave an unreaped child. Exec
+attempt reaping is nonblocking and bounded by exec_reap_grace; the host's
+worker/validator final reap after successful termination remains blocking. No early
 stderr capture is added: pre-mapping, direct dependency output and crashes in the
 reporting path may leave no diagnostic text. Optional compiled-object capture
 (1 MiB) and exec stream text (1023 bytes each, with truncation marker) keep their
@@ -1212,3 +1213,12 @@ The Rust controller preserves response versions and unfamiliar order strings.
 Acceptance selects every registered canonical case in [the catalog](catalog.json),
 including opt-ins and both runner contexts. Required skips/unrun cases prevent
 completion.
+
+Exec attempt observation distinguishes stream EOF, leader exit, termination
+requests and confirmed reaping. A deadline remains an attempt failure even when
+the leader exited naturally while another group member retained the pipes;
+`child_exit_code` preserves that observed natural status. Cleanup or observation
+errors do not manufacture a child exit or sandbox denial. If the worker dies
+before the slot is published, incomplete exec fields remain unavailable even
+when an independent observer saw a live child. Supporting earlier spawn facts
+in the reply requires a separate publication contract.

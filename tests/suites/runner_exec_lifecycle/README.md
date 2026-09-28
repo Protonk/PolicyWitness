@@ -35,3 +35,13 @@ the public exec-deadline assertion remains here. Direct capture controls live in
 The shell entry point uses `tests/lib/case.sh` for setup and logged checks.
 Case IDs, checker arguments, and artifact paths remain defined by this suite.
 The `shell_helpers` controls verify failure propagation and report/log behavior.
+
+Additional cases close both streams while the observed helper processes keep
+responding, or exit the leader while its child retains the streams. The former
+must finish naturally after test release; the latter must stop the remaining
+group member at the deadline while preserving the leader's actual exit code.
+`worker_dies_during_exec` terminates the independently identified worker while
+both helper processes are live. Earlier file effects survive; unfinished exec
+fields remain absent and later effects are absent. The test owns helper cleanup
+and observes liveness before performing it. This guards missing-publication
+semantics without claiming that current worker death cleans up descendants.

@@ -443,7 +443,8 @@ func runDispositionResolverTests(_ tk: TestKit) {
         var export: [String: Any] = [:]
         tk.run("Swift spellings agree with the Python contract module") {
             export = try pythonExport(root)
-            try expectEqual(export["response_with_disposition"] as? Int, PWContract.responseSchema)
+            try expectEqual(export["response_with_disposition"] as? Int, 10, "disposition introduction version stays fixed when later contracts advance")
+            try expectTrue(PWContract.responseSchema >= 10)
             try expectEqual(strings(export["claim_states"]), PWDisposition.claimStates)
             try expectEqual(strings(export["run_questions"]), PWDisposition.runQuestions)
             try expectEqual(strings(export["step_questions"]), PWDisposition.stepQuestions)

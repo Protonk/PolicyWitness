@@ -218,6 +218,7 @@ public struct CWorkerParam {
 }
 
 public struct CWorkerInput {
+    public static let defaultSentinelTimeoutMs = 120_000
     public var workerExecutablePath: String
     public var policy: String
     public var params: [CWorkerParam]
@@ -254,18 +255,22 @@ public struct CWorkerInput {
     /// runs in seconds rather than tens of seconds. Production
     /// callers pass nil.
     public var execChildDeadlineMs: Int?
+    /// Internal test equipment: shorten the local exec plan budget independently
+    /// of the host sentinel. Never populated from specimen JSON.
+    public var execAttemptBudgetMs: Int?
 
     public init(workerExecutablePath: String,
                 policy: String,
                 params: [CWorkerParam] = [],
                 slots: [CWorkerSlotInput],
                 readyByteTimeoutMs: Int = 1_000,
-                sentinelTimeoutMs: Int = 120_000,
+                sentinelTimeoutMs: Int = CWorkerInput.defaultSentinelTimeoutMs,
                 exitGraceMs: Int = 1_000,
                 postApplyHangMs: Int? = nil,
                 postApplyKillSignal: Int? = nil,
                 preReadyHangMs: Int? = nil,
                 execChildDeadlineMs: Int? = nil,
+                execAttemptBudgetMs: Int? = nil,
                 captureAppliedProfile: Bool = false,
                 captureNonce: String? = nil) {
         self.workerExecutablePath = workerExecutablePath
@@ -279,6 +284,7 @@ public struct CWorkerInput {
         self.postApplyKillSignal = postApplyKillSignal
         self.preReadyHangMs = preReadyHangMs
         self.execChildDeadlineMs = execChildDeadlineMs
+        self.execAttemptBudgetMs = execAttemptBudgetMs
         self.captureAppliedProfile = captureAppliedProfile
         self.captureNonce = captureNonce
     }
@@ -837,6 +843,10 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
     if let deadlineMs = input.execChildDeadlineMs, deadlineMs > 0 {
         argv.append("--exec-child-deadline-ms")
         argv.append(String(deadlineMs))
+    }
+    if let budgetMs = input.execAttemptBudgetMs {
+        argv.append("--exec-attempt-budget-ms")
+        argv.append(String(budgetMs))
     }
     var pid: pid_t = 0
     let spawnRC = withCStringArrayCopy(argv) { argvPtr in

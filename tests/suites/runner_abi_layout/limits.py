@@ -24,7 +24,7 @@ ABI_LIMITS = {
     'observed_path': ('PW_SHM_OBSERVED_PATH_MAX', 1),
     'attempt_error': ('PW_SHM_ERROR_MAX', 1),
 }
-NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'exec_attempt_budget', 'exec_step_descriptors',
+NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'exec_attempt_budget', 'exec_reap_grace', 'exec_step_descriptors',
                  'exec_descriptor_reserve', 'validator_query_payload'}
 
 

@@ -5,7 +5,7 @@ default smoke check compares a built app against these exact values.
 """
 # BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 REQUEST_SCHEMA = 3
-RESPONSE_SCHEMA = 10
+RESPONSE_SCHEMA = 11
 WORKER_ABI = 7
 CONTROLLER_ENVELOPE = 3
 # END GENERATED CONTRACT VERSIONS

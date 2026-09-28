@@ -261,19 +261,14 @@ typedef struct {
     int32_t  errno_val;
     char     observed_path[PW_SHM_OBSERVED_PATH_MAX];
     char     error[PW_SHM_ERROR_MAX];
-    /* Exec output fields (ABI v4). Populated by the run_attempt
-     * EXEC_SPAWN case. Sentinel conventions when no child ran:
-     *   child_pid          == 0  (spawn failed; errno_val carries the
-     *                              posix_spawn errno; child_exit_code
-     *                              and child_term_signal stay at -1/0)
-     *   child_exit_code    == -1 (child was signaled OR no child ran)
-     *   child_term_signal  == 0  (child clean-exited OR no child ran)
-     * When child_pid > 0 the spawn succeeded — exactly one of
-     * child_exit_code (clean exit) or child_term_signal (signal
-     * termination) carries the verdict. The drift classifier reads
-     * child_pid to distinguish a sandbox-blocked spawn (child_pid==0,
-     * errno EPERM/EACCES → strong deny) from a child non-zero exit
-     * (child_pid>0, rc!=0 → non-policy failure). */
+    /* Exec output fields (ABI v4 layout). child_pid > 0 establishes spawn,
+     * not reaping. Zero means no child was produced (including admission or
+     * setup refusal). Final status is populated only after a confirmed reap:
+     * child_exit_code >= 0 is a natural exit; child_term_signal > 0 is a
+     * reaped signal. The -1/0 pair also represents unconfirmed final status.
+     * Attempt rc can report observation/cleanup failure independently of the
+     * leader's exit code. No permission-shaped errno alone establishes a
+     * sandbox cause. These fields are readable only after slot completion. */
     int32_t  child_pid;
     int32_t  child_exit_code;
     int32_t  child_term_signal;
