@@ -44,13 +44,15 @@ changes are outside the initial scope.
   valid negative controls. Corrected queries found no counted loss overlapping
   the missing attempts. Diagnostic loss searches must use the corrected method;
   absence of a loss notice must not become a production completeness claim.
-- Archive wall timestamps ran about +35 to +36 ms later than the instrumented
-  control's syscall-time `CLOCK_REALTIME`; the earlier stream-versus-archive
-  comparison implies about +10 ms an hour before, so the offset drifts within a
-  session. Whole-second ceiling leaves variable trailing slack and can exclude a
+- Archive wall timestamps display later than `CLOCK_REALTIME` by an offset that
+  tracks wall-clock discipline: about +10 ms at 16:34, +35 to +36 ms at 17:25
+  and +59 to +62 ms at 18:27 UTC on 2026-09-28, measured on the kernel channel
+  and then on a userland `os_log` marker, while `timed` was slewing the clock
+  and logd re-mapped its conversion only at clock steps and roughly hourly.
+  Whole-second ceiling leaves variable trailing slack and can exclude a
   near-boundary record. Wider searches did not recover the observed omissions,
-  so this is a separate coverage issue. Those measurements are not a universal
-  bound on the offset.
+  so this is a separate coverage issue. The scan padding decision in section 3
+  records the measurements and the bound they support.
 - Burst and lifetime controls did not establish guaranteed record availability.
   The 32-read condition retained some evidence in each phase of three long runs,
   but lost individual records. Neither repetition nor retries until a record
@@ -120,19 +122,118 @@ the supported operation and path evidence, with valid candidate references and
 explicit ambiguity. A child-process record is not a worker record; a duplicate
 flush naming a neighbour is not a record of the missing attempt.
 
-Make an explicit decision about bounded scan padding for the measured timestamp
-conversion offset. Any wider query must report its actual bounds separately
-from the original client timestamps and must not masquerade as the old interval.
-Test both boundaries with supplied timestamps; do not derive event timing from
-path names. A finite pad can cover an explicit allowance, not guarantee delivery
-or exact run membership. Do not silently change window meaning, claim PID-reuse
-protection, or add waits/retries as an emission guarantee.
+Scan padding for the measured timestamp conversion offset is decided below: a
+symmetric two-second pad reported as its own window field. Any wider query must
+report its actual bounds separately from the original client timestamps and
+must not masquerade as the old interval. Test both boundaries with supplied
+timestamps; do not derive event timing from path names. A finite pad covers an
+explicit allowance, not delivery or exact run membership. Do not silently change
+window meaning, claim PID-reuse protection, or add waits/retries as an emission
+guarantee.
 
 Specify whether a bounded collector retains usable complete events on partial
 collection or marks the entire capture unavailable. Either choice must expose
 incompleteness and preserve the null/list and correlation contracts. This choice,
 the budget values, and timeout/overflow representation are implementation
 decisions to settle before changing the public evidence shape.
+
+#### Scan padding decision
+
+**What the offset is.** `log show` converts a record's `machTimestamp` to wall
+time through logd's timesync mapping, while the client span comes from
+`CLOCK_REALTIME`. Between re-maps `timed` disciplines the wall clock, slewing
+through `adjtime` and stepping through `settimeofday`, so displayed times drift
+from the client's clock by the correction applied since the last re-map. On
+2026-09-28 logd re-mapped at every clock step (three steps of 63 to 73 ms, each
+accompanied within 10 ms by a `=== system wallclock time adjusted` timesync
+event) and roughly hourly otherwise (35 timesync events in 24 h). The machine
+had been up 147 days with the offset at 60 ms, so the offset does not
+accumulate over uptime. Records are stamped inside the denied syscall (mach
+latency −2 to −10 µs), so this offset is the only timing error between a record
+and the client span.
+
+| Measured at (UTC) | Displayed minus `CLOCK_REALTIME` | Source |
+| --- | --- | --- |
+| 16:34 | about +10 ms | stream-versus-archive comparison, first round |
+| 17:25 to 17:28 | +35.41 to +36.10 ms | kernel deny lines of the instrumented control, 9 records |
+| 18:27 | +59.10 to +61.68 ms | userland `os_log` marker, 6 records; the kernel channel recorded none of six denials in the same run; `timed` reported a −68 ms residual in progress |
+
+**Exposure.** The window floors the client start and ceils the client end to
+whole seconds, so each bound carries 0 to 1,000 ms of slack. A last-step
+denial displayed `offset` ms after the client end is excluded when the end
+falls within `offset` of the next whole second: probability `offset / 1000`
+per such denial, about 2% at today's largest offset for a one-rule specimen and
+0% for the 64-rule cohorts, whose teardown places the last record 7 to 55 ms
+before the client end. A negative offset (clock slewed forward) moves records
+earlier and exposes the start bound the same way. None of the observed
+omissions was a slack exclusion; the ±60 s scans lack them too.
+
+**Options considered.**
+
+1. No pad. Keeps the window derivation; leaves a measured 0 to 2% exclusion of
+   real records that grows with the offset, and the case cannot tell that
+   exclusion from OS omission.
+2. Fixed symmetric pad of N whole seconds. `log show` accepts nothing finer than
+   a second, so N is an integer. Cost measured at zero: the original interval's
+   PID-predicate scan took 0.03 s at 21 s and at 23 s. Wider bounds admit only
+   lines naming the worker PID; PID reuse within seconds does not occur in
+   practice and the window already disclaims protection against it.
+3. Runtime measurement: emit a controller-side `os_log` marker carrying
+   `CLOCK_REALTIME` before the scan and read its displayed time back in the
+   same scan, then pad by or report the measured offset. Exact, but it adds a
+   marker whose visibility has only been checked at 5 s, a second parse path
+   and a dependency on userland log persistence; outside the initial scope.
+4. End-only pad. Covers the observed sign only; a forward slew or a step would
+   expose the start bound.
+
+**Decision.** Option 2 with N = 2: scan from `floor(client start) − 2 s` to
+`ceil(client end) + 2 s`. One second already exceeds every observed offset by
+16× and the mechanism's bound (steps observed at 63 to 73 ms plus at most an
+hour of slew between re-maps); the second covers a maximum-rate slew hour at no
+cost. The value is a documented limit; changing it is an edit to
+`docs/limits.json` and its generated copies.
+
+**Representation.** `window.start` and `window.end` keep their meaning, the
+whole-second UTC strings handed to `log show` and mirrored back by the
+observer, now padded. `started_at_unix_ms` and `ended_at_unix_ms` keep the raw
+client span. Add `window.pad_seconds` (2). An absent field in an older envelope
+means 0, which is what those envelopes did, so the change is additive and needs
+no envelope contract bump under the rule in [docs/CONTRACT.md](docs/CONTRACT.md);
+the documented derivation "widened to whole seconds" gains the pad. The
+window's four disclaimers stay false.
+
+**Touchpoints.**
+
+- `SandboxLogWindow::runner_client_span` in [sandbox_log.rs](controller/src/sandbox_log.rs)
+  applies the pad and carries `pad_seconds`; `observer_argv` and
+  `observer_window_matches` need no change. [runner_client.rs](controller/src/runner_client.rs)
+  and [run_flow.rs](controller/src/run_flow.rs) construct the window and their
+  tests assert the derived strings.
+- Rust controls `run_span_window_floors_start_ceils_end_and_never_collapses`,
+  `run_span_window_claims_coverage_and_nothing_stronger`,
+  `observer_is_asked_for_the_window_and_never_for_a_trailing_lookback` and
+  `requested_intervals_select_independently_timed_events`; the fixture
+  [observer.py](tests/fixtures/deny_capture/observer.py) needs its `/before` and
+  `/after` events outside the padded bounds so the exclusion controls stay
+  meaningful.
+- `documented_controller_limits` in [run_flow.rs](controller/src/run_flow.rs)
+  and a new `docs/limits.json` entry (section `evidence`, value 2, unit
+  seconds, value and boundary checks) regenerated by `docs/generate_limits.py`;
+  the prose in [LIMITS.md](docs/LIMITS.md) and the user guide.
+- The live case's window assertions, its membership assertion
+  (`start_s <= at <= end_s`) and the retired-interval replay, which must keep
+  using the client-derived end rather than the padded `window.end`; the catalog
+  description ("requests the full client interval");
+  [controller/README.md](controller/README.md) and
+  [docs/PolicyWitness.md](docs/PolicyWitness.md) `window` descriptions.
+- The consumer passes the window through; the shape validator must accept the
+  new key.
+
+**Left open.** The bound rests on one machine's `timed` behaviour over one day.
+A machine without network time or with a different step threshold could differ,
+so the limit's `counting` text states an allowance, not a guarantee. The
+investigation record routes `offset_probe.py`, which re-measures both channels
+in about ten seconds, for use before changing N.
 
 ### 4. Make the default battery independent of OS emission
 

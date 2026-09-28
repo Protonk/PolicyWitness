@@ -411,6 +411,19 @@ replay lost its first four consecutive runs; both matrix losses were in the
 reads after the 20 s hold. The control adds a trailing run of losses (idle runs
 2 to 7), so contiguity in time, not leading position, is the shared shape.
 
+**Offset mechanism and a third measurement (18:27 UTC).** Six userland `os_log`
+markers carrying their own `CLOCK_REALTIME` displayed +59.10 to +61.68 ms late,
+against +35.41 to +36.10 ms on the kernel channel at 17:25 and about +10 ms at
+16:34; six interleaved `sandbox-exec` denials recorded none, so the kext
+omission was total in that run. `timed` logged a −68 ms residual slew in
+progress at 18:29 and three clock steps of 63 to 73 ms over the day, each
+accompanied within 10 ms by a logd `=== system wallclock time adjusted`
+timesync event (35 timesync events in 24 h, roughly hourly otherwise). The
+machine had been up 147 days, so the offset does not accumulate over uptime: it
+is the wall-clock correction applied since logd's last re-map, and the scan
+padding decision in the associated plan rests on that bound. `eventType ==
+timesyncEvent` needs no extra flag.
+
 ## Open questions
 
 Closed by the follow-up round:
@@ -454,10 +467,11 @@ Open:
   55 ms before it; separating teardown duration from the conversion offset needs
   per-attempt `mach_continuous_time` in the worker's evidence, which no schema
   carries today.
-- How large can the archive's conversion offset become across a session (+10 ms
-  at 16:34, +36 ms at 17:25), and should the production window add trailing
-  slack beyond the whole-second ceiling? The exposure is the offset divided by
-  one second per last-step denial; a padded end changes the window contract.
+- How large can the archive's conversion offset become (+10 ms at 16:34,
+  +36 ms at 17:25, +62 ms at 18:27)? The mechanism bounds it by `timed`'s
+  corrections between logd re-maps, measured on one machine over one day; the
+  associated plan decides a symmetric two-second scan pad on that basis, and a
+  machine with different time discipline could need re-measurement.
 - What positive live guarantee can the default battery retain without treating
   external absence as a PW correctness failure (former question 5)? Unchanged,
   with the added fact that the omission is an OS-side kext behaviour
@@ -494,6 +508,7 @@ than a dispatcher-owned completed run.
 | Evidence review of the first round | [EVIDENCE-REVIEW.md](../tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
 | Follow-up archive checks | [archive/](../tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
 | Instrumented unconfined control | [latency/](../tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
+| Offset mechanism, third measurement | [sandbox-log-troubleshooting-20260928-c/](../tests/out/sandbox-log-troubleshooting-20260928-c/): `marker.c` (userland `os_log` marker printing `CLOCK_REALTIME` and `mach_continuous_time`), `offset_probe.py`, `receipts.json`, `scan.ndjson` with `scan-command.json`, `summary.json`; `timesync-24h.ndjson` and `timed-24h.ndjson` with `timed-summary.json` (logd timesync events and `timed` adjustments over 24 h). Target tree `/private/tmp/pw-log-offset-…` named in `receipts.json`. |
 
 The new driver refuses to reuse an existing mode directory. To repeat it, copy
 `experiment.py` and `analyze.py` into a fresh direct child of `tests/out/`, then
