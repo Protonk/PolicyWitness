@@ -122,15 +122,42 @@ membership. Do not silently change
 window meaning, claim PID-reuse protection, or add waits/retries as an emission
 guarantee.
 
-Specify whether a bounded collector retains usable complete events on partial
-collection or marks the entire capture unavailable. Either choice must expose
-incompleteness and preserve the null/list and correlation contracts. This choice,
-the budget values, and timeout/overflow representation are implementation
-decisions to settle before changing the public evidence shape.
+#### Partial collection
 
-#### Scan padding decision
+**Action.** In the CLI's `log show` capture path, treat locally incomplete
+collection as unavailable for correlation. At either subprocess boundary,
+timeout, read failure, output truncation or overflow, or failure to observe
+completion prevents `capture_status: captured`.
+Report the failure reason so partial collection remains distinguishable from
+collection that never started. Set `correlation_status` to `unavailable`, and
+`step_denies`, diagnostics `first_deny` and
+`permission_failures_without_record` to null. Use one success gate for
+correlation; do not introduce partial associations or per-step completeness.
 
-**Decision.** Use a symmetric two-second pad: scan from
+**Retention.** Keep available stdout/stderr diagnostics within the collection
+budgets, with their source, observed byte counts, truncation and failure reasons,
+and cleanup facts. Preserve an intact, shape-valid observer reply, including
+its events and metadata, as diagnostic evidence even when collection failed.
+If the observer JSON is incomplete, retain its bounded raw prefix without
+repairing it or extracting events from fragments. Do not add a second transport
+to recover output held by a terminated observer. Some valid deny records may
+therefore remain uncorrelated; that is the accepted cost of avoiding a separate
+event-recovery and partial-correlation contract.
+
+**Boundary.** Incompleteness here means PW failed to finish collecting the
+requested query's output. A successful complete query returning early-only,
+late-only or no deny records remains eligible for normal correlation and
+missing-record diagnostics. The number of permission-shaped failures does not
+determine whether collection completed, and completion does not certify OS
+delivery.
+
+Choose the numeric budgets and public representation of timeout/overflow
+details under section 2 before changing the evidence shape. Those choices must
+preserve this retention policy and unavailable-correlation behavior.
+
+#### Scan padding
+
+**Structure.** Use a symmetric two-second pad: scan from
 `floor(client start) − 2 s` to `ceil(client end) + 2 s`. Document the value in
 `docs/limits.json` and regenerate its copies. The limit's `counting` text must
 state a timestamp-conversion allowance, not a guarantee of delivery or coverage
@@ -248,15 +275,17 @@ correctness, equipment failures and measured OS record availability.
   budgets, every supported deny record survives collection and parsing with
   its raw evidence and provenance. Losing even one such supplied record fails
   this condition, regardless of live OS record availability.
-- **Correlation.** Each retained record receives all and only the candidate
-  associations supported by the worker PID, operation and path evidence.
-  Ambiguity remains explicit. Unrelated PIDs, unsupported matches and invalid
-  candidate references cannot acquire worker or step attribution.
+- **Correlation.** For a successful complete capture, each retained record
+  receives all and only the candidate associations supported by the worker PID,
+  operation and path evidence. Ambiguity remains explicit. Unrelated PIDs,
+  unsupported matches and invalid candidate references cannot acquire worker
+  or step attribution.
 - **Capture state.** The envelope and consumer distinguish successful empty
   collection, partial collection, unavailable evidence and disabled collection.
-  A partial-collection policy is selected and applied consistently; incomplete
-  output never passes as complete. `permission_failures_without_record` is
-  null unless correlation reaches `pid_match` or `no_match` with per-step
+  Incomplete collection retains available diagnostics but yields unavailable
+  correlation and null associations; incomplete output never passes as complete.
+  `permission_failures_without_record` is null unless correlation reaches
+  `pid_match` or `no_match` with per-step
   comparisons present. When those conditions hold, it lists exactly the
   permission-shaped steps without a captured candidate, or `[]` if none
   qualify. That list makes no claim about the OS store.
