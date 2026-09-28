@@ -95,8 +95,36 @@ bounded retention at both subprocess boundaries: observer capture in
 [sandbox_log.rs](controller/src/sandbox_log.rs) and `log show` capture in
 [sandbox-log-observer.rs](controller/src/bin/sandbox-log-observer.rs). Enforce
 retention limits while reading output. Choose concrete default budgets from
-observed normal costs and test them independently of `--timeout-ms`, whose
-existing runner-client meaning must stay intact.
+observed normal costs with headroom; measurements choose defaults, not a maximum
+query duration that every machine must meet.
+
+#### Collection deadline and user control
+
+Add `policy-witness run --log-timeout-ms <n>` as a per-run override of the
+collection deadline. Accept positive integer milliseconds that can be represented
+and added to the monotonic clock without overflow; reject invalid, zero or
+unrepresentable values before invoking the runner. There is no unlimited value.
+Keep `--timeout-ms`'s runner-client meaning unchanged. With `--no-log-capture`,
+validate the option but launch no collector. A larger log timeout lets a user
+accommodate a slower archive scan without changing the specimen, query window
+or runner timeout; it increases the optional wait before envelope delivery and
+does not promise a record.
+
+Start the collection deadline immediately before observer launch. Pass that
+same monotonic deadline to the observer for supervising `log show`; startup and
+inner collection must consume the shared allowance, not restart it. Use a shared
+monotonic clock domain for that argument. A directly invoked observer, including
+the retired-window control, uses the documented finite default when no deadline
+is supplied. The controller enforces the outer deadline even if the observer
+stops responding. On expiry, stop collection and enter a separately documented,
+fixed cleanup grace. The maximum supervised wait is the chosen collection
+allowance plus that
+grace; retries, parsing and reporting must not restart either budget. Record the
+effective timeout, whether it came from the default or CLI, elapsed time and
+cutoff reason when collection is attempted. Byte caps and cleanup grace remain
+independent limits; this override buys waiting time only.
+
+#### Output budgets and query selection
 
 Count raw bytes crossing each pipe before decoding, event parsing or controller
 PID/candidate filtering. For `log show`, these are bytes emitted after its query
@@ -130,15 +158,46 @@ failure must produce explicit log-channel evidence and still allow the runner
 envelope to be emitted. A truncated JSON prefix is never a complete report.
 Validate reply shape as well as transport success.
 
-Define ownership and cleanup for both the observer and its log child. A child
-holding a pipe open after its leader exits must not defeat the deadline.
-Termination requests, confirmed exit and unconfirmed cleanup must remain
-distinct observations for each process. Account for the log child even if the
-observer exits or is terminated before delivering a reply. Test those paths
-with owned subprocess fixtures rather than by hanging a real system log command.
-Keep the implementation confined to logging unless a shared primitive can be
-reused without changing other capture contracts. No new user-facing flag is
-assumed.
+#### Ownership and cleanup without an observer reply
+
+Use a dedicated process group created as part of spawning the observer, before
+its program runs, with PGID equal to the observer PID. The controller therefore
+knows the cleanup target from its own spawn result. Rust's
+[`CommandExt::process_group(0)`](https://doc.rust-lang.org/std/os/unix/process/trait.CommandExt.html#method.process_group)
+provides this launch-time setup. The observer must launch `log show` in that
+inherited group, without creating another group or session. A failure to
+establish the group fails collector launch; never fall back to signalling the
+controller's own group. No PID announcement on stderr or other lifecycle
+transport is required for this design.
+
+The controller owns group cleanup, while the observer normally waits for its
+direct log child and includes that child's PID and wait observation in its
+reply. On a collection failure or observer exit, finish cleanup of any remaining
+group members even if the leader has exited or both pipes reached EOF. Keep the
+observer unreaped while group signalling is possible: observe its exit without
+reaping (for example, `waitid` with `WNOWAIT`), issue any required group
+`SIGKILL`, then perform bounded reaping and group-absence observation. This pins
+the leader's PID through signalling and avoids targeting a reused PGID. Never
+send a later group signal after releasing that ownership. If ownership cannot
+be established or is lost, withhold group signalling and report unconfirmed
+cleanup with the reason. A pipe held open by the orphaned log child must not
+defeat either deadline.
+
+Report three separate facts: the controller's observer wait result, the
+observer-reported log-child identity/wait result if received, and the
+controller's group cleanup request and outcome. Without a reply, the individual
+log-child PID and exit status may remain unknown; group ownership still permits
+cleanup. After signalling and reaping, bounded group probes that report no such
+group (`ESRCH`) establish group absence, not an invented child wait status.
+Other probe results or exhausted cleanup grace leave group cleanup unconfirmed.
+Sending a signal, observer exit or pipe EOF alone cannot confirm group cleanup.
+An observer-died-first case must attempt owned-group cleanup and can confirm
+absence; it must not automatically become an unconfirmed-cleanup result.
+
+Test this ownership and observation sequence with owned subprocess fixtures,
+including observer death before any reply. Keep the implementation confined to
+logging unless a shared primitive can be reused without changing other capture
+contracts.
 
 ### 3. Preserve useful records and state the real scan bounds
 
@@ -173,9 +232,11 @@ and cleanup facts. Preserve an intact, shape-valid observer reply, including
 its events and metadata, as diagnostic evidence even when collection failed.
 If the observer JSON is incomplete, retain its bounded raw prefix without
 repairing it or extracting events from fragments. Do not add a second transport
-to recover output held by a terminated observer. Some valid deny records may
-therefore remain uncorrelated; that is the accepted cost of avoiding a separate
-event-recovery and partial-correlation contract.
+for deny records or to recover output held by a terminated observer. Cleanup
+uses the controller-owned process group from section 2 and requires no such
+transport. Some valid deny records may therefore remain uncorrelated; that is
+the accepted cost of avoiding a separate event-recovery and partial-correlation
+contract.
 
 **Boundary.** Incompleteness here means PW failed to finish collecting the
 requested query's output. A successful complete query returning early-only,
@@ -221,8 +282,9 @@ establishes that a record was caused by an attempt in this run.
 **Touchpoints.**
 
 - `SandboxLogWindow::runner_client_span` in [sandbox_log.rs](controller/src/sandbox_log.rs)
-  applies the pad and carries `pad_seconds`; `observer_argv` and
-  `observer_window_matches` need no change. [runner_client.rs](controller/src/runner_client.rs)
+  applies the pad and carries `pad_seconds`; `observer_window_matches` keeps
+  checking the mirrored bounds. `observer_argv` separately carries the collection
+  deadline from section 2. [runner_client.rs](controller/src/runner_client.rs)
   and [run_flow.rs](controller/src/run_flow.rs) construct the window and their
   tests assert the derived strings.
 - Rust controls `run_span_window_floors_start_ceils_end_and_never_collapses`,
@@ -269,6 +331,19 @@ coverage descriptions.
   a valid diagnostic reply after inner failure and an incomplete outer reply.
   Give filtering and normal-capacity cases fixed expected outputs; limit-fault
   cases must exercise the declared cutoff rather than merely accept any error.
+- Exercise group ownership with fixtures where the observer dies before any
+  child announcement or JSON, while its log child stays alive with an inherited
+  pipe, and where the child closes its pipes but remains alive. Independently
+  verify group membership and eventual absence, keep individual child status
+  unknown when no report supplied it, and reject leader-only cleanup. Include
+  unresolved signal/probe failure and exhausted-grace cases that require unconfirmed
+  cleanup; verify that no signalling follows release of the leader's PID.
+- Exercise `--log-timeout-ms` parsing, the default, invalid values and disabled
+  capture. A controlled slow query must reach the short deadline and complete
+  under a larger override with the same execution result and query bounds.
+  Check that the effective value reaches both supervisors, neither restarts the
+  allowance, and output caps and cleanup grace stay unchanged. A still-stalled
+  collector must exhaust the larger finite allowance as well.
 - Require positive supplied-event cases to retain all eligible events and
   associations. Deliberately dropping a line or supplied event, inventing an
   association, suppressing every capture, or changing an execution answer must
@@ -326,12 +401,21 @@ in [tests/catalog.json](tests/catalog.json) and the case's section in
 to describe conditional live-record checks and mandatory supplied-event
 coverage. Keep their scan-bound descriptions consistent with the padding.
 
+Update the CLI usage in [cli.rs](controller/src/cli.rs), the CLI surface in
+[controller/README.md](controller/README.md), argument handling in
+[run_flow.rs](controller/src/run_flow.rs), CLI integration coverage and the user
+guide together for `--log-timeout-ms`. Document how to recognize a collection
+deadline and increase it on a slower machine, including the extra cleanup grace
+and unchanged byte limits. Publish the default and fixed grace in the limits
+inventory, and document the controller-to-observer deadline argument.
+
 Document the query predicate, byte-counting boundaries, budget relationships,
-failure reasons and cleanup observations in the permanent contracts. State the
-partial-collection policy and the distinct claims of live and controlled cases
-there so deletion of this plan leaves no implementation or test dependency on
-it. Keep repository links to the investigation record confined to associated
-`*-PLAN.md` files.
+failure reasons and process-group cleanup observations in the permanent
+contracts. Distinguish group absence from a received log-child wait result and
+unknown child identity when no observer reply arrives. State the partial-collection
+policy and the distinct claims of live and controlled cases there so deletion
+of this plan leaves no implementation or test dependency on it. Keep repository
+links to the investigation record confined to associated `*-PLAN.md` files.
 
 Run the affected Rust/consumer checks and meaningful collector failure controls,
 then build and validate a signed app containing the implementation. Run the
@@ -355,6 +439,13 @@ documented collection-limit outcomes and measured OS record availability.
   inner capture within its limits. A stalled process, a pipe held open or
   excessive output cannot make PW wait indefinitely to emit an available runner
   result. Truncating a buffer after an unbounded read fails this condition.
+- **User-controlled waiting.** A valid `--log-timeout-ms` override changes the
+  collection allowance at both supervisors without restarting it or changing
+  the runner timeout, query bounds, output limits or cleanup grace. Effective
+  settings and cutoff evidence are reported. Controlled slow input can complete
+  under a larger allowance; a hang remains bounded by that allowance plus the
+  fixed grace. Invalid values fail before execution, and disabled capture still
+  launches no collector.
 - **Query selection.** The OS query admits the supported Sandbox worker
   process/PID message forms. Unrelated messages containing the PID's digits in
   a different PID, path or other text do not qualify on that basis. Exact
@@ -387,10 +478,16 @@ documented collection-limit outcomes and measured OS record availability.
   unpadded client-end interval. Clock rollback retains null bounds and prevents
   querying. Neither padding nor successful capture asserts complete delivery,
   exact run membership or protection against PID reuse.
-- **Cleanup evidence.** The logging operation accounts for both the observer
-  and its log child. A termination request, confirmed exit and unconfirmed
-  cleanup remain distinguishable in the reported evidence. Sending a signal
-  or observing only the observer's exit does not establish that both exited.
+- **Cleanup evidence.** The controller owns the observer's process group from
+  spawn and can clean up its inherited log child after observer death without
+  receiving a child PID. Signalling finishes before the leader is reaped.
+  Observer wait status, received log-child wait status, group termination
+  requests, confirmed group absence and unconfirmed cleanup remain distinct.
+  No reply leaves individual child status unknown, not group cleanup unattempted.
+  Signal delivery, observer exit and pipe EOF alone never establish group
+  absence. Controlled orphan cases require independently verified group cleanup;
+  unresolved observation failures retain an explicit unconfirmed result, and loss of
+  ownership prevents further group signals.
 - **OS-independent default battery.** No default correctness assertion requires
   macOS to emit a selected denial, and passing does not depend on retries until
   a record appears. Empty results and supported budget-exhaustion outcomes are
