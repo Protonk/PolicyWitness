@@ -13,7 +13,7 @@ late denial unrecorded: the unified log holds no deny record for the worker's
 final denied read inside the scanned span
 ```
 
-The [case](tests/suites/witness_contract/check_deny_capture_window.py) denies an
+The [case](../tests/suites/witness_contract/check_deny_capture_window.py) denies an
 early read, holds two `/bin/sleep` children to their exec deadlines, then denies
 a late read about twenty seconds later. It checks the complete runner-client
 scan interval, associations and missing-record diagnostics. Its final assertion
@@ -48,7 +48,7 @@ unconditional worker-log availability guarantee has been established.
 Use the built app at `dist/PolicyWitness.app` from an unsandboxed session. In
 the automation harness, `log show` returned `Cannot run while sandboxed`;
 live investigation commands were rerun with escalation as described in
-[tests/README.md](tests/README.md#sandboxed-automation-harnesses). Missing
+[tests/README.md](../tests/README.md#sandboxed-automation-harnesses). Missing
 equipment or blocked capture is distinct from a successful query with no record.
 Preserve each execution and scan; these steps do not retry a failure until green.
 
@@ -480,20 +480,20 @@ than a dispatcher-owned completed run.
 
 | Evidence | Route and contents |
 | --- | --- |
-| Original failed case and app inventory | [exec-budget-robust](tests/out/runs/exec-budget-robust/): case artifacts under `suites/witness_contract/deny_capture_covers_the_run/artifacts/`; app inventory under `artifact-integrity/`. |
-| Original immediate passing rerun | [exec-budget-robust-rerun](tests/out/runs/exec-budget-robust-rerun/), same case artifact layout. |
-| Independent registered reruns | [crosscheck A](tests/out/runs/sandbox-log-crosscheck-20260928-a/) and [crosscheck B](tests/out/runs/sandbox-log-crosscheck-20260928-b/), each with observations and artifact-integrity receipts. |
-| Initial independent investigation | [INVESTIGATION.md](tests/out/sandbox-log-crosscheck-20260928/INVESTIGATION.md) indexes the original-failure re-queries, platform/C controls, tighter worker replay, delayed scans, unconfined read controls, and their scripts. |
-| New experiment driver and summarized results | [experiment.py](tests/out/sandbox-log-troubleshooting-20260928/experiment.py), [analysis.json](tests/out/sandbox-log-troubleshooting-20260928/analysis.json), [analyze.py](tests/out/sandbox-log-troubleshooting-20260928/analyze.py). |
-| Short matrix | [matrix/](tests/out/sandbox-log-troubleshooting-20260928/matrix/): `rows.json`, `initial-summary.json`, `block-*-initial.json`, `loss.json`, and per-case `specimen.json`, `command.json`, `envelope.json`. Counterexamples: `b2-17-n1-p0.5` and `b3-08-n32-p0.5`. |
-| Twenty-second runs | [long/](tests/out/sandbox-log-troubleshooting-20260928/long/): the same per-case receipts, `*-initial.json` raw scans and `initial-summary.json`; [long-timing-checks.json](tests/out/sandbox-log-troubleshooting-20260928/long-timing-checks.json) records interval/phase timestamp checks. Counterexamples include `b0-n8`, `b1-n1`, `b1-n8`, and `b2-n32`. |
-| Stream comparison and receipt times | [stream/](tests/out/sandbox-log-troubleshooting-20260928/stream/): `stream-receipts.jsonl`, `stream-command.json`, `stream-summary.json`, `initial-path.json`, per-case envelopes and `timestamp-comparison.json`; [stream-timing.json](tests/out/sandbox-log-troubleshooting-20260928/stream-timing.json) gives parsed receipt timing. |
-| Delayed wider queries and exact comparisons | [rescan/](tests/out/sandbox-log-troubleshooting-20260928/rescan/): `*-path-wide.json` commands/results and `summaries.json`; [cross-channel-checks.json](tests/out/sandbox-log-troubleshooting-20260928/cross-channel-checks.json) records exact target-membership and app-inventory equality checks. |
-| Coverage audit and controlled replay | [COVERAGE-AUDIT.md](tests/out/sandbox-log-troubleshooting-20260928/COVERAGE-AUDIT.md), [replay.py](tests/out/sandbox-log-troubleshooting-20260928/replay.py), [replay_test.rs](tests/out/sandbox-log-troubleshooting-20260928/replay_test.rs), and [replay/](tests/out/sandbox-log-troubleshooting-20260928/replay/): input envelope/specimen, source hashes, receipts, baseline/restored consumer outputs and all three rejected-mutation logs. |
-| Provenance and fixture locations | [provenance.json](tests/out/sandbox-log-troubleshooting-20260928/provenance.json); each live cohort's `environment.json` names its retained `/private/tmp/pw-log-…` target tree, and its `app-before.json`, `app-after.json`, `completion.json` record integrity and timing. |
-| Evidence review of the first round | [EVIDENCE-REVIEW.md](tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
-| Follow-up archive checks | [archive/](tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
-| Instrumented unconfined control | [latency/](tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
+| Original failed case and app inventory | [exec-budget-robust](../tests/out/runs/exec-budget-robust/): case artifacts under `suites/witness_contract/deny_capture_covers_the_run/artifacts/`; app inventory under `artifact-integrity/`. |
+| Original immediate passing rerun | [exec-budget-robust-rerun](../tests/out/runs/exec-budget-robust-rerun/), same case artifact layout. |
+| Independent registered reruns | [crosscheck A](../tests/out/runs/sandbox-log-crosscheck-20260928-a/) and [crosscheck B](../tests/out/runs/sandbox-log-crosscheck-20260928-b/), each with observations and artifact-integrity receipts. |
+| Initial independent investigation | [INVESTIGATION.md](../tests/out/sandbox-log-crosscheck-20260928/INVESTIGATION.md) indexes the original-failure re-queries, platform/C controls, tighter worker replay, delayed scans, unconfined read controls, and their scripts. |
+| New experiment driver and summarized results | [experiment.py](../tests/out/sandbox-log-troubleshooting-20260928/experiment.py), [analysis.json](../tests/out/sandbox-log-troubleshooting-20260928/analysis.json), [analyze.py](../tests/out/sandbox-log-troubleshooting-20260928/analyze.py). |
+| Short matrix | [matrix/](../tests/out/sandbox-log-troubleshooting-20260928/matrix/): `rows.json`, `initial-summary.json`, `block-*-initial.json`, `loss.json`, and per-case `specimen.json`, `command.json`, `envelope.json`. Counterexamples: `b2-17-n1-p0.5` and `b3-08-n32-p0.5`. |
+| Twenty-second runs | [long/](../tests/out/sandbox-log-troubleshooting-20260928/long/): the same per-case receipts, `*-initial.json` raw scans and `initial-summary.json`; [long-timing-checks.json](../tests/out/sandbox-log-troubleshooting-20260928/long-timing-checks.json) records interval/phase timestamp checks. Counterexamples include `b0-n8`, `b1-n1`, `b1-n8`, and `b2-n32`. |
+| Stream comparison and receipt times | [stream/](../tests/out/sandbox-log-troubleshooting-20260928/stream/): `stream-receipts.jsonl`, `stream-command.json`, `stream-summary.json`, `initial-path.json`, per-case envelopes and `timestamp-comparison.json`; [stream-timing.json](../tests/out/sandbox-log-troubleshooting-20260928/stream-timing.json) gives parsed receipt timing. |
+| Delayed wider queries and exact comparisons | [rescan/](../tests/out/sandbox-log-troubleshooting-20260928/rescan/): `*-path-wide.json` commands/results and `summaries.json`; [cross-channel-checks.json](../tests/out/sandbox-log-troubleshooting-20260928/cross-channel-checks.json) records exact target-membership and app-inventory equality checks. |
+| Coverage audit and controlled replay | [COVERAGE-AUDIT.md](../tests/out/sandbox-log-troubleshooting-20260928/COVERAGE-AUDIT.md), [replay.py](../tests/out/sandbox-log-troubleshooting-20260928/replay.py), [replay_test.rs](../tests/out/sandbox-log-troubleshooting-20260928/replay_test.rs), and [replay/](../tests/out/sandbox-log-troubleshooting-20260928/replay/): input envelope/specimen, source hashes, receipts, baseline/restored consumer outputs and all three rejected-mutation logs. |
+| Provenance and fixture locations | [provenance.json](../tests/out/sandbox-log-troubleshooting-20260928/provenance.json); each live cohort's `environment.json` names its retained `/private/tmp/pw-log-…` target tree, and its `app-before.json`, `app-after.json`, `completion.json` record integrity and timing. |
+| Evidence review of the first round | [EVIDENCE-REVIEW.md](../tests/out/sandbox-log-troubleshooting-20260928-b/EVIDENCE-REVIEW.md): inventory, claim-to-file mapping, counterexample table, driver review, regularities and gaps. |
+| Follow-up archive checks | [archive/](../tests/out/sandbox-log-troubleshooting-20260928-b/archive/): `archive_checks.py` and `summary.json`; per missing worker `pid-*.ndjson` (channel-agnostic PID query) and `kext-*-<phase>.ndjson` (`sender == "Sandbox"` within 3 s); per cohort `records-*.ndjson` and `loss-*.ndjson` (with `--loss`); every query's `*-command.json`; `flush-signature-check.json`. |
+| Instrumented unconfined control | [latency/](../tests/out/sandbox-log-troubleshooting-20260928-b/latency/): `probe_latency.c`, `run_latency.py`, `receipts.jsonl` (23 runs), `environment.json` (codesign transcript, target tree `/private/tmp/pw-log-latency-ym2qqnyp`), `initial-*.ndjson` and `delayed-*.ndjson` scans with `*-command.json`, `analyze_latency.py`, `analysis.json`, `timeline.json`, `pid-keyed-all-controls*` (apply lines per PID), `duplicate-report-lines.json`. |
 
 The new driver refuses to reuse an existing mode directory. To repeat it, copy
 `experiment.py` and `analyze.py` into a fresh direct child of `tests/out/`, then
