@@ -44,11 +44,13 @@ changes are outside the initial scope.
   valid negative controls. Corrected queries found no counted loss overlapping
   the missing attempts. Diagnostic loss searches must use the corrected method;
   absence of a loss notice must not become a production completeness claim.
-- Archive wall timestamps differed from the syscall's instrumented wall clock
-  by approximately +10 to +36 ms during the session. Whole-second ceiling leaves
-  variable trailing slack and can exclude a near-boundary record. Wider searches
-  did not recover the observed omissions, so this is a separate coverage issue.
-  Those measurements are not a universal bound on the offset.
+- Archive wall timestamps ran about +35 to +36 ms later than the instrumented
+  control's syscall-time `CLOCK_REALTIME`; the earlier stream-versus-archive
+  comparison implies about +10 ms an hour before, so the offset drifts within a
+  session. Whole-second ceiling leaves variable trailing slack and can exclude a
+  near-boundary record. Wider searches did not recover the observed omissions,
+  so this is a separate coverage issue. Those measurements are not a universal
+  bound on the offset.
 - Burst and lifetime controls did not establish guaranteed record availability.
   The 32-read condition retained some evidence in each phase of three long runs,
   but lost individual records. Neither repetition nor retries until a record
