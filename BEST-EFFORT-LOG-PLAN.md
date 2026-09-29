@@ -1,9 +1,32 @@
 # Best-effort deny-log evidence
 
-Status: Sections 1–4 complete. Section 5 is next. The isolated archive is accepted on the
-14.8.3 reader, resolving the query-selection prerequisite; see
-[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md). The section 3 live
-final-denial failure remains retained; section 4 replaces that emission requirement.
+Status: Complete. Sections 1–5 are implemented and accepted on macOS 14.8.3
+(23J220). The final integrated default battery passed all 165 cases with no
+skips or unrun cases against the unchanged signed development app. No open
+prerequisites or acceptance failures remain. Earlier failures retain their
+original results; the checkpoints below distinguish them from final acceptance.
+The isolated archive prerequisite is resolved; see
+[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md).
+This plan remains on disk for review; permanent contracts and tests do not
+depend on it.
+
+## Associated commits
+
+The table groups the planning revisions and lists each implementation/fixture
+commit. `git log -- BEST-EFFORT-LOG-PLAN.md LOG-ARCHIVE-FIXTURE-PLAN.md` gives the
+individual planning edits. The commit carrying this final status and table is
+the plan-only completion record.
+
+| Commit | Scope | Review summary |
+| --- | --- | --- |
+| `facbe77` through `3794562` | Planning | Diagnosis, ownership, budgets, scan padding, acceptance criteria and the required archive oracle. |
+| `97f4d09` | Sections 1–2 | Separate execution/log ownership; bounded supervision, timeout override, exact worker-token predicate and source controls. Archive acceptance was still pending. |
+| `298692d` | Archive prerequisite | Scope isolated fixture generation and reader acceptance. |
+| `9b09ad9` | Archive fixture | Commit the real 14.8.7 archive, independent corpus/manifest, generation recipe and provenance. |
+| `d17d289` | Fixture review | Abort generation on corpus comparison failure; accepted fixture branch brought into main. |
+| `a50164c` | Section 3 | Pad client-span queries by two seconds, preserve raw bounds and candidate evidence, and cover historical windows. |
+| `fbcb9bf` | Section 4 | Supplied-text preservation/capacity controls, both-boundary failure coverage and live checks independent of OS emission. |
+| `72f0516` | Section 5 | Finish permanent contracts, correct direct-wrapper registration, pass the integrated default battery and protect evidence. |
 
 ## Execution checkpoint
 
@@ -147,8 +170,8 @@ reaches the existing emission requirement that section 4 will replace.
 ## Section 4 checkpoint
 
 Implementation, controlled validation and signed live validation are complete.
-Section 5's integrated default battery and final contract audit remain separate
-work.
+The section 5 checkpoint records the final contract audit and integrated
+default-battery acceptance.
 
 - The observer's unchanged `log show` collector/parser now lives in
   `controller/src/log_show.rs`, used by production and supplied-text replay.
@@ -220,6 +243,72 @@ work.
   inputs by [the final 52-control run](tests/out/runs/best-effort-log-section4-final-live-controls/run.json).
   This test-only refinement followed signed validation and did not change app
   bytes. No live capture was retried to obtain a preferred availability result.
+
+## Section 5 checkpoint
+
+Complete. Permanent documentation, generated copies, test registration and the
+integrated signed-artifact validation are accepted.
+
+- The root description, controller contract, user guide, limits inventory,
+  failure/consumer contract, coverage map and fixture catalog agree on execution
+  independence, padded bounds, the exact OS predicate, shared monotonic budget,
+  raw-byte counting, cutoff reasons, partial evidence and owned cleanup.
+  The guide shows how to recognize `deadline` and use a finite larger
+  `--log-timeout-ms` without changing scan bounds, runner timeout or byte limits.
+  Obsolete 8 MiB/full-buffer observer descriptions are corrected, while the
+  runner-client and sbpl-check receiver contracts remain distinct.
+- `docs/limits.json` counting prose was clarified and its document/guide copies
+  regenerated; enforced values did not change. Request schema 3, response
+  schema 11, worker ABI 7 and controller envelope 3 remain current. The additive
+  collection facts do not reinterpret historical envelopes: missing supervision
+  remains unknown, missing padding means zero and stored trailing scans remain
+  trailing. Existing consumer controls and generated-contract checks pass.
+- `YOLO=1 ./build.sh` rebuilt and Developer ID signed the app and ZIP and staged
+  the updated guide. The [audit receipts](tests/out/runs/best-effort-log-section5-accepted/contract-audit/README.md)
+  retain the build log, build stamp, source snapshots, ZIP/guide hashes, link
+  checks and plan-independence check. This is a signed development build; no
+  notarization submission was made.
+- The [first default battery](tests/out/runs/best-effort-log-section5-default/run.json)
+  completed all 165 cases: 164 passed and `shell_helpers/script_groups` failed.
+  Its independent wrapper inventory caught the missing `log_capture_controls.sh`
+  entry in the direct witness-suite wrapper; the public catalog already included
+  the case. The missing entry was added without changing the signed app. The
+  failed run remains intact and is not credited as a passing integrated run.
+- The [final default battery](tests/out/runs/best-effort-log-section5-accepted/run.json)
+  (`PW_TEST_OUT_DIR=tests/out/runs/best-effort-log-section5-accepted tests/run.sh`)
+  passed **165/165 cases**, with zero skips, unrun cases or harness errors.
+  Coverage includes 192 Rust unit tests, four explicitly selected disposition
+  controls, 381 Swift tests, 14 CLI integration tests, 52 independent live
+  acceptance controls, the required archive query and all three live log
+  witnesses. The archive method is separately registered and executed, even
+  though it is excluded from the ordinary Rust unit batch. Signature/evidence
+  checks passed, and all four before/after app inventories from the two default
+  runs are equal. Source, ZIP and staged guide stayed unchanged during the
+  accepted run; subsequent retention-index and plan edits record acceptance only.
+- The first default run observed an early record but no late record in its
+  20,087 ms window witness. It correctly passed the revised log contract and
+  retained the missing-record diagnostic. The final 20,079 ms run observed both.
+  Both completed collection without cutoff. These are separate availability
+  observations; the second default run was required by the wrapper correction,
+  not by a desired log result. The earlier section 3 emission-dependent failure
+  remains preserved with its original status.
+- The [mutation applicability audit](tests/out/runs/best-effort-log-section5-accepted/contract-audit/mutation-applicability.json)
+  verifies unchanged predicate, command builder and archive oracle, and the
+  behavior-preserving parser move. Both original predicate mutations still
+  provide pre-parser rejection evidence. All five replay-mutated production
+  paths match their accepted hashes. Later test-only additions leave the
+  decisive positive assertions unchanged; the reviewed differences are retained
+  explicitly and do not acquire retrospective mutation credit. The final
+  default battery covers those additions. Original mutation commands, patches,
+  outputs and archive runs are copied into the retained audit directory.
+- The [failure classification](tests/out/runs/best-effort-log-section5-accepted/contract-audit/failure-classification.json)
+  distinguishes corrected test/registration errors, resolved missing-archive
+  equipment, the debug capacity deadline and observed live-record absence.
+  `tests/RETAINED.json` protects all 20 related managed runs, including the
+  original failures. No failed result was overwritten or converted to success.
+  Permanent tests use checked-in fixtures and constructed input; no permanent
+  code or documentation links to either investigation plan. All acceptance
+  claims remain usable without this file or the local audit receipts.
 
 ## Promise and scope
 
