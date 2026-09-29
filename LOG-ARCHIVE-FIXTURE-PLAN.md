@@ -2,8 +2,9 @@
 
 Status: Complete. The fixture was generated in an isolated macOS 14.8.7
 (23J520) VM on a macOS 26.6.2 (25G83) host and accepted by this checkout's
-macOS 14.8.3 (23J220) reader. The query-selection prerequisite in
-[BEST-EFFORT-LOG-PLAN.md](BEST-EFFORT-LOG-PLAN.md), sections 2 and 4, is resolved.
+macOS 14.8.3 (23J220) reader. The query-selection prerequisite for the
+[best-effort log collection contract](controller/README.md#log-collection-budgets-and-cleanup)
+is resolved.
 
 ## Accepted deliverable
 

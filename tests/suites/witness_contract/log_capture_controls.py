@@ -110,7 +110,7 @@ def projection(e):
 def main():
     out=Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
     records=[]
-    def check(name, e, expected='captured', rejection=None):
+    def check(name, e, expected='captured', rejection=None, now_ns=NOW):
         # Model the serialized observer pipe independently of the assertions.
         c=e['data']['sandbox_log_capture']; r=c['supervision']
         if c.get('observer') is not None and not r['stdout']['truncated']:
@@ -119,7 +119,7 @@ def main():
             c.update(stdout_bytes_received=n,stdout_bytes_retained=n)
         (out/(name+'.json')).write_text(json.dumps(e,indent=2)+'\n')
         try:
-            result=check_live_capture(e, now_ns=NOW)
+            result=check_live_capture(e, now_ns=now_ns)
             assert result['outcome']==expected, result
             assert projection(e)==projection(complete()), 'execution evidence changed'
         except AssertionError as error:
@@ -136,6 +136,16 @@ def main():
         for stream in ('stdout','stderr'):
             check(boundary+'_'+stream+'_overflow',limit_case(boundary,stream=stream),'budget_exhausted')
         check(boundary+'_deadline',limit_case(boundary,'deadline'),'budget_exhausted')
+    # Parsing may cross the inner reserved deadline just after the supervisor's
+    # last elapsed-time sample. It must not wait for the outer deadline to count.
+    for boundary, deadline, elapsed in [('log_show',10_000_000_000,8999), ('observer',11_000_000_000,9999)]:
+        e=limit_case(boundary,'deadline'); c=e['data']['sandbox_log_capture']
+        r=c['supervision'] if boundary=='observer' else c['observer']['data']['collection']
+        r['elapsed_ms']=elapsed
+        r['cutoff']['detail']='output parsing exceeded the collection deadline'
+        check(boundary+'_parsing_deadline',e,'budget_exhausted',now_ns=deadline)
+        check('reject_'+boundary+'_parsing_before_deadline',copy.deepcopy(e),
+              rejection='deadline not observed',now_ns=deadline-1)
     e=limit_case('observer','deadline'); c=e['data']['sandbox_log_capture']; r=c['supervision']
     c.update(tool_exit_code=1,stdout_raw=None,stdout_parse_error=None,stdout_bytes_received=0,stdout_bytes_retained=0)
     r['process'].update(pid=None,exit_observed=False,reaped=False,exit_code=None)

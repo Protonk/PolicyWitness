@@ -55,7 +55,8 @@ def check_cutoff(cutoff, boundary, report, now_ns):
         # monotonic clock independently when that later phase is named.
         require(report['elapsed_ms'] >= report['budget']['timeout_ms'] - report['reserve_ms'] or
                 (isinstance(cutoff.get('detail'), str) and bool(cutoff['detail']) and
-                 now_ns >= report['budget']['deadline_monotonic_ns']), 'deadline not observed')
+                 now_ns >= report['budget']['deadline_monotonic_ns'] - report['reserve_ms'] * 1_000_000),
+                'deadline not observed')
     else:
         allowed = {
             'observer': {'output_overflow': {'stdout': 'log_observer_output', 'stderr': 'log_observer_stderr'}},

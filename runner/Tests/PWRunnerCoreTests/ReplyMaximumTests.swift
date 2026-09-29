@@ -15,6 +15,12 @@ import Foundation
 
 private let maximalUnit = "\u{01}"
 
+// A parent realpath is followed by a slash and an admitted literal leaf; the
+// resulting diagnostic string can exceed realpath's own 1,023-byte buffer.
+let maximalParentPathBytes = 1023 + 1 + (PWShmLayout.targetMax - 1)
+// Supported system firmlinks prepend /System/Volumes/Data to a realpath.
+let maximalFirmlinkPathBytes = 1023 + "/System/Volumes/Data".utf8.count
+
 private func maximal(_ bytes: Int) -> String { String(repeating: maximalUnit, count: bytes) }
 
 /// Documented UTF-8 byte limits for echoed strings; nil keeps a fixed value.
@@ -42,7 +48,8 @@ private let stringPolicy: [String: Int?] = [
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
-    "realpath_resolved": 1023, "firmlink_resolved": 1023, "parent_realpath_resolved": 1023,
+    "realpath_resolved": 1023, "firmlink_resolved": maximalFirmlinkPathBytes,
+    "parent_realpath_resolved": maximalParentPathBytes,
     "observed_path": PWShmLayout.observedPathMax - 1, "stdout": PWShmLayout.childOutputBytes - 1,
     "stderr": PWShmLayout.childOutputBytes - 1, "text": PWShmLayout.diagnosticBytes - 1,
     // Generated below rather than filled: valid base64 and the validator's own line.
@@ -82,14 +89,14 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     var diagnostics = check["path_diagnostics"] as! [String: Any]
     diagnostics["same_as_input"] = [String]()
     diagnostics["realpath_resolved"] = maximal(1023)
-    diagnostics["firmlink_resolved"] = maximal(1023)
+    diagnostics["firmlink_resolved"] = maximal(maximalFirmlinkPathBytes)
     check["path_diagnostics"] = diagnostics
     step["sandbox_check"] = check
     var attempt = step["attempt"] as! [String: Any]
     var attemptPaths = attempt["path_diagnostics"] as! [String: Any]
     attemptPaths["same_as_input"] = [String]()
     attemptPaths["realpath_resolved"] = maximal(1023)
-    attemptPaths["parent_realpath_resolved"] = maximal(1023)
+    attemptPaths["parent_realpath_resolved"] = maximal(maximalParentPathBytes)
     attempt["path_diagnostics"] = attemptPaths
     attempt["observed_path"] = maximal(PWShmLayout.observedPathMax - 1)
     attempt["error"] = maximal(PWShmLayout.errorMax - 1)

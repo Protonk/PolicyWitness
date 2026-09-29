@@ -217,8 +217,10 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   independent sandbox-check query. `matching_evidence` records each candidate's
   mapped operation, submitted kind/action, matched path and path sources.
   The host's after-orchestration `attempt.path_diagnostics` forms (`realpath_resolved`,
-  `parent_realpath_resolved`) are a match source only with their observer and
-  phase, and appear in `path_sources` under that provenance; a kernel record
+  `parent_realpath_resolved`) are a match source only with a valid compact block,
+  `runner_host`/`after_orchestration` provenance and an input equal to both the
+  submitted target and reported requested path. They appear in `path_sources`
+  under that provenance; a kernel record
   names the resolved path, so a target through a symlink correlates that way.
   Unmatched events remain
   in `deny_events`. Validator queries can themselves generate denial records

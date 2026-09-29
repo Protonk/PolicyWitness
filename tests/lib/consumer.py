@@ -231,6 +231,8 @@ def validate_evidence_shape(envelope):
                     (attempt_path.get('observer'), attempt_path.get('phase')) != ('runner_host', 'after_orchestration'):
                 errors.append(f'{sid}: attempt path diagnostics lack host/phase provenance')
             if isinstance(attempt_path, dict):
+                if attempt_path.get('input') != attempt.get('requested_path') or not isinstance(attempt.get('requested_path'), str):
+                    errors.append(f'{sid}: attempt path diagnostics input differs from requested_path')
                 # The attempt block has no legacy shape: it is compact from birth.
                 errors.extend(f"{sid}: attempt {error.replace('response 9 path diagnostics', 'path diagnostics')}"
                               for error in validate_path_diagnostics(attempt_path, require_compact=True, forms=ATTEMPT_PATH_FORMS))

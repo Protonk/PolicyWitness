@@ -1054,9 +1054,9 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Synthesized maximal reply",
-      "value": 24051866,
+      "value": 24869018,
       "unit": "bytes",
-      "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present.",
+      "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions.",
       "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",
       "control": "Recomputed by runner_unit; edit the manifest when the synthesizer's number moves.",
       "sources": [
@@ -1352,7 +1352,7 @@
       "value": 1000,
       "unit": "milliseconds",
       "counting": "Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged.",
-      "effect": "An inner deadline cutoff arrives as an intact observer reply with its retained diagnostics; an allowance at or below the reserve leaves no time for the query itself.",
+      "effect": "Leaves time for an intact observer reply containing the inner cutoff and retained diagnostics. Cleanup and scheduling can consume this reserve; an interrupted report retains only bounded transport diagnostics. An allowance at or below the reserve leaves no time for the query itself.",
       "control": "Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection.",
       "sources": [
         {

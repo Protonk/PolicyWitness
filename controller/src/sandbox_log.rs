@@ -205,6 +205,47 @@ pub fn match_step_denies(
     bounded_step_denies(steps, submitted_plan, deny_events, pid, None).unwrap()
 }
 
+// Validate the whole compact block before using either form. These observations
+// belong to this submitted attempt, and their fixed provenance is part of the
+// contract, not an arbitrary label supplied by a runner reply.
+fn host_attempt_forms<'a>(step: &'a Value, submitted: &Value) -> Option<[Option<&'a str>; 2]> {
+    if !matches!(submitted.get("kind")?.as_str()?, "file" | "exec") {
+        return None;
+    }
+    let attempt = step.get("attempt")?;
+    let forms = attempt.get("path_diagnostics")?;
+    let input = forms.get("input")?.as_str()?;
+    if input.is_empty()
+        || Some(input) != submitted.get("target").and_then(Value::as_str)
+        || Some(input) != attempt.get("requested_path").and_then(Value::as_str)
+        || forms.get("observer")?.as_str()? != "runner_host"
+        || forms.get("phase")?.as_str()? != "after_orchestration"
+    {
+        return None;
+    }
+    let names = ["realpath_resolved", "parent_realpath_resolved"];
+    let mut same = [false; 2];
+    for name in forms.get("same_as_input")?.as_array()? {
+        let index = names
+            .iter()
+            .position(|&supported| Some(supported) == name.as_str())?;
+        if same[index] {
+            return None;
+        }
+        same[index] = true;
+    }
+    let mut resolved = [None; 2];
+    for (index, name) in names.iter().enumerate() {
+        resolved[index] = match (same[index], forms.get(name)) {
+            (true, None) => Some(input),
+            (false, Some(Value::Null)) => None,
+            (false, Some(Value::String(value))) if value != input => Some(value.as_str()),
+            _ => return None,
+        };
+    }
+    Some(resolved)
+}
+
 pub fn bounded_step_denies(
     steps: &[Value],
     submitted_plan: &[Value],
@@ -252,7 +293,7 @@ pub fn bounded_step_denies(
                 .or_insert(Some(request));
         }
     }
-    let joined: Vec<(&str, &Value, &Value)> = steps
+    let joined: Vec<_> = steps
         .iter()
         .filter_map(|step| {
             let id = step_id(step)?;
@@ -260,7 +301,8 @@ pub fn bounded_step_denies(
                 return None;
             }
             let request = (*requests.get(id)?)?;
-            Some((id, step, request.get("attempt")?))
+            let attempt = request.get("attempt")?;
+            Some((id, step, attempt, host_attempt_forms(step, attempt)))
         })
         .collect();
     let mut out = Vec::new();
@@ -282,7 +324,7 @@ pub fn bounded_step_denies(
         };
         let mut candidates = Vec::new();
         let mut matching_evidence = Vec::new();
-        for &(id, step, attempt) in &joined {
+        for &(id, step, attempt, forms) in &joined {
             if !attempt_operations(attempt).contains(&operation) {
                 continue;
             }
@@ -300,33 +342,13 @@ pub fn bounded_step_denies(
                     path_sources.push(format!("attempt.{key}"));
                 }
             }
-            // Host-resolved forms of the attempt target count only with their
-            // observer/phase provenance. The block is always compact: a form
-            // listed in same_as_input equals the input, a string is the derived
-            // form, null derived nothing. A malformed block supplies no identity.
-            if let Some(forms) = step.get("attempt").and_then(|a| a.get("path_diagnostics")) {
-                let label = |key: &str| {
-                    forms
-                        .get(key)
-                        .and_then(Value::as_str)
-                        .filter(|text| !text.is_empty())
-                };
-                if let (Some(observer), Some(phase), Some(input), Some(listed)) = (
-                    label("observer"),
-                    label("phase"),
-                    forms.get("input").and_then(Value::as_str),
-                    forms.get("same_as_input").and_then(Value::as_array),
-                ) {
-                    for name in ["realpath_resolved", "parent_realpath_resolved"] {
-                        let is_listed = listed.iter().any(|n| n.as_str() == Some(name));
-                        let value = match (is_listed, forms.get(name)) {
-                            (true, None) => Some(input),
-                            (false, Some(form)) => form.as_str(),
-                            _ => None,
-                        };
-                        if value == Some(path) {
-                            path_sources.push(format!("{observer}.{phase}.{name}"));
-                        }
+            if let Some(forms) = forms {
+                for (name, value) in ["realpath_resolved", "parent_realpath_resolved"]
+                    .into_iter()
+                    .zip(forms)
+                {
+                    if value == Some(path) {
+                        path_sources.push(format!("runner_host.after_orchestration.{name}"));
                     }
                 }
             }
@@ -1247,6 +1269,74 @@ mod tests {
             matches[0].matching_evidence[0].path_sources,
             ["submitted_attempt.target", "attempt.requested_path"]
         );
+    }
+    #[test]
+    fn malformed_host_forms_cannot_supply_candidate_identity() {
+        let plan = [request("s", "open_read", "/link/file")];
+        let valid = json!({"input": "/link/file", "same_as_input": [],
+            "realpath_resolved": "/real/file", "parent_realpath_resolved": null,
+            "observer": "runner_host", "phase": "after_orchestration"});
+        let mut malformed = Vec::new();
+        for (key, value) in [
+            ("observer", json!("worker")),
+            ("phase", json!("before_attempt")),
+            ("input", json!("/unrelated/file")),
+            ("same_as_input", json!(["unknown"])),
+            ("same_as_input", json!([3])),
+            ("same_as_input", json!(["realpath_resolved"])),
+            ("parent_realpath_resolved", json!(3)),
+            ("parent_realpath_resolved", json!("/link/file")),
+        ] {
+            let mut forms = valid.clone();
+            forms[key] = value;
+            malformed.push(forms);
+        }
+        let mut absent = valid.clone();
+        absent
+            .as_object_mut()
+            .unwrap()
+            .remove("parent_realpath_resolved");
+        malformed.push(absent.clone());
+        absent["same_as_input"] = json!(["parent_realpath_resolved", "parent_realpath_resolved"]);
+        malformed.push(absent);
+        for forms in malformed {
+            let step = json!({"step_id": "s", "attempt": {
+                "requested_path": "/link/file", "path_diagnostics": forms}});
+            assert!(
+                match_step_denies(
+                    &[step.clone()],
+                    &plan,
+                    &[deny(Some(42), "file-read-data", "/real/file")],
+                    Some(42)
+                )
+                .is_empty(),
+                "{forms}"
+            );
+            let direct = match_step_denies(
+                &[step],
+                &plan,
+                &[deny(Some(42), "file-read-data", "/link/file")],
+                Some(42),
+            );
+            assert_eq!(
+                direct[0].matching_evidence[0].path_sources,
+                ["submitted_attempt.target", "attempt.requested_path"],
+                "{forms}"
+            );
+        }
+        for requested in [Value::Null, json!("/different/file")] {
+            let step = json!({"step_id": "s", "attempt": {
+                "requested_path": requested, "path_diagnostics": valid}});
+            assert!(
+                match_step_denies(
+                    &[step],
+                    &plan,
+                    &[deny(Some(42), "file-read-data", "/real/file")],
+                    Some(42)
+                )
+                .is_empty()
+            );
+        }
     }
     #[test]
     fn parent_form_matches_created_and_unlinked_records() {

@@ -41,6 +41,33 @@ def consumer_controls(artifacts, baseline, current):
         require(a['comparison_groups']['agreement'] == ['fs_write_allowed'], 'supported agreement must remain recoverable')
 
     run('supported_agreement', current, agreement)
+    # Attempt forms have their own compact contract even beside a legacy query.
+    resolved = copy.deepcopy(current)
+    attempt = resolved['data']['runner_result']['steps'][0]['attempt']
+    attempt['requested_path'] = '/link/file'
+    attempt['path_diagnostics'] = dict(input='/link/file', observer='runner_host',
+        phase='after_orchestration', same_as_input=[], realpath_resolved='/real/file',
+        parent_realpath_resolved=None)
+    assert not validate_evidence_shape(resolved)
+    run('attempt_path_forms', resolved,
+        lambda a: require(a['steps'][0]['attempt_path_diagnostics'] == attempt['path_diagnostics'],
+                          'attempt path forms or provenance lost'))
+    for name, change, diagnostic in [
+        ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
+        ('missing_target', lambda a: a.pop('requested_path'), 'input differs from requested_path'),
+        ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/phase provenance'),
+        ('wrong_phase', lambda a: a['path_diagnostics'].update(phase='before_attempt'), 'host/phase provenance'),
+        ('missing_compact', lambda a: a['path_diagnostics'].pop('same_as_input'), 'require same_as_input'),
+        ('duplicate_form', lambda a: a['path_diagnostics'].update(same_as_input=['realpath_resolved']*2), 'unique supported form names'),
+        ('missing_form', lambda a: a['path_diagnostics'].pop('parent_realpath_resolved'), 'exclusively'),
+    ]:
+        malformed = copy.deepcopy(resolved)
+        change(malformed['data']['runner_result']['steps'][0]['attempt'])
+        errors = validate_evidence_shape(malformed)
+        (artifacts / ('attempt_path_' + name + '.json')).write_text(json.dumps(dict(envelope=malformed, errors=errors), indent=2)+'\n')
+        assert any(diagnostic in error for error in errors), (name, errors)
+        records.append(dict(control='attempt_path_' + name, rejected=True, errors=errors))
+    assert recover_evidence(current)['steps'][0]['attempt_path_diagnostics'] is None
     unknown = copy.deepcopy(current)
     unknown['data']['runner_result']['steps'][0]['comparison']['conclusion'] = 'unavailable'
     unknown['data']['runner_result']['steps'][0]['drift'] = None

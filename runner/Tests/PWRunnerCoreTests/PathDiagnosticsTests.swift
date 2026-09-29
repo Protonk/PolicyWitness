@@ -5,6 +5,47 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
     let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     tk.group("path diagnostics wire states and byte identity") {
+        tk.run("composed host paths can exceed the realpath buffer without escaping the reply bound") {
+            let fm = FileManager.default
+            let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("pw-long-parent-\(UUID().uuidString)")
+            try fm.createDirectory(at: root, withIntermediateDirectories: true)
+            defer { try? fm.removeItem(at: root) }
+            var parent = root
+            while parent.path.utf8.count < 850 {
+                parent.appendPathComponent(String(repeating: "d", count: 100))
+            }
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+            let link = root.appendingPathComponent("link")
+            try fm.createSymbolicLink(at: link, withDestinationURL: parent)
+            let leaf = String(repeating: "x", count: 240)
+            let input = link.path + "/" + leaf
+            try expectTrue(input.utf8.count < PWShmLayout.targetMax, "target must pass admission")
+            guard let resolved = parentRealpathResolved(input),
+                  let realParent = canonicalizePath(parent.path).resolved else {
+                throw TestFailure(message: "long parent must resolve")
+            }
+            try expectEqual(resolved, realParent + "/" + leaf)
+            try expectTrue(resolved.utf8.count > 1023, "composition exceeds realpath's limit")
+            try expectTrue(resolved.utf8.count <= maximalParentPathBytes, "maximal reply covers the composed path")
+            // Firmlink substitution also adds bytes after realpath has finished.
+            let basis = "/private/" + String(repeating: "x", count: 1023 - "/private/".utf8.count)
+            guard let mapped = firmlinkResolved(basis) else { throw TestFailure(message: "standard firmlink missing") }
+            try expectTrue(mapped.utf8.count > 1023)
+            try expectTrue(mapped.utf8.count <= maximalFirmlinkPathBytes)
+            // Fail visibly if this host's system mappings need a larger bound.
+            if let table = try? String(contentsOfFile: "/usr/share/firmlinks", encoding: .utf8) {
+                for row in table.split(separator: "\n") {
+                    guard let source = row.split(separator: "\t").first,
+                          let mapped = firmlinkResolved(String(source)) else { continue }
+                    try expectTrue(mapped.utf8.count - source.utf8.count <= maximalFirmlinkPathBytes - 1023,
+                                   "system firmlink expansion exceeds the synthesized allowance")
+                }
+            }
+            let forms = PWRunnerAttemptPathDiagnostics(input: input, realpath_resolved: nil,
+                parent_realpath_resolved: resolved, observer: "runner_host", phase: "after_orchestration")
+            let decoded = try pwRunnerDecodeJSON(PWRunnerAttemptPathDiagnostics.self, from: pwRunnerEncodeJSON(forms))
+            try expectEqual(decoded.parent_realpath_resolved, .some(resolved))
+        }
         tk.run("shared valid and malformed fixtures decode and re-encode without evidence loss") {
             let data = try Data(contentsOf: root.appendingPathComponent("tests/fixtures/contract/path_diagnostics.json"))
             let rows = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]

@@ -175,6 +175,20 @@
       "reason": "Best-effort deny-log initial default battery: 164 passes and the direct witness-wrapper registration failure; preserve alongside its correction and final acceptance.",
       "source": null,
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/best-effort-log-final-review-source",
+      "run_id": "20260929T181411Z_b9604367",
+      "reason": "Final best-effort log review: all 37 selected Swift/native cases passed, including 384 Swift checks and composed-path bounds. Source is the base commit plus the review patch preserved with final-review-default.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/best-effort-log-final-review-default",
+      "run_id": "20260929T181548Z_31e432e6",
+      "reason": "Final best-effort log review: all 165 default cases passed with no skips, unrun cases or harness errors; signed app unchanged. Regression failures, source patch, build log and review findings are preserved under review-audit/.",
+      "source": null,
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
