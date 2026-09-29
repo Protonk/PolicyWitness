@@ -265,6 +265,7 @@ mod tests {
             assert_eq!(run.exit_code, 0);
             let window =
                 SandboxLogWindow::runner_client_span(run.started_at_unix_ms, run.ended_at_unix_ms);
+            assert_eq!(window.pad_seconds, 2);
             assert!(window.start.is_none() && window.end.is_none());
             assert!(observer_argv("observer".into(), 42, "pw-probe-runner", &window).is_err());
             // A unit-test binary has no bundle helper to resolve. This must

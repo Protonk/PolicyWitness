@@ -446,7 +446,12 @@ public contract. An incomplete attempt can still be a candidate: a kernel event
 can precede interrupted publication.
 
 `capture.window` records the scanned interval, the runner client's own span
-widened to whole seconds, and explicitly reports no structured event
+rounded outward to whole seconds and padded by two seconds at each end:
+`floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client
+milliseconds are unchanged; `pad_seconds: 2` describes the pad (absence in older
+envelopes means 0). Supported records in either padding region remain eligible
+for correlation. This allowance for client/archive clock differences promises no
+delivery or exact run membership. The window explicitly reports no structured event
 timestamps, exact run membership, step ordering, or PID-reuse protection. The
 observer mirrors the interval it scanned; any other interval is
 `window_mismatch`, which retains raw observer evidence but never yields

@@ -1,4 +1,4 @@
-"""The live observer is asked for the whole client interval.
+"""The live observer is asked for the padded client interval.
 
 The specimen denies one read, holds two exec children to their worker deadlines,
 then denies another read, so the first denial is well over ten seconds older
@@ -7,10 +7,10 @@ before the attempts. Real ``log show`` must accept and mirror the independently
 computed bounds. Missing kernel records are recorded as unavailable evidence.
 
 An independent control replays the retired trailing interval (the ten seconds
-before the client's end) through the same embedded observer against the same
+before the unpadded, rounded client end) through the same embedded observer against the same
 log store. Event timestamps, when present, establish interval membership;
 path names do not establish timing. Deterministic Rust controls use a fixed
-event corpus to require early/late inclusion and exclusion at both bounds.
+event corpus to require inclusion in both pads and exclusion outside both bounds.
 
 The final denied read is the minimum witness: it happened last, inside the
 scanned span, so a log store that holds no record of it fails the case with a
@@ -125,9 +125,10 @@ def main():
     assert window['kind'] == 'runner_client_span' and 'last' not in window, window
     assert window['started_at_unix_ms'] == client['started_at_unix_ms'], (window, client)
     assert window['ended_at_unix_ms'] == client['ended_at_unix_ms'], (window, client)
-    start_s = client['started_at_unix_ms'] // 1000
-    end_s = max((client['ended_at_unix_ms'] + 999) // 1000, start_s + 1)
-    assert (window['start'], window['end']) == (stamp(start_s), stamp(end_s)), window
+    assert window['pad_seconds'] == 2, window
+    query_start_s = client['started_at_unix_ms'] // 1000 - 2
+    query_end_s = (client['ended_at_unix_ms'] + 999) // 1000 + 2
+    assert (window['start'], window['end']) == (stamp(query_start_s), stamp(query_end_s)), window
     assert STAMP.match(window['start']) and STAMP.match(window['end']), window
     for key in WINDOW_FLAGS:
         assert window[key] is False, window
@@ -147,7 +148,7 @@ def main():
     associations = {item['event_index']: item for item in capture['step_denies']}
     expected_steps = {str(early): ids['early'], str(late): ids['late']}
     for read in reads:
-        assert start_s <= read['at'] <= end_s, read
+        assert query_start_s <= read['at'] <= query_end_s, read
         assert read['path'] in expected_steps, read
         association = associations[read['event_index']]
         assert association['candidate_step_ids'] == [expected_steps[read['path']]], association
@@ -163,33 +164,35 @@ def main():
     (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
 
     # Control: the retired trailing interval, replayed against the same log store.
-    retired_start = stamp(end_s - RETIRED_LOOKBACK_SECONDS)
+    retired_end_s = (client['ended_at_unix_ms'] + 999) // 1000
+    retired_start_s = retired_end_s - RETIRED_LOOKBACK_SECONDS
+    retired_start, retired_end = stamp(retired_start_s), stamp(retired_end_s)
     argv = [str(observer), '--pid', str(worker['pid']), '--process-name', 'pw-probe-runner',
-            '--start', retired_start, '--end', window['end'], '--format', 'json']
+            '--start', retired_start, '--end', retired_end, '--format', 'json']
     control = subprocess.run(argv, capture_output=True, text=True, timeout=120)
     (out / 'retired-window.json').write_text(control.stdout)
     (out / 'retired-window.stderr').write_text(control.stderr)
     assert control.returncode == 0, control.stderr
     retired = json.loads(control.stdout)['data']
     assert retired['log_rc'] == 0 and retired['log_error'] is None, retired
-    assert (retired['start'], retired['end'], retired['last']) == (retired_start, window['end'], None), retired
+    assert (retired['start'], retired['end'], retired['last']) == (retired_start, retired_end, None), retired
     retired_reads = timed_reads(retired['deny_events'], worker['pid'])
     for read in retired_reads:
-        assert end_s - RETIRED_LOOKBACK_SECONDS <= read['at'] <= end_s, read
+        assert retired_start_s <= read['at'] <= retired_end_s, read
     # Only timestamped observations support a temporal claim. Neither scan is
     # required to contain a record for every denied attempt.
-    older = [read for read in reads if read['at'] < end_s - RETIRED_LOOKBACK_SECONDS]
+    older = [read for read in reads if read['at'] < retired_start_s]
     assert not ({read['raw_line'] for read in older} & {read['raw_line'] for read in retired_reads})
     availability = {name: ('observed' if any(read['path'] == str(target) for read in reads)
                            else 'not_observed') for name, target in [('early', early), ('late', late)]}
 
     (out / 'observations.json').write_text(json.dumps({
-        'span_ms': span_ms, 'window': window, 'retired_window': {'start': retired_start, 'end': window['end']},
+        'span_ms': span_ms, 'window': window, 'retired_window': {'start': retired_start, 'end': retired_end},
         'run_bounded_reads': reads, 'retired_reads': retired_reads,
         'availability': availability, 'observed_events_outside_retired_window': older,
         'permission_failures_without_record': diagnostics['permission_failures_without_record'],
         'steps': ids}, indent=2) + '\n')
-    print(f'window equals the client span ({span_ms} ms); real log show accepts both intervals; '
+    print(f'window equals the padded client span ({span_ms} ms); real log show accepts both intervals; '
           f'live denial availability={availability}', flush=True)
 
     # The envelope names exactly the denied reads the log did not record.

@@ -2143,6 +2143,7 @@ mod tests {
             .collect();
         let actual = std::collections::BTreeMap::from([
             ("client_rpc_wait", DEFAULT_TIMEOUT_MS),
+            ("log_window_pad", crate::sandbox_log::LOG_WINDOW_PAD_SECONDS),
             (
                 "controller_output",
                 crate::utils::RUNNER_CAPTURE_BYTES as u64,
@@ -2353,6 +2354,221 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn padded_records_survive_assembly_and_consumer_recovery() {
+        use crate::sandbox_log::{observer_argv, parse_observer_output};
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        // Native permission failures and expected event subsets are specified
+        // independently of the timestamp-selection fixture and matching code.
+        let paths = [
+            "/before",
+            "/lower-bound",
+            "/start-pad",
+            "/start-slack",
+            "/early",
+            "/short-tail",
+            "/short-pad",
+            "/short-bound",
+            "/late",
+            "/end-slack",
+            "/end-pad",
+            "/upper-bound",
+            "/after",
+        ];
+        let plan: Vec<_> = paths
+            .iter()
+            .map(|path| {
+                json!({"step_id": path,
+            "attempt": {"kind":"file", "action":"open_read", "target":path}})
+            })
+            .collect();
+        let request = json!({"probe_plan":plan});
+        let mut runner = worker("ok", None);
+        runner["schema_version"] = json!(7);
+        runner["steps"] = json!(paths.iter().map(|path| json!({
+            "step_id":path, "drift":null,
+            "sandbox_check":{"outcome":"allow", "native_rc":0, "result_source":"validator"},
+            "attempt":{"requested_kind":"file", "requested_action":"open_read",
+                "requested_path":path, "outcome":"open_failed", "errno":1,
+                "native_rc":-1, "result_source":"worker"},
+            "comparison":{"scope":"submitted_operation_and_target", "prediction":"allow",
+                "observation":"permission_failure", "observation_basis":"permission_errno",
+                "operation_relation":"matched", "target_relation":"same_submitted",
+                "conclusion":"unavailable", "limitations":["state_stability_unestablished",
+                    "query_attempt_order_unestablished", "sandbox_attribution_unestablished"]}
+        })).collect::<Vec<_>>());
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures/deny_capture/observer.py");
+        let mut envelopes = Vec::new();
+        for (start, end, expected) in [
+            (
+                1_999,
+                22_001,
+                vec![
+                    "/lower-bound",
+                    "/start-pad",
+                    "/start-slack",
+                    "/early",
+                    "/short-tail",
+                    "/short-pad",
+                    "/short-bound",
+                    "/late",
+                    "/end-slack",
+                    "/end-pad",
+                    "/upper-bound",
+                ],
+            ),
+            (
+                1_999,
+                2_001,
+                vec![
+                    "/lower-bound",
+                    "/start-pad",
+                    "/start-slack",
+                    "/early",
+                    "/short-tail",
+                    "/short-pad",
+                    "/short-bound",
+                ],
+            ),
+            (
+                13_000,
+                23_000,
+                vec!["/late", "/end-slack", "/end-pad", "/upper-bound"],
+            ),
+            (40_000, 50_000, vec![]),
+        ] {
+            let mut execution = execution_data(Some(runner.clone()));
+            execution.runner_client.started_at_unix_ms = start;
+            execution.runner_client.ended_at_unix_ms = end;
+            let (result, data, code) = attach_sandbox_logs(
+                complete_execution(execution),
+                &request,
+                false,
+                |pid, process, window| {
+                    let argv = observer_argv("observer".into(), pid, process, &window).unwrap();
+                    let out = Command::new("/usr/bin/python3")
+                        .arg(&fixture)
+                        .args(&argv[1..])
+                        .output()
+                        .unwrap();
+                    assert!(
+                        out.status.success(),
+                        "{}",
+                        String::from_utf8_lossy(&out.stderr)
+                    );
+                    Ok(parse_observer_output(&out, window))
+                },
+            );
+            assert_eq!(code, 0);
+            let wire: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(wire["data"]["runner_result"], runner);
+            let cap = &wire["data"]["sandbox_log_capture"];
+            assert_eq!(cap["capture_status"], "captured");
+            assert_eq!(cap["window"]["pad_seconds"], 2);
+            let events = cap["deny_events"].as_array().unwrap();
+            assert_eq!(
+                events
+                    .iter()
+                    .map(|e| e["path"].as_str().unwrap())
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            assert_eq!(cap["observer"]["data"]["deny_events"], cap["deny_events"]);
+            let candidates = cap["step_denies"].as_array().unwrap();
+            assert_eq!(candidates.len(), expected.len());
+            for (index, path) in expected.iter().enumerate() {
+                assert_eq!(candidates[index]["event_index"], index);
+                assert_eq!(candidates[index]["candidate_step_ids"], json!([path]));
+                assert_eq!(candidates[index]["association"], "candidate");
+                assert_eq!(candidates[index]["matching_evidence"][0]["path"], *path);
+            }
+            let diag = &wire["data"]["runner_sandbox_diagnostics"];
+            assert_eq!(
+                diag["correlation_status"],
+                if expected.is_empty() {
+                    "no_match"
+                } else {
+                    "pid_match"
+                }
+            );
+            assert_eq!(
+                diag["first_deny"],
+                if expected.is_empty() {
+                    Value::Null
+                } else {
+                    json!({"event_index":0})
+                }
+            );
+            assert_eq!(
+                diag["permission_failures_without_record"],
+                json!(
+                    paths
+                        .iter()
+                        .filter(|p| !expected.contains(p))
+                        .collect::<Vec<_>>()
+                )
+            );
+            envelopes.push(wire);
+        }
+        let mut child = Command::new("/usr/bin/python3")
+            .args(["-B", "-c", "import json, sys; sys.path.insert(0, sys.argv[1]); from consumer import recover_evidence, validate_evidence_shape; es=json.load(sys.stdin); assert all(not validate_evidence_shape(e) for e in es); print(json.dumps([recover_evidence(e) for e in es]))"])
+            .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&envelopes).unwrap())
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let answers: Vec<Value> = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(answers.len(), envelopes.len());
+        for (wire, answer) in envelopes.iter().zip(answers) {
+            let cap = &wire["data"]["sandbox_log_capture"];
+            let recovered = &answer["denials"];
+            assert_eq!(recovered["capture"], *cap);
+            assert_eq!(recovered["window"], cap["window"]);
+            assert_eq!(recovered["events"], cap["deny_events"]);
+            assert_eq!(
+                recovered["diagnostics"],
+                wire["data"]["runner_sandbox_diagnostics"]
+            );
+            let candidates = recovered["candidates"].as_array().unwrap();
+            assert_eq!(
+                candidates.len(),
+                cap["step_denies"].as_array().unwrap().len()
+            );
+            for (candidate, original) in candidates
+                .iter()
+                .zip(cap["step_denies"].as_array().unwrap())
+            {
+                assert_eq!(
+                    candidate["candidate_step_ids"],
+                    original["candidate_step_ids"]
+                );
+                assert_eq!(
+                    candidate["matching_evidence"],
+                    original["matching_evidence"]
+                );
+                assert_eq!(
+                    candidate["event"],
+                    cap["deny_events"][original["event_index"].as_u64().unwrap() as usize]
+                );
+            }
+        }
+    }
+
     fn event(pid: Option<i32>) -> SandboxDenyEvent {
         SandboxDenyEvent {
             pid,

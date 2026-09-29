@@ -230,6 +230,14 @@ def consumer_controls(artifacts, baseline, current):
             historical['data'].pop('log_last', None)
         run('envelope_%d_with_legacy_runner_candidates' % envelope_version, historical,
             lambda a: candidate(a, recorded_window))
+    padded = copy.deepcopy(logged)
+    padded_window = dict(window, pad_seconds=2, start='1969-12-31 23:59:59+0000',
+                         end='1970-01-01 00:00:05+0000')
+    padded['data']['sandbox_log_capture']['window'] = padded_window
+    assert not validate_evidence_shape(padded)
+    run('padded_window_with_legacy_runner', padded, lambda a: candidate(a, padded_window))
+    # Absence in historical envelopes means zero; recovery must not invent a pad.
+    assert recover_evidence(logged)['denials']['window'].get('pad_seconds', 0) == 0
     logged['schema_version'] = 2
     logged['data'].pop('log_last', None)
     lost = copy.deepcopy(logged)

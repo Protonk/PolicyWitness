@@ -57,8 +57,7 @@ replace the required OS query. Regeneration must not respond automatically to a
 failed assertion or revise the expected corpus to a captured subset.
 
 Archive production and reader compatibility are separate observations. Record
-the producer OS/build and every reader OS/build tested. A fixture generated on
-26.2 must pass the same acceptance on a 14.8.3 reader before claiming that
+the producer OS/build and every reader OS/build tested. A fixture must pass acceptance on each reader version before claiming that
 compatibility. An unreadable archive fails the required case; it is not skipped.
 
 ## Generated fixture
@@ -110,5 +109,12 @@ derived by that script from the documented message contract, not from PW output.
   macOS 14.8.7 23J520 (the producer): the same three production argv
   (`unfiltered`, `worker_42`, `worker_7`) return the identical corpus multiset
   and selected rows with no reader diagnostics; the registered case itself has
-  not run there (no toolchain in the guest). Acceptance on a 14.8.3 reader
-  remains to be recorded.
+  not run there (no toolchain in the guest).
+  macOS 14.8.3 23J220 (`/usr/bin/log` SHA-256
+  `91ec8d275cdbbe3798e8e1c93021bf619a78dce8dc3644843c5015a69945adef`): the
+  registered case passes with all 26 corpus messages and the exact 11/3 selected
+  multisets and parsed events. All three queries exit 0 with empty stderr and
+  confirmed group absence. `FALSEPREDICATE` fails before parsing (0 instead of
+  11); the actual former bare-PID-digit predicate also fails there (20 instead
+  of 11). Restored production passes. Archive hashes and independently
+  regenerated corpus/manifest bytes match.

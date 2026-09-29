@@ -61,7 +61,7 @@ def load_limits(path: Path, root: Path = ROOT):
             raise ValueError(f"{ident}: value must be a positive integer")
         if item["section"] not in SECTIONS:
             raise ValueError(f"{ident}: unknown section")
-        if item["unit"] not in {"UTF-8 bytes", "bytes", "items", "milliseconds", "levels", "records"}:
+        if item["unit"] not in {"UTF-8 bytes", "bytes", "items", "milliseconds", "seconds", "levels", "records"}:
             raise ValueError(f"{ident}: unknown unit")
         for key in ("title", "counting", "effect", "control", "behavior"):
             if not isinstance(item[key], str) or not item[key].strip():
@@ -97,7 +97,7 @@ def reference(ref):
 
 
 def render(limits):
-    lines = [START, "", "Values are maxima unless labelled as defaults."]
+    lines = [START, "", "Values are maxima unless labelled as defaults or fixed allowances."]
     for section, title in SECTIONS.items():
         lines += ["", f"## {title}", "", "| Limit | Value | Counting and consequence | Control |",
                   "| --- | --- | --- | --- |"]

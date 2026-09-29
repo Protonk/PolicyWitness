@@ -1,10 +1,9 @@
 # Best-effort deny-log evidence
 
-Status: Section 1 complete. Section 2 local implementation and checks are
-complete; OS predicate selection remains pending the isolated archive. Generation
-targets the available macOS 26.2 remote host, with 14.8.3 reader compatibility
-checked after transfer. This external prerequisite is described in
-[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md).
+Status: Sections 1–3 complete. The isolated archive is accepted on the
+14.8.3 reader, resolving the query-selection prerequisite; see
+[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md). Section 4 remains next;
+the live final-denial requirement still fails and is retained below.
 
 ## Execution checkpoint
 
@@ -32,21 +31,20 @@ checked after transfer. This external prerequisite is described in
   evidence or a runtime bound. The script, helper hash, arguments and every
   sample are retained locally at
   `/private/tmp/pw-best-effort-prerequisites-f7dte1_g/`.
-- Archive prerequisite: no fixture exists yet. On this host, read-only
-  `log collect` help required the documented unsandboxed rerun and confirmed
-  system-store collection requiring root, without a message-selection option.
-  An isolated generation environment and inspected corpus remain necessary
-  before crediting query selection. No ambient archive was collected. Controlled event volume and serialization expansion have now been measured
-  for section 2, as recorded below.
+- Archive prerequisite is resolved: the isolated 14.8.7 fixture and independent
+  manifest pass the 14.8.3 reader, including both required predicate mutation
+  controls. No ambient developer archive was collected. Provenance is in the
+  [fixture README](tests/fixtures/deny_capture/README.md); local review and
+  merged-main acceptance receipts are linked from the archive plan.
 - For the later signed build, follow `docs/SIGNING.md`: Developer ID signing
   through `build.sh` (`YOLO=1` can select the identity); `entitlement-jail` is the
   explicitly supplied keychain profile for notarization if that flow is run.
 
 ## Section 2 checkpoint
 
-Local implementation and validation are complete. Section 3 has not started.
-The real OS predicate-selection proof remains open under the linked archive
-plan; local passing controls do not substitute for that proof.
+Implementation, local validation and the real OS predicate-selection proof
+are complete. The linked archive plan records reader acceptance and mutation
+controls.
 
 - `--log-timeout-ms` validates a finite positive allowance before runner work,
   including when logging is disabled. The default is 10,000 ms; both supervisors
@@ -65,8 +63,8 @@ plan; local passing controls do not substitute for that proof.
 - Failed/incomplete capture retains bounded raw diagnostics or an intact
   observer reply, but withholds all correlations. Serialized execution evidence
   and exit status remain invariant. The OS predicate now requests complete
-  worker/PID message tokens; actual selection remains unvalidated pending the
-  archive, including positive and old-bare-digit/false-predicate mutation tests.
+  worker/PID message tokens; the accepted archive verifies positive selections
+  and rejects the old-bare-digit and false-predicate mutations.
 - On macOS 14.8.3 (23J220), three fixed seven-second padded-window queries with
   the rebuilt signed observer took 639, 395 and 372 ms. Each returned 2,499
   observer bytes, 51 inner stdout bytes, no stderr and no events. The 10-second
@@ -96,13 +94,55 @@ plan; local passing controls do not substitute for that proof.
   Earlier failures and runs remain intact. The final build receipt is
   `/private/tmp/pw-section2-build-accepted.log`. This is a signed development
   build; no notarization submission was made.
-- The required default archive case executes explicitly and fails for the
-  missing fixture, without a skip:
-  [pending archive run](tests/out/runs/best-effort-log-section2-archive-pending/run.json).
-  The default battery cannot be credited as passing until the real fixture and
-  reader acceptance land. The remote generation target is macOS 26.2; a 14.8.3
-  VM is a conditional fallback if cross-version reading fails, not an upfront
-  requirement. No ambient developer archive was collected.
+- The original [missing-fixture failure](tests/out/runs/best-effort-log-section2-archive-pending/run.json)
+  remains intact. The fixture is now present and the required default case
+  passes on 14.8.3; this resolves that failure without an implicit skip.
+
+## Section 3 checkpoint
+
+Implementation and section-specific validation are complete. The live case
+reaches the existing emission requirement that section 4 will replace.
+
+- Ordered timestamps scan `floor(client start) - 2 s` through
+  `ceil(client end) + 2 s`, with `window.pad_seconds: 2` and unchanged raw client
+  milliseconds. Missing padding in older envelopes means zero. Equal spans
+  remain nonempty; rollback still withholds both bounds and never starts a scan.
+  Contract versions and all four window disclaimers are unchanged.
+- Independent timestamp controls include both pads, exact query boundaries and
+  one millisecond outside each. Complete full, early-only, late-only and empty
+  replies retain every eligible candidate and missing-record diagnostic through
+  production assembly, serialization and independent consumer recovery.
+  Existing bounded-failure controls retain diagnostic replies without correlation.
+- The live window case checks the padded query and mirrored bounds. Its retired
+  ten-second control ends at the separate unpadded, rounded client end. The
+  existing mandatory final-denial assertion remains for section 4 to replace.
+- `docs/limits.json` records the two-second allowance and its clock-difference
+  purpose, with compiled-value and boundary checks; limits/guide copies and the
+  affected controller, evidence and test contracts are updated.
+- All eight selected source cases passed: 189 Rust unit tests, four explicitly
+  selected disposition controls, formatting, source/limits/wire drift checks,
+  consumer controls and the real archive query. Evidence:
+  [accepted source run](tests/out/runs/best-effort-log-section3-accepted-source/run.json).
+  The [initial source failure](tests/out/runs/best-effort-log-section3-source/run.json)
+  is retained: one pre-existing receiver fixture still mirrored unpadded bounds;
+  its literal bounds were corrected before the accepted run.
+- `YOLO=1 ./build.sh` reached signed app/ZIP completion; the build receipt is
+  `/private/tmp/pw-section3-build.vGE1rX`. The surrounding command failed afterward
+  when assigning zsh's read-only `status` variable, after the build's `DONE`
+  output. Signed-artifact validation checks those unchanged bytes. No
+  notarization submission was made.
+- The [signed run](tests/out/runs/best-effort-log-section3-signed/run.json)
+  completed all ten selected cases: nine passed (signature/evidence and release
+  controls, all 14 CLI integration tests, three smoke cases and termination/log
+  correlation). The app remained unchanged throughout validation.
+- `deny_capture_covers_the_run` verified the 20,083 ms native run, exact padded
+  query/mirrored bounds, both real-tool intervals, candidate association,
+  consumer recovery and missing-record diagnostics. Both collection boundaries
+  completed without cutoff. It then failed the existing mandatory final-denial
+  assertion: the early record was present and the late record absent. The
+  [observations](tests/out/runs/best-effort-log-section3-signed/suites/witness_contract/deny_capture_covers_the_run/artifacts/observations.json)
+  and all raw receipts remain intact; there was no retry. This is the section 4
+  live-acceptance work, not a passing default-battery claim.
 
 ## Promise and scope
 

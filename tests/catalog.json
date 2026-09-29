@@ -1079,7 +1079,7 @@
             "bash",
             "tests/suites/witness_contract/deny_capture_covers_the_run.sh"
           ],
-          "description": "Deny capture requests the full client interval; real log show accepts its bounds and available timestamped events retain candidate associations"
+          "description": "Deny capture requests the padded client interval; real log show accepts its bounds and available timestamped events retain candidate associations"
         },
         {
           "id": "log_query_predicate_archive",

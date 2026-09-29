@@ -75,10 +75,12 @@ children to the worker's exec deadline, then denies another read. Its metadata
 queries are allowed, avoiding query-generated denials for the attempted reads.
 It requires the recorded
 `capture.window` to be the runner client's own span (`runner_client_span`), with
-`start`/`end` equal to an independent whole-second UTC rendering of the client's
-timestamps, mirrored back by the observer with `last` null and a zero `log show`
+`start`/`end` equal to an independent UTC rendering of `floor(client start) - 2 s`
+and `ceil(client end) + 2 s`, and `pad_seconds: 2`. Raw client milliseconds stay
+unchanged. The query bounds are mirrored back by the observer with `last` null and a zero `log show`
 exit. Each available read-denial event must be associated with its step.
-The retired trailing interval (the ten seconds before the client's end) is then
+The retired trailing interval (ten seconds ending at the unpadded, rounded client
+end) is then
 replayed through the embedded observer against the same log store. Test-only
 parsing of raw event timestamps checks membership in both intervals; path names
 are never used to infer timing. The final denied read is the minimum witness:
@@ -93,7 +95,9 @@ the run capture, consumer answers, `retired-window.json` and `observations.json`
 
 Rust controls independently exercise the actual outgoing argv against
 `tests/fixtures/deny_capture/observer.py`, whose fixed event timestamps require
-early/late inclusion, whole-second widening, and exclusion outside the bounds.
+early/late inclusion, both padding regions, exact boundaries, and exclusion
+immediately outside the bounds. Production assembly and consumer recovery retain
+all eligible candidates from complete full, early-only, late-only and empty replies.
 Short, long, equal-endpoint and ten-second intervals share the same event corpus.
 Injected clock rollbacks must retain raw readings with null bounds and no helper
 invocation. Receiver-to-consumer controls send mismatched and missing bounds and

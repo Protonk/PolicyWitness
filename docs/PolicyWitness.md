@@ -384,15 +384,18 @@ import resolution or compilation.
   dying before slot completion leaves exec details unpublished, not proof
   that no child spawned or that cleanup succeeded.
 - Deny-log capture has no fixed lookback limit. The requested interval is the
-  runner client's wall-clock span, widened to whole seconds because `log show`
-  accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
+  runner client's wall-clock span: `floor(start) - 2 s` through `ceil(end) + 2 s`.
+  Whole-second rounding accommodates `log show` precision; the additional pad
+  allows for client/archive clock differences. `window.pad_seconds` records 2;
+  its absence in older envelopes means 0. Raw client milliseconds are unchanged.
+  Reversed endpoints prevent the scan; ordered endpoints
   do not establish clock continuity or complete log delivery. Archive access has
   been observed to cost seconds even for short spans; scan cost is not guaranteed
   to be independent of span or log volume.
 
 <!-- BEGIN GENERATED LIMITS -->
 
-Values are maxima unless labelled as defaults.
+Values are maxima unless labelled as defaults or fixed allowances.
 
 ### Specimen admission
 
@@ -453,6 +456,7 @@ Values are maxima unless labelled as defaults.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
+| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero. |
 | Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
 | Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
 | Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed; no public override. |
@@ -1025,8 +1029,8 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
   followed by at most a 1,000 ms cleanup grace. A larger value buys waiting time
   without changing the specimen, scan bounds or byte budgets.
 - `--no-log-capture`: skip the unified-log (`log show`) deny scan. Its requested
-  interval is the runner client's own wall-clock span, widened to whole seconds;
-  there is no fixed lookback to tune. Archive access has been observed to cost
+  interval is the runner client's own wall-clock span, rounded outward to whole
+  seconds and padded by two seconds at each end; there is no fixed lookback to tune. Archive access has been observed to cost
   seconds even for short spans, without a fixed-cost guarantee. Pass this when
   you don't consume
   `data.sandbox_log_capture` (or the `first_deny` diagnostic it backs) and want
@@ -1074,6 +1078,16 @@ $PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSER
 ```
 
 ### Denial-log correlation
+
+`sandbox_log_capture.window` separates raw client milliseconds
+(`started_at_unix_ms`, `ended_at_unix_ms`) from the UTC query bounds (`start`,
+`end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`.
+`pad_seconds` is 2; its absence in an older envelope means 0. The pad allows for
+client/archive clock differences, and supported records in either padding region
+remain eligible candidates. It promises neither complete delivery nor exact run
+membership. Structured event timestamps, step ordering and PID-reuse protection
+remain unavailable. Reversed client timestamps retain the raw values with null
+bounds and `invalid_window`, without invoking the observer.
 
 The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
 It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports `process_disposition` (`no_worker`, `unconfirmed`,

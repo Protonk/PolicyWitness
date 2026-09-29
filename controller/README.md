@@ -83,7 +83,7 @@ Runs a **single runner evaluation** against the selected runner service:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
 - Starts a fresh runner instance (one XPC host + two short-lived children), applies the policy exactly once inside the C worker, executes the probe plan and validator batch in parallel, and returns the runner's structured JSON result.
-- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, widened to whole seconds, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. Archive access has been observed to cost seconds even for short spans; that observation is not a fixed-cost guarantee.
+- Captures supporting evidence (best-effort) using `sandbox-log-observer` and attaches it to the output. The requested `log show` interval is the runner client's own start-to-end span, rounded outward to whole seconds and padded by two seconds at each end, with no fixed lookback. A backwards wall-clock reading prevents the scan. The interval does not guarantee that every denied attempt has a log record. Pass `--no-log-capture` to skip this scan entirely. Archive access has been observed to cost seconds even for short spans; that observation is not a fixed-cost guarantee.
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
   process per run), spawned by the runner host alongside the C
   worker. It reads NDJSON probes from stdin and writes NDJSON
@@ -199,7 +199,12 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   reply for any other interval is `window_mismatch`, not `captured`. If the
   client's end precedes its start, both strings are null, the raw milliseconds
   are retained, and `invalid_window` records that no observer was invoked.
-  Ordered endpoints alone cannot establish clock continuity during the run.
+  For ordered endpoints the bounds are `floor(client start) - 2 s` and
+  `ceil(client end) + 2 s`. `window.pad_seconds` is 2; absence in older envelopes
+  means 0. The raw client milliseconds remain unchanged. The pad allows for
+  differences between client and archive clocks; supported records in either
+  padding region remain eligible candidates. It guarantees neither delivery
+  nor exact run membership. Ordered endpoints alone cannot establish clock continuity during the run.
   The window explicitly disclaims structured event timestamps, exact run membership, step
   ordering and PID-reuse protection.
   `step_denies` contains event references with candidate step IDs: one candidate

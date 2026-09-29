@@ -1244,6 +1244,45 @@
       "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
     },
     {
+      "id": "log_window_pad",
+      "section": "evidence",
+      "title": "Deny-log scan padding per endpoint",
+      "value": 2,
+      "unit": "seconds",
+      "counting": "Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition.",
+      "effect": "Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection.",
+      "control": "Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero.",
+      "sources": [
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "LOG_WINDOW_PAD_SECONDS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "documented_controller_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "run_span_window_floors_start_ceils_end_and_never_collapses",
+          "kind": "boundary"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "requested_intervals_select_independently_timed_events",
+          "kind": "boundary"
+        },
+        {
+          "path": "controller/src/run_flow.rs",
+          "symbol": "padded_records_survive_assembly_and_consumer_recovery",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Independent timestamp fixtures cover both padding regions, exact and exterior bounds, equal spans and rollback. Complete full, early-only, late-only and empty replies preserve eligible candidates and missing-record diagnostics through assembly, serialization and consumer recovery."
+    },
+    {
       "id": "log_collection_timeout",
       "section": "evidence",
       "title": "Default log collection timeout",

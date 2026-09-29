@@ -22,7 +22,7 @@ usage:
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
   - request.json is passed through to the runner client (or copied with runner mode injected)
-  - the unified-log (`log show`) deny scan requests the runner client's wall-clock span, widened to whole seconds; reversed endpoints prevent the scan
+  - the unified-log (`log show`) deny scan requests the runner client's wall-clock span, rounded outward to whole seconds and padded by two seconds at each end; reversed endpoints prevent the scan
   - --log-timeout-ms sets a finite log-collection allowance (default 10000 ms), with a separate fixed 1000 ms cleanup grace
   - --no-log-capture skips that scan; use it when you don't consume the deny evidence and want the per-run cost back
   - --version prints a JSON envelope (kind=version) with the build stamp and the wire contract versions this build speaks; every envelope also carries the stamp under `build`"

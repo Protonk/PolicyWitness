@@ -46,8 +46,11 @@ pub struct SandboxLogMatchEvidence {
     pub path_sources: Vec<String>,
 }
 
+pub const LOG_WINDOW_PAD_SECONDS: u64 = 2;
+
 /// The interval requested from the observer. It is the runner client's own
-/// wall-clock span, widened to whole seconds because `log show` accepts
+/// wall-clock span, rounded outward to whole seconds and padded by two seconds
+/// at each end to allow for client/archive clock differences. `log show` accepts
 /// `YYYY-MM-DD HH:MM:SS+0000` and nothing finer. Reversed clock readings retain
 /// their raw values but have no scan bounds. Ordered endpoints do not establish
 /// clock continuity or complete log delivery. Events have no structured
@@ -57,6 +60,7 @@ pub struct SandboxLogWindow {
     pub kind: &'static str,
     pub started_at_unix_ms: u64,
     pub ended_at_unix_ms: u64,
+    pub pad_seconds: u64,
     pub start: Option<String>,
     pub end: Option<String>,
     pub event_timestamps_available: bool,
@@ -66,17 +70,18 @@ pub struct SandboxLogWindow {
 }
 
 impl SandboxLogWindow {
-    /// Floor the start and ceil the end to whole seconds; a truncated end would
-    /// drop events from the run's final partial second. The end is always at
-    /// least one second after the start so an equal span still scans. A clock
-    /// rollback cannot be repaired by inventing a later end: withhold both bounds.
+    /// Round outward, then pad both ends; even equal timestamps yield a scan.
+    /// A clock rollback cannot be repaired by padding: withhold both bounds.
     pub fn runner_client_span(started_at_unix_ms: u64, ended_at_unix_ms: u64) -> Self {
-        let start_s = started_at_unix_ms / 1000;
-        let end_s = ended_at_unix_ms.div_ceil(1000).max(start_s + 1);
+        // Dividing u64 milliseconds first fits i64 seconds, including the pad.
+        // Signed seconds preserve the exact lower bound near the Unix epoch.
+        let start_s = (started_at_unix_ms / 1000) as i64 - LOG_WINDOW_PAD_SECONDS as i64;
+        let end_s = ended_at_unix_ms.div_ceil(1000) as i64 + LOG_WINDOW_PAD_SECONDS as i64;
         Self {
             kind: "runner_client_span",
             started_at_unix_ms,
             ended_at_unix_ms,
+            pad_seconds: LOG_WINDOW_PAD_SECONDS,
             start: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(start_s)),
             end: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(end_s)),
             event_timestamps_available: false,
@@ -90,9 +95,9 @@ impl SandboxLogWindow {
 /// Render a Unix second as the `%Y-%m-%d %H:%M:%S%z` form `log show` parses,
 /// always in UTC with an explicit offset so local time and DST never move the
 /// window. Fractional seconds are rejected by the tool, so none are emitted.
-pub fn log_show_timestamp(unix_seconds: u64) -> String {
-    let days = i64::try_from(unix_seconds / 86_400).unwrap_or(i64::MAX);
-    let rem = unix_seconds % 86_400;
+pub fn log_show_timestamp(unix_seconds: i64) -> String {
+    let days = unix_seconds.div_euclid(86_400);
+    let rem = unix_seconds.rem_euclid(86_400);
     let (hour, minute, second) = (rem / 3_600, (rem % 3_600) / 60, rem % 60);
     // Proleptic Gregorian civil date from days since 1970-01-01 (H. Hinnant).
     let z = days + 719_468;
@@ -965,7 +970,7 @@ mod tests {
         ] {
             let original = receiver_fixture(
                 r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319,
-                    "start":"1970-01-01 00:00:00+0000","end":"1970-01-01 00:00:01+0000","last":null}}"#,
+                    "start":"1969-12-31 23:59:58+0000","end":"1970-01-01 00:00:03+0000","last":null}}"#,
                 mode,
                 crate::utils::OBSERVER_CAPTURE_BYTES,
             );
@@ -1184,6 +1189,8 @@ mod tests {
     fn log_show_timestamps_are_utc_whole_seconds_with_explicit_offset() {
         // Expected strings come from Python's datetime, not from this formatter.
         for (seconds, expected) in [
+            (-2, "1969-12-31 23:59:58+0000"),
+            (-1, "1969-12-31 23:59:59+0000"),
             (0, "1970-01-01 00:00:00+0000"),
             (951782400, "2000-02-29 00:00:00+0000"),
             (1767225599, "2025-12-31 23:59:59+0000"),
@@ -1198,28 +1205,48 @@ mod tests {
 
     #[test]
     fn run_span_window_floors_start_ceils_end_and_never_collapses() {
-        let window = SandboxLogWindow::runner_client_span(951_782_400_999, 951_782_401_001);
-        assert_eq!(window.start.as_deref(), Some("2000-02-29 00:00:00+0000"));
-        assert_eq!(window.end.as_deref(), Some("2000-02-29 00:00:02+0000"));
-        assert_eq!(window.started_at_unix_ms, 951_782_400_999);
-        assert_eq!(window.ended_at_unix_ms, 951_782_401_001);
-        // An exact-second end is not widened.
-        assert_eq!(
-            SandboxLogWindow::runner_client_span(1_000, 3_000)
-                .end
-                .as_deref(),
-            Some("1970-01-01 00:00:03+0000")
-        );
-        // Equal inputs still yield a one-second scan.
-        for (started, ended) in [(5_000, 5_000), (5_500, 5_500)] {
+        // Literal bounds include rounding, both pads, equal spans and epoch crossing.
+        for (started, ended, start, end) in [
+            (
+                951_782_400_999,
+                951_782_401_001,
+                "2000-02-28 23:59:58+0000",
+                "2000-02-29 00:00:04+0000",
+            ),
+            (
+                1_000,
+                3_000,
+                "1969-12-31 23:59:59+0000",
+                "1970-01-01 00:00:05+0000",
+            ),
+            (
+                5_000,
+                5_000,
+                "1970-01-01 00:00:03+0000",
+                "1970-01-01 00:00:07+0000",
+            ),
+            (
+                5_500,
+                5_500,
+                "1970-01-01 00:00:03+0000",
+                "1970-01-01 00:00:08+0000",
+            ),
+            (0, 0, "1969-12-31 23:59:58+0000", "1970-01-01 00:00:02+0000"),
+            // No lookback cap is reintroduced for a long run.
+            (
+                0,
+                300_000,
+                "1969-12-31 23:59:58+0000",
+                "1970-01-01 00:05:02+0000",
+            ),
+        ] {
             let window = SandboxLogWindow::runner_client_span(started, ended);
-            assert_eq!(window.start.as_deref(), Some("1970-01-01 00:00:05+0000"));
-            assert_eq!(window.end.as_deref(), Some("1970-01-01 00:00:06+0000"));
+            assert_eq!(window.start.as_deref(), Some(start));
+            assert_eq!(window.end.as_deref(), Some(end));
+            assert_eq!(window.started_at_unix_ms, started);
+            assert_eq!(window.ended_at_unix_ms, ended);
+            assert_eq!(window.pad_seconds, 2);
         }
-        // A long run is scanned in full: no lookback cap is reintroduced.
-        let long = SandboxLogWindow::runner_client_span(0, 300_000);
-        assert_eq!(long.start.as_deref(), Some("1970-01-01 00:00:00+0000"));
-        assert_eq!(long.end.as_deref(), Some("1970-01-01 00:05:00+0000"));
     }
 
     #[test]
@@ -1228,8 +1255,9 @@ mod tests {
         assert_eq!(v["kind"], "runner_client_span");
         assert_eq!(v["started_at_unix_ms"], 1_000);
         assert_eq!(v["ended_at_unix_ms"], 2_500);
-        assert_eq!(v["start"], "1970-01-01 00:00:01+0000");
-        assert_eq!(v["end"], "1970-01-01 00:00:03+0000");
+        assert_eq!(v["pad_seconds"], 2);
+        assert_eq!(v["start"], "1969-12-31 23:59:59+0000");
+        assert_eq!(v["end"], "1970-01-01 00:00:05+0000");
         assert!(v.get("last").is_none());
         for field in [
             "event_timestamps_available",
@@ -1264,9 +1292,9 @@ mod tests {
                 "--process-name",
                 "pw-probe-runner",
                 "--start",
-                "1970-01-01 00:00:01+0000",
+                "1969-12-31 23:59:59+0000",
                 "--end",
-                "1970-01-01 00:00:03+0000",
+                "1970-01-01 00:00:05+0000",
                 "--format",
                 "json",
             ]
@@ -1281,23 +1309,28 @@ mod tests {
         let event = r#"{"pid":42,"operation":"file-read-data","path":"/attempt","raw_line":"x"}"#;
         for (reply, expected) in [
             (
+                r#""start":"1969-12-31 23:59:59+0000","end":"1970-01-01 00:00:05+0000","last":null"#,
+                "captured",
+            ),
+            (
+                r#""start":"1969-12-31 23:59:59+0000","end":"1970-01-01 00:00:05+0000""#,
+                "captured",
+            ),
+            (
+                r#""start":"1970-01-01 00:00:02+0000","end":"1970-01-01 00:00:05+0000","last":null"#,
+                "window_mismatch",
+            ),
+            (
+                r#""start":"1969-12-31 23:59:59+0000","end":"1970-01-01 00:00:04+0000","last":null"#,
+                "window_mismatch",
+            ),
+            (
+                r#""start":"1969-12-31 23:59:59+0000","end":"1970-01-01 00:00:05+0000","last":"10s""#,
+                "window_mismatch",
+            ),
+            // A pre-padding reply is not the query we requested.
+            (
                 r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000","last":null"#,
-                "captured",
-            ),
-            (
-                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000""#,
-                "captured",
-            ),
-            (
-                r#""start":"1970-01-01 00:00:02+0000","end":"1970-01-01 00:00:03+0000","last":null"#,
-                "window_mismatch",
-            ),
-            (
-                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:04+0000","last":null"#,
-                "window_mismatch",
-            ),
-            (
-                r#""start":"1970-01-01 00:00:01+0000","end":"1970-01-01 00:00:03+0000","last":"10s""#,
                 "window_mismatch",
             ),
             (r#""last":"10s""#, "window_mismatch"),
@@ -1320,24 +1353,62 @@ mod tests {
     fn requested_intervals_select_independently_timed_events() {
         let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../tests/fixtures/deny_capture/observer.py");
-        for (started, ended, paths) in [
+        for (started, ended, retired, paths) in [
             (
                 1_999,
                 22_001,
+                false,
                 vec![
+                    "/lower-bound",
+                    "/start-pad",
                     "/start-slack",
                     "/early",
                     "/short-tail",
+                    "/short-pad",
+                    "/short-bound",
                     "/late",
                     "/end-slack",
+                    "/end-pad",
+                    "/upper-bound",
                 ],
             ),
-            (1_999, 2_001, vec!["/start-slack", "/early", "/short-tail"]),
-            (2_500, 2_500, vec!["/early", "/short-tail"]),
-            // Explicit ten-second control against the very same event corpus.
-            (13_000, 23_000, vec!["/late", "/end-slack"]),
+            (
+                1_999,
+                2_001,
+                false,
+                vec![
+                    "/lower-bound",
+                    "/start-pad",
+                    "/start-slack",
+                    "/early",
+                    "/short-tail",
+                    "/short-pad",
+                    "/short-bound",
+                ],
+            ),
+            (
+                2_500,
+                2_500,
+                false,
+                vec![
+                    "/start-pad",
+                    "/start-slack",
+                    "/early",
+                    "/short-tail",
+                    "/short-pad",
+                    "/short-bound",
+                ],
+            ),
+            // Retired control has its own unpadded end: ceil(22001ms) = 23s.
+            (13_000, 23_000, true, vec!["/late", "/end-slack"]),
+            (40_000, 50_000, false, vec![]),
         ] {
-            let window = SandboxLogWindow::runner_client_span(started, ended);
+            let mut window = SandboxLogWindow::runner_client_span(started, ended);
+            if retired {
+                window.start = Some("1970-01-01 00:00:13+0000".into());
+                window.end = Some("1970-01-01 00:00:23+0000".into());
+                window.pad_seconds = 0;
+            }
             let argv = observer_argv("observer".into(), 42, "pw-probe-runner", &window).unwrap();
             let out = Command::new("/usr/bin/python3")
                 .arg(&fixture)

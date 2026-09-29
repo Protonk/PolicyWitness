@@ -65,15 +65,18 @@ import resolution or compilation.
   dying before slot completion leaves exec details unpublished, not proof
   that no child spawned or that cleanup succeeded.
 - Deny-log capture has no fixed lookback limit. The requested interval is the
-  runner client's wall-clock span, widened to whole seconds because `log show`
-  accepts nothing finer. Reversed endpoints prevent the scan; ordered endpoints
+  runner client's wall-clock span: `floor(start) - 2 s` through `ceil(end) + 2 s`.
+  Whole-second rounding accommodates `log show` precision; the additional pad
+  allows for client/archive clock differences. `window.pad_seconds` records 2;
+  its absence in older envelopes means 0. Raw client milliseconds are unchanged.
+  Reversed endpoints prevent the scan; ordered endpoints
   do not establish clock continuity or complete log delivery. Archive access has
   been observed to cost seconds even for short spans; scan cost is not guaranteed
   to be independent of span or log volume.
 
 <!-- BEGIN GENERATED LIMITS -->
 
-Values are maxima unless labelled as defaults.
+Values are maxima unless labelled as defaults or fixed allowances.
 
 ## Specimen admission
 
@@ -134,6 +137,7 @@ Values are maxima unless labelled as defaults.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
+| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero. |
 | Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
 | Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
 | Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed; no public override. |
@@ -205,6 +209,7 @@ Value checks compare the inventory with compiled constants, constructed defaults
 | `log_show_stdout` | [`LOG_STDOUT_BYTES`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); boundary: [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) | Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder. |
 | `log_show_stderr` | [`LOG_STDERR_BYTES`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); boundary: [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) | Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder. |
 | `log_observer_stderr` | [`OBSERVER_STDERR_BYTES`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); boundary: [`both_raw_streams_are_bounded_at_exact_edges`](../controller/src/log_capture.rs) | Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder. |
+| `log_window_pad` | [`LOG_WINDOW_PAD_SECONDS`](../controller/src/sandbox_log.rs) | value: [`documented_controller_limits`](../controller/src/run_flow.rs); boundary: [`run_span_window_floors_start_ceils_end_and_never_collapses`](../controller/src/sandbox_log.rs); boundary: [`requested_intervals_select_independently_timed_events`](../controller/src/sandbox_log.rs); boundary: [`padded_records_survive_assembly_and_consumer_recovery`](../controller/src/run_flow.rs) | Independent timestamp fixtures cover both padding regions, exact and exterior bounds, equal spans and rollback. Complete full, early-only, late-only and empty replies preserve eligible candidates and missing-record diagnostics through assembly, serialization and consumer recovery. |
 | `log_collection_timeout` | [`DEFAULT_LOG_TIMEOUT_MS`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); boundary: [`larger_allowance_buys_time_only_and_still_bounds_hangs`](../controller/src/log_capture.rs) | Independent slow-success and permanent-hang fixtures prove that a larger finite allowance buys waiting time only; shared absolute deadlines are not restarted by the observer. |
 | `log_cleanup_grace` | [`CLEANUP_GRACE_MS`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); path: [`cleanup_failures_and_lost_ownership_remain_unconfirmed`](../controller/src/log_capture.rs) | Owned orphan controls cover leader death before reply, pipes open or closed, group absence, failed signalling/probing and lost ownership. The bound concerns supervised waiting, not OS scheduling. |
 | `log_deny_events` | [`MAX_DENY_EVENTS`](../controller/src/log_capture.rs) | value: [`documented_collection_limits`](../controller/src/log_capture.rs); boundary: [`event_limit_withholds_completion_without_discarding_retained_diagnostics`](../controller/src/bin/sandbox-log-observer.rs) | Exact and over-limit fixtures retain diagnostics and distinguish complete capture from overflow. |
