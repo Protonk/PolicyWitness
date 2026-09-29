@@ -29,7 +29,8 @@ $SSH 'set -e; cd /Users/admin/pwqp
 START=$(sed -n "s/.*\"start\": \"\([^\"]*\)\".*/\1/p" record/record.json); END=$(sed -n "s/.*\"end\": \"\([^\"]*\)\".*/\1/p" record/record.json)
 /usr/bin/log show --archive query_predicate.logarchive --start "$START" --end "$END" --style syslog --info --debug > record/unfiltered-window.txt
 grep -o "PWQP:.*$" record/unfiltered-window.txt | LC_ALL=C sort > record/rendered.sorted; LC_ALL=C sort corpus.lines > record/corpus.sorted
-cmp record/rendered.sorted record/corpus.sorted && echo "rendered corpus == declared corpus"
+cmp record/rendered.sorted record/corpus.sorted
+echo "rendered corpus == declared corpus"
 /usr/bin/log show --archive query_predicate.logarchive --style syslog --info --debug > record/full-archive.txt
 (cd query_predicate.logarchive && find . -type f | LC_ALL=C sort | xargs shasum -a 256) > record/archive.sha256'
 # 4. Transfer archive + record to the checkout, verify hashes, then:
