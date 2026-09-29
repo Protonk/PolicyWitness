@@ -1,9 +1,9 @@
 # Best-effort deny-log evidence
 
-Status: Sections 1–3 complete. The isolated archive is accepted on the
+Status: Sections 1–4 complete. Section 5 is next. The isolated archive is accepted on the
 14.8.3 reader, resolving the query-selection prerequisite; see
-[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md). Section 4 remains next;
-the live final-denial requirement still fails and is retained below.
+[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md). The section 3 live
+final-denial failure remains retained; section 4 replaces that emission requirement.
 
 ## Execution checkpoint
 
@@ -143,6 +143,83 @@ reaches the existing emission requirement that section 4 will replace.
   [observations](tests/out/runs/best-effort-log-section3-signed/suites/witness_contract/deny_capture_covers_the_run/artifacts/observations.json)
   and all raw receipts remain intact; there was no retry. This is the section 4
   live-acceptance work, not a passing default-battery claim.
+
+## Section 4 checkpoint
+
+Implementation, controlled validation and signed live validation are complete.
+Section 5's integrated default battery and final contract audit remain separate
+work.
+
+- The observer's unchanged `log show` collector/parser now lives in
+  `controller/src/log_show.rs`, used by production and supplied-text replay.
+  Full, early-only, late-only and empty cases cross that parser, a supervised
+  receiver, production assembly, serialization and independent consumer
+  recovery. Fixed expectations cover raw lines, candidate indices, ambiguity,
+  unrelated child/neighbour PIDs and operation/path mismatches. Native replies,
+  execution answers and CLI status stay invariant across disabled/unavailable,
+  wrong-window, malformed, inner nonzero/overflow and interrupted outer replies.
+- A fixed 256-record input preserves every 511-byte target and candidate through
+  the same path. Its initial unoptimized replay hit the ten-second collection
+  budget; the diagnostic run took 10.05 seconds including consumer recovery.
+  The capacity oracle now uses a declared, fixed 30-second test allowance, not
+  a changed production default. Initial failure and diagnostic receipts remain
+  at `/private/tmp/pw-section4-initial-replay.txt` and
+  `/private/tmp/pw-section4-capacity-diagnostic.log`. This measures capacity for
+  the supplied corpus, not a bound on live volume.
+- The finite override replay keeps the same execution and query bounds: a
+  100 ms allowance cuts off a slow query, 1,500 ms completes it, and a stalled
+  query still exhausts 1,500 ms. Both boundaries use the same decoded absolute
+  budget; byte caps and cleanup grace do not change. Existing supervisor tests
+  now exercise launch, exit/signal, closed-pipe hang, read and cleanup faults
+  at both boundaries, with independent PID/group absence checks. Existing
+  orphan, byte-edge, JSON-expansion and derived-limit controls remain mandatory.
+- The default `witness_contract/log_capture_controls` case supplies 52 success
+  and rejection cases. Shared live assertions require intact successful
+  collection or observed deadline/limit exhaustion with correct boundary,
+  byte counts and confirmed cleanup. Budget exhaustion has null correlations;
+  missing helpers, blocked access, wrong bounds, malformed complete replies,
+  unexplained exits and unsupported cleanup cannot borrow an unavailable status.
+  Default selection includes both this case and the strict archive case, as
+  recorded in `/private/tmp/pw-section4-default-selection.json`.
+- The live window case no longer requires the OS to record either denial. It
+  preserves native attempts, padded bounds, returned-record candidate checks
+  and missing-record diagnostics. Its retired query is a separate invocation;
+  differences are retained without cross-query record-presence assertions.
+  Termination correlation and maximum-target reply survival use the same
+  live acceptance rules. The latter keeps all native reply-capacity assertions.
+- Five actual production mutations in an isolated source copy each fail the
+  positive replay test: dropped line, dropped event, invented association,
+  suppressed capture and changed execution answer. A baseline passed; every
+  mutation was restored and the primary checkout was never mutated. Logs,
+  source hashes, patches and results are at
+  `/private/tmp/pw-section4-mutations-g1tic865/results.json`.
+  Existing false-predicate and actual former bare-PID archive mutation proofs
+  remain recorded in the completed archive plan; predicate generation is unchanged.
+- All nine selected [source cases](tests/out/runs/best-effort-log-section4-accepted-source/run.json)
+  passed: 192 Rust unit tests, four disposition controls, formatting, drift and
+  limits/contracts checks, consumer controls, live-acceptance controls and the
+  real archive query. The final both-boundary exit/hang assertion correction
+  passed in [the final unit run](tests/out/runs/best-effort-log-section4-final-unit/run.json).
+  The subsequently added interrupted-JSON replay also passed its focused test;
+  its receipt is `/private/tmp/pw-section4-prefix-replay.log`.
+- `YOLO=1 ./build.sh` rebuilt and Developer ID signed the app and ZIP, with
+  receipt `/private/tmp/pw-section4-build.OvpNU9`. No notarization submission
+  was made.
+- All eight [signed cases](tests/out/runs/best-effort-log-section4-signed/run.json)
+  passed: signatures/evidence, all 14 integration tests, three smoke cases and
+  all three revised live witnesses. Artifact integrity remained unchanged.
+  The 20,080 ms window run captured both early and late records; the two
+  enabled termination captures completed, and the maximum-target capture
+  returned 231,411 observer bytes. These are observations of those invocations,
+  not delivery guarantees or live-volume limits; the earlier section 3 failure
+  remains intact.
+- Final review made completed-query record checks conditional on complete
+  collection, so a path cut inside a retained diagnostic prefix cannot fail
+  an otherwise supported budget outcome or acquire a candidate claim. The
+  actual live content checker is exercised with full, empty and interrupted
+  inputs by [the final 52-control run](tests/out/runs/best-effort-log-section4-final-live-controls/run.json).
+  This test-only refinement followed signed validation and did not change app
+  bytes. No live capture was retried to obtain a preferred availability result.
 
 ## Promise and scope
 

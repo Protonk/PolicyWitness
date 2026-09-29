@@ -1071,7 +1071,7 @@
             "bash",
             "tests/suites/witness_contract/worker_termination_and_log_correlation.sh"
           ],
-          "description": "Consumer recovery preserves denied writes, independent disposition, capture limits and ambiguous matching provenance"
+          "description": "Independent denied writes and unrelated self-signal; collection/cleanup facts distinguish completed capture from evidenced budget exhaustion"
         },
         {
           "id": "deny_capture_covers_the_run",
@@ -1079,7 +1079,16 @@
             "bash",
             "tests/suites/witness_contract/deny_capture_covers_the_run.sh"
           ],
-          "description": "Deny capture requests the padded client interval; real log show accepts its bounds and available timestamped events retain candidate associations"
+          "description": "Native denied reads and padded scan bounds; completed empty queries or evidenced budget cutoffs are admissible, returned records and diagnostics must agree"
+        },
+        {
+          "id": "log_capture_controls",
+          "description": "Controlled acceptance and rejection of live capture facts; empty queries and evidenced cutoffs do not excuse malformed replies or failed cleanup",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/log_capture_controls.sh"
+          ],
+          "requires": []
         },
         {
           "id": "log_query_predicate_archive",

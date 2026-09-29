@@ -1,7 +1,9 @@
 """Real denied attempts, unrelated self-signal, and capture on failure/success.
 
 Captured kernel events are optional: deterministic Rust controls cover their
-association even on hosts where unified logs are blocked or contain no match.
+association independently of live availability. Required tool access and valid
+collection/cleanup facts remain mandatory. Documented budget exhaustion is
+unavailable evidence, never positive correlation coverage.
 """
 import errno
 import json
@@ -13,6 +15,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
 from consumer import recover_evidence, validate_evidence_shape
+from log_capture_contract import check_live_capture
 
 
 def main():
@@ -45,6 +48,7 @@ def main():
             if signaled:
                 specimen['_test_overrides'] = overrides
             args = ['--timeout-ms', '20000']
+            live_result = {'outcome': 'disabled'}
             if not capture_enabled:
                 args.append('--no-log-capture')
             run = RunCapture(pw, out / name, specimen, cli_args=args)
@@ -101,6 +105,7 @@ def main():
             assert recovered['capture_status'] == diag['capture_status']
             assert recovered['correlation_status'] == diag['correlation_status']
             assert recovered['diagnostics']['termination_cause'] == ('unknown' if signaled else None)
+            live_result = {'outcome': 'disabled'}
             if not capture_enabled:
                 assert recovered['capture_status'] == 'disabled'
                 assert recovered['association_reporting'] == 'not_reported'
@@ -110,6 +115,7 @@ def main():
                 assert diag['first_deny'] is None, diag
                 assert diag['permission_failures_without_record'] is None, diag
             else:
+                live_result = check_live_capture(envelope)
                 assert isinstance(capture, dict), 'observer must be invoked for both failure and success'
                 assert diag['capture_status'] == capture['capture_status'], diag
                 window = capture['window']
@@ -172,7 +178,7 @@ def main():
                     assert diag['correlation_status'] == 'unavailable', diag
                     assert diag['first_deny'] is None, diag
                     assert diag['permission_failures_without_record'] is None, diag
-            observations.append({'run': name, 'outcome': expected, 'diagnostics': diag})
+            observations.append({'run': name, 'outcome': expected, 'diagnostics': diag, 'live_result': live_result})
             (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
             print(f'{name}: disposition and independent denied attempts verified; capture={diag["capture_status"]}', flush=True)
 

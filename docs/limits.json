@@ -1152,9 +1152,14 @@
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "inner_byte_limit_with_maximal_json_escaping_fits_outer_serialization_limit",
           "kind": "boundary"
+        },
+        {
+          "path": "controller/src/log_replay_tests.rs",
+          "symbol": "controlled_256_step_capture_keeps_every_long_target_candidate",
+          "kind": "boundary"
         }
       ],
-      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus preserves all records; exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only."
+      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under a fixed 30-second test allowance for the unoptimized build. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
     },
     {
       "id": "log_show_stdout",

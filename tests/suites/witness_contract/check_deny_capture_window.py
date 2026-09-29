@@ -1,21 +1,10 @@
-"""The live observer is asked for the padded client interval.
+"""Native denied attempts and padded scan bounds, independent of OS emission.
 
-The specimen denies one read, holds two exec children to their worker deadlines,
-then denies another read, so the first denial is well over ten seconds older
-than the reply. Allowed metadata queries avoid generating read-denial records
-before the attempts. Real ``log show`` must accept and mirror the independently
-computed bounds. Missing kernel records are recorded as unavailable evidence.
-
-An independent control replays the retired trailing interval (the ten seconds
-before the unpadded, rounded client end) through the same embedded observer against the same
-log store. Event timestamps, when present, establish interval membership;
-path names do not establish timing. Deterministic Rust controls use a fixed
-event corpus to require inclusion in both pads and exclusion outside both bounds.
-
-The final denied read is the minimum witness: it happened last, inside the
-scanned span, so a log store that holds no record of it fails the case with a
-named reason after every artifact is written. The envelope must also list each
-unrecorded permission failure beside its correlation status.
+Each live invocation is checked on its own collection/cleanup facts. Completed
+queries may be empty; documented budget exhaustion withholds correlation.
+Returned records must satisfy interval and candidate checks, but do not prove
+retrieval completeness. Supplied-text and archive controls require preservation.
+The retired ten-second query is a separate observation, never a presence oracle.
 """
 import errno
 import json
@@ -30,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
 from consumer import recover_evidence, validate_evidence_shape
+from log_capture_contract import check_live_capture, check_observer_report
 
 STAMP = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\+0000$')
 RETIRED_LOOKBACK_SECONDS = 10
@@ -52,6 +42,22 @@ def timed_reads(events, pid):
         at = datetime.strptime(prefix, '%Y-%m-%d %H:%M:%S.%f%z').timestamp()
         reads.append({'event_index': index, 'path': event['path'], 'at': at,
                       'raw_line': event['raw_line']})
+    return reads
+
+
+def checked_reads(capture, pid, start_s, end_s, expected_steps):
+    # A bounded prefix may end inside a parsed path. Those diagnostic records
+    # must not acquire complete-query membership or association claims.
+    if capture['capture_status'] != 'captured':
+        return []
+    reads = timed_reads(capture['deny_events'], pid)
+    associations = {item['event_index']: item for item in capture['step_denies']}
+    for read in reads:
+        assert start_s <= read['at'] <= end_s, read
+        assert read['path'] in expected_steps, read
+        association = associations[read['event_index']]
+        assert association['candidate_step_ids'] == [expected_steps[read['path']]], association
+        assert association['association'] == 'candidate', association
     return reads
 
 
@@ -132,32 +138,12 @@ def main():
     assert STAMP.match(window['start']) and STAMP.match(window['end']), window
     for key in WINDOW_FLAGS:
         assert window[key] is False, window
-    if capture['capture_status'] == 'blocked':
-        raise AssertionError('unified log refused (%r); run from an unsandboxed session, see '
-                             'tests/README.md → Sandboxed automation harnesses' % capture.get('blocked_reason'))
-    assert capture['capture_status'] == 'captured', capture
-    mirrored = capture['observer']['data']
-    assert mirrored['pid'] == worker['pid'] and mirrored['process_name'] == 'pw-probe-runner', mirrored
-    assert mirrored['last'] is None, mirrored
-    assert (mirrored['start'], mirrored['end']) == (window['start'], window['end']), mirrored
-    # The real tool accepted the generated strings; a format regression fails here.
-    assert mirrored['log_rc'] == 0 and mirrored['log_error'] is None, mirrored
+    live_result = check_live_capture(envelope)
+    complete = live_result['outcome'] == 'captured'
 
-    events = capture['deny_events']
-    reads = timed_reads(events, worker['pid'])
-    associations = {item['event_index']: item for item in capture['step_denies']}
     expected_steps = {str(early): ids['early'], str(late): ids['late']}
-    for read in reads:
-        assert query_start_s <= read['at'] <= query_end_s, read
-        assert read['path'] in expected_steps, read
-        association = associations[read['event_index']]
-        assert association['candidate_step_ids'] == [expected_steps[read['path']]], association
-        assert association['association'] == 'candidate', association
+    reads = checked_reads(capture, worker['pid'], query_start_s, query_end_s, expected_steps)
     diagnostics = data['runner_sandbox_diagnostics']
-    matches = [i for i, event in enumerate(events) if event.get('pid') == worker['pid']]
-    assert diagnostics['capture_status'] == 'captured', diagnostics
-    assert diagnostics['correlation_status'] == ('pid_match' if matches else 'no_match'), diagnostics
-    assert diagnostics['first_deny'] == ({'event_index': matches[0]} if matches else None), diagnostics
     assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
     answers = recover_evidence(envelope)
     assert answers['denials']['window'] == window
@@ -173,35 +159,35 @@ def main():
     (out / 'retired-window.json').write_text(control.stdout)
     (out / 'retired-window.stderr').write_text(control.stderr)
     assert control.returncode == 0, control.stderr
-    retired = json.loads(control.stdout)['data']
-    assert retired['log_rc'] == 0 and retired['log_error'] is None, retired
-    assert (retired['start'], retired['end'], retired['last']) == (retired_start, retired_end, None), retired
-    retired_reads = timed_reads(retired['deny_events'], worker['pid'])
+    retired_envelope = json.loads(control.stdout)
+    retired_cutoff = check_observer_report(retired_envelope, worker['pid'], retired_start, retired_end)
+    retired = retired_envelope['data']
+    retired_reads = timed_reads(retired['deny_events'], worker['pid']) if retired_cutoff is None else []
     for read in retired_reads:
         assert retired_start_s <= read['at'] <= retired_end_s, read
-    # Only timestamped observations support a temporal claim. Neither scan is
-    # required to contain a record for every denied attempt.
+    # Compare observations for diagnostics only: no cross-query presence claim.
     older = [read for read in reads if read['at'] < retired_start_s]
-    assert not ({read['raw_line'] for read in older} & {read['raw_line'] for read in retired_reads})
-    availability = {name: ('observed' if any(read['path'] == str(target) for read in reads)
+    availability = {name: ('unavailable' if not complete else
+                           'observed' if any(read['path'] == str(target) for read in reads)
                            else 'not_observed') for name, target in [('early', early), ('late', late)]}
 
     (out / 'observations.json').write_text(json.dumps({
-        'span_ms': span_ms, 'window': window, 'retired_window': {'start': retired_start, 'end': retired_end},
+        'span_ms': span_ms, 'window': window, 'live_result': live_result,
+        'retired_cutoff': retired_cutoff, 'retired_window': {'start': retired_start, 'end': retired_end},
         'run_bounded_reads': reads, 'retired_reads': retired_reads,
         'availability': availability, 'observed_events_outside_retired_window': older,
+        'first_seen_in_retired_query': ([r for r in retired_reads if r['raw_line'] not in {x['raw_line'] for x in reads}]
+                                        if complete and retired_cutoff is None else None),
         'permission_failures_without_record': diagnostics['permission_failures_without_record'],
         'steps': ids}, indent=2) + '\n')
-    print(f'window equals the padded client span ({span_ms} ms); real log show accepts both intervals; '
+    print(f'window equals the padded client span ({span_ms} ms); collection={live_result["outcome"]}; '
           f'live denial availability={availability}', flush=True)
 
-    # The envelope names exactly the denied reads the log did not record.
-    unrecorded = sorted(ids[name] for name in ('early', 'late') if availability[name] == 'not_observed')
-    assert sorted(diagnostics['permission_failures_without_record']) == unrecorded, \
-        (diagnostics['permission_failures_without_record'], unrecorded)
-    if availability['late'] == 'not_observed':
-        raise AssertionError('late denial unrecorded: the unified log holds no deny record for the worker\'s final '
-                             'denied read inside the scanned span; see observations.json and retired-window.json')
+    if complete:
+        # Absence describes this completed query, never absence of a denial.
+        unrecorded = sorted(ids[name] for name in ('early', 'late') if availability[name] == 'not_observed')
+        assert sorted(diagnostics['permission_failures_without_record']) == unrecorded, \
+            (diagnostics['permission_failures_without_record'], unrecorded)
 
 
 if __name__ == '__main__':

@@ -2,6 +2,14 @@
 
 `observer.py` supplies independently timed events for window/receiver replay.
 It does not model kernel emission or prove OS query selection.
+`controller/src/log_replay_tests.rs` supplies raw Sandbox text to the production
+collector/parser and follows it through the supervised receiver, association,
+serialization and consumer paths. Its fixed expectations include full,
+early-only, late-only and empty inputs, unmatched PIDs/operations/paths,
+ambiguity, diagnostic retention and 256 long-target candidates. The live
+acceptance controls under `tests/suites/witness_contract/log_capture_controls.py`
+construct collection facts independently and reject invalid success or cutoff
+claims. Neither control requires a previously captured live receipt.
 
 The required archive control reads `query_predicate.logarchive` with the real
 `/usr/bin/log show` engine and the production predicate and command builder.

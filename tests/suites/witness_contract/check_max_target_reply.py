@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from consumer import validate_current_build_evidence
 from run_capture import RunCapture
+from log_capture_contract import check_live_capture
 
 def documented_limit(ident):
     manifest = json.loads((Path(__file__).resolve().parents[3] / 'docs/limits.json').read_text())
@@ -158,9 +159,8 @@ def run_case(pw, out, name, request, *, refused=False, capture_logs=False, measu
                                budget_over_reply=round(client['capture_limit_bytes'] / client['stdout_bytes_received'], 3))
         if capture_logs:
             capture = data['sandbox_log_capture']
-            assert isinstance(capture, dict), 'known worker PID must request capture'
-            assert capture['capture_status'] != 'capture_error'
-            assert capture.get('stdout_truncated') is not True
+            live_result = check_live_capture(envelope)
+            observation['live_result'] = live_result
             observation.update(observer_reply_bytes=capture.get('stdout_bytes_received'),
                                observer_capture_status=capture['capture_status'])
     print(f"{name}: {client['stdout_bytes_received']} reply bytes; refused at admission={refused}", flush=True)

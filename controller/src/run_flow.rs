@@ -1562,6 +1562,8 @@ mod tests {
     use crate::sandbox_log::{SandboxDenyEvent, capture_sandbox_logs, match_step_denies};
     use serde_json::json;
 
+    include!("log_replay_tests.rs");
+
     fn diagnostics_with_logs(
         runner: Option<&Value>,
         disabled: bool,

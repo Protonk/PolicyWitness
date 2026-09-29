@@ -729,6 +729,11 @@ mod tests {
         loop {
             let observed = signal(-pid, 0);
             if observed.rc == -1 && observed.errno == Some(libc::ESRCH) {
+                let process = signal(pid, 0);
+                assert!(
+                    process.rc == -1 && process.errno == Some(libc::ESRCH),
+                    "process {pid} remains: {process:?}"
+                );
                 return;
             }
             assert!(
@@ -903,37 +908,39 @@ else:
 
     #[test]
     fn launch_exit_and_closed_pipe_hang_have_explicit_facts() {
-        let launch = capture(
-            &mut Command::new("/no/such/pw-collector"),
-            budget(500),
-            Boundary::Observer,
-        );
-        assert_eq!(
-            launch.supervision.cutoff.as_ref().unwrap().reason,
-            "launch_error"
-        );
-        assert!(launch.supervision.process.pid.is_none());
-        assert_eq!(launch.supervision.cleanup.ownership, "not_started");
-        for (script, code, sig, reason) in [
-            ("import sys; sys.exit(7)", Some(7), None, "process_exit"),
-            (
-                "import os,signal; os.kill(os.getpid(),signal.SIGTERM)",
-                None,
-                Some(libc::SIGTERM),
-                "process_exit",
-            ),
-            (
-                "import os,time; os.close(1); os.close(2); time.sleep(60)",
-                None,
-                Some(libc::SIGKILL),
-                "deadline",
-            ),
-        ] {
-            let out = capture(&mut python(script), budget(300), Boundary::Observer);
-            assert_eq!(out.supervision.cutoff.as_ref().unwrap().reason, reason);
-            assert_eq!(out.supervision.process.exit_code, code);
-            assert_eq!(out.supervision.process.term_signal, sig);
-            absent(out.supervision.process.pid.unwrap());
+        for boundary in [Boundary::Observer, Boundary::LogShow] {
+            let launch = capture(
+                &mut Command::new("/no/such/pw-collector"),
+                budget(500),
+                boundary,
+            );
+            assert_eq!(
+                launch.supervision.cutoff.as_ref().unwrap().reason,
+                "launch_error"
+            );
+            assert!(launch.supervision.process.pid.is_none());
+            assert_eq!(launch.supervision.cleanup.ownership, "not_started");
+            for (script, code, sig, reason) in [
+                ("import sys; sys.exit(7)", Some(7), None, "process_exit"),
+                (
+                    "import os,signal; os.kill(os.getpid(),signal.SIGTERM)",
+                    None,
+                    Some(libc::SIGTERM),
+                    "process_exit",
+                ),
+                (
+                    "import os,time; os.close(1); os.close(2); time.sleep(60)",
+                    None,
+                    Some(libc::SIGKILL),
+                    "deadline",
+                ),
+            ] {
+                let out = capture(&mut python(script), budget(300), boundary);
+                assert_eq!(out.supervision.cutoff.as_ref().unwrap().reason, reason);
+                assert_eq!(out.supervision.process.exit_code, code);
+                assert_eq!(out.supervision.process.term_signal, sig);
+                absent(out.supervision.process.pid.unwrap());
+            }
         }
     }
 
@@ -992,63 +999,84 @@ else:
 
     #[test]
     fn pipe_read_failure_retains_reason_and_still_cleans_owned_group() {
-        let mut ops = FaultOps {
-            fault: "read",
-            reaped: false,
-            signals: 0,
-        };
-        let out = capture_with_ops(
-            &mut python("import time; time.sleep(60)"),
-            budget(500),
-            Boundary::Observer,
-            (64, 64),
-            &mut ops,
-        );
-        assert_eq!(
-            out.supervision.cutoff.as_ref().unwrap().reason,
-            "read_error"
-        );
-        assert!(out.supervision.stdout.read_error.is_some());
-        assert_eq!(out.supervision.stdout.bytes_read, 0);
-        assert_eq!(out.supervision.cleanup.outcome, "group_absent");
-        assert!(!out.supervision.complete());
-        absent(out.supervision.process.pid.unwrap());
-    }
-
-    #[test]
-    fn cleanup_failures_and_lost_ownership_remain_unconfirmed() {
-        for fault in ["ownership", "signal", "probe", "reap"] {
+        for boundary in [Boundary::Observer, Boundary::LogShow] {
             let mut ops = FaultOps {
-                fault,
+                fault: "read",
                 reaped: false,
                 signals: 0,
             };
             let out = capture_with_ops(
                 &mut python("import time; time.sleep(60)"),
-                budget(50),
-                Boundary::Observer,
-                (1024, 1024),
+                budget(500),
+                boundary,
+                (64, 64),
                 &mut ops,
             );
-            assert_eq!(out.supervision.cleanup.outcome, "unconfirmed");
-            assert!(!out.supervision.complete());
-            assert_eq!(ops.signals, if fault == "ownership" { 0 } else { 1 });
-            let pid = out.supervision.process.pid.unwrap();
-            if !out.supervision.process.reaped {
-                // Independent fixture teardown owns this still-unreaped child.
-                assert!(observe_exit(pid).is_ok());
-                signal(-pid, libc::SIGKILL);
-                let until = Instant::now() + Duration::from_secs(2);
-                loop {
-                    let rc = unsafe { libc::waitpid(pid, std::ptr::null_mut(), libc::WNOHANG) };
-                    if rc == pid {
-                        break;
-                    }
-                    assert!(rc >= 0 && Instant::now() < until);
-                    std::thread::sleep(Duration::from_millis(2));
+            assert_eq!(
+                out.supervision.cutoff.as_ref().unwrap().reason,
+                "read_error"
+            );
+            assert!(out.supervision.stdout.read_error.is_some());
+            assert_eq!(out.supervision.stdout.bytes_read, 0);
+            assert_eq!(
+                out.supervision.cleanup.outcome,
+                if boundary == Boundary::Observer {
+                    "group_absent"
+                } else {
+                    "child_reaped"
                 }
+            );
+            assert!(!out.supervision.complete());
+            absent(out.supervision.process.pid.unwrap());
+        }
+    }
+
+    #[test]
+    fn cleanup_failures_and_lost_ownership_remain_unconfirmed() {
+        for boundary in [Boundary::Observer, Boundary::LogShow] {
+            for fault in ["ownership", "signal", "probe", "reap"] {
+                if boundary == Boundary::LogShow && fault == "probe" {
+                    continue;
+                }
+                let mut ops = FaultOps {
+                    fault,
+                    reaped: false,
+                    signals: 0,
+                };
+                let out = capture_with_ops(
+                    &mut python("import time; time.sleep(60)"),
+                    budget(50),
+                    boundary,
+                    (1024, 1024),
+                    &mut ops,
+                );
+                assert_eq!(out.supervision.cleanup.outcome, "unconfirmed");
+                assert!(!out.supervision.complete());
+                assert_eq!(ops.signals, if fault == "ownership" { 0 } else { 1 });
+                let pid = out.supervision.process.pid.unwrap();
+                if !out.supervision.process.reaped {
+                    // Independent fixture teardown owns this still-unreaped child.
+                    assert!(observe_exit(pid).is_ok());
+                    signal(
+                        if boundary == Boundary::Observer {
+                            -pid
+                        } else {
+                            pid
+                        },
+                        libc::SIGKILL,
+                    );
+                    let until = Instant::now() + Duration::from_secs(2);
+                    loop {
+                        let rc = unsafe { libc::waitpid(pid, std::ptr::null_mut(), libc::WNOHANG) };
+                        if rc == pid {
+                            break;
+                        }
+                        assert!(rc >= 0 && Instant::now() < until);
+                        std::thread::sleep(Duration::from_millis(2));
+                    }
+                }
+                absent(pid);
             }
-            absent(pid);
         }
     }
 }

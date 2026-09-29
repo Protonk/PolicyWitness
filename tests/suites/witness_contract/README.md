@@ -73,43 +73,68 @@ tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt
 `deny_capture_covers_the_run` denies one read, holds two `/bin/sleep` exec
 children to the worker's exec deadline, then denies another read. Its metadata
 queries are allowed, avoiding query-generated denials for the attempted reads.
-It requires the recorded
-`capture.window` to be the runner client's own span (`runner_client_span`), with
-`start`/`end` equal to an independent UTC rendering of `floor(client start) - 2 s`
-and `ceil(client end) + 2 s`, and `pad_seconds: 2`. Raw client milliseconds stay
-unchanged. The query bounds are mirrored back by the observer with `last` null and a zero `log show`
-exit. Each available read-denial event must be associated with its step.
-The retired trailing interval (ten seconds ending at the unpadded, rounded client
-end) is then
-replayed through the embedded observer against the same log store. Test-only
-parsing of raw event timestamps checks membership in both intervals; path names
-are never used to infer timing. The final denied read is the minimum witness:
-it happened last, inside the scanned span, so a log store with no record of it
-fails the case with a named reason after every artifact is written, and the
-envelope's `permission_failures_without_record` must name exactly the denied
-reads the log did not record. The early denial is not required; its
-availability is recorded. `observations.json` records early/late availability
-and any timestamped events outside the shorter interval. A blocked unified log
-still fails the real-tool check with a pointer to the harness note. Artifacts include
-the run capture, consumer answers, `retired-window.json` and `observations.json`.
+The native attempts, worker exit and elapsed span are mandatory witnesses.
+`capture.window` retains the raw client milliseconds and requests
+`floor(client start) - 2 s` through `ceil(client end) + 2 s`, with `pad_seconds: 2`.
+The observer must mirror those bounds without a trailing lookback. Returned
+read-denial records must lie in the padded interval and name the expected
+candidate step. A complete empty query is valid; early/late record availability
+is recorded and does not determine whether this case passes. These checks do
+not establish retrieval completeness or complete OS delivery.
 
-Rust controls independently exercise the actual outgoing argv against
-`tests/fixtures/deny_capture/observer.py`, whose fixed event timestamps require
-early/late inclusion, both padding regions, exact boundaries, and exclusion
-immediately outside the bounds. Production assembly and consumer recovery retain
-all eligible candidates from complete full, early-only, late-only and empty replies.
-Short, long, equal-endpoint and ten-second intervals share the same event corpus.
-Injected clock rollbacks must retain raw readings with null bounds and no helper
-invocation. Receiver-to-consumer controls send mismatched and missing bounds and
-trailing replies containing matching events through production association,
-diagnostics and serialization, then the Python consumer. Both successful and
-signaled runs, and old/current runner replies, must preserve execution evidence
-without inventing correlations. Historical controller-envelope fixtures retain
-their trailing-window meaning in the blackbox consumer controls. Run with:
+The retired ten-second query ends at the unpadded, rounded client end and checks
+its own invocation. Timestamp parsing establishes membership in each interval;
+path names do not establish timing. No record equality or inclusion is required
+between the queries. `observations.json` retains their availability differences,
+including records first seen by the retired query, without inferring their cause.
+Artifacts also include the native run, consumer answers and raw retired reply.
+
+The three live log cases (`deny_capture_covers_the_run`,
+`worker_termination_and_log_correlation`, `max_targets_reply_survives`) share
+[`log_capture_contract.py`](../../lib/log_capture_contract.py). Completed queries
+must have intact replies, matching identities/windows/budgets, finished pipes,
+observed successful exits and confirmed cleanup. Supported timeout/overflow
+requires a cutoff at the identified boundary, the documented deadline or
+limit with its observations, bounded retention and confirmed cleanup. Such
+capture is unavailable for correlation: candidates, `first_deny` and missing-record
+diagnostics are null. It is not positive capture coverage. Missing helpers,
+blocked access, malformed complete replies, wrong bounds, unexplained process
+failures and unconfirmed cleanup remain failures. Generic `unavailable` is
+insufficient. `log_capture_controls` supplies complete/early/late/empty replies,
+cutoffs and deliberate corruptions to enforce these distinctions without an app.
+
+Positive preservation coverage is mandatory and independent of live emission:
+
+- Rust window controls run actual argv against `observer.py`'s fixed event
+  timestamps: both padding regions, exact/exterior boundaries, equal spans and
+  rollback. Wrong/missing/trailing bounds withhold correlations without losing
+  diagnostic records, including legacy replies and historical envelope windows.
+- `log_replay_tests.rs` replaces only the inner query command with supplied text,
+  calls the production `log_show.rs` parser/collector, transports a bounded reply
+  through the supervised receiver, and runs real assembly and consumer recovery.
+  Full, early-only, late-only and empty inputs have fixed expected records and
+  candidates. Child/neighbour PIDs, mismatched operation/path and duplicate
+  records cannot gain invented associations; repeated attempts remain ambiguous.
+  Failed inner queries retain intact diagnostics without correlations. Disabled,
+  unavailable, malformed and wrong-window cases preserve execution evidence.
+- The controlled capacity case retains 256 distinct 511-byte targets and all
+  candidate references through the entire replay. Its fixed 30-second allowance
+  accommodates the unoptimized test build; production still defaults to ten
+  seconds. This proves capacity for the supplied corpus, not a live-volume bound.
+- Supervisor controls cover both boundaries' byte edges, launch/read/wait/exit
+  faults, hangs and cleanup failures. Owned-group controls check orphan pipes,
+  leader death before a reply, membership, eventual absence and no signals after
+  reaping. Deadline controls preserve execution and bounds under short/long
+  overrides and still bound a permanently stalled query. JSON expansion,
+  incomplete outer replies and derived-data limits have separate exact oracles.
+- The required archive case tests real OS predicate selection before parsing;
+  suppressing every selected record cannot pass it. Positive replay assertions
+  reject dropped lines/events, invented associations, blanket capture suppression
+  and changed execution answers even though empty live captures are admissible.
 
 ```sh
 tests/run.sh --case witness_contract/deny_capture_covers_the_run
-tests/run.sh --suite unit --case blackbox_e2e/checker_controls
+tests/run.sh --suite unit --case witness_contract/log_capture_controls --case witness_contract/log_query_predicate_archive
 ```
 
 ## Create on an existing file
@@ -195,6 +220,11 @@ conservative receipt allowance (`2 * 4 * ceil(capture / 3) + 4096`, capture from
 the manifest) and must still fit under the bound; Swift independently tests that
 allowance with maximal slash-heavy bytes. The corpus is evidence that real
 replies stay inside a bound that follows the schema, not the source of the bound.
+The optional deny-log channel follows the shared live-capture rules above:
+complete empty queries and evidenced budget cutoffs are admissible, while native
+runner replies must still survive intact. The separate 256-record supplied-text
+control proves observer/candidate capacity for its fixed corpus; the specimen's
+step count does not bound live log volume.
 
 Four refusal workloads submit 32,768-byte query values or filter/attempt labels.
 Each requires a host-owned `admission_failure` naming the field, no steps and no
@@ -366,7 +396,8 @@ The same failure runs with capture disabled and enabled; both retain the same
 execution status. An un-overridden run verifies successful-run capture. The
 checker verifies worker identity in observer output, explicit capture/window
 limits and any actual event associations. Repeated attempts reference each event
-once with ambiguous candidate IDs. Logs can be unavailable or contain no match;
+once with ambiguous candidate IDs. Completed logs can contain no match, while
+evidenced budget exhaustion must withhold correlation; unexpected collection or cleanup failures fail the case.
 Rust tests deterministically cover populated, missing/mismatched PID, unrelated
 operation, independent query, repeated-attempt and unavailable-capture cases.
 Artifacts retain each request, raw envelope, stderr, capture metadata, file bytes
