@@ -9,6 +9,8 @@ import zipfile
 
 from artifact import digest
 
+STEPS = ('staple', 'staple-validation', 'gatekeeper', 're-zip')
+
 
 def create(archive=None, *, parent=None):
     archive = Path(archive).resolve() if archive is not None else None
@@ -62,7 +64,9 @@ def summarize(out):
     if notary.is_file():
         value = json.loads(notary.read_text())
         lines.append(f"| Notarization | {value['state']} | [result](notarization/result.json) |")
-    for path in sorted(out.glob('*/command.json')):
+    receipts = [out / step / 'command.json' for step in STEPS if (out / step / 'command.json').is_file()]
+    receipts += sorted(path for path in out.glob('*/command.json') if path.parent.name not in STEPS)
+    for path in receipts:
         value = json.loads(path.read_text())
         state = ('timed out' if value['timed_out'] else 'interrupted' if value['interrupted']
                  else 'launch error' if value.get('error') else 'incomplete' if value['returncode'] is None

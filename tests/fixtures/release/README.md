@@ -11,6 +11,12 @@ are checked by the existing opt-in signed-artifact controls. The release helpers
 accept a Python-only command injection boundary; their CLIs always use the real
 tools and expose no bypass flags.
 
+`publish_tools.py` stands in for `gh` in `preflight/release_publish_controls`.
+It records every invocation, passes `git` through to a real local bare remote,
+simulates release creation, listing and asset download, and can report a wrong
+digest or corrupt a download. It never contacts GitHub or imports the release
+implementation; the checker patches the publisher's single `run` boundary.
+
 `hanging_command.py` supplies real processes for `preflight/release_deadline_controls`.
 It records each invocation, writes and flushes configured raw bytes before
 forking, and connects its parent and child to the existing exec fixture's

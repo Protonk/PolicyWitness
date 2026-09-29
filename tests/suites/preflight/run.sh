@@ -20,6 +20,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release controls failed
 test_pass "release continuation requires known acceptance and checks the actual extracted archive"
 fi
 
+if test_selected release_publish_controls; then
+test_begin preflight release_publish_controls
+test_step publish "exercise the tag preflight, release archiving and GitHub publication offline"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release publish controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_release_publish.py" "${PW_TEST_ARTIFACTS}"
+test_pass "release archiving and publication verify their inputs and refuse every mismatch"
+fi
+
 if test_selected codesign.preflight; then
 bash "${ROOT_DIR}/tests/suites/preflight/preflight.sh"
 fi

@@ -46,12 +46,27 @@ Offline release controls also exercise the release procedure's decision points.
   Apple requests and need no built app, signing identity, or compiler. macOS
   socket/process observation may require escalation in an automation sandbox.
 
+- `release_publish_controls` exercises the three release tools against a real
+  temporary repository with a bare `origin`, fixture ZIPs, attempts and run
+  records. The tag preflight must refuse an untagged or dirty tree, a
+  lightweight tag, a remote holding a different tag, an unreachable remote and
+  an existing archive, and must only warn under `--report`. Archiving must
+  refuse a hash, acceptance, notarization, tag, guide, notes or battery
+  mismatch without touching the distribution or the retention index, and on
+  success must move the attempt, write the checksums and provenance record,
+  and retain the acceptance and battery runs. Publication runs `git` for real
+  against the bare remote and a GitHub stand-in: it pushes the tag once,
+  creates the release once with the tag verified, downloads every asset back,
+  and records origin only when digests and bytes match; a second run verifies
+  without creating, and a mismatch leaves origin unrecorded.
+
 ## Fixtures
 
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
 - `tests/fixtures/release/tools.py`: controlled external-tool boundary and receipts.
+- `tests/fixtures/release/publish_tools.py`: GitHub stand-in for publication controls.
 - `tests/fixtures/release/hanging_command.py`: real command processes; reuses
   `tests/fixtures/exec/control.py` for socket readiness and independent OS exits.
 
@@ -70,4 +85,5 @@ Run:
 ./tests/run.sh --case preflight/signed_artifact_controls
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls
+./tests/run.sh --case preflight/release_publish_controls
 ```

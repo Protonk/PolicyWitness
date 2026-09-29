@@ -101,8 +101,11 @@ Release ZIP acceptance is a separate explicit command:
 `bash tests/accept-release.sh dist/PolicyWitness.zip`. It inspects a temporary
 extraction, checks the staple and Gatekeeper assessment, runs the existing allow
 and deny contracts through the extracted controller, and records the ZIP hash
-and before/after integrity. It never builds or signs. See [docs/SIGNING.md](../docs/SIGNING.md) for the
-complete release procedure and the handling of delayed or uncertain Apple replies.
+and before/after integrity. It never builds or signs. `make release` runs it as
+part of the notarization chain, then runs the default battery against the final
+app and archives the release; `make publish` publishes an archived release. See
+[docs/SIGNING.md](../docs/SIGNING.md) for the complete release procedure and the
+handling of delayed or uncertain Apple replies.
 
 ## Reusing verification results
 
@@ -266,7 +269,7 @@ prerequisites should fail, not skip.
 
 | Suite | Tier | Primary claim | Requires | Skips when | Notes / artifacts |
 | --- | --- | --- | --- | --- | --- |
-| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; release continuation and real deadline controls | Built app for inspection; signing controls also need matching Developer ID; release controls need no app, with macOS socket/process observation for deadlines | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
+| `preflight` | Baseline + opt-in signing controls | Enforce bundle layout, signatures, and manifest hashes; release continuation, real deadline, and offline tag/archive/publish controls | Built app for inspection; signing controls also need matching Developer ID; release controls need no app, with macOS socket/process observation for deadlines | — | Read-only inspection; signing controls mutate disposable copies only. Select `preflight/codesign.preflight` for inspection alone. |
 | `source_drift` | Baseline | The runner source manifest is consistent between the on-disk `runner/Sources/` tree and `build.sh`'s `XPC_RUNNER_*` set. (The SwiftPM package auto-discovers by convention, so its set equals disk; build.sh vs the tree is the comparison that can ship a broken `PWRunner.xpc`.) Catches a compiled file added to one but not the other before the drift ships. Also checks the limits inventory, copied user guide, standalone staging, stale-document build refusal, documentation links (including both AGENTS files), the `_test_overrides` key table in `runner/README.md` against `PWRunnerTestOverrides`, the shared paragraph of the sandboxed-harness note across its three copies, the `policy-witness` usage lines in `cli.rs` against the README's CLI surface block, and the contract version manifest (`docs/contract.json`) against every generated copy in code and documents. | Python 3 | — | `tests/out/runs/default/suites/source_drift/.../check.log` |
 | `shell_helpers` | Baseline | Case helpers retain arguments, logs and identity; failures stop case stages. Result helpers preserve matching terminal evidence and logging/exit behavior. Wrapper groups preserve child order, streams, and failure status while continuing later children | Bash + Python 3; macOS codesign for mutation prerequisite control | — | Independent receipts and subprocess observations; covers case/equipment failures, separate build logs, quiet output, result serialization, wrapper phase gates/cleanup, and explicit skips. No built app or toolchain; mutation prerequisites inspect an unsigned fixture and forbid later builds; BYOXPC ownership controls use fake OS/CLI commands; wrapper and worker-setup controls use simulated children. |
 | `dispatcher` | Baseline | Requested suite execution, case reports, and lifecycle events determine the same shell exit status and `run.json.ok` | Bash + Python 3; cancellation also needs macOS local sockets and process observation | — | Separate reconciliation, accounting, cancellation, and selection controls. Includes kernel-observed cleanup of an interrupted ordinary case and its helper, plus executable receipts from two usable stub apps. No app or compiler. |

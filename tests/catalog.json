@@ -32,6 +32,11 @@
           "id": "release_deadline_controls",
           "requires": [],
           "description": "Real hung release commands stop within their deadline, preserve output, and leave no live child or retry"
+        },
+        {
+          "id": "release_publish_controls",
+          "requires": [],
+          "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches"
         }
       ]
     },

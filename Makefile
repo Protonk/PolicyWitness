@@ -1,8 +1,10 @@
-.PHONY: build clean test notarize
+.PHONY: build clean test notarize release publish
 
 NOTARY_KEYCHAIN_PROFILE ?=
 YOLO ?=
 DIST_DIR ?= dist
+RELEASE_NOTES ?=
+VERSION ?=
 
 build:
 	@if [ -z "$(IDENTITY)" ] && [ -z "$(YOLO)" ]; then \
@@ -32,6 +34,7 @@ notarize:
 		echo "example: make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1"; \
 		exit 2; \
 	fi
+	@/usr/bin/python3 -B tests/lib/release_preflight.py --report --dist "$(DIST_DIR)"
 	@$(MAKE) build
 	@set -eu; \
 	  release_evidence="$$(/usr/bin/python3 -B tests/lib/release_evidence.py "$(DIST_DIR)/PolicyWitness.zip")"; \
@@ -42,3 +45,29 @@ notarize:
 	  rm -f "$(DIST_DIR)/PolicyWitness.zip"; \
 	  /usr/bin/python3 -B tests/lib/release_commands.py --step re-zip "$$release_evidence" 60 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(DIST_DIR)/PolicyWitness.app" "$(DIST_DIR)/PolicyWitness.zip"; \
 	  bash tests/accept-release.sh "$(DIST_DIR)/PolicyWitness.zip" --evidence-dir "$$release_evidence"
+
+release:
+	@if [ -z "$(NOTARY_KEYCHAIN_PROFILE)" ]; then \
+		echo "ERROR: set NOTARY_KEYCHAIN_PROFILE to your notarytool keychain profile name"; \
+		echo "example: make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1 RELEASE_NOTES=notes.md"; \
+		exit 2; \
+	fi
+	@/usr/bin/python3 -B tests/lib/release_preflight.py --dist "$(DIST_DIR)" >/dev/null
+	@$(MAKE) notarize
+	@set -eu; \
+	  version="$$(/usr/bin/python3 -B tests/lib/release_preflight.py --dist "$(DIST_DIR)" --format version)"; \
+	  battery="tests/out/runs/release-$$version-default"; \
+	  echo "==> [release] default battery against $(DIST_DIR)/PolicyWitness.app -> $$battery"; \
+	  PW_APP_DIR="$(DIST_DIR)/PolicyWitness.app" PW_TEST_OUT_DIR="$$battery" ./tests/run.sh; \
+	  echo "==> [release] archive $(DIST_DIR)/archive/v$$version"; \
+	  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" --battery "$$battery" \
+	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",)
+
+publish:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "ERROR: set VERSION to the archived release version"; \
+		echo "example: make publish VERSION=0.2.4"; \
+		exit 2; \
+	fi
+	@/usr/bin/python3 -B tests/lib/release_publish.py "$(DIST_DIR)/archive/v$(VERSION)" \
+	  $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",)

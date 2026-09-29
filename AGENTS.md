@@ -15,6 +15,7 @@ Pick what you’re changing:
 - **Query/attempt ordering (release barrier, `comparison.order`)** → [tests/FAILURE-PROPAGATION-CONTRACT.md → Public representation and meaning](tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning), `wait_for_proceed` in [pw_probe_runner.c](controller/tools/pw_probe_runner/pw_probe_runner.c), the post-applied hook in [CWorker.swift](runner/Sources/PWRunnerCore/CWorker.swift), `ComparisonEvidence` in [CWorkerOrchestrator.swift](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 - **Runner client (NSXPCConnection wrapper)** → [runner/Clients/PWRunnerClient/](runner/Clients/PWRunnerClient/)
 - **Build + signing** → [build.sh](build.sh), [docs/SIGNING.md](docs/SIGNING.md)
+- **Release (tag preflight, notarize, archive, publish)** → [Makefile](Makefile), [docs/SIGNING.md → Release procedure](docs/SIGNING.md#release-procedure), `release_preflight.py`, `release_archive.py` and `release_publish.py` under [tests/lib/](tests/lib/)
 - **Distribution output + release archives** → [dist/README.md](dist/README.md), [dist/AGENTS.md](dist/AGENTS.md)
 - **Evidence generation / manifests** → [tests/build-evidence.py](tests/build-evidence.py)
 - **Tests** → [tests/README.md](tests/README.md), [tests/run.sh](tests/run.sh)

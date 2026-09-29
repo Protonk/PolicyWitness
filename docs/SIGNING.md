@@ -58,10 +58,46 @@ These are derived from the **actual signed binaries on disk** (hashes and entitl
 
 ## Release procedure
 
-Run commands from the repository root, outside an automation sandbox. `make
-notarize` **builds again**, even if you already built and tested the app. Its last
-step tests the actual final ZIP; a successful earlier test run is not release
-acceptance. For an already-built ZIP, use the individual steps below.
+Run commands from the repository root, outside an automation sandbox, at a clean
+checkout of the release commit. Tag first: `build.sh` derives the version it
+stamps from the nearest `v*` tag, so a build made before tagging is stamped with
+the previous version. `tests/lib/release_preflight.py` refuses a release from an
+untagged or dirty tree, from a lightweight tag, when the remote already holds a
+different tag of that name, or when `dist/archive/<tag>/` already exists.
+
+```sh
+git tag -a v0.2.4 -m "PolicyWitness 0.2.4"
+make release NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1 RELEASE_NOTES=/path/to/notes.md
+git commit tests/RETAINED.json -m "Retain the 0.2.4 release evidence"
+make publish VERSION=0.2.4
+```
+
+`make release` runs the preflight, then the `make notarize` chain below (build,
+sign, submit, wait, staple, validate, re-zip, accept), then the full default
+battery against the stapled app into `tests/out/runs/release-<version>-default`,
+and finally `tests/lib/release_archive.py`, which archives the accepted release
+under `dist/archive/v<version>/`. Archiving copies the final ZIP and staged
+guide, writes `SHA256SUMS` and `release.json`, moves the attempt's receipts to
+`evidence/` (leaving a `<attempt>.archived` pointer under `dist/evidence/`),
+archives the notes as `evidence/release-notes.md`, and appends the acceptance
+run and the battery run to `tests/RETAINED.json`. Commit that index change.
+Release acceptance and the battery take the test checkout lock, so run no other
+battery while `make release` runs. Nothing in `make release` leaves the machine
+except the notarization submission.
+
+`make publish` is the outward step. `tests/lib/release_publish.py` pushes the
+tag if the remote lacks it, creates the GitHub release once from the archived
+assets with `--verify-tag`, reads the release back, downloads every asset,
+compares bytes and digests with `SHA256SUMS`, and only then records the release
+and asset URLs in `release.json` and the reply in `evidence/github-release.json`.
+Re-running it verifies an existing release and creates nothing. It needs an
+authenticated `gh`; `RELEASE_NOTES=` overrides the archived notes.
+
+`make notarize` is the lower-level chain. It **builds again**, even if you
+already built and tested the app, and its last step tests the actual final ZIP;
+a successful earlier test run is not release acceptance. It prints the preflight
+findings as warnings rather than stopping, so a rehearsal still records what it
+stamps. For an already-built ZIP, use the individual steps below.
 
 ```sh
 make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail YOLO=1
@@ -89,6 +125,9 @@ directories hold raw receipts. Missing steps have no recorded result.
 | Validate | Reads the stapled app | Staple validation and Gatekeeper assessment succeed |
 | Re-zip | Replaces ZIP with the stapled app | ZIP creation succeeds |
 | Accept archive | Extracts a disposable copy and runs checks | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 |
+| Battery (`make release`) | Runs the default battery against the stapled app | `run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
+| Archive (`make release`) | Copies the ZIP and guide, moves receipts, retains evidence | `dist/archive/v<version>/release.json` with `origin: null` |
+| Publish (`make publish`) | Pushes the tag, creates the release, verifies uploads | `release.json` records `origin` and `evidence/github-release.json` exists |
 
 `notarize.py` owns only submission and one bounded wait. It preserves the input
 as `evidence/<attempt>/notarization/submitted.zip` beside the input ZIP.
@@ -228,10 +267,12 @@ assessment, not a claim about every recipient's machine or Gatekeeper cache.
 ## Preserved release archives
 
 `dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
-`release.json` provenance record, and supporting `evidence/`. The two retained
-examples are `v2.3.0` and `v0.2.3`, spanning the version reset. The guide is
-included when it was distributed. Provenance records distinguish a verified
-published asset from locally retained material; unknown source commits remain
+`release.json` provenance record, and supporting `evidence/`. `make release`
+creates one per version through `tests/lib/release_archive.py`; the two earlier
+examples, `v2.3.0` and `v0.2.3`, were assembled by hand on either side of the
+version reset. The guide is included when it was distributed. Provenance records
+distinguish a verified published asset (`origin.kind: github_release`, written
+by `make publish`) from locally retained material; unknown source commits remain
 null. An archive's directory name is not evidence that a corresponding Git tag
 is available. Original command receipts retain their original paths.
 
