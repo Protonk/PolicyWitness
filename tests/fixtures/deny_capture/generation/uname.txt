@@ -1,0 +1,1 @@
+Darwin admins-Virtual-Machine.local 23.6.0 Darwin Kernel Version 23.6.0: Tue Apr 21 20:17:41 PDT 2026; root:xnu-10063.141.1.712.16~1/RELEASE_ARM64_VMAPPLE arm64

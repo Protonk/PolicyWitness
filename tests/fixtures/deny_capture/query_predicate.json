@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "message_marker": "PWQP:",
+  "emitting_pid": 522,
+  "window": {
+    "start": "2026-09-29 06:12:03+0000",
+    "end": "2026-09-29 06:12:11+0000"
+  },
+  "messages": [
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-write-data /private/tmp/pw fixture/target file.txt",
+    "PWQP: Sandbox:  pw-probe-runner(42) deny(1) file-read-data /private/tmp/two-spaces",
+    "PWQP: Sandbox:\tpw-probe-runner(42)\tdeny(1)\tmach-lookup\tcom.apple.cfprefsd.daemon",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) sysctl-read kern.osrelease",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/tmp/a  b",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) process-exec /usr/bin/true",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) system-fsctl (_IO \"h\" 47)",
+    "PWQP: 3 duplicate reports for Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(42) deny(1) syscall-unix 545",
+    "PWQP: Sandbox: pw-probe-runner(7) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(7) deny(2) file-write-create /private/tmp/pw fixture/created",
+    "PWQP: Sandbox: pw-probe-runner(7) deny(1) mach-lookup com.apple.system.logger",
+    "PWQP: Sandbox: other-worker(42) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(420) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(142) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(43) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(70) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: pw-probe-runner(8) deny(1) file-read-data /private/etc/hosts",
+    "PWQP: Sandbox: other-worker(9) deny(1) file-read-data /private/tmp/42/pw-probe-runner(42)",
+    "PWQP: Sandbox: other-worker(9) deny(1) mach-lookup com.example.42.7",
+    "PWQP: pw-probe-runner(42) deny(1) file-read-data /private/tmp/no-sandbox-prefix",
+    "PWQP: Sandbox: xpw-probe-runner(42) deny(1) file-read-data /private/tmp/prefixed-name",
+    "PWQP: Sandbox: pw-probe-runner-2(42) deny(1) file-read-data /private/tmp/suffixed-name",
+    "PWQP: Sandbox: pw-probe-runner(42)x deny(1) file-read-data /private/tmp/token-suffix"
+  ],
+  "queries": [
+    {
+      "name": "worker_42",
+      "pid": 42,
+      "process_name": "pw-probe-runner",
+      "start": "2026-09-29 06:12:03+0000",
+      "end": "2026-09-29 06:12:11+0000",
+      "selected_messages": [
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-write-data /private/tmp/pw fixture/target file.txt",
+        "PWQP: Sandbox:  pw-probe-runner(42) deny(1) file-read-data /private/tmp/two-spaces",
+        "PWQP: Sandbox:\tpw-probe-runner(42)\tdeny(1)\tmach-lookup\tcom.apple.cfprefsd.daemon",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) sysctl-read kern.osrelease",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/tmp/a  b",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) process-exec /usr/bin/true",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) system-fsctl (_IO \"h\" 47)",
+        "PWQP: 3 duplicate reports for Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts",
+        "PWQP: Sandbox: pw-probe-runner(42) deny(1) syscall-unix 545"
+      ],
+      "deny_events": [
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/etc/hosts"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/etc/hosts"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-write-data",
+          "path": "/private/tmp/pw fixture/target file.txt"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/tmp/two-spaces"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "mach-lookup",
+          "path": "com.apple.cfprefsd.daemon"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "sysctl-read",
+          "path": "kern.osrelease"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/tmp/a  b"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "process-exec",
+          "path": "/usr/bin/true"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "system-fsctl",
+          "path": "(_IO \"h\" 47)"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/etc/hosts"
+        },
+        {
+          "pid": 42,
+          "process": "pw-probe-runner",
+          "operation": "syscall-unix",
+          "path": "545"
+        }
+      ]
+    },
+    {
+      "name": "worker_7",
+      "pid": 7,
+      "process_name": "pw-probe-runner",
+      "start": "2026-09-29 06:12:03+0000",
+      "end": "2026-09-29 06:12:11+0000",
+      "selected_messages": [
+        "PWQP: Sandbox: pw-probe-runner(7) deny(1) file-read-data /private/etc/hosts",
+        "PWQP: Sandbox: pw-probe-runner(7) deny(2) file-write-create /private/tmp/pw fixture/created",
+        "PWQP: Sandbox: pw-probe-runner(7) deny(1) mach-lookup com.apple.system.logger"
+      ],
+      "deny_events": [
+        {
+          "pid": 7,
+          "process": "pw-probe-runner",
+          "operation": "file-read-data",
+          "path": "/private/etc/hosts"
+        },
+        {
+          "pid": 7,
+          "process": "pw-probe-runner",
+          "operation": "file-write-create",
+          "path": "/private/tmp/pw fixture/created"
+        },
+        {
+          "pid": 7,
+          "process": "pw-probe-runner",
+          "operation": "mach-lookup",
+          "path": "com.apple.system.logger"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "2x ordinary; emitted twice for multiplicity",
+    "1x path with spaces",
+    "1x two spaces after Sandbox:",
+    "1x tab-separated tokens",
+    "1x sysctl form",
+    "1x double space inside the target",
+    "1x exec form",
+    "1x parenthesised/quoted target as the kernel prints it",
+    "1x kernel duplicate-report prefix before Sandbox:",
+    "1x numeric target",
+    "1x second worker identity",
+    "1x deny count other than 1",
+    "1x mach form",
+    "1x another worker name, same pid as 42",
+    "1x longer pid containing 42",
+    "1x longer pid containing 42",
+    "1x neighbouring pid of 42",
+    "1x longer pid containing 7",
+    "1x neighbouring pid of 7",
+    "1x requested token only inside a path",
+    "1x requested digits only in unrelated deny text",
+    "1x worker token without Sandbox: prefix",
+    "1x worker name with a prefix",
+    "1x worker name with a suffix",
+    "1x worker token with a trailing character"
+  ]
+}

@@ -1,0 +1,26 @@
+PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(42) deny(1) file-write-data /private/tmp/pw fixture/target file.txt
+PWQP: Sandbox:  pw-probe-runner(42) deny(1) file-read-data /private/tmp/two-spaces
+PWQP: Sandbox:	pw-probe-runner(42)	deny(1)	mach-lookup	com.apple.cfprefsd.daemon
+PWQP: Sandbox: pw-probe-runner(42) deny(1) sysctl-read kern.osrelease
+PWQP: Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/tmp/a  b
+PWQP: Sandbox: pw-probe-runner(42) deny(1) process-exec /usr/bin/true
+PWQP: Sandbox: pw-probe-runner(42) deny(1) system-fsctl (_IO "h" 47)
+PWQP: 3 duplicate reports for Sandbox: pw-probe-runner(42) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(42) deny(1) syscall-unix 545
+PWQP: Sandbox: pw-probe-runner(7) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(7) deny(2) file-write-create /private/tmp/pw fixture/created
+PWQP: Sandbox: pw-probe-runner(7) deny(1) mach-lookup com.apple.system.logger
+PWQP: Sandbox: other-worker(42) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(420) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(142) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(43) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(70) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: pw-probe-runner(8) deny(1) file-read-data /private/etc/hosts
+PWQP: Sandbox: other-worker(9) deny(1) file-read-data /private/tmp/42/pw-probe-runner(42)
+PWQP: Sandbox: other-worker(9) deny(1) mach-lookup com.example.42.7
+PWQP: pw-probe-runner(42) deny(1) file-read-data /private/tmp/no-sandbox-prefix
+PWQP: Sandbox: xpw-probe-runner(42) deny(1) file-read-data /private/tmp/prefixed-name
+PWQP: Sandbox: pw-probe-runner-2(42) deny(1) file-read-data /private/tmp/suffixed-name
+PWQP: Sandbox: pw-probe-runner(42)x deny(1) file-read-data /private/tmp/token-suffix
