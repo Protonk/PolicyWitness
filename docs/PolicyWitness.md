@@ -1,12 +1,13 @@
 # PolicyWitness User Guide
 
-PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md).
+PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [Questions](#questions).
 
 Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
 
 ## Contents
 
 - [Quick start](#quick-start)
+- [Questions](#questions)
 - [Specimen format](#specimen-format)
 - [Limits](#limits)
 - [Output envelope](#output-envelope)
@@ -54,6 +55,64 @@ Run it:
 ```sh
 $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 ```
+
+## Questions
+
+<!-- BEGIN COPIED QUESTIONS -->
+
+### When should I use PolicyWitness?
+
+PolicyWitness compares `sandbox_check` predictions with the observed results of operations attempted under a sandbox policy. Use it when developing a policy or investigating disagreement for particular operations, filters and targets. You can also use it as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
+
+### Who needs to use PolicyWitness?
+
+Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. 
+
+### Why might I want to use PolicyWitness even if I don't need to?
+
+Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
+
+### Beyond observing drift, what does PolicyWitness's attempt channel record?
+
+The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are not necessarily raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
+
+### Can PolicyWitness probe operations it doesn't natively support?
+
+Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not automatically turn that evidence into a comparison for that operation and successful spawning can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
+
+### How does PolicyWitness handle uncertainty in its verdicts?
+
+PolicyWitness keeps the prediction (`sandbox_check`) and attempt observations (`attempt`) separate from the comparison it derives. In the response schema, `comparison` records the conclusion, its operation and target scope, and known limitations. `drift` is a separate, compact summary: `false` for agreement, `true` for disagreement, and `null` for either directional consistency or an unavailable comparison.
+
+The current runner closes query collection before releasing attempts. Eligible native records report `comparison.order: query_first`; this proves an interval before attempts, not a common state snapshot. A deny prediction beside a successful attempt still yields `null` because state stability and runtime target identity remain unestablished. A successful same-target unlink also prevents an allow/success agreement while its order against the query is unknown.
+
+For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
+
+### Can PolicyWitness return a verdict of `drift: true`?
+
+No. `drift: true` would assert that `sandbox_check` and kernel enforcement disagreed with every other explanation excluded, and the envelope carries no evidence that the target's state was stable or that a path named the same object at query time and attempt time. Without that evidence the typed comparison has no disagreement case to construct, so the runner never emits one, its encoder rejects one, and the consumer checks reject one. A deny prediction beside a successful attempt is reported as `conclusion: unavailable` with `drift: null`, with the native prediction, the attempt result and the ordering evidence retained for the reader.
+
+### Can PolicyWitness run every profile that `libsandbox` accepts?
+
+No. PolicyWitness has its own limits, documented in [the limits inventory](#limits).
+
+### What versions of SBPL are supported?
+
+`(version 1)` is the officially supported SBPL profile prologue, but a small fraction of the profiles Apple ships under `/System/Library/Sandbox/Profiles/` open with `(version 2)` or `(version 3)` — the higher numbers are not documented in any public reference. PolicyWitness compiles whatever the host's `sandbox_compile_string` accepts, so all three work.
+
+### How do I use imports with PolicyWitness?
+
+PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
+
+### Can PolicyWitness test sandbox-extension behavior?
+
+No. PolicyWitness does not issue, consume, release, or otherwise track sandbox extensions, and it does not model changes in access caused by extension state. Policies containing extension predicates may compile and run, but PolicyWitness does not provide first-class probes or comparison semantics for extension lifecycle behavior.
+
+### Which happens first, the prediction or the attempt?
+
+A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+
+<!-- END COPIED QUESTIONS -->
 
 ## Specimen format
 

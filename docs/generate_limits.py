@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Render the limits inventory and copy its shared section into the user guide.
 
-References identify owners, not proof of values. Compiled C, Swift and Rust
+The same run copies the shared questions from QUESTIONS.md into the guide's
+Questions section. References identify owners, not proof of values. Compiled C, Swift and Rust
 tests compare implementation values with this manifest independently.
 --check verifies both documents without writing. --stage-guide copies the
 checked guide for distribution without regenerating stale documentation.
@@ -23,6 +24,11 @@ SHARED_START = "<!-- BEGIN SHARED LIMITS -->"
 SHARED_END = "<!-- END SHARED LIMITS -->"
 GUIDE_START = "<!-- BEGIN COPIED LIMITS -->"
 GUIDE_END = "<!-- END COPIED LIMITS -->"
+QUESTIONS_START = "<!-- BEGIN SHARED QUESTIONS -->"
+QUESTIONS_END = "<!-- END SHARED QUESTIONS -->"
+GUIDE_QUESTIONS_START = "<!-- BEGIN COPIED QUESTIONS -->"
+GUIDE_QUESTIONS_END = "<!-- END COPIED QUESTIONS -->"
+GUIDE_NAME = "PolicyWitness.md"
 SECTIONS = {
     "admission": "Specimen admission",
     "execution": "Execution budgets",
@@ -150,6 +156,35 @@ def update_guide(text, limits_document):
                          GUIDE_START + "\n\n" + shared + "\n\n" + GUIDE_END)
 
 
+def shared_questions(questions_document):
+    begin, finish = block_bounds(questions_document, QUESTIONS_START, QUESTIONS_END)
+    shared = questions_document[begin + len(QUESTIONS_START):finish - len(QUESTIONS_END)].strip()
+    headings = re.findall(r"^#+ ", "\n".join(prose_lines(shared)), re.MULTILINE)
+    if not headings or any(heading != "## " for heading in headings):
+        raise ValueError("shared questions must use level-two headings only")
+    # Questions nest under the guide's Questions heading, and links into the
+    # guide become internal links in the copy. Everything else is verbatim.
+    shared = re.sub(r"^## ", "### ", shared, flags=re.MULTILINE)
+    return shared.replace(f"]({GUIDE_NAME}#", "](#")
+
+
+def update_guide_questions(text, questions_document):
+    return replace_block(text, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END,
+                         GUIDE_QUESTIONS_START + "\n\n" + shared_questions(questions_document)
+                         + "\n\n" + GUIDE_QUESTIONS_END)
+
+
+def require_standalone(prose, what):
+    # The copied sections use inline links only, and must need no companion
+    # files or web pages. Reject reference links/definitions rather than
+    # assuming they can be resolved in a standalone release asset.
+    if re.search(r"\]\s*\[|^\s*\[[^]\n]+\]:|<https?://", prose, re.MULTILINE):
+        raise ValueError(f"{what} must use inline internal links only")
+    for target in re.findall(r"\]\(([^)]+)\)", prose):
+        if not target.startswith("#"):
+            raise ValueError(f"{what} depend on another document: {target}")
+
+
 def prose_lines(text):
     """Ignore fenced examples when inspecting this guide's Markdown links."""
     fence = None
@@ -172,15 +207,12 @@ def validate_guide(text, limits):
     for item in limits:
         if copied.count(f"(`{item['id']}`)") != 1:
             raise ValueError(f"guide must contain exactly one limits row: {item['id']}")
-    # The shared section uses inline links only, and must need no companion
-    # files or web pages. Reject reference links/definitions rather than
-    # assuming they can be resolved in a standalone release asset.
-    prose = "\n".join(prose_lines(copied))
-    if re.search(r"\]\s*\[|^\s*\[[^]\n]+\]:|<https?://", prose, re.MULTILINE):
-        raise ValueError("copied limits must use inline internal links only")
-    for target in re.findall(r"\]\(([^)]+)\)", prose):
-        if not target.startswith("#"):
-            raise ValueError(f"copied limits depend on another document: {target}")
+    require_standalone("\n".join(prose_lines(copied)), "copied limits")
+    begin, finish = block_bounds(text, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END)
+    questions = "\n".join(prose_lines(text[begin + len(GUIDE_QUESTIONS_START):finish - len(GUIDE_QUESTIONS_END)]))
+    if not re.search(r"^### ", questions, re.MULTILINE):
+        raise ValueError("guide must contain at least one copied question")
+    require_standalone(questions, "copied questions")
 
     # Headings in this guide use ATX syntax. Match the punctuation-stripped
     # anchors used by its Markdown links, including duplicate-heading suffixes.
@@ -204,22 +236,26 @@ def validate_guide(text, limits):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="check both documents; do not write")
+    mode.add_argument("--check", action="store_true", help="check the documents; do not write")
     mode.add_argument("--stage-guide", type=Path, metavar="PATH",
-                      help="check both documents, then copy the guide to PATH")
+                      help="check the documents, then copy the guide to PATH")
     args = parser.parse_args()
     path = ROOT / "docs/LIMITS.md"
     guide_path = ROOT / "docs/PolicyWitness.md"
+    questions_path = ROOT / "docs/QUESTIONS.md"
     try:
         limits = load_limits(ROOT / "docs/limits.json")
         before = path.read_text()
         after = update_document(before, limits)
-        # Derive the copy from the freshly rendered source, even when the
-        # on-disk tables were stale. Validate both inputs before any writes.
+        # Derive the copies from the freshly rendered source and the FAQ, even
+        # when the on-disk tables were stale. Validate every input before any
+        # writes. QUESTIONS.md is an input only; it is never rewritten.
+        questions = questions_path.read_text()
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
-        guide_after = update_guide(guide_before, after)
+        guide_after = update_guide_questions(update_guide(guide_before, after), questions)
         validate_guide(guide_after, limits)
+        question_count = len(re.findall(r"^### ", shared_questions(questions), re.MULTILINE))
         if args.check or args.stage_guide is not None:
             stale = [name for name, old, new in [
                 ("LIMITS.md", before, after), ("PolicyWitness.md", guide_before, guide_after)]
@@ -233,9 +269,9 @@ def main():
                 path.write_text(after)
             if guide_before != guide_after:
                 guide_path.write_text(guide_after)
-        print(f"ok: {len(limits)} limits; " +
+        print(f"ok: {len(limits)} limits, {question_count} questions; " +
               (f"guide staged at {args.stage_guide}" if args.stage_guide is not None else
-               "both documents current" if args.check else "LIMITS.md generated and guide copy updated"))
+               "documents current" if args.check else "LIMITS.md generated and guide copies updated"))
         return 0
     except (ValueError, OSError, TypeError, KeyError) as error:
         print(f"limits: {error}", file=sys.stderr)

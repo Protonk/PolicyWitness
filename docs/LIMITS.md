@@ -246,13 +246,16 @@ Value checks compare the inventory with compiled constants, constructed defaults
 Edit [limits.json](limits.json), then run `python3 docs/generate_limits.py` from
 the repository root. The same command copies the marked shared section into
 [PolicyWitness.md](PolicyWitness.md); edit its explanations here. Review the
-handwritten explanations as well as the tables.
+handwritten explanations as well as the tables. The same command also copies the
+shared questions from [QUESTIONS.md](QUESTIONS.md) into the guide's Questions
+section; edit the questions there, writing links into the guide as
+`PolicyWitness.md#anchor`.
 The JSON is a reviewed description; production code does not load it.
 
 `python3 docs/generate_limits.py --check` verifies the manifest's shape, source
-and check references, generated text in both documents, and the guide's internal
-links. The copied section must contain every limit and require no companion
-files or web pages. `--stage-guide PATH` performs the same checks before copying
+and check references, generated text in both documents, the copied questions,
+and the guide's internal links. The copied sections must contain every limit and
+every shared question and require no companion files or web pages. `--stage-guide PATH` performs the same checks before copying
 the guide; it refuses stale documents without regenerating them. The build
 checks freshness before compilation and stages the guide before packaging.
 

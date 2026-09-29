@@ -20,7 +20,8 @@ generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
 # build.sh checks the limits documents first; a build checkout needs their inputs.
-LIMITS_FILES = {'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md', 'build.sh'}
+LIMITS_FILES = {'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
+                'docs/QUESTIONS.md', 'build.sh'}
 
 
 def limits_references():

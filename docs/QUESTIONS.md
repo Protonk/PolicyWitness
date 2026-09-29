@@ -1,6 +1,8 @@
 # PolicyWitness — FAQ
 
-The following questions are answered briefly with exhaustive detail remanded to the [user guide](PolicyWitness.md).
+The following questions are answered briefly with exhaustive detail remanded to the [user guide](PolicyWitness.md). The questions between the shared markers are copied into the guide's Questions section by `docs/generate_limits.py`; links into the guide are written as `PolicyWitness.md#anchor` and become internal links in the copy.
+
+<!-- BEGIN SHARED QUESTIONS -->
 
 ## When should I use PolicyWitness?
 
@@ -26,7 +28,7 @@ Yes — via the `exec` attempt kind plus the named-augment interface. Callers sh
 
 PolicyWitness keeps the prediction (`sandbox_check`) and attempt observations (`attempt`) separate from the comparison it derives. In the response schema, `comparison` records the conclusion, its operation and target scope, and known limitations. `drift` is a separate, compact summary: `false` for agreement, `true` for disagreement, and `null` for either directional consistency or an unavailable comparison.
 
-The current runner closes query collection before releasing attempts. Eligible native records report `comparison.order: query_first`; this proves an interval before attempts, not a common state snapshot. A deny prediction beside a successful attempt still yields `null` because state stability and runtime target identity remain unestablished. A successful same-target unlink also prevents an allow/success agreement while its order against the query is unknown. Stored response-7 replies may use the weaker historical disagreement meaning; decoding preserves their recorded values.
+The current runner closes query collection before releasing attempts. Eligible native records report `comparison.order: query_first`; this proves an interval before attempts, not a common state snapshot. A deny prediction beside a successful attempt still yields `null` because state stability and runtime target identity remain unestablished. A successful same-target unlink also prevents an allow/success agreement while its order against the query is unknown.
 
 For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
 
@@ -36,7 +38,7 @@ No. `drift: true` would assert that `sandbox_check` and kernel enforcement disag
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
-No. PolicyWitness has its own limits, documented in [PolicyWitness limits](LIMITS.md).
+No. PolicyWitness has its own limits, documented in [the limits inventory](PolicyWitness.md#limits).
 
 ## What versions of SBPL are supported?
 
@@ -50,6 +52,8 @@ PolicyWitness supports imports the same way `sandbox-exec` does — `(import "na
 
 No. PolicyWitness does not issue, consume, release, or otherwise track sandbox extensions, and it does not model changes in access caused by extension state. Policies containing extension predicates may compile and run, but PolicyWitness does not provide first-class probes or comparison semantics for extension lifecycle behavior.
 
-### Which happens first, the prediction or the attempt?
+## Which happens first, the prediction or the attempt?
 
 A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+
+<!-- END SHARED QUESTIONS -->
