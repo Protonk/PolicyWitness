@@ -43,6 +43,7 @@ name = "controller"
 version = "0.1.0"
 dependencies = [
  "ctrlc",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

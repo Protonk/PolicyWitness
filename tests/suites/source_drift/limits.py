@@ -203,6 +203,7 @@ class LimitsDocumentationTests(unittest.TestCase):
             'tests/suites/runner_abi_layout/limits.py',
             'runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift',
             'controller/src/run_flow.rs',
+            'controller/src/log_capture.rs',
             'controller/src/bin/sbpl-check.rs',
             'controller/src/bin/sandbox-log-observer.rs',
         }

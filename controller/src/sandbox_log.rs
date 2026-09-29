@@ -6,9 +6,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::ffi::OsString;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
+use crate::log_capture::{
+    self, Boundary, CollectionBudget, Cutoff, LogTimeout, ProcessCapture, Supervision,
+};
 use crate::utils::{JsonOutputCapture, capture_json_output};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -116,6 +119,8 @@ pub struct SandboxLogCapture {
     pub observed_deny: Option<bool>,
     pub deny_events: Option<Vec<SandboxDenyEvent>>,
     pub step_denies: Option<Vec<SandboxLogStepDeny>>,
+    pub supervision: Option<Supervision>,
+    pub processing_cutoff: Option<Cutoff>,
 }
 
 fn observed_deny_from_observer_envelope(obj: &Value) -> Option<bool> {
@@ -180,17 +185,57 @@ fn attempt_operations(attempt: &Value) -> &'static [&'static str] {
     }
 }
 
+#[cfg(test)]
 pub fn match_step_denies(
     steps: &[Value],
     submitted_plan: &[Value],
     deny_events: &[SandboxDenyEvent],
     pid: Option<i32>,
 ) -> Vec<SandboxLogStepDeny> {
+    bounded_step_denies(steps, submitted_plan, deny_events, pid, None).unwrap()
+}
+
+pub fn bounded_step_denies(
+    steps: &[Value],
+    submitted_plan: &[Value],
+    deny_events: &[SandboxDenyEvent],
+    pid: Option<i32>,
+    budget: Option<CollectionBudget>,
+) -> Result<Vec<SandboxLogStepDeny>, Cutoff> {
     let Some(pid) = pid.filter(|p| *p > 0) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
+    for (name, count, limit) in [
+        (
+            "reply_steps",
+            steps.len(),
+            log_capture::MAX_CORRELATION_STEPS,
+        ),
+        (
+            "submitted_steps",
+            submitted_plan.len(),
+            log_capture::MAX_CORRELATION_STEPS,
+        ),
+        (
+            "deny_events",
+            deny_events.len(),
+            log_capture::MAX_DENY_EVENTS,
+        ),
+    ] {
+        if count > limit {
+            return Err(Cutoff::limit("correlation_overflow", name, limit, count));
+        }
+    }
     let mut out = Vec::new();
+    let mut total_matches = 0;
+    let mut total_bytes = 0usize;
     for (event_index, event) in deny_events.iter().enumerate() {
+        if budget.is_some_and(CollectionBudget::expired) {
+            return Err(Cutoff::reason(
+                "deadline",
+                Some("candidate association exceeded the collection deadline".into()),
+            ));
+        }
         if event.pid != Some(pid) {
             continue;
         }
@@ -245,6 +290,34 @@ pub fn match_step_denies(
             // normalized_path has no guaranteed observer/phase on legacy replies;
             // an unowned enrichment alone cannot establish a candidate match.
             if !path_sources.is_empty() {
+                total_matches += 1;
+                if total_matches > log_capture::MAX_ASSOCIATIONS {
+                    return Err(Cutoff::limit(
+                        "correlation_overflow",
+                        "matching_evidence",
+                        log_capture::MAX_ASSOCIATIONS,
+                        total_matches,
+                    ));
+                }
+                // Conservative encoded/allocation allowance: duplicate step ID,
+                // path, operation, kind/action, six-byte escaping and fixed keys,
+                // path-source labels and per-event/reference overhead.
+                let bytes = (2 * id.len()
+                    + path.len()
+                    + operation.len()
+                    + attempt["kind"].as_str().unwrap_or("").len()
+                    + attempt["action"].as_str().unwrap_or("").len())
+                    * 6
+                    + 1024;
+                total_bytes = total_bytes.saturating_add(bytes);
+                if total_bytes > log_capture::MAX_ASSOCIATION_BYTES {
+                    return Err(Cutoff::limit(
+                        "correlation_overflow",
+                        "association_bytes",
+                        log_capture::MAX_ASSOCIATION_BYTES,
+                        total_bytes,
+                    ));
+                }
                 candidates.push(id.to_string());
                 matching_evidence.push(SandboxLogMatchEvidence {
                     step_id: id.to_string(),
@@ -271,7 +344,13 @@ pub fn match_step_denies(
             });
         }
     }
-    out
+    if budget.is_some_and(CollectionBudget::expired) {
+        return Err(Cutoff::reason(
+            "deadline",
+            Some("candidate association exceeded the collection deadline".into()),
+        ));
+    }
+    Ok(out)
 }
 
 /// The observer is asked for exactly the window; `--last` never appears.
@@ -301,10 +380,20 @@ pub fn observer_argv(
     ])
 }
 
+#[cfg(test)]
 pub fn capture_sandbox_logs(
     pid: i64,
     process_name: &str,
     window: SandboxLogWindow,
+) -> Result<SandboxLogCapture, String> {
+    capture_sandbox_logs_with_timeout(pid, process_name, window, LogTimeout::default())
+}
+
+pub fn capture_sandbox_logs_with_timeout(
+    pid: i64,
+    process_name: &str,
+    window: SandboxLogWindow,
+    timeout: LogTimeout,
 ) -> Result<SandboxLogCapture, String> {
     // Check before resolving or executing a helper. The raw clock readings
     // remain available even though no interval can be submitted to log show.
@@ -322,19 +411,144 @@ pub fn capture_sandbox_logs(
             observed_deny: None,
             deny_events: None,
             step_denies: None,
+            supervision: None,
+            processing_cutoff: None,
         });
     }
     let tool = resolve_contents_macos_tool("sandbox-log-observer")?;
     let argv = observer_argv(tool.into_os_string(), pid, process_name, &window)?;
 
-    let out = Command::new(&argv[0])
+    let budget = timeout.start()?;
+    let mut command = Command::new(&argv[0]);
+    command
         .args(&argv[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("failed to run sandbox-log-observer: {e}"))?;
+        .arg("--collection-budget")
+        .arg(budget.argument());
+    Ok(parse_supervised_observer(
+        log_capture::capture(&mut command, budget, Boundary::Observer),
+        window,
+        pid,
+        process_name,
+    ))
+}
 
-    Ok(parse_observer_output(&out, window))
+fn cutoff_status(report: &Supervision) -> &'static str {
+    match report.cutoff.as_ref().map(|c| c.reason.as_str()) {
+        Some("deadline") => "timeout",
+        Some("output_overflow" | "event_overflow" | "serialization_overflow") => "overflow",
+        Some("launch_error") => "requested_unavailable",
+        Some("process_exit") => "error",
+        _ => "capture_error",
+    }
+}
+
+pub(crate) fn parse_supervised_observer(
+    raw: ProcessCapture,
+    window: SandboxLogWindow,
+    pid: i64,
+    process_name: &str,
+) -> SandboxLogCapture {
+    use std::os::unix::process::ExitStatusExt;
+    let status =
+        std::process::ExitStatus::from_raw(raw.supervision.process.exit_code.unwrap_or(1) << 8);
+    let out = std::process::Output {
+        status,
+        stdout: raw.stdout,
+        stderr: raw.stderr,
+    };
+    let mut capture = parse_observer_output(&out, window);
+    let report = raw.supervision;
+    capture.output.stdout_bytes_received = Some(report.stdout.bytes_read);
+    capture.output.stderr_bytes_received = Some(report.stderr.bytes_read);
+    capture.output.stdout_bytes_retained = Some(report.stdout.bytes_retained);
+    capture.output.stderr_bytes_retained = Some(report.stderr.bytes_retained);
+    capture.output.stderr_truncated = report.stderr.truncated;
+    if report.stdout.truncated {
+        capture.output.stdout_truncated = true;
+        capture.output.stdout_capture_error =
+            Some("observer stdout exceeded its streaming limit".into());
+        capture.output.stdout_raw = Some(String::from_utf8_lossy(&out.stdout).into_owned());
+        capture.observer = None;
+        capture.observed_deny = None;
+        capture.deny_events = None;
+    }
+    // Shape-valid, intact replies remain diagnostic evidence even after a failed
+    // wait, interrupted pipe or inner query. No extraction from JSON fragments.
+    let data = capture.observer.as_ref().and_then(|o| o.get("data"));
+    let inner = data
+        .and_then(|d| d.get("collection"))
+        .and_then(|v| serde_json::from_value::<Supervision>(v.clone()).ok());
+    let shape_valid = data.is_some_and(|d| {
+        d["observer_schema_version"] == 1
+            && d["mode"] == "show"
+            && d["pid"].as_i64() == Some(pid)
+            && d["process_name"].as_str() == Some(process_name)
+            && d["log_truncated"].is_boolean()
+            && d["log_stdout"].is_string()
+            && d["log_stderr"].is_string()
+            && capture
+                .deny_events
+                .as_ref()
+                .is_some_and(|events| d["observed_deny"].as_bool() == Some(!events.is_empty()))
+            && [
+                "process_name",
+                "predicate",
+                "start",
+                "end",
+                "last",
+                "plan_id",
+                "row_id",
+                "correlation_id",
+            ]
+            .iter()
+            .all(|key| {
+                d.get(key).is_none_or(|v| {
+                    v.is_null()
+                        || v.as_str()
+                            .is_some_and(|s| s.len() <= log_capture::MAX_OBSERVER_METADATA_BYTES)
+                })
+            })
+            && inner
+                .as_ref()
+                .is_some_and(|r| d["log_rc"].as_i64() == r.process.exit_code.map(i64::from))
+    }) && inner.as_ref().is_some_and(|inner| {
+        inner.boundary == Boundary::LogShow
+            && inner.budget.deadline_monotonic_ns == report.budget.deadline_monotonic_ns
+            && inner.budget.started_monotonic_ns == report.budget.started_monotonic_ns
+            && inner.budget.timeout_ms == report.budget.timeout_ms
+            && inner.budget.timeout_source == report.budget.timeout_source
+            && inner.stdout.limit_bytes == log_capture::LOG_STDOUT_BYTES
+            && inner.stderr.limit_bytes == log_capture::LOG_STDERR_BYTES
+    });
+    if !report.complete() {
+        capture.capture_status = cutoff_status(&report).into();
+    } else if capture.processing_cutoff.is_some() {
+        capture.capture_status = "overflow".into();
+    } else if !shape_valid {
+        if capture.observer.is_some() {
+            capture.capture_status = "invalid_reply".into();
+        }
+    } else if let Some(inner) = inner {
+        if !inner.complete() {
+            capture.capture_status = if capture.blocked_reason.is_some() {
+                "blocked"
+            } else {
+                cutoff_status(&inner)
+            }
+            .into();
+        } else if data.is_some_and(|d| d["log_truncated"] == true) {
+            capture.capture_status = "capture_error".into();
+        }
+    }
+    if capture.capture_status == "captured" && report.budget.expired() {
+        capture.capture_status = "timeout".into();
+        capture.processing_cutoff = Some(Cutoff::reason(
+            "deadline",
+            Some("observer reply parsing exceeded the collection deadline".into()),
+        ));
+    }
+    capture.supervision = Some(report);
+    capture
 }
 
 /// The observer mirrors the window it actually handed to `log show`. A reply
@@ -357,23 +571,104 @@ pub(crate) fn parse_observer_output(
 ) -> SandboxLogCapture {
     let exit_code = out.status.code().unwrap_or(1);
 
-    let (output, parsed) = capture_json_output(
-        out,
-        "sandbox-log-observer",
-        crate::utils::OBSERVER_CAPTURE_BYTES,
-    );
+    let mut output;
+    let parsed;
+    let mut processing_cutoff = None;
+    // Count JSON punctuation outside strings before allocating a Value tree.
+    // This bounds object/array expansion even for a malformed helper response.
+    let mut quoted = false;
+    let mut escaped = false;
+    let mut tokens = 0;
+    for b in &out.stdout {
+        if quoted {
+            if escaped {
+                escaped = false;
+            } else if *b == b'\\' {
+                escaped = true;
+            } else if *b == b'"' {
+                quoted = false;
+            }
+        } else if *b == b'"' {
+            quoted = true;
+        } else if matches!(b, b'{' | b'[' | b',' | b':') {
+            tokens += 1;
+            if tokens > log_capture::MAX_OBSERVER_JSON_TOKENS {
+                processing_cutoff = Some(Cutoff::limit(
+                    "json_structure_overflow",
+                    "json_punctuation",
+                    log_capture::MAX_OBSERVER_JSON_TOKENS,
+                    tokens,
+                ));
+                break;
+            }
+        }
+    }
+    if processing_cutoff.is_some() {
+        output = JsonOutputCapture::unavailable(
+            "observer JSON structure limit exceeded".into(),
+            crate::utils::OBSERVER_CAPTURE_BYTES,
+        );
+        let (prefix, truncated) =
+            crate::utils::truncate_output(&out.stdout, crate::utils::OBSERVER_CAPTURE_BYTES);
+        output.stdout_raw = Some(prefix);
+        output.stdout_truncated = truncated;
+        output.stdout_bytes_received = Some(out.stdout.len());
+        output.stdout_bytes_retained =
+            Some(out.stdout.len().min(crate::utils::OBSERVER_CAPTURE_BYTES));
+        let (stderr, stderr_truncated) =
+            crate::utils::truncate_output(&out.stderr, log_capture::OBSERVER_STDERR_BYTES);
+        output.stderr = stderr;
+        output.stderr_truncated = stderr_truncated;
+        output.stderr_bytes_received = Some(out.stderr.len());
+        output.stderr_bytes_retained =
+            Some(out.stderr.len().min(log_capture::OBSERVER_STDERR_BYTES));
+        parsed = None;
+    } else {
+        (output, parsed) = capture_json_output(
+            out,
+            "sandbox-log-observer",
+            crate::utils::OBSERVER_CAPTURE_BYTES,
+        );
+    }
 
     let observed_deny = parsed
         .as_ref()
         .and_then(observed_deny_from_observer_envelope);
     let observer_log_error = parsed.as_ref().and_then(observer_log_error);
     let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
-    let deny_events = parsed.as_ref().and_then(observer_deny_events);
+    let deny_events = parsed
+        .as_ref()
+        .filter(|v| {
+            v.pointer("/data/deny_events")
+                .and_then(Value::as_array)
+                .is_none_or(|events| events.len() <= log_capture::MAX_DENY_EVENTS)
+        })
+        .and_then(observer_deny_events);
     let window_mirrored = parsed
         .as_ref()
         .is_some_and(|obj| observer_window_matches(obj, &window));
 
-    let capture_status = if output.stdout_capture_error.is_some() {
+    if parsed
+        .as_ref()
+        .and_then(|v| v.pointer("/data/deny_events"))
+        .and_then(Value::as_array)
+        .is_some_and(|events| events.len() > log_capture::MAX_DENY_EVENTS)
+    {
+        processing_cutoff = Some(Cutoff::limit(
+            "event_overflow",
+            "deny_events",
+            log_capture::MAX_DENY_EVENTS,
+            parsed.as_ref().unwrap()["data"]["deny_events"]
+                .as_array()
+                .unwrap()
+                .len(),
+        ));
+        // Preserve the intact reply as diagnostic evidence, without allocating
+        // another derived event array beyond the declared limit.
+    }
+    let capture_status = if processing_cutoff.is_some() {
+        "overflow".to_string()
+    } else if output.stdout_capture_error.is_some() {
         "capture_error".to_string()
     } else if output.stdout_parse_error.is_some() {
         "parse_error".to_string()
@@ -383,7 +678,7 @@ pub(crate) fn parse_observer_output(
         "error".to_string()
     } else if exit_code != 0 {
         "error".to_string()
-    } else if observed_deny.is_some() {
+    } else if observed_deny.is_some() && deny_events.is_some() {
         if window_mirrored {
             "captured".to_string()
         } else {
@@ -405,6 +700,8 @@ pub(crate) fn parse_observer_output(
         observed_deny,
         deny_events,
         step_denies: None,
+        supervision: None,
+        processing_cutoff,
     }
 }
 
@@ -412,6 +709,219 @@ pub(crate) fn parse_observer_output(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn supervised_receiver_retains_failed_inner_evidence_and_rejects_bad_shapes() {
+        let line = "Sandbox: pw-probe-runner(42) deny(1) file-write-data /attempt";
+        for scenario in [
+            "complete",
+            "nonzero",
+            "overflow",
+            "bad_pid",
+            "missing_collection",
+            "wrong_budget",
+            "bad_observed",
+            "bad_exit",
+            "bad_metadata",
+        ] {
+            let budget = LogTimeout {
+                milliseconds: 3000,
+                source: log_capture::TimeoutSource::Cli,
+            }
+            .start()
+            .unwrap();
+            let mut inner = Command::new("/usr/bin/python3");
+            inner.args(["-c", "import os,sys; os.write(1,sys.argv[1].encode()+b'\\n'); os.write(1,b'x'*int(sys.argv[2])); sys.exit(int(sys.argv[3]))", line,
+                if scenario == "overflow" { "1048577" } else { "0" }, if scenario == "nonzero" { "7" } else { "0" }]);
+            let inner = log_capture::capture(&mut inner, budget, Boundary::LogShow);
+            let window = SandboxLogWindow::runner_client_span(1000, 2500);
+            let mut body = json!({"kind":"sandbox_log_observer_report", "data": {
+                "observer_schema_version":1, "mode":"show", "pid":42, "process_name":"pw-probe-runner",
+                "start":window.start, "end":window.end, "last":null,
+                "log_rc":inner.supervision.process.exit_code, "log_error":inner.supervision.cutoff.as_ref().map(|c| &c.reason),
+                "log_truncated":inner.supervision.stdout.truncated, "log_stdout":String::from_utf8_lossy(&inner.stdout), "log_stderr":"",
+                "observed_deny":true, "deny_events":[{"pid":42,"process":"pw-probe-runner", "operation":"file-write-data", "path":"/attempt", "raw_line":line}],
+                "collection":inner.supervision,
+            }});
+            match scenario {
+                "bad_pid" => body["data"]["pid"] = json!(99),
+                "bad_observed" => body["data"]["observed_deny"] = json!(false),
+                "bad_exit" => body["data"]["log_rc"] = json!(19),
+                "bad_metadata" => {
+                    body["data"]["predicate"] =
+                        json!("x".repeat(log_capture::MAX_OBSERVER_METADATA_BYTES + 1))
+                }
+                "missing_collection" => {
+                    body["data"].as_object_mut().unwrap().remove("collection");
+                }
+                "wrong_budget" => {
+                    body["data"]["collection"]["budget"]["deadline_monotonic_ns"] =
+                        json!(budget.deadline_monotonic_ns + 1)
+                }
+                _ => (),
+            }
+            // File-backed stdin avoids argv limits for the intact, bounded
+            // diagnostic reply after inner overflow. The fixture stdout is the
+            // only receiver transport.
+            let file = std::env::temp_dir().join(format!(
+                "pw-observer-reply-{}-{scenario}.json",
+                std::process::id()
+            ));
+            std::fs::write(&file, serde_json::to_vec(&body).unwrap()).unwrap();
+            let mut observer = Command::new("/bin/cat");
+            observer.arg(&file);
+            let raw = log_capture::capture(&mut observer, budget, Boundary::Observer);
+            std::fs::remove_file(file).unwrap();
+            let received = parse_supervised_observer(raw, window, 42, "pw-probe-runner");
+            let expected = match scenario {
+                "complete" => "captured",
+                "nonzero" => "error",
+                "overflow" => "overflow",
+                _ => "invalid_reply",
+            };
+            assert_eq!(received.capture_status, expected, "{scenario}");
+            assert_eq!(
+                received.observer.as_ref(),
+                Some(&body),
+                "intact diagnostic reply must survive"
+            );
+            assert_eq!(received.deny_events.as_ref().unwrap().len(), 1);
+            assert!(received.step_denies.is_none());
+            assert!(received.supervision.as_ref().unwrap().complete());
+        }
+    }
+
+    #[test]
+    fn incomplete_outer_reply_remains_raw_and_has_no_recovered_events() {
+        let budget = LogTimeout {
+            milliseconds: 200,
+            source: log_capture::TimeoutSource::Cli,
+        }
+        .start()
+        .unwrap();
+        let mut observer = Command::new("/usr/bin/python3");
+        observer.args([
+            "-c",
+            "import os,time; os.write(1,b'{\"data\":'); time.sleep(60)",
+        ]);
+        let raw = log_capture::capture(&mut observer, budget, Boundary::Observer);
+        let capture = parse_supervised_observer(
+            raw,
+            SandboxLogWindow::runner_client_span(0, 1),
+            42,
+            "pw-probe-runner",
+        );
+        assert_eq!(capture.capture_status, "timeout");
+        assert_eq!(capture.output.stdout_raw.as_deref(), Some("{\"data\":"));
+        assert!(
+            capture.observer.is_none()
+                && capture.deny_events.is_none()
+                && capture.step_denies.is_none()
+        );
+        assert_eq!(
+            capture.supervision.as_ref().unwrap().cleanup.outcome,
+            "group_absent"
+        );
+    }
+
+    #[test]
+    fn derived_json_and_candidate_allocations_are_bounded() {
+        use std::os::unix::process::ExitStatusExt;
+        let stdout = format!("[{}0]", "0,".repeat(log_capture::MAX_OBSERVER_JSON_TOKENS));
+        let output = std::process::Output {
+            status: std::process::ExitStatus::from_raw(0),
+            stdout: stdout.into_bytes(),
+            stderr: vec![],
+        };
+        let capture = parse_observer_output(&output, SandboxLogWindow::runner_client_span(0, 1));
+        assert_eq!(capture.capture_status, "overflow");
+        assert!(capture.observer.is_none());
+        assert_eq!(
+            capture.processing_cutoff.as_ref().unwrap().reason,
+            "json_structure_overflow"
+        );
+        let steps: Vec<_> = (0..256)
+            .map(|i| json!({"step_id":format!("s{i}")}))
+            .collect();
+        let plan: Vec<_> = (0..256).map(|i| json!({"step_id":format!("s{i}"), "attempt":{"kind":"file","action":"open_read","target":format!("/p{i}")}})).collect();
+        let events: Vec<_> = (0..256)
+            .map(|i| SandboxDenyEvent {
+                pid: Some(42),
+                process: Some("pw-probe-runner".into()),
+                operation: Some("file-read-data".into()),
+                path: Some(format!("/p{i}")),
+                raw_line: None,
+            })
+            .collect();
+        let matches = bounded_step_denies(&steps, &plan, &events, Some(42), None).unwrap();
+        assert_eq!(matches.len(), 256);
+        for (i, matching) in matches.iter().enumerate() {
+            assert_eq!(matching.candidate_step_ids, [format!("s{i}")]);
+        }
+        let identical_plan: Vec<_> = plan
+            .iter()
+            .map(|p| {
+                let mut p = p.clone();
+                p["attempt"]["target"] = json!("/p0");
+                p
+            })
+            .collect();
+        let repeated = vec![events[0].clone(); 256];
+        let cutoff = bounded_step_denies(&steps, &identical_plan, &repeated, Some(42), None)
+            .err()
+            .expect("candidate expansion must be bounded");
+        assert_eq!(cutoff.reason, "correlation_overflow");
+        assert!(cutoff.observed.unwrap() > cutoff.limit.unwrap());
+        assert_eq!(cutoff.stream.as_deref(), Some("matching_evidence"));
+        let long_path = format!("/{}", "x".repeat(510));
+        let long_plan: Vec<_> = plan
+            .iter()
+            .map(|p| {
+                let mut p = p.clone();
+                p["attempt"]["target"] = json!(long_path);
+                p
+            })
+            .collect();
+        let mut long_event = events[0].clone();
+        long_event.path = Some(long_path);
+        let cutoff =
+            bounded_step_denies(&steps, &long_plan, &vec![long_event; 256], Some(42), None)
+                .err()
+                .expect("correlation limit must reject");
+        assert_eq!(cutoff.stream.as_deref(), Some("association_bytes"));
+        assert_eq!(
+            cutoff.limit,
+            Some(log_capture::MAX_ASSOCIATION_BYTES as u64)
+        );
+        let extra_steps = vec![steps[0].clone(); 257];
+        assert_eq!(
+            bounded_step_denies(&extra_steps, &plan, &events, Some(42), None)
+                .err()
+                .expect("correlation limit must reject")
+                .stream
+                .as_deref(),
+            Some("reply_steps")
+        );
+        let extra_plan = vec![plan[0].clone(); 257];
+        assert_eq!(
+            bounded_step_denies(&steps, &extra_plan, &events, Some(42), None)
+                .err()
+                .expect("correlation limit must reject")
+                .stream
+                .as_deref(),
+            Some("submitted_steps")
+        );
+    }
+
+    #[test]
+    fn empty_correlation_does_not_bypass_the_shared_deadline() {
+        let budget = LogTimeout::parse("1").unwrap().start().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(3));
+        let cutoff = bounded_step_denies(&[], &[], &[], Some(42), Some(budget))
+            .err()
+            .expect("expired budget");
+        assert_eq!(cutoff.reason, "deadline");
+    }
 
     #[test]
     fn unfamiliar_diagnostics_survive_observer_capture() {

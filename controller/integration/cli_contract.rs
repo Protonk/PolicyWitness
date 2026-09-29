@@ -101,6 +101,74 @@ fn version_flag_reports_build_stamp_and_contract_versions() {
 }
 
 #[test]
+fn log_timeout_flag_and_disabled_capture_keep_execution_available() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let request = repo_root().join("tests/fixtures/pw_runner/specimen_file_read_deny.json");
+    for disabled in [false, true] {
+        let mut args = vec!["run", request.to_str().unwrap(), "--log-timeout-ms", "1"];
+        if disabled {
+            args.push("--no-log-capture");
+        }
+        let out = run_pw(&bin, &args);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(
+            envelope["data"]["runner_result"]["steps"][0]["sandbox_check"]["outcome"],
+            "deny"
+        );
+        assert!(envelope["data"]["runner_result"]["steps"][0]["attempt"].is_object());
+        let capture = &envelope["data"]["sandbox_log_capture"];
+        if disabled {
+            assert!(capture.is_null());
+            assert_eq!(
+                envelope["data"]["runner_sandbox_diagnostics"]["capture_status"],
+                "disabled"
+            );
+        } else {
+            assert_eq!(capture["supervision"]["budget"]["timeout_ms"], 1);
+            assert_eq!(capture["supervision"]["budget"]["timeout_source"], "cli");
+            if capture["capture_status"] != "captured" {
+                assert_eq!(
+                    envelope["data"]["runner_sandbox_diagnostics"]["correlation_status"],
+                    "unavailable"
+                );
+                assert!(capture["step_denies"].is_null());
+            }
+        }
+    }
+    for invalid in ["0", "-1", "unlimited", "18446744073709551615"] {
+        let out = run_pw(
+            &bin,
+            &[
+                "run",
+                "/definitely-absent-specimen",
+                "--no-log-capture",
+                "--log-timeout-ms",
+                invalid,
+            ],
+        );
+        assert!(!out.status.success());
+        let envelope: serde_json::Value =
+            serde_json::from_slice(&out.stdout).expect("CLI admission error envelope");
+        assert!(
+            envelope["result"]["error"]
+                .as_str()
+                .unwrap()
+                .contains("invalid value for --log-timeout-ms")
+        );
+        assert_eq!(envelope["result"]["exit_code"], 2);
+        assert!(envelope["data"].get("runner_result").is_none());
+    }
+}
+
+#[test]
 fn specimen_smoke_file_read_deny() {
     if !integration_enabled() {
         return;

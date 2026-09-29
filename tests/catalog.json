@@ -1082,6 +1082,17 @@
           "description": "Deny capture requests the full client interval; real log show accepts its bounds and available timestamped events retain candidate associations"
         },
         {
+          "id": "log_query_predicate_archive",
+          "description": "Required committed archive: real log show must preserve the independent positive message multiset and exclude unrelated PID digits before parsing; missing fixture or tool access fails",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/log_query_predicate_archive.sh"
+          ],
+          "requires": [
+            "cargo"
+          ]
+        },
+        {
           "id": "instrumentation_field_rejected",
           "command": [
             "bash",

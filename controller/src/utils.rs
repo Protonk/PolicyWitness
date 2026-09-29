@@ -5,14 +5,14 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // Per-receiver retention budgets, not peak-memory limits: Command::output
-// has already collected both streams. The runner budget is derived, not tuned:
+// has already collected both streams for runner and policy helper capture. The runner budget is derived, not tuned:
 // three times the synthesized maximal reply (docs/limits.json
 // runner_reply_maximum, computed by runner_unit from the field-complete reply
 // fixture with every string at its limit), rounded up to a whole 4 MiB.
-// Helper and observer output retain their independent budgets.
+// Observer capture enforces independent streaming budgets in log_capture.
 pub const RUNNER_CAPTURE_BYTES: usize = 64 * 1024 * 1024;
 pub const HELPER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
-pub const OBSERVER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
+pub const OBSERVER_CAPTURE_BYTES: usize = crate::log_capture::OBSERVER_STDOUT_BYTES;
 
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()

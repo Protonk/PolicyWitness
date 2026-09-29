@@ -1,6 +1,108 @@
 # Best-effort deny-log evidence
 
-Status: Ready to run. 
+Status: Section 1 complete. Section 2 local implementation and checks are
+complete; OS predicate selection remains pending the isolated archive. Generation
+targets the available macOS 26.2 remote host, with 14.8.3 reader compatibility
+checked after transfer. This external prerequisite is described in
+[LOG-ARCHIVE-FIXTURE-PLAN.md](LOG-ARCHIVE-FIXTURE-PLAN.md).
+
+## Execution checkpoint
+
+- The field-ownership and in-checkout consumer audit is recorded in
+  [the controller contract](controller/README.md#execution-and-log-evidence-ownership).
+  Production assembly completes execution and disposition before collection;
+  typed log output attaches only log-owned fields without changing the wire
+  shape, statuses or contract versions.
+- The production assembly control covers all current collector states, retained
+  diagnostic events, absent authoritative worker identity, legacy replies and
+  a witnessed host-cleanup cause. Timeout and overflow are included, alongside real subprocess failure
+  controls. Window replay now uses that same assembly path before
+  independent consumer recovery.
+- Validation: `tests/run.sh --suite unit --case blackbox_e2e/checker_controls`
+  passed all four selected cases (160 Rust unit tests, formatting, the four
+  explicitly selected disposition controls, and the blackbox/consumer/oracle
+  controls). Local evidence is in
+  `tests/out/runs/best-effort-log-section1-checks/`. The app has not been rebuilt
+  for this section; signed-artifact/live validation remains later work.
+- Initial resource measurements on macOS 14.8.3 (23J220) used the existing
+  observer with a fixed absent worker PID and a seven-second padded query window.
+  All three fixed samples succeeded: 277, 166 and 162 ms; each returned 1,340
+  observer-response bytes and 50 inner stdout bytes, with no events or stderr.
+  These empty-query samples are cost observations, not defaults, capacity
+  evidence or a runtime bound. The script, helper hash, arguments and every
+  sample are retained locally at
+  `/private/tmp/pw-best-effort-prerequisites-f7dte1_g/`.
+- Archive prerequisite: no fixture exists yet. On this host, read-only
+  `log collect` help required the documented unsandboxed rerun and confirmed
+  system-store collection requiring root, without a message-selection option.
+  An isolated generation environment and inspected corpus remain necessary
+  before crediting query selection. No ambient archive was collected. Controlled event volume and serialization expansion have now been measured
+  for section 2, as recorded below.
+- For the later signed build, follow `docs/SIGNING.md`: Developer ID signing
+  through `build.sh` (`YOLO=1` can select the identity); `entitlement-jail` is the
+  explicitly supplied keychain profile for notarization if that flow is run.
+
+## Section 2 checkpoint
+
+Local implementation and validation are complete. Section 3 has not started.
+The real OS predicate-selection proof remains open under the linked archive
+plan; local passing controls do not substitute for that proof.
+
+- `--log-timeout-ms` validates a finite positive allowance before runner work,
+  including when logging is disabled. The default is 10,000 ms; both supervisors
+  share the same monotonic deadline and one fixed 1,000 ms cleanup grace.
+  Runner timeout semantics and all existing contract versions are unchanged.
+- Both pipes are bounded during reads: log-show stdout 1 MiB and stderr 128 KiB;
+  observer stdout 32 MiB and stderr 128 KiB. Event, JSON-structure, candidate and
+  serialization guards bound derived data. Limits and controls are recorded in
+  `docs/limits.json`, the generated guide and the controller contract.
+- The observer starts in an owned group; its log child inherits that group.
+  Non-reaping exit observation preserves ownership until group signalling is
+  finished. Bounded reaping and an `ESRCH` probe establish group absence;
+  missing replies never invent log-child identity or wait results. Controls
+  cover leader death before any reply with orphan pipes open and closed,
+  launch/nonzero/signal/read/wait failures, overflow, hangs and failed cleanup.
+- Failed/incomplete capture retains bounded raw diagnostics or an intact
+  observer reply, but withholds all correlations. Serialized execution evidence
+  and exit status remain invariant. The OS predicate now requests complete
+  worker/PID message tokens; actual selection remains unvalidated pending the
+  archive, including positive and old-bare-digit/false-predicate mutation tests.
+- On macOS 14.8.3 (23J220), three fixed seven-second padded-window queries with
+  the rebuilt signed observer took 639, 395 and 372 ms. Each returned 2,499
+  observer bytes, 51 inner stdout bytes, no stderr and no events. The 10-second
+  default provides headroom over these observations; it is not a maximum OS
+  query-cost claim or a guarantee of complete live evidence.
+- Controlled capacity preserved 256 records: 142,848 inner stdout bytes and
+  3,111,267 observer bytes. Exact inner stdout/stderr caps with maximum JSON
+  escaping produced 25,953,682 observer bytes, below 33,554,432. Independent
+  candidate controls preserve 256 unique associations and reject excess count,
+  charged bytes and step counts. These measurements do not bound kernel volume.
+  Scripts, hashes, arguments and raw measurement outputs are retained at
+  `/private/tmp/pw-best-effort-section2-8p6n2nm0/`.
+- Final source validation passed seven registered cases: 188 Rust unit tests,
+  formatting, four explicitly selected disposition controls, source/limits/wire
+  drift checks and blackbox/consumer/oracle controls. Evidence:
+  [accepted source run](tests/out/runs/best-effort-log-section2-accepted-source/run.json).
+- The final app and ZIP were rebuilt and Developer ID signed through
+  `YOLO=1 ./build.sh`. Signature/evidence verification, three smoke cases and
+  termination/log correlation passed in the
+  [signed run](tests/out/runs/best-effort-log-section2-signed/run.json).
+  Its integration failure was a new test reading CLI admission errors from
+  stderr instead of JSON stdout. The corrected assertion, formatting and all
+  14 integration tests passed against unchanged artifact bytes in the
+  [replacement integration run](tests/out/runs/best-effort-log-section2-integration-fixed/run.json).
+  The integration-test assertion was the only code change after accepted source
+  validation; production code and the other tested paths were unaffected.
+  Earlier failures and runs remain intact. The final build receipt is
+  `/private/tmp/pw-section2-build-accepted.log`. This is a signed development
+  build; no notarization submission was made.
+- The required default archive case executes explicitly and fails for the
+  missing fixture, without a skip:
+  [pending archive run](tests/out/runs/best-effort-log-section2-archive-pending/run.json).
+  The default battery cannot be credited as passing until the real fixture and
+  reader acceptance land. The remote generation target is macOS 26.2; a 14.8.3
+  VM is a conditional fallback if cross-version reading fails, not an upfront
+  requirement. No ambient developer archive was collected.
 
 ## Promise and scope
 

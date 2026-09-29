@@ -1125,16 +1125,16 @@
     {
       "id": "log_observer_output",
       "section": "transport",
-      "title": "Log observer output",
-      "value": 8388608,
+      "title": "Log observer stdout",
+      "value": 33554432,
       "unit": "bytes",
-      "counting": "Per stdout or stderr stream captured from sandbox-log-observer. Byte prefix before lossy text decoding; independent of the runner reply budget.",
-      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
-      "control": "Fixed; no public override. Unlike the runner reply, the observer's output is log volume over the client span, not admitted request strings, so no admission bound derives this budget.",
+      "counting": "Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap.",
+      "effect": "One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation.",
+      "control": "Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata.",
       "sources": [
         {
-          "path": "controller/src/utils.rs",
-          "symbol": "OBSERVER_CAPTURE_BYTES"
+          "path": "controller/src/log_capture.rs",
+          "symbol": "OBSERVER_STDOUT_BYTES"
         }
       ],
       "checks": [
@@ -1144,12 +1144,336 @@
           "kind": "value"
         },
         {
-          "path": "controller/src/utils.rs",
-          "symbol": "arbitrary_budgets_preserve_counts_at_every_unicode_cut",
+          "path": "controller/src/log_capture.rs",
+          "symbol": "both_raw_streams_are_bounded_at_exact_edges",
+          "kind": "boundary"
+        },
+        {
+          "path": "controller/src/bin/sandbox-log-observer.rs",
+          "symbol": "inner_byte_limit_with_maximal_json_escaping_fits_outer_serialization_limit",
           "kind": "boundary"
         }
       ],
-      "behavior": "The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Exceeding it loses the whole deny-log channel for the run (capture_error), while worker attempts, predictions and attribution are unaffected; a per-event truncation that keeps the captured prefix usable would be the next step if that loss is observed in practice."
+      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus preserves all records; exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only."
+    },
+    {
+      "id": "log_show_stdout",
+      "section": "transport",
+      "title": "Log show stdout",
+      "value": 1048576,
+      "unit": "bytes",
+      "counting": "Raw bytes read from log show stdout, before decoding or parsing; enforced while reading.",
+      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "LOG_STDOUT_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "both_raw_streams_are_bounded_at_exact_edges",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+    },
+    {
+      "id": "log_show_stderr",
+      "section": "transport",
+      "title": "Log show stderr",
+      "value": 131072,
+      "unit": "bytes",
+      "counting": "Raw bytes read from log show stderr, before decoding or parsing; enforced while reading.",
+      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "LOG_STDERR_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "both_raw_streams_are_bounded_at_exact_edges",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+    },
+    {
+      "id": "log_observer_stderr",
+      "section": "transport",
+      "title": "Log observer stderr",
+      "value": 131072,
+      "unit": "bytes",
+      "counting": "Raw bytes read from observer stderr, before decoding or parsing; enforced while reading.",
+      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "OBSERVER_STDERR_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "both_raw_streams_are_bounded_at_exact_edges",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+    },
+    {
+      "id": "log_collection_timeout",
+      "section": "evidence",
+      "title": "Default log collection timeout",
+      "value": 10000,
+      "unit": "milliseconds",
+      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default.",
+      "effect": "Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations.",
+      "control": "Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "DEFAULT_LOG_TIMEOUT_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "larger_allowance_buys_time_only_and_still_bounds_hangs",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Independent slow-success and permanent-hang fixtures prove that a larger finite allowance buys waiting time only; shared absolute deadlines are not restarted by the observer."
+    },
+    {
+      "id": "log_cleanup_grace",
+      "section": "evidence",
+      "title": "Log cleanup grace",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately.",
+      "effect": "Unconfirmed reaping or group absence is reported; retries never restart the allowance.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "CLEANUP_GRACE_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "cleanup_failures_and_lost_ownership_remain_unconfirmed",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Owned orphan controls cover leader death before reply, pipes open or closed, group absence, failed signalling/probing and lost ownership. The bound concerns supervised waiting, not OS scheduling."
+    },
+    {
+      "id": "log_deny_events",
+      "section": "evidence",
+      "title": "Parsed deny events",
+      "value": 8192,
+      "unit": "records",
+      "counting": "Parsed deny events in show output and the derived controller array.",
+      "effect": "An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_DENY_EVENTS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/bin/sandbox-log-observer.rs",
+          "symbol": "event_limit_withholds_completion_without_discarding_retained_diagnostics",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Exact and over-limit fixtures retain diagnostics and distinguish complete capture from overflow."
+    },
+    {
+      "id": "log_candidate_count",
+      "section": "evidence",
+      "title": "Candidate associations",
+      "value": 4096,
+      "unit": "items",
+      "counting": "Total event-to-step candidates, including ambiguous matches.",
+      "effect": "Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_ASSOCIATIONS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "derived_json_and_candidate_allocations_are_bounded",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "A 256-record unique-path control preserves all associations; repeated matching attempts exhaust the candidate budget."
+    },
+    {
+      "id": "log_candidate_bytes",
+      "section": "evidence",
+      "title": "Candidate allocation allowance",
+      "value": 8388608,
+      "unit": "bytes",
+      "counting": "Conservative encoded/allocation charge per candidate: six times the sum of twice the step-ID length plus path, operation, kind and action lengths, plus 1,024 bytes of structure.",
+      "effect": "Excess discards all associations and withholds correlation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_ASSOCIATION_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "derived_json_and_candidate_allocations_are_bounded",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Long repeated paths exercise the allocation allowance independently of the candidate count. This is a derived-data bound, not a peak-process-memory claim."
+    },
+    {
+      "id": "log_correlation_steps",
+      "section": "evidence",
+      "title": "Steps admitted to correlation",
+      "value": 256,
+      "unit": "items",
+      "counting": "Each of the submitted plan and returned step arrays.",
+      "effect": "Excess withholds log correlation; execution evidence is unchanged.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_CORRELATION_STEPS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "derived_json_and_candidate_allocations_are_bounded",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "A 256-step control preserves unique candidates; over-limit arrays reject correlation."
+    },
+    {
+      "id": "log_reply_structure",
+      "section": "transport",
+      "title": "Observer JSON structure",
+      "value": 262144,
+      "unit": "items",
+      "counting": "Opening object/array delimiters, commas and colons outside quoted strings, counted before allocating a JSON tree.",
+      "effect": "Excess retains bounded raw diagnostic text and withholds parsing and correlation.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_OBSERVER_JSON_TOKENS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "derived_json_and_candidate_allocations_are_bounded",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Independent oversized JSON array trips the structural guard before Value allocation."
+    },
+    {
+      "id": "log_observer_metadata",
+      "section": "transport",
+      "title": "Observer echoed metadata",
+      "value": 4096,
+      "unit": "UTF-8 bytes",
+      "counting": "Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID.",
+      "effect": "Observer rejects excess before launching log show; controller also rejects oversized reply metadata.",
+      "control": "Fixed; no public override.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "MAX_OBSERVER_METADATA_BYTES"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "supervised_receiver_retains_failed_inner_evidence_and_rejects_bad_shapes",
+          "kind": "path"
+        }
+      ],
+      "behavior": "Receiver malformed-shape controls cover excess metadata; direct argument admission is source-inspected."
     },
     {
       "id": "policy_helper_output",

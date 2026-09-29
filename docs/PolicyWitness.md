@@ -440,7 +440,12 @@ Values are maxima unless labelled as defaults.
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
 | Synthesized maximal reply (`runner_reply_maximum`) | 21,660,314 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
 | Runner client output (`controller_output`) | 67,108,864 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
-| Log observer output (`log_observer_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from sandbox-log-observer. Byte prefix before lossy text decoding; independent of the runner reply budget. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. Unlike the runner reply, the observer's output is log volume over the client span, not admitted request strings, so no admission bound derives this budget. |
+| Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
+| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
+| Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
+| Log observer stderr (`log_observer_stderr`) | 131,072 bytes | Raw bytes read from observer stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
+| Observer JSON structure (`log_reply_structure`) | 262,144 items | Opening object/array delimiters, commas and colons outside quoted strings, counted before allocating a JSON tree. Excess retains bounded raw diagnostic text and withholds parsing and correlation. | Fixed; no public override. |
+| Observer echoed metadata (`log_observer_metadata`) | 4,096 UTF-8 bytes | Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID. Observer rejects excess before launching log show; controller also rejects oversized reply metadata. | Fixed; no public override. |
 | Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from sbpl-check. Byte prefix before lossy text decoding; independent of the runner reply budget. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
 | Rejected validator frame context (`validator_fault_context`) | 256 bytes | Raw prefix of the first rejected frame, before base64 encoding. The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss. | Fixed; no public override. |
 
@@ -448,6 +453,12 @@ Values are maxima unless labelled as defaults.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
+| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
+| Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
+| Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed; no public override. |
+| Candidate associations (`log_candidate_count`) | 4,096 items | Total event-to-step candidates, including ambiguous matches. Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic. | Fixed; no public override. |
+| Candidate allocation allowance (`log_candidate_bytes`) | 8,388,608 bytes | Conservative encoded/allocation charge per candidate: six times the sum of twice the step-ID length plus path, operation, kind and action lengths, plus 1,024 bytes of structure. Excess discards all associations and withholds correlation. | Fixed; no public override. |
+| Steps admitted to correlation (`log_correlation_steps`) | 256 items | Each of the submitted plan and returned step arrays. Excess withholds log correlation; execution evidence is unchanged. | Fixed; no public override. |
 | Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained bytes in each stdout/stderr text buffer, excluding NUL. A truncation marker occupies part of this space on overflow. Additional output is drained but not retained. | Fixed; no public override. |
 | Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Diagnostic payload bytes, excluding NUL. The primary diagnostic is bounded and reports retained length and truncation state; it is not a transcript. | Fixed; no public override. |
 | Optional compiled-object capture (`applied_profile`) | 1,048,576 bytes | Raw bytecode bytes for a nonempty supported single-profile (type 0) object, before base64 encoding. Oversize or unsupported objects leave capture unavailable without preventing policy application. | Fixed; no public override. |
@@ -1007,6 +1018,12 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 ### Common flags
 
 - `--timeout-ms <n>`: runner RPC timeout
+- `--log-timeout-ms <n>`: optional log collection allowance, default 10,000 ms.
+  Positive integer milliseconds only, with checked monotonic deadline arithmetic;
+  no unlimited value. Invalid values fail before running the specimen, including
+  with `--no-log-capture`. Observer startup and `log show` share one deadline,
+  followed by at most a 1,000 ms cleanup grace. A larger value buys waiting time
+  without changing the specimen, scan bounds or byte budgets.
 - `--no-log-capture`: skip the unified-log (`log show`) deny scan. Its requested
   interval is the runner client's own wall-clock span, widened to whole seconds;
   there is no fixed lookback to tune. Archive access has been observed to cost
@@ -1017,6 +1034,26 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 - `--version`: print a `kind="version"` envelope with the build stamp and the
   wire contract versions this build speaks
+
+Log collection counts and bounds both stdout and stderr while reading. Inner
+`log show` limits are 1 MiB stdout and 128 KiB stderr; observer limits are 32 MiB
+stdout and 128 KiB stderr. Derived events, associations and serialization also
+have finite limits in the inventory above. A small specimen can still exceed a
+log limit because admission does not bound OS log volume or scan cost.
+
+`timeout`, `overflow` and other incomplete captures are unavailable for
+correlation. They retain bounded diagnostics and any intact observer reply, but
+leave `step_denies`, `first_deny` and `permission_failures_without_record` null.
+A successful complete empty query remains distinct. Neither case changes native
+attempts, predictions, execution result or process disposition.
+
+`sandbox_log_capture.supervision` records the observer wait and owned-group
+cleanup. `observer.data.collection`, when received, records the log child's
+separate wait. Both report effective timeout/source, elapsed time, stream byte
+counts, limits and cutoff reasons. `group_absent` requires an observed absent
+group after cleanup; an unknown child wait is never inferred from that fact.
+[The controller contract](../controller/README.md#log-collection-budgets-and-cleanup)
+describes the full evidence fields and success gate.
 
 ### Debug-attach to the worker
 

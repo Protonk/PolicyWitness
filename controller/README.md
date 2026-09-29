@@ -18,6 +18,7 @@ Core controller modules:
 - `controller/src/runner_select.rs` — runner selection + provenance
 - `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
 - `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
+- `controller/src/log_capture.rs` — bounded log subprocess reads, deadlines and owned cleanup
 - `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate/reconcile
 
 Support modules:
@@ -55,7 +56,7 @@ Standalone helper tools (embedded into the `.app`):
 The launcher intentionally exposes a minimal surface:
 
 ```text
-policy-witness run <request.json> [--timeout-ms <n>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
+policy-witness run <request.json> [--timeout-ms <n>] [--log-timeout-ms <n>] [--no-log-capture] [--runner-mode <standard|byoxpc>]
 policy-witness runner <command> [options]
 policy-witness --version
 ```
@@ -67,6 +68,12 @@ count), `describe` (`git describe --dirty`) and `commit`. build.sh derives them
 from git and stamps the same values into the app and XPC service Info.plists;
 a plain `cargo build` reports `unknown`. The stamp says which code produced an
 envelope; the contract numbers say how to read it.
+
+`run --log-timeout-ms <n>` sets the optional log collection allowance (default
+10,000 ms). It accepts positive integer milliseconds representable in the shared
+monotonic clock, including deadline and cleanup-grace addition. Zero, invalid or
+overflowing values fail before runner invocation, even with `--no-log-capture`.
+There is no unlimited value. The runner's `--timeout-ms` is independent.
 
 ### `run`
 
@@ -212,7 +219,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
 `data.sandbox_log_capture.capture_status` values:
 
-- `captured`: observer succeeded, no error reported, and its interval matches;
+- `captured`: both supervised captures completed, the reply shape and interval
+  match, and parsing/correlation stayed within their budgets;
   this does not certify that every denial was logged
 - `window_mismatch`: observer returned different or missing bounds, or a trailing
   lookback; its raw reply and parsed denial events survive, but `step_denies` and
@@ -223,14 +231,141 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `blocked`: unified log access blocked (see `blocked_reason`)
 - `error`: observer returned an error or non-zero exit
 - `parse_error`: observer stdout was not valid JSON
-- `capture_error`: the controller could not retain the full observer JSON
-- `invalid_reply`: parsed observer JSON lacks the required observation
+- `timeout`: the shared collection deadline expired
+- `overflow`: a stream, event, JSON-structure or candidate budget was exceeded
+- `capture_error`: incomplete collection, decoding/read failure or unconfirmed cleanup
+- `invalid_reply`: parsed observer JSON fails the required observation, identity,
+  metadata or supervision shape
 - `requested_unavailable`: observer could not be executed
+
+### Log collection budgets and cleanup
+
+Collection starts immediately before observer launch. The controller passes a
+`CLOCK_MONOTONIC` deadline through the observer's internal `--collection-budget`
+argument. Startup and `log show` consume this same allowance. Standalone observer
+show mode defaults to 10,000 ms. A larger `--log-timeout-ms` changes waiting time
+only; it changes neither the query interval nor byte limits and promises no
+record. Cleanup has one 1,000 ms grace ending no later than the original deadline
+plus that grace. This bounds supervised waits, not OS scheduling or arbitrary
+work elsewhere in the controller.
+
+The show path counts bytes while reading both pipes: inner stdout 1 MiB, inner
+stderr 128 KiB, observer stdout 32 MiB, observer stderr 128 KiB. One additional
+byte detects overflow but is not retained. The observer's bounded serializer
+accounts for duplicated raw lines and JSON escaping. Event, JSON-structure and
+candidate allocation guards bound derived data; [the limits inventory](../docs/LIMITS.md)
+defines their counting rules and controls. These are stream and derived-data
+bounds, not a promise about peak process memory. Standalone streaming/follow
+mode has a separate contract and is not used by `run`.
+
+The OS query requests supported `Sandbox: process(pid)` message tokens rather
+than bare PID digits. Parsed worker PID is checked again before association.
+The required archive control validates OS selection before parsing; parser and
+argument tests alone do not prove query selection. Its fixture and reader
+requirements are in [the fixture README](../tests/fixtures/deny_capture/README.md).
+
+`supervision` under `sandbox_log_capture` reports the controller's observer
+capture; `observer.data.collection` reports the observer's direct log-child
+capture when a reply exists. Each includes the effective budget and source,
+elapsed time, boundary, per-stream limit/read/retained counts, EOF/truncation/read
+errors, process identity and wait observations, cutoff and cleanup facts.
+`processing_cutoff` records controller parsing/correlation limits; its `stream`
+identifies the bounded structure. Received byte counts describe actual reads,
+not the total output a stopped producer might have emitted.
+
+The controller spawns the observer into a dedicated group with PGID equal to its
+PID. The log child inherits it. The controller observes leader exit without
+reaping, signals the owned group, then performs bounded reaping and group probes.
+It never sends a group signal after releasing the leader's ownership. Only an
+`ESRCH` group probe establishes `group_absent`; signal delivery, pipe EOF and
+leader exit alone do not. Lost ownership withholds signalling and leaves cleanup
+unconfirmed. The observer separately reports its direct child's wait. If no
+reply arrives, that child's identity and wait remain unknown even when the
+controller confirms group absence.
+
+Any failed or incomplete capture withholds all correlation: `step_denies`,
+`first_deny` and `permission_failures_without_record` are null and
+`correlation_status` is `unavailable`. An intact diagnostic reply and its events
+survive failure. Incomplete JSON remains a bounded raw prefix, without fragment
+repair or recovered events. Execution result, exit code, native observations and
+disposition were completed before collection and remain unchanged.
 
 Optional:
 
 - `PW_VERIFY_EVIDENCE=1` runs a manifest hash verification pass and includes a
   `data.app_provenance.evidence_verify` report in the output.
+
+### Execution and log-evidence ownership
+
+The execution channel is complete before optional log collection begins.
+For fixed runner reply and runner-client capture bytes, changing collector
+contents, availability or failure status cannot change execution evidence or
+the CLI exit status. A matching event corroborates a candidate; it never
+rewrites a comparison, drift, failure attribution or termination cause. Missing
+log evidence establishes neither allowance nor a sandbox cause for a
+permission-shaped failure.
+
+Ownership is per field, including inside the shared diagnostics object:
+
+| Wire fields | Owner and production writer | Inputs and readers |
+| --- | --- | --- |
+| `result` and the returned CLI exit status | Execution: `complete_execution` in [run_flow.rs](src/run_flow.rs); early admission/usage failures remain in `cmd_run` and [cli.rs](src/cli.rs). | Runner `normalized_outcome` and `error`, then runner-client capture/parse errors. `cmd_run` prints the completed result and returns its exit status; no log fields are inputs. |
+| `data.runner_result`, including predictions, native attempts, comparisons, drift and worker/validator observations | Execution: [runner_client.rs](src/runner_client.rs) parses the runner reply; `ExecutionData` retains it unchanged. | Log processing borrows the reply for worker identity and candidate matching. It has no mutable runner reference. |
+| `data.runner_client`, `policy_check`, `runner_startup_diagnostics`, provenance, request/runner metadata, augmentation and runner timeout | Execution: runner-client capture, independent fallback compilation and `cmd_run` preparation. | Client timestamps supply the log query window. Fallback compilation runs only for `xpc_error`; collector status does not request it or change its meaning. |
+| `data.runner_sandbox_diagnostics.worker_pid`, `process_disposition`, `termination_cause`, `stop_reason`, `disposition_integrity`, `disposition_issues` | Execution: `execution_diagnostics` and `project_disposition` in [run_flow.rs](src/run_flow.rs). | Authoritative `runner_subprocess.pid`, carried disposition record, its raw supporting facts and reply steps/schema. No capture inputs. |
+| Entire `data.sandbox_log_capture`, including `window`, `observer`, `observed_deny`, `deny_events`, `step_denies` and transport diagnostics | Logs: `collect_log_evidence` attaches capture or launch-failure diagnostics; [sandbox_log.rs](src/sandbox_log.rs) constructs the window and parses observer output; `finish_sandbox_log_capture` replaces candidate associations. | [sandbox-log-observer.rs](src/bin/sandbox-log-observer.rs) supplies observer/query output and parsed events. Matching uses authoritative worker identity and submitted attempt operation/path evidence. `step_denies` references candidate step IDs; it is never written inside runner steps or comparisons. |
+| Diagnostics `capture_status`, `correlation_status`, `first_deny`, `permission_failures_without_record` | Logs: `log_diagnostics` in [run_flow.rs](src/run_flow.rs). | Capture status, retained events, authoritative worker PID and candidate associations; the missing-record list also reads the runner's per-step `comparison.observation`. |
+
+`complete_execution` constructs a `CompletedExecution` value before
+`attach_sandbox_logs` invokes the collector. `collect_log_evidence` returns only
+`LogEvidence`: the capture subtree and the four log-owned diagnostics. Separate
+execution and log structs flatten into the existing JSON objects when attached;
+neither the field paths nor their meanings change. Pre-run augment rejection
+retains null capture and diagnostics without invoking collection.
+
+Only a `captured` report with an event array and an authoritative worker PID can
+reach `pid_match` or `no_match`. Failed reports may retain matching events as
+diagnostics, but cannot supply `step_denies`, `first_deny` or
+`permission_failures_without_record`. Disabled capture reports `disabled` /
+`not_attempted`; absent worker identity reports `no_worker` / `not_attempted`;
+unavailable capture reports its failure status / `unavailable`. A successful
+empty event array remains `captured` / `no_match`. Without an authoritative PID,
+even supplied matching events cannot gain associations.
+
+`permission_failures_without_record` is null unless correlation reaches
+`pid_match` or `no_match` and per-step comparisons are present. When available,
+it lists exactly the permission-shaped steps without captured candidates, or
+`[]` when none qualify. It makes no claim about what the OS log store contains,
+why a record is absent, or whether a sandbox caused the attempted failure.
+
+The permanent Rust control
+`collector_states_preserve_the_serialized_execution_half` runs the production
+completion/attachment/serialization path with eventful, empty and unrelated
+successful captures, every supported collection failure status, and disabled
+capture. It compares execution bytes after removing only the log-owned fields
+and the envelope generation timestamp, checks CLI status and correlation, and
+retains diagnostic events on failed captures. Current disposition, legacy
+reply, missing-comparison and absent-worker cases are included. The window
+replay control also sends serialized production output through the independent
+Python consumer. These controls run in the default `unit/rust.unit` case.
+
+### In-repository consumer audit
+
+The audit covers readers in this checkout, including test-only producers and
+their stored fixtures. Consumers outside this checkout were not audited.
+
+| Reader or fixture | Use of the two channels |
+| --- | --- |
+| [consumer.py](../tests/lib/consumer.py), `recover_evidence` | Builds comparison/failure groups from runner steps. Copies capture, window, diagnostics and resolved candidate references into the separate `denials` answer; log fields never change step/failure groups. Shape/order validation reads runner evidence. |
+| [lifecycle_adapter.py](../tests/lib/lifecycle_adapter.py), [lifecycle_contract.py](../tests/lib/lifecycle_contract.py), [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) | The adapter selects only the execution diagnostic keys enumerated by `DIAGNOSTICS_KEYS`. Contract projections and oracle checks use worker records/raw facts and those execution projections. Constructed oracle envelopes supply disabled log fields; log evidence does not decide a lifecycle claim. |
+| [blackbox.py](../tests/lib/blackbox.py), [validate_run.py](../tests/suites/blackbox_e2e/validate_run.py) | Validate runner shape and native steps. Legacy `deny_signal` assertions read runner step fields, not the optional log channel. |
+| [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) | Constructs log captures to verify consumer retention, candidate provenance, distinct availability states and historical windows. Separately checks native comparisons and attribution limits. |
+| [disposition_controls.py](../tests/suites/blackbox_e2e/disposition_controls.py), [disposition fixtures](../tests/fixtures/disposition/) | Validate execution projections, including rejection of a replaced termination cause. `a1_expected.json` and `a1_known_loss.json` carry disabled capture; neither supplies log evidence for the worker cause. |
+| [check_termination_correlation.py](../tests/suites/witness_contract/check_termination_correlation.py) | Checks native denied writes and self-signal/clean-exit disposition independently; then checks capture state, window, candidates and missing-record diagnostics. |
+| [check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) | Reads client timestamps, requested/mirrored bounds, events, candidate references and missing-record diagnostics. Its live record-presence assertions affect test acceptance, not execution classification. |
+| [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py) | Separately checks runner-reply retention and optional observer transport retention. No log-derived native outcome. |
+| [check_pre_apply_failure.py](../tests/suites/witness_contract/check_pre_apply_failure.py), [check_attempt_in_flight.py](../tests/suites/witness_contract/check_attempt_in_flight.py) | Read execution disposition/cause; pre-apply checks also require disabled capture and null first-deny evidence. Neither uses a deny event to assign worker termination. |
+| Rust controls in [run_flow.rs](src/run_flow.rs), [sandbox_log.rs](src/sandbox_log.rs), [runner_client.rs](src/runner_client.rs), and [observer.py](../tests/fixtures/deny_capture/observer.py) | Exercise projection, status gating, matching, transport retention and window propagation; the observer fixture supplies independently timed records. Production log-to-execution writes are excluded by the assembly boundary above. |
 
 ### Runner selection (external entitlements)
 

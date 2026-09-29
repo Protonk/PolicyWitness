@@ -7,7 +7,11 @@
 #[path = "../json_contract.rs"]
 #[allow(dead_code)]
 mod json_contract;
+#[path = "../log_capture.rs"]
+#[allow(dead_code)]
+mod log_capture;
 
+use log_capture::{Boundary, CollectionBudget, Cutoff, LogTimeout, Supervision};
 use serde::Serialize;
 use std::ffi::OsString;
 use std::fs::OpenOptions;
@@ -51,14 +55,10 @@ usage:
 notes:
   - runs `log show` (default) or `log stream` (with --duration/--follow) with a sandbox-deny predicate (observer-only)
   - --format jsonl emits per-line events plus a final report line
+  - show mode has a finite default collection deadline (10000 ms) and fixed cleanup grace (1000 ms)
+  - --collection-budget <json> is the internal shared CLOCK_MONOTONIC budget passed by the controller
   - intended to run outside PolicyWitness.app (unsandboxed)"
     );
-}
-
-fn cmd_output_to_string(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes)
-        .trim_end_matches('\n')
-        .to_string()
 }
 
 fn now_unix_ms() -> u64 {
@@ -96,13 +96,49 @@ fn is_pid_alive(pid: i32) -> bool {
 }
 
 fn sandbox_predicate(process_name: &str, pid: i32) -> String {
-    let term = format!("Sandbox: {}({})", process_name, pid);
-    let escaped = term.replace('"', "\\\"");
-    // Match both explicit deny lines and any sandbox line for the PID.
+    let mut name = String::new();
+    for c in process_name.chars() {
+        if "\\.^$|?*+()[]{}".contains(c) {
+            name.push('\\');
+        }
+        name.push(c);
+    }
+    // Select complete process/PID tokens, including supported whitespace after
+    // Sandbox:. Exact parsed PID checking still precedes candidate association.
+    let pattern = format!(r"(?s).*Sandbox:[ \t]+{name}\({pid}\)([ \t]+.*)?");
     format!(
-        r#"((eventMessage CONTAINS[c] "{}") OR ((eventMessage CONTAINS[c] "deny") AND (eventMessage CONTAINS[c] "{}")))"#,
-        escaped, pid
+        "eventMessage MATCHES[c] {}",
+        serde_json::to_string(&pattern).unwrap()
     )
+}
+
+// The archive is an internal test input, never a controller flag or a fallback
+// to the live store. Production and the archive control use identical flags.
+fn log_show_command(
+    start: Option<&str>,
+    end: Option<&str>,
+    last: Option<&str>,
+    predicate: Option<&str>,
+    archive: Option<&Path>,
+) -> Command {
+    let mut command = Command::new("/usr/bin/log");
+    command.args(["show", "--style", "syslog", "--info", "--debug"]);
+    if let Some(archive) = archive {
+        command.arg("--archive").arg(archive);
+    }
+    if let Some(last) = last {
+        command.arg("--last").arg(last);
+    }
+    if let Some(start) = start {
+        command.arg("--start").arg(start);
+    }
+    if let Some(end) = end {
+        command.arg("--end").arg(end);
+    }
+    if let Some(predicate) = predicate {
+        command.arg("--predicate").arg(predicate);
+    }
+    command
 }
 
 fn is_log_prelude_line(line: &str) -> bool {
@@ -169,6 +205,71 @@ fn parse_sandbox_deny_line(line: &str) -> Option<SandboxDenyEvent> {
         path,
         raw_line: line.to_string(),
     })
+}
+
+struct ShowCapture {
+    stdout: String,
+    stderr: String,
+    observed_lines: usize,
+    deny_lines: Vec<String>,
+    deny_events: Vec<SandboxDenyEvent>,
+    report: Supervision,
+}
+
+fn capture_show(command: &mut Command, budget: CollectionBudget) -> ShowCapture {
+    let captured = log_capture::capture(command, budget, Boundary::LogShow);
+    let mut report = captured.supervision;
+    if (std::str::from_utf8(&captured.stdout).is_err()
+        || std::str::from_utf8(&captured.stderr).is_err())
+        && report.cutoff.is_none()
+    {
+        report.cutoff = Some(Cutoff::reason(
+            "decode_error",
+            Some(
+                "log show emitted invalid UTF-8; retained text is lossy diagnostic evidence".into(),
+            ),
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&captured.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&captured.stderr).into_owned();
+    let mut observed_lines = 0;
+    let mut deny_lines = Vec::new();
+    let mut deny_events = Vec::new();
+    for line in stdout.lines() {
+        if line.trim().is_empty() || is_log_prelude_line(line) {
+            continue;
+        }
+        observed_lines += 1;
+        if let Some(event) = parse_sandbox_deny_line(line) {
+            if deny_events.len() == log_capture::MAX_DENY_EVENTS {
+                report.cutoff.get_or_insert_with(|| {
+                    Cutoff::limit(
+                        "event_overflow",
+                        "deny_events",
+                        log_capture::MAX_DENY_EVENTS,
+                        deny_events.len() + 1,
+                    )
+                });
+                break;
+            }
+            deny_lines.push(line.to_string());
+            deny_events.push(event);
+        }
+    }
+    if budget.expired() && report.cutoff.is_none() {
+        report.cutoff = Some(Cutoff::reason(
+            "deadline",
+            Some("log output parsing exceeded the collection deadline".into()),
+        ));
+    }
+    ShowCapture {
+        stdout,
+        stderr,
+        observed_lines,
+        deny_lines,
+        deny_events,
+        report,
+    }
 }
 
 fn open_output(path: &Path, append: bool) -> Result<std::fs::File, String> {
@@ -248,6 +349,7 @@ struct LogObserverData {
     deny_lines: Vec<String>,
     deny_events: Vec<SandboxDenyEvent>,
     layer_attribution: ObserverLayerAttribution,
+    collection: Option<Supervision>,
 }
 
 #[derive(Serialize)]
@@ -280,6 +382,7 @@ fn main() {
     let mut plan_id: Option<String> = None;
     let mut row_id: Option<String> = None;
     let mut correlation_id: Option<String> = None;
+    let mut collection_budget: Option<CollectionBudget> = None;
     let mut output_format = OutputFormat::Json;
     let mut output_path: Option<PathBuf> = None;
     let mut follow = false;
@@ -290,6 +393,19 @@ fn main() {
     while idx < args.len() {
         let arg = args.get(idx).and_then(|s| s.to_str()).unwrap_or_default();
         match arg {
+            "--collection-budget" => {
+                collection_budget = Some(
+                    args.get(idx + 1)
+                        .and_then(|s| s.to_str())
+                        .ok_or_else(|| "missing --collection-budget".to_string())
+                        .and_then(CollectionBudget::from_argument)
+                        .unwrap_or_else(|err| {
+                            eprintln!("{err}");
+                            std::process::exit(2);
+                        }),
+                );
+                idx += 2;
+            }
             "-h" | "--help" => {
                 print_usage();
                 return;
@@ -515,6 +631,29 @@ fn main() {
             }
         },
     };
+    if stream_mode && collection_budget.is_some() {
+        eprintln!("--collection-budget is only valid for log show");
+        std::process::exit(2);
+    }
+    // Bound echoed query/identity metadata independently of stream output.
+    for value in [
+        Some(predicate.as_str()),
+        process_name.as_deref(),
+        start.as_deref(),
+        end.as_deref(),
+        last.as_deref(),
+        plan_id.as_deref(),
+        row_id.as_deref(),
+        correlation_id.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if value.len() > log_capture::MAX_OBSERVER_METADATA_BYTES {
+            eprintln!("observer metadata exceeds 4096 UTF-8 bytes");
+            std::process::exit(2);
+        }
+    }
 
     let mut output_file = if output_format == OutputFormat::Jsonl {
         output_path.as_ref().map(|path| {
@@ -537,6 +676,7 @@ fn main() {
     let log_rc: Option<i32>;
     let mut log_error: Option<String> = None;
     let mut blocked_reason: Option<String> = None;
+    let mut collection: Option<Supervision> = None;
 
     // log stream gives live updates; log show is a point-in-time snapshot.
     let mode = if stream_mode { "stream" } else { "show" }.to_string();
@@ -584,6 +724,7 @@ fn main() {
                     layer_attribution: ObserverLayerAttribution {
                         seatbelt: "observer_only".to_string(),
                     },
+                    collection: None,
                 };
                 let result = json_result(false);
                 if let Err(err) =
@@ -725,94 +866,44 @@ fn main() {
             }
         }
     } else {
-        let mut cmd = Command::new("/usr/bin/log");
-        cmd.arg("show")
-            .arg("--style")
-            .arg("syslog")
-            .arg("--info")
-            .arg("--debug");
-
-        if let Some(last) = &last {
-            cmd.arg("--last").arg(last);
-        } else {
-            if let Some(start) = &start {
-                cmd.arg("--start").arg(start);
-            }
-            if let Some(end) = &end {
-                cmd.arg("--end").arg(end);
-            }
+        let budget = collection_budget.unwrap_or_else(|| {
+            LogTimeout::default().start().unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(2);
+            })
+        });
+        let mut command = log_show_command(
+            start.as_deref(),
+            end.as_deref(),
+            last.as_deref(),
+            Some(&predicate),
+            None,
+        );
+        let captured = capture_show(&mut command, budget);
+        log_rc = captured.report.process.exit_code;
+        log_truncated = captured.report.stdout.truncated
+            || captured.report.stderr.truncated
+            || captured
+                .report
+                .cutoff
+                .as_ref()
+                .is_some_and(|c| c.reason == "event_overflow");
+        if !captured.report.complete() {
+            log_error = Some(
+                captured
+                    .report
+                    .cutoff
+                    .as_ref()
+                    .map(|c| c.reason.clone())
+                    .unwrap_or_else(|| "log query completion unavailable".into()),
+            );
         }
-
-        cmd.arg("--predicate").arg(&predicate);
-
-        let out = match cmd.output() {
-            Ok(out) => out,
-            Err(err) => {
-                let data = LogObserverData {
-                    observer_schema_version: OBSERVER_SCHEMA_VERSION,
-                    mode,
-                    duration_ms,
-                    stop_on_pid_exit: until_pid_exit,
-                    plan_id: plan_id.clone(),
-                    row_id: row_id.clone(),
-                    correlation_id: correlation_id.clone(),
-                    pid,
-                    process_name: process_name.clone(),
-                    predicate,
-                    start,
-                    end,
-                    last,
-                    log_rc: None,
-                    log_stdout: String::new(),
-                    log_stderr: String::new(),
-                    log_error: Some(format!("failed to run log: {err}")),
-                    blocked_reason: None,
-                    log_truncated: false,
-                    observed_lines: 0,
-                    observed_deny: false,
-                    deny_lines: Vec::new(),
-                    deny_events: Vec::new(),
-                    layer_attribution: ObserverLayerAttribution {
-                        seatbelt: "observer_only".to_string(),
-                    },
-                };
-                let result = json_result(false);
-                if let Err(err) =
-                    json_contract::print_envelope("sandbox_log_observer_report", result, &data)
-                {
-                    eprintln!("{err}");
-                }
-                std::process::exit(1);
-            }
-        };
-
-        log_rc = out.status.code();
-        log_stdout = cmd_output_to_string(&out.stdout);
-        log_stderr = cmd_output_to_string(&out.stderr);
-
-        let mut filtered: Vec<&str> = Vec::new();
-        for line in log_stdout.lines() {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if is_log_prelude_line(trimmed) {
-                continue;
-            }
-            filtered.push(line);
-        }
-
-        observed_lines = filtered.len();
-        for line in filtered {
-            if let Some(event) = parse_sandbox_deny_line(line) {
-                deny_lines.push(line.to_string());
-                deny_events.push(event);
-            }
-        }
-
-        if !out.status.success() {
-            log_error = Some("log show returned non-zero".to_string());
-        }
+        log_stdout = captured.stdout;
+        log_stderr = captured.stderr;
+        observed_lines = captured.observed_lines;
+        deny_lines = captured.deny_lines;
+        deny_events = captured.deny_events;
+        collection = Some(captured.report);
     }
 
     let lower = format!("{log_stdout}\n{log_stderr}").to_ascii_lowercase();
@@ -851,16 +942,19 @@ fn main() {
         layer_attribution: ObserverLayerAttribution {
             seatbelt: "observer_only".to_string(),
         },
+        collection,
     };
 
     let result = json_result(log_error.is_none());
 
     match output_format {
         OutputFormat::Json => {
-            let text = match json_contract::render_envelope(
+            let text = match json_contract::render_envelope_limited(
                 "sandbox_log_observer_report",
                 result,
                 &data,
+                true,
+                log_capture::OBSERVER_STDOUT_BYTES - 1, // final newline also crosses the pipe
             ) {
                 Ok(text) => text,
                 Err(err) => {
@@ -885,10 +979,12 @@ fn main() {
             println!("{text}");
         }
         OutputFormat::Jsonl => {
-            let text = match json_contract::render_envelope_compact(
+            let text = match json_contract::render_envelope_limited(
                 "sandbox_log_observer_report",
                 result,
                 &data,
+                false,
+                log_capture::OBSERVER_STDOUT_BYTES - 1,
             ) {
                 Ok(text) => text,
                 Err(err) => {
@@ -906,7 +1002,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_sandbox_deny_line, sandbox_predicate};
+    use super::*;
 
     #[test]
     fn documented_observer_limits() {
@@ -969,9 +1065,351 @@ mod tests {
 
     #[test]
     fn predicate_escapes_quotes_and_includes_pid() {
-        let pred = sandbox_predicate("service\"name", 123);
-        assert!(pred.contains("Sandbox: service\\\"name(123)"));
-        assert!(pred.contains("deny"));
-        assert!(pred.contains("123"));
+        let pred = sandbox_predicate("service\"name.*", 123);
+        let regex: String =
+            serde_json::from_str(pred.strip_prefix("eventMessage MATCHES[c] ").unwrap()).unwrap();
+        assert!(regex.contains(r#"service"name\.\*\(123\)"#));
+        assert!(regex.contains("Sandbox:"));
+        assert!(!pred.contains("CONTAINS"));
+        // Syntax checks are not a substitute for the real archive query case.
+    }
+
+    fn python(script: &str) -> Command {
+        let mut command = Command::new("/usr/bin/python3");
+        command.args(["-c", script]);
+        command
+    }
+
+    fn report_from_capture(capture: ShowCapture) -> LogObserverData {
+        LogObserverData {
+            observer_schema_version: OBSERVER_SCHEMA_VERSION,
+            mode: "show".into(),
+            duration_ms: None,
+            stop_on_pid_exit: false,
+            plan_id: None,
+            row_id: None,
+            correlation_id: None,
+            pid: 42,
+            process_name: Some("pw-probe-runner".into()),
+            predicate: sandbox_predicate("pw-probe-runner", 42),
+            start: Some("2026-01-01 00:00:00+0000".into()),
+            end: Some("2026-01-01 00:00:05+0000".into()),
+            last: None,
+            log_rc: capture.report.process.exit_code,
+            log_stdout: capture.stdout,
+            log_stderr: capture.stderr,
+            log_error: capture.report.cutoff.as_ref().map(|c| c.reason.clone()),
+            blocked_reason: None,
+            log_truncated: capture.report.stdout.truncated || capture.report.stderr.truncated,
+            observed_lines: capture.observed_lines,
+            observed_deny: !capture.deny_events.is_empty(),
+            deny_lines: capture.deny_lines,
+            deny_events: capture.deny_events,
+            layer_attribution: ObserverLayerAttribution {
+                seatbelt: "observer_only".into(),
+            },
+            collection: Some(capture.report),
+        }
+    }
+
+    #[test]
+    fn controlled_capacity_preserves_256_records_and_fits_the_outer_report() {
+        let script = r#"import os
+for n in range(256):
+    os.write(1, ('Sandbox: pw-probe-runner(42) deny(1) file-write-data /capacity/%03d/' % n).encode() + b'\x01'*490 + b'\n')
+"#;
+        let capture = capture_show(&mut python(script), LogTimeout::default().start().unwrap());
+        assert!(capture.report.complete(), "{:?}", capture.report);
+        assert_eq!(capture.deny_events.len(), 256);
+        assert_eq!(capture.deny_lines.len(), 256);
+        for (n, event) in capture.deny_events.iter().enumerate() {
+            assert_eq!(event.pid, Some(42));
+            assert_eq!(
+                event.path.as_deref(),
+                Some(format!("/capacity/{n:03}/{}", "\u{1}".repeat(490)).as_str())
+            );
+        }
+        let report = report_from_capture(capture);
+        let text = json_contract::render_envelope_limited(
+            "sandbox_log_observer_report",
+            json_result(true),
+            &report,
+            true,
+            log_capture::OBSERVER_STDOUT_BYTES - 1,
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(value["data"]["deny_events"].as_array().unwrap().len(), 256);
+        eprintln!(
+            "capacity: 256 records, inner stdout {} bytes, observer report {} bytes",
+            report.collection.as_ref().unwrap().stdout.bytes_read,
+            text.len() + 1
+        );
+    }
+
+    #[test]
+    fn inner_byte_limit_with_maximal_json_escaping_fits_outer_serialization_limit() {
+        let script = format!(
+            r#"import os
+prefix = b'Sandbox: pw-probe-runner(42) deny(1) file-write-data /'
+os.write(1, prefix + b'\x01'*({}-len(prefix)-1) + b'\n')
+os.write(2, b'\x01'*{})
+"#,
+            log_capture::LOG_STDOUT_BYTES,
+            log_capture::LOG_STDERR_BYTES
+        );
+        let capture = capture_show(&mut python(&script), LogTimeout::default().start().unwrap());
+        assert!(capture.report.complete(), "{:?}", capture.report);
+        assert_eq!(
+            capture.report.stdout.bytes_read,
+            log_capture::LOG_STDOUT_BYTES
+        );
+        assert_eq!(
+            capture.report.stderr.bytes_read,
+            log_capture::LOG_STDERR_BYTES
+        );
+        assert_eq!(capture.deny_events.len(), 1);
+        let report = report_from_capture(capture);
+        let text = json_contract::render_envelope_limited(
+            "sandbox_log_observer_report",
+            json_result(true),
+            &report,
+            true,
+            log_capture::OBSERVER_STDOUT_BYTES - 1,
+        )
+        .unwrap();
+        assert!(text.len() + 1 < log_capture::OBSERVER_STDOUT_BYTES);
+        assert!(
+            json_contract::render_envelope_limited(
+                "sandbox_log_observer_report",
+                json_result(true),
+                &report,
+                true,
+                100
+            )
+            .is_err()
+        );
+        eprintln!(
+            "maximum escaping: observer report {} bytes, budget {}",
+            text.len() + 1,
+            log_capture::OBSERVER_STDOUT_BYTES
+        );
+    }
+
+    #[test]
+    fn event_limit_withholds_completion_without_discarding_retained_diagnostics() {
+        for n in [
+            log_capture::MAX_DENY_EVENTS,
+            log_capture::MAX_DENY_EVENTS + 1,
+        ] {
+            let script = format!(
+                "import os; os.write(1,b'Sandbox: w(42) deny(1) file-read-data /a\\n'*{n})"
+            );
+            let capture =
+                capture_show(&mut python(&script), LogTimeout::default().start().unwrap());
+            assert_eq!(capture.deny_events.len(), log_capture::MAX_DENY_EVENTS);
+            assert_eq!(capture.report.complete(), n == log_capture::MAX_DENY_EVENTS);
+            if n > log_capture::MAX_DENY_EVENTS {
+                let cutoff = capture.report.cutoff.as_ref().unwrap();
+                assert_eq!(cutoff.reason, "event_overflow");
+                assert_eq!(cutoff.observed, Some(n as u64));
+            }
+            let report = report_from_capture(capture);
+            let text = json_contract::render_envelope_limited(
+                "sandbox_log_observer_report",
+                json_result(n == log_capture::MAX_DENY_EVENTS),
+                &report,
+                true,
+                log_capture::OBSERVER_STDOUT_BYTES - 1,
+            )
+            .unwrap();
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&text).unwrap()["data"]["deny_events"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                log_capture::MAX_DENY_EVENTS
+            );
+        }
+    }
+
+    #[test]
+    fn inner_timeout_preserves_available_record_and_actual_child_wait() {
+        let budget = LogTimeout {
+            milliseconds: 200,
+            source: log_capture::TimeoutSource::Cli,
+        }
+        .start()
+        .unwrap();
+        let capture = capture_show(
+            &mut python(
+                "import os,time; os.write(1,b'Sandbox: w(42) deny(1) file-read-data /a\\n'); time.sleep(60)",
+            ),
+            budget,
+        );
+        assert_eq!(capture.deny_events.len(), 1);
+        assert_eq!(capture.report.cutoff.as_ref().unwrap().reason, "deadline");
+        assert_eq!(capture.report.process.term_signal, Some(libc::SIGKILL));
+        assert!(capture.report.process.reaped);
+        assert_eq!(capture.report.cleanup.outcome, "child_reaped");
+        let report = report_from_capture(capture);
+        let text = json_contract::render_envelope_limited(
+            "sandbox_log_observer_report",
+            json_result(false),
+            &report,
+            true,
+            log_capture::OBSERVER_STDOUT_BYTES - 1,
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&text).unwrap()["data"]["deny_events"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    #[ignore = "selected explicitly by the required archive case; needs the committed archive and OS log access"]
+    fn log_query_predicate_archive() {
+        use serde_json::{Value, json};
+        use std::collections::BTreeMap;
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/fixtures/deny_capture");
+        let archive = root.join("query_predicate.logarchive");
+        assert!(
+            archive.is_dir(),
+            "required archive fixture missing: {}; see fixture README",
+            archive.display()
+        );
+        let manifest: Value = serde_json::from_slice(
+            &std::fs::read(root.join("query_predicate.json"))
+                .expect("required independent query manifest missing"),
+        )
+        .unwrap();
+        assert_eq!(manifest["schema_version"], 1);
+        assert!(manifest["emitting_pid"].as_i64().is_some_and(|pid| pid > 0));
+        let artifacts = PathBuf::from(
+            std::env::var_os("PW_LOG_ARCHIVE_EVIDENCE")
+                .expect("archive control requires an evidence directory"),
+        );
+        std::fs::create_dir_all(&artifacts).unwrap();
+        let marker = manifest["message_marker"].as_str().unwrap();
+        assert!(!marker.is_empty());
+        let multiset = |messages: Vec<String>| {
+            let mut counts = BTreeMap::new();
+            for message in messages {
+                *counts.entry(message).or_insert(0_usize) += 1;
+            }
+            counts
+        };
+        let strings = |value: &Value| {
+            value
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect::<Vec<_>>()
+        };
+        let query = |label: &str, start: &str, end: &str, predicate: Option<&str>| {
+            assert!(
+                label
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            );
+            let mut command =
+                log_show_command(Some(start), Some(end), None, predicate, Some(&archive));
+            let argv: Vec<_> = std::iter::once(command.get_program())
+                .chain(command.get_args())
+                .map(|s| s.to_string_lossy().into_owned())
+                .collect();
+            std::fs::write(
+                artifacts.join(format!("{label}.argv.json")),
+                serde_json::to_vec_pretty(&argv).unwrap(),
+            )
+            .unwrap();
+            let capture = log_capture::capture_with_limits(
+                &mut command,
+                LogTimeout::default().start().unwrap(),
+                Boundary::Observer,
+                (log_capture::LOG_STDOUT_BYTES, log_capture::LOG_STDERR_BYTES),
+            );
+            std::fs::write(artifacts.join(format!("{label}.stdout")), &capture.stdout).unwrap();
+            std::fs::write(artifacts.join(format!("{label}.stderr")), &capture.stderr).unwrap();
+            std::fs::write(
+                artifacts.join(format!("{label}.supervision.json")),
+                serde_json::to_vec_pretty(&capture.supervision).unwrap(),
+            )
+            .unwrap();
+            assert!(
+                capture.supervision.complete(),
+                "archive query {label} failed: {:?}",
+                capture.supervision
+            );
+            String::from_utf8(capture.stdout).unwrap()
+        };
+        let all = query(
+            "unfiltered",
+            manifest["window"]["start"].as_str().unwrap(),
+            manifest["window"]["end"].as_str().unwrap(),
+            None,
+        );
+        let inventory: Vec<_> = all
+            .lines()
+            .filter_map(|line| line.find(marker).map(|at| line[at..].to_string()))
+            .collect();
+        assert_eq!(
+            multiset(inventory),
+            multiset(strings(&manifest["messages"])),
+            "unfiltered corpus missing, duplicated or unexpected"
+        );
+        assert!(manifest["queries"].as_array().unwrap().len() >= 2);
+        for input in manifest["queries"].as_array().unwrap() {
+            let pid = i32::try_from(input["pid"].as_i64().unwrap()).unwrap();
+            assert_ne!(
+                Some(i64::from(pid)),
+                manifest["emitting_pid"].as_i64(),
+                "emitter and embedded worker identity must differ"
+            );
+            let expected = strings(&input["selected_messages"]);
+            assert!(
+                !expected.is_empty(),
+                "each archive query requires a positive oracle"
+            );
+            let predicate = sandbox_predicate(input["process_name"].as_str().unwrap(), pid);
+            let output = query(
+                input["name"].as_str().unwrap(),
+                input["start"].as_str().unwrap(),
+                input["end"].as_str().unwrap(),
+                Some(&predicate),
+            );
+            let mut selected = Vec::new();
+            for line in output.lines() {
+                if line.trim().is_empty()
+                    || is_log_prelude_line(line)
+                    || line.starts_with("Timestamp")
+                {
+                    continue;
+                }
+                let at = line
+                    .find(marker)
+                    .unwrap_or_else(|| panic!("unexpected selected non-corpus row: {line}"));
+                selected.push(line[at..].to_string());
+            }
+            assert_eq!(
+                multiset(selected),
+                multiset(expected),
+                "selected message multiset differs before parsing"
+            );
+            let parsed: Vec<_> = output.lines().filter_map(parse_sandbox_deny_line).map(|e|
+                json!({"pid":e.pid, "process":e.process, "operation":e.operation, "path":e.path})).collect();
+            let normalized =
+                |events: Vec<Value>| multiset(events.iter().map(Value::to_string).collect());
+            assert_eq!(
+                normalized(parsed),
+                normalized(input["deny_events"].as_array().unwrap().clone()),
+                "parser discarded or changed a selected deny record"
+            );
+        }
     }
 }

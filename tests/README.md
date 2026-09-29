@@ -459,3 +459,8 @@ follow the [public comparison contract](FAILURE-PROPAGATION-CONTRACT.md#public-r
 including null for unattributed failures, unresolved scope, every deny/success difference and unordered same-target mutation. From response 8 it checks per-step order against the collection/release/acknowledgement chain; ordered unlink can retain allow/success agreement. Current-build conformance is explicit; historical response-7 disagreements survive generic decoding. Step identity,
 independent file/process observations, native results and partial-evidence
 protections remain separately asserted.
+
+The default `witness_contract/log_query_predicate_archive` case requires the
+committed [query archive and independent manifest](fixtures/deny_capture/README.md).
+It performs read-only OS queries; no default case may generate or download a
+replacement fixture. Missing data or incompatible readers fail explicitly.

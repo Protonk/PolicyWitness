@@ -443,3 +443,15 @@ The pre-apply case also attempts a real spawn of a nonexistent worker and
 requires unchanged files, no worker or validator subprocess, and no ordering
 object. Once a worker exists but has not published application, ordering is
 all-false with `not_invoked`; no prediction is `query_first`.
+
+## Archive query selection
+
+`log_query_predicate_archive` is a required default case that runs the production
+`log show` command builder against a committed, self-contained `.logarchive`.
+It checks the complete unfiltered corpus, then selected message multiplicities
+before parsing, then independent expected events. It does not depend on new
+live denial emission. Missing/unreadable data, blocked access, timeout, overflow,
+nonzero exit and wrong or empty selection fail; none is an availability skip.
+The Rust test is excluded from the generic unit batch and explicitly selected
+by this case. See [the fixture contract](../../fixtures/deny_capture/README.md)
+for the manifest and producer/reader compatibility requirements.

@@ -19,6 +19,7 @@ use crate::augments::{AugmentResolution, PolicyAugmentation, resolve_augments};
 use crate::cli;
 use crate::evidence;
 use crate::json_contract;
+use crate::log_capture::LogTimeout;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
 use crate::request_patch::{read_json_file, write_temp_request};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
@@ -28,7 +29,8 @@ use crate::runner_select::{
     runner_provenance_from_target,
 };
 use crate::sandbox_log::{
-    SandboxLogCapture, SandboxLogWindow, capture_sandbox_logs, match_step_denies, worker_pid,
+    SandboxLogCapture, SandboxLogWindow, bounded_step_denies, capture_sandbox_logs_with_timeout,
+    worker_pid,
 };
 use crate::utils::now_unix_ms;
 
@@ -45,7 +47,7 @@ pub struct AppProvenance {
 }
 
 #[derive(Serialize)]
-pub struct RunData {
+struct ExecutionData {
     pub request_path: String,
     pub runner_service_bundle_id: String,
     pub runner_service_executable: String,
@@ -58,17 +60,43 @@ pub struct RunData {
     pub timeout_ms: u64,
     pub runner_client: RunnerClientRun,
     pub runner_result: Option<Value>,
-    pub sandbox_log_capture: Option<SandboxLogCapture>,
     pub runner_startup_diagnostics: Option<RunnerStartupDiagnostics>,
-    pub runner_sandbox_diagnostics: Option<RunnerSandboxDiagnostics>,
 }
 
 #[derive(Serialize)]
-pub struct RunnerSandboxDiagnostics {
+struct RunData {
+    #[serde(flatten)]
+    execution: ExecutionData,
+    sandbox_log_capture: Option<SandboxLogCapture>,
+    runner_sandbox_diagnostics: Option<RunnerSandboxDiagnostics>,
+}
+
+// Completed before any optional collector runs. Log processing only borrows
+// runner evidence and returns LogEvidence; it cannot rewrite this value.
+struct CompletedExecution {
+    data: ExecutionData,
+    diagnostics: RunnerExecutionDiagnostics,
+    result: json_contract::JsonResult,
+    exit_code: i32,
+}
+
+struct LogEvidence {
+    capture: Option<SandboxLogCapture>,
+    diagnostics: RunnerLogDiagnostics,
+}
+
+#[derive(Serialize)]
+struct RunnerSandboxDiagnostics {
+    #[serde(flatten)]
+    execution: RunnerExecutionDiagnostics,
+    #[serde(flatten)]
+    logs: RunnerLogDiagnostics,
+}
+
+#[derive(Serialize)]
+struct RunnerExecutionDiagnostics {
     pub worker_pid: Option<i32>,
     pub process_disposition: &'static str,
-    pub capture_status: String,
-    pub correlation_status: &'static str,
     pub termination_cause: Option<&'static str>,
     /// Projection of the worker disposition record's stop reason; null for a
     /// legacy reply or an unresolved question.
@@ -77,6 +105,12 @@ pub struct RunnerSandboxDiagnostics {
     pub disposition_integrity: Option<&'static str>,
     /// Integrity issues plus the record's own reported conflicts; empty when none.
     pub disposition_issues: Vec<Value>,
+}
+
+#[derive(Serialize)]
+struct RunnerLogDiagnostics {
+    pub capture_status: String,
+    pub correlation_status: &'static str,
     /// First PID match in the capture array, not the first event in time or a
     /// cause of termination. Reference keeps the event in observer evidence.
     pub first_deny: Option<DenyEventReference>,
@@ -158,6 +192,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let mut timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut runner_mode_arg: Option<String> = None;
     let mut no_log_capture = false;
+    let mut log_timeout = LogTimeout::default();
 
     let mut idx = 0usize;
     while idx < args.len() {
@@ -181,6 +216,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     .and_then(|s| s.to_string_lossy().parse::<u64>().ok())
                     .ok_or_else(|| "invalid value for --timeout-ms".to_string())?;
                 timeout_ms = value.max(1);
+                idx += 2;
+            }
+            "--log-timeout-ms" => {
+                let value = args
+                    .get(idx + 1)
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| "missing value for --log-timeout-ms".to_string())?;
+                log_timeout = LogTimeout::parse(value)?;
                 idx += 2;
             }
             "--runner-mode" => {
@@ -267,7 +310,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
             let runner_client = synthetic_runner_client(&format!(
                 "runner not invoked; augment resolution failed: {err}"
             ));
-            let data = RunData {
+            let execution = ExecutionData {
                 request_path: request_path.to_string_lossy().to_string(),
                 runner_service_bundle_id: runner_target
                     .bundle_id
@@ -283,8 +326,11 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                 timeout_ms,
                 runner_client,
                 runner_result: None,
-                sandbox_log_capture: None,
                 runner_startup_diagnostics: None,
+            };
+            let data = RunData {
+                execution,
+                sandbox_log_capture: None,
                 runner_sandbox_diagnostics: None,
             };
             let result = json_contract::JsonResult {
@@ -320,14 +366,11 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         &runner_target.connection,
     )?;
 
-    let runner_pid = worker_pid(runner_result.as_ref());
     let runner_outcome = runner_result
         .as_ref()
         .and_then(|v| v.get("normalized_outcome"))
         .and_then(|v| v.as_str())
-        .unwrap_or("runner_output_not_json")
-        .to_string();
-    let ok = runner_outcome == "ok";
+        .unwrap_or("runner_output_not_json");
 
     // Retain the independent fallback result without assigning a worker cause.
     let mut policy_check: Option<PolicyCheckCapture> = None;
@@ -353,45 +396,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         None
     };
 
-    let mut sandbox_log_capture = if no_log_capture {
-        // Explicitly disabled; diagnostics distinguish this from unavailable capture.
-        None
-    } else {
-        runner_pid.map(|pid| {
-            // Capture unified-log evidence only when the runner PID is known.
-            // Request the client's wall-clock interval, with no lookback cap.
-            // Invalid timing is retained without invoking the observer.
-            let window = SandboxLogWindow::runner_client_span(
-                runner_client.started_at_unix_ms,
-                runner_client.ended_at_unix_ms,
-            );
-            capture_sandbox_logs(i64::from(pid), "pw-probe-runner", window.clone()).unwrap_or_else(
-                |err| SandboxLogCapture {
-                    window,
-                    capture_status: "requested_unavailable".to_string(),
-                    tool_exit_code: 1,
-                    blocked_reason: None,
-                    output: crate::utils::JsonOutputCapture::unavailable(
-                        err,
-                        crate::utils::OBSERVER_CAPTURE_BYTES,
-                    ),
-                    observer: None,
-                    observed_deny: None,
-                    deny_events: None,
-                    step_denies: None,
-                },
-            )
-        })
-    };
-
-    let runner_sandbox_diagnostics = finish_sandbox_log_capture(
-        runner_result.as_ref(),
-        &request_value,
-        no_log_capture,
-        &mut sandbox_log_capture,
-    );
-
-    let data = RunData {
+    let execution = complete_execution(ExecutionData {
         request_path: request_path.to_string_lossy().to_string(),
         runner_service_bundle_id: runner_target
             .bundle_id
@@ -407,10 +412,30 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         timeout_ms,
         runner_client,
         runner_result,
-        sandbox_log_capture,
         runner_startup_diagnostics,
-        runner_sandbox_diagnostics,
-    };
+    });
+    let (result, data, exit_code) = attach_sandbox_logs(
+        execution,
+        &request_value,
+        no_log_capture,
+        |pid, process, window| capture_sandbox_logs_with_timeout(pid, process, window, log_timeout),
+    );
+
+    json_contract::print_envelope("run", result, &data)?;
+    Ok(exit_code)
+}
+
+fn complete_execution(data: ExecutionData) -> CompletedExecution {
+    let diagnostics = execution_diagnostics(data.runner_result.as_ref());
+    let runner_outcome = data
+        .runner_result
+        .as_ref()
+        .and_then(|v| v.get("normalized_outcome"))
+        .and_then(Value::as_str)
+        .unwrap_or("runner_output_not_json")
+        .to_string();
+    let ok = runner_outcome == "ok";
+    let exit_code = if ok { 0 } else { 1 };
 
     let error = if ok {
         None
@@ -432,7 +457,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let result = json_contract::JsonResult {
         ok,
         rc: None,
-        exit_code: Some(if ok { 0 } else { 1 }),
+        exit_code: Some(exit_code),
         normalized_outcome: Some(runner_outcome),
         errno: None,
         error,
@@ -440,21 +465,95 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         stdout: None,
     };
 
-    json_contract::print_envelope("run", result, &data)?;
-    Ok(if ok { 0 } else { 1 })
+    CompletedExecution {
+        data,
+        diagnostics,
+        result,
+        exit_code,
+    }
 }
 
-// Both association and diagnostics consume the observer's capture status. Keep
-// this assembly on the production path so receiver-to-consumer controls cover it.
+// This is the production assembly seam. The collector receives only its query
+// inputs; log processing has read-only execution evidence and returns only
+// log-owned fields. Flattening merges the two channels into the existing wire
+// shape without granting either channel ownership of the other's fields.
+fn attach_sandbox_logs(
+    execution: CompletedExecution,
+    request: &Value,
+    disabled: bool,
+    collect: impl FnOnce(i64, &str, SandboxLogWindow) -> Result<SandboxLogCapture, String>,
+) -> (json_contract::JsonResult, RunData, i32) {
+    let logs = collect_log_evidence(
+        execution.data.runner_result.as_ref(),
+        request,
+        &execution.data.runner_client,
+        disabled,
+        collect,
+    );
+    let data = RunData {
+        execution: execution.data,
+        sandbox_log_capture: logs.capture,
+        runner_sandbox_diagnostics: Some(RunnerSandboxDiagnostics {
+            execution: execution.diagnostics,
+            logs: logs.diagnostics,
+        }),
+    };
+    (execution.result, data, execution.exit_code)
+}
+
+fn collect_log_evidence(
+    runner: Option<&Value>,
+    request: &Value,
+    client: &RunnerClientRun,
+    disabled: bool,
+    collect: impl FnOnce(i64, &str, SandboxLogWindow) -> Result<SandboxLogCapture, String>,
+) -> LogEvidence {
+    let mut capture = if disabled {
+        None
+    } else {
+        worker_pid(runner).map(|pid| {
+            let window = SandboxLogWindow::runner_client_span(
+                client.started_at_unix_ms,
+                client.ended_at_unix_ms,
+            );
+            collect(i64::from(pid), "pw-probe-runner", window.clone()).unwrap_or_else(|err| {
+                SandboxLogCapture {
+                    window,
+                    capture_status: "requested_unavailable".into(),
+                    tool_exit_code: 1,
+                    blocked_reason: None,
+                    output: crate::utils::JsonOutputCapture::unavailable(
+                        err,
+                        crate::utils::OBSERVER_CAPTURE_BYTES,
+                    ),
+                    observer: None,
+                    observed_deny: None,
+                    deny_events: None,
+                    step_denies: None,
+                    supervision: None,
+                    processing_cutoff: None,
+                }
+            })
+        })
+    };
+    let diagnostics = finish_sandbox_log_capture(runner, request, disabled, &mut capture);
+    LogEvidence {
+        capture,
+        diagnostics,
+    }
+}
+
+// Association and log diagnostics share one availability gate; retained events
+// from a failed capture or without an authoritative PID cannot gain candidates.
 fn finish_sandbox_log_capture(
     runner: Option<&Value>,
     request: &Value,
     disabled: bool,
     capture: &mut Option<SandboxLogCapture>,
-) -> Option<RunnerSandboxDiagnostics> {
+) -> RunnerLogDiagnostics {
     if let Some(capture) = capture.as_mut() {
         capture.step_denies = None;
-        if !disabled && capture.capture_status == "captured" {
+        if !disabled && worker_pid(runner).is_some() && capture.capture_status == "captured" {
             if let (Some(steps), Some(events)) = (
                 runner
                     .and_then(|r| r.get("steps"))
@@ -462,16 +561,28 @@ fn finish_sandbox_log_capture(
                 capture.deny_events.as_ref(),
             ) {
                 let plan = request.get("probe_plan").and_then(Value::as_array);
-                capture.step_denies = Some(match_step_denies(
+                match bounded_step_denies(
                     steps,
                     plan.map(Vec::as_slice).unwrap_or(&[]),
                     events,
                     worker_pid(runner),
-                ));
+                    capture.supervision.as_ref().map(|r| r.budget),
+                ) {
+                    Ok(associations) => capture.step_denies = Some(associations),
+                    Err(cutoff) => {
+                        capture.capture_status = if cutoff.reason == "deadline" {
+                            "timeout"
+                        } else {
+                            "overflow"
+                        }
+                        .into();
+                        capture.processing_cutoff = Some(cutoff);
+                    }
+                }
             }
         }
     }
-    synthesize_runner_sandbox_diagnostics(runner, disabled, capture.as_ref())
+    log_diagnostics(runner, disabled, capture.as_ref())
 }
 
 // Execution disposition and optional log correlation are separate observations.
@@ -1316,11 +1427,7 @@ fn project_disposition(
     }
 }
 
-fn synthesize_runner_sandbox_diagnostics(
-    runner: Option<&Value>,
-    disabled: bool,
-    capture: Option<&SandboxLogCapture>,
-) -> Option<RunnerSandboxDiagnostics> {
+fn execution_diagnostics(runner: Option<&Value>) -> RunnerExecutionDiagnostics {
     let pid = worker_pid(runner);
     let sub = runner.and_then(|r| r.get("runner_subprocess"));
     let reply_steps: Vec<Value> = runner
@@ -1348,7 +1455,22 @@ fn synthesize_runner_sandbox_diagnostics(
             issues: vec![],
         },
     };
-    let disposition = projection.disposition;
+    RunnerExecutionDiagnostics {
+        worker_pid: pid,
+        process_disposition: projection.disposition,
+        termination_cause: projection.cause,
+        stop_reason: projection.stop_reason,
+        disposition_integrity: projection.integrity,
+        disposition_issues: projection.issues,
+    }
+}
+
+fn log_diagnostics(
+    runner: Option<&Value>,
+    disabled: bool,
+    capture: Option<&SandboxLogCapture>,
+) -> RunnerLogDiagnostics {
+    let pid = worker_pid(runner);
     let capture_status = if disabled {
         "disabled"
     } else if pid.is_none() {
@@ -1387,18 +1509,12 @@ fn synthesize_runner_sandbox_diagnostics(
         } else {
             None
         };
-    Some(RunnerSandboxDiagnostics {
-        worker_pid: pid,
-        process_disposition: disposition,
+    RunnerLogDiagnostics {
         capture_status: capture_status.to_string(),
         correlation_status,
-        termination_cause: projection.cause,
-        stop_reason: projection.stop_reason,
-        disposition_integrity: projection.integrity,
-        disposition_issues: projection.issues,
         first_deny,
         permission_failures_without_record,
-    })
+    }
 }
 
 // The runner's own per-step classification is the only input: a step counts
@@ -1443,8 +1559,459 @@ fn permission_failures_without_record(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sandbox_log::SandboxDenyEvent;
+    use crate::sandbox_log::{SandboxDenyEvent, capture_sandbox_logs, match_step_denies};
     use serde_json::json;
+
+    fn diagnostics_with_logs(
+        runner: Option<&Value>,
+        disabled: bool,
+        capture: Option<&SandboxLogCapture>,
+    ) -> RunnerSandboxDiagnostics {
+        RunnerSandboxDiagnostics {
+            execution: execution_diagnostics(runner),
+            logs: log_diagnostics(runner, disabled, capture),
+        }
+    }
+
+    fn execution_data(runner: Option<Value>) -> ExecutionData {
+        use crate::runner_select::{RunnerConnectionKind, RunnerTarget};
+        let target = RunnerTarget {
+            kind: RunnerKind::Standard,
+            connection: RunnerConnectionKind::XpcService,
+            service_name: "controlled.service".into(),
+            process_name: "PWRunner".into(),
+            bundle_id: None,
+            bundle_path: None,
+            executable_path: None,
+            registry_id: None,
+            signature: None,
+            entitlements: None,
+        };
+        let stdout = serde_json::to_vec(&runner).unwrap();
+        let (output, _) = crate::utils::capture_json_output(
+            &std::process::Output {
+                status: std::os::unix::process::ExitStatusExt::from_raw(0),
+                stdout,
+                stderr: b"fixed runner-client diagnostic".to_vec(),
+            },
+            "runner",
+            crate::utils::RUNNER_CAPTURE_BYTES,
+        );
+        ExecutionData {
+            request_path: "/controlled/request.json".into(),
+            runner_service_bundle_id: target.service_name.clone(),
+            runner_service_executable: target.process_name.clone(),
+            runner_service_name: target.service_name.clone(),
+            runner_registry_id: None,
+            runner_provenance: runner_provenance_from_target(&target),
+            app_provenance: None,
+            policy_augmentation: None,
+            policy_check: None,
+            timeout_ms: DEFAULT_TIMEOUT_MS,
+            runner_client: RunnerClientRun {
+                argv: vec!["controlled-client".into()],
+                started_at_unix_ms: 1_000,
+                ended_at_unix_ms: 2_500,
+                exit_code: 0,
+                output,
+            },
+            runner_result: runner,
+            runner_startup_diagnostics: None,
+        }
+    }
+
+    #[test]
+    fn collector_states_preserve_the_serialized_execution_half() {
+        // Independent native observations with two indistinguishable candidates
+        // and one permission failure that has no matching captured path.
+        let request = json!({"probe_plan": [
+            {"step_id": "a", "attempt": {"kind": "file", "action": "open_write", "target": "/attempt"}},
+            {"step_id": "b", "attempt": {"kind": "file", "action": "open_write", "target": "/attempt"}},
+            {"step_id": "silent", "attempt": {"kind": "file", "action": "open_write", "target": "/silent"}}
+        ]});
+        let mut runner = worker("ok", None);
+        runner["schema_version"] = json!(7);
+        runner["steps"] = json!(["a", "b", "silent"].map(|id| json!({
+            "step_id": id, "drift": null, "deny_signal": null,
+            "sandbox_check": {"outcome": "allow", "rc": 0, "pid": 42},
+            "attempt": {"outcome": "open_failed", "rc": -1, "errno": 1,
+                "requested_kind": "file", "requested_action": "open_write"},
+            "comparison": {"observation": "permission_failure", "conclusion": "unavailable",
+                "limitations": ["sandbox_attribution_unestablished"]}
+        })));
+        let mut failed = runner.clone();
+        failed["normalized_outcome"] = json!("runner_failed");
+        failed["error"] = json!("worker signal 9");
+        failed["runner_subprocess"]["exit_code"] = Value::Null;
+        failed["runner_subprocess"]["term_signal"] = json!(9);
+        let mut no_pid = runner.clone();
+        no_pid["pid"] = json!(42); // A matching host/client PID is not authoritative.
+        no_pid["runner_subprocess"]
+            .as_object_mut()
+            .unwrap()
+            .remove("pid");
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/disposition/a1_expected.json"
+        ))
+        .unwrap();
+        let mut no_comparisons = runner.clone();
+        for step in no_comparisons["steps"].as_array_mut().unwrap() {
+            step.as_object_mut().unwrap().remove("comparison");
+        }
+        let cases = [
+            (Some(runner), 0, "clean_exit", Value::Null, true),
+            (Some(failed), 1, "signaled", json!("unknown"), true),
+            (Some(no_pid), 0, "no_worker", Value::Null, true),
+            (
+                Some(fixture["data"]["runner_result"].clone()),
+                1,
+                "signaled",
+                json!("host_sentinel_deadline"),
+                false,
+            ),
+            (Some(no_comparisons), 0, "clean_exit", Value::Null, false),
+            (None, 1, "no_worker", Value::Null, false),
+        ];
+        for (runner, expected_exit, disposition, cause, permission_steps) in cases {
+            let mut baseline = None;
+            for state in [
+                "events",
+                "empty",
+                "unrelated",
+                "blocked",
+                "error",
+                "capture_error",
+                "parse_error",
+                "invalid_reply",
+                "window_mismatch",
+                "invalid_window",
+                "requested_unavailable",
+                "timeout",
+                "overflow",
+                "disabled",
+            ] {
+                let execution = complete_execution(execution_data(runner.clone()));
+                let client = serde_json::to_value(&execution.data.runner_client).unwrap();
+                let pid = worker_pid(runner.as_ref());
+                let disabled = state == "disabled";
+                let mut invoked = false;
+                let (result, data, exit_code) = attach_sandbox_logs(
+                    execution,
+                    &request,
+                    disabled,
+                    |actual_pid, name, window| {
+                        invoked = true;
+                        assert_eq!(Some(actual_pid), pid.map(i64::from));
+                        assert_eq!(name, "pw-probe-runner");
+                        assert_eq!(
+                            (window.started_at_unix_ms, window.ended_at_unix_ms),
+                            (1_000, 2_500)
+                        );
+                        if state == "requested_unavailable" {
+                            return Err("controlled collector launch failure".into());
+                        }
+                        let status = match state {
+                            "events" | "empty" | "unrelated" => "captured",
+                            other => other,
+                        };
+                        let events = match state {
+                            "empty" => vec![],
+                            "unrelated" => vec![event(Some(99))],
+                            // Every failed capture deliberately retains a matching
+                            // diagnostic event. Status, not event presence, gates it.
+                            _ => vec![event(Some(99)), event(pid)],
+                        };
+                        let mut capture = capture_with(status, events);
+                        capture.window = window;
+                        capture.observer = Some(json!({"data": {"diagnostic": "retained reply"}}));
+                        // Reject precomputed/stale associations supplied by a collector.
+                        capture.step_denies = Some(match_step_denies(
+                            runner
+                                .as_ref()
+                                .and_then(|r| r["steps"].as_array())
+                                .map(Vec::as_slice)
+                                .unwrap_or(&[]),
+                            request["probe_plan"].as_array().unwrap(),
+                            capture.deny_events.as_ref().unwrap(),
+                            pid,
+                        ));
+                        Ok(capture)
+                    },
+                );
+                assert_eq!(invoked, !disabled && pid.is_some(), "{state}");
+                assert_eq!(exit_code, expected_exit, "{state}");
+                let text = json_contract::render_envelope("run", result, &data).unwrap();
+                let mut wire: Value = serde_json::from_str(&text).unwrap();
+                assert_eq!(wire["result"]["exit_code"], expected_exit, "{state}");
+                assert_eq!(wire["result"]["ok"], expected_exit == 0, "{state}");
+                assert_eq!(
+                    wire["data"]["runner_result"],
+                    runner.clone().unwrap_or(Value::Null),
+                    "{state}"
+                );
+                assert_eq!(wire["data"]["runner_client"], client, "{state}");
+                assert_eq!(
+                    wire["data"]
+                        .as_object()
+                        .unwrap()
+                        .keys()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                    [
+                        "app_provenance",
+                        "policy_augmentation",
+                        "policy_check",
+                        "request_path",
+                        "runner_client",
+                        "runner_provenance",
+                        "runner_registry_id",
+                        "runner_result",
+                        "runner_sandbox_diagnostics",
+                        "runner_service_bundle_id",
+                        "runner_service_executable",
+                        "runner_service_name",
+                        "runner_startup_diagnostics",
+                        "sandbox_log_capture",
+                        "timeout_ms"
+                    ],
+                    "internal ownership structs must not change the data wire shape",
+                );
+                let diag = &wire["data"]["runner_sandbox_diagnostics"];
+                assert_eq!(
+                    diag.as_object()
+                        .unwrap()
+                        .keys()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                    [
+                        "capture_status",
+                        "correlation_status",
+                        "disposition_integrity",
+                        "disposition_issues",
+                        "first_deny",
+                        "permission_failures_without_record",
+                        "process_disposition",
+                        "stop_reason",
+                        "termination_cause",
+                        "worker_pid"
+                    ],
+                    "internal ownership structs must not change the diagnostics wire shape",
+                );
+                assert_eq!(diag["process_disposition"], disposition, "{state}");
+                assert_eq!(diag["termination_cause"], cause, "{state}");
+                let cap = &wire["data"]["sandbox_log_capture"];
+                if disabled || pid.is_none() {
+                    assert!(cap.is_null());
+                    assert_eq!(
+                        diag["capture_status"],
+                        if disabled { "disabled" } else { "no_worker" }
+                    );
+                    assert_eq!(diag["correlation_status"], "not_attempted");
+                    assert!(diag["first_deny"].is_null());
+                    assert!(diag["permission_failures_without_record"].is_null());
+                } else if matches!(state, "events" | "empty" | "unrelated") {
+                    assert_eq!(diag["capture_status"], "captured");
+                    assert_eq!(
+                        diag["correlation_status"],
+                        if state == "events" {
+                            "pid_match"
+                        } else {
+                            "no_match"
+                        }
+                    );
+                    assert_eq!(
+                        diag["first_deny"],
+                        if state == "events" {
+                            json!({"event_index": 1})
+                        } else {
+                            Value::Null
+                        }
+                    );
+                    if permission_steps {
+                        assert_eq!(
+                            diag["permission_failures_without_record"],
+                            if state == "events" {
+                                json!(["silent"])
+                            } else {
+                                json!(["a", "b", "silent"])
+                            }
+                        );
+                        if state == "events" {
+                            assert_eq!(cap["step_denies"].as_array().unwrap().len(), 1);
+                            assert_eq!(cap["step_denies"][0]["event_index"], 1);
+                            assert_eq!(
+                                cap["step_denies"][0]["candidate_step_ids"],
+                                json!(["a", "b"])
+                            );
+                            assert_eq!(cap["step_denies"][0]["association"], "ambiguous");
+                        } else {
+                            assert_eq!(cap["step_denies"], json!([]));
+                        }
+                    }
+                } else {
+                    assert_eq!(cap["capture_status"], state);
+                    assert_eq!(diag["capture_status"], state);
+                    assert_eq!(diag["correlation_status"], "unavailable");
+                    assert!(cap["step_denies"].is_null());
+                    assert!(diag["first_deny"].is_null());
+                    assert!(diag["permission_failures_without_record"].is_null());
+                    if state != "requested_unavailable" {
+                        assert_eq!(cap["deny_events"][1]["pid"], pid.unwrap());
+                        assert_eq!(cap["observer"]["data"]["diagnostic"], "retained reply");
+                    }
+                }
+                // Remove only the four log-owned diagnostic fields and the log
+                // subtree. Everything else, including unknown future execution
+                // fields, must be byte-identical across collector states.
+                wire.as_object_mut().unwrap().remove("generated_at_unix_ms");
+                wire["data"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("sandbox_log_capture");
+                for key in [
+                    "capture_status",
+                    "correlation_status",
+                    "first_deny",
+                    "permission_failures_without_record",
+                ] {
+                    assert!(
+                        wire["data"]["runner_sandbox_diagnostics"]
+                            .as_object_mut()
+                            .unwrap()
+                            .remove(key)
+                            .is_some()
+                    );
+                }
+                let bytes = serde_json::to_vec(&wire).unwrap();
+                if let Some(baseline) = &baseline {
+                    assert_eq!(&bytes, baseline, "execution changed under {state}");
+                } else {
+                    baseline = Some(bytes);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
+        use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
+        let native: Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/disposition/a1_expected.json"
+        ))
+        .unwrap();
+        let runner = native["data"]["runner_result"].clone();
+        let mut baseline = None;
+        for (script, expected) in [
+            ("import time; time.sleep(60)", "timeout"),
+            ("import os; os.write(1,b'x'*33554433)", "overflow"),
+            ("import os; os.write(2,b'e'*131073)", "overflow"),
+            ("import sys; sys.exit(7)", "error"),
+            (
+                "import os,signal; os.kill(os.getpid(),signal.SIGTERM)",
+                "error",
+            ),
+            ("print('{broken')", "parse_error"),
+        ] {
+            let (result, data, code) = attach_sandbox_logs(
+                complete_execution(execution_data(Some(runner.clone()))),
+                &json!({"probe_plan":[]}),
+                false,
+                |pid, process, window| {
+                    let mut command = std::process::Command::new("/usr/bin/python3");
+                    command.args(["-c", script]);
+                    let budget = LogTimeout {
+                        milliseconds: if expected == "timeout" { 150 } else { 3000 },
+                        source: TimeoutSource::Cli,
+                    }
+                    .start()
+                    .unwrap();
+                    let raw = log_capture::capture(&mut command, budget, Boundary::Observer);
+                    Ok(crate::sandbox_log::parse_supervised_observer(
+                        raw, window, pid, process,
+                    ))
+                },
+            );
+            assert_eq!(code, 1);
+            let mut wire: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(wire["data"]["runner_result"], runner);
+            let capture = &wire["data"]["sandbox_log_capture"];
+            assert_eq!(capture["capture_status"], expected);
+            assert_eq!(capture["supervision"]["cleanup"]["outcome"], "group_absent");
+            assert!(capture["step_denies"].is_null());
+            let diag = &wire["data"]["runner_sandbox_diagnostics"];
+            assert_eq!(diag["correlation_status"], "unavailable");
+            assert!(
+                diag["first_deny"].is_null()
+                    && diag["permission_failures_without_record"].is_null()
+            );
+            wire.as_object_mut().unwrap().remove("generated_at_unix_ms");
+            wire["data"]
+                .as_object_mut()
+                .unwrap()
+                .remove("sandbox_log_capture");
+            for key in [
+                "capture_status",
+                "correlation_status",
+                "first_deny",
+                "permission_failures_without_record",
+            ] {
+                wire["data"]["runner_sandbox_diagnostics"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove(key);
+            }
+            let bytes = serde_json::to_vec(&wire).unwrap();
+            if let Some(baseline) = &baseline {
+                assert_eq!(&bytes, baseline, "{expected}");
+            } else {
+                baseline = Some(bytes);
+            }
+        }
+    }
+
+    #[test]
+    fn retained_events_without_worker_identity_never_acquire_associations() {
+        let request = json!({"probe_plan": [{"step_id": "s", "attempt": {
+            "kind": "file", "action": "open_write", "target": "/attempt"}}]});
+        for sub in [
+            Value::Null,
+            json!({"pid": 0}),
+            json!({"pid": -1}),
+            json!({"pid": 4_294_967_338_u64}),
+        ] {
+            let runner = json!({"pid": 42, "runner_subprocess": sub, "steps": [{"step_id": "s",
+                "comparison": {"observation": "permission_failure"}}]});
+            let mut capture = capture_with("captured", vec![event(Some(42))]);
+            capture.step_denies = Some(match_step_denies(
+                runner["steps"].as_array().unwrap(),
+                request["probe_plan"].as_array().unwrap(),
+                capture.deny_events.as_ref().unwrap(),
+                Some(42),
+            ));
+            assert_eq!(capture.step_denies.as_ref().unwrap().len(), 1);
+            let mut capture = Some(capture);
+            let diagnostics =
+                finish_sandbox_log_capture(Some(&runner), &request, false, &mut capture);
+            assert!(capture.as_ref().unwrap().step_denies.is_none());
+            assert_eq!(
+                capture
+                    .as_ref()
+                    .unwrap()
+                    .deny_events
+                    .as_ref()
+                    .unwrap()
+                    .len(),
+                1
+            );
+            assert_eq!(diagnostics.capture_status, "no_worker");
+            assert_eq!(diagnostics.correlation_status, "not_attempted");
+            assert!(diagnostics.first_deny.is_none());
+            assert!(diagnostics.permission_failures_without_record.is_none());
+        }
+    }
 
     #[test]
     fn no_match_is_distinguished_by_unrecorded_permission_failures() {
@@ -1471,7 +2038,7 @@ mod tests {
         ]);
         // One denial recorded, one not: only the silent one is listed.
         let mut cap = Some(capture_with("captured", vec![denied("/recorded")]));
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap).unwrap();
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap);
         assert_eq!(diag.correlation_status, "pid_match");
         assert_eq!(
             diag.permission_failures_without_record,
@@ -1479,7 +2046,7 @@ mod tests {
         );
         // No record at all: no_match now names the denials the attempts reported.
         let mut cap = Some(capture_with("captured", vec![event(Some(99))]));
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap).unwrap();
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut cap);
         assert_eq!(diag.correlation_status, "no_match");
         assert_eq!(
             diag.permission_failures_without_record,
@@ -1494,14 +2061,14 @@ mod tests {
         let mut clean = runner.clone();
         clean["steps"] = json!([step("fine", "succeeded"), step("other", "other_failure")]);
         let mut cap = Some(capture_with("captured", vec![]));
-        let diag = finish_sandbox_log_capture(Some(&clean), &request, false, &mut cap).unwrap();
+        let diag = finish_sandbox_log_capture(Some(&clean), &request, false, &mut cap);
         assert_eq!(diag.permission_failures_without_record, Some(vec![]));
         // Unclassifiable, uncorrelated or disabled: null, never an invented list.
         let mut legacy = runner.clone();
         legacy["steps"] = json!([{"step_id": "recorded", "drift": false,
             "attempt": {"requested_path": "/recorded", "errno": 1}}]);
         let mut cap = Some(capture_with("captured", vec![]));
-        let diag = finish_sandbox_log_capture(Some(&legacy), &request, false, &mut cap).unwrap();
+        let diag = finish_sandbox_log_capture(Some(&legacy), &request, false, &mut cap);
         assert_eq!(diag.correlation_status, "no_match");
         assert_eq!(diag.permission_failures_without_record, None);
         for (status, disabled) in [
@@ -1510,14 +2077,53 @@ mod tests {
             ("captured", true),
         ] {
             let mut cap = Some(capture_with(status, vec![]));
-            let diag =
-                finish_sandbox_log_capture(Some(&runner), &request, disabled, &mut cap).unwrap();
+            let diag = finish_sandbox_log_capture(Some(&runner), &request, disabled, &mut cap);
             assert_ne!(diag.correlation_status, "no_match", "{status}");
             assert_eq!(diag.permission_failures_without_record, None, "{status}");
         }
-        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut None).unwrap();
+        let diag = finish_sandbox_log_capture(Some(&runner), &request, false, &mut None);
         assert_eq!(diag.correlation_status, "unavailable");
         assert_eq!(diag.permission_failures_without_record, None);
+    }
+
+    #[test]
+    fn log_timeout_is_validated_before_any_runner_or_specimen_work() {
+        for value in [
+            "0",
+            "-1",
+            "+1",
+            "1.5",
+            "unlimited",
+            "18446744073709551615",
+            "18446744073709551616",
+        ] {
+            for disabled in [false, true] {
+                let mut args = vec!["--log-timeout-ms".into(), value.into()];
+                if disabled {
+                    args.push("--no-log-capture".into());
+                }
+                let error = cmd_run(&args).unwrap_err();
+                assert!(
+                    error.contains("invalid value for --log-timeout-ms"),
+                    "{error}"
+                );
+            }
+        }
+        let args = vec![
+            "--log-timeout-ms".into(),
+            "1".into(),
+            "--no-log-capture".into(),
+        ];
+        let error = cmd_run(&args).unwrap_err();
+        assert!(
+            !error.contains("log-timeout"),
+            "valid finite timeout must pass option admission: {error}"
+        );
+        assert!(
+            cmd_run(&["--log-timeout-ms".into()])
+                .unwrap_err()
+                .contains("missing value")
+        );
     }
 
     #[test]
@@ -1596,6 +2202,8 @@ mod tests {
             observed_deny: Some(!events.is_empty()),
             deny_events: Some(events),
             step_denies: None,
+            supervision: None,
+            processing_cutoff: None,
         }
     }
 
@@ -1658,20 +2266,12 @@ mod tests {
                         };
                         parse_observer_output(&out, window.clone())
                     });
-                    let diagnostics =
-                        finish_sandbox_log_capture(Some(&runner), &request, false, &mut capture);
-                    let result = json_contract::JsonResult {
-                        ok: !signaled,
-                        rc: None,
-                        exit_code: Some(i32::from(signaled)),
-                        normalized_outcome: Some(outcome.into()),
-                        errno: None,
-                        error: signaled.then(|| "worker signal 9".into()),
-                        stderr: None,
-                        stdout: None,
-                    };
-                    let data = json!({"runner_result": runner, "sandbox_log_capture": capture,
-                        "runner_sandbox_diagnostics": diagnostics});
+                    let execution = complete_execution(execution_data(Some(runner.clone())));
+                    let (result, data, exit_code) =
+                        attach_sandbox_logs(execution, &request, false, |_, _, _| {
+                            Ok(capture.take().unwrap())
+                        });
+                    assert_eq!(exit_code, i32::from(signaled));
                     let text = json_contract::render_envelope("run", result, &data).unwrap();
                     let wire: Value = serde_json::from_str(&text).unwrap();
                     assert!(wire["schema_version"].as_u64().unwrap() >= 2);
@@ -1783,7 +2383,7 @@ mod tests {
             cap.deny_events.as_ref().unwrap(),
             Some(42),
         ));
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
+        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
         let envelope = json!({"data":{"runner_result":runner,
             "sandbox_log_capture":cap, "runner_sandbox_diagnostics":diag}});
         let data = &envelope["data"];
@@ -1845,9 +2445,9 @@ mod tests {
         assert_eq!(associations[0].event_index, 0);
         assert_eq!(associations[0].candidate_step_ids, ["s"]);
         assert_eq!(associations[0].association, "candidate");
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-        assert_eq!(diag.termination_cause, Some("unknown"));
-        assert_eq!(diag.first_deny.unwrap().event_index, 0);
+        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
+        assert_eq!(diag.logs.first_deny.unwrap().event_index, 0);
         assert_eq!(runner, before);
         assert_eq!(cap.deny_events.as_ref().unwrap().len(), 1);
     }
@@ -1857,12 +2457,12 @@ mod tests {
         let runner = worker("runner_failed", Some(9));
         let original = runner.clone();
         let cap = capture_with("captured", vec![event(Some(99)), event(Some(42))]);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-        assert_eq!(diag.worker_pid, Some(42));
-        assert_eq!(diag.process_disposition, "signaled");
-        assert_eq!(diag.first_deny.unwrap().event_index, 1);
-        assert_eq!(diag.termination_cause, Some("unknown"));
-        assert_eq!(diag.correlation_status, "pid_match");
+        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+        assert_eq!(diag.execution.worker_pid, Some(42));
+        assert_eq!(diag.execution.process_disposition, "signaled");
+        assert_eq!(diag.logs.first_deny.unwrap().event_index, 1);
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
+        assert_eq!(diag.logs.correlation_status, "pid_match");
         assert_eq!(cap.deny_events.as_ref().unwrap().len(), 2);
         assert_eq!(runner, original);
     }
@@ -1883,13 +2483,12 @@ mod tests {
             (false, "captured", "captured", "no_match"),
         ] {
             let cap = capture_with(status, vec![]);
-            let diag =
-                synthesize_runner_sandbox_diagnostics(Some(&runner), disabled, Some(&cap)).unwrap();
-            assert_eq!(diag.capture_status, expected_capture);
-            assert_eq!(diag.correlation_status, expected_correlation);
-            assert_eq!(diag.process_disposition, "signaled");
-            assert_eq!(diag.termination_cause, Some("unknown"));
-            assert!(diag.first_deny.is_none());
+            let diag = diagnostics_with_logs(Some(&runner), disabled, Some(&cap));
+            assert_eq!(diag.logs.capture_status, expected_capture);
+            assert_eq!(diag.logs.correlation_status, expected_correlation);
+            assert_eq!(diag.execution.process_disposition, "signaled");
+            assert_eq!(diag.execution.termination_cause, Some("unknown"));
+            assert!(diag.logs.first_deny.is_none());
             assert_eq!(runner, original);
         }
     }
@@ -1897,11 +2496,11 @@ mod tests {
     fn successful_run_keeps_correlations_without_a_termination_cause() {
         let runner = worker("ok", None);
         let cap = capture_with("captured", vec![event(Some(42))]);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-        assert_eq!(diag.process_disposition, "clean_exit");
-        assert_eq!(diag.capture_status, "captured");
-        assert_eq!(diag.first_deny.unwrap().event_index, 0);
-        assert_eq!(diag.termination_cause, None);
+        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+        assert_eq!(diag.execution.process_disposition, "clean_exit");
+        assert_eq!(diag.logs.capture_status, "captured");
+        assert_eq!(diag.logs.first_deny.unwrap().event_index, 0);
+        assert_eq!(diag.execution.termination_cause, None);
         assert_eq!(runner["normalized_outcome"], "ok");
     }
     #[test]
@@ -1910,13 +2509,12 @@ mod tests {
             let runner =
                 json!({"pid": 42, "normalized_outcome": outcome, "runner_subprocess": null});
             let cap = capture_with("captured", vec![event(Some(42))]);
-            let diag =
-                synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-            assert_eq!(diag.worker_pid, None);
-            assert_eq!(diag.capture_status, "no_worker");
-            assert_eq!(diag.process_disposition, "no_worker");
-            assert_eq!(diag.correlation_status, "not_attempted");
-            assert!(diag.first_deny.is_none());
+            let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+            assert_eq!(diag.execution.worker_pid, None);
+            assert_eq!(diag.logs.capture_status, "no_worker");
+            assert_eq!(diag.execution.process_disposition, "no_worker");
+            assert_eq!(diag.logs.correlation_status, "not_attempted");
+            assert!(diag.logs.first_deny.is_none());
         }
     }
     #[test]
@@ -1924,24 +2522,23 @@ mod tests {
         let runner = worker("runner_failed", Some(9));
         for status in ["captured", "blocked", "parse_error"] {
             let cap = capture_with(status, vec![event(None), event(Some(99))]);
-            let diag =
-                synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-            assert!(diag.first_deny.is_none());
+            let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+            assert!(diag.logs.first_deny.is_none());
         }
         let mut cap = capture_with("captured", vec![]);
         cap.deny_events = None;
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, Some(&cap)).unwrap();
-        assert_eq!(diag.correlation_status, "unavailable");
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), false, None).unwrap();
-        assert_eq!(diag.capture_status, "requested_unavailable");
+        let diag = diagnostics_with_logs(Some(&runner), false, Some(&cap));
+        assert_eq!(diag.logs.correlation_status, "unavailable");
+        let diag = diagnostics_with_logs(Some(&runner), false, None);
+        assert_eq!(diag.logs.capture_status, "requested_unavailable");
     }
     #[test]
     fn unconfirmed_reap_does_not_manufacture_clean_disposition_from_status_storage() {
         let mut runner = worker("runner_failed", None);
         runner["runner_subprocess"]["reaped"] = json!(false);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.process_disposition, "unconfirmed");
-        assert_eq!(diag.termination_cause, Some("unknown"));
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.process_disposition, "unconfirmed");
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
     }
     // Disposition record plan, B1 (wave 1 refusal). Red by design until the
     // controller validates status representations; wave 2 adds the structured
@@ -1952,17 +2549,20 @@ mod tests {
         let mut runner = worker("runner_failed", Some(9));
         // One final reap represented as both a clean exit and a signal.
         runner["runner_subprocess"]["exit_code"] = json!(0);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
         assert!(
-            !matches!(diag.process_disposition, "signaled" | "clean_exit"),
+            !matches!(
+                diag.execution.process_disposition,
+                "signaled" | "clean_exit"
+            ),
             "exit_code 0 beside term_signal 9 is an invalid status pair; \
              an unqualified disposition ({}) resolves it silently",
-            diag.process_disposition
+            diag.execution.process_disposition
         );
         // Unaffected: identity and capture fields do not depend on the status rule.
-        assert_eq!(diag.worker_pid, Some(42));
-        assert_eq!(diag.capture_status, "disabled");
-        assert_eq!(diag.correlation_status, "not_attempted");
+        assert_eq!(diag.execution.worker_pid, Some(42));
+        assert_eq!(diag.logs.capture_status, "disabled");
+        assert_eq!(diag.logs.correlation_status, "not_attempted");
     }
     // Disposition record plan, E1 (wave 2, behavioral red). The runner reply
     // carries the record the contract names; the controller must project the
@@ -1999,13 +2599,13 @@ mod tests {
     #[test]
     fn disposition_record_projects_witnessed_host_cleanup_cause() {
         let runner = disposition_reply("deadline_expiry", true);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
         assert_eq!(
-            diag.termination_cause,
+            diag.execution.termination_cause,
             Some("host_sentinel_deadline"),
             "E1: the controller ignores the carried disposition record and reports a generic cause"
         );
-        assert_eq!(diag.process_disposition, "signaled");
+        assert_eq!(diag.execution.process_disposition, "signaled");
         let wire = serde_json::to_value(&diag).unwrap();
         assert_eq!(wire["disposition_integrity"], json!("valid"));
         assert_eq!(wire["stop_reason"], json!("sentinel_deadline"));
@@ -2014,12 +2614,12 @@ mod tests {
     fn record_contradicting_its_basis_is_withheld() {
         // A supported signal claim while the reply says the worker was never reaped.
         let runner = disposition_reply("deadline_expiry", false);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
         assert_eq!(
-            diag.process_disposition, "withheld",
+            diag.execution.process_disposition, "withheld",
             "E1: an assembled claim that contradicts its basis must be withheld, not re-derived"
         );
-        assert_eq!(diag.termination_cause, Some("unknown"));
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
         let wire = serde_json::to_value(&diag).unwrap();
         assert_eq!(wire["disposition_integrity"], json!("invalid"));
         assert!(
@@ -2032,12 +2632,12 @@ mod tests {
     fn conflicting_status_reports_the_status_rule() {
         let mut runner = worker("runner_failed", Some(9));
         runner["runner_subprocess"]["exit_code"] = json!(0);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
         assert_eq!(
-            diag.process_disposition, "conflicting",
+            diag.execution.process_disposition, "conflicting",
             "B1: exit_code 0 beside term_signal 9 must be reported as a status conflict"
         );
-        assert_eq!(diag.termination_cause, Some("unknown"));
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
         let wire = serde_json::to_value(&diag).unwrap();
         let issues = wire["disposition_issues"]
             .as_array()
@@ -2055,41 +2655,41 @@ mod tests {
     fn legacy_reply_without_record_keeps_compatibility_projections() {
         let mut signaled = worker("runner_failed", Some(9));
         signaled["schema_version"] = json!(9);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&signaled), true, None).unwrap();
-        assert_eq!(diag.process_disposition, "signaled");
-        assert_eq!(diag.termination_cause, Some("unknown"));
+        let diag = diagnostics_with_logs(Some(&signaled), true, None);
+        assert_eq!(diag.execution.process_disposition, "signaled");
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
         let wire = serde_json::to_value(&diag).unwrap();
         assert!(wire.get("stop_reason").map_or(true, Value::is_null));
         let mut clean = worker("ok", None);
         clean["schema_version"] = json!(9);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&clean), true, None).unwrap();
-        assert_eq!(diag.process_disposition, "clean_exit");
-        assert_eq!(diag.termination_cause, None);
+        let diag = diagnostics_with_logs(Some(&clean), true, None);
+        assert_eq!(diag.execution.process_disposition, "clean_exit");
+        assert_eq!(diag.execution.termination_cause, None);
     }
     #[test]
     fn unrecognized_future_trigger_never_projects_a_cause() {
         let runner = disposition_reply("host_future_trigger", true);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.termination_cause, Some("unknown"));
-        assert_ne!(diag.process_disposition, "clean_exit");
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
+        assert_ne!(diag.execution.process_disposition, "clean_exit");
     }
 
     #[test]
     fn current_reply_missing_disposition_is_withheld() {
         let mut runner = disposition_reply("deadline_expiry", true);
         runner["runner_subprocess"]["disposition"] = Value::Null;
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.process_disposition, "withheld");
-        assert_eq!(diag.disposition_integrity, Some("invalid"));
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.process_disposition, "withheld");
+        assert_eq!(diag.execution.disposition_integrity, Some("invalid"));
     }
 
     #[test]
     fn disposition_cannot_hide_a_second_status_representation() {
         let mut runner = disposition_reply("deadline_expiry", true);
         runner["runner_subprocess"]["exit_code"] = json!(0);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.process_disposition, "withheld");
-        assert_eq!(diag.termination_cause, Some("unknown"));
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.process_disposition, "withheld");
+        assert_eq!(diag.execution.termination_cause, Some("unknown"));
     }
 
     #[test]
@@ -2101,9 +2701,12 @@ mod tests {
         ] {
             let mut runner = disposition_reply("deadline_expiry", true);
             runner["runner_subprocess"]["termination_request"][field] = value;
-            let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-            assert_eq!(diag.process_disposition, "withheld", "mismatched {field}");
-            assert_eq!(diag.termination_cause, Some("unknown"));
+            let diag = diagnostics_with_logs(Some(&runner), true, None);
+            assert_eq!(
+                diag.execution.process_disposition, "withheld",
+                "mismatched {field}"
+            );
+            assert_eq!(diag.execution.termination_cause, Some("unknown"));
         }
     }
 
@@ -2120,8 +2723,11 @@ mod tests {
             let mut runner = disposition_reply("deadline_expiry", true);
             runner["runner_subprocess"]["disposition"]["questions"]["final_status"]["basis"] =
                 basis.clone();
-            let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-            assert_eq!(diag.process_disposition, "withheld", "basis {basis}");
+            let diag = diagnostics_with_logs(Some(&runner), true, None);
+            assert_eq!(
+                diag.execution.process_disposition, "withheld",
+                "basis {basis}"
+            );
         }
     }
 
@@ -2131,9 +2737,9 @@ mod tests {
         runner["runner_subprocess"]["poll_stop_reason"] = json!("future_stop");
         runner["runner_subprocess"]["disposition"]["questions"]["stop_reason"]["answer"] =
             json!("future_stop");
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.stop_reason, None);
-        assert_eq!(diag.process_disposition, "signaled");
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.stop_reason, None);
+        assert_eq!(diag.execution.process_disposition, "signaled");
         assert_eq!(
             runner["runner_subprocess"]["poll_stop_reason"],
             json!("future_stop")
@@ -2147,12 +2753,12 @@ mod tests {
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];
-        let diag = synthesize_runner_sandbox_diagnostics(Some(base), true, None).unwrap();
+        let diag = diagnostics_with_logs(Some(base), true, None);
         assert_eq!(
-            diag.disposition_integrity,
+            diag.execution.disposition_integrity,
             Some("valid"),
             "{:?}",
-            diag.disposition_issues
+            diag.execution.disposition_issues
         );
         // The degraded-reply contract intentionally withholds comparisons while
         // retaining independently usable lifecycle observations.
@@ -2162,9 +2768,12 @@ mod tests {
         for step in degraded["steps"].as_array_mut().unwrap() {
             step["comparison"] = Value::Null;
         }
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&degraded), true, None).unwrap();
-        assert_eq!(diag.disposition_integrity, Some("valid"));
-        assert_eq!(diag.termination_cause, Some("host_sentinel_deadline"));
+        let diag = diagnostics_with_logs(Some(&degraded), true, None);
+        assert_eq!(diag.execution.disposition_integrity, Some("valid"));
+        assert_eq!(
+            diag.execution.termination_cause,
+            Some("host_sentinel_deadline")
+        );
         let mutations = [
             (
                 "/runner_subprocess/disposition/questions/progress_association/value",
@@ -2190,8 +2799,12 @@ mod tests {
         for (path, value) in mutations {
             let mut runner = base.clone();
             *runner.pointer_mut(path).expect(path) = value;
-            let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-            assert_eq!(diag.disposition_integrity, Some("invalid"), "{path}");
+            let diag = diagnostics_with_logs(Some(&runner), true, None);
+            assert_eq!(
+                diag.execution.disposition_integrity,
+                Some("invalid"),
+                "{path}"
+            );
         }
         let mut runner = base.clone();
         let issue = json!({"kind":"conflict", "rule":"D5", "question":"step_boundary_reached", "step_index":0,
@@ -2203,8 +2816,8 @@ mod tests {
         runner["steps"][0]["attempt"]["lifecycle"]["boundary"] = fake;
         runner["steps"][0]["attempt"]["lifecycle"]["summary"] = json!("conflicting");
         runner["steps"][0]["comparison"]["limitations"] = json!(["attempt:lifecycle_conflicting"]);
-        let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-        assert_eq!(diag.disposition_integrity, Some("invalid"));
+        let diag = diagnostics_with_logs(Some(&runner), true, None);
+        assert_eq!(diag.execution.disposition_integrity, Some("invalid"));
     }
 
     #[test]
@@ -2215,14 +2828,17 @@ mod tests {
                 .as_object_mut()
                 .unwrap()
                 .remove(*name);
-            let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-            assert_eq!(diag.process_disposition, "withheld", "missing {name}");
+            let diag = diagnostics_with_logs(Some(&runner), true, None);
+            assert_eq!(
+                diag.execution.process_disposition, "withheld",
+                "missing {name}"
+            );
         }
         for state in [json!("future_state"), json!(17), Value::Null] {
             let mut runner = disposition_reply("deadline_expiry", true);
             runner["runner_subprocess"]["disposition"]["questions"]["stop_reason"]["state"] = state;
-            let diag = synthesize_runner_sandbox_diagnostics(Some(&runner), true, None).unwrap();
-            assert_eq!(diag.process_disposition, "withheld");
+            let diag = diagnostics_with_logs(Some(&runner), true, None);
+            assert_eq!(diag.execution.process_disposition, "withheld");
         }
     }
 }

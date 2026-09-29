@@ -9,6 +9,7 @@ mod bundle;
 mod cli;
 mod evidence;
 mod json_contract;
+mod log_capture;
 mod plist;
 mod policy_check;
 mod request_patch;
