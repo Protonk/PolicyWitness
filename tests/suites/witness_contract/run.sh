@@ -26,6 +26,7 @@ scripts=(
 # should surface.
   "${SUITE_DIR}/worker_termination_and_log_correlation.sh"
   "${SUITE_DIR}/deny_capture_covers_the_run.sh"
+  "${SUITE_DIR}/log_capture_controls.sh"
   "${SUITE_DIR}/log_query_predicate_archive.sh"
   "${SUITE_DIR}/instrumentation_field_rejected.sh"
   "${SUITE_DIR}/prediction_target_is_independent_of_attempt_target.sh"

@@ -49,6 +49,18 @@ maps C1–C6 to registered tests, independent controls, legacy behavior and deli
 limits. Consumer recovery uses only one envelope; tests keep their scenario
 expectations separate from the reported summaries.
 
+Log coverage separates three claims, all in the default selection:
+
+| Claim | Required coverage | Limit of the claim |
+| --- | --- | --- |
+| OS query selection | `witness_contract/log_query_predicate_archive`: real `log show`, committed archive, independent positive/negative multisets before parsing | Fixture forms and verified readers; no claim about kernel emission |
+| Record preservation and execution independence | `unit/rust.unit`: supplied-text parser/receiver/assembly/consumer replay, capacity, deadline/byte/cleanup faults; `blackbox_e2e/checker_controls`: historical and current consumer recovery | Exact controlled inputs and expected candidates; no live retrieval-completeness claim |
+| Live collection evidence | `witness_contract/deny_capture_covers_the_run`, `worker_termination_and_log_correlation`, `max_targets_reply_survives`, with independent `log_capture_controls` | Native execution remains mandatory. Complete empty queries and evidenced budget exhaustion with confirmed cleanup are admissible; unsupported failures are not. |
+
+The [witness suite](suites/witness_contract/README.md#deny-capture-covers-the-run)
+defines these oracles and their equipment requirements. Missing log records do
+not establish allowance or a cause for an attempted failure.
+
 ## Attempt outcome coverage matrix
 
 Host lifecycle observations have separate driver/encoding coverage in

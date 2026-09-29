@@ -19,6 +19,7 @@ Core controller modules:
 - `controller/src/runner_client.rs` — wrapper around `pw-runner-client`
 - `controller/src/sandbox_log.rs` — unified-log capture mapping for sandbox denials
 - `controller/src/log_capture.rs` — bounded log subprocess reads, deadlines and owned cleanup
+- `controller/src/log_show.rs` — the observer's show collector/parser, also used by supplied-text replay
 - `controller/src/runner_commands.rs` — external runner install/list/status/verify/remove/validate/reconcile
 
 Support modules:
@@ -152,7 +153,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `build`: the build stamp described under the CLI surface
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing, exact received/retained
-  stream byte counts and `capture_limit_bytes` (8 MiB). `stdout_capture_error`
+  stream byte counts and `capture_limit_bytes` (64 MiB). `stdout_capture_error`
   identifies controller prefix loss; `stdout_parse_error` identifies malformed
   untruncated JSON/UTF-8. Full output is collected first; this is not a streaming
   allocation bound. Synthetic non-invocations have null byte counts.
@@ -247,7 +248,11 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 
 Collection starts immediately before observer launch. The controller passes a
 `CLOCK_MONOTONIC` deadline through the observer's internal `--collection-budget`
-argument. Startup and `log show` consume this same allowance. Standalone observer
+argument: a JSON object with `timeout_ms`, `timeout_source` (`default` or `cli`),
+`started_monotonic_ns` and `deadline_monotonic_ns`. The observer validates the
+arithmetic and uses the absolute deadline without restarting it. These are
+boot-relative clock readings, not wall-clock query bounds. Startup, `log show`,
+reply parsing and candidate association consume this same allowance. Standalone observer
 show mode defaults to 10,000 ms. A larger `--log-timeout-ms` changes waiting time
 only; it changes neither the query interval nor byte limits and promises no
 record. Cleanup has one 1,000 ms grace ending no later than the original deadline
@@ -256,15 +261,23 @@ work elsewhere in the controller.
 
 The show path counts bytes while reading both pipes: inner stdout 1 MiB, inner
 stderr 128 KiB, observer stdout 32 MiB, observer stderr 128 KiB. One additional
-byte detects overflow but is not retained. The observer's bounded serializer
+byte detects overflow but is not retained. Inner stdout is already filtered by
+the OS predicate; counting precedes PW decoding, parsing and PID filtering.
+Observer stdout counts the serialized report and its final newline. The observer's bounded serializer
 accounts for duplicated raw lines and JSON escaping. Event, JSON-structure and
 candidate allocation guards bound derived data; [the limits inventory](../docs/LIMITS.md)
 defines their counting rules and controls. These are stream and derived-data
 bounds, not a promise about peak process memory. Standalone streaming/follow
 mode has a separate contract and is not used by `run`.
 
-The OS query requests supported `Sandbox: process(pid)` message tokens rather
-than bare PID digits. Parsed worker PID is checked again before association.
+The OS query uses `/usr/bin/log show --style syslog --info --debug` with the
+recorded UTC `--start` and `--end`. Its `eventMessage MATCHES[c]` predicate has
+the regular-expression shape `(?s).*Sandbox:[ \t]+<escaped-name>\(<pid>\)([ \t]+.*)?`:
+one or more spaces/tabs after `Sandbox:`, a literal process name and complete
+parenthesized PID, then whitespace or end of message. The name is regex-escaped
+and the entire pattern is JSON-quoted for the predicate. There is no bare-digit
+alternative or emitter-PID test: the emitting process can differ from the
+worker named in the message. Parsed worker PID is checked again before association.
 The required archive control validates OS selection before parsing; parser and
 argument tests alone do not prove query selection. Its fixture and reader
 requirements are in [the fixture README](../tests/fixtures/deny_capture/README.md).
@@ -277,6 +290,26 @@ errors, process identity and wait observations, cutoff and cleanup facts.
 `processing_cutoff` records controller parsing/correlation limits; its `stream`
 identifies the bounded structure. Received byte counts describe actual reads,
 not the total output a stopped producer might have emitted.
+
+Read the status together with the recorded cutoff and cleanup facts:
+
+| Cutoff reason | Meaning and capture status |
+| --- | --- |
+| `deadline` | Shared allowance expired during collection or processing; `timeout`. |
+| `output_overflow` | A raw stdout/stderr read exceeded its limit; `overflow`, with stream, limit and observed count. |
+| `event_overflow`, `json_structure_overflow`, `correlation_overflow` | A derived-data guard was exceeded; `overflow`, with the affected structure and count/charge. Candidate-byte charges are conservative allocation/encoding allowances, not measured JSON sizes. |
+| `launch_error` | Supervised executable could not start; `requested_unavailable`. Failure to resolve the observer before supervision also uses this status, without invented process facts. |
+| `process_exit` | Nonzero or signaled exit without an earlier cutoff; `error`. A recognized inner log-access refusal uses `blocked` and retains its reason. |
+| `clock_error`, `pipe_setup_error`, `read_error`, `decode_error`, `wait_error`, `pipe_open_after_exit`, `cleanup_unconfirmed` | Collection or cleanup could not be established; `capture_error`. Detailed wait, stream and cleanup observations remain available. |
+
+An earlier cutoff can coexist with a later cleanup failure; `timeout` or
+`overflow` alone never certifies successful cleanup. Malformed complete JSON,
+invalid reply shape and mismatched windows have their own statuses above.
+If the bounded observer serializer cannot produce a report, the observer exits
+nonzero with a bounded stderr diagnostic; the controller cannot invent inner
+observations from that missing report. The 32 MiB outer allowance accommodates
+the bounded inner text, its repeated raw lines, worst-case JSON escaping and
+metadata; fixed-corpus and escaping controls verify this relationship.
 
 The controller spawns the observer into a dedicated group with PGID equal to its
 PID. The log child inherits it. The controller observes leader exit without
@@ -294,6 +327,17 @@ Any failed or incomplete capture withholds all correlation: `step_denies`,
 survive failure. Incomplete JSON remains a bounded raw prefix, without fragment
 repair or recovered events. Execution result, exit code, native observations and
 disposition were completed before collection and remain unchanged.
+
+The default battery tests three separate claims. The committed archive and
+independent manifest test real OS query selection before parsing; supplied-text
+replay tests exact record/candidate preservation through production parsing,
+reception, assembly and consumer recovery; live witnesses test native execution
+and the capture facts returned by that invocation. A completed empty live query
+or an evidenced budget cutoff with confirmed cleanup is admissible. Missing
+equipment, blocked access, malformed complete replies and unexplained process
+or cleanup failures still fail those live checks. None of these cases proves
+that the OS emitted or delivered every denial. See the
+[witness suite](../tests/suites/witness_contract/README.md#deny-capture-covers-the-run).
 
 Optional:
 
@@ -367,10 +411,11 @@ their stored fixtures. Consumers outside this checkout were not audited.
 | [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) | Constructs log captures to verify consumer retention, candidate provenance, distinct availability states and historical windows. Separately checks native comparisons and attribution limits. |
 | [disposition_controls.py](../tests/suites/blackbox_e2e/disposition_controls.py), [disposition fixtures](../tests/fixtures/disposition/) | Validate execution projections, including rejection of a replaced termination cause. `a1_expected.json` and `a1_known_loss.json` carry disabled capture; neither supplies log evidence for the worker cause. |
 | [check_termination_correlation.py](../tests/suites/witness_contract/check_termination_correlation.py) | Checks native denied writes and self-signal/clean-exit disposition independently; then checks capture state, window, candidates and missing-record diagnostics. |
-| [check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) | Reads client timestamps, requested/mirrored bounds, events, candidate references and missing-record diagnostics. Its live record-presence assertions affect test acceptance, not execution classification. |
+| [check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) | Checks native execution, timestamps, padded/mirrored bounds and collection facts. Completed-query records and candidate references are checked conditionally; early/late availability is diagnostic, and independent queries need not return the same records. |
 | [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py) | Separately checks runner-reply retention and optional observer transport retention. No log-derived native outcome. |
+| [log_capture_contract.py](../tests/lib/log_capture_contract.py), [log_capture_controls.py](../tests/suites/witness_contract/log_capture_controls.py) | Shared live acceptance gate and independent supplied observations. Require complete collection or evidenced budget exhaustion with confirmed cleanup; reject unsupported availability claims without changing native expectations. |
 | [check_pre_apply_failure.py](../tests/suites/witness_contract/check_pre_apply_failure.py), [check_attempt_in_flight.py](../tests/suites/witness_contract/check_attempt_in_flight.py) | Read execution disposition/cause; pre-apply checks also require disabled capture and null first-deny evidence. Neither uses a deny event to assign worker termination. |
-| Rust controls in [run_flow.rs](src/run_flow.rs), [sandbox_log.rs](src/sandbox_log.rs), [runner_client.rs](src/runner_client.rs), and [observer.py](../tests/fixtures/deny_capture/observer.py) | Exercise projection, status gating, matching, transport retention and window propagation; the observer fixture supplies independently timed records. Production log-to-execution writes are excluded by the assembly boundary above. |
+| Rust controls in [run_flow.rs](src/run_flow.rs), [log_replay_tests.rs](src/log_replay_tests.rs), [sandbox_log.rs](src/sandbox_log.rs), [runner_client.rs](src/runner_client.rs), and [observer.py](../tests/fixtures/deny_capture/observer.py) | Exercise projection, status gating, matching, transport retention and window propagation; supplied text crosses the production parser and assembly, while the observer fixture supplies independently timed records. Production log-to-execution writes are excluded by the assembly boundary above. |
 
 ### Runner selection (external entitlements)
 

@@ -1167,7 +1167,7 @@
       "title": "Log show stdout",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Raw bytes read from log show stdout, before decoding or parsing; enforced while reading.",
+      "counting": "Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading.",
       "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
       "control": "Fixed; no public override.",
       "sources": [

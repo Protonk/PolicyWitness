@@ -26,7 +26,12 @@ deterministic, and checked into the repo so tests are hermetic.
   capture, exit-status, timeout, and overlapping-run controls in `run_capture`.
 - `deny_capture/`: an observer transport fixture with fixed event timestamps;
   Rust tests pass the real outgoing interval arguments through Python's date
-  parser to check inclusion, widening and exclusion without kernel-log delivery.
+  parser to check padding, inclusion and exclusion without kernel-log delivery.
+  The committed real log archive and independent manifest supply the required
+  OS predicate-selection oracle, including nonempty positives and negatives
+  checked before parsing. Its [README](deny_capture/README.md) records corpus,
+  hashes, isolated generation and verified readers. Default tests never generate
+  or download a replacement archive.
 - `caller_auth/`: disposable built-in XPC app copies, explicit signing and
   signature inspection, command capture, and process cleanup. Authorization
   expectations and independent file-effect checks belong to the smoke case.

@@ -340,13 +340,20 @@ import resolution or compilation.
 - The controller's runner-client budget is derived, not tuned: three times the
   synthesized maximal reply (`runner_reply_maximum`, the field-complete reply
   fixture with 256 steps and records and every string at its limit, encoded by
-  the production encoder), rounded up to a whole 4 MiB. Helper and log-observer
-  streams keep an independent 8 MiB. Receivers report their budget in
-  `capture_limit_bytes`; collection still buffers the whole stream first. The
+  the production encoder), rounded up to a whole 4 MiB. The sbpl-check streams
+  keep an independent 8 MiB. These receivers report their budget in
+  `capture_limit_bytes`; collection buffers the whole stream first. The
   synthesized number is an upper bound for the schema, since it puts fields
   that cannot co-occur in one run side by side; the live 256-step corpus is
   evidence that real replies stay inside it. A reply string key added without a
   size classification fails runner_unit, so the bound follows the schema.
+- Log collection enforces limits during reads: inner log-show stdout 1 MiB and
+  stderr 128 KiB, observer stdout 32 MiB and stderr 128 KiB. The outer allowance
+  accommodates repeated raw lines, JSON escaping and metadata from bounded
+  inner output; derived structures have independent guards. The runner's reply
+  size and step count cannot bound OS log volume. Both supervisors share one
+  monotonic deadline and a fixed cleanup grace. `--log-timeout-ms` changes the
+  time allowance, leaving byte limits and the padded query interval unchanged.
 - Service and direct orchestration share admission. Top-level metadata comes
   first, then plan/parameter counts, worker strings and host query fields.
   Each string checks its UTF-8 capacity before its native-string constraint.
@@ -444,7 +451,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Synthesized maximal reply (`runner_reply_maximum`) | 21,660,314 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
 | Runner client output (`controller_output`) | 67,108,864 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
-| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
+| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
 | Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
 | Log observer stderr (`log_observer_stderr`) | 131,072 bytes | Raw bytes read from observer stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
 | Observer JSON structure (`log_reply_structure`) | 262,144 items | Opening object/array delimiters, commas and colons outside quoted strings, counted before allocating a JSON tree. Excess retains bounded raw diagnostic text and withholds parsing and correlation. | Fixed; no public override. |
@@ -1059,6 +1066,25 @@ group after cleanup; an unknown child wait is never inferred from that fact.
 [The controller contract](../controller/README.md#log-collection-budgets-and-cleanup)
 describes the full evidence fields and success gate.
 
+If `data.sandbox_log_capture.capture_status` is `timeout`, inspect
+`supervision.cutoff`, `observer.data.collection.cutoff` (when an intact reply
+arrived), and `processing_cutoff` for `reason: "deadline"`. The supervision
+budgets report the effective `timeout_ms` and `timeout_source`; cleanup facts
+show whether PW confirmed process/group cleanup. A timeout status alone does
+not establish that cleanup succeeded.
+
+For a slower machine, a finite larger allowance can be selected per run:
+
+```sh
+$PW run request.json --log-timeout-ms 30000
+```
+
+This permits up to 30 seconds of collection plus the fixed one-second cleanup
+grace. The runner RPC timeout, padded query interval and byte limits stay the
+same. It cannot resolve an `overflow` or guarantee more records. Each invocation
+is a separate observation; a later result does not replace an earlier failure
+or show what an earlier query could have returned.
+
 ### Debug-attach to the worker
 
 To pause the worker for a debugger attach, set
@@ -1137,8 +1163,8 @@ step-ID joins stay unmatched. Create can create a new file or open an existing
 one for writing. A missing completed attempt does not prevent a candidate
 association: a denial can precede interrupted publication.
 
-Capture scans the runner client's own start-to-end span, widened to whole
-seconds, and records it in `capture.window`; the observer mirrors the interval
+Capture scans the runner client's own start-to-end span, rounded outward to whole
+seconds and padded by two seconds at each end, and records it in `capture.window`; the observer mirrors the interval
 it scanned, and a reply for any other interval is `window_mismatch` rather than
 `captured`. Mismatched replies and parsed events remain inspectable, but
 `step_denies` and diagnostics `first_deny` are null and correlation is

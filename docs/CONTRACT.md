@@ -66,6 +66,20 @@ says what each older number lacked.
 A stored reply keeps the meaning it had when written. The response number says
 which of these rules apply; every later number keeps the earlier rows.
 
+Log evidence is additive within the controller envelope. Missing `supervision`,
+`observer.data.collection` or `processing_cutoff` in a stored envelope does not
+prove a budget, a completed wait or successful cleanup. Readers preserve the
+reported window: an envelope-1 trailing scan remains trailing, and an unpadded
+client-span window remains unpadded. Missing `window.pad_seconds` means zero
+padding; it does not acquire the current two-second allowance. Present `start`
+and `end` are the actual requested bounds. Unknown capture statuses are
+unavailable evidence, never execution failure or proof of allowance.
+Current-build collection assertions belong to conformance tests; generic
+consumer recovery does not retroactively require these observations from older
+envelopes. The [collection contract](../controller/README.md#log-collection-budgets-and-cleanup)
+defines current observations and partial-result handling. Request, runner
+response and worker ABI reading rules are independent of this optional channel.
+
 | Response | Introduced |
 | --- | --- |
 | 1 | Initial shape. |

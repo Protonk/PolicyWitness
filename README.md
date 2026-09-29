@@ -21,6 +21,14 @@ Each step records two evidence channels plus their comparison:
 - **Drift** (`steps[].drift`): `false` for a supported allow/success agreement and `null` when the evidence leaves the comparison unavailable or merely directionally consistent. `true` is reserved for a difference from kernel enforcement with material alternative explanations excluded. The current runner establishes query order for eligible records but cannot establish state stability or runtime target identity, so it produces no `true` claims. Successful same-target unlink also makes agreement unavailable while its order against the query is unknown.
 
 Unified-log evidence for kernel denies is attached out-of-band (best-effort).
+Collection has a shared ten-second allowance and a fixed one-second cleanup
+grace, with bounded output. `--log-timeout-ms` changes that allowance independently
+of the runner timeout. Empty queries and collection failures cannot change the
+execution result, predictions, attempts or process disposition. The scan covers
+the client span rounded outward and padded by two seconds at each end; matching
+records identify candidates, without proving exact run membership, a unique
+attempt or a termination cause. See the [collection contract](controller/README.md#log-collection-budgets-and-cleanup)
+and [operating guidance](docs/PolicyWitness.md#common-flags).
 
 ## Entitlements + SBPL
 

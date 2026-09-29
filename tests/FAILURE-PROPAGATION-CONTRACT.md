@@ -466,6 +466,17 @@ Raw lines remain available. The observer preserves the full remaining target,
 including spaces; it does not shorten a path into a different target. PID
 matching alone never establishes a termination cause or exact run membership.
 
+Collection uses one finite monotonic allowance across the observer and its log
+child, with fixed cleanup grace and streaming byte limits at both boundaries.
+Failed or incomplete captures retain bounded diagnostics, but all candidate
+associations, `first_deny` and missing-record diagnostics are null. Execution
+result, CLI exit status, native observations, comparisons and disposition remain
+independent. The [controller collection contract](../controller/README.md#log-collection-budgets-and-cleanup)
+defines cutoff reasons, retained prefixes, ownership and separate child-wait
+versus group-absence observations. Complete empty live queries and evidenced
+budget exhaustion with confirmed cleanup are admissible live outcomes; archive
+selection and supplied-text preservation controls have strict positive oracles.
+
 ## Coverage audit and acceptance ownership
 
 The entries below distinguish constructed host interpretation, actual C-worker
@@ -742,10 +753,10 @@ identifies I/O failure. Worker summary precedence does not discard the validator
 subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
-The controller collects full `Command::output()` buffers before retaining a
-64 MiB prefix per runner-client stream (three times the synthesized maximal
-reply in `docs/limits.json`, rounded up to 4 MiB) and an independent 8 MiB
-prefix per sbpl-check or log-observer stream.
+For the runner client and sbpl-check, the controller collects full
+`Command::output()` buffers before retaining a 64 MiB prefix per runner-client
+stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
+up to 4 MiB) and an independent 8 MiB prefix per sbpl-check stream.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
@@ -757,6 +768,14 @@ Synthetic non-invocations have null received/retained counts. This cap is not a
 streaming allocation bound, and inner records cannot be promised when their
 outer envelope was lost. Independent `sbpl-check` admission remains
 `policy_too_large` in both helper status and missing-reply note prose.
+
+Log collection instead enforces streaming bounds: 32 MiB observer stdout and
+128 KiB observer stderr, containing the inner log-show capture of at most 1 MiB
+stdout and 128 KiB stderr. Its received counts describe actual reads, including
+at most one excess byte that detects a stream overflow, not the total output
+the stopped producer might have emitted. No JSON fragment recovery is attempted.
+An intact failed reply can retain diagnostic events, without correlation. These
+are stream and derived-data bounds, not a peak-process-memory guarantee.
 
 Readiness, blocking policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
@@ -801,16 +820,20 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same original-byte JSON parser with an explicit retention budget: 64 MiB
-for runner-client streams, 8 MiB for helper and observer streams. Exact stdout
-and stderr received/retained byte counts precede lossy context conversion.
+the same original-byte JSON parser with explicit retention budgets: 64 MiB
+per runner-client stream, 8 MiB per sbpl-check stream, and streaming limits of
+32 MiB stdout / 128 KiB stderr for the observer. Received/retained byte counts
+precede lossy context conversion; log collection's counts are actual bounded
+reads, while the other receivers count fully collected buffers.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper
 `status="invalid_reply"` means parsed JSON lacks the required compilation
 observation; `compiled` remains null and the original envelope is retained.
-The observer similarly uses `capture_status="invalid_reply"` when no denial
-observation or explicit helper failure is available. This cap is not a streaming
-memory bound.
+The observer uses `capture_status="invalid_reply"` when parsed JSON lacks the
+required observation, identity, metadata or supervision shape. An interrupted
+outer reply keeps only its bounded raw prefix. Receiver completeness does not
+imply that the OS delivered every denial, and a stream limit is not a bound on
+the process's total memory.
 
 Deny plus ambiguous EPERM/EACCES has `drift=null`. A matching submitted scope
 can retain directional consistency in `comparison`; a separate query target
