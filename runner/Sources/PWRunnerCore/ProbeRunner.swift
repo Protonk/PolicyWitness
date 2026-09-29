@@ -270,7 +270,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
     let resolved = canonicalizePath(path)
     let target = resolved.resolved ?? resolved.normalized
     let requestedPath = resolved.input
-    let normalizedPath = resolved.normalized
 
     switch action {
     case PWRunnerWire.attemptActionOpenRead:
@@ -283,7 +282,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
                 outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
-                normalized_path: normalizedPath,
                 observed_path: nil
             )
         }
@@ -296,7 +294,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
-            normalized_path: normalizedPath,
             observed_path: observed
         )
 
@@ -309,7 +306,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
                 outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
-                normalized_path: normalizedPath,
                 observed_path: nil
             )
         }
@@ -323,7 +319,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
-            normalized_path: normalizedPath,
             observed_path: observed
         )
 
@@ -336,7 +331,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
                 outcome: AttemptOutcome.openFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
-                normalized_path: normalizedPath,
                 observed_path: nil
             )
         }
@@ -348,7 +342,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
-            normalized_path: normalizedPath,
             observed_path: observed
         )
 
@@ -361,7 +354,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
                 outcome: AttemptOutcome.unlinkFailed,
                 error: String(cString: strerror(errno)),
                 requested_path: requestedPath,
-                normalized_path: normalizedPath,
                 observed_path: nil
             )
         }
@@ -371,7 +363,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             outcome: AttemptOutcome.ok,
             error: nil,
             requested_path: requestedPath,
-            normalized_path: normalizedPath,
             observed_path: nil
         )
 
@@ -382,7 +373,6 @@ private func runFileAttempt(action: String, path: String) -> PWRunnerAttemptResu
             outcome: AttemptOutcome.unsupported,
             error: "unsupported file action",
             requested_path: requestedPath,
-            normalized_path: normalizedPath,
             observed_path: nil
         )
     }

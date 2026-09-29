@@ -53,7 +53,7 @@ def check_cutoff(cutoff, boundary, report, now_ns):
         # elapsed_ms is measured from the shared budget start. Parsing/association
         # can expire after the supervisor's last measurement; check the same OS
         # monotonic clock independently when that later phase is named.
-        require(report['elapsed_ms'] >= report['budget']['timeout_ms'] or
+        require(report['elapsed_ms'] >= report['budget']['timeout_ms'] - report['reserve_ms'] or
                 (isinstance(cutoff.get('detail'), str) and bool(cutoff['detail']) and
                  now_ns >= report['budget']['deadline_monotonic_ns']), 'deadline not observed')
     else:
@@ -80,6 +80,7 @@ def check_cutoff(cutoff, boundary, report, now_ns):
 
 def check_supervision(report, boundary, timeout_ms, timeout_source, now_ns):
     require(isinstance(report, dict) and report.get('boundary') == boundary, 'missing/wrong supervision boundary')
+    require(report.get('reserve_ms') == (LIMITS['log_report_reserve'] if boundary == 'log_show' else 0), 'wrong report reserve')
     check_budget(report.get('budget'), timeout_ms, timeout_source)
     require(integer(report.get('elapsed_ms')), 'missing elapsed observation')
     cutoff = report.get('cutoff')
@@ -166,6 +167,7 @@ def check_observer_report(observer, pid, start, end, *, timeout_ms=10000, timeou
 def check_live_capture(envelope, *, timeout_ms=10000, timeout_source='default', now_ns=None):
     """Return a classification; raise for missing evidence or unexpected failures."""
     now_ns = time.clock_gettime_ns(time.CLOCK_MONOTONIC) if now_ns is None else now_ns
+    require(integer(envelope.get('schema_version'), 4), 'collection facts require controller envelope 4')
     data = envelope['data']
     capture, diag = data.get('sandbox_log_capture'), data.get('runner_sandbox_diagnostics')
     require(isinstance(capture, dict) and isinstance(diag, dict), 'known worker requires capture and diagnostics')

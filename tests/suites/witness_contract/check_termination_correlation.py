@@ -17,6 +17,12 @@ from run_capture import RunCapture
 from consumer import recover_evidence, validate_evidence_shape
 from log_capture_contract import check_live_capture
 
+# The target is a real path under /private/tmp, so the host's after-orchestration
+# forms equal the submitted target and are admitted beside it, by name.
+PATH_SOURCES = {'submitted_attempt.target', 'attempt.requested_path',
+                'runner_host.after_orchestration.realpath_resolved',
+                'runner_host.after_orchestration.parent_realpath_resolved'}
+
 
 def main():
     pw, directory = sys.argv[1:]
@@ -48,7 +54,6 @@ def main():
             if signaled:
                 specimen['_test_overrides'] = overrides
             args = ['--timeout-ms', '20000']
-            live_result = {'outcome': 'disabled'}
             if not capture_enabled:
                 args.append('--no-log-capture')
             run = RunCapture(pw, out / name, specimen, cli_args=args)
@@ -155,7 +160,7 @@ def main():
                             assert match['operation_source'] == 'submitted_attempt'
                             assert match['requested_kind'] == 'file' and match['requested_action'] == 'open_write'
                             assert match['path'] == str(target)
-                            assert set(match['path_sources']) == {'submitted_attempt.target', 'attempt.requested_path'}
+                            assert set(match['path_sources']) == PATH_SOURCES, match
                     assert isinstance(associations, list), capture
                     assert len({a['event_index'] for a in associations}) == len(associations), associations
                     for association in associations:
@@ -172,7 +177,7 @@ def main():
                             assert item['operation_source'] == 'submitted_attempt', item
                             assert (item['requested_kind'], item['requested_action']) == ('file', 'open_write'), item
                             assert item['path'] == str(target), item
-                            assert set(item['path_sources']) == {'submitted_attempt.target', 'attempt.requested_path'}, item
+                            assert set(item['path_sources']) == PATH_SOURCES, item
                         assert 'deny_events' not in association, association
                 else:
                     assert diag['correlation_status'] == 'unavailable', diag

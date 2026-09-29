@@ -63,7 +63,7 @@ usage:
 notes:
   - runs `log show` (default) or `log stream` (with --duration/--follow) with a sandbox-deny predicate (observer-only)
   - --format jsonl emits per-line events plus a final report line
-  - show mode has a finite default collection deadline (10000 ms) and fixed cleanup grace (1000 ms)
+  - show mode has a finite default collection deadline (10000 ms) and fixed cleanup grace (1000 ms); log show stops 1000 ms before the deadline so the report can be delivered
   - --collection-budget <json> is the internal shared CLOCK_MONOTONIC budget passed by the controller
   - intended to run outside PolicyWitness.app (unsandboxed)"
     );
@@ -756,7 +756,7 @@ fn main() {
             Some(&predicate),
             None,
         );
-        let captured = capture_show(&mut command, budget);
+        let captured = capture_show(&mut command, budget, log_capture::LOG_REPORT_RESERVE_MS);
         log_rc = captured.report.process.exit_code;
         log_truncated = captured.report.stdout.truncated
             || captured.report.stderr.truncated
@@ -995,7 +995,11 @@ mod tests {
 for n in range(256):
     os.write(1, ('Sandbox: pw-probe-runner(42) deny(1) file-write-data /capacity/%03d/' % n).encode() + b'\x01'*490 + b'\n')
 "#;
-        let capture = capture_show(&mut python(script), LogTimeout::default().start().unwrap());
+        let capture = capture_show(
+            &mut python(script),
+            LogTimeout::default().start().unwrap(),
+            log_capture::LOG_REPORT_RESERVE_MS,
+        );
         assert!(capture.report.complete(), "{:?}", capture.report);
         assert_eq!(capture.deny_events.len(), 256);
         assert_eq!(capture.deny_lines.len(), 256);
@@ -1035,7 +1039,11 @@ os.write(2, b'\x01'*{})
             log_capture::LOG_STDOUT_BYTES,
             log_capture::LOG_STDERR_BYTES
         );
-        let capture = capture_show(&mut python(&script), LogTimeout::default().start().unwrap());
+        let capture = capture_show(
+            &mut python(&script),
+            LogTimeout::default().start().unwrap(),
+            log_capture::LOG_REPORT_RESERVE_MS,
+        );
         assert!(capture.report.complete(), "{:?}", capture.report);
         assert_eq!(
             capture.report.stdout.bytes_read,
@@ -1082,8 +1090,11 @@ os.write(2, b'\x01'*{})
             let script = format!(
                 "import os; os.write(1,b'Sandbox: w(42) deny(1) file-read-data /a\\n'*{n})"
             );
-            let capture =
-                capture_show(&mut python(&script), LogTimeout::default().start().unwrap());
+            let capture = capture_show(
+                &mut python(&script),
+                LogTimeout::default().start().unwrap(),
+                log_capture::LOG_REPORT_RESERVE_MS,
+            );
             assert_eq!(capture.deny_events.len(), log_capture::MAX_DENY_EVENTS);
             assert_eq!(capture.report.complete(), n == log_capture::MAX_DENY_EVENTS);
             if n > log_capture::MAX_DENY_EVENTS {
@@ -1113,7 +1124,7 @@ os.write(2, b'\x01'*{})
     #[test]
     fn inner_timeout_preserves_available_record_and_actual_child_wait() {
         let budget = LogTimeout {
-            milliseconds: 200,
+            milliseconds: 1_200,
             source: log_capture::TimeoutSource::Cli,
         }
         .start()
@@ -1123,6 +1134,11 @@ os.write(2, b'\x01'*{})
                 "import os,time; os.write(1,b'Sandbox: w(42) deny(1) file-read-data /a\\n'); time.sleep(60)",
             ),
             budget,
+            log_capture::LOG_REPORT_RESERVE_MS,
+        );
+        assert_eq!(
+            capture.report.reserve_ms,
+            log_capture::LOG_REPORT_RESERVE_MS
         );
         assert_eq!(capture.deny_events.len(), 1);
         assert_eq!(capture.report.cutoff.as_ref().unwrap().reason, "deadline");

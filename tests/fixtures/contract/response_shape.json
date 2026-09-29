@@ -1,5 +1,5 @@
 {
-  "response_schema" : 11,
+  "response_schema" : 12,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -184,9 +184,9 @@
       "exit_code" : "number",
       "lifecycle" : "object",
       "native_rc" : "null",
-      "normalized_path" : "null",
       "observed_path" : "null",
       "outcome" : "string",
+      "path_diagnostics" : "object",
       "rc" : "number",
       "requested_action" : "string",
       "requested_kind" : "string",
@@ -208,6 +208,13 @@
       "answer" : "string",
       "basis" : "array",
       "state" : "string"
+    },
+    "reply.steps[].attempt.path_diagnostics" : {
+      "input" : "string",
+      "observer" : "string",
+      "parent_realpath_resolved" : "null",
+      "phase" : "string",
+      "same_as_input" : "array"
     },
     "reply.steps[].comparison" : {
       "conclusion" : "string",

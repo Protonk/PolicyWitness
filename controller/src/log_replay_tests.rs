@@ -63,7 +63,7 @@ if fault == 'nonzero': sys.exit(7)
                     &lines.join("\n"),
                     fault,
                 ]);
-                let inner = capture_show(&mut query, inner_budget);
+                let inner = capture_show(&mut query, inner_budget, log_capture::LOG_REPORT_RESERVE_MS);
                 let complete = inner.report.complete();
                 let truncated = inner.report.stdout.truncated || inner.report.stderr.truncated;
                 let mut payload = json!({"observer_schema_version":1, "mode":"show", "pid":pid,
@@ -348,15 +348,10 @@ for e in json.load(sys.stdin):
             .iter()
             .map(|p| format!("Sandbox: pw-probe-runner(42) deny(1) file-read-data {p}"))
             .collect();
-        // The unoptimized all-path replay takes about ten seconds on the test
-        // host. Give this capacity oracle a fixed 30-second test allowance;
-        // production's default remains covered separately at 10 seconds.
-        let wire = replay(
-            &plan,
-            &lines,
-            "complete",
-            LogTimeout::parse("30000").unwrap(),
-        );
+        // The production default allowance is the oracle: the provenance join
+        // is resolved once per capture, so this replay costs well under a second
+        // even in an unoptimized build.
+        let wire = replay(&plan, &lines, "complete", LogTimeout::default());
         let c = &wire["data"]["sandbox_log_capture"];
         assert_eq!(
             c["capture_status"], "captured",
@@ -390,10 +385,11 @@ for e in json.load(sys.stdin):
         ];
         let lines = vec!["Sandbox: pw-probe-runner(42) deny(1) file-read-data /early".into()];
         let mut baseline = None;
+        // The inner allowance is the override minus the 1,000 ms report reserve.
         for (fault, ms, expected) in [
-            ("slow", 100, "timeout"),
-            ("slow", 1500, "captured"),
-            ("stalled", 1500, "timeout"),
+            ("slow", 1100, "timeout"),
+            ("slow", 2500, "captured"),
+            ("stalled", 2500, "timeout"),
         ] {
             let wire = replay(
                 &plan,
@@ -422,7 +418,12 @@ for e in json.load(sys.stdin):
                 assert_eq!(c["deny_events"].as_array().unwrap().len(), 1);
                 assert_eq!(c["step_denies"][0]["candidate_step_ids"], json!(["early"]));
             } else {
-                assert_eq!(c["supervision"]["cutoff"]["reason"], "deadline");
+                // The reserve lets the inner deadline arrive as an intact reply.
+                assert!(c["supervision"]["cutoff"].is_null(), "{}", c["supervision"]);
+                let inner = &c["observer"]["data"]["collection"];
+                assert_eq!(inner["cutoff"]["reason"], "deadline");
+                assert_eq!(inner["reserve_ms"], 1000);
+                assert!(c["deny_events"].is_array());
                 assert!(c["step_denies"].is_null());
             }
         }

@@ -1,5 +1,8 @@
 """Native denied attempts and padded scan bounds, independent of OS emission.
 
+One denied read goes through a symlinked directory: the policy names the
+resolved path, the attempt names the link, and any returned record is
+correlated through the host's after-orchestration attempt path forms.
 Each live invocation is checked on its own collection/cleanup facts. Completed
 queries may be empty; documented budget exhaustion withholds correlation.
 Returned records must satisfy interval and candidate checks, but do not prove
@@ -58,6 +61,7 @@ def checked_reads(capture, pid, start_s, end_s, expected_steps):
         association = associations[read['event_index']]
         assert association['candidate_step_ids'] == [expected_steps[read['path']]], association
         assert association['association'] == 'candidate', association
+        read['path_sources'] = association['matching_evidence'][0]['path_sources']
     return reads
 
 
@@ -70,9 +74,15 @@ def main():
     with tempfile.TemporaryDirectory(prefix='pw-window-', dir='/private/tmp') as work:
         early = Path(work) / secrets.token_hex(12)
         late = Path(work) / secrets.token_hex(12)
-        for target in (early, late):
+        real = Path(work) / 'real'
+        real.mkdir()
+        link = Path(work) / 'link'
+        link.symlink_to(real)
+        via = link / secrets.token_hex(12)          # the attempt's requested form
+        resolved_via = str(real / via.name)         # the form the kernel names
+        for target in (early, late, real / via.name):
             target.write_bytes(secrets.token_bytes(16))
-        ids = {name: secrets.token_hex(8) for name in ('early', 'hold_a', 'hold_b', 'late')}
+        ids = {name: secrets.token_hex(8) for name in ('early', 'via', 'hold_a', 'hold_b', 'late')}
 
         def read_step(name, target):
             return {'step_id': ids[name],
@@ -90,9 +100,11 @@ def main():
             'policy': {'format': 'sbpl',
                        'sbpl_source': '(version 1)(allow default)'
                                       '(deny file-read-data (literal (param "EARLY")))'
+                                      '(deny file-read-data (literal (param "VIA")))'
                                       '(deny file-read-data (literal (param "LATE")))',
-                       'params': {'EARLY': str(early), 'LATE': str(late)}},
-            'probe_plan': [read_step('early', early), hold_step('hold_a'), hold_step('hold_b'), read_step('late', late)],
+                       'params': {'EARLY': str(early), 'VIA': resolved_via, 'LATE': str(late)}},
+            'probe_plan': [read_step('early', early), read_step('via', via),
+                           hold_step('hold_a'), hold_step('hold_b'), read_step('late', late)],
         }
         run = RunCapture(pw, out / 'run', specimen, cli_args=['--timeout-ms', '120000'])
         with run:
@@ -109,12 +121,20 @@ def main():
     worker = runner['runner_subprocess']
     assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
     steps = {step['step_id']: step for step in runner['steps']}
-    assert list(steps) == [ids[name] for name in ('early', 'hold_a', 'hold_b', 'late')], list(steps)
-    for name in ('early', 'late'):
+    assert list(steps) == [ids[name] for name in ('early', 'via', 'hold_a', 'hold_b', 'late')], list(steps)
+    for name in ('early', 'via', 'late'):
         step = steps[ids[name]]
         assert step['sandbox_check']['outcome'] == 'allow', step
         attempt = step['attempt']
         assert attempt['outcome'] == 'open_failed' and attempt['errno'] in (errno.EPERM, errno.EACCES), attempt
+        forms = attempt['path_diagnostics']
+        assert (forms['observer'], forms['phase']) == ('runner_host', 'after_orchestration'), forms
+    # The host's later resolution of the link form is mandatory evidence; whether
+    # the OS logged the denial under that form is a separate, optional observation.
+    via_forms = steps[ids['via']]['attempt']['path_diagnostics']
+    assert via_forms['input'] == str(via) and via_forms['same_as_input'] == [], via_forms
+    assert via_forms['realpath_resolved'] == resolved_via, via_forms
+    assert via_forms['parent_realpath_resolved'] == resolved_via, via_forms
     for name in ('hold_a', 'hold_b'):
         attempt = steps[ids[name]]['attempt']
         assert attempt['child_pid'] > 0 and attempt['child_term_signal'] == 9, attempt
@@ -141,8 +161,12 @@ def main():
     live_result = check_live_capture(envelope)
     complete = live_result['outcome'] == 'captured'
 
-    expected_steps = {str(early): ids['early'], str(late): ids['late']}
+    expected_steps = {str(early): ids['early'], resolved_via: ids['via'], str(late): ids['late']}
     reads = checked_reads(capture, worker['pid'], query_start_s, query_end_s, expected_steps)
+    for read in reads:
+        if read['path'] == resolved_via:
+            assert 'runner_host.after_orchestration.realpath_resolved' in read['path_sources'], read
+            assert 'submitted_attempt.target' not in read['path_sources'], read
     diagnostics = data['runner_sandbox_diagnostics']
     assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
     answers = recover_evidence(envelope)
@@ -169,7 +193,7 @@ def main():
     older = [read for read in reads if read['at'] < retired_start_s]
     availability = {name: ('unavailable' if not complete else
                            'observed' if any(read['path'] == str(target) for read in reads)
-                           else 'not_observed') for name, target in [('early', early), ('late', late)]}
+                           else 'not_observed') for name, target in [('early', early), ('via', resolved_via), ('late', late)]}
 
     (out / 'observations.json').write_text(json.dumps({
         'span_ms': span_ms, 'window': window, 'live_result': live_result,
@@ -185,7 +209,7 @@ def main():
 
     if complete:
         # Absence describes this completed query, never absence of a denial.
-        unrecorded = sorted(ids[name] for name in ('early', 'late') if availability[name] == 'not_observed')
+        unrecorded = sorted(ids[name] for name in ('early', 'via', 'late') if availability[name] == 'not_observed')
         assert sorted(diagnostics['permission_failures_without_record']) == unrecorded, \
             (diagnostics['permission_failures_without_record'], unrecorded)
 

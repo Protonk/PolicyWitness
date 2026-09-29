@@ -12,6 +12,9 @@ use std::time::{Duration, Instant};
 
 pub const DEFAULT_LOG_TIMEOUT_MS: u64 = 10_000;
 pub const CLEANUP_GRACE_MS: u64 = 1_000;
+// The log child stops this long before the shared deadline so the observer can
+// reap it and deliver its report before the controller's own deadline.
+pub const LOG_REPORT_RESERVE_MS: u64 = 1_000;
 pub const LOG_STDOUT_BYTES: usize = 1024 * 1024;
 pub const LOG_STDERR_BYTES: usize = 128 * 1024;
 // Raw text is repeated as log_stdout, deny_lines and event.raw_line, with
@@ -153,7 +156,14 @@ impl CollectionBudget {
     }
 
     pub fn expired(self) -> bool {
-        monotonic_ns().map_or(true, |now| now >= self.deadline_monotonic_ns)
+        self.expired_within(0)
+    }
+
+    /// True once fewer than `reserve_ms` remain before the shared deadline.
+    pub fn expired_within(self, reserve_ms: u64) -> bool {
+        monotonic_ns().map_or(true, |now| {
+            now.saturating_add(reserve_ms.saturating_mul(1_000_000)) >= self.deadline_monotonic_ns
+        })
     }
 }
 
@@ -248,6 +258,9 @@ pub struct CleanupObservation {
 pub struct Supervision {
     pub boundary: Boundary,
     pub budget: CollectionBudget,
+    /// Milliseconds withheld from the shared deadline at this boundary so a
+    /// report can follow; 0 at the observer boundary.
+    pub reserve_ms: u64,
     pub elapsed_ms: u64,
     pub cutoff: Option<Cutoff>,
     pub stdout: StreamObservation,
@@ -439,13 +452,30 @@ pub fn capture(
     capture_with_limits(command, budget, boundary, boundary.limits())
 }
 
+/// Stop `reserve_ms` before the shared deadline instead of at it.
+pub fn capture_reserving(
+    command: &mut Command,
+    budget: CollectionBudget,
+    boundary: Boundary,
+    reserve_ms: u64,
+) -> ProcessCapture {
+    capture_with_ops(
+        command,
+        budget,
+        boundary,
+        boundary.limits(),
+        reserve_ms,
+        &mut NativeOps,
+    )
+}
+
 pub(crate) fn capture_with_limits(
     command: &mut Command,
     budget: CollectionBudget,
     boundary: Boundary,
     limits: (usize, usize),
 ) -> ProcessCapture {
-    capture_with_ops(command, budget, boundary, limits, &mut NativeOps)
+    capture_with_ops(command, budget, boundary, limits, 0, &mut NativeOps)
 }
 
 fn capture_with_ops(
@@ -453,6 +483,7 @@ fn capture_with_ops(
     budget: CollectionBudget,
     boundary: Boundary,
     limits: (usize, usize),
+    reserve_ms: u64,
     ops: &mut impl ProcessOps,
 ) -> ProcessCapture {
     let entry = Instant::now();
@@ -462,6 +493,7 @@ fn capture_with_ops(
         supervision: Supervision {
             boundary,
             budget,
+            reserve_ms,
             elapsed_ms: 0,
             cutoff: None,
             stdout: stream(limits.0),
@@ -495,7 +527,10 @@ fn capture_with_ops(
         },
     };
     let remaining = match monotonic_ns() {
-        Ok(now) => budget.deadline_monotonic_ns.saturating_sub(now),
+        Ok(now) => budget
+            .deadline_monotonic_ns
+            .saturating_sub(reserve_ms.saturating_mul(1_000_000))
+            .saturating_sub(now),
         Err(e) => {
             answer.supervision.cutoff = Some(Cutoff::reason("clock_error", Some(e)));
             return finish(answer, entry);
@@ -699,6 +734,7 @@ mod tests {
             ("log_observer_stderr", OBSERVER_STDERR_BYTES as u64),
             ("log_collection_timeout", DEFAULT_LOG_TIMEOUT_MS as u64),
             ("log_cleanup_grace", CLEANUP_GRACE_MS as u64),
+            ("log_report_reserve", LOG_REPORT_RESERVE_MS as u64),
             ("log_deny_events", MAX_DENY_EVENTS as u64),
             ("log_candidate_count", MAX_ASSOCIATIONS as u64),
             ("log_candidate_bytes", MAX_ASSOCIATION_BYTES as u64),
@@ -1010,6 +1046,7 @@ else:
                 budget(500),
                 boundary,
                 (64, 64),
+                0,
                 &mut ops,
             );
             assert_eq!(
@@ -1048,6 +1085,7 @@ else:
                     budget(50),
                     boundary,
                     (1024, 1024),
+                    0,
                     &mut ops,
                 );
                 assert_eq!(out.supervision.cleanup.outcome, "unconfirmed");

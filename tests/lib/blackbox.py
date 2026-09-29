@@ -125,7 +125,7 @@ def validate_step(step, expected):
     if not isinstance(attempt, dict):
         fail(f"missing attempt for {step_id}")
     else:
-        for key in ("rc", "exit_code", "errno", "syscall_errno", "requested_path", "normalized_path", "observed_path"):
+        for key in ("rc", "exit_code", "errno", "syscall_errno", "requested_path", "observed_path"):
             if key not in attempt:
                 fail(f"{step_id}: missing attempt.{key}")
         exit_code = attempt.get("exit_code")

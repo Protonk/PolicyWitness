@@ -74,6 +74,11 @@ tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt
 children to the worker's exec deadline, then denies another read. Its metadata
 queries are allowed, avoiding query-generated denials for the attempted reads.
 The native attempts, worker exit and elapsed span are mandatory witnesses.
+One denied read goes through a symlinked directory: the policy names the
+resolved path, the attempt names the link, and the host's
+`attempt.path_diagnostics` must resolve the link form to the denied path. A
+returned record for that step must be admitted through the host form, never
+the submitted target.
 `capture.window` retains the raw client milliseconds and requests
 `floor(client start) - 2 s` through `ceil(client end) + 2 s`, with `pad_seconds: 2`.
 The observer must mirror those bounds without a trailing lookback. Returned
@@ -118,14 +123,17 @@ Positive preservation coverage is mandatory and independent of live emission:
   Failed inner queries retain intact diagnostics without correlations. Disabled,
   unavailable, malformed and wrong-window cases preserve execution evidence.
 - The controlled capacity case retains 256 distinct 511-byte targets and all
-  candidate references through the entire replay. Its fixed 30-second allowance
-  accommodates the unoptimized test build; production still defaults to ten
-  seconds. This proves capacity for the supplied corpus, not a live-volume bound.
+  candidate references through the entire replay under the production default
+  allowance. A separate control correlates the maximum event volume against a
+  256-step plan inside that allowance. Both prove capacity for supplied input,
+  not a live-volume bound.
 - Supervisor controls cover both boundaries' byte edges, launch/read/wait/exit
   faults, hangs and cleanup failures. Owned-group controls check orphan pipes,
   leader death before a reply, membership, eventual absence and no signals after
   reaping. Deadline controls preserve execution and bounds under short/long
-  overrides and still bound a permanently stalled query. JSON expansion,
+  overrides and still bound a permanently stalled query; the log child's
+  1,000 ms report reserve lets an inner deadline arrive as an intact observer
+  reply. JSON expansion,
   incomplete outer replies and derived-data limits have separate exact oracles.
 - The required archive case tests real OS predicate selection before parsing;
   suppressing every selected record cannot pass it. Positive replay assertions

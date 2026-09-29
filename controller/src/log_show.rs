@@ -80,8 +80,12 @@ pub(crate) struct ShowCapture {
     pub(crate) report: Supervision,
 }
 
-pub(crate) fn capture_show(command: &mut Command, budget: CollectionBudget) -> ShowCapture {
-    let captured = log_capture::capture(command, budget, Boundary::LogShow);
+pub(crate) fn capture_show(
+    command: &mut Command,
+    budget: CollectionBudget,
+    reserve_ms: u64,
+) -> ShowCapture {
+    let captured = log_capture::capture_reserving(command, budget, Boundary::LogShow, reserve_ms);
     let mut report = captured.supervision;
     if (std::str::from_utf8(&captured.stdout).is_err()
         || std::str::from_utf8(&captured.stderr).is_err())
@@ -120,7 +124,7 @@ pub(crate) fn capture_show(command: &mut Command, budget: CollectionBudget) -> S
             deny_events.push(event);
         }
     }
-    if budget.expired() && report.cutoff.is_none() {
+    if budget.expired_within(reserve_ms) && report.cutoff.is_none() {
         report.cutoff = Some(Cutoff::reason(
             "deadline",
             Some("log output parsing exceeded the collection deadline".into()),

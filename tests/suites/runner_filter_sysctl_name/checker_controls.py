@@ -44,7 +44,7 @@ def main():
                         "rc": 1 if sysctl else 0, "exit_code": 1 if sysctl else 0,
                         "errno": 1 if sysctl else None, "syscall_errno": 1 if sysctl else None,
                         "requested_path": "kern.osrelease" if sysctl else "/etc/hosts",
-                        "normalized_path": None, "observed_path": None if sysctl else "/private/etc/hosts",
+                        "observed_path": None if sysctl else "/private/etc/hosts",
                     },
                 }],
             }},
@@ -145,7 +145,7 @@ def main():
         for channel, keys in (
             ("sandbox_check", ("scope", "pid", "operation", "filter_value",
                                "filter_type_id", "errno", "error")),
-            ("attempt", ("exit_code", "errno", "syscall_errno", "requested_path", "normalized_path", "observed_path", "rc")),
+            ("attempt", ("exit_code", "errno", "syscall_errno", "requested_path", "observed_path", "rc")),
         ):
             for key in keys:
                 broken, step = mutate()

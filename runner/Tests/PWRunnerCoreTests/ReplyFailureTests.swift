@@ -21,6 +21,8 @@ func replyFixture() throws -> PWRunnerRunResult {
             "observer":"runner_host","phase":"after_orchestration"}},
         "attempt":{"rc":0,"outcome":"ok","requested_kind":"file","requested_action":"open_read",
           "requested_path":"/owned","result_source":"worker","native_rc":null,
+          "path_diagnostics":{"input":"/owned","same_as_input":["realpath_resolved"],"parent_realpath_resolved":null,
+            "observer":"runner_host","phase":"after_orchestration"},
           "lifecycle":{"summary":"completed",
             "boundary":{"state":"supported","answer":"reached","basis":["slot","attempt_support"]},
             "result":{"state":"supported","answer":"published","basis":["slot","attempt_support"]}}},

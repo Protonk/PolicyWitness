@@ -128,7 +128,7 @@ Exit codes:
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 11, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Every step contains `deny_signal: null` because that channel is unobserved. Legacy signal objects remain readable by the Swift
@@ -153,7 +153,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `build`: the build stamp described under the CLI surface
 - `data.runner_result`: the runner's JSON (if parseable)
 - `data.runner_client`: argv + stdout/stderr + timing, exact received/retained
-  stream byte counts and `capture_limit_bytes` (64 MiB). `stdout_capture_error`
+  stream byte counts and `capture_limit_bytes` (72 MiB). `stdout_capture_error`
   identifies controller prefix loss; `stdout_parse_error` identifies malformed
   untruncated JSON/UTF-8. Full output is collected first; this is not a streaming
   allocation bound. Synthetic non-invocations have null byte counts.
@@ -189,9 +189,11 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   `permission_failures_without_record` lists the step IDs whose attempt the
   runner classified as a permission-shaped failure and that no captured event
   names as a candidate; it is null unless correlation was `pid_match` or
-  `no_match` and the reply carries per-step comparisons. `no_match` beside a
-  non-empty list means the log holds no record of denials the attempts
-  themselves reported, not that nothing was denied; the field never says why.
+  `no_match` and the reply carries per-step comparisons. A non-empty list means
+  this capture yielded no candidate for denials the attempts themselves
+  reported, not that nothing was denied; it makes no claim about what the OS
+  log store contains (a record can exist under another path form, such as a
+  resolved symlink) and never says why.
 - `data.sandbox_log_capture`: optional observer evidence, also captured for
   successful runs; null when disabled or no authoritative worker PID exists.
   `window` records the scanned interval: the runner client's start and end
@@ -214,7 +216,11 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   Attempt kind/action come from the request joined by unique step ID, never the
   independent sandbox-check query. `matching_evidence` records each candidate's
   mapped operation, submitted kind/action, matched path and path sources.
-  Unowned `normalized_path` alone is not a match source. Unmatched events remain
+  The host's after-orchestration `attempt.path_diagnostics` forms (`realpath_resolved`,
+  `parent_realpath_resolved`) are a match source only with their observer and
+  phase, and appear in `path_sources` under that provenance; a kernel record
+  names the resolved path, so a target through a symlink correlates that way.
+  Unmatched events remain
   in `deny_events`. Validator queries can themselves generate denial records
   naming the worker PID before attempts begin. Neither a matching path nor a
   candidate association establishes that an attempted operation produced a log
@@ -258,6 +264,14 @@ only; it changes neither the query interval nor byte limits and promises no
 record. Cleanup has one 1,000 ms grace ending no later than the original deadline
 plus that grace. This bounds supervised waits, not OS scheduling or arbitrary
 work elsewhere in the controller.
+
+The observer stops its log child 1,000 ms before the shared deadline
+(`log_report_reserve`) so it can reap the child and deliver its report before
+the controller's own deadline; `reserve_ms` records that withholding (0 at the
+observer boundary, 1,000 under `observer.data.collection`). An inner deadline
+therefore normally arrives as an intact reply whose `observer.data.collection.cutoff`
+is `deadline`, with its retained diagnostics, rather than as a killed observer.
+An allowance at or below the reserve leaves no time for the query itself.
 
 The show path counts bytes while reading both pipes: inner stdout 1 MiB, inner
 stderr 128 KiB, observer stdout 32 MiB, observer stderr 128 KiB. One additional

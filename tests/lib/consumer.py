@@ -10,9 +10,11 @@ from lifecycle_adapter import read_lifecycle, summaries
 
 
 PATH_FORMS = ('realpath_resolved', 'firmlink_resolved')
+# Attempt targets carry the leaf-followed and parent-resolved forms (response 12+).
+ATTEMPT_PATH_FORMS = ('realpath_resolved', 'parent_realpath_resolved')
 
 
-def validate_path_diagnostics(path, *, require_compact=False):
+def validate_path_diagnostics(path, *, require_compact=False, forms=PATH_FORMS):
     """Validate representation without inferring whether a path resolved."""
     if not isinstance(path, dict) or not isinstance(path.get('input'), str):
         return ['path diagnostics require a string input']
@@ -21,10 +23,10 @@ def validate_path_diagnostics(path, *, require_compact=False):
         return ['response 9 path diagnostics require same_as_input']
     same = path.get('same_as_input', [])
     if not isinstance(same, list) or any(not isinstance(x, str) for x in same) or \
-            len(set(same)) != len(same) or any(x not in PATH_FORMS for x in same):
+            len(set(same)) != len(same) or any(x not in forms for x in same):
         return ['same_as_input must contain unique supported form names']
     errors = []
-    for name in PATH_FORMS:
+    for name in forms:
         if compact and (name in same) == (name in path):
             errors.append(f'{name} must be either listed in same_as_input or present, exclusively')
         if name in path and path[name] is not None:
@@ -35,7 +37,7 @@ def validate_path_diagnostics(path, *, require_compact=False):
     return errors
 
 
-def path_form(path, name):
+def path_form(path, name, forms=PATH_FORMS):
     """How a host path form relates to the diagnostics' input, by the reply's own rules.
 
     Response 9 lists forms equal to the input by name in `same_as_input` and
@@ -43,7 +45,7 @@ def path_form(path, name):
     Returns 'same_as_input', 'resolved', 'unavailable', 'not_reported' or
     'invalid'. Contradictory evidence is never interpreted as a resolution.
     """
-    if validate_path_diagnostics(path):
+    if validate_path_diagnostics(path, forms=forms):
         return 'invalid'
     same = path.get('same_as_input')
     if isinstance(same, list) and name in same:
@@ -90,6 +92,7 @@ def recover_evidence(envelope):
         if failure is not None:
             answer['failure_groups'][failure].append(step['step_id'])
         path = query.get('path_diagnostics')
+        attempt_path = attempt.get('path_diagnostics') if isinstance(attempt.get('path_diagnostics'), dict) else None
         answer['steps'].append({
             'step_id': step['step_id'], 'comparison': comparison,
             'drift_present': 'drift' in step, 'drift': step.get('drift'),
@@ -101,6 +104,10 @@ def recover_evidence(envelope):
                                'provenance_not_reported' if path.get('observer') is None or path.get('phase') is None
                                else 'reported'),
             'path_diagnostics': path,
+            'attempt_path_reporting': ('not_reported' if attempt_path is None else
+                                       'provenance_not_reported' if attempt_path.get('observer') is None or attempt_path.get('phase') is None
+                                       else 'reported'),
+            'attempt_path_diagnostics': attempt_path,
         })
     capture = data.get('sandbox_log_capture') or {}
     diagnostics = data.get('runner_sandbox_diagnostics') or {}
@@ -218,6 +225,15 @@ def validate_evidence_shape(envelope):
         if path is not None:
             errors.extend(f'{sid}: {error}' for error in validate_path_diagnostics(
                 path, require_compact=runner['schema_version'] >= 9))
+        attempt_path = attempt.get('path_diagnostics') if isinstance(attempt, dict) else None
+        if attempt_path is not None:
+            if not isinstance(attempt_path, dict) or \
+                    (attempt_path.get('observer'), attempt_path.get('phase')) != ('runner_host', 'after_orchestration'):
+                errors.append(f'{sid}: attempt path diagnostics lack host/phase provenance')
+            if isinstance(attempt_path, dict):
+                # The attempt block has no legacy shape: it is compact from birth.
+                errors.extend(f"{sid}: attempt {error.replace('response 9 path diagnostics', 'path diagnostics')}"
+                              for error in validate_path_diagnostics(attempt_path, require_compact=True, forms=ATTEMPT_PATH_FORMS))
     if runner['schema_version'] >= 8 and not failed_reporting:
         errors.extend(validate_ordering(runner))
     if runner['schema_version'] >= lifecycle_contract.RESPONSE_WITH_DISPOSITION:
@@ -249,6 +265,13 @@ def validate_current_build_evidence(envelope):
                 type(attempt.get('rc')) is int and attempt['rc'] == 0 and \
                 isinstance(attempt.get('requested_path'), str):
             removed_targets.add(attempt['requested_path'])
+        # From response 12 a current build resolves every file/exec target after
+        # orchestration; constructed older-version replies carry no such block.
+        if type(runner.get('schema_version')) is int and runner['schema_version'] >= 12 and \
+                isinstance(attempt, dict) and attempt.get('requested_kind') in ('file', 'exec') and \
+                isinstance(attempt.get('requested_path'), str) and attempt['requested_path'] and \
+                attempt.get('path_diagnostics') is None:
+            errors.append(f"{step.get('step_id')}: current build omits attempt path diagnostics")
     for step in steps:
         comparison = step.get('comparison')
         query = step.get('sandbox_check')

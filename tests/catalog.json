@@ -1079,7 +1079,7 @@
             "bash",
             "tests/suites/witness_contract/deny_capture_covers_the_run.sh"
           ],
-          "description": "Native denied reads and padded scan bounds; completed empty queries or evidenced budget cutoffs are admissible, returned records and diagnostics must agree"
+          "description": "Native denied reads, one through a symlinked directory, and padded scan bounds; completed empty queries or evidenced budget cutoffs are admissible, returned records and diagnostics must agree"
         },
         {
           "id": "log_capture_controls",

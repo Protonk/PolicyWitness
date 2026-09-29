@@ -887,3 +887,28 @@ documented collection-limit outcomes and measured OS record availability.
   Implemented limits, field meanings and partial-collection behavior are
   documented outside the plan. Repository links into the investigation record
   occur only in associated `*-PLAN.md` files.
+
+## Deviations recorded after the audit
+
+Noticed during the 2026-09-29 audit of the completed work. Each is a deviation
+from the text above and is in place in the permanent contracts and tests.
+
+- Correlation resolves the step-provenance join once per capture instead of per
+  event. The 256-record capacity replay runs under the production default
+  allowance; the 30-second test allowance named in the section 4 checkpoint is
+  gone.
+- The log child stops `log_report_reserve` (1,000 ms) before the shared
+  deadline so the observer's report, including an inner deadline cutoff,
+  reaches the controller. Section 2 passed one deadline to both supervisors
+  with no reserve.
+- The controller envelope is 4. `timeout`, `overflow`, `supervision`,
+  `processing_cutoff` and `window.pad_seconds` are recorded under that bump
+  rather than as additive fields of envelope 3.
+- The response schema is 12. `steps[].attempt.path_diagnostics` carries the
+  host's after-orchestration `realpath_resolved` and `parent_realpath_resolved`
+  forms of file and exec targets, correlation admits them as a named
+  `path_sources` entry, and `normalized_path` is gone. Section 3 limited targets
+  to the submitted, requested and observed paths.
+- `permission_failures_without_record` is documented as naming steps without a
+  captured candidate, with no claim about the OS store; the earlier wording
+  said the log holds no record.

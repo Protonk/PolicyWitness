@@ -379,17 +379,31 @@ private func rejectedRetiredRequestKey(in request: Data) -> String? {
 // realpath is unavailable) is retained for hosts that for any
 // reason can't stat the path.
 //
-// path_diagnostics appears on path-filter sandbox_check results
-// only.
+// path_diagnostics appears on path-filter sandbox_check results and,
+// as attempt.path_diagnostics, on file and exec attempts.
 func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] {
     return steps.map { step in
+        var updated = step
+        // The attempt target gets the same later host observation: the
+        // leaf-followed realpath and the parent-resolved literal-leaf form.
+        // Neither reclassifies the attempt or its comparison.
+        if let kind = step.attempt.requested_kind,
+           kind == PWRunnerWire.attemptKindFile || kind == PWRunnerWire.attemptKindExec,
+           let target = step.attempt.requested_path, !target.isEmpty {
+            updated.attempt.path_diagnostics = PWRunnerAttemptPathDiagnostics(
+                input: target,
+                realpath_resolved: canonicalizePath(target).resolved,
+                parent_realpath_resolved: parentRealpathResolved(target),
+                observer: "runner_host",
+                phase: "after_orchestration"
+            )
+        }
         guard step.sandbox_check.filter_kind == PWRunnerWire.sandboxFilterPath,
               let value = step.sandbox_check.filter_value,
               !value.isEmpty
         else {
-            return step
+            return updated
         }
-        var updated = step
         let canonical = canonicalizePath(value)
         let basis = canonical.resolved ?? wellKnownSymlinksResolved(value)
         updated.sandbox_check.path_diagnostics = PWRunnerPathDiagnostics(

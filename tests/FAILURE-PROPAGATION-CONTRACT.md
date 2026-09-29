@@ -754,13 +754,13 @@ subprocess evidence. All original validator pipe descriptors close on exec;
 parent writes use FD-scoped SIGPIPE suppression and checked nonblocking setup.
 
 For the runner client and sbpl-check, the controller collects full
-`Command::output()` buffers before retaining a 64 MiB prefix per runner-client
+`Command::output()` buffers before retaining a 72 MiB prefix per runner-client
 stream (three times the synthesized maximal reply in `docs/limits.json`, rounded
 up to 4 MiB) and an independent 8 MiB prefix per sbpl-check stream.
 Each capture object's `stdout_bytes_received` and
 `stderr_bytes_received` are exact full lengths; `*_bytes_retained` are measured
 before lossy text conversion; `capture_limit_bytes` reports the selected receiver
-budget (67108864 or 8388608). Locally truncated
+budget (75497472 or 8388608). Locally truncated
 stdout is not parsed and has `stdout_capture_error`, distinct from
 `stdout_parse_error` for malformed JSON/UTF-8 within the cap. Text context may use
 replacement characters; accepted JSON is parsed from original untruncated bytes.
@@ -771,7 +771,9 @@ outer envelope was lost. Independent `sbpl-check` admission remains
 
 Log collection instead enforces streaming bounds: 32 MiB observer stdout and
 128 KiB observer stderr, containing the inner log-show capture of at most 1 MiB
-stdout and 128 KiB stderr. Its received counts describe actual reads, including
+stdout and 128 KiB stderr. The log child stops 1,000 ms before the shared
+deadline so the observer's report can be delivered before the controller's own
+deadline. Its received counts describe actual reads, including
 at most one excess byte that detects a stream overflow, not the total output
 the stopped producer might have emitted. No JSON fragment recovery is attempted.
 An intact failed reply can retain diagnostic events, without correlation. These
@@ -820,7 +822,7 @@ a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
 validity of all received frames. Decoding faults coexist with these observations.
 
 All controller JSON receivers (runner client, sbpl-check and log observer) use
-the same original-byte JSON parser with explicit retention budgets: 64 MiB
+the same original-byte JSON parser with explicit retention budgets: 72 MiB
 per runner-client stream, 8 MiB per sbpl-check stream, and streaming limits of
 32 MiB stdout / 128 KiB stderr for the observer. Received/retained byte counts
 precede lossy context conversion; log collection's counts are actual bounded
@@ -1158,10 +1160,13 @@ Path diagnostics retain their fields and add `observer="runner_host"` and
 older records. Denial candidates add matching evidence without changing their
 candidate-only meaning; optional logs cannot change PW status or `drift`.
 Matching evidence identifies submitted operation provenance and every matched
-`submitted_attempt.target`, `attempt.requested_path` or `attempt.observed_path`.
-An unowned legacy `normalized_path` alone no longer admits a candidate; its raw
-value is retained in the runner reply. This controller correlation correction
-also applies when consuming older runner replies without rewriting their version.
+`submitted_attempt.target`, `attempt.requested_path`, `attempt.observed_path`,
+or host-resolved `attempt.path_diagnostics` form named with its observer and
+phase (`runner_host.after_orchestration.realpath_resolved` or
+`parent_realpath_resolved`). A legacy `normalized_path`, which no reply ever
+populated and response 12 drops, never admits a candidate. This controller
+correlation rule also applies when consuming older runner replies without
+rewriting their version.
 
 ### Permanent consumer enforcement
 

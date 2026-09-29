@@ -115,11 +115,12 @@ struct RunnerLogDiagnostics {
     /// cause of termination. Reference keeps the event in observer evidence.
     pub first_deny: Option<DenyEventReference>,
     /// Step IDs whose attempt the runner itself classified as a permission-shaped
-    /// failure and that no captured event names as a candidate. Beside
-    /// `no_match` a non-empty list means the log holds no record of denials the
-    /// attempts reported, not that nothing was denied; it never says why. Null
-    /// when correlation was not possible or the reply carries no per-step
-    /// comparison.
+    /// failure and that no captured event names as a candidate. A non-empty
+    /// list means this capture yielded no candidate for denials the attempts
+    /// reported, not that nothing was denied; it makes no claim about the OS
+    /// log store (a record can exist under another path form, such as a
+    /// resolved symlink) and never says why. Null when correlation was not
+    /// possible or the reply carries no per-step comparison.
     pub permission_failures_without_record: Option<Vec<String>>,
 }
 

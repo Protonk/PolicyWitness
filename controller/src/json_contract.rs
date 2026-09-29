@@ -8,7 +8,7 @@ use serde_json::{Map, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 // END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]

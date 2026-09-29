@@ -71,9 +71,8 @@ def check_envelope(envelope, rc, specimen, expected):
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction
         assert step['drift'] is (False if expectation['attempt_ok'] else None), step
         assert attempt['requested_path'] == target, attempt
-        # Normalization is optional; the successful open's observed path is
-        # independent worker evidence and must be present below.
-        assert attempt['normalized_path'] in (None, target), attempt
+        # The successful open's observed path is independent worker evidence
+        # and must be present below.
         if expectation['attempt_ok']:
             assert attempt['outcome'] == 'ok' and attempt['observed_path'] == target, attempt
             assert attempt.get('error') is None, attempt

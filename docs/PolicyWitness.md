@@ -448,8 +448,8 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
-| Synthesized maximal reply (`runner_reply_maximum`) | 21,660,314 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
-| Runner client output (`controller_output`) | 67,108,864 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
+| Synthesized maximal reply (`runner_reply_maximum`) | 24,051,866 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
+| Runner client output (`controller_output`) | 75,497,472 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
 | Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
@@ -464,8 +464,9 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero. |
-| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
+| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
 | Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
+| Log report reserve (`log_report_reserve`) | 1,000 milliseconds | Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged. An inner deadline cutoff arrives as an intact observer reply with its retained diagnostics; an allowance at or below the reserve leaves no time for the query itself. | Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection. |
 | Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed; no public override. |
 | Candidate associations (`log_candidate_count`) | 4,096 items | Total event-to-step candidates, including ambiguous matches. Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic. | Fixed; no public override. |
 | Candidate allocation allowance (`log_candidate_bytes`) | 8,388,608 bytes | Conservative encoded/allocation charge per candidate: six times the sum of twice the step-ID length plus path, operation, kind and action lengths, plus 1,024 bytes of structure. Excess discards all associations and withholds correlation. | Fixed; no public override. |
@@ -500,7 +501,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 11, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
@@ -667,15 +668,17 @@ debugger attach (see [Debug-attach to the worker](#debug-attach-to-the-worker)).
 The runner echoes step results with additional context:
 
 - `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, filter_type_id, errno, error, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_kind, requested_action, requested_path, normalized_path, observed_path }`
+- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_kind, requested_action, requested_path, observed_path, path_diagnostics? }`
 - `steps[].drift`: `bool | null` — see the field description above.
 
 Notes:
 - `scope` is `post_sandbox` for runner-hosted checks.
 - `requested_path` echoes the attempt target for every attempt kind
-  (path, Mach service name, sysctl name, etc.). `normalized_path` and
-  `observed_path` are file-path diagnostics; non-file attempts carry
-  explicit `null` for those fields.
+  (path, Mach service name, sysctl name, etc.). `observed_path` is the
+  worker's own `F_GETPATH` observation of a successful open, explicit `null`
+  otherwise. `path_diagnostics` is the host's later resolution of a file or
+  exec attempt target (see [attempt.path_diagnostics](#attemptpath_diagnostics));
+  other attempt kinds omit it.
 - `filter_value` is the exact string the runner passes to `sandbox_check`,
   except when `outcome == "prediction_unavailable"` — in that case no
   `sandbox_check` call is made; `filter_value` is echoed back from the
@@ -827,6 +830,24 @@ retired `data_volume_form` heuristic for `/private` paths.
   host's `realpath` fails. The firmlinks map is loaded eagerly and
   has a built-in fallback mirroring the standard mappings on
   Catalina+.
+
+### attempt.path_diagnostics
+
+From response 12, every file or exec attempt with a nonempty target carries
+`attempt.path_diagnostics`: `{ observer, phase, input, same_as_input,
+realpath_resolved?, parent_realpath_resolved? }`, produced by the same
+unsandboxed host pass after orchestration (`observer="runner_host"`,
+`phase="after_orchestration"`) and always in the compact three-state form
+above. `realpath_resolved` is `realpath(3)` of the target with the leaf
+followed. `parent_realpath_resolved` is `realpath(3)` of the parent directory
+with the literal leaf appended: the path the kernel names for a created or
+unlinked entry, or for a symlink acted on itself. Either is null when the host
+cannot derive it (a missing leaf has no leaf-followed form; a relative path has
+no parent form). Neither establishes what the worker's own syscall resolved,
+and neither changes the attempt, its comparison or `drift`. Deny-log
+correlation admits these forms as candidate evidence under their provenance;
+see [Denial-log correlation](#denial-log-correlation). `normalized_path`,
+which no reply ever populated, is gone from response 12.
 
 Capture the sandbox_check argument quickly (no interpose needed):
 
@@ -1033,7 +1054,9 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
   Positive integer milliseconds only, with checked monotonic deadline arithmetic;
   no unlimited value. Invalid values fail before running the specimen, including
   with `--no-log-capture`. Observer startup and `log show` share one deadline,
-  followed by at most a 1,000 ms cleanup grace. A larger value buys waiting time
+  followed by at most a 1,000 ms cleanup grace; the `log show` child itself stops
+  1,000 ms before that deadline so the observer's report, including an inner
+  deadline cutoff, can be delivered. A larger value buys waiting time
   without changing the specimen, scan bounds or byte budgets.
 - `--no-log-capture`: skip the unified-log (`log show`) deny scan. Its requested
   interval is the runner client's own wall-clock span, rounded outward to whole
@@ -1132,9 +1155,11 @@ claims withheld, or `not_reported` for a legacy reply). These fields do not chan
 `permission_failures_without_record` lists the step IDs whose attempt the
 runner classified as a permission-shaped failure and that no captured event
 names as a candidate (null unless correlation reached `pid_match` or `no_match`
-and the reply carries per-step comparisons). A `no_match` beside a non-empty
-list means the log holds no record of denials the attempts themselves reported;
-it does not mean nothing was denied, and it does not say why.
+and the reply carries per-step comparisons). A non-empty list means this
+capture yielded no candidate for denials the attempts themselves reported; it
+does not mean nothing was denied, it makes no claim about what the OS log store
+contains (a record can exist under another path form, such as a resolved
+symlink), and it does not say why.
 
 `first_deny` references an event by array index. Step associations under
 `sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
@@ -1145,8 +1170,14 @@ multiple candidates use `"ambiguous"`. Neither establishes a unique occurrence.
 Step matching requires a positive worker PID matching the event, an exact
 operation relevant to the submitted attempt joined by unique step ID, and an
 exact target/path match. Query operations and filter values are independent and
-are never used as attempt provenance. Targets come from the submitted attempt
-and its requested/normalized/observed path evidence. Supported operations are:
+are never used as attempt provenance. Targets come from the submitted attempt,
+its requested and worker-observed paths, and the host's after-orchestration
+`attempt.path_diagnostics` forms; each admitted source is named in
+`matching_evidence.path_sources`, the host forms as
+`runner_host.after_orchestration.<form>`. A kernel record names the resolved
+path, so a target reached through a symlink (such as `/etc/hosts`) correlates
+through `realpath_resolved`, and a created or unlinked entry through
+`parent_realpath_resolved`. Supported operations are:
 
 | Attempt | Relevant event operations |
 | --- | --- |

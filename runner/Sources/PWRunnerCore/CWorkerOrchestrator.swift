@@ -728,7 +728,6 @@ func buildAttemptResult(
             outcome: AttemptOutcome.unsupported,
             error: "kind='\(step.attempt.kind)', action='\(step.attempt.action)' not implemented",
             requested_path: step.attempt.target,
-            normalized_path: nil,
             observed_path: nil
         )
     }
@@ -741,7 +740,6 @@ func buildAttemptResult(
             outcome: AttemptOutcome.notRunWorkerDied,
             error: "no completed attempt result: slot unavailable",
             requested_path: step.attempt.target,
-            normalized_path: nil,
             observed_path: nil
         )
     }
@@ -752,7 +750,6 @@ func buildAttemptResult(
             outcome: AttemptOutcome.notRunWorkerDied,
             error: "no completed attempt result: slot publication incomplete",
             requested_path: step.attempt.target,
-            normalized_path: nil,
             observed_path: nil
         )
     }
@@ -797,9 +794,6 @@ func buildAttemptResult(
         outcome: outcome,
         error: s.error,
         requested_path: step.attempt.target,
-        normalized_path: nil,        // path canonicalization for file
-                                     // attempts is left to host-side
-                                     // enrichment (see enrichPathDiagnostics)
         observed_path: s.observedPath,
         child_pid: s.childPid.map { Int($0) },
         child_exit_code: s.childExitCode.map { Int($0) },

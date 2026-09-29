@@ -32,6 +32,25 @@ func canonicalizePath(_ input: String) -> CanonicalPath {
     return CanonicalPath(input: input, normalized: normalized, resolved: nil)
 }
 
+/// The parent directory through realpath(3) with the literal leaf appended:
+/// the path form the kernel names for a created or unlinked entry, or for a
+/// symlink acted on itself. Nil for a relative path, a missing or dot leaf, or a
+/// parent the host cannot resolve.
+func parentRealpathResolved(_ input: String) -> String? {
+    guard input.hasPrefix("/"), !input.hasSuffix("/"), let slash = input.lastIndex(of: "/") else {
+        return nil
+    }
+    let leaf = String(input[input.index(after: slash)...])
+    if leaf.isEmpty || leaf == "." || leaf == ".." {
+        return nil
+    }
+    let parent = slash == input.startIndex ? "/" : String(input[..<slash])
+    guard let resolvedParent = canonicalizePath(parent).resolved else {
+        return nil
+    }
+    return resolvedParent == "/" ? "/" + leaf : resolvedParent + "/" + leaf
+}
+
 // Resolve the kernel's view of an open file descriptor, when available.
 func observedPathForFd(_ fd: Int32) -> String? {
     var buf = [CChar](repeating: 0, count: Int(PATH_MAX))

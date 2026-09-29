@@ -1054,7 +1054,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Synthesized maximal reply",
-      "value": 21660314,
+      "value": 24051866,
       "unit": "bytes",
       "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present.",
       "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",
@@ -1092,7 +1092,7 @@
       "id": "controller_output",
       "section": "transport",
       "title": "Runner client output",
-      "value": 67108864,
+      "value": 75497472,
       "unit": "bytes",
       "counting": "Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap.",
       "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
@@ -1159,7 +1159,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under a fixed 30-second test allowance for the unoptimized build. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
+      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under the production default allowance. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
     },
     {
       "id": "log_show_stdout",
@@ -1293,7 +1293,7 @@
       "title": "Default log collection timeout",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. Standalone show uses the same finite default.",
+      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default.",
       "effect": "Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations.",
       "control": "Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture.",
       "sources": [
@@ -1346,6 +1346,40 @@
       "behavior": "Owned orphan controls cover leader death before reply, pipes open or closed, group absence, failed signalling/probing and lost ownership. The bound concerns supervised waiting, not OS scheduling."
     },
     {
+      "id": "log_report_reserve",
+      "section": "evidence",
+      "title": "Log report reserve",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged.",
+      "effect": "An inner deadline cutoff arrives as an intact observer reply with its retained diagnostics; an allowance at or below the reserve leaves no time for the query itself.",
+      "control": "Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection.",
+      "sources": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "LOG_REPORT_RESERVE_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/log_capture.rs",
+          "symbol": "documented_collection_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/bin/sandbox-log-observer.rs",
+          "symbol": "inner_timeout_preserves_available_record_and_actual_child_wait",
+          "kind": "boundary"
+        },
+        {
+          "path": "controller/src/log_replay_tests.rs",
+          "symbol": "timeout_override_changes_waiting_only_across_both_boundaries",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "A short inner allowance cuts off the log child while the observer's report, including its inner cutoff, still reaches the controller; a stalled query exhausts the reserved inner allowance and is reported the same way."
+    },
+    {
       "id": "log_deny_events",
       "section": "evidence",
       "title": "Parsed deny events",
@@ -1370,9 +1404,14 @@
           "path": "controller/src/bin/sandbox-log-observer.rs",
           "symbol": "event_limit_withholds_completion_without_discarding_retained_diagnostics",
           "kind": "boundary"
+        },
+        {
+          "path": "controller/src/sandbox_log.rs",
+          "symbol": "maximum_event_volume_correlates_within_the_default_allowance",
+          "kind": "boundary"
         }
       ],
-      "behavior": "Exact and over-limit fixtures retain diagnostics and distinguish complete capture from overflow."
+      "behavior": "Exact and over-limit fixtures retain diagnostics and distinguish complete capture from overflow. The maximum event volume correlates against a 256-step plan inside the default collection allowance."
     },
     {
       "id": "log_candidate_count",

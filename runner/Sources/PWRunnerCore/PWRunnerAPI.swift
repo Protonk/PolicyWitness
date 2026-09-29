@@ -163,7 +163,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 3
-    public static let responseSchema: Int = 11
+    public static let responseSchema: Int = 12
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -416,77 +416,156 @@ public struct PWRunnerPathDiagnostics: Codable {
         self.firmlink_resolved = firmlink_resolved
     }
 
-    enum CodingKeys: String, CodingKey {
-        case observer, phase
-        case input
-        case same_as_input
-        case realpath_resolved
-        case firmlink_resolved
-    }
-
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+        var container = encoder.container(keyedBy: PathFormKey.self)
         try container.encodeIfPresent(observer, forKey: .observer)
         try container.encodeIfPresent(phase, forKey: .phase)
         try container.encode(input, forKey: .input)
-        var sameAsInput: [String] = []
-        let forms: [(String, CodingKeys, String?)] = [
-            ("realpath_resolved", .realpath_resolved, realpath_resolved),
-            ("firmlink_resolved", .firmlink_resolved, firmlink_resolved),
-        ]
-        for (name, key, value) in forms {
-            if let absent = legacyAbsentForms {
-                if let value {
-                    try container.encode(value, forKey: key)
-                } else if !absent.contains(name) {
-                    try container.encodeNil(forKey: key)
-                }
-            } else if let value, value.utf8.elementsEqual(input.utf8) {
-                sameAsInput.append(name)
-            } else if let value {
-                try container.encode(value, forKey: key)
-            } else {
-                // Explicit null: the host computed this form and got nothing.
-                try container.encodeNil(forKey: key)
-            }
-        }
-        if legacyAbsentForms == nil {
-            try container.encode(sameAsInput, forKey: .same_as_input)
-        }
+        try encodePathForms(&container, input: input,
+            forms: [("realpath_resolved", realpath_resolved), ("firmlink_resolved", firmlink_resolved)],
+            legacyAbsent: legacyAbsentForms)
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let container = try decoder.container(keyedBy: PathFormKey.self)
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
         phase = try container.decodeIfPresent(String.self, forKey: .phase)
         input = try container.decode(String.self, forKey: .input)
-        let compact = container.contains(.same_as_input)
-        let sameAsInput = compact ? try container.decode([String].self, forKey: .same_as_input) : []
-        if Set(sameAsInput).count != sameAsInput.count || !Set(sameAsInput).isSubset(of: Set(Self.formNames)) {
-            throw DecodingError.dataCorruptedError(forKey: .same_as_input, in: container,
-                debugDescription: "same_as_input must contain unique supported form names")
-        }
-        let submitted = input
-        func form(_ key: CodingKeys) throws -> String? {
-            let listed = sameAsInput.contains(key.rawValue)
-            if compact && listed == container.contains(key) {
-                throw DecodingError.dataCorruptedError(forKey: key, in: container,
-                    debugDescription: "form must be either listed in same_as_input or present, exclusively")
+        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames, compactRequired: false)
+        realpath_resolved = decoded.values["realpath_resolved"] ?? nil
+        firmlink_resolved = decoded.values["firmlink_resolved"] ?? nil
+        legacyAbsentForms = decoded.legacyAbsent
+    }
+}
+
+/// Dynamic key for the shared three-state path-form wire rule, so the query
+/// and attempt blocks differ only in their form-name lists.
+struct PathFormKey: CodingKey {
+    var stringValue: String
+    var intValue: Int? { nil }
+    init(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { nil }
+    static let observer = PathFormKey(stringValue: "observer")
+    static let phase = PathFormKey(stringValue: "phase")
+    static let input = PathFormKey(stringValue: "input")
+    static let sameAsInput = PathFormKey(stringValue: "same_as_input")
+}
+
+/// Encode `forms` beside `input`: a form with the same UTF-8 bytes as `input`
+/// is listed in `same_as_input` and omitted, a different form is a string, an
+/// underivable form is an explicit null. A legacy record (`legacyAbsent` set)
+/// keeps its string/null shape without the marker.
+func encodePathForms(_ container: inout KeyedEncodingContainer<PathFormKey>, input: String,
+                     forms: [(String, String?)], legacyAbsent: Set<String>?) throws {
+    var sameAsInput: [String] = []
+    for (name, value) in forms {
+        let key = PathFormKey(stringValue: name)
+        if let absent = legacyAbsent {
+            if let value {
+                try container.encode(value, forKey: key)
+            } else if !absent.contains(name) {
+                try container.encodeNil(forKey: key)
             }
-            if listed { return submitted }
-            let value = try container.decodeIfPresent(String.self, forKey: key)
-            if compact, let value, value.utf8.elementsEqual(submitted.utf8) {
-                throw DecodingError.dataCorruptedError(forKey: key, in: container,
-                    debugDescription: "a form with identical UTF-8 bytes must be listed in same_as_input")
-            }
-            return value
+        } else if let value, value.utf8.elementsEqual(input.utf8) {
+            sameAsInput.append(name)
+        } else if let value {
+            try container.encode(value, forKey: key)
+        } else {
+            // Explicit null: the host computed this form and got nothing.
+            try container.encodeNil(forKey: key)
         }
-        realpath_resolved = try form(.realpath_resolved)
-        firmlink_resolved = try form(.firmlink_resolved)
-        if !compact {
-            legacyAbsentForms = Set([CodingKeys.realpath_resolved, .firmlink_resolved]
-                .filter { !container.contains($0) }.map { $0.rawValue })
+    }
+    if legacyAbsent == nil {
+        try container.encode(sameAsInput, forKey: .sameAsInput)
+    }
+}
+
+/// Decode the forms in `formNames` under the same rule. Without the compact
+/// marker (allowed only when `compactRequired` is false) the omitted forms are
+/// returned as `legacyAbsent`, an unknown rather than an observed failure.
+func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: String, formNames: [String],
+                     compactRequired: Bool) throws -> (values: [String: String?], legacyAbsent: Set<String>?) {
+    let compact = container.contains(.sameAsInput)
+    if compactRequired && !compact {
+        throw DecodingError.dataCorruptedError(forKey: .sameAsInput, in: container,
+            debugDescription: "path diagnostics require same_as_input")
+    }
+    let sameAsInput = compact ? try container.decode([String].self, forKey: .sameAsInput) : []
+    if Set(sameAsInput).count != sameAsInput.count || !Set(sameAsInput).isSubset(of: Set(formNames)) {
+        throw DecodingError.dataCorruptedError(forKey: .sameAsInput, in: container,
+            debugDescription: "same_as_input must contain unique supported form names")
+    }
+    var values: [String: String?] = [:]
+    for name in formNames {
+        let key = PathFormKey(stringValue: name)
+        let listed = sameAsInput.contains(name)
+        if compact && listed == container.contains(key) {
+            throw DecodingError.dataCorruptedError(forKey: key, in: container,
+                debugDescription: "form must be either listed in same_as_input or present, exclusively")
         }
+        if listed {
+            values[name] = .some(input)
+            continue
+        }
+        let value = try container.decodeIfPresent(String.self, forKey: key)
+        if compact, let value, value.utf8.elementsEqual(input.utf8) {
+            throw DecodingError.dataCorruptedError(forKey: key, in: container,
+                debugDescription: "a form with identical UTF-8 bytes must be listed in same_as_input")
+        }
+        values[name] = .some(value)
+    }
+    let legacyAbsent: Set<String>? = compact ? nil
+        : Set(formNames.filter { !container.contains(PathFormKey(stringValue: $0)) })
+    return (values, legacyAbsent)
+}
+
+// The unsandboxed host's after-orchestration resolution of a file or exec
+// attempt target. `realpath_resolved` follows the leaf; `parent_realpath_resolved`
+// resolves the parent and keeps the leaf literal, the form the kernel names for
+// a created or unlinked path. Neither establishes what the worker's own syscall
+// resolved: they are candidate evidence for deny-log correlation only. The
+// block exists from response 12 and is always compact.
+public struct PWRunnerAttemptPathDiagnostics: Codable {
+    public static let formNames = ["realpath_resolved", "parent_realpath_resolved"]
+
+    public var observer: String?
+    public var phase: String?
+    public var input: String
+    public var realpath_resolved: String?
+    public var parent_realpath_resolved: String?
+
+    public init(
+        input: String,
+        realpath_resolved: String? = nil,
+        parent_realpath_resolved: String? = nil,
+        observer: String? = nil,
+        phase: String? = nil
+    ) {
+        self.observer = observer
+        self.phase = phase
+        self.input = input
+        self.realpath_resolved = realpath_resolved
+        self.parent_realpath_resolved = parent_realpath_resolved
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: PathFormKey.self)
+        try container.encodeIfPresent(observer, forKey: .observer)
+        try container.encodeIfPresent(phase, forKey: .phase)
+        try container.encode(input, forKey: .input)
+        try encodePathForms(&container, input: input,
+            forms: [("realpath_resolved", realpath_resolved), ("parent_realpath_resolved", parent_realpath_resolved)],
+            legacyAbsent: nil)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: PathFormKey.self)
+        observer = try container.decodeIfPresent(String.self, forKey: .observer)
+        phase = try container.decodeIfPresent(String.self, forKey: .phase)
+        input = try container.decode(String.self, forKey: .input)
+        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames, compactRequired: true)
+        realpath_resolved = decoded.values["realpath_resolved"] ?? nil
+        parent_realpath_resolved = decoded.values["parent_realpath_resolved"] ?? nil
     }
 }
 
@@ -628,7 +707,9 @@ public struct PWRunnerAttemptResult: Codable {
     public var outcome: String
     public var error: String?
     public var requested_path: String?
-    public var normalized_path: String?
+    /// Host-resolved forms of the attempt target; absent for non-path attempts
+    /// and in replies before response 12.
+    public var path_diagnostics: PWRunnerAttemptPathDiagnostics?
     public var observed_path: String?
 
     /// Exec-attempt outputs. All five are nil for non-exec attempts and
@@ -658,7 +739,7 @@ public struct PWRunnerAttemptResult: Codable {
         outcome: String,
         error: String? = nil,
         requested_path: String? = nil,
-        normalized_path: String? = nil,
+        path_diagnostics: PWRunnerAttemptPathDiagnostics? = nil,
         observed_path: String? = nil,
         child_pid: Int? = nil,
         child_exit_code: Int? = nil,
@@ -673,7 +754,7 @@ public struct PWRunnerAttemptResult: Codable {
         self.outcome = outcome
         self.error = error
         self.requested_path = requested_path
-        self.normalized_path = normalized_path
+        self.path_diagnostics = path_diagnostics
         self.observed_path = observed_path
         self.child_pid = child_pid
         self.child_exit_code = child_exit_code
@@ -692,7 +773,7 @@ public struct PWRunnerAttemptResult: Codable {
         case outcome
         case error
         case requested_path
-        case normalized_path
+        case path_diagnostics
         case observed_path
         case child_pid
         case child_exit_code
@@ -728,11 +809,7 @@ public struct PWRunnerAttemptResult: Codable {
         } else {
             try container.encodeNil(forKey: .requested_path)
         }
-        if let normalized_path {
-            try container.encode(normalized_path, forKey: .normalized_path)
-        } else {
-            try container.encodeNil(forKey: .normalized_path)
-        }
+        try container.encodeIfPresent(path_diagnostics, forKey: .path_diagnostics)
         if let observed_path {
             try container.encode(observed_path, forKey: .observed_path)
         } else {
@@ -767,7 +844,7 @@ public struct PWRunnerAttemptResult: Codable {
         outcome = try container.decode(String.self, forKey: .outcome)
         error = try container.decodeIfPresent(String.self, forKey: .error)
         requested_path = try container.decodeIfPresent(String.self, forKey: .requested_path)
-        normalized_path = try container.decodeIfPresent(String.self, forKey: .normalized_path)
+        path_diagnostics = try container.decodeIfPresent(PWRunnerAttemptPathDiagnostics.self, forKey: .path_diagnostics)
         observed_path = try container.decodeIfPresent(String.self, forKey: .observed_path)
         child_pid = try container.decodeIfPresent(Int.self, forKey: .child_pid)
         child_exit_code = try container.decodeIfPresent(Int.self, forKey: .child_exit_code)

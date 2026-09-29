@@ -94,7 +94,6 @@ def main():
         ("attempt", "rc", "missing attempt.rc"),
         ("attempt", "errno", "missing attempt.errno"),
         ("attempt", "exit_code", "missing attempt.exit_code"),
-        ("attempt", "normalized_path", "missing attempt.normalized_path"),
         ("attempt", "observed_path", "missing attempt.observed_path"),
     ):
         broken, steps = mutate()

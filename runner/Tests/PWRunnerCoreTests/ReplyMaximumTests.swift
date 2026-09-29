@@ -42,7 +42,7 @@ private let stringPolicy: [String: Int?] = [
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
-    "realpath_resolved": 1023, "firmlink_resolved": 1023, "normalized_path": 1023,
+    "realpath_resolved": 1023, "firmlink_resolved": 1023, "parent_realpath_resolved": 1023,
     "observed_path": PWShmLayout.observedPathMax - 1, "stdout": PWShmLayout.childOutputBytes - 1,
     "stderr": PWShmLayout.childOutputBytes - 1, "text": PWShmLayout.diagnosticBytes - 1,
     // Generated below rather than filled: valid base64 and the validator's own line.
@@ -86,7 +86,11 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     check["path_diagnostics"] = diagnostics
     step["sandbox_check"] = check
     var attempt = step["attempt"] as! [String: Any]
-    attempt["normalized_path"] = maximal(1023)
+    var attemptPaths = attempt["path_diagnostics"] as! [String: Any]
+    attemptPaths["same_as_input"] = [String]()
+    attemptPaths["realpath_resolved"] = maximal(1023)
+    attemptPaths["parent_realpath_resolved"] = maximal(1023)
+    attempt["path_diagnostics"] = attemptPaths
     attempt["observed_path"] = maximal(PWShmLayout.observedPathMax - 1)
     attempt["error"] = maximal(PWShmLayout.errorMax - 1)
     attempt["stdout"] = maximal(PWShmLayout.childOutputBytes - 1)

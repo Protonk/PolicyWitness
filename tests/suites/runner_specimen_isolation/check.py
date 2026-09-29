@@ -181,11 +181,10 @@ def exercise_checker(witnesses, envelopes, out):
                          ('syscall_errno', 'true', 'invalid attempt.syscall_errno'),
                          ('syscall_errno', 'false', 'invalid attempt.syscall_errno')]
             else:
-                # The bounded audit's complete 24-case measurement, including
-                # the two legitimate omissions of optional diagnostic text.
+                # The bounded audit's complete measurement, including the two
+                # legitimate omissions of optional diagnostic text.
                 cases = [(key, 'delete', f'missing attempt.{key}') for key in
-                         ('rc', 'exit_code', 'errno', 'syscall_errno', 'requested_path',
-                          'normalized_path', 'observed_path')]
+                         ('rc', 'exit_code', 'errno', 'syscall_errno', 'requested_path', 'observed_path')]
                 cases += [('outcome', 'delete', 'attempt outcome:'), ('error', 'delete', None),
                           ('errno', 'null', 'attempt.errno mismatch'),
                           ('exit_code', 'null', 'invalid attempt.exit_code'),

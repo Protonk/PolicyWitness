@@ -7,16 +7,16 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 11, worker ABI 7, controller envelope 3. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 11 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 12 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 3 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 4 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -93,6 +93,7 @@ response and worker ABI reading rules are independent of this optional channel.
 | 9 | `sandbox_check.effective_filter_value` is gone; it always equaled `filter_value`. `path_diagnostics` names the forms equal to `input` in `same_as_input` and omits their keys, carries `realpath_resolved` and `firmlink_resolved` only when they differ (a string) or could not be derived (null), and no longer carries the `data_volume_form` heuristic. Each form is in exactly one of those states; equality means identical UTF-8 bytes. Conflicting or missing states are malformed; legacy omissions remain unreported. |
 | 10 | `runner_subprocess.disposition`, the worker disposition record, is mandatory beside a worker subprocess, with the host facts `cleanup_trigger`, `grace_end` and `collection_basis`, and `steps[].attempt.lifecycle` with its `attempt:*` lifecycle limitations. Readers validate the record against the raw facts it cites and project from it; a subprocess without the record at this version is invalid, not a legacy omission. Omission in older replies is unreported. See tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record". |
 | 11 | Exec attempt status is independent of the leader's exit status: a deadline or observation/cleanup failure can produce `exec_failed` and `rc=-1` while `child_exit_code=0` preserves the observed natural exit. For a spawned child whose final status is unconfirmed, `child_exit_code=-1` and `child_term_signal=0` establish neither an exit nor a signal; the attempt diagnostic retains the observation/cleanup failure. Replies before this number could report success at a deadline when the leader had already exited. |
+| 12 | `steps[].attempt.path_diagnostics` carries the unsandboxed host's after-orchestration resolution of a file or exec attempt target: `realpath_resolved` (leaf followed) and `parent_realpath_resolved` (parent resolved, leaf literal), under the same three-state `same_as_input` rule as the query block, always compact, with `observer` and `phase`. `steps[].attempt.normalized_path`, never populated, is gone. Neither form establishes what the worker's own syscall resolved; they are candidate evidence for deny-log correlation only. |
 
 Response 10 replies produced from request 3 onward may carry `unit: "nul_bytes"`
 in `admission_failure`, with `maximum` 0 and `actual` the count of embedded NULs
@@ -115,6 +116,7 @@ refusal it cannot quantify, never as an accepted request.
 | 1 | Initial shape. `data.sandbox_log_capture.window` recorded a trailing `last` lookback (`kind: "trailing"`), and `data.log_last` echoed the flag that set it. |
 | 2 | Deny-log capture requests the runner client's own span: `window` carries `kind: "runner_client_span"`, the client's start and end milliseconds and the whole-second UTC `start`/`end` strings handed to `log show`; `last` and `data.log_last` are gone. Reversed clock readings retain the milliseconds with null bounds and `capture_status: "invalid_window"`, without invoking the observer. `runner_sandbox_diagnostics.permission_failures_without_record` names the steps whose attempt reported a permission-shaped failure that no captured event records. A reply for different or missing bounds or a trailing lookback is `window_mismatch`; raw observer evidence survives without candidate or diagnostic correlation. |
 | 3 | `runner_sandbox_diagnostics` projects the worker disposition record: `termination_cause` names witnessed host cleanup (`host_sentinel_deadline`, `host_exit_grace_exhausted`, `host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`) instead of a blanket `unknown`, `stop_reason` carries the projected poll stop reason, `disposition_integrity` and `disposition_issues` report validation, and `process_disposition` adds `conflicting`, `withheld` and `unrecognized`. Legacy replies without the record keep the raw-status projection with `unknown` and `not_reported`. |
+| 4 | `data.sandbox_log_capture` adds `supervision` (the controller's observer capture: shared budget, `reserve_ms`, elapsed time, per-stream limits and counts, process wait and owned-group cleanup facts), `processing_cutoff`, `window.pad_seconds` (2; absence in older envelopes means 0) and the `capture_status` values `timeout` and `overflow`; `observer.data.collection` carries the observer's log-child capture, which stops 1,000 ms before the shared deadline. Any incomplete collection withholds every correlation. Candidate `matching_evidence.path_sources` may name a host-resolved attempt path form beside the submitted, requested and observed sources. |
 
 | Request | Introduced |
 | --- | --- |

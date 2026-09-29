@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::process::Command;
 
@@ -190,6 +191,10 @@ fn attempt_operations(attempt: &Value) -> &'static [&'static str] {
     }
 }
 
+fn step_id(value: &Value) -> Option<&str> {
+    value.get("step_id").and_then(Value::as_str)
+}
+
 #[cfg(test)]
 pub fn match_step_denies(
     steps: &[Value],
@@ -231,6 +236,33 @@ pub fn bounded_step_denies(
             return Err(Cutoff::limit("correlation_overflow", name, limit, count));
         }
     }
+    // A duplicate ID on either side makes the provenance join unusable. Resolve
+    // the join once, in reply order; each event then costs one pass over the
+    // joined steps instead of a rescan of both arrays per step.
+    let mut reply_ids: HashMap<&str, usize> = HashMap::new();
+    for id in steps.iter().filter_map(step_id) {
+        *reply_ids.entry(id).or_insert(0) += 1;
+    }
+    let mut requests: HashMap<&str, Option<&Value>> = HashMap::new();
+    for request in submitted_plan {
+        if let Some(id) = step_id(request) {
+            requests
+                .entry(id)
+                .and_modify(|unique| *unique = None)
+                .or_insert(Some(request));
+        }
+    }
+    let joined: Vec<(&str, &Value, &Value)> = steps
+        .iter()
+        .filter_map(|step| {
+            let id = step_id(step)?;
+            if reply_ids.get(id) != Some(&1) {
+                return None;
+            }
+            let request = (*requests.get(id)?)?;
+            Some((id, step, request.get("attempt")?))
+        })
+        .collect();
     let mut out = Vec::new();
     let mut total_matches = 0;
     let mut total_bytes = 0usize;
@@ -250,31 +282,7 @@ pub fn bounded_step_denies(
         };
         let mut candidates = Vec::new();
         let mut matching_evidence = Vec::new();
-        for step in steps {
-            let Some(id) = step.get("step_id").and_then(Value::as_str) else {
-                continue;
-            };
-            // A duplicate ID on either side makes the provenance join unusable.
-            if steps
-                .iter()
-                .filter(|s| s.get("step_id").and_then(Value::as_str) == Some(id))
-                .count()
-                != 1
-            {
-                continue;
-            }
-            let mut submitted = submitted_plan
-                .iter()
-                .filter(|s| s.get("step_id").and_then(Value::as_str) == Some(id));
-            let Some(request) = submitted.next() else {
-                continue;
-            };
-            if submitted.next().is_some() {
-                continue;
-            }
-            let Some(attempt) = request.get("attempt") else {
-                continue;
-            };
+        for &(id, step, attempt) in &joined {
             if !attempt_operations(attempt).contains(&operation) {
                 continue;
             }
@@ -292,8 +300,36 @@ pub fn bounded_step_denies(
                     path_sources.push(format!("attempt.{key}"));
                 }
             }
-            // normalized_path has no guaranteed observer/phase on legacy replies;
-            // an unowned enrichment alone cannot establish a candidate match.
+            // Host-resolved forms of the attempt target count only with their
+            // observer/phase provenance. The block is always compact: a form
+            // listed in same_as_input equals the input, a string is the derived
+            // form, null derived nothing. A malformed block supplies no identity.
+            if let Some(forms) = step.get("attempt").and_then(|a| a.get("path_diagnostics")) {
+                let label = |key: &str| {
+                    forms
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .filter(|text| !text.is_empty())
+                };
+                if let (Some(observer), Some(phase), Some(input), Some(listed)) = (
+                    label("observer"),
+                    label("phase"),
+                    forms.get("input").and_then(Value::as_str),
+                    forms.get("same_as_input").and_then(Value::as_array),
+                ) {
+                    for name in ["realpath_resolved", "parent_realpath_resolved"] {
+                        let is_listed = listed.iter().any(|n| n.as_str() == Some(name));
+                        let value = match (is_listed, forms.get(name)) {
+                            (true, None) => Some(input),
+                            (false, Some(form)) => form.as_str(),
+                            _ => None,
+                        };
+                        if value == Some(path) {
+                            path_sources.push(format!("{observer}.{phase}.{name}"));
+                        }
+                    }
+                }
+            }
             if !path_sources.is_empty() {
                 total_matches += 1;
                 if total_matches > log_capture::MAX_ASSOCIATIONS {
@@ -518,6 +554,7 @@ pub(crate) fn parse_supervised_observer(
                 .is_some_and(|r| d["log_rc"].as_i64() == r.process.exit_code.map(i64::from))
     }) && inner.as_ref().is_some_and(|inner| {
         inner.boundary == Boundary::LogShow
+            && inner.reserve_ms == log_capture::LOG_REPORT_RESERVE_MS
             && inner.budget.deadline_monotonic_ns == report.budget.deadline_monotonic_ns
             && inner.budget.started_monotonic_ns == report.budget.started_monotonic_ns
             && inner.budget.timeout_ms == report.budget.timeout_ms
@@ -725,6 +762,7 @@ mod tests {
             "bad_pid",
             "missing_collection",
             "wrong_budget",
+            "wrong_reserve",
             "bad_observed",
             "bad_exit",
             "bad_metadata",
@@ -738,7 +776,12 @@ mod tests {
             let mut inner = Command::new("/usr/bin/python3");
             inner.args(["-c", "import os,sys; os.write(1,sys.argv[1].encode()+b'\\n'); os.write(1,b'x'*int(sys.argv[2])); sys.exit(int(sys.argv[3]))", line,
                 if scenario == "overflow" { "1048577" } else { "0" }, if scenario == "nonzero" { "7" } else { "0" }]);
-            let inner = log_capture::capture(&mut inner, budget, Boundary::LogShow);
+            let inner = log_capture::capture_reserving(
+                &mut inner,
+                budget,
+                Boundary::LogShow,
+                log_capture::LOG_REPORT_RESERVE_MS,
+            );
             let window = SandboxLogWindow::runner_client_span(1000, 2500);
             let mut body = json!({"kind":"sandbox_log_observer_report", "data": {
                 "observer_schema_version":1, "mode":"show", "pid":42, "process_name":"pw-probe-runner",
@@ -763,6 +806,7 @@ mod tests {
                     body["data"]["collection"]["budget"]["deadline_monotonic_ns"] =
                         json!(budget.deadline_monotonic_ns + 1)
                 }
+                "wrong_reserve" => body["data"]["collection"]["reserve_ms"] = json!(0),
                 _ => (),
             }
             // File-backed stdin avoids argv limits for the intact, bounded
@@ -916,6 +960,38 @@ mod tests {
                 .as_deref(),
             Some("submitted_steps")
         );
+    }
+
+    #[test]
+    fn maximum_event_volume_correlates_within_the_default_allowance() {
+        // The provenance join is resolved once per capture. Rescanning both step
+        // arrays for every event made 8192 worker events against 256 steps
+        // exhaust the production allowance in an unoptimized build.
+        let steps: Vec<_> = (0..256)
+            .map(|i| json!({"step_id": format!("s{i}")}))
+            .collect();
+        let plan: Vec<_> = (0..256).map(|i| json!({"step_id": format!("s{i}"), "attempt": {"kind": "file", "action": "open_read", "target": format!("/p{i}")}})).collect();
+        let events: Vec<_> = (0..log_capture::MAX_DENY_EVENTS)
+            .map(|i| SandboxDenyEvent {
+                pid: Some(42),
+                process: Some("pw-probe-runner".into()),
+                operation: Some("file-read-data".into()),
+                path: Some(if i < 256 {
+                    format!("/p{i}")
+                } else {
+                    format!("/unplanned/{i}")
+                }),
+                raw_line: None,
+            })
+            .collect();
+        let budget = LogTimeout::default().start().unwrap();
+        let matches = bounded_step_denies(&steps, &plan, &events, Some(42), Some(budget))
+            .expect("maximum event volume must correlate inside the default allowance");
+        assert_eq!(matches.len(), 256);
+        for (i, matching) in matches.iter().enumerate() {
+            assert_eq!(matching.event_index, i);
+            assert_eq!(matching.candidate_step_ids, [format!("s{i}")]);
+        }
     }
 
     #[test]
@@ -1126,18 +1202,84 @@ mod tests {
         );
     }
     #[test]
-    fn unowned_normalization_alone_does_not_supply_path_identity() {
-        let step = serde_json::json!({"step_id":"s", "attempt":{"normalized_path":"/later"}});
-        let plan = [request("s", "open_read", "/submitted")];
-        let event = [deny(Some(42), "file-read-data", "/later")];
-        assert!(match_step_denies(&[step.clone()], &plan, &event, Some(42)).is_empty());
-        let mut observed = step;
-        observed["attempt"]["observed_path"] = serde_json::json!("/later");
-        let matches = match_step_denies(&[observed], &plan, &event, Some(42));
+    fn host_resolved_attempt_forms_supply_identity_only_with_provenance() {
+        let plan = [request("s", "open_read", "/link/file")];
+        let event = [deny(Some(42), "file-read-data", "/real/file")];
+        let block = |provenance: bool| {
+            let mut forms = json!({"input": "/link/file", "same_as_input": [],
+                "realpath_resolved": "/real/file", "parent_realpath_resolved": "/real/file"});
+            if provenance {
+                forms["observer"] = json!("runner_host");
+                forms["phase"] = json!("after_orchestration");
+            }
+            json!({"step_id": "s", "attempt": {"requested_path": "/link/file", "path_diagnostics": forms}})
+        };
+        assert!(match_step_denies(&[block(false)], &plan, &event, Some(42)).is_empty());
+        let matches = match_step_denies(&[block(true)], &plan, &event, Some(42));
         assert_eq!(matches.len(), 1);
         assert_eq!(
             matches[0].matching_evidence[0].path_sources,
-            ["attempt.observed_path"]
+            [
+                "runner_host.after_orchestration.realpath_resolved",
+                "runner_host.after_orchestration.parent_realpath_resolved"
+            ]
+        );
+        // A form listed as equal to the input carries the input's bytes and
+        // nothing else; a malformed listing (listed and present) supplies none.
+        let mut listed = block(true);
+        listed["attempt"]["path_diagnostics"] = json!({"input": "/link/file",
+            "same_as_input": ["realpath_resolved"], "parent_realpath_resolved": null,
+            "observer": "runner_host", "phase": "after_orchestration"});
+        assert!(match_step_denies(&[listed.clone()], &plan, &event, Some(42)).is_empty());
+        let same = [deny(Some(42), "file-read-data", "/link/file")];
+        let matches = match_step_denies(&[listed.clone()], &plan, &same, Some(42));
+        assert_eq!(
+            matches[0].matching_evidence[0].path_sources,
+            [
+                "submitted_attempt.target",
+                "attempt.requested_path",
+                "runner_host.after_orchestration.realpath_resolved"
+            ]
+        );
+        listed["attempt"]["path_diagnostics"]["realpath_resolved"] = json!("/link/file");
+        let matches = match_step_denies(&[listed], &plan, &same, Some(42));
+        assert_eq!(
+            matches[0].matching_evidence[0].path_sources,
+            ["submitted_attempt.target", "attempt.requested_path"]
+        );
+    }
+    #[test]
+    fn parent_form_matches_created_and_unlinked_records() {
+        let step = json!({"step_id": "s", "attempt": {"requested_path": "/link/new",
+            "path_diagnostics": {"input": "/link/new", "same_as_input": [],
+                "realpath_resolved": null, "parent_realpath_resolved": "/real/new",
+                "observer": "runner_host", "phase": "after_orchestration"}}});
+        for (action, op) in [
+            ("create", "file-write-create"),
+            ("unlink", "file-write-unlink"),
+        ] {
+            let plan = [request("s", action, "/link/new")];
+            let matches = match_step_denies(
+                &[step.clone()],
+                &plan,
+                &[deny(Some(42), op, "/real/new")],
+                Some(42),
+            );
+            assert_eq!(matches.len(), 1, "{action}");
+            assert_eq!(
+                matches[0].matching_evidence[0].path_sources,
+                ["runner_host.after_orchestration.parent_realpath_resolved"]
+            );
+        }
+        // Null forms derive nothing; a record under any other path stays unmatched.
+        assert!(
+            match_step_denies(
+                &[step],
+                &[request("s", "create", "/link/new")],
+                &[deny(Some(42), "file-write-create", "/other/new")],
+                Some(42)
+            )
+            .is_empty()
         );
     }
     #[test]

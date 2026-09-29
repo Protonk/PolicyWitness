@@ -18,7 +18,7 @@ def supervision(boundary):
     def stream(limit):
         return dict(limit_bytes=limit, bytes_read=0, bytes_retained=0, eof=True, truncated=False, read_error=None)
     outer = boundary == 'observer'
-    return dict(boundary=boundary, budget=budget, elapsed_ms=20, cutoff=None,
+    return dict(boundary=boundary, budget=budget, reserve_ms=0 if outer else 1000, elapsed_ms=20, cutoff=None,
         stdout=stream(33554432 if outer else 1048576), stderr=stream(131072),
         process=dict(pid=101 if outer else 102, exit_observed=True, reaped=True, exit_code=0, term_signal=None, wait_error=None),
         cleanup=dict(scope='process_group' if outer else 'direct_child', target=101 if outer else 102,
@@ -56,7 +56,7 @@ def complete(which=('early', 'late')):
         capture_status='captured', correlation_status='pid_match' if events else 'no_match',
         first_deny=dict(event_index=0) if events else None,
         permission_failures_without_record=[name for name in ('early','late') if name not in which])
-    return dict(result=dict(ok=True, exit_code=0, normalized_outcome='ok'), data=dict(
+    return dict(schema_version=4, result=dict(ok=True, exit_code=0, normalized_outcome='ok'), data=dict(
         runner_client=dict(started_at_unix_ms=1000, ended_at_unix_ms=2500),
         runner_result=dict(schema_version=7, normalized_outcome='ok', runner_subprocess=dict(pid=42, exit_code=0),
             steps=[dict(step_id=name, attempt=dict(native_rc=-1, errno=1),
@@ -172,6 +172,8 @@ def main():
         ('no_cutoff',lambda e:unavailable(e,'timeout'),'budget status without a cutoff'),
         ('missing_report',lambda e:e['data']['sandbox_log_capture'].update(observer=None,deny_events=None,observed_deny=None),'complete observer reply missing'),
         ('bad_bounds',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(end='1970-01-01 00:00:06+0000'),'wrong observer query bounds'),
+        ('wrong_reserve',lambda e:e['data']['sandbox_log_capture']['observer']['data']['collection'].update(reserve_ms=0),'wrong report reserve'),
+        ('old_envelope',lambda e:e.update(schema_version=3),'collection facts require controller envelope 4'),
         ('blocked_data',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(blocked_reason='Cannot run while sandboxed'),'required unified-log access blocked'),
         ('bad_shape',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(observer_schema_version=None),'malformed observer reply'),
         ('wrong_worker',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(pid=99),'wrong observer identity'),
