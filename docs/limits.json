@@ -727,7 +727,7 @@
       "title": "Validator I/O test override floor",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Minimum effective _test_overrides.validator_io_timeout_ms; request schema remains 1.",
+      "counting": "Minimum effective _test_overrides.validator_io_timeout_ms.",
       "effect": "Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply.",
       "control": "Production default and internal test equipment; not a public CLI tuning interface.",
       "sources": [
@@ -1256,7 +1256,7 @@
       "unit": "seconds",
       "counting": "Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition.",
       "effect": "Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection.",
-      "control": "Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero.",
+      "control": "Fixed; no public override. window.pad_seconds records the pad.",
       "sources": [
         {
           "path": "controller/src/sandbox_log.rs",

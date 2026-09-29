@@ -52,6 +52,11 @@ bundle scaffolding under `runner/Services/PWRunner/`.
     the C worker.
 - `Sources/PWRunnerCore/ProbeRunner.swift`
   - `sandbox_check` helpers and shared prediction-unavailable metadata.
+    `predictionUnavailableOpFilters` is the set of `(operation, filter_kind)`
+    pairs the runner never predicts. Adding a pair requires empirical
+    verification with `tests/suites/witness_contract/harness/verify_filter_id.sh`;
+    the `source_drift` suite checks the set against the pairs listed in the
+    user guide.
 - `Sources/PWRunnerCore/PathUtils.swift`
   - Path normalization and fd-based observation helpers.
 - `Sources/PWRunnerCore/Signals.swift`

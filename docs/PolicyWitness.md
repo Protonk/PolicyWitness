@@ -1,36 +1,6 @@
 # PolicyWitness User Guide
 
-## Opt-in compiled-object receipt
-
-An SBPL policy may set `capture_applied_profile: true` and a fresh per-application
-`capture_nonce` (32 lowercase hexadecimal characters). The runner adds
-`data.runner_result.applied_profile`, with its own `schema_version: 1`. A
-`status: "captured"` receipt contains `worker_pid`, `request_nonce`, `profile_type`,
-`bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
-`source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
-the caller must arrange restricted receipt storage before opting in.
-
-The C worker copies the bytecode from the same compiler-result pointer it passes
-to `sandbox_apply`, before applying. The host requires successful apply,
-complete worker exit, matching PID/nonce, lengths, input identities and payload
-checksum before publication. Missing capture, failed apply, worker death or
-capture corruption is unavailable; no expected digest is accepted as an output.
-An unavailable nested receipt has a reason and no bytecode, or is absent if no
-worker result was obtained. Capture identifies the supplied compiled object, not
-kernel readback.
-
-Source identity hashes the UTF-8 C string consumed by compilation. Parameter
-identity is SHA-256 of the little-endian 32-bit pair count followed by sorted
-32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,
-LE32 value-byte count, then value UTF-8 bytes. The worker hashes its private copy
-of the strings passed to `sandbox_set_param`; the host independently recomputes
-the identity. Pair ordering is irrelevant, consumed values are not. Embedded NUL
-inputs cannot qualify as matching complete requested inputs. Consumers must join
-the nonce and worker identity to their own request and compare actual decoded
-bytecode with any independently retained expected object. A source hash alone
-does not establish that equality.
-
-PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md); for the project-level pitch see [README.md](../README.md).
+PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [QUESTIONS.md](QUESTIONS.md).
 
 Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
 
@@ -48,10 +18,10 @@ Reading paths: try it via [Quick start](#quick-start), write a specimen via [Spe
 
 Quick start uses the built-in standard runner. If you need entitlements the standard runner doesn't ship — debug-attach, DYLD env, custom dylib loading, JIT — see [External runners (BYOXPC)](#external-runners-byoxpc) below.
 
-Set a convenience variable:
+Set a convenience variable, adjusting the path to wherever `PolicyWitness.app` is installed:
 
 ```sh
-PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
+PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
 ```
 
 Create a specimen:
@@ -132,6 +102,36 @@ resolves them against the system profile search path. `(param "NAME")`
 substitution uses values from `policy.params`. `string-append` of param
 references is supported by the compiler.
 
+### Compiled-object receipt (opt-in)
+
+An SBPL policy may set `capture_applied_profile: true` and a fresh per-application
+`capture_nonce` (32 lowercase hexadecimal characters). The runner adds
+`data.runner_result.applied_profile`, with its own `schema_version: 1`. A
+`status: "captured"` receipt contains `worker_pid`, `request_nonce`, `profile_type`,
+`bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
+`source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
+the caller must arrange restricted receipt storage before opting in.
+
+The C worker copies the bytecode from the same compiler-result pointer it passes
+to `sandbox_apply`, before applying. The host requires successful apply,
+complete worker exit, matching PID/nonce, lengths, input identities and payload
+checksum before publication. Missing capture, failed apply, worker death or
+capture corruption is unavailable; no expected digest is accepted as an output.
+An unavailable nested receipt has a reason and no bytecode, or is absent if no
+worker result was obtained. Capture identifies the supplied compiled object, not
+kernel readback.
+
+Source identity hashes the UTF-8 C string consumed by compilation. Parameter
+identity is SHA-256 of the little-endian 32-bit pair count followed by sorted
+32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,
+LE32 value-byte count, then value UTF-8 bytes. The worker hashes its private copy
+of the strings passed to `sandbox_set_param`; the host independently recomputes
+the identity. Pair ordering is irrelevant, consumed values are not. Embedded NUL
+inputs cannot qualify as matching complete requested inputs. Consumers must join
+the nonce and worker identity to their own request and compare actual decoded
+bytecode with any independently retained expected object. A source hash alone
+does not establish that equality.
+
 ### SBPL check (`sbpl-check`)
 
 `sbpl-check` is a host-side SBPL compiler. The C worker exercises the
@@ -177,9 +177,9 @@ fails to compile is **not** reported as `bad_policy`: it reaches the C
 worker and surfaces as `runner_failed` with an operation=5 compilation record,
 NULL-result evidence and any published compiler diagnostic. Parameter setup
 and application failures have their own operation/result records.
-`bad_policy` in a run is now emitted only by the runner host for a
+In a run, `bad_policy` comes only from the runner host, for a
 structurally invalid policy (missing `sbpl_source`, or a non-`sbpl`
-`format`); the host runs `sbpl-check` itself only on the
+`format`); the controller runs `sbpl-check` only on the
 `xpc_error` path.
 
 The sbpl-check envelope also records the imports closure:
@@ -278,7 +278,7 @@ Shipped augments:
   libSystem-dynamic helper `posix_spawn` under `(deny default)`:
   `(allow process-exec*)`, `(allow process-fork)`, and an
   **unconditional** `(allow file-read*)`. Empirically derived
-  against `tests/fixtures/exec/helper.c`
+  with the project's exec helper fixture
   on macOS 14.8.3 (build 23J220, Darwin 23.6.0).
 
   **This is a pragmatic baseline, not a narrow minimum.**
@@ -393,8 +393,8 @@ import resolution or compilation.
 - Deny-log capture has no fixed lookback limit. The requested interval is the
   runner client's wall-clock span: `floor(start) - 2 s` through `ceil(end) + 2 s`.
   Whole-second rounding accommodates `log show` precision; the additional pad
-  allows for client/archive clock differences. `window.pad_seconds` records 2;
-  its absence in older envelopes means 0. Raw client milliseconds are unchanged.
+  allows for client/archive clock differences. `window.pad_seconds` records 2.
+  Raw client milliseconds are unchanged.
   Reversed endpoints prevent the scan; ordered endpoints
   do not establish clock continuity or complete log delivery. Archive access has
   been observed to cost seconds even for short spans; scan cost is not guaranteed
@@ -433,7 +433,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Polling grace after the host requests exit. Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported. | Production default; test-only controls are not a public tuning interface. |
 | Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement. Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host. | Production default and internal test equipment; not a public CLI tuning interface. |
 | Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. | Production default and internal test equipment; not a public CLI tuning interface. |
-| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective _test_overrides.validator_io_timeout_ms; request schema remains 1. Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply. | Production default and internal test equipment; not a public CLI tuning interface. |
+| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective _test_overrides.validator_io_timeout_ms. Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply. | Production default and internal test equipment; not a public CLI tuning interface. |
 | Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results. |
 | Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Polling grace after closing validator pipes. Expiry triggers a SIGKILL attempt, then reaping; failures remain reported. | Production default; test-only controls are not a public tuning interface. |
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped. | Production default; test-only controls are not a public tuning interface. |
@@ -463,7 +463,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad; absence in older envelopes means zero. |
+| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad. |
 | Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
 | Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
 | Log report reserve (`log_report_reserve`) | 1,000 milliseconds | Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged. Leaves time for an intact observer reply containing the inner cutoff and retained diagnostics. Cleanup and scheduling can consume this reserve; an interrupted report retains only bounded transport diagnostics. An allowance at or below the reserve leaves no time for the query itself. | Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection. |
@@ -516,8 +516,40 @@ the host or client when no worker metadata exists.
 signal, syscall return and errno only on failure. Exit/signal values require a
 successful reap; both are absent/null when disposition is unconfirmed. Wait
 errors retain their phase and native return/errno, including recovered EINTR.
-Old replies missing these fields contain unknown observations, not false values.
 Application remains independently reported by `sandboxed_after_apply`.
+
+`runner_subprocess` also records three host facts where the host acts:
+`cleanup_trigger` (why exit was requested: `deadline_expiry`, `completion`,
+`child_reaped`, `poll_wait_error` or `policy_transfer_error`), `grace_end` (how
+the exit-grace wait ended: `not_entered`, `reaped_during_grace`, `exhausted` or
+`wait_error`) and `collection_basis` (whether the final shared-memory reads
+followed a confirmed reap: `after_confirmed_reap`, `execution_may_continue` or
+`unavailable`). `runner_subprocess.disposition` is the worker disposition
+record: one account of the worker's lifecycle, present whenever a worker
+subprocess is reported. It answers seven run questions (`final_status`,
+`stop_reason`, `cleanup_trigger`, `grace_end`, `kill_request_and_result`,
+`collection_basis`, `progress_association`) and three per-step questions
+(`step_boundary_reached`, `step_result_published`,
+`step_requested_operation_applicability`). Each answer is `supported` with a
+`basis` naming the raw fields that witness it, `unresolved` or `inapplicable`
+with a reason, or `conflicting` with an entry in `issues`. The raw fields stay
+authoritative; the record references them, and every lifecycle conclusion in
+the envelope, including `attempt.lifecycle` and the controller's
+`termination_cause`, is a projection of it.
+
+The controller projects the record into `data.runner_sandbox_diagnostics`:
+`process_disposition` (`no_worker`, `unconfirmed`, `clean_exit`, `nonzero_exit`,
+`signaled`, `conflicting`, `withheld` or `unrecognized`), `termination_cause`,
+`stop_reason`, `disposition_integrity` and `disposition_issues`.
+`termination_cause` names host cleanup the record witnesses end to end
+(`host_sentinel_deadline`, `host_exit_grace_exhausted`,
+`host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`); it is
+null for a confirmed clean exit and `unknown` for every other termination,
+including a self-signal and an unresolved or conflicting status. It never names
+the sandbox. `stop_reason` projects why polling stopped (a deadline can coexist
+with a clean exit), and `disposition_integrity` with `disposition_issues` says
+whether the carried record agreed with the raw facts it cites (`valid`, or
+`invalid` with claims withheld). These fields do not change `normalized_outcome`.
 
 A host reply-construction failure reports `runner_reporting_failed`, `rc: 1`
 and `reporting_failure` with the diagnostic and original execution summary.
@@ -526,13 +558,9 @@ observations survive, but every `comparison` is omitted and every `drift` is
 null. Retained ordering observations are diagnostic; this reply certifies no
 per-step order. If serialization also fails for that degraded reply,
 `evidence_retained` is false and steps and subprocess evidence are absent.
-See the [reply failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure)
-for the narrow exception to the normal comparison requirements.
 
-Every new step contains `deny_signal: null`: the C worker does not measure this
-channel. This is distinct from a measured count of zero. Stored legacy signal
-objects remain decodable, with their original version and counts; readers that
-require an object must migrate to a nullable field. Optional subprocess objects
+Every step contains `deny_signal: null`: the C worker does not measure this
+channel. This is distinct from a measured count of zero. Optional subprocess objects
 may be omitted or null. Signal, errno and drift nulls on steps require key
 presence. Outcome mappings below use execution evidence without assigning a
 sandbox termination cause from a signal or log match.
@@ -556,17 +584,9 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
   non-null. `null` in two cases:
     1. No validator probes remained after orchestrator-side
-       filtering, so the validator was never spawned. This covers an
-       empty `probe_plan`, plus any plan where every step's
-       `sandbox_check` falls into one of the
-       `prediction_unavailable` buckets — `(operation, filter_kind)`
-       pair in the empirically-drifting set (iokit / sysctl
-       families), filter kind the runner doesn't predict
-       (`preference_domain`, `mach_port`, etc.), or path filter
-       whose `filter_value` doesn't resolve via `realpath` on the
-       host. The orchestrator synthesizes
-       `sandbox_check.outcome = "prediction_unavailable"` for each
-       skipped step locally.
+       filtering, so the validator was never spawned: an empty
+       `probe_plan`, or a plan where every step's `sandbox_check` is
+       `prediction_unavailable` (see [Per-step shape](#per-step-shape)).
     2. The validator failed to spawn before any child process existed
        (surfaced as `normalized_outcome =
        "validator_spawn_failed"`).
@@ -576,10 +596,9 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   the direct native return code and native descriptive text. The code is not
   ambient errno. Unfamiliar nonzero codes remain failures; wording is not a
   classification rule. The record survives a higher-priority worker failure
-  and evidence-preserving reply degradation. Older replies may omit it, so
-  absence does not prove that a validator was spawned successfully.
+  and evidence-preserving reply degradation.
 - `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before the entire attempt batch, not state stability or runtime identity.
-- `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it.
+- `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it. `validator_disposition` is `not_invoked`, `not_needed` (empty query plan), `not_spawned`, `reaped` or `unconfirmed`.
 - `steps[].drift: bool | null` — `false` means a supported allow/success
   agreement within matching submitted operation/target scope. It does not prove
   equal state or runtime identity. `true` requires evidence of differing kernel
@@ -613,13 +632,6 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   spawn prerequisites remain separate: allow does not promise a successful spawn.
   Native failure and missing-result evidence survive.
 
-The [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning)
-lists the supported scope mappings, observations and limits. Response 7 changes
-`drift` semantics; old versions 4–6 remain readable with their original values and
-no invented comparison metadata. Consumers must interpret the response version.
-Path diagnostics carry `observer="runner_host"` and `phase="after_orchestration"`:
-they describe later host resolution, not what the validator or worker saw earlier.
-
 The authoritative child object also includes `worker_evidence` when a child was
 spawned. Its ABI version identifies the host-selected layout, not proof that
 the child reached ABI validation. It contains the latest atomic `progress`, an
@@ -641,27 +653,44 @@ the host's errno and written/expected UTF-8 byte counts, while worker evidence
 and process status remain available. Written bytes do not prove child receipt.
 
 Step channels expose `result_source`, `native_rc` and optional `missing_reason`.
-A missing prediction retains the compatibility `rc=0` but has source `synthetic`,
+A missing prediction retains `rc=0` but has source `synthetic`,
 `native_rc:null`, and distinguishes `validator_not_invoked` from
 `validator_no_verdict`. An incomplete attempt retains `not_run_worker_died`,
 meaning no completed result; `attempt.lifecycle` says which: its `summary` is
 `completed`, `started_without_result`, `not_reached`, `unsupported`, `unresolved` or
 `conflicting`, and its `boundary` and `result` claims carry the supporting
-observations or the reason the question is unresolved (see
-[the worker disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)). Completed attempts use source
+observations or the reason the question is unresolved, projected from
+[the worker disposition record](#shape-and-schema_version). Completed attempts use source
 `worker`, but their rc is PW attempt status, not a raw syscall return, so their
 `native_rc` is also null. Received predictions use source `validator`; native rc
-is retained only for native-call result records. See the
-[field contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-evidence-contract)
-for publication, absence and numeric-code definitions.
+is retained only for native-call result records.
 
-The request schema also accepts an optional `_test_overrides`
-field. The leading underscore is intentional: it marks `_test_overrides`
-as a private, unsupported field used by the project's own tests to
-reach failure paths that production specimens can't construct.
-Production callers should leave it unset. The one exception users
-may want to reach for directly is `worker_post_apply_hang_ms` for
-debugger attach (see [Debug-attach to the worker](#debug-attach-to-the-worker)).
+### Receiver evidence
+
+`validator_subprocess` retains accepted `records` (including null-ID diagnostics)
+and their `raw_line`, expected IDs, association issues, received stdout byte
+count, probe write counts, independent I/O/decode faults, termination-call
+observations and actual reap status. Duplicate IDs supply no unique per-step
+prediction. Decode context is not an accepted verdict. Unfamiliar structurally
+valid diagnostic outcomes remain visible even when their per-step summary is
+`error`.
+
+`data.runner_client` reports exact received/retained stdout and stderr byte counts
+and `capture_limit_bytes`. `stdout_capture_error` means the
+controller truncated its own retained reply; `stdout_parse_error` means the
+untruncated bytes could not be decoded as JSON. Records inside
+a lost envelope are unavailable. The independent fallback helper's admission
+refusal remains `policy_too_large`; successful helper compilation cannot explain
+a missing worker reply.
+
+`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
+worker exists. It never substitutes the host PID.
+
+Per-step `native_rc` is authoritative for native returns. A received diagnostic
+without a native return retains `result_source="validator"`, `native_rc=null`
+and `rc=-1`; this is not a synthetic validator record or a claimed
+native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+missing reason. `outcome="error"` alone does not identify a native call failure.
 
 ### Per-step shape
 
@@ -684,18 +713,11 @@ Notes:
   `sandbox_check` call is made; `filter_value` is echoed back from the
   request unchanged for cross-referencing with the specimen.
 - `filter_type_id`: `1` (path), `2` (mach-lookup global), `17`
-  (mach-lookup local). The global-name ID was previously documented
-  as `16` based on a now-invalidated external reference; empirical
-  verification against actual kernel enforcement (see
-  `tests/suites/witness_contract/harness/verify_filter_id.sh`) shows
-  `2` works correctly under strict verification (deny on the policy's
-  denied value AND allow on a sibling un-denied value). ID `12` also
-  passes the same strict verification across the scan to 200 —
-  presumably an alias or aliased predicate path — so `2` is the
-  selected working ID, not the uniquely correct one. The local-name
-  ID (`17`) has not been re-verified by the same methodology and may
-  also be incorrect; it is documented here unchanged pending a
-  verification fixture. For filter kinds in the
+  (mach-lookup local). The global-name ID was verified against kernel
+  enforcement (deny on the policy's denied value and allow on a sibling
+  un-denied value); ID `12` passes the same check, so `2` is the selected
+  working ID, not the uniquely correct one. The local-name ID has not been
+  verified by the same method. For filter kinds in the
   prediction_unavailable set, no `filter_type_id` is emitted (see
   [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
 - `outcome`: `allow`, `deny`, `error`, `unsupported_operation`, or
@@ -777,9 +799,9 @@ Notes:
   isn't in PolicyWitness's implemented set. Per-step skip: the
   worker no-ops this slot; the `sandbox_check` verdict still runs;
   `drift` is `null` for the step.
-- `not_run_worker_died` — compatibility spelling for no completed attempt
-  result. Missing or incomplete publication does not prove the operation never
-  started. Errno and drift are null when no result supports them.
+- `not_run_worker_died` — no completed attempt result. Missing or incomplete
+  publication does not prove the operation never started; `attempt.lifecycle`
+  says which. Errno and drift are null when no result supports them.
 
 ### path_diagnostics
 
@@ -804,16 +826,11 @@ Each form is in exactly one of three states, so a reader never guesses:
 - present as a string: the host derived a different form;
 - present as an explicit `null`: the host could not derive the form.
 
-`same_as_input` is required in response 9 and contains unique names drawn
+`same_as_input` is required and contains unique names drawn
 from `realpath_resolved` and `firmlink_resolved`. A form both listed and
 present, or neither listed nor present, is malformed. A carried string
 must differ from `input` in UTF-8 bytes. Canonically equivalent Unicode
 spellings with different bytes remain separate strings.
-
-Earlier replies use string/null keys without `same_as_input`. A missing
-legacy form remains unreported, distinct from explicit null; decoding and
-re-encoding it preserves that omission. Legacy replies may also contain the
-retired `data_volume_form` heuristic for `/private` paths.
 
 - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
   Computed in the unsandboxed host; under normal conditions this is
@@ -833,7 +850,7 @@ retired `data_volume_form` heuristic for `/private` paths.
 
 ### attempt.path_diagnostics
 
-From response 12, every file or exec attempt with a nonempty target carries
+Every file or exec attempt with a nonempty target carries
 `attempt.path_diagnostics`: `{ observer, phase, input, same_as_input,
 realpath_resolved?, parent_realpath_resolved? }`, produced by the same
 unsandboxed host pass after orchestration (`observer="runner_host"`,
@@ -846,8 +863,7 @@ cannot derive it (a missing leaf has no leaf-followed form; a relative path has
 no parent form). Neither establishes what the worker's own syscall resolved,
 and neither changes the attempt, its comparison or `drift`. Deny-log
 correlation admits these forms as candidate evidence under their provenance;
-see [Denial-log correlation](#denial-log-correlation). `normalized_path`,
-which no reply ever populated, is gone from response 12.
+see [Denial-log correlation](#denial-log-correlation).
 
 Capture the sandbox_check argument quickly (no interpose needed):
 
@@ -866,14 +882,11 @@ are documented under SBPL check above):
   validator also has confirmed clean disposition, valid received records for
   every requested step ID, and no transport, decoding, or association failure.
   Uniquely associated per-step diagnostics retain their per-step semantics.
-- `runner_sandbox_denied` — recognized legacy string, not emitted by current
-  producers. Neither a process signal nor a PID-matched denial establishes that
-  the sandbox caused termination.
 - `runner_timeout` — the host observed exhaustion of its sentinel polling
   budget. This remains a timeout if the child voluntarily exits during grace;
   a cleanup termination request alone does not establish a deadline.
 - `runner_failed` — execution/reporting failure, including inconsistent
-  publication, a published worker operation failure or legacy status, an incomplete
+  publication, a published worker operation failure, an incomplete
   report, abnormal or unconfirmed disposition, or a host wait/cleanup failure.
   The cause may be unknown; this label does not prove a host defect. A completed
   report survives an abnormal exit, but cannot establish clean run completion.
@@ -893,7 +906,7 @@ are documented under SBPL check above):
   unexpected records arrived, or validator disposition/cleanup is abnormal or
   unconfirmed. A sufficient record count alone cannot establish success.
   Partial verdicts and attempts survive. Missing supported-query verdicts use
-  the compatibility `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
+  the `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
   `native_rc:null`, and a missing reason.
 - `bad_request` — request rejected before any worker spawn. Causes
   include: JSON decode failure, empty `sandbox_check.operation`
@@ -911,15 +924,10 @@ are documented under SBPL check above):
   or seam path is replaced by `<admission_refused>`, omitted, `unknown` or
   dropped from the mirrored `test_overrides` respectively. Every echoed field
   is checked independently, including when several fields are invalid.
-  Unknown `filter.kind` and unsupported `(attempt.kind,
-  attempt.action)` combos within the admission limits downgrade to per-step
-  `prediction_unavailable` and `unsupported`
-  respectively (see the per-step sections above).
+  Unknown filter kinds and unsupported attempt combinations within the
+  admission limits are per-step outcomes, not refusals.
 - `libsandbox_unavailable` — libsandbox could not be opened on this
   host (the host pre-spawn check failed `dlopen`).
-- `sandbox_apply_failed` — retained legacy/reserved spelling. Current producers
-  use `runner_failed`; the worker record distinguishes an observed native apply
-  failure from compilation, parameter setup and failures without a report.
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -981,13 +989,6 @@ Currently in this category:
   across all candidate filter IDs in 1..200 against `kern.osrelease`.
   Confirms the drift pattern is not iokit-specific.
 
-Adding a pair to this set requires empirical verification via
-`tests/suites/witness_contract/harness/verify_filter_id.sh`. The
-matching code lives in
-`runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters`.
-Both the Swift check helper and the host query planner use this shared set;
-source_drift checks its agreement with the documented pairs.
-
 ### Attempt kinds the runner implements
 
 The C worker implements these `(attempt.kind, attempt.action)`
@@ -999,17 +1000,12 @@ combinations:
 - `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
   binary. `target` is the absolute path to the helper (becomes
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].
-  The runner pre-creates stdout/stderr pipes
-  pre-apply (so the post-apply syscall surface stays minimal — see
-  [Augments](#augments) → `exec_baseline` for the policy contract);
-  the worker first raises its soft descriptor limit to fit them, four per
-  exec step, see `exec_step_descriptors` under
-  [Execution budgets](#execution-budgets),
-  bounds each child by `exec_child_wait` and by the remaining
-  `exec_attempt_budget` from the same section (a step reached with no
-  remainder is refused before spawn),
-  drains both streams interleaved while the child runs, reaps via
-  `waitpid`, and surfaces these fields under `attempt`:
+  The worker creates each child's stdout/stderr pipes before the sandbox
+  applies (so the post-apply syscall surface stays minimal — see
+  [Augments](#augments) → `exec_baseline` for the policy contract), bounds
+  each child by the deadlines and descriptor budget under
+  [Execution budgets](#execution-budgets), drains both streams while the
+  child runs, reaps it, and surfaces these fields under `attempt`:
 
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
@@ -1034,9 +1030,8 @@ combinations:
   no policy fd, no other exec slots' pipes) and an empty
   environment.
 
-  `data.runner_sandbox_diagnostics.first_deny` is a worker-PID correlation
-  reference, not a denied-syscall or termination-cause claim. Exec children have
-  different PIDs; per-child log correlation is not provided.
+  Exec children have their own PIDs; deny-log correlation covers the worker
+  PID only (see [Denial-log correlation](#denial-log-correlation)).
 
 Specimens are free to author probes with other attempt combinations
 (`("iokit", "open")`, future kinds, etc.) — those steps surface
@@ -1050,108 +1045,75 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
 ### Common flags
 
 - `--timeout-ms <n>`: runner RPC timeout
-- `--log-timeout-ms <n>`: optional log collection allowance, default 10,000 ms.
-  Positive integer milliseconds only, with checked monotonic deadline arithmetic;
-  no unlimited value. Invalid values fail before running the specimen, including
-  with `--no-log-capture`. Observer startup and `log show` share one deadline,
-  followed by at most a 1,000 ms cleanup grace; the `log show` child itself stops
-  1,000 ms before that deadline so the observer's report, including an inner
-  deadline cutoff, can be delivered. A larger value buys waiting time
-  without changing the specimen, scan bounds or byte budgets.
-- `--no-log-capture`: skip the unified-log (`log show`) deny scan. Its requested
-  interval is the runner client's own wall-clock span, rounded outward to whole
-  seconds and padded by two seconds at each end; there is no fixed lookback to tune. Archive access has been observed to cost
-  seconds even for short spans, without a fixed-cost guarantee. Pass this when
-  you don't consume
-  `data.sandbox_log_capture` (or the `first_deny` diagnostic it backs) and want
-  the per-run cost back. `data.sandbox_log_capture` is then `null`.
+- `--log-timeout-ms <n>`: log collection allowance, default 10,000 ms. Positive
+  integer milliseconds only; no unlimited value. Invalid values fail before
+  running the specimen, including with `--no-log-capture`. A larger value buys
+  waiting time only: the specimen, the scan interval and the byte budgets are
+  unchanged, and no record is promised.
+- `--no-log-capture`: skip the unified-log (`log show`) deny scan. Archive access
+  has been observed to cost seconds even for short spans. Pass this when you
+  don't consume `data.sandbox_log_capture` (or the `first_deny` diagnostic it
+  backs); `data.sandbox_log_capture` is then `null`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 - `--version`: print a `kind="version"` envelope with the build stamp and the
   wire contract versions this build speaks
 
-Log collection counts and bounds both stdout and stderr while reading. Inner
-`log show` limits are 1 MiB stdout and 128 KiB stderr; observer limits are 32 MiB
-stdout and 128 KiB stderr. Derived events, associations and serialization also
-have finite limits in the inventory above. A small specimen can still exceed a
-log limit because admission does not bound OS log volume or scan cost.
+Log collection is bounded in time and size. Observer startup, `log show` and
+result processing share one monotonic deadline, followed by a fixed 1,000 ms
+cleanup grace; the `log show` child itself stops 1,000 ms before that deadline
+so the observer can deliver its report. Byte limits are listed under
+[Evidence capture](#evidence-capture); a small specimen can still exceed one
+because admission does not bound OS log volume. `sandbox_log_capture.supervision`
+records the controller's observer wait and owned-group cleanup, and
+`observer.data.collection` records the observer's own log child; both report
+the effective timeout and its source, elapsed time, per-stream byte counts and
+limits, and a `cutoff` reason. `deadline` reports as `capture_status: "timeout"`;
+`output_overflow`, `event_overflow`, `json_structure_overflow` and
+`correlation_overflow` as `overflow`; `launch_error` as `requested_unavailable`;
+`process_exit` as `error` (or `blocked` for a recognized log-access refusal);
+and `clock_error`, `pipe_setup_error`, `read_error`, `decode_error`,
+`wait_error`, `pipe_open_after_exit` and `cleanup_unconfirmed` as `capture_error`.
+`processing_cutoff` names a controller-side parsing or correlation limit.
+`group_absent` requires an observed absent group after cleanup; a timeout or
+overflow status alone does not establish that cleanup succeeded.
 
-`timeout`, `overflow` and other incomplete captures are unavailable for
-correlation. They retain bounded diagnostics and any intact observer reply, but
-leave `step_denies`, `first_deny` and `permission_failures_without_record` null.
+Any incomplete capture withholds correlation: `step_denies`, `first_deny` and
+`permission_failures_without_record` are null and `correlation_status` is
+`unavailable`, while bounded diagnostics and any intact observer reply survive.
 A successful complete empty query remains distinct. Neither case changes native
 attempts, predictions, execution result or process disposition.
 
-`sandbox_log_capture.supervision` records the observer wait and owned-group
-cleanup. `observer.data.collection`, when received, records the log child's
-separate wait. Both report effective timeout/source, elapsed time, stream byte
-counts, limits and cutoff reasons. `group_absent` requires an observed absent
-group after cleanup; an unknown child wait is never inferred from that fact.
-[The controller contract](../controller/README.md#log-collection-budgets-and-cleanup)
-describes the full evidence fields and success gate.
-
-If `data.sandbox_log_capture.capture_status` is `timeout`, inspect
-`supervision.cutoff`, `observer.data.collection.cutoff` (when an intact reply
-arrived), and `processing_cutoff` for `reason: "deadline"`. The supervision
-budgets report the effective `timeout_ms` and `timeout_source`; cleanup facts
-show whether PW confirmed process/group cleanup. A timeout status alone does
-not establish that cleanup succeeded.
-
-For a slower machine, a finite larger allowance can be selected per run:
+For a slower machine, select a larger finite allowance per run:
 
 ```sh
 $PW run request.json --log-timeout-ms 30000
 ```
 
-This permits up to 30 seconds of collection plus the fixed one-second cleanup
-grace. The runner RPC timeout, padded query interval and byte limits stay the
-same. It cannot resolve an `overflow` or guarantee more records. Each invocation
-is a separate observation; a later result does not replace an earlier failure
-or show what an earlier query could have returned.
-
-### Debug-attach to the worker
-
-To pause the worker for a debugger attach, set
-`_test_overrides.worker_post_apply_hang_ms: <N>` on the request. The
-C worker stays alive for `N` ms after applying the policy, giving
-you an `lldb -p <runner_subprocess.pid>` window. The same seam
-backs `tests/suites/witness_contract/worker_post_apply_hang_seam.sh`.
-
-Custom dylib injection, JIT, DYLD env, and other entitlement-backed
-inspection paths go through BYOXPC: install a signed `.xpc` bundle
-with the entitlements you need and select it via `runner.id` or
-`runner.service`. To set `DYLD_*` env vars, supply them at install
-time:
-
-```sh
-$PW runner install --kind byoxpc --bundle /path/to/MyRunner.xpc --env DYLD_INSERT_LIBRARIES=/path/to/lib.dylib
-```
+Each invocation is a separate observation; a later result does not replace an
+earlier failure or show what an earlier query could have returned.
 
 ### Denial-log correlation
 
 `sandbox_log_capture.window` separates raw client milliseconds
 (`started_at_unix_ms`, `ended_at_unix_ms`) from the UTC query bounds (`start`,
-`end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`.
-`pad_seconds` is 2; its absence in an older envelope means 0. The pad allows for
-client/archive clock differences, and supported records in either padding region
-remain eligible candidates. It promises neither complete delivery nor exact run
-membership. Structured event timestamps, step ordering and PID-reuse protection
-remain unavailable. Reversed client timestamps retain the raw values with null
-bounds and `invalid_window`, without invoking the observer.
+`end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`, with
+`pad_seconds` recording the pad. The observer mirrors the interval it scanned;
+a reply for any other interval is `window_mismatch` rather than `captured`: its
+parsed events remain inspectable, but `step_denies` and `first_deny` are null
+and correlation is `unavailable`. If the client's wall-clock end precedes its
+start, capture is `invalid_window`: raw milliseconds survive, `start`/`end` are
+null and the observer is not invoked. The pad allows for client/archive clock
+differences, and supported records in either padding region remain eligible
+candidates. It promises neither complete delivery nor exact run membership.
+Structured event timestamps, step ordering and PID-reuse protection remain
+unavailable; array position is not proof of execution order. Ordered endpoints
+do not prove clock continuity during execution.
 
 The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
-It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports `process_disposition` (`no_worker`, `unconfirmed`,
-`clean_exit`, `nonzero_exit`, `signaled`, `conflicting`, `withheld`, `unrecognized`),
-`capture_status`, and `correlation_status` (`not_attempted`, `unavailable`, `no_match`,
-`pid_match`). `termination_cause` names host cleanup the worker disposition record
-witnesses end to end (`host_sentinel_deadline`, `host_exit_grace_exhausted`,
-`host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`); it is null for a
-confirmed clean exit and `unknown` for every other termination, including a
-self-signal, an unresolved or conflicting status, and every reply without the record.
-It never names the sandbox. `stop_reason` projects why polling stopped (a deadline can
-coexist with a clean exit), and `disposition_integrity` with `disposition_issues` says
-whether the carried record agreed with the raw facts it cites (`valid`, `invalid` with
-claims withheld, or `not_reported` for a legacy reply). These fields do not change
-`normalized_outcome`.
+It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports
+`capture_status` and `correlation_status` (`not_attempted`, `unavailable`,
+`no_match`, `pid_match`) beside the process disposition fields described under
+[Shape and schema_version](#shape-and-schema_version).
 `permission_failures_without_record` lists the step IDs whose attempt the
 runner classified as a permission-shaped failure and that no captured event
 names as a candidate (null unless correlation reached `pid_match` or `no_match`
@@ -1161,7 +1123,9 @@ does not mean nothing was denied, it makes no claim about what the OS log store
 contains (a record can exist under another path form, such as a resolved
 symlink), and it does not say why.
 
-`first_deny` references an event by array index. Step associations under
+`first_deny` references, by `event_index`, the first worker-PID match in
+`deny_events` array order; it is not the first event in time or a cause of
+death. Step associations under
 `sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
 association}`. Events remain in `deny_events`, including unmatched events;
 associations do not copy them. A single candidate uses `association="candidate"`;
@@ -1198,27 +1162,12 @@ step-ID joins stay unmatched. Create can create a new file or open an existing
 one for writing. A missing completed attempt does not prevent a candidate
 association: a denial can precede interrupted publication.
 
-Capture scans the runner client's own start-to-end span, rounded outward to whole
-seconds and padded by two seconds at each end, and records it in `capture.window`; the observer mirrors the interval
-it scanned, and a reply for any other interval is `window_mismatch` rather than
-`captured`. Mismatched replies and parsed events remain inspectable, but
-`step_denies` and diagnostics `first_deny` are null and correlation is
-`unavailable`. If the client's wall-clock end precedes its start, capture is
-`invalid_window`: raw milliseconds survive, `start`/`end` are null, and the
-observer is not invoked. A diagnostic remains in capture `stderr`; observer,
-events and associations are null. Ordered endpoints do not prove clock
-continuity during execution.
-
 Validator `sandbox_check` queries can generate denial records naming the worker
 PID before any attempt begins. A matching target is therefore not proof that a
-record came from its paired attempt. Some denied attempts have no available log
-record; requesting the full interval does not guarantee complete delivery.
-
-Parsed events have no structured timestamps. Window fields
-explicitly report no exact run membership, step ordering, or PID-reuse
-protection. Raw log lines are
-retained; array position is not proof of execution order. A PID match can reflect
-an ordinary denied probe followed by an unrelated self-signal or crash.
+record came from its paired attempt, and a PID match can reflect an ordinary
+denied probe followed by an unrelated self-signal or crash. Some denied attempts
+have no available log record; requesting the full interval does not guarantee
+complete delivery.
 
 ### Troubleshooting
 
@@ -1231,11 +1180,9 @@ an ordinary denied probe followed by an unrelated self-signal or crash.
   may leave the underlying cause unknown. Completed predictions, attempts and
   captured denial events remain usable for their own claims.
 - `data.runner_sandbox_diagnostics` separates process disposition from capture
-  status and correlation. `first_deny` is an `{event_index}` reference to the
-  first worker-PID match in `sandbox_log_capture.deny_events` array order, not
-  the first event in time or a cause of death. Capture can be disabled,
-  unavailable, or captured without a match; none proves policy played no role.
-  Successful runs also retain capture. See the correlation contract below.
+  status and correlation. Capture can be disabled, unavailable, or captured
+  without a match; none proves policy played no role. Successful runs also
+  retain capture. See [Denial-log correlation](#denial-log-correlation).
 - `normalized_outcome` is `worker_spawn_failed`: the host could not
   `posix_spawn` the worker. Verify the bundle is signed and on a writable
   filesystem; `pgrep -fl PWRunner` should show no stragglers.
@@ -1258,29 +1205,27 @@ BYOXPC is the only external runner kind.
 ### What you need
 
 - A runner `.xpc` bundle to sign (typically a copy of `PWRunner.xpc`).
-- A signing identity: a **Developer ID Application whose Team ID matches the app**.
-  The copied `PWRunner.xpc` carries the built-in signed-caller check
-  (`PWRunnerRequireSignedCaller`), which compares the caller's Team ID to the
-  runner's — so an ad-hoc runner (no Team ID) is rejected at connect time. Ad-hoc
-  signing works only for a local runner with those caller-auth keys removed (see
-  [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing)).
+- A signing identity: a **Developer ID Application whose Team ID matches the app**
+  (see [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing)).
 - An entitlements plist.
 - A logged-in GUI session (launchd bootstrap is not available from non-GUI shells).
 
-### Tested install path (copy/paste)
+### Install a BYOXPC runner
 
-This sequence matches `tests/suites/runner_byoxpc/run.sh` and is the
-recommended starting point.
+This sequence is the one the project's own tests exercise and is the
+recommended starting point. Adjust `APP` to wherever `PolicyWitness.app` is
+installed.
 
 ```sh
-PW="$PWD/dist/PolicyWitness.app/Contents/MacOS/policy-witness"
+APP="/Applications/PolicyWitness.app"
+PW="$APP/Contents/MacOS/policy-witness"
 IDENTITY="Developer ID Application: Your Name (TEAMID)"
 ENT="$PWD/path/to/your-byoxpc-entitlements.plist"
 BYO="$PWD/runtime/byosig/instances/PWRunner.byoxpc.xpc"
 
 mkdir -p "$(dirname "$BYO")"
 rm -rf "$BYO"
-cp -R dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc "$BYO"
+cp -R "$APP/Contents/XPCServices/PWRunner.xpc" "$BYO"
 
 $PW runner install --kind byoxpc \
   --bundle "$BYO" \
@@ -1291,28 +1236,9 @@ $PW runner install --kind byoxpc \
 $PW runner verify --service-name com.yourteam.policy-witness.PWRunner --timeout-ms 2000
 ```
 
-`$IDENTITY` must be a Developer ID whose Team ID matches the app bundle (the
-copied runner enforces a team-matched signed caller). Do not add `--allow-adhoc`
-here: an ad-hoc runner that keeps the caller-auth keys is rejected at connect
-time with `xpc_error`. For an ad-hoc/local runner, see
-[Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
-
-### Install a BYOXPC runner
-
-```sh
-$PW runner install \
-  --kind byoxpc \
-  --bundle /path/to/MyRunner.xpc \
-  --identity "Developer ID Application: Your Name (TEAMID)" \
-  --entitlements /path/to/entitlements.plist \
-  --scope user
-```
-
 Notes:
-- Use `--allow-adhoc` only for a local runner whose caller-auth keys
-  (`PWRunnerRequireSignedCaller`, `PWRunnerAllowedIdentifiers`) have been removed
-  from the copied bundle's Info.plist; otherwise sign with a team-matched
-  `--identity`. See [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
+- Use `--allow-adhoc` only for a local runner whose caller-auth keys have been
+  removed; see [Caller authentication and ad-hoc signing](#caller-authentication-and-ad-hoc-signing).
 - Use `--scope system` if you want a system-wide service (requires admin).
 - Use `--skip-bootstrap` if you will run `launchctl` manually.
 - Use `--env KEY=VALUE` to set launchd `EnvironmentVariables` (for `DYLD_*`).
@@ -1342,16 +1268,14 @@ that template inherits the check, which constrains how you may sign it:
 
 - **Signed runner (default, recommended):** sign the copy with a **Developer ID
   whose Team ID matches the app** (so the runner's team equals `pw-runner-client`'s).
-  `runner verify` returns `ok`. This is the path exercised by
-  `tests/suites/runner_byoxpc/runner_install.sh`.
+  `runner verify` returns `ok`.
 - **Ad-hoc / local runner:** ad-hoc signatures have **no Team ID**, so a runner
   that keeps the caller-auth keys rejects every connection with
   `NSXPCConnectionInvalid` (reported as `normalized_outcome: xpc_error`). To run
   ad-hoc, first remove `PWRunnerRequireSignedCaller` and
   `PWRunnerAllowedIdentifiers` from the copied bundle's Info.plist, then
   `--allow-adhoc`. Such a runner accepts any local caller — appropriate for local
-  testing, not for a trust boundary. This path is exercised by
-  `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`.
+  testing, not for a trust boundary.
 
 Symptom cheat-sheet: `xpc_error` right after install usually means an ad-hoc (or
 wrong-team) runner failing the signed-caller check; `xpc_timeout` means the host
@@ -1479,38 +1403,3 @@ Registry location:
 ```
 ~/Library/Application Support/PolicyWitness/runners.json
 ```
-
-### Receiver evidence
-
-`validator_subprocess` retains accepted `records` (including null-ID diagnostics)
-and their `raw_line`, expected IDs, association issues, received stdout byte
-count, probe write counts, independent I/O/decode faults, termination-call
-observations and actual reap status. Duplicate IDs supply no unique per-step
-prediction. Decode context is not an accepted verdict. Unfamiliar structurally
-valid diagnostic outcomes remain visible even when their per-step summary is
-`error`.
-
-`data.runner_client` reports exact received/retained stdout and stderr byte counts
-and `capture_limit_bytes`. `stdout_capture_error` means the
-controller truncated its own retained reply; `stdout_parse_error` means the
-untruncated bytes could not be decoded as JSON. Records inside
-a lost envelope are unavailable. The independent fallback helper's admission
-refusal remains `policy_too_large`; successful helper compilation cannot explain
-a missing worker reply.
-
-
-`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
-worker exists. It never substitutes the host PID. Typed readers must accept
-null; replies before schema 6 carry an integer PID and remain decodable. The
-top-level legacy PID convention is unchanged. Request schema and worker ABI are
-separate contracts.
-
-Per-step `native_rc` is authoritative for native returns. A received diagnostic
-without a native return retains `result_source="validator"`, `native_rc=null`
-and compatibility `rc=-1`; this is not a synthetic validator record or a claimed
-native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
-missing reason. `outcome="error"` alone does not identify a native call failure.
-
-See [the query and receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
-for immutable query planning, query association, independent pipe collection,
-and exact-byte controller capture semantics.
