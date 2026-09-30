@@ -1,58 +1,26 @@
 # Removing the drift verdict
 
-Status: DESIGN and REPAIR firm as of 2026-09-30. The D1 scenario matrix and the D2
-dossier fragment are written from live output; every decision is a numbered
-D6 row, and any later change to DESIGN or REMOVAL is a new row. Nothing here is
-implemented. The inventory baseline is df333b4
-with request schema 3, response schema 12, worker ABI 7 and controller envelope
-4. Source line numbers below are as of that commit and will move.
+Status: DESIGN and REPAIR firm as of 2026-09-30; REMOVAL secured; DOCUMENTATION
+held lightly. Every decision is a numbered D6 row and any later change to
+DESIGN or REMOVAL is a new row. Nothing is implemented. The inventory baseline
+is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
+envelope 4); source line numbers are as of that commit.
 
 ## Premise
 
-PolicyWitness reports `steps[].drift` as `true`, `false` or `null`, and
-`steps[].comparison.conclusion` as one of `agreement`, `disagreement`,
-`directional_consistency` or `unavailable`. Both are verdicts about the
-relation between a `sandbox_check` answer and observed enforcement. Neither is
-sound as a product surface:
+PolicyWitness reports `steps[].drift` (`true`, `false`, `null`) and
+`steps[].comparison.conclusion` (`agreement`, `disagreement`,
+`directional_consistency`, `unavailable`): verdicts about the relation between
+a `sandbox_check` answer and observed enforcement. This plan removes them, the
+unobserved deny-signal channel and four duplicate or constant fields; keeps
+every observation and relation that fed them as typed obligations; adds a
+specimen dossier; and drops reading of earlier reply versions. The reader
+computes any label. PW supplies none on the wire, in test equipment or in a
+guide recipe.
 
-1. `drift: true` was deliberately made unreachable (encoder and consumers reject
-   it) so that no plausible-looking determination could be built on top of it
-   by agents or readers. It has been unreachable since response 8.
-2. Drift between the prediction API and enforcement was always speculation. The
-   Sandbox kernel extension evaluates the target PID's compiled profile for
-   both the query and the hook. Every difference this repository has ever
-   recorded was an input-materialization or coverage gap, never the evaluator
-   answering the same question two ways: BBX-001 was a wrong filter ID; the
-   three `prediction_unavailable` pairs were found by scanning filter IDs 1..200
-   and finding none that matched; the deny log names `/private/etc/hosts` while
-   the query took `/etc/hosts`; bare `process-exec` is rejected by the query
-   while the hook is `process-exec*`; one spawn exercises exec, fork and
-   file-read hooks while one query covers one. What PW can witness is the gap
-   between the question the API lets you ask and the question the hook asks.
-3. `drift: false` and `conclusion: unavailable` erase distinctions. `false`
-   reads as "no drift" when it means allow predicted, success observed, matched
-   submitted scope, no unordered mutation. `unavailable` collapses eight
-   situations into one word, including the only interesting one (deny predicted,
-   attempt succeeded, order established, no deny record). At summary level that
-   case is indistinguishable from "the validator never ran."
-
-The change: remove the verdict fields, keep every observation and relation that
-fed them, and gather the specimen evidence a reader needs into one place. The
-reader computes any label. PW supplies no joint verdict on the wire, in a
-canonical test reducer, or in a guide recipe.
-
-Repair size determines the work breakdown, not the desired design. 
-
-Current code and documentation should describe the shipped app; 
-historical names, paths and interpretations do not earn
-compatibility machinery merely by having existed. Schema changes are planned
-explicitly, including an envelope bump for the dossier. An anticipated schema
-reset before 0.5.0 does not excuse mismatched schema numbers and emitted shapes
-in the meantime.
-
-The four sections below are executed in order. DESIGN and REPAIR are firm and
-REMOVAL is secured. DOCUMENTATION is held lightly and is the next section to
-firm before execution.
+Code and documentation describe the shipped app. Historical names, paths and
+interpretations earn no compatibility machinery. Schema numbers move with the
+implementation that emits the new shape, never before it.
 
 ## DESIGN
 
@@ -64,35 +32,16 @@ prediction and enforcement. Descriptive values are: what was submitted, what
 each channel returned and on what basis, whether the two submitted scopes
 match, the order PW established by its own actions, and which obligations of a
 comparison are or are not discharged, with the evidence that discharges them.
+A proposed field fails if a reader could compute it from the other fields, or
+if its value space contains a finding word (`agreement`, `disagreement`,
+`drift`, `consistent`).
 
-The test for a proposed field: can a reader compute any joint label from the
-other fields? If yes, the label does not ship. If a field's value space contains
-a word that sounds like a finding (`agreement`, `disagreement`, `drift`,
-`consistent`), it does not ship.
+### D1. The per-step comparison record
 
-### D1. Layer one: the per-step comparison record
-
-`steps[].comparison` stays. Its name is accurate: it compares the two
-submitted scopes and records what each channel observed. Its content changes.
-
-| Field | Disposition | Notes |
-| --- | --- | --- |
-| `scope` | **remove** | Constant `submitted_operation_and_target` on every step. The guide states the scope once (D6.13). |
-| `prediction` | keep | `allow`, `deny`, `unavailable`. Native verdict or its absence. |
-| `observation` | keep | `succeeded`, `permission_failure`, `other_failure`, `unavailable`. The controller's `permission_failures_without_record` reads this field; it must survive unchanged. |
-| `observation_basis` | keep | Names the worker fields that support `observation`. |
-| `operation_relation` | keep | `matched`, `different`, `unresolved`. |
-| `target_relation` | keep | `same_submitted`, `different_submitted`, `unresolved`. |
-| `order` | keep | `query_first`, `unestablished`. A claim about PW's own actions, already gated by the eligibility rule and the encoder. |
-| `conclusion` | **remove** | No replacement. |
-| `steps[].drift` | **remove** | No replacement. |
-| `limitations` | restructure | See below. |
-
-`limitations` today is a flat list of strings rendered from a typed Swift value
-(`ComparisonEvidence`) plus descriptive notes appended by the classifier. The
-typed part becomes a typed wire object; the descriptive notes stay a list.
-
-Selected shape (D1-B):
+`steps[].comparison` keeps `prediction`, `observation`, `observation_basis`,
+`operation_relation`, `target_relation` and `order` unchanged. `conclusion`,
+`scope` (D6.13) and `steps[].drift` are removed. The five typed
+`limitations` strings become `obligations`; the remaining strings stay a list.
 
 ```json
 "comparison": {
@@ -111,66 +60,28 @@ Selected shape (D1-B):
 }
 ```
 
-Rules for `obligations`:
-
-- Only obligations whose status varies per step are per-step fields.
-  `sandbox_attribution` is `not_required` for a success, `unestablished` for
-  any failure, and `not_applicable` when there is no completed observation
-  (D6.14). `runtime_target_identity` is `unestablished` for a path scope
-  and `not_applicable` otherwise. `target_mutation` is `none`, `unordered` (a
-  worker-reported successful unlink of the queried path anywhere in the run
-  while order is unestablished) or `after_query` (the same with `query_first`),
-  and names the steps that reported the unlink. `none` means no qualifying
-  mutation was reported; it does not establish an unchanged target.
-- No obligation's value space contains `established`. Runtime identity varies
-  only between `unestablished` and `not_applicable`. State stability does not
-  vary per step and is stated once, at run level, in the runner reply's
-  `comparison_conditions` (see the fragment below), as a condition of every
-  comparison this runner produces.
-- `query_attempt_order_unestablished` disappears from `limitations`. It was
-  defined as exactly `order != query_first` and the consumer already enforces
-  that equivalence.
-- `limitations` keeps only descriptive notes that have no typed home:
-  `query_plan:*`, `prediction:*`, `attempt:*` (including the lifecycle
-  limitations), `exec_query_not_full_spawn_prediction`, `compound_attempt`,
-  `attempt_operation_unestablished`, `broad_query_operation`, `operation:*`,
-  `target:*`, `query_filter_scope_unestablished`, `submitted_target_unavailable`,
-  `exec_result_failed_after_spawn`, `host_path_resolution_changed`. Their
-  vocabulary does not change.
-
-D1-B is the implementation target. There is no flat-limitations fallback based
-on repair cost. Inventory and assertion counts determine how to prepare and
-verify the change.
-
-Wire fragment for response 13, as the shape golden will record it:
-
 | Path | Type | Rule |
 | --- | --- | --- |
-| `comparison.obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_applicable` when `observation` is `unavailable`; `not_required` otherwise |
-| `comparison.obligations.runtime_target_identity.status` | string | `unestablished` when the query's `filter_kind` is `path` or the mapped attempt filter is `path`; `not_applicable` otherwise |
-| `comparison.obligations.target_mutation.status` | string | `none`, `unordered` or `after_query` |
-| `comparison.obligations.target_mutation.steps` | array of string | step IDs, in plan order, of every step whose worker-reported successful unlink names the queried path, including the current step; empty exactly when `status` is `none` |
-| `comparison.limitations` | array of string | may be empty; contains none of the five removed strings |
+| `obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_applicable` when `observation` is `unavailable`; `not_required` otherwise (D6.14) |
+| `obligations.runtime_target_identity.status` | string | `unestablished` when the query's `filter_kind` is `path` or the mapped attempt filter is `path`; `not_applicable` otherwise |
+| `obligations.target_mutation.status` | string | `none`; `unordered` when a worker-reported successful unlink of the queried path exists anywhere in the run and `order` is `unestablished`; `after_query` when the same holds with `order: query_first`. `none` does not establish an unchanged target |
+| `obligations.target_mutation.steps` | array of string | step IDs, in plan order, of every step whose worker-reported successful unlink names the queried path, including the current step; empty exactly when `status` is `none` |
+| `limitations` | array of string | may be empty; vocabulary unchanged: `query_plan:*`, `prediction:*`, `attempt:*` (including the lifecycle entries), `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `operation:*`, `target:*`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed`. `query_attempt_order_unestablished` is gone (it equalled `order != query_first`) |
 
-Run-level conditions live in the runner reply, not only in the controller
-dossier, because the runner produces the comparisons and `pw-runner-client`
-emits the reply on its own. The reply gains
-`comparison_conditions: { "unestablishable": ["state_stability"] }` beside
-`steps`, present whenever `steps` is present and withheld with the comparisons
-on a `runner_reporting_failed` reply. The dossier references it (D2).
-The bare reply is a reader surface (D6.19), so the field stays in the reply and
-the dossier points at it through `references` (D2, D6.20).
+No obligation's value space contains `established`. State stability does not
+vary per step: the reply carries `comparison_conditions:
+{ "unestablishable": ["state_stability"] }` beside `steps`, present whenever
+`steps` is present and withheld with the comparisons on a
+`runner_reporting_failed` reply (D6.9, D6.19).
 
 #### Scenario matrix
 
 Every controlled scenario the repository exercises, run live on 2026-09-30
-against the built app (three specimens: a real-validator plan of 24 steps, a
-steered-validator plan of 7, and a pre-apply failure), then rewritten into the
-response 13 shape by the rules above. Columns: prediction; observation with its
-basis; operation and target relation; order; obligations as A (sandbox
-attribution), I (runtime target identity), M (target mutation), with `nr` =
-`not_required`, `na` = `not_applicable`, `un` = `unestablished`; then the
-remaining `limitations`.
+against the built app (a real-validator plan of 24 steps, a steered-validator
+plan of 7, and a pre-apply failure), rewritten into the response 13 shape.
+Obligations are abbreviated A (sandbox attribution), I (runtime target
+identity), M (target mutation); `nr` = `not_required`, `na` =
+`not_applicable`, `un` = `unestablished`.
 
 | ID | Scenario | Pred | Observation / basis | Op | Target | Order | A | I | M | Limitations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -209,97 +120,28 @@ remaining `limitations`.
 | R | `runner_reporting_failed` | no `comparison` object and no `comparison_conditions`; not run live | | | | | | | | |
 | T | worker deadline, slot started without result | as C1 with `attempt:started_without_result`; not run live | | | | | | | | |
 
-What the matrix establishes:
+Rows with identical objects (S01, S23, S24, B7) are one scenario under
+different attempt actions, which `attempt.requested_action` distinguishes.
+The pairs `attempt:attempt_not_supported` with `attempt:unsupported` (S09) and
+`attempt:slot_incomplete` with `attempt:not_reached` (C1) come from the missing
+reason and the disposition record respectively; both stay.
 
-- **No collapse.** Rows with identical objects (S01, S23, S24, B7) are the same
-  scenario under different attempt actions, which `attempt.requested_action`
-  distinguishes. Every pair of rows that means something different differs in
-  at least one field. B1, the case that today reads `unavailable` like S07 and
-  S09, is now the only row with deny, succeeded, matched, same, `query_first`,
-  no obligation outstanding and no limitation.
-- **New information.** S19, S25 and B6 today render nothing for an ordered
-  unlink; `after_query` with the unlinking step now says so. B3 and B5 today
-  carry the same string; the `steps` list now says whether the step unlinked
-  the path itself or another step did.
-- **Every string has a home.** The five removed strings map to obligations, to
-  `order`, or to the run-level condition. Every other string observed live
-  appears unchanged in the last column. The pairs `attempt:attempt_not_supported`
-  with `attempt:unsupported` (S09) and `attempt:slot_incomplete` with
-  `attempt:not_reached` (C1) come from two sources, the missing reason and the
-  disposition record, and both stay.
-- **Readable without a label.** Each row answers what each channel saw, whether
-  the scopes match, whether PW ordered the query first, and what is
-  outstanding. Nothing in a row needs the reader to know a mapping.
+### D2. The specimen dossier
 
-The live outputs are retained in the session scratchpad, not in the repository;
-the matrix is the record. During I2/I3 the same three specimens become the
-`check_comparison.py` expectations and the shape golden's fixture.
+`data.specimen` is a controller-owned object under envelope 5, present on
+every `kind: "run"` envelope including `bad_request` and `xpc_error`. It holds
+what was tested and under what conditions; the records that describe how the
+run went stay where they are, and the dossier points at them. No alias remains
+at a former path.
 
-### D2. Layer two: the specimen dossier
-
-A reader investigating one run needs, in one place: what was compiled, what
-each channel was asked, what the evaluator returned, what the kernel reported,
-and the conditions of the run. Most of this exists in the envelope today,
-scattered under `data.*`; other evidence needs collection on the normal run path.
-
-Create a controller-owned object `data.specimen`, with controller envelope 5.
-It holds what was tested and under what conditions. Everything else under
-`data` describes how the run went: transport, the raw runner reply, process
-diagnostics and log capture. Those records stay where they are and the guide
-maps them to the dossier. No alias remains at a former path.
-
-Disposition of every current `data` key:
-
-| Key | Disposition | Reason |
-| --- | --- | --- |
-| `app_provenance` | move to `specimen.app_provenance` | provenance |
-| `policy_augmentation` | move to `specimen.policy_augmentation` | what was compiled |
-| `request_path` | move to `specimen.request_path` | where the input came from |
-| `runner_provenance` | move to `specimen.runner_provenance` | provenance |
-| `runner_service_bundle_id` | remove | equals `runner_provenance.runner_bundle_id` |
-| `runner_service_name` | remove | equals `runner_provenance.runner_service_name` |
-| `runner_registry_id` | remove | equals `runner_provenance.runner_registry_id` |
-| `runner_service_executable` | remove | the basename of `runner_provenance.runner_executable_path` |
-| `policy_check` | stay | diagnostic fallback compile on the `xpc_error` path; its `sbpl-check` output is kept verbatim, including that tool's own imports block, and is not cross-referenced with the dossier's scan |
-| `runner_client` | stay | transport |
-| `runner_result` | stay | the raw runner reply |
-| `runner_sandbox_diagnostics` | stay | projection of the run |
-| `runner_startup_diagnostics` | stay | how the run went |
-| `sandbox_log_capture` | stay | the kernel's account, with its own status |
-| `timeout_ms` | stay | client budget beside `runner_client` |
-
-`data.specimen` is present on every `kind: "run"` envelope, including
-`bad_request` and `xpc_error` results, since the request file was read in every
-such case. Each collected item carries its own status; nothing in the dossier
-is omitted to signal failure.
-
-| Item | Today | Dossier disposition |
-| --- | --- | --- |
-| Policy source hash, format | `runner_result.policy_sha256`, `policy_format` | reference |
-| Submitted vs applied source, augments | `data.policy_augmentation` (only when augments applied) | **move** to `specimen.policy.augmentation`, always present, `applied: []` when no augment was used (D6.15) |
-| Parameter identity, compiled bytecode | `runner_result.applied_profile` (opt-in receipt) | reference; stays opt-in |
-| Imports scan (`policy_closure_sha256`, per-import path/hash/mtime, completeness, truncation, cycle) | only in `sbpl-check` output, which runs only on the `xpc_error` path | **add** as `specimen.policy.imports`: collect on every applicable source-policy run, with explicit scan basis, limits and failures |
-| macOS product version and build | only `sbpl-check` (`macos_build_version` via `sw_vers`) | **add** as `specimen.host`: `macos_version`, `macos_build`, `kernel_release`, `arch`, read with `sysctlbyname` (D6.16) |
-| libsandbox identity | none | **add** in the runner reply as `library_identity`, observed by the XPC host per function group (see below); the dossier references it (D6.11) |
-| Runner identity and entitlements | `data.runner_provenance` | **move** to `specimen.runner_provenance`, shape unchanged |
-| App evidence metadata and verification | `data.app_provenance` | **move** to `specimen.app_provenance`, shape unchanged |
-| Worker binary hash and entitlements | in the evidence manifest on disk, referenced by `data.app_provenance.evidence_manifest_path` | **add** as `specimen.binaries`: the service, worker and validator manifest entries, each verified against the file the run uses (D6.17) |
-| Build stamp, contract versions | `build`, `runner_result.schema_version`, envelope `schema_version`, `worker_evidence.abi_version` | reference |
-| What each query asked | `validator_subprocess.records[]` (operation, filter type and ID, value, rc, errno, raw line) | reference |
-| What each attempt did | `steps[].attempt` (requested kind/action/path, observed path, errno, child status) | reference |
-| Host path forms | `steps[].sandbox_check.path_diagnostics`, `steps[].attempt.path_diagnostics` | reference |
-| Ordering | `runner_subprocess.ordering`, `steps[].comparison.order` | reference |
-| Planning exclusions in this run | `steps[].sandbox_check.outcome == prediction_unavailable` plus `query_plan:*` | **add** as `specimen.conditions.prediction_unavailable_pairs`: the distinct pairs excluded in this run |
-| Kernel's own account | `data.sandbox_log_capture` with its capture status and known omission | reference |
-| Run-level comparison conditions | nowhere; today rendered as `state_stability_unestablished` on every step | **add** in the runner reply as `comparison_conditions.unestablishable: ["state_stability"]` (D1); the dossier references it, and the guide gives it one sentence of meaning |
-
-The dossier is a closed list: inputs each channel fed the evaluator, the
-evaluator's outputs, the kernel's independent account, and the run conditions.
-Anything else proposed for it needs a reason under one of those four heads.
-
-#### Dossier fragment
-
-The shape for envelope 5, with the two open items marked:
+| `data` key | Disposition |
+| --- | --- |
+| `app_provenance`, `runner_provenance` | move to `specimen.*`, shape unchanged |
+| `policy_augmentation` | move to `specimen.policy.augmentation`, always present (D6.15) |
+| `request_path` | move to `specimen.request_path` |
+| `runner_service_bundle_id`, `runner_service_name`, `runner_registry_id`, `runner_service_executable` | remove; each equals or derives from a `runner_provenance` field |
+| `policy_check` | stay; its `sbpl-check` output is kept verbatim, including that tool's own imports block |
+| `runner_client`, `runner_result`, `runner_sandbox_diagnostics`, `runner_startup_diagnostics`, `sandbox_log_capture`, `timeout_ms` | stay |
 
 ```json
 "specimen": {
@@ -351,53 +193,32 @@ The shape for envelope 5, with the two open items marked:
 
 | Path | Type | Rule |
 | --- | --- | --- |
-| `request_path` | string | the path given to `run`, as today |
-| `policy.format` | string | from the request; `sbpl` today |
-| `policy.augmentation` | object | today's `policy_augmentation` shape, always present; `applied` is `[]` and the two hashes are equal when no augment was used |
-| `policy.imports.status` | string | `complete`, `incomplete`, `failed`, `not_applicable` |
+| `request_path` | string | the path given to `run` |
+| `policy.format` | string | from the request |
+| `policy.augmentation` | object | today's `policy_augmentation` shape; `applied` is `[]` and the two hashes are equal when no augment was used |
+| `policy.imports.status` | string | `complete`, `incomplete`, `failed`, `not_applicable` (no `sbpl_source`) |
 | `policy.imports.basis` | string | constant `controller_scan_of_applied_source`: the controller walks the source after augments, before invoking the runner; it is not evidence of what the worker's compiler read |
-| `policy.imports.closure_sha256` | string or null | over the resolved records, computed whenever the scan ran; `status` says whether the closure is complete |
-| `policy.imports.records[]` | array | the `sbpl-check` import record shape, unchanged |
-| `policy.imports.cycle` | array or null | as `sbpl-check` |
-| `policy.imports.limits` | object | the five bounds in force, so a reader knows what `incomplete` was measured against |
+| `policy.imports.closure_sha256` | string or null | over the resolved records whenever the scan ran; `status` says whether the closure is complete |
+| `policy.imports.records[]`, `cycle` | as `sbpl-check` | unchanged shapes |
+| `policy.imports.limits` | object | the five bounds in force: depth 8, count 64, file 1 MiB, total 8 MiB, 1,000 ms; provisional until the I4 measurement, then recorded in `docs/limits.json` |
 | `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
-| `policy.imports.failure` | string or null | why `failed`, when the scan could not run at all |
-| `host.*` | string or null each | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails |
-| `binaries.*` | object | the manifest entry for the service, worker and validator the run uses, with `path` the file hashed and `verification.status` one of `match`, `mismatch`, `unavailable`; for a BYOXPC runner the bundle's own copies are hashed against the app manifest's embedded-helper entries |
-| `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair`; `[]` when none |
-| `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own, one key per row marked reference in the table above. The key set and the pointer values are fixed by envelope 5, not computed from presence: a pointer to a record the reply withheld or never produced is still present, and the reader finds the withholding where the reply states it. Nothing is copied. |
+| `policy.imports.failure` | string or null | why `failed` |
+| `host.*` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine` via `sysctlbyname`; null when the read fails (D6.16) |
+| `binaries.*` | object | the manifest entry for the service, worker and validator the run uses, `path` the file hashed, `verification.status` one of `match`, `mismatch`, `unavailable`; a BYOXPC runner's own copies are hashed against the app manifest's embedded-helper entries (D6.17) |
+| `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair` |
+| `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own. Key set and values are fixed by envelope 5, not computed from presence; a pointer to a withheld or absent record is still present (D6.20) |
 
-Collection order: host facts, binaries and the imports scan are gathered before
-the runner is invoked, so a hung or refused runner still leaves a complete
-dossier. A `not_applicable` scan still carries `limits`, `records: []` and null
-hashes; nothing is omitted to signal a state.
+Host facts, binaries and the imports scan are gathered before the runner is
+invoked. A `not_applicable` scan still carries `limits`, `records: []` and
+null hashes; nothing in the dossier is omitted to signal a state.
 
-Imports collection is a controller-side scan of source and files, not proof of
-the exact inputs consumed by the worker's compiler. Report unresolved imports,
-incomplete scanning, truncation, cycles and collection failures explicitly;
-non-source specimens need an explicit not-applicable result. The existing
-resolver bounds depth and count but reads imported files without a byte bound.
-Reuse it with explicit byte and collection budgets, and record the limits in
-`docs/limits.json`. Measure a WebProcess-size profile to establish budgets and
-improve the implementation, not to reconsider default collection. An incomplete
-scan must remain distinguishable from a complete one, including when it has a
-hash.
-
-Provisional budgets, to be confirmed by the I4 measurement: the helper's depth 8
-and count 64 are reused; each imported file is bounded at 1 MiB and the whole
-scan at 8 MiB and 1,000 ms. The host's 478 system profiles total 2.06 MB and the
-largest is 43.6 KB, so these bounds are generous for real inputs and exist to
-keep a hostile import chain from stalling a run. Exceeding any bound yields
-`incomplete` with the bound named.
-
-Library identity names what was observed and in which process, per function.
-Verified on this host on 2026-09-30: `sandbox_check` and `sandbox_init` resolve
-to `/usr/lib/system/libsystem_sandbox.dylib`; `sandbox_compile_string`,
-`sandbox_apply` and `sandbox_free_profile` resolve to
-`/usr/lib/libsandbox.1.dylib`. Neither file exists on disk; both are served from
-the dyld shared cache (`_dyld_shared_cache_contains_path` is true for each), and
-two separate processes report the same cache UUID. The record lives in the
-runner reply as `library_identity`, one entry per function group:
+Library identity is one record per function group, observed by the XPC host
+in `SandboxLib.load` and published in the runner reply as `library_identity`
+(D6.5, D6.11). Verified on this host on 2026-09-30: `sandbox_check` and
+`sandbox_init` resolve to `/usr/lib/system/libsystem_sandbox.dylib`;
+`sandbox_compile_string`, `sandbox_apply` and `sandbox_free_profile` resolve to
+`/usr/lib/libsandbox.1.dylib`; neither file exists on disk, both are served
+from the dyld shared cache, and separate processes report the same cache UUID.
 
 ```json
 "library_identity": {
@@ -413,37 +234,28 @@ runner reply as `library_identity`, one entry per function group:
 }
 ```
 
-The claim is exactly this: the cache image every process on the host maps for
-each function, plus the presence or absence of an on-disk override at
-observation time. It is not a worker-side observation, and the guide says so.
-
-The XPC host observes (D6.11). It already loads libsandbox in `SandboxLib.load`
-as its pre-spawn check, shares the bundle with both children and spawns the
-worker with an empty environment, so it is the nearest observer short of the
-worker. From its existing handle it resolves the functions the children use,
-`sandbox_check` for the validator and `sandbox_compile_string` and
-`sandbox_apply` for the worker, calls `dladdr` on each, reads
-`_dyld_get_shared_cache_uuid` and `_dyld_shared_cache_contains_path`, and stats
-each image path. The record is present with `status: observed` on every reply
-whose host performed the load check, and with `status: unavailable` plus the
-`dlopen` diagnostic when that check failed (`libsandbox_unavailable`); a
-`bad_request` refusal carries none, since no process work happened. It is
-retained on a degraded `runner_reporting_failed` reply because it is an
-observation, not a comparison claim. Worker-published identity would need
-shared-memory transport and an ABI bump; that is not part of this change, and
-the ABI stays at 7.
+The host resolves the three functions from its existing handle, calls
+`dladdr` on each, reads `_dyld_get_shared_cache_uuid` and
+`_dyld_shared_cache_contains_path`, and stats each image path. The record is
+`status: observed` on every reply whose host performed the load check,
+`status: unavailable` with the `dlopen` diagnostic when that check failed
+(`libsandbox_unavailable`), and absent on a `bad_request` refusal. It is
+retained on a degraded `runner_reporting_failed` reply. The claim is the
+identity of the cache image every process on the host maps for each function,
+plus the presence or absence of an on-disk override at observation time; it is
+not a worker-side observation, and the guide says so.
 
 ### D3. Invariants
 
-- Producer: `PWRunnerStepResult` has no `drift` or `deny_signal` property. `PWRunnerComparison`
-  has no `conclusion` property and no `drift` accessor. The reply-shape golden
-  (`tests/fixtures/contract/response_shape.json`) has neither key under
-  `steps[]`, omits `deny_signal`, and has `obligations` under `comparison`.
-  `PWRunnerRunResult` has no `deny_signal_total`, and `PWRunnerSignalResult` and
-  `Signals.swift` are gone (R2).
-- Encoder: the response 8 clause that rejects `disagreement` becomes the
-  obligation-consistency table below. The `query_first` eligibility check is
-  unchanged.
+- Producer: `PWRunnerStepResult` has no `drift` or `deny_signal` property;
+  `PWRunnerComparison` has no `conclusion`, `scope` or `drift`;
+  `PWRunnerAttemptResult` has no `exit_code` or `syscall_errno`;
+  `PWRunnerSandboxCheckResult` has no `scope`; `PWRunnerRunResult` has no
+  `deny_signal_total`; `PWRunnerSignalResult` and `Signals.swift` are gone.
+  The reply-shape golden (`tests/fixtures/contract/response_shape.json`)
+  records the response 13 shape.
+- Encoder, replacing the clause that rejected `disagreement`; the
+  `query_first` eligibility check is unchanged:
 
   | Condition | Rejected when |
   | --- | --- |
@@ -451,540 +263,375 @@ the ABI stays at 7.
   | `target_mutation.status: unordered` | `order` is `query_first` |
   | `target_mutation.status: none` | `steps` is non-empty |
   | `target_mutation.status` other than `none` | `steps` is empty, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
-  | `sandbox_attribution.status` | disagrees with the D1 fragment's rule for this step's `observation` and `limitations` |
-  | `runtime_target_identity.status` | disagrees with the D1 fragment's rule for this step's filter kinds |
+  | `sandbox_attribution.status`, `runtime_target_identity.status` | disagree with the D1 rules for this step |
   | any step | carries `drift`, `conclusion`, `deny_signal`, `comparison.scope`, `sandbox_check.scope`, `attempt.exit_code` or `attempt.syscall_errno`, or one of the five removed limitation strings |
   | `comparison_conditions` | absent while `steps` is present, or present on a `runner_reporting_failed` reply |
-- Reply degradation: `runner_reporting_failed` still omits every `comparison`.
-  `order` is a claim about PW's actions and is withheld with the rest.
-  `library_identity` is an observation and is retained.
-- `library_identity`: present exactly when the host performed its libsandbox
-  load check; `observer` is `runner_host` and every image's `basis` is `dladdr`;
-  `status: observed` requires a non-empty `images` array and a shared cache
-  UUID, `status: unavailable` requires a diagnostic and no images.
-- Consumer (`tests/lib/consumer.py`): for the new contract, reject
-  `steps[].drift`, `steps[].deny_signal` and
-  `steps[].comparison.conclusion`, reject `established` as any obligation
-  status, and validate obligations against their supporting evidence. Apply the
-  legacy-reader policy below to existing version branches; unsupported versions
-  must not silently receive current-schema interpretations.
-- Controller: no production reader of `drift` or `conclusion` exists; the only
-  production reader of `comparison` is `permission_failures_without_record`,
-  which reads `observation`.
-- Dossier: `references` carries exactly the fixed key set with the fixed
-  pointer values. The consumer rejects a missing key, an extra key or a
-  different pointer.
+  | `library_identity` | absent when the host performed the load check; `observer` not `runner_host`; an image `basis` not `dladdr`; `observed` without images or a cache UUID; `unavailable` without a diagnostic or with images |
+- Reply degradation: `runner_reporting_failed` omits every `comparison` and
+  `comparison_conditions`; `library_identity` is retained.
+- Consumer (`tests/lib/consumer.py`): accepts exactly the manifest numbers and
+  reports any other as `unsupported`; rejects the removed keys; rejects
+  `established` as any obligation status; validates obligations against raw
+  evidence; requires `references` to carry exactly the fixed keys and values.
+- Controller: the only production reader of `comparison` is
+  `permission_failures_without_record`, which reads `observation`.
 
-### D4. Direct evidence assertions and reader recipes
+### D4. Assertions and recipes
 
-Remove the historical joint labels and their classifier without relocating them
-to an official reducer. `tests/lib/consumer.py` recovers and validates the
-observations, scope relations, ordering and obligations. Scenario expectations
-belong to tests and assert the evidence each scenario establishes. Replace
-`comparison_groups` keyed by the old conclusions with direct evidence access or
-concrete selections that preserve the distinctions between missing evidence,
-different scopes and observed outcomes.
-
-Guide recipes may select an explicit combination, such as deny predicted plus
-attempt succeeded, and show the associated scope, ordering and limitations.
-They do not assign `agreement`, `disagreement`, `directional_consistency` or a
-joint `unavailable` verdict. Single-channel absence values such as
-`prediction: unavailable` remain descriptive and are unaffected.
+Tests assert the evidence each scenario establishes, by field. The consumer
+validates and selects; it returns no value computed from both channels. Guide
+recipes select an explicit combination, such as deny predicted plus attempt
+succeeded, and show its scope, order and obligations; they assign no label.
 
 ### D5. Versioning
 
-- Response schema 12 → 13 for the completed comparison, the signal removal,
-  the attempt-alias and query-scope removals (D6.22, D6.23), the run-level
-  `comparison_conditions` field and the host-observed `library_identity`
-  record. The current contract description
-  must specify the descriptive fields and typed obligations, the absence of joint
-  verdicts and unobserved signal keys, and the scope of each claim.
-- Controller envelope 4 → 5 for `data.specimen` and provenance relocation.
-  Bump for the dossier even if its final shape were purely additive.
-- Request schema and worker ABI remain unchanged. Library identity is
-  host-observed (D2), so no shared-memory transport is added and the ABI stays
-  at 7.
-- Edit `docs/contract.json` and regenerate its copies with the implementation
-  that emits the corresponding shape. A preparatory manifest bump would make
-  `PWRunnerRunResult` label the old shape with the new number, because its
-  initializer defaults to `PWContract.responseSchema`.
-- Revise [CONTRACT.md](docs/CONTRACT.md) as follows (D6.21). Its "When a
-  number moves" paragraph becomes: "Bump a number when the rules for reading
-  change: a field removed, its type or meaning changed, or a new requirement
-  placed on readers. An added field alone does not require a bump, since an
-  absent field means unknown, never false. A bump may still be chosen for an
-  additive change when the addition is a deliberate contract; the manifest's
-  history says so. Because host and worker ship together, the worker ABI bumps
-  on any change to the shared-memory layout or the handshake over it." Its
-  "Reading older replies" section, the three version tables and "Naming numbers
-  in prose" are removed; `git log -- docs/contract.json` is the history. In
-  their place, a "Supported versions" section: "Every reader in this repository
-  accepts exactly the numbers in the manifest and reports any other number as
-  unsupported. A stored reply keeps its bytes and the meaning it had when
-  written; no current tool reads it." The "What each number identifies" list
-  gains one sentence per contract describing the current shape. Response:
-  "`steps[].comparison` records each channel's observation, the submitted-scope
-  relations, the order PW established and the typed obligations, with
-  `comparison_conditions` and `library_identity` at run level; it carries no
-  joint verdict and no signal channel." Envelope: "`data.specimen` is the
-  dossier: request path, policy augmentation and imports, host facts, runner
-  and app provenance, verified binaries, run conditions and `references` to
-  the records it does not own; the raw runner reply, transport, diagnostics and
-  log capture stay beside it."
-- Keep schema numbers and emitted behavior aligned at every integration point.
-  The user guide describes the shipped app.
+- Response schema 12 → 13: the comparison record, `comparison_conditions`,
+  `library_identity`, and the removal of `drift`, `conclusion`,
+  `comparison.scope`, `deny_signal`, `deny_signal_total`, `attempt.exit_code`,
+  `attempt.syscall_errno` and `sandbox_check.scope`.
+- Controller envelope 4 → 5: `data.specimen` and the `data` key dispositions.
+- Request schema and worker ABI unchanged.
+- `docs/contract.json` is edited, and `python3 docs/generate_contract.py` run,
+  with the implementation that emits the shape; `PWRunnerRunResult` defaults
+  `schema_version` to the manifest constant, so an earlier bump mislabels the
+  old shape.
+- [CONTRACT.md](docs/CONTRACT.md) (D6.21). "When a number moves" becomes:
+  "Bump a number when the rules for reading change: a field removed, its type
+  or meaning changed, or a new requirement placed on readers. An added field
+  alone does not require a bump, since an absent field means unknown, never
+  false. A bump may still be chosen for an additive change when the addition
+  is a deliberate contract; the manifest's history says so. Because host and
+  worker ship together, the worker ABI bumps on any change to the
+  shared-memory layout or the handshake over it." The "Reading older replies"
+  section, the three version tables and "Naming numbers in prose" are removed.
+  A "Supported versions" section replaces them: "Every reader in this
+  repository accepts exactly the numbers in the manifest and reports any other
+  number as unsupported. A stored reply keeps its bytes and the meaning it had
+  when written; no current tool reads it." "What each number identifies" gains
+  one sentence per contract. Response: "`steps[].comparison` records each
+  channel's observation, the submitted-scope relations, the order PW
+  established and the typed obligations, with `comparison_conditions` and
+  `library_identity` at run level; it carries no joint verdict and no signal
+  channel." Envelope: "`data.specimen` is the dossier: request path, policy
+  augmentation and imports, host facts, runner and app provenance, verified
+  binaries, run conditions and `references` to the records it does not own;
+  the raw runner reply, transport, diagnostics and log capture stay beside it."
 
 ### D6. Recorded decisions
 
 | # | Decision | Resolution |
 | --- | --- | --- |
-| 1 | Typed obligations or flat limitations | D1-B. No repair-cost fallback; counts determine work breakdown and verification. |
-| 2 | Schema bumps and integration | One response bump to 13 for the final response shape, plus envelope 5 for the dossier. Each bump lands with its implementation. Request/ABI bump if their contracts change. |
-| 3 | Remove `steps[].deny_signal` | Yes, regardless of repair size. Audit `deny_signal_total`, types, helpers, fixtures and prose; remove parts serving only the abandoned channel. |
-| 4 | Imports collection | Every applicable source-policy run, with explicit scan basis, completeness, limits and failures. Measure large profiles to set budgets; collection is not conditional on being cheap. |
-| 5 | libsandbox identity | Per function group, observed by the XPC host (D6.11): image path, whether the shared cache serves it, on-disk presence and hash, and the shared cache UUID, with `observer` and `basis` stated. Unavailable components are explained. The claim names the cache image every process maps; it is not a worker-side observation, and the guide says so. |
-| 6 | Move existing provenance under `data.specimen` | Yes for relevant controller-owned provenance and augmentation. Give each a canonical home without compatibility aliases; preserve raw channel records where their ownership matters. |
-| 7 | Historical labels and reducer | Remove both the labels and the proposed canonical reducer. Tests assert evidence directly; recipes select concrete combinations without joint verdicts. |
-| 8 | Supported versions for every reader | Exactly the manifest numbers. Any other version is reported as `unsupported`; no version branches remain. The one legacy artifact that survives is the captured `a1_known_loss.json`, kept as bytes to check that rejection. |
-| 9 | Where run-level comparison conditions live | In the runner reply as `comparison_conditions`, because the runner produces comparisons and `pw-runner-client` emits the reply alone. The dossier references it. |
-| 10 | The `data` boundary | The table in D2: four keys move, four duplicates are removed, seven stay. `data.specimen` is present on every run envelope. |
-| 11 | Library identity observer | The XPC host, in `SandboxLib.load`, published in the runner reply as `library_identity`; the dossier references it. No ABI change. |
-| 12 | Integration mechanics | Preparation lands on `main` as behavior-preserving commits. The contract integration (I2, I3, I4) is done in a worktree on a branch with as many commits as it needs, verified there with the default battery and `--all`, and reaches `main` as one fast-forward. No intermediate shape is ever on `main` under the final numbers. |
-| 13 | `comparison.scope` | Removed. It was the same constant on every step; the guide states the scope once. |
-| 14 | `sandbox_attribution` with no observation | `not_applicable`. Today's code renders nothing for this case, which reads as `not_required`; a missing observation has nothing to attribute. |
-| 15 | `policy.augmentation` presence | Always present in the dossier, with `applied: []` and equal hashes when no augment was used. |
-| 16 | Host facts | Read with `sysctlbyname` (`kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`), no subprocess; the values equal `sw_vers` output on this host. |
-| 17 | Binary verification | The service, worker and validator the run uses are hashed on every run and compared with their manifest entries. The whole-manifest `PW_VERIFY_EVIDENCE` path is untouched. |
-| 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source; provisional budgets in D2. |
-| 19 | Reader surfaces | The controller envelope and the bare runner reply printed by `pw-runner-client` are both reader surfaces. Run-level evidence the runner produces (`comparison_conditions`, `library_identity`) lives in the reply; the dossier points at it. |
-| 20 | How the dossier references records it does not own | A `references` object of RFC 6901 JSON pointers from the envelope root, one per referenced record, with a fixed key set and fixed values. No copies. |
-| 21 | CONTRACT.md | The version tables, "Reading older replies" and "Naming numbers in prose" go; a "Supported versions" section and one current-shape sentence per contract replace them; the bump rule permits deliberate additive bumps (text in D5). |
-| 22 | `attempt.exit_code` and `attempt.syscall_errno` | Removed. The initializer assigns them from `rc` and `errno`; the checker's alias-agreement rule goes with them. |
-| 23 | `sandbox_check.scope` | Removed. The constant `post_sandbox` on every query dates from in-process checks. |
-| 24 | REPAIR principle | Port scenarios and invariants, never assertions or code. Delete on `main` first. The matrix fixture is the single source of truth for comparison expectations, read by one live case and one Swift table-driven test. |
+| 1 | Obligations | Typed (`obligations` object). No flat-limitations fallback. |
+| 2 | Bumps | Response 13 and envelope 5, each landing with its implementation. |
+| 3 | `steps[].deny_signal` | Removed with `deny_signal_total`, `PWRunnerSignalResult` and `Signals.swift`. |
+| 4 | Imports collection | Every run with an `sbpl_source`, with basis, status, limits and failure; budgets confirmed by measurement. |
+| 5 | Library identity | Per function group, with `observer` and `basis`; unavailable components explained; not a worker-side observation. |
+| 6 | Provenance | Moved under `data.specimen`; no aliases at former paths. |
+| 7 | Joint labels | None on the wire, in test equipment or in recipes. |
+| 8 | Supported versions | Exactly the manifest numbers; any other is `unsupported`; no version branches. The captured `a1_known_loss.json` stays as bytes to check that rejection. |
+| 9 | `comparison_conditions` | In the runner reply; the dossier references it. |
+| 10 | `data` boundary | The D2 table. `data.specimen` on every run envelope. |
+| 11 | Identity observer | The XPC host, in `SandboxLib.load`, publishing `library_identity` in the reply. No ABI change. |
+| 12 | Integration mechanics | Behavior-preserving preparation on `main`; the contract integration in a worktree branch with as many commits as it needs, verified with the default battery and `--all`, reaching `main` as one fast-forward. |
+| 13 | `comparison.scope` | Removed; the guide states the scope once. |
+| 14 | `sandbox_attribution` with no observation | `not_applicable`. |
+| 15 | `policy.augmentation` | Always present. |
+| 16 | Host facts | `sysctlbyname`, no subprocess. |
+| 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. |
+| 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source. |
+| 19 | Reader surfaces | The envelope and the bare reply from `pw-runner-client`. |
+| 20 | References | RFC 6901 pointers, fixed keys and values, no copies. |
+| 21 | CONTRACT.md | Text in D5. |
+| 22 | `attempt.exit_code`, `attempt.syscall_errno` | Removed; assigned from `rc` and `errno`. |
+| 23 | `sandbox_check.scope` | Removed; constant `post_sandbox`. |
+| 24 | REPAIR principle | Port scenarios and invariants, never assertions or code; delete on `main` first; the matrix fixture is the single source of comparison expectations. |
 
-### Legacy readers and retained evidence
-
-The reader inventory is closed (D6.8). The Swift decoder gates at 8, 9 and 10,
-`consumer.py` branches at 7, 8, 9 and 12, `runner_client.rs` exercises versions
-4 through 8, the release tooling reads no envelopes, and no out-of-tree reader
-is known. None of these is a current workflow that needs an older version, so
-every branch goes and every reader accepts exactly the manifest numbers.
-Keep a legacy reader or version branch only for an identified current workflow.
-Record its caller, supported versions and concrete purpose in the implementation
-inventory. An old fixture, link or retained envelope does not itself establish
-that need. Remove branches, model properties, round-trip tests and compatibility
-prose whose sole purpose is historical preservation. Do not add legacy-only
-properties to current producer models as a default requirement.
-
-Stored evidence retains its original bytes and meaning. `records/`, retained
-run output and release acceptance artifacts are not rewritten to the new shape.
-Their preservation does not obligate the shipped implementation to read them.
-Unsupported versions must be identified as unsupported wherever a remaining
-reader would otherwise interpret them using the current contract. Distinguish
-captured evidence from synthetic test fixtures: regenerate fixtures for current
-scenarios, and retain legacy fixtures only for a documented current reader
-workflow. Historical explanation belongs in git unless it is needed to operate
-a supported reader today.
+Reader inventory behind D6.8: the Swift decoder gates at 8, 9 and 10;
+`consumer.py` branches at 7, 8, 9 and 12; `runner_client.rs` exercises 4
+through 8; the release tooling reads no envelopes; no out-of-tree reader is
+known. Stored evidence (`records/`, retained run output, release acceptance
+artifacts) keeps its bytes and is not rewritten; no shipped reader reads it.
 
 ## REMOVAL
 
-This section is a starting inventory. "Removed" means: the wire keys, the code
-that computes them, the invariants that police them, the tests that assert them,
-and every active surface that names or promises them. This includes CLI help,
-diagnostics, test messages, comments, docstrings, identifiers, filenames,
-registries and overlapping documentation. Counts and file lists are not a closed
-removal boundary. R9 identifies evidence and unrelated meanings that stay; the
-legacy-reader policy governs compatibility code.
+"Removed" means the wire keys, the code that computes them, the invariants
+that police them, the tests that assert them, and every active surface that
+names or promises them: CLI help, diagnostics, test messages, comments,
+docstrings, identifiers, filenames, registries and documentation. R9 lists
+what stays.
 
 ### R1. Wire keys
 
 | Key | Where | Disposition |
 | --- | --- | --- |
-| `steps[].drift` | runner reply | removed |
-| `steps[].comparison.conclusion` | runner reply | removed |
-| `comparison.limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | removed from `limitations` (D1-B); the first is stated once at run level, the middle three become `obligations`, the last is dropped |
-| `steps[].deny_signal` | runner reply | removed, regardless of repair cost |
-| `steps[].comparison.scope` | runner reply | removed (D6.13) |
-| `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno` | runner reply | removed (D6.22); pure aliases of `rc` and `errno` |
-| `steps[].sandbox_check.scope` | runner reply | removed (D6.23); constant `post_sandbox` |
-| `deny_signal_total` | runner reply | audit with the signal channel; remove if it serves only historical behavior |
-| `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocate under `data.specimen`; remove former paths without compatibility aliases |
-| `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed; each duplicates or derives from `runner_provenance` |
+| `steps[].drift`, `steps[].comparison.conclusion`, `steps[].comparison.scope` | runner reply | removed |
+| `limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | the first becomes `comparison_conditions`, the middle three become `obligations`, the last is dropped |
+| `steps[].deny_signal`, `deny_signal_total` | runner reply | removed |
+| `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno`, `steps[].sandbox_check.scope` | runner reply | removed (D6.22, D6.23) |
+| `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocated under `data.specimen` |
+| `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed |
 
 ### R2. Producer code
 
 | File | Symbol or site | Disposition |
 | --- | --- | --- |
-| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `PWRunnerComparison.drift` (computed, ~906) | delete |
-| same | `PWRunnerComparison.limitations` | keep; vocabulary shrinks |
-| same | `PWRunnerComparison.conclusion` | delete; add `obligations` |
-| same | `PWRunnerStepResult.drift`, its `init` parameter, `CodingKeys.drift`, the explicit-null `encode` branch and `decodeIfPresent` (~929–987) | delete; no default legacy-only property or version-gated read |
-| same | `PWRunnerStepResult.deny_signal` (~921–982), `PWRunnerRunResult.deny_signal_total` (~1720–1873) and `PWRunnerSignalResult` (~857) | delete all three; the orchestrator sets both fields to nil unconditionally |
-| same | encoder invariant: `steps.allSatisfy({ $0.comparison == nil && $0.drift == nil })` (~1817) and `comparison.conclusion != "disagreement", step.drift != true` (~1847) | rewrite per D3 |
-| same | doc comments at ~133 ("known to drift from kernel enforcement"), ~157 ("`drift` is null for these steps"), ~726 ("the orchestrator's drift classifier") | reword |
-| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837) | delete |
-| same | `ComparisonEvidence.renderLimitations()` (~843) | becomes `renderObligations()` plus the descriptive list |
-| same | `drift: comparison.drift` in step assembly (~632) | delete |
-| same | `deny_signal: nil` in step assembly and `deny_signal_total: nil` in run assembly | remove with the corresponding model fields |
-| same | header comment (~24–26), comments at ~722, ~763, ~890 | reword |
-| `runner/Sources/PWRunnerCore/PWRunnerService.swift` | degrade path `failed.steps[index].drift = nil` (~128) | delete the line; `comparison = nil` stays |
-| `runner/Sources/PWRunnerCore/ProbeRunner.swift` | comment ~151 ("userland-vs-kernel drift is broader than iokit") | reword; the pair set itself is untouched |
-| `runner/Sources/PWRunnerCore/Signals.swift` | `installDenySignalHandler`, `denySignalCount`, the SIGUSR1 handler | delete the file; nothing under `runner/Sources` calls either function. Remove its `XPC_RUNNER_SIGNALS_FILE` line from `build.sh`, which `source_drift` checks against the tree |
+| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `PWRunnerComparison.drift` (~906), `.conclusion`, `.scope` | delete; add `obligations` |
+| same | `PWRunnerStepResult.drift`: init parameter, `CodingKeys.drift`, explicit-null `encode` branch, `decodeIfPresent` (~929–987) | delete, with no legacy-only property or version-gated read |
+| same | `PWRunnerStepResult.deny_signal` (~921–982), `PWRunnerRunResult.deny_signal_total` (~1720–1873), `PWRunnerSignalResult` (~857) | delete |
+| same | `PWRunnerAttemptResult.exit_code`, `.syscall_errno` (~704–803); `PWRunnerSandboxCheckResult.scope`, `PWRunnerWire.sandboxCheckScopePost` (~41) | delete |
+| same | encoder clauses `steps.allSatisfy({ $0.comparison == nil && $0.drift == nil })` (~1817) and `comparison.conclusion != "disagreement", step.drift != true` (~1847) | rewrite per D3 |
+| same | doc comments ~133, ~157, ~726 | reword |
+| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837); `renderLimitations()` (~843); `drift: comparison.drift` (~632); `deny_signal: nil`, `deny_signal_total: nil` (~162, ~631); comments ~24–26, ~722, ~763, ~890 | delete or reword; `renderLimitations` becomes `renderObligations` plus the descriptive list |
+| `runner/Sources/PWRunnerCore/PWRunnerService.swift` | `failed.steps[index].drift = nil` (~128) | delete; `comparison = nil` stays |
+| `runner/Sources/PWRunnerCore/ProbeRunner.swift` | comment ~151; `scope:` arguments ~187, ~248 | reword; delete |
+| `runner/Sources/PWRunnerCore/Signals.swift` | whole file; no caller under `runner/Sources` | delete, and its `XPC_RUNNER_SIGNALS_FILE` line in `build.sh` |
+| `runner/Sources/PWRunnerCore/SandboxLib.swift` | `load` | add the `library_identity` observation |
 
-The verdict-key removal needs no C change and no Rust production reader change.
-The dossier is Rust only. Library identity is observed by the XPC host
-(D6.11): a Swift addition in `SandboxLib.swift` and the reply model, with no C
-change and no ABI bump.
+No C change. The dossier is Rust only.
 
 ### R3. Controller fixtures
 
-Production Rust reads neither verdict key. These test fixtures construct steps
-with them and become current-shaped; the legacy-shape case at ~2071 is deleted
-under D6.8:
-
-- `controller/src/run_flow.rs` at ~1638, ~2022, ~2071, ~2252, ~2394, ~2593,
-  ~2652.
-- `controller/src/runner_client.rs` ~163–173.
-- `controller/src/log_replay_tests.rs` ~14–22.
+Production Rust reads no removed key. Fixtures that construct steps with them
+become current-shaped; the legacy-shape case at ~2071 is deleted:
+`controller/src/run_flow.rs` ~1638, ~2022, ~2071, ~2252, ~2394, ~2593, ~2652;
+`controller/src/runner_client.rs` ~163–173; `controller/src/log_replay_tests.rs`
+~14–22.
 
 ### R4. Shared consumers
 
 | File | Sites | Disposition |
 | --- | --- | --- |
-| `tests/lib/consumer.py` | `comparison_groups` keyed by `conclusion` (~79–80); `drift_present`/`drift` in step answers (~98); allowed `conclusion` set (~185); reporting-failure rule (~194); projection check (~213–215); disagreement rejections (~286, ~361); mutation rule reading `conclusion` (~296) | replace joint-label groups with direct evidence access/selections (D4); presence rejections and obligations validation per D3; delete the version branches at 7, 8, 9 and 12 and reject any non-manifest version as `unsupported` (D6.8) |
-| `tests/lib/blackbox.py` | explicit-null check (~110–111); type and expected-value checks (~154–160); related signal assertions | replace removed-field assertions with direct evidence expectations and absence checks; no legacy handling remains |
-| `tests/lib/lifecycle_oracle.py` | constructed reply steps carry `drift: None` and `conclusion` (~338–341) | update the constructed shape |
-| `tests/lib/path_diagnostics_contract.py` | constructed step carries `drift=None` and `conclusion` (~26–32) | update |
+| `tests/lib/consumer.py` | `comparison_groups` (~79–80); `drift` in step answers (~98); `conclusion` set (~185); reporting-failure rule (~194); projection check (~213–215); disagreement rejections (~286, ~361); mutation rule (~296); version branches at 7, 8, 9, 12 | rewritten per REPAIR I3 |
+| `tests/lib/blackbox.py` | explicit-null check (~110–111); drift checks (~154–160); alias-agreement rule; `effective_filter_value` fallback | delete |
+| `tests/lib/lifecycle_oracle.py` (~338–341), `tests/lib/path_diagnostics_contract.py` (~26–32) | constructed steps carry `drift` and `conclusion` | update the constructed shape |
 
 ### R5. Test assertions
 
-Classes: **a** asserts a `drift` value; **b** asserts a `conclusion` value;
-**c** tests the disagreement prohibition or the projection rule; **d** asserts
-explicit-null key presence; **e** name or description only.
+Counts on df333b4: about 245 `drift`/`conclusion` references across 30 test
+files and 120 across 10 Swift test files; the five removed limitation strings at
+109 sites; `limitations` read at 125 sites; `deny_signal` at 28 suite sites, 8
+Swift sites and 1 controller site; 14 catalog entries.
 
-| Suite or target | Files | Classes | Notes |
-| --- | --- | --- | --- |
-| `runner_unit` | `DriftClassifierTests.swift` (53 refs) | a b c | Replaced by the table-driven `ComparisonEvidenceTests.swift` over the matrix fixture (I2) |
-| `runner_unit` | `EnvelopeInvariantTests.swift` (30) | a b c | Delete the version 4–7 round-trips (D6.8); update current-shape cases |
-| `runner_unit` | `OrderingTests.swift` (10), `ReplyFailureTests.swift` (12 plus the field-complete fixture), `ReplyMaximumTests.swift` (2), `WorkerEvidenceTests.swift` (1), `main.swift` comment | a c d | The reply-shape golden regenerates from `ReplyFailureTests` |
-| `runner_unit` | `AttemptOutcomeMappingTests.swift`, `CWorkerTests.swift` | e | Comments say "drift classifier"; reword |
-| `unit/rust.unit` | R3 fixtures | a b | |
-| `blackbox_e2e` | `checker_controls.py` (21) | a b c d | Negative controls that mutate `conclusion`/`drift` become controls that inject the removed keys and expect rejection |
-| `blackbox_menagerie` | `checker_controls.py` (13), `validate_run.py` (1), `cases/core.json` (23 of 23 steps carry `expect.drift`) | a d | Replace `expect.drift` with expectations on the prediction, observation and relevant scope/order/obligation evidence |
-| `failure_boundaries` | `check.py` (4) | a | |
-| `run_effects` | `check_file_actions.py` (2) | a b | |
-| `runner_exec_dac` | `check.py` (7), `check_query_scope.py` (6), `run.sh` (2) | a b e | Case id `execute_permission_is_not_sandbox_drift` becomes `execute_permission_controls_spawn` |
-| `runner_exec_inheritance` | `check.py` (1) | a | |
-| `runner_exec_lifecycle` | `check.py` (2), `check_edges.py` (2) | a b | |
-| `runner_filter_sysctl_name` | `checker_controls.py` (6) | a d | |
-| `runner_outcome_runner_timeout` | `check.py` (2) | a | |
-| `runner_outcome_validator_no_reply` | `check.py` (2) | a | |
-| `runner_specimen_isolation` | `check.py` (1) | a | |
-| `runner_use_c_worker` | `run.sh` (63) | a e | `drift_null_for_dac_eacces` and `drift_null_for_non_policy_failure` are deleted (matrix S03, S17, S14); five descriptions in the catalog |
-| `runner_validator_failure` | `check.py` (3), `check_signal.py` (1) | a b d | |
-| `witness_contract` | `check_comparison.py` (11), `check_ordering.py` (10), `check_prediction_targets.py` (6), `check_removed_target.py` (2), `check_attempt_in_flight.py` (1), `check_create_existing.py` (3), `check_diagnostic_transport.py` (3), `check_pre_apply_failure.py` (3), `check_termination_correlation.py` (1), `check_worker_evidence.py` (1), `check_worker_sparse.py` (1) | a b | `check_comparison.py` is absorbed by the `comparison_matrix` case (I2) |
-| `witness_contract` | `drift_determination_via_validator_seam.sh` (12), `run.sh` (6) | a b e | Deleted; matrix specimen B (rows B1 to B7) and the `comparison_matrix` case cover it |
-
-Total as counted on df333b4: about 245 references across 30 test files, 120
-across 10 Swift test files, 14 in `tests/catalog.json`. The five removed
-limitation strings appear at 109 sites (`attempt_mutation_order_unestablished`
-28, `sandbox_attribution_unestablished` 25, `state_stability_unestablished` 23,
-`query_attempt_order_unestablished` 23, `runtime_target_identity_unestablished`
-10), and `limitations` is read at 125 sites, 32 of them in
-`DriftClassifierTests.swift`. `deny_signal` appears at 28 test-suite sites, 8
-Swift test sites and 1 controller site. Provenance-path references and semantic
-references are found through R11. Preserve
-scenario coverage by replacing verdict assertions with assertions on the
-evidence those scenarios establish; remove assertions whose only purpose was the
-obsolete contract.
+| Suite | Files (references) | Disposition |
+| --- | --- | --- |
+| `runner_unit` | `DriftClassifierTests.swift` (53) | replaced by `ComparisonEvidenceTests.swift` (REPAIR I2) |
+| `runner_unit` | `EnvelopeInvariantTests.swift` (30) | version 4–7 round-trips deleted; current-shape cases updated |
+| `runner_unit` | `OrderingTests.swift` (10), `ReplyFailureTests.swift` (12 plus the field-complete fixture), `ReplyMaximumTests.swift` (2), `WorkerEvidenceTests.swift` (1), comments in `AttemptOutcomeMappingTests.swift`, `CWorkerTests.swift`, `main.swift` | updated; the golden regenerates from `ReplyFailureTests` |
+| `unit/rust.unit` | R3 fixtures | updated |
+| `blackbox_e2e` | `checker_controls.py` (21) | rebuilt (REPAIR I3) |
+| `blackbox_menagerie` | `checker_controls.py` (13), `validate_run.py` (1), `cases/core.json` (23 steps carry `expect.drift`) | `expect.drift` deleted |
+| `failure_boundaries` (4), `run_effects` (2), `runner_exec_inheritance` (1), `runner_exec_lifecycle` (4), `runner_filter_sysctl_name` (6), `runner_outcome_runner_timeout` (2), `runner_outcome_validator_no_reply` (2), `runner_specimen_isolation` (1), `runner_validator_failure` (4) | check scripts | field assertions |
+| `runner_exec_dac` | `check.py` (7), `check_query_scope.py` (6), `run.sh` (2) | field assertions; case id becomes `execute_permission_controls_spawn` |
+| `runner_use_c_worker` | `run.sh` (63) | `drift_null_for_dac_eacces` and `drift_null_for_non_policy_failure` deleted (S03, S17, S14); other assertions become field assertions |
+| `witness_contract` | `check_ordering.py` (10), `check_prediction_targets.py` (6), `check_create_existing.py` (3), `check_diagnostic_transport.py` (3), `check_pre_apply_failure.py` (3), `check_removed_target.py` (2), `check_attempt_in_flight.py`, `check_termination_correlation.py`, `check_worker_evidence.py`, `check_worker_sparse.py` (1 each) | field assertions |
+| `witness_contract` | `check_comparison.py` (11), `drift_determination_via_validator_seam.sh` (12), `run.sh` (6) | absorbed by `comparison_matrix` (REPAIR I2); the seam case deleted |
 
 ### R6. Goldens and fixtures
 
 | Fixture | Contains | Disposition |
 | --- | --- | --- |
-| `tests/fixtures/contract/response_shape.json` | `drift: boolean` (~178), `conclusion: string`, `limitations: array` (~220–221), `deny_signal` and `deny_signal_total` | regenerate from the updated `ReplyFailureTests` fixture; review all removals and additions as the acknowledgement |
-| `tests/fixtures/blackbox_menagerie/cases/core.json` | `expect.drift` on every step | rewrite expectations |
-| `tests/fixtures/blackbox_e2e/checker/missing_path_run.json` | synthetic, response 5, no envelope number; the baseline for `blackbox_e2e/checker_controls.py` and `blackbox_menagerie/checker_controls.py` | regenerate at response 13 and envelope 5 from a live run |
-| `tests/fixtures/disposition/a1_expected.json` | generated control, envelope 3 and response 10; read by `disposition_controls.py` and three `run_flow.rs` tests | regenerate at 13 and 5 |
-| `tests/fixtures/disposition/a1_known_loss.json` | captured envelope, envelope 2 and response 9; `disposition_controls.py` checks that the reader rejects it as the legacy reply it is | keep the bytes; the check becomes the `unsupported` rejection under D6.8 |
+| `tests/fixtures/contract/response_shape.json` | `drift`, `conclusion`, `limitations`, `deny_signal`, `deny_signal_total` | regenerate from `ReplyFailureTests`; the reviewed diff is the acknowledgement |
+| `tests/fixtures/blackbox_menagerie/cases/core.json` | `expect.drift` on every step | delete the key |
+| `tests/fixtures/blackbox_e2e/checker/missing_path_run.json` | synthetic response 5; baseline for both checker-control files | regenerate at 13 and 5 from a live run |
+| `tests/fixtures/disposition/a1_expected.json` | generated control, envelope 3, response 10; read by `disposition_controls.py` and three `run_flow.rs` tests | regenerate at 13 and 5 |
+| `tests/fixtures/disposition/a1_known_loss.json` | captured envelope 2, response 9 | keep the bytes; the check becomes the `unsupported` rejection |
+| `tests/fixtures/blackbox_e2e/BBX-00{1,2}/expected.json` | drift keys | delete the keys |
 
 ### R7. Registries
 
-- `tests/catalog.json`: four case ids and five descriptions name drift (listed
-  in R5). Renaming an id changes evidence paths; `tests/RETAINED.json` and
-  release acceptance records under `dist/` reference old ids and are not
-  rewritten.
-- `tests/README.md` suite-coverage rows for `blackbox_e2e` (~300),
-  `witness_contract` (~312, ~457, ~462), `runner_use_c_worker` (~296),
-  `runner_validator_failure` (~293). `source_drift` checks this table against
-  the suites on disk.
+- `tests/catalog.json`: three ids deleted, one renamed, two added (REPAIR I5).
+  `tests/RETAINED.json` and release acceptance records under `dist/` reference
+  old ids and are not rewritten.
+- `tests/README.md` suite-coverage rows (~293, ~296, ~300, ~312) and the
+  "Comparison evidence coverage" section (~455–465); `source_drift` checks the
+  table against the suites on disk.
 - `tests/COVERAGE.md` rows ~25, ~27, ~30, ~31, ~83, ~84, ~86, ~87.
-- Suite READMEs with references: `witness_contract` (20), `runner_use_c_worker`
+- Suite READMEs: `witness_contract` (20 references), `runner_use_c_worker`
   (12), `runner_exec_dac` (7), `blackbox_e2e` (4), `blackbox_menagerie` (3),
   `runner_specimen_isolation` (3), `runner_validator_failure` (3),
   `runner_filter_sysctl_name` (2), and one each in `run_effects`,
   `runner_exec_lifecycle`, `runner_outcome_runner_timeout`,
   `runner_outcome_validator_no_reply`, `runner_c_worker_harness`,
-  `runner_byoxpc`, both iokit filter suites.
+  `runner_byoxpc` and both iokit filter suites.
 
-### R8. Contract text that states the removed claims
+### R8. Contract and contributor text
 
-These are implementation-level documents. They belong to REMOVAL and REPAIR,
-not to DOCUMENTATION, because they are read by contributors rather than users.
-
-- [tests/FAILURE-PROPAGATION-CONTRACT.md](tests/FAILURE-PROPAGATION-CONTRACT.md):
-  the "Supported public conclusion" column of the claim/evidence review; the C1
-  row of the consumer-question baseline (it asks "which steps report
-  established agreement"); the accepted-answer table, which speaks of
-  agreement, unavailable and directional consistency throughout; the
-  `drift=false projects…` and `drift=null covers…` paragraphs under "Public
-  representation and meaning"; the "Ordering protocol names" row for
-  `runner_reporting_failed` ("comparisons absent, drift null"); the "Permanent
-  consumer enforcement" table and its "explicit drift projection" sentence; the
-  "Compatibility and acceptance gate" paragraph on preserved drift values and the
-  encoder's disagreement rejection. The whole chapter is replaced under I5; C1
-  through C6 and the accepted-answers table go, and the ownership table names
-  owners by matrix row and invariant.
-- [docs/CONTRACT.md](docs/CONTRACT.md): describe response 13 and envelope 5,
-  revise the additive-change bump rule, and remove blanket backward-reading
-  promises. Audit older-version clauses against the legacy-reader policy;
-  historical rows are not automatically retained.
-- [AGENTS.md](AGENTS.md) core idea "Predictions precede attempts" ends with
-  "`drift: true` is unreachable until a separate evidence contract exists."
-  Reword; the barrier claim stays.
-- [runner/README.md](runner/README.md) ~74, ~230, ~240, ~260–267, ~314;
-  [runner/AGENTS.md](runner/AGENTS.md) ~15 ("the orchestrator's drift
-  computation"); [runner/augments/README.md](runner/augments/README.md) ~154;
-  [controller/README.md](controller/README.md) ~137–145 (output contract),
-  ~369, ~378.
+- `tests/FAILURE-PROPAGATION-CONTRACT.md`: the chapter "Derived comparisons
+  and evidence joins" (376 lines) is replaced under REPAIR I5. The "Ordering
+  protocol names" row for `runner_reporting_failed` ("comparisons absent,
+  drift null") is reworded.
+- `docs/CONTRACT.md` per D5.
+- `AGENTS.md` core idea "Predictions precede attempts": its last clause names
+  `drift: true`; the barrier claim stays.
+- `runner/README.md` ~74, ~230, ~240, ~260–267, ~314; `runner/AGENTS.md` ~15;
+  `runner/augments/README.md` ~154; `controller/README.md` ~137–145, ~369,
+  ~378 and its consumer-audit table.
 
 ### R9. Not removed
 
-- The `source_drift` suite and every use of "drift" meaning docs-versus-code
-  divergence: `tests/suites/source_drift/*`, `runner_abi_layout` ("layout
-  drift"), comments "can't silently drift apart" in
+- `source_drift`, `runner_abi_layout` and every use of "drift" meaning
+  docs-versus-code or layout divergence: comments in
   `CWorkerOrchestrator.swift` ~712, `AttemptOutcomeMappingTests.swift` ~96,
   `controller/src/runner_manager.rs` ~1080, `sb_api_validator.c` ~605,
   `CWorker.swift` ~47, `tests/lib/artifact.py` ~38,
   `tests/suites/dispatcher/check_selection.py` ~126.
-- The `prediction_unavailable` planning set in `ProbeRunner.swift`, its
-  `source_drift` agreement check against the user guide, and
-  `tests/suites/witness_contract/harness/VERIFICATIONS.md`. The pair set is
-  evidence; only its description changes (see DOCUMENTATION).
-- `records/` is never edited.
+- The `prediction_unavailable` set in `ProbeRunner.swift`, its `source_drift`
+  check against the guide, and `harness/VERIFICATIONS.md`; only its
+  description changes.
 - `comparison.order`, `runner_subprocess.ordering`, `eligibleOrderedStep`, the
-  release barrier and the opt-in `order_barrier_mutations` control.
-- `comparison.observation` and the controller's
-  `permission_failures_without_record`.
-- Stored evidence retains its original bytes and meaning. Legacy reader code,
-  synthetic fixtures and round-trip tests are subject to the DESIGN policy and
-  are not protected merely by a stored reply's existence.
-- `dist/evidence` and `dist/archive` release acceptance records.
+  release barrier and the opt-in `order_barrier_mutations` control;
+  `legacy_worker_abi6` in `OrderingTests` (the ABI tripwire).
+- `comparison.observation` and `permission_failures_without_record`.
+- `records/`, `dist/evidence`, `dist/archive`.
 
-### R10. Still to secure before REMOVAL is final
+### R10. Semantic completion criterion
 
-1. Signal channel: closed. The inventory is in R2 (two model fields, one struct,
-   one source file with no callers, one `build.sh` line) and R5 (28 suite sites,
-   8 Swift test sites, 1 controller site, six documentation sites). All of it
-   goes.
-2. Fixtures: closed; see R6.
-3. Reader workflows: closed by D6.8; see "Legacy readers and retained evidence".
-4. Counts: closed; see the totals under R5.
-5. Golden path: closed. `ContractVersionTests.swift` compares the golden, writes
-   a candidate under the case artifacts and reports `ok`, `missing_golden`,
-   `needs_bump` or `update`. Its header comment says "Added keys need no bump";
-   revise it with the CONTRACT.md rule change in D5.
-6. Dossier ownership, paths and identity basis: closed by D2 and D6.9–11. The
-   imports budgets are provisional until the I4 measurement.
-
-### R11. Semantic removal completion criterion
-
-Run multiple searches before and after implementation, followed by contextual
-reading. Search exact keys and symbols, case and naming variants, and related
-language: `drift`, `conclusion`, `agreement`, `disagreement`, `consistent`,
-`directional_consistency`, `verdict`, `prediction`, `enforcement`, `mismatch`,
-signal-channel names, removed limitation strings and former provenance paths.
-Follow discovered aliases, callers and generated copies; inspect filenames and
-registry entries as well as file contents.
-
-Cover CLI usage/help, runtime and test diagnostics, test names and descriptions,
-function/type/variable names, code comments and docstrings, fixtures, registries,
-and contributor and user documentation. Read affected passages and call sites
-for claims that survive without any of the search terms. Preserve useful
-overlapping documentation while making every account describe current behavior.
-
-Record remaining matches by their actual meaning: a current descriptive channel
-value, an unrelated use such as source drift, immutable evidence, an explicit
-removed-key rejection, or a documented current legacy-reader workflow. Planning
-text that names removal targets is expected. Completion requires explaining
-surviving semantic references, not merely reaching zero matches for one word or
-exhausting the initial inventory. The broader documentation-overlap review is
-parked under DOCUMENTATION and is not a prerequisite for this removal.
+Before and after implementation, search the vocabulary `drift`, `conclusion`,
+`agreement`, `disagreement`, `consistent`, `directional_consistency`,
+`verdict`, `prediction`, `enforcement`, `mismatch`, the signal-channel names,
+the removed limitation strings and the former provenance paths, across CLI
+help, diagnostics, test names and descriptions, identifiers, comments,
+docstrings, fixtures, registries and documentation; follow aliases, callers
+and generated copies; read affected passages for claims that survive without
+any search term. Record every remaining match by its meaning: a current
+descriptive value, an unrelated use, immutable evidence, an explicit
+removed-key rejection. Completion is the explained residue, not a zero count.
 
 ## REPAIR
 
-Firm as of 2026-09-30. One principle replaces a work breakdown by class of
-assertion: port scenarios and invariants, never assertions or code. Every test
-artifact the removal touches is classified once:
+Port scenarios and invariants, never assertions or code. Every test artifact
+the removal touches is classified once:
 
 | Class | What it is | Disposition |
 | --- | --- | --- |
-| Scenario | A case with an independent control: a real file, a direct OS call, a steered verdict, a captured host fact | Keep the scenario. Its expectations come from the D1 matrix or from its own control, never from the old labels. |
-| Old-contract control | A control proving the checker rejects a loss expressible only in the removed contract: a drift value, a conclusion, a projection, an alias | Delete. Re-express only when the invariant it guarded survives in D3, and then in D3's wording. |
-| Legacy branch | Code, a fixture, a round-trip or prose whose purpose is reading a version no reader accepts (D6.8) | Delete. |
+| Scenario | A case with an independent control: a real file, a direct OS call, a steered verdict, a captured host fact | Keep. Expectations come from the D1 matrix or the case's own control. |
+| Old-contract control | A control proving the checker rejects a loss expressible only in the removed contract | Delete. Re-express only when the invariant survives in D3, in D3's wording. |
+| Legacy branch | Code, a fixture, a round-trip or prose whose purpose is reading a version no reader accepts | Delete. |
 | Equipment | A shared library or helper | Rewrite from the contract: no version branches, no derived labels, no compatibility fallbacks. |
 
-The default is delete. Keeping anything requires naming the matrix row or the
-D3 invariant it serves. A test that cannot name one is a monument.
+Keeping anything requires naming the matrix row or the D3 invariant it serves.
 
 ### I1. Delete on `main`
 
 Everything in the second and third classes whose removal leaves the default
 battery green at response 12 lands on `main` before the integration worktree
-opens. Emitted behavior does not change; coverage of the old contract and of
-unsupported versions is removed ahead of the code that produced it.
+opens. The rationale lines in DOCUMENTATION's infrastructure ledger are
+confirmed captured first.
 
 - Swift: the `EnvelopeInvariantTests` groups "response 7 preserves legacy
   uncertainty", the version 4 through 6 round-trips, the stored response 4
   signal object, "legacy absent or null observations remain unknown" and
   "legacy integer PID remains readable"; the `OrderingTests` case "encoder
   rejects public disagreement"; the `ReplyFailureTests` defects
-  `disagreement`, `false_drift` and `true_drift`. The `legacy_worker_abi6`
-  case stays: it is the ABI mismatch tripwire, not version reading.
+  `disagreement`, `false_drift` and `true_drift`.
 - Rust: the version 4 through 8 loop in `runner_client.rs`; the legacy-shape
   case in `run_flow.rs` (~2071).
 - `blackbox_e2e/checker_controls.py`: `response7*`, `legacy7_difference`,
   `blanket_unknown`, `supported_agreement`, `false_drift`, `true_drift`,
   `missing_drift`, `removed_*_false_claim`, `disagreement_without_labels`,
-  `order_limit`, and the synthesized response 7 "current" envelope in
-  `main()`.
+  `order_limit`, and the synthesized response 7 envelope in `main()`.
 - `tests/lib/lifecycle_contract.py`, `lifecycle_adapter.py`,
   `lifecycle_oracle.py`: the `MISSING` sentinel, `RESPONSE_WITH_DISPOSITION`,
   the legacy projection rows and transport notes, the
   `legacy_host_facts_missing` example, and every `not_reported` state that
-  only a reply before the record could produce. The record is required.
-- `tests/lib/blackbox.py`: the `effective_filter_value` fallback in
-  `submitted_filter_value`.
-- Before any deletion in this list, the rationale lines of DOCUMENTATION's
-  infrastructure ledger are confirmed captured; they are the only record of
-  why the deleted artifacts existed.
-- Cases: `runner_use_c_worker/drift_null_for_dac_eacces` (matrix S03, S17)
-  and `drift_null_for_non_policy_failure` (S14);
-  `witness_contract/drift_determination_via_validator_seam` (specimen B,
-  rows B1 to B7). Their catalog entries, `tests/README.md` rows and
-  `tests/COVERAGE.md` mentions go with them, so `source_drift` stays green.
+  only a reply before the record could produce.
+- `tests/lib/blackbox.py`: the `effective_filter_value` fallback.
+- Cases: `runner_use_c_worker/drift_null_for_dac_eacces` (S03, S17),
+  `runner_use_c_worker/drift_null_for_non_policy_failure` (S14),
+  `witness_contract/drift_determination_via_validator_seam` (B1 to B7), with
+  their catalog entries, `tests/README.md` rows and `tests/COVERAGE.md`
+  mentions.
 - Preparation that changes no emitted byte: factor `resolve_imports`,
   `compute_closure_hash` and the OS-facts read out of `sbpl-check.rs` into the
-  controller library; write the matrix fixture (I2); add the exec and sysctl
-  specimens under `tests/fixtures/pw_runner/`; create the worktree (D6.12).
+  controller library; write the matrix fixture (I2); add an exec and a sysctl
+  specimen under `tests/fixtures/pw_runner/`; create the worktree (D6.12).
 
-### I2. The matrix is the source of truth
+### I2. The matrix fixture
 
-`tests/fixtures/comparison/matrix.json` holds the 32 rows of the D1 matrix:
-for each, the specimen inputs (policy, query, attempt, steered verdict if any,
-independent control) and the expected response 13 `comparison` object. Two
-readers, no third copy:
+`tests/fixtures/comparison/matrix.json` holds the 32 rows: for each, the
+specimen inputs (policy, query, attempt, steered verdict if any, independent
+control) and the expected response 13 `comparison` object. Two readers:
 
 - `witness_contract/comparison_matrix`, new: runs the three specimens through
-  the CLI with the real validator, the steered validator and the failing
-  policy, checks every step against its row with the consumer's `validate`
-  and `select`, and keeps the independent controls `check_comparison.py` had
-  (the direct EACCES open, the retained file bytes). It replaces
-  `check_comparison.py` and the seam case.
+  the CLI, checks every step against its row with `validate` and `select`, and
+  keeps the independent controls `check_comparison.py` had (the direct EACCES
+  open, the retained file bytes).
 - `runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift`, replacing
   `DriftClassifierTests.swift`: table-driven over the same file through
-  `comparisonEvidence(...)`, plus the existing host-path-provenance group. Its
-  registration in `main.swift` changes with it.
+  `comparisonEvidence(...)`, plus the existing host-path-provenance group;
+  registered in `main.swift`.
 
-A row that changes is changed in the fixture; both readers fail until the
-producer agrees.
-
-### I3. Equipment rewritten from the contract
+### I3. Equipment
 
 - `tests/lib/consumer.py` exposes `validate(document)`, `steps(document)`,
   `select(steps, **fields)`, `lifecycle(document)` and `denials(document)`.
-  `document` is an envelope or a bare runner reply (D6.19). A version other
-  than the manifest's yields one `unsupported` error and nothing else. The
-  three validators (`validate_evidence_shape`, `validate_current_build_evidence`
-  and `validate_ordering`) merge into `validate`, which checks obligations
-  against raw evidence: `target_mutation` from every worker-reported
-  successful unlink in the reply, `sandbox_attribution` from `observation` and
+  `document` is an envelope or a bare runner reply. A version other than the
+  manifest's yields one `unsupported` error. `validate` merges
+  `validate_evidence_shape`, `validate_current_build_evidence` and
+  `validate_ordering` and checks obligations against raw evidence:
+  `target_mutation` from every worker-reported successful unlink,
+  `sandbox_attribution` from `observation` and
   `exec_result_failed_after_spawn`, `runtime_target_identity` from the filter
   kinds, `references` against the fixed set. `recover_evidence`,
   `comparison_groups`, `failure_groups`, `path_reporting` and
-  `step_reporting` are gone. No function returns a value computed from both
-  channels.
-- `tests/lib/blackbox.py`: `validate_step` drops the drift checks and the
-  alias-agreement rule (D6.22); `expected.comparison` may carry
-  `obligations`. `validate_run_shape` calls `validate`.
-- `tests/lib/unavailable_prediction.py` and `path_diagnostics_contract.py`:
-  field selections in place of groups.
-- The e2e checker controls are rebuilt against a captured current baseline:
-  `missing_path_run.json` regenerated at 13 and 5 from a live run. Surviving
-  controls are exactly those whose invariant is in D3: injected `drift`,
-  `conclusion`, `deny_signal`, `comparison.scope`, `exit_code`,
-  `syscall_errno` and `sandbox_check.scope` keys; obligation contradictions
-  per the D3 table; missing or wrong `references`; missing
-  `comparison_conditions` or `library_identity` where required; path
-  provenance; the ordering chain; reporting-failure withholding; an
-  unsupported version; and one control that feeds `pw-runner-client` output
-  to `validate` directly. The mutation-order controls are re-expressed
-  against `target_mutation`.
-- Menagerie: `expect.drift` is deleted from every step of `core.json`;
-  `validate_run.py` passes `expect.comparison` through when present.
-- Fixtures per R6; `BBX-001/expected.json` and `BBX-002/expected.json` lose
-  their drift keys.
+  `step_reporting` are gone.
+- `tests/lib/blackbox.py`: `validate_step` loses the drift checks and the
+  alias-agreement rule; `expected.comparison` may carry `obligations`;
+  `validate_run_shape` calls `validate`.
+- `tests/lib/unavailable_prediction.py`, `path_diagnostics_contract.py`: field
+  selections.
+- `blackbox_e2e/checker_controls.py` rebuilt against `missing_path_run.json`
+  regenerated at 13 and 5 from a live run. Surviving controls: injected
+  removed keys; obligation contradictions per D3; missing or wrong
+  `references`; missing `comparison_conditions` or `library_identity` where
+  required; path provenance; the ordering chain; reporting-failure
+  withholding; an unsupported version; one control feeding `pw-runner-client`
+  output to `validate`. The mutation-order controls are re-expressed against
+  `target_mutation`.
+- Menagerie: `expect.drift` deleted from `core.json`; `validate_run.py` passes
+  `expect.comparison` through. `BBX-001` and `BBX-002` `expected.json` lose
+  their drift keys. Other fixtures per R6.
 
 ### I4. Producer and dossier, in the worktree
 
-- Swift per R2, plus D6.22 and D6.23, the `library_identity` observation in
-  `SandboxLib.load` and its reply field, and `comparison_conditions`. The
-  field-complete fixture in `ReplyFailureTests` gains the new records; the
-  reply-budget string classification in `ReplyMaximumTests` gains every new
-  string key; the shape golden regenerates and its diff is the
-  acknowledgement.
-- Controller per D2: `data.specimen`, the `data` disposition table, the
-  references object, host facts, binaries, and the imports scan with its
-  budgets in `docs/limits.json`. Rust tests for shape, statuses, budgets, the
-  fixed reference set, and the relocated paths.
+- Swift per R2, D6.22 and D6.23, plus `library_identity` and
+  `comparison_conditions`. The field-complete fixture in `ReplyFailureTests`
+  gains the new records; the string classification in `ReplyMaximumTests`
+  gains every new string key; the shape golden regenerates.
+- Controller per D2 with Rust tests for shape, statuses, budgets, the fixed
+  reference set and the relocated paths; `docs/limits.json` gains the scan
+  budgets after measurement on the largest system profile and a
+  WebProcess-size specimen.
 - `docs/contract.json` to 13 and 5 with these changes, then
-  `python3 docs/generate_contract.py`; never before them.
+  `python3 docs/generate_contract.py`.
 - `witness_contract/dossier_witness`, new: the dossier against the specimen
   that ran and host facts the test captures independently (`sw_vers`,
   `uname`, the manifest, a hash of the worker binary).
-- Measure the imports scan on the largest system profile and on a
-  WebProcess-size specimen; confirm or adjust the D2 budgets and record them.
 
 ### I5. Contract and registry documents
 
 - `tests/FAILURE-PROPAGATION-CONTRACT.md`: the chapter "Derived comparisons
-  and evidence joins" is replaced, not revised. Its replacement holds the
-  comparison record (D1 rules and fragment), the invariants (D3), the
-  scenario matrix, an ownership table naming which registered case owns which
-  rows and which invariants, and supported versions (D6.8). The join table
-  stays with its "Supported public conclusion" column renamed "What the record
+  and evidence joins" is replaced by the comparison record (D1), the
+  invariants (D3), the scenario matrix, an ownership table naming which case
+  owns which rows and invariants, and supported versions. The join table stays
+  with its "Supported public conclusion" column renamed "What the record
   states". C1 through C6, the accepted-answers table, "Public representation
   and meaning", "Permanent consumer enforcement" and "Compatibility and
   acceptance gate" go.
-- `docs/CONTRACT.md` per D5 and D6.21.
-- `tests/catalog.json`: the deleted ids go, `comparison_matrix` and
-  `dossier_witness` are added, `execute_permission_is_not_sandbox_drift`
-  becomes `execute_permission_controls_spawn`.
+- `docs/CONTRACT.md` per D5. `ContractVersionTests.swift`'s header comment
+  ("Added keys need no bump") changes with it.
+- `tests/catalog.json`: `comparison_matrix` and `dossier_witness` added;
+  `execute_permission_is_not_sandbox_drift` becomes
+  `execute_permission_controls_spawn`.
 - `tests/README.md`: the "Comparison evidence coverage" section becomes one
-  paragraph pointing at the matrix fixture and its two readers; the suite rows
-  for the affected suites are rewritten. `tests/COVERAGE.md` rows likewise.
-  Suite READMEs and fixture READMEs are covered by DOCUMENTATION's
-  infrastructure ledger; their mechanically checked parts change with I1 and
-  I5 so `source_drift` stays green.
+  paragraph pointing at the matrix fixture and its two readers; affected suite
+  rows rewritten. `tests/COVERAGE.md` rows likewise. Suite and fixture READMEs
+  follow DOCUMENTATION's infrastructure ledger.
 - `runner/README.md`, `runner/AGENTS.md`, `runner/augments/README.md`,
-  `controller/README.md` (including its consumer-audit table, which names
-  equipment functions that no longer exist) and the AGENTS.md core idea per R8.
+  `controller/README.md` (including its consumer-audit table) and the
+  AGENTS.md core idea per R8.
 
 ### Kept scenarios
-
-Their expectations are rewritten from the matrix or from their own controls;
-none asserts a removed key.
 
 | Case | Independent control | Expectation source |
 | --- | --- | --- |
@@ -996,145 +643,119 @@ none asserts a removed key.
 | `runner_validator_failure/*`, `runner_outcome_validator_no_reply` | transcripts, signals | B2, B4 |
 | `runner_outcome_runner_timeout`, `witness_contract/worker_post_apply_hang_seam`, `worker_attempt_in_flight_at_deadline` | deadlines, file effects | S01 plus the lifecycle rows |
 | `runner_specimen_isolation`, `runner_exec_lifecycle`, `runner_exec_inheritance` | process observations | S15, S16 |
-| `failure_boundaries/*` | admission and receiver faults | shape only; no comparison expectations |
-| `blackbox_e2e/BBX-001`, `BBX-002`, the menagerie cases | policy knowledge, file effects | channel expectations (`predict`, `attempt_ok`, `errno`) |
+| `failure_boundaries/*` | admission and receiver faults | shape only |
+| `blackbox_e2e/BBX-001`, `BBX-002`, the menagerie cases | policy knowledge, file effects | `predict`, `attempt_ok`, `errno` |
 | `runner_filter_*` | planning exclusion | S10 |
 
 ### Verification
 
-- Default battery after I1 on `main`, after each worktree increment, and
-  `tests/run.sh --all` before the fast-forward; the `--all` run is retained as
-  the acceptance record.
-- `order_barrier_mutations` once after integration.
-- Before I1 and after the fast-forward, run the five comparison specimens
-  (the three under `tests/fixtures/pw_runner/` plus the exec and sysctl
-  specimens added in I1) and diff the envelopes with run-varying values
+- Default battery after I1 on `main` and after each worktree increment;
+  `tests/run.sh --all` before the fast-forward, retained as the acceptance
+  record. `order_barrier_mutations` once after integration.
+- Before I1 and after the fast-forward, run the five specimens under
+  `tests/fixtures/pw_runner/` and diff the envelopes with run-varying values
   accounted for.
-- R11's searches over the test tree and the equipment, read in context.
-- A reader of the finished `consumer.py` finds no function that returns a
-  value computed from both channels, and no branch on `schema_version` other
-  than the equality check.
+- R10 over the test tree and equipment.
+- The finished `consumer.py` has no function returning a value computed from
+  both channels and no branch on `schema_version` other than the equality
+  check.
 - Sub-agents cannot run the built app; live verification runs from the main
   session.
 
 ## DOCUMENTATION
 
-Held lightly, except for the method and the requirement to describe current
-shipped behavior. The primary prose review covers `README.md` and
-`docs/PolicyWitness.md`; R8 and R11 cover overlapping contributor docs, help and
-implementation text. The guide mechanically entrains `docs/QUESTIONS.md`
-(between the `SHARED QUESTIONS` markers) and `docs/LIMITS.md` (between the
-`SHARED LIMITS` markers) through `python3 docs/generate_limits.py`; the copied
-blocks in the guide are never edited by hand, and `source_drift` checks the
-copies and the guide's `prediction_unavailable` list against the Swift set.
-
-Remove historical explanations, old label mappings and compatibility links that
-have no current use. Git retains the history. Any documentation for a retained
-legacy reader must explain a supported current workflow, not keep the retired
-product model alive in the guide.
-
-### Why this section is separate
-
-Humans and agents read these two documents first and form durable assumptions
-about what PW is for and what it can do. A sentence that survives the edit
-while still promising a verdict will be believed. So the edit is preceded by a
-ledger, and the ledger is reviewed before any prose changes.
+Held lightly except for the method. The prose review covers `README.md` and
+`docs/PolicyWitness.md`; R8 and the infrastructure ledger cover contributor
+documents. The guide entrains `docs/QUESTIONS.md` (between the `SHARED
+QUESTIONS` markers) and `docs/LIMITS.md` (between the `SHARED LIMITS` markers)
+through `python3 docs/generate_limits.py`; the copied blocks are never edited
+by hand, and `source_drift` checks the copies and the guide's
+`prediction_unavailable` list against the Swift set.
 
 ### The ledger
 
 Every sentence in the two documents that states a goal or a capability gets a
-row: the sentence, its classification (keep, revise, remove), and the
-replacement text if revised. Seed rows found so far:
+row: the sentence, its class (keep, revise, remove) and the replacement
+direction. Seed rows:
 
 | Document | Sentence (abridged) | Class | Direction |
 | --- | --- | --- | --- |
-| README ¶1 | "harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement" | revise | PW witnesses what a policy does to a process through two channels evaluated by the same kernel evaluator; it does not adjudicate between them |
-| README ¶2 | "Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles" | revise | Keep the lifecycle argument; drop "measuring against" |
-| README Flow | "Each step records two evidence channels plus their comparison" | keep | With the comparison bullet rewritten |
-| README Flow | the **Drift** bullet | remove | Replace with a **Comparison** bullet: submitted-scope relations, order, obligations, no label |
+| README ¶1 | "harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement" | revise | PW witnesses what a policy does to a process through two channels; it does not adjudicate between them |
+| README ¶2 | "Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles" | revise | keep the lifecycle argument; drop "measuring against" |
+| README Flow | "Each step records two evidence channels plus their comparison" | keep | with the comparison bullet rewritten |
+| README Flow | the **Drift** bullet | remove | a **Comparison** bullet: submitted-scope relations, order, obligations |
 | README Flow | "Eligible `query_first` records establish this ordering; they do not establish a shared state snapshot" | keep | |
-| FAQ | "When should I use PolicyWitness?" ("compares … predictions with the observed results … investigating disagreement") | revise | Use it to witness a policy's effect on specific operations and targets, with both channels and the kernel log attached |
-| FAQ | "Beyond observing drift, what does PolicyWitness's attempt channel record?" | revise | Heading loses "drift" |
-| FAQ | "How does PolicyWitness handle uncertainty in its verdicts?" | remove and replace | New question: "What does a comparison record contain, and what does it not claim?" |
-| FAQ | "Can PolicyWitness return a verdict of `drift: true`?" | remove and replace | New question: "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?" Answer: no, by design; what it gives you instead; how to read it |
+| FAQ | "When should I use PolicyWitness?" | revise | to witness a policy's effect on specific operations and targets, with both channels and the kernel log attached |
+| FAQ | "Beyond observing drift, what does PolicyWitness's attempt channel record?" | revise | heading loses "drift" |
+| FAQ | "How does PolicyWitness handle uncertainty in its verdicts?" | replace | "What does a comparison record contain, and what does it not claim?" |
+| FAQ | "Can PolicyWitness return a verdict of `drift: true`?" | replace | "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?": no; what it gives instead; how to read it |
 | FAQ | "Which happens first, the prediction or the attempt?" | keep | |
-| Guide, Output envelope → Top-level fields | the `steps[].drift` and `steps[].comparison` bullets | revise | Per D1; add `obligations` |
-| Guide, Per-step shape | "`steps[].drift`: `bool \| null`" | remove | |
-| Guide, attempt outcome notes (~800, ~829, ~860, ~863, ~923, ~1071, ~1099) | "`drift` is null …" | revise | Say what the comparison fields show instead |
-| Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement", "the drift pattern is not iokit-specific" | revise | State the verified fact: no filter ID in 1..200 produced a verdict matching enforcement, so the query cannot be made to ask the hook's question; keep the "Currently in this category:" marker and the pair list format that `source_drift` parses |
-| Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | Drop "drift" |
-| Guide | new section: the specimen dossier | add | Canonical provenance paths and the map to raw channel records; collection basis and limits; concrete evidence-selection recipes without joint verdicts |
-| Guide, dossier section | library identity | add | State the host-observed basis and the on-disk override check; say plainly that it is not a worker-side observation |
-| Guide, Output envelope | fields are described by envelope path only | revise | Document the bare reply printed by `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture (D6.19); the dossier's `references` are the map |
-| Guide and FAQ | signal-channel descriptions and old provenance paths | revise/remove | Describe surviving evidence channels and canonical dossier paths; no historical aliases or migration narrative |
-| LIMITS | import and dossier collection bounds | revise/add | Describe the normal-run depth/count, byte and collection budgets selected in I4 |
+| Guide, Top-level fields | the `steps[].drift` and `steps[].comparison` bullets | revise | per D1 |
+| Guide, Per-step shape | "`steps[].drift`: `bool \| null`"; the `exit_code` and `syscall_errno` aliases; `scope` | remove | |
+| Guide, attempt outcome notes (~800, ~829, ~860, ~863, ~923, ~1071, ~1099) | "`drift` is null …" | revise | say what the comparison fields show |
+| Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement"; "the drift pattern is not iokit-specific" | revise | state the verified fact: no filter ID in 1..200 produced a verdict matching enforcement; keep the "Currently in this category:" marker and list format that `source_drift` parses |
+| Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | drop "drift" |
+| Guide | the specimen dossier | add | canonical paths, `references` as the map to raw records, collection basis and limits, evidence-selection recipes without labels |
+| Guide, dossier section | library identity | add | the host-observed basis and the on-disk override check; not a worker-side observation |
+| Guide, Output envelope | fields described by envelope path only | revise | the bare reply from `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture |
+| Guide and FAQ | signal-channel descriptions and old provenance paths | remove | |
+| LIMITS | import scan bounds | add | the normal-run depth, count, byte and time budgets from I4 |
 
 ### Infrastructure ledger (from REPAIR)
 
-The user-facing ledger above is built by reading. This one is built from the
-REPAIR classification: one row per artifact REPAIR deletes, replaces, rewrites
-or adds, with every document that names it found by exact search on
-2026-09-30, and whether any part of that document is mechanically checked.
-Everything not marked checked is prose that only reading will fix. `records/`
-also matches and stays untouched by policy.
-
-Two sequencing facts. The rationale lines below are captured now, before I1
-deletes the files that carry them; that is the one place DOCUMENTATION work
-precedes REPAIR execution. After I5, R11's test-tree pass reruns the same
-search patterns against the finished tree, so completion is measured against
-the names this ledger started from.
+One row per artifact REPAIR deletes, replaces, rewrites or adds, with every
+document that names it found by exact search on 2026-09-30, and the
+mechanically checked part marked. Everything not marked is prose that only
+reading will fix. `records/` also matches and stays untouched. After I5, R10
+reruns the same searches against the finished tree.
 
 | Artifact | REPAIR | Documents naming it (hits) | Mechanically checked part |
 | --- | --- | --- | --- |
 | `witness_contract/drift_determination_via_validator_seam` | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/suites/witness_contract/README.md` (section) | suite table row, README presence |
 | `runner_use_c_worker/drift_null_for_dac_eacces` | I1 delete | `tests/README.md` (1), `tests/suites/runner_exec_dac/README.md` (1), `tests/suites/runner_use_c_worker/README.md` (1), `tests/suites/witness_contract/README.md` (1) | suite table row |
 | `runner_use_c_worker/drift_null_for_non_policy_failure` | I1 delete | `tests/suites/runner_use_c_worker/README.md` (2), `tests/README.md` (1), `tests/COVERAGE.md` (1), `docs/PolicyWitness.md` (1) | suite table row; outcome matrix |
-| `runner_exec_dac/execute_permission_is_not_sandbox_drift` | rename | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/COVERAGE.md` (1), `tests/suites/runner_exec_dac/README.md` (whole file is in the verdict frame), `tests/suites/run_capture/README.md` (1) | suite table row; outcome matrix |
+| `runner_exec_dac/execute_permission_is_not_sandbox_drift` | rename | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/COVERAGE.md` (1), `tests/suites/runner_exec_dac/README.md` (whole file), `tests/suites/run_capture/README.md` (1) | suite table row; outcome matrix |
 | `witness_contract/check_comparison.py` | I2 absorbed | `tests/suites/witness_contract/README.md` (1) | none |
 | `DriftClassifierTests.swift` | I2 replaced | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
 | `EnvelopeInvariantTests` legacy groups | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (3), `tests/COVERAGE.md` (2) | outcome matrix |
 | `runner_client.rs` version loop | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
-| `checker_controls.py` legacy and drift controls | I1 delete, I3 rebuild | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/README.md` (6), `tests/COVERAGE.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `tests/suites/runner_filter_sysctl_name/README.md` (2), `controller/README.md` (1), and one each in the `smoke`, `run_effects`, `runner_byoxpc` and both iokit filter suite READMEs | suite table rows; outcome matrix |
+| `checker_controls.py` legacy and drift controls | I1 delete, I3 rebuild | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/README.md` (6), `tests/COVERAGE.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `tests/suites/runner_filter_sysctl_name/README.md` (2), `controller/README.md` (1), one each in the `smoke`, `run_effects`, `runner_byoxpc` and both iokit filter suite READMEs | suite table rows; outcome matrix |
 | `consumer.py` `recover_evidence` and its groups | I3 rewrite | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `controller/README.md` (consumer-audit table) | none |
 | `consumer.py` three validators | I3 merge | `tests/FAILURE-PROPAGATION-CONTRACT.md` (2) | none |
-| `blackbox.py` `effective_filter_value` fallback | I1 delete | `docs/CONTRACT.md` (1, goes with the tables) | none |
-| `blackbox.py` alias-agreement rule | I3 delete (D6.22) | `tests/README.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `runner/README.md` (1), `docs/PolicyWitness.md` (1), and one each in the `runner_filter_sysctl_name`, `runner_specimen_isolation` and `runner_outcome_runner_timeout` READMEs | suite table rows; guide per-step shape line |
+| `blackbox.py` `effective_filter_value` fallback | I1 delete | `docs/CONTRACT.md` (1) | none |
+| `blackbox.py` alias-agreement rule | I3 delete | `tests/README.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `runner/README.md` (1), `docs/PolicyWitness.md` (1), one each in the `runner_filter_sysctl_name`, `runner_specimen_isolation` and `runner_outcome_runner_timeout` READMEs | suite table rows; guide per-step shape line |
 | lifecycle legacy rows and sentinels | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/suites/blackbox_e2e/README.md` (2), `docs/CONTRACT.md` (1), `controller/README.md` (1), `tests/fixtures/disposition/README.md` (1), `tests/suites/witness_contract/README.md` (1) | none |
 | `missing_path_run.json` | I3 regenerate | `tests/suites/blackbox_e2e/README.md` (1) | none |
 | `a1_expected.json`, `a1_known_loss.json` | I3 regenerate, keep | `tests/fixtures/disposition/README.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `controller/README.md` (1) | none |
 | menagerie `expect.drift` | I3 delete key | `tests/FAILURE-PROPAGATION-CONTRACT.md` (2), `controller/README.md` (1), `tests/suites/blackbox_e2e/README.md` (1), `tests/suites/blackbox_menagerie/README.md` (1), `tests/suites/witness_contract/README.md` (1) | none |
 | BBX `expected.json` drift keys | I3 delete key | `tests/suites/blackbox_e2e/README.md` (3), `tests/OPT_IN_TESTS.md` (1), `tests/suites/runner_byoxpc/README.md` (1) | none |
-| `tests/fixtures/comparison/matrix.json` | I2 new | none yet; needs `tests/fixtures/README.md`, the `witness_contract` README and the `runner_unit` README | README presence |
-| `witness_contract/dossier_witness` | I4 new | none yet; needs the `witness_contract` README and `tests/README.md` | suite table row |
-| legacy-reading vocabulary (`legacy`, `older replies`, `stored replies`, `historical`) | D6.8 | `tests/FAILURE-PROPAGATION-CONTRACT.md` (33), `tests/COVERAGE.md` (7), `docs/CONTRACT.md` (6), `tests/README.md` (5), `runner/README.md` (4), `controller/README.md` (4), `tests/suites/blackbox_e2e/README.md` (4), `tests/suites/witness_contract/README.md` (2), and one each in `tests/fixtures/README.md`, `tests/fixtures/disposition/README.md`, `tests/fixtures/worker_lifecycle/README.md`, and the `runner_filter_sysctl_name`, `runner_unit`, `blackbox_menagerie` and `runner_c_worker_harness` READMEs | none beyond the rows above |
+| `tests/fixtures/comparison/matrix.json` | I2 new | needs `tests/fixtures/README.md`, the `witness_contract` README and the `runner_unit` README | README presence |
+| `witness_contract/dossier_witness` | I4 new | needs the `witness_contract` README and `tests/README.md` | suite table row |
+| legacy-reading vocabulary (`legacy`, `older replies`, `stored replies`, `historical`) | D6.8 | `tests/FAILURE-PROPAGATION-CONTRACT.md` (33), `tests/COVERAGE.md` (7), `docs/CONTRACT.md` (6), `tests/README.md` (5), `runner/README.md` (4), `controller/README.md` (4), `tests/suites/blackbox_e2e/README.md` (4), `tests/suites/witness_contract/README.md` (2), one each in `tests/fixtures/README.md`, `tests/fixtures/disposition/README.md`, `tests/fixtures/worker_lifecycle/README.md`, and the `runner_filter_sysctl_name`, `runner_unit`, `blackbox_menagerie` and `runner_c_worker_harness` READMEs | none beyond the rows above |
 
-Rationale that must survive the deletion of the artifact that carries it,
-captured from the READMEs before I1:
+Rationale that must survive the deletion of the artifact carrying it,
+captured before I1:
 
 - **Seam case.** A stub validator supplies the verdicts so the comparison is
   exercised independently of libsandbox's answers; the transcript is not a
   native result, and expectations come from submitted scopes and independent
-  file and permission controls. Survives as the matrix README's description
-  of specimen B and its use of `_test_overrides.validator_executable_path`.
+  file and permission controls. Goes to the matrix README's description of
+  specimen B and its use of `_test_overrides.validator_executable_path`.
 - **DAC EACCES case.** A permission failure under an allow prediction is not
-  evidence about the sandbox. Survives as matrix row S03 and the
-  `sandbox_attribution` obligation; the `runner_exec_dac` README's first
-  sentence keeps the idea for exec, reworded without "drift".
+  evidence about the sandbox. Matrix row S03 and the `sandbox_attribution`
+  obligation; the `runner_exec_dac` README's first sentence keeps it for exec.
 - **Unknown-service case.** `kr=1102` means the service is not registered; it
-  is not a permission result. Survives as matrix row S14 and the guide's
-  `lookup_failed` note, which already says this.
+  is not a permission result. Matrix row S14 and the guide's `lookup_failed`
+  note.
 - **Checker controls.** Controls run without the app before the live cases;
-  controlled changes must fail; combined failures must report each independent
+  controlled changes must fail; combined failures report each independent
   problem; controls exercise the checker CLI without importing its
-  implementation. These four sentences move to the rebuilt controls' README.
-- **Disposition fixtures.** The captured-versus-generated distinction stays as
-  written; the captured reply's sentence changes from "accepted as the legacy
-  reply it is" to "reported as unsupported, which is the check".
+  implementation. These four sentences go to the rebuilt controls' README.
+- **Disposition fixtures.** The captured-versus-generated distinction stays;
+  the captured reply's sentence becomes "reported as unsupported, which is the
+  check".
 - **Transport test.** The controller forwards the reply unchanged, including
-  unfamiliar strings. Survives as a current-version transport test; the
-  "legacy absences" half of its name goes.
-- **Legacy round-trips and lifecycle legacy rows.** Nothing to preserve;
-  CONTRACT.md's "Supported versions" sentence is the whole replacement.
+  unfamiliar strings. Stays as a current-version transport test.
 
 ### A proposed statement of what PolicyWitness is
 
@@ -1155,81 +776,47 @@ To be agreed before editing, then placed at the top of the README and the guide:
 ### Method
 
 1. Complete both ledgers. The user-facing one is built by reading the two
-   documents end to end, since the sentences that mislead most contain none of
-   the search terms; `rg` over the R11 vocabulary is only the starting point.
+   documents end to end; `rg` over the R10 vocabulary is only the starting
+   point.
 2. Before opening a document, write a current-state brief in scratch from the
    DESIGN sections, the matrix and the built app, without reading the old
    prose. Edit against the brief. Open the old text only to find what to
    delete and what a reader still needs. Where the plan says a passage is
    replaced, the old text is not an input.
-3. Review each ledger as a whole before editing. Check that the kept sentences
+3. Review each ledger as a whole before editing; check that the kept sentences
    still make sense once the removed ones are gone.
 4. History has one sanctioned form. A past-tense clause is allowed only when it
-   changes what the reader does now: "a stored reply is reported as
-   unsupported" is current behavior; "replies before 13 carried drift" is not.
-   Beyond that, one history sentence per document, as a pointer to `git log`,
-   never an account. A sentence whose subject is a deleted artifact is deleted,
-   not annotated; the ledgers say which artifacts those are.
-5. Write in the register of one existing paragraph per document kind, chosen
-   because it describes current behavior with no history: the user guide's
-   three-state `path_diagnostics` paragraph; the README's "Entitlements + SBPL"
-   section; the AGENTS.md "Bundle layout is a contract" section; the
-   controller README's "Execution and log-evidence ownership" table.
+   changes what the reader does now ("a stored reply is reported as
+   unsupported" qualifies; "replies before 13 carried drift" does not). Beyond
+   that, one history sentence per document, as a pointer to `git log`, never
+   an account. A sentence whose subject is a deleted artifact is deleted, not
+   annotated; the ledgers say which artifacts those are.
+5. Write in the register of one existing paragraph per document kind, each
+   describing current behavior with no history: the guide's three-state
+   `path_diagnostics` paragraph; the README's "Entitlements + SBPL" section;
+   the AGENTS.md "Bundle layout is a contract" section; the controller
+   README's "Execution and log-evidence ownership" table.
 6. Edit `QUESTIONS.md` and `LIMITS.md` first, run `generate_limits.py`, then
    the guide's own prose, then the README, then the infrastructure documents.
-7. Check-in after each document. The next turn reads the document cold, with
+7. Check in after each document. The next turn reads the document cold, with
    only this section loaded, and lists every sentence that would puzzle a
-   reader who never saw the previous version. Those are fixed before the next
+   reader who never saw the previous version; those are fixed before the next
    document is opened. When a bridge seems necessary, the check-in carries
    the sentence with and without it and asks whether the bare version is
-   nonsensical, rather than deciding alone.
-8. Completion. Run `source_drift`. Then search for the tell-words (no longer,
+   nonsensical.
+8. Completion. Run `source_drift`. Search for the tell-words (no longer,
    previously, formerly, now, instead, replaces, legacy, historical, used to,
    since response, before response) and read every hit; each that stays is
-   kept with a one-line reason, as R11 does for surviving semantic
-   references. Reconcile `AGENTS.md`, the runner, controller and test READMEs,
-   CLI help, diagnostics, comments and docstrings with the guide: different
-   wording is fine, contradiction and retired claims are not.
+   kept with a one-line reason. Reconcile `AGENTS.md`, the runner, controller
+   and test READMEs, CLI help, diagnostics, comments and docstrings with the
+   guide: different wording is fine, contradiction and retired claims are not.
 
-### Holding pen: overlapping documentation (deferred)
+### Open
 
-PolicyWitness intentionally documents behavior in overlapping places, often with
-different wording for different readers. That friction is accepted. The problem
-to revisit is how to maintain agreement between those accounts when a concept
-changes: exact-text searches and generated-copy checks cannot find every stale
-promise or historical assumption.
-
-This subsection holds a later review; it does not authorize a documentation
-reorganization, deduplication project or new tooling as part of drift removal.
-The current removal must still update every affected surface through R11.
-
-Questions and inventory for whoever returns to this:
-
-- Map overlapping subjects across the README, user guide, QUESTIONS/LIMITS,
-  CONTRACT, runner/controller/test READMEs, AGENTS files, CLI help, diagnostics,
-  test descriptions, comments and docstrings. Identify each account's audience,
-  purpose and source of authority.
-- Distinguish generated copies and enforced tables from manually maintained
-  restatements. Record generator inputs and outputs, including
-  `generate_limits.py` and `generate_contract.py`, and which relationships
-  `source_drift` actually checks.
-- Identify where different wording is useful and where it hides conflicting or
-  obsolete claims. Consider how agents should search, read and reconcile those
-  passages without assuming identical text or a single comprehensive document.
-- Identify historical links, compatibility explanations and redundant promises
-  that have no present role. Evaluate them against current shipped behavior and
-  actual reader workflows, not preservation for its own sake.
-
-The later review should produce a map of the overlaps and concrete maintenance
-recommendations. Whether any material should move, be generated, be removed or
-remain independently worded is open. No general consolidation decision is made
-here, and this deferred review does not block completion of the present plan.
-
-### Held lightly
-
-- Whether `comparison` keeps its name. The recommendation is to keep it because
-  it accurately names the submitted-scope relations and collected observations.
-- How prominent the "witness" framing should be. The name of the project
-  argues for very.
-- Whether the FAQ should gain a question on reading the deny log as the
-  kernel's account, given the known intermittent omission. Probably yes, short.
+- How prominent the "witness" framing should be in the README.
+- Whether the FAQ gains a short question on reading the deny log as the
+  kernel's account, given its known intermittent omission.
+- Deferred and not part of this plan: how overlapping accounts across the
+  README, guide, contracts, READMEs, AGENTS files, help text and comments are
+  kept in agreement when a concept changes, beyond exact-text search and
+  generated copies.
