@@ -617,12 +617,18 @@ current-version fixtures for unfamiliar-value transport tests.
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
 
 | 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
-| 36 | Dossier presence on non-execution run envelopes | Open. `cli.rs`'s pre-execution `tool_error` path emits `kind: "run"` with a bare `{"error": …}` data object and no `RunData`, so D2's "every run envelope" rule has no collection point there. Resolve before implementation. |
+| 36 | Dossier presence on non-execution run envelopes | Open. `cli.rs`'s pre-execution `tool_error` path emits `kind: "run"` with a bare `{"error": …}` data object and no `RunData`, so D2's "every run envelope" rule has no collection point there. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all take that path, so D2's sentence about those errors "retaining their existing envelope kind" describes a kind that is already `run`. The `data.error` string there is a constant; the real message is in `result.error`. Recommended resolution: one `data` skeleton for every run envelope, emitted from `cmd_run`, with the dossier at its collected state. Resolve before implementation. |
 | 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
 | 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. |
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. |
 | 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
 | 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. |
+
+`kind: "run"` is not the only kind whose `data` shape varies within one kind:
+`runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
+in place of their own record. That variance is outside this plan, which changes
+only the run envelope, and it is recorded here so a later reader does not read
+D6.36's resolution as covering it.
 
 Reader inventory behind D6.8 and D6.31: the Swift decoder gates at 8, 9 and 10;
 `consumer.py` branches at 7, 8, 9 and 12; the Python lifecycle tools branch at
