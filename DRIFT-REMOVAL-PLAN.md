@@ -2,8 +2,7 @@
 
 Status: REVISED for readiness review as of 2026-09-30; implementation has not
 started. The matrix's response 12 columns are verified against live output
-(see the scenario matrix). Every readiness box below is checked; D6.41's
-mutation-list shape is under review, and a change there would edit D1. The readiness gate below separates settled decisions from execution
+(see the scenario matrix), and every readiness box below is checked. The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -62,7 +61,7 @@ remaining strings stay a list.
   "obligations": {
     "sandbox_attribution":     { "status": "not_required" },
     "runtime_target_identity": { "status": "unestablished" },
-    "target_mutation":         { "status": "none", "steps": [] }
+    "target_mutation":         { "status": "none" }
   },
   "limitations": []
 }
@@ -72,18 +71,22 @@ remaining strings stay a list.
 | --- | --- | --- |
 | `obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_applicable` when `observation` is `unavailable`; `not_required` otherwise (D6.14) |
 | `obligations.runtime_target_identity.status` | string | `unestablished` when the query's `filter_kind` is `path` or the mapped attempt filter is `path`; `not_applicable` otherwise |
-| `obligations.target_mutation.status` | string | `none` when the qualifying list below is empty; otherwise `unordered` when `order` is `unestablished`, or `after_query` when `order` is `query_first`. `none` does not establish an unchanged target |
-| `obligations.target_mutation.steps` | array of string | the complete, unique list of qualifying step IDs in plan order, including the current step when it qualifies; empty exactly when `status` is `none` |
+| `obligations.target_mutation.status` | string | `none` when no run step qualifies under the rule below; otherwise `unordered` when `order` is `unestablished`, or `after_query` when `order` is `query_first`. `none` does not establish an unchanged target. The obligation names no step: which step removed the target is in the attempt records (D6.42) |
 | `limitations` | array of string | may be empty; vocabulary unchanged: `query_plan:*`, `prediction:*`, `attempt:*` (including the lifecycle entries), `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `operation:*`, `target:*`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed`. `query_attempt_order_unestablished` is gone (it equalled `order != query_first`) |
 
-The qualifying list is empty unless the query has `filter_kind: path`, a
-nonnull submitted `filter_value`, and no `query_plan:*` limitation. Otherwise,
-include every run step whose attempt has `result_source: worker`,
-`requested_kind: file`, `requested_action: unlink`, `outcome: ok`, `rc: 0`,
-and `requested_path` equal to that submitted filter value. Host-resolved paths
-do not participate. An excluded query therefore keeps `none` even if a later
-attempt removes its submitted path; the raw unlink record remains available.
-This preserves the producer's query-exclusion boundary (D6.26).
+No step qualifies unless the query has `filter_kind: path`, a nonnull submitted
+`filter_value`, and no `query_plan:*` limitation. Given that, a run step
+qualifies when its attempt has `result_source: worker`, `requested_kind: file`,
+`requested_action: unlink`, `outcome: ok`, `rc: 0`, and `requested_path` equal to
+that submitted filter value; the current step counts as a run step. Host-resolved
+paths do not participate. An excluded query therefore keeps `none` even if a
+later attempt removes its submitted path. That exclusion is the obligation's
+whole content beyond existence: it is producer knowledge a reader recomputing
+from the attempt records would not apply, which is why the status ships and the
+matching step IDs do not. A reader who wants the step compares
+`attempt.requested_path` against the query's `filter_value` across the steps,
+exactly as the producer does. This preserves the producer's query-exclusion
+boundary (D6.26, D6.42).
 
 No obligation's value space contains `established`. State stability does not
 vary per step: the reply carries `comparison_conditions:
@@ -139,19 +142,19 @@ identity), M (target mutation); `nr` = `not_required`, `na` =
 | S16 | spawn ok, child exits 1 | allow | succeeded / spawned_child | matched | same | query_first | un | un | none | `exec_result_failed_after_spawn`, `exec_query_not_full_spawn_prediction` |
 | S17 | spawn of mode-000 target, EACCES | allow | permission_failure / permission_errno | matched | same | query_first | un | un | none | `exec_query_not_full_spawn_prediction` |
 | S18 | spawn of absent target | unavailable | other_failure / completed_worker_status | matched | same | unestablished | un | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested`, `exec_query_not_full_spawn_prediction` |
-| S19 | ordered unlink of queried path | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query [S19] | `host_path_resolution_changed` |
+| S19 | ordered unlink of queried path | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query | `host_path_resolution_changed` |
 | S20 | `process-exec-interpreter` query, binary spawn | allow | succeeded / spawned_child | different | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction`, `operation:different` |
 | S21 | `local_name` query, kr=1100 | allow | permission_failure / bootstrap_permission_result | matched | unresolved | query_first | un | na | none | `query_filter_scope_unestablished`, `target:unresolved` |
 | S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | nr | un | none | `query_filter_scope_unestablished`, `submitted_target_unavailable`, `target:unresolved` |
 | S23 | allow, `access` succeeds | as S01 | | | | | | | | |
 | S24 | allow, `open_write` succeeds | as S01 | | | | | | | | |
-| S25 | read of the path S19 unlinked, ENOENT | allow | other_failure / completed_worker_status | matched | same | query_first | un | un | after_query [S19] | `host_path_resolution_changed` |
+| S25 | read of the path S19 unlinked, ENOENT | allow | other_failure / completed_worker_status | matched | same | query_first | un | un | after_query | `host_path_resolution_changed` |
 | B1 | steered deny, read succeeds, ordered | deny | succeeded / completed_worker_status | matched | same | query_first | nr | un | none | |
 | B2 | verdict omitted, read succeeds | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:validator_no_verdict` |
-| B3 | verdict omitted, unlink of queried path | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered [B3] | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
+| B3 | verdict omitted, unlink of queried path | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
 | B4 | validator error record | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:no_usable_verdict` |
-| B5 | verdict omitted, read of a path B6 unlinks | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered [B6] | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
-| B6 | allow, ordered unlink | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query [B6] | `host_path_resolution_changed` |
+| B5 | verdict omitted, read of a path B6 unlinks | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
+| B6 | allow, ordered unlink | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query | `host_path_resolution_changed` |
 | B7 | allow, read succeeds (control) | as S01 | | | | | | | | |
 | C1 | policy fails to compile, nothing runs | unavailable | unavailable / no_completed_worker_result | matched | same | unestablished | na | un | none | `prediction:validator_not_invoked`, `attempt:slot_incomplete`, `attempt:not_reached` |
 | R | `runner_reporting_failed` | no `comparison` object and no `comparison_conditions`; both fallback levels tested in `ReplyFailureTests` | | | | | | | | |
@@ -497,9 +500,8 @@ case, including the absence before loading.
   | --- | --- |
   | `target_mutation.status: after_query` | `order` is not `query_first` |
   | `target_mutation.status: unordered` | `order` is `query_first` |
-  | `target_mutation.status: none` | `steps` is non-empty |
-  | `target_mutation.status` other than `none` | `steps` is empty, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
-  | `target_mutation.steps` | differs from D1's complete qualifying list: missing, invented, duplicated, nonqualifying or out-of-order IDs; producer and consumer both check this |
+  | `target_mutation.status` other than `none` | no run step qualifies under D1, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
+  | `target_mutation` | carries any key but `status`; producer and consumer both check this |
   | `sandbox_attribution.status`, `runtime_target_identity.status` | disagree with the D1 rules for this step |
   | any step | carries `drift`, `conclusion`, `deny_signal`, `comparison.scope`, `sandbox_check.scope`, `attempt.exit_code` or `attempt.syscall_errno`, or one of the five removed limitation strings |
   | `comparison_conditions` | absent or not exactly `{ "unestablishable": ["state_stability"] }` while `steps` is present on an ordinary reply; present on either `runner_reporting_failed` fallback |
@@ -625,13 +627,13 @@ current-version fixtures for unfamiliar-value transport tests.
 | 23 | `sandbox_check.scope` | Removed; constant `post_sandbox`. |
 | 24 | REPAIR principle | Port scenarios and invariants, never assertions or code; delete on `main` first; the matrix fixture is the single source of comparison expectations. |
 | 25 | Descriptive derivation (clarifies 7) | D0 permits computed descriptive fields, validation and selection across channels. Only joint prediction/enforcement verdicts are prohibited. |
-| 26 | Mutation and conditions | D1's query-exclusion guard and complete qualifying ID list govern both encoder and consumer. Both reporting-failure levels omit `comparison_conditions`; ordinary empty-step replies carry it. |
+| 26 | Mutation and conditions | D1's query-exclusion guard governs both encoder and consumer (see D6.42 for the retired ID list). Both reporting-failure levels omit `comparison_conditions`; ordinary empty-step replies carry it. |
 | 27 | Library observation (refines 5 and 11) | Host-resolved functions only; explicit partial observations and issues. Presence follows collection stage, including post-load refusals; both reply fallbacks retain pre-materialized identity. |
 | 28 | Dossier failures (refines 10 and 15) | Nullable format/hashes, augmentation status/error and the D2 failure table. Collection failures do not change execution admission or outcome. |
 | 29 | Binary provenance (refines 17) | Hash selected paths, including overrides and BYOXPC copies, against built-in manifest baselines. Prefix baseline metadata with `manifest_`; unavailable/mismatched verification is descriptive. |
 | 30 | Import observation (refines 4 and 18) | One serialized request for all readers; hash and lex the same bounded import bytes. Nonregular files are not read. `wall_ms` is a cooperative budget, not a hard filesystem timeout. |
 | 31 | Reader scope (refines 8 and 21) | Exact versions at response/envelope semantic boundaries, including production Rust; raw transport remains lossless. Request admission is unchanged. D5 defines unsupported and malformed results. |
-| 32 | Matrix evidence and size controls | 32 S/B/C expectations plus R/T with explicit owners; T retains its completed prediction/order. Unlinked exploratory claims are not acceptance evidence. Maximal mutation lists participate in reply-size checks. |
+| 32 | Matrix evidence and size controls | 32 S/B/C expectations plus R/T with explicit owners; T retains its completed prediction/order. Unlinked exploratory claims are not acceptance evidence. |
 | 33 | Integration order (supersedes 24's deletion order) | Only behavior-preserving preparation on `main`. Retire contract tests in the worktree; retire live scenarios only with passing replacement controls in the same increment. |
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
 
@@ -641,7 +643,8 @@ current-version fixtures for unfamiliar-value transport tests.
 | 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. |
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. |
 | 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
-| 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. |
+| 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. Superseded by 42. |
+| 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships because the query-exclusion guard is producer knowledge; the step IDs did not, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -897,7 +900,7 @@ families:
 | S01–S25 (S04 unused), B1–B7, C1 | `witness_contract/comparison_matrix` | native/file controls and steered-validator transcript; preserve each specimen, raw run, checker output and app inventory in managed test artifacts |
 | T | `witness_contract/worker_attempt_in_flight_at_deadline` | FIFO, raw progress, validator record and release chain; assert the comparison selected from the shared fixture |
 | R and D2 identity retention | `runner_unit` / `ReplyFailureTests` | internal encoder faults at both fallback levels; no live-policy claim |
-| Mutation-list completeness and exclusion | `ComparisonEvidenceTests`, encoder invariants and checker controls | excluded-query create/unlink, multiple qualifying IDs, unrelated/failed/synthetic unlinks, missing/invented/duplicate/reordered IDs |
+| `target_mutation` status and exclusion | `ComparisonEvidenceTests`, encoder invariants and checker controls | excluded-query create/unlink, a qualifying removal in another step, unrelated/failed/synthetic unlinks, and an injected `steps` key |
 
 The T setup already has a retained
 [live reply](tests/out/runs/release-0.2.4-default/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/run.json)
@@ -922,7 +925,7 @@ same verified increment.
   no-reply envelopes follow D5's separate rules. `validate` merges
   `validate_evidence_shape`, `validate_current_build_evidence` and
   `validate_ordering` and checks obligations against raw evidence:
-  `target_mutation` from D1's eligible query and complete qualifying list,
+  `target_mutation` from D1's eligible query and qualifying rule,
   `sandbox_attribution` from `observation` and
   `exec_result_failed_after_spawn`, `runtime_target_identity` from the filter
   kinds, `references` against the fixed set. `recover_evidence`,
@@ -941,7 +944,7 @@ same verified increment.
   withholding at both fallback levels; every version-boundary control in D5;
   one control feeding `pw-runner-client`
   output to `validate`. The mutation-order controls are re-expressed against
-  `target_mutation`, including all ID-list defects in I2. Identity controls
+  `target_mutation`, including the exclusion and another-step cases in I2. Identity controls
   cover partial observations and pre-load/post-load refusals, using independent
   stage expectations rather than inferring the stage from `bad_request` alone.
 - Menagerie: `expect.drift` deleted from `core.json`; `validate_run.py` passes
@@ -965,21 +968,14 @@ same verified increment.
 ### I4. Producer and dossier, in the worktree
 
 - Swift per R2, D6.22 and D6.23, plus `library_identity` and
-  `comparison_conditions`. Pass run attempts with their step IDs into the
-  comparison producer so it can emit and validate the full mutation list.
-  The field-complete fixture in `ReplyFailureTests`
+  `comparison_conditions`. The comparison producer already receives the run
+  attempts and already tests for a qualifying removal, so the obligation needs
+  no new plumbing. The field-complete fixture in `ReplyFailureTests`
   gains the new records; the string classification in `ReplyMaximumTests`
-  gains every new string key. Also construct the maximum legal number of
-  mutation references per step, with unique maximal-length IDs, across the
-  maximum step count; do not merely duplicate a fixture with an empty list.
-  That shape is quadratic in the step count, and the synthesizer's sizing rule
-  fills request-derived strings with U+0001 at six JSON bytes per byte: 256
-  steps × 256 IDs × 63-byte IDs is about 97.5 KB per step and ~23.8 MB in all,
-  so `runner_reply_maximum` roughly doubles from 24,869,018 bytes and the
-  derived `controller_output` budget follows it to about 144 MiB. Recompute both
-  from the synthesizer and edit `docs/limits.json` to whatever it reports; a
-  bound on the list length instead would be a D1 change, not a limits edit
-  (D6.41). The shape golden regenerates.
+  gains every new string key. The obligations add three short status strings per
+  step and no repeated container, so `runner_reply_maximum` and the derived
+  `controller_output` keep their documented values; confirm that from the
+  synthesizer rather than assuming it (D6.42). The shape golden regenerates.
 - Controller per D2 with Rust tests for shape, statuses, budgets, the fixed
   reference set, relocated paths, request snapshot and D5 version gates.
   Scan controls include nonregular files, changing originals, a single read
