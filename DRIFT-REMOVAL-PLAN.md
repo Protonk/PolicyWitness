@@ -1,0 +1,556 @@
+# Removing the drift verdict
+
+Status: draft outline, 2026-09-30. Nothing here is implemented. The working
+tree is at df333b4 with request schema 3, response schema 12, worker ABI 7 and
+controller envelope 4. Line numbers below are as of that commit and will move.
+
+## Premise
+
+PolicyWitness reports `steps[].drift` as `true`, `false` or `null`, and
+`steps[].comparison.conclusion` as one of `agreement`, `disagreement`,
+`directional_consistency` or `unavailable`. Both are verdicts about the
+relation between a `sandbox_check` answer and observed enforcement. Neither is
+sound as a product surface:
+
+1. `drift: true` was deliberately made unreachable (encoder and consumers reject
+   it) so that no plausible-looking determination could be built on top of it
+   by agents or readers. It has been unreachable since response 8.
+2. Drift between the prediction API and enforcement was always speculation. The
+   Sandbox kernel extension evaluates the target PID's compiled profile for
+   both the query and the hook. Every difference this repository has ever
+   recorded was an input-materialization or coverage gap, never the evaluator
+   answering the same question two ways: BBX-001 was a wrong filter ID; the
+   three `prediction_unavailable` pairs were found by scanning filter IDs 1..200
+   and finding none that matched; the deny log names `/private/etc/hosts` while
+   the query took `/etc/hosts`; bare `process-exec` is rejected by the query
+   while the hook is `process-exec*`; one spawn exercises exec, fork and
+   file-read hooks while one query covers one. What PW can witness is the gap
+   between the question the API lets you ask and the question the hook asks.
+3. `drift: false` and `conclusion: unavailable` erase distinctions. `false`
+   reads as "no drift" when it means allow predicted, success observed, matched
+   submitted scope, no unordered mutation. `unavailable` collapses eight
+   situations into one word, including the only interesting one (deny predicted,
+   attempt succeeded, order established, no deny record). At summary level that
+   case is indistinguishable from "the validator never ran."
+
+The change: remove the verdict fields, keep every observation and relation that
+fed them, and gather the specimen evidence a reader needs into one place. The
+reader computes any label. PW ships none on the wire.
+
+The four sections below are executed in order. DESIGN and REMOVAL are meant to
+be pinned down before work starts; REMOVAL is written as design because the
+exact set of things removed is still being secured. REPAIR and DOCUMENTATION are
+held lightly and will be rewritten once the first two are settled.
+
+## DESIGN
+
+### D0. The one rule
+
+The reply may describe. It may not conclude. No field in a response 13 reply
+has a value space that includes a claim about the relation between the
+prediction and enforcement. Descriptive values are: what was submitted, what
+each channel returned and on what basis, whether the two submitted scopes
+match, the order PW established by its own actions, and which obligations of a
+comparison are or are not discharged, with the evidence that discharges them.
+
+The test for a proposed field: can a reader compute any joint label from the
+other fields? If yes, the label does not ship. If a field's value space contains
+a word that sounds like a finding (`agreement`, `disagreement`, `drift`,
+`consistent`), it does not ship.
+
+### D1. Layer one: the per-step comparison record
+
+`steps[].comparison` stays. Its name is accurate: it compares the two
+submitted scopes and records what each channel observed. Its content changes.
+
+| Field | Disposition | Notes |
+| --- | --- | --- |
+| `scope` | keep | Constant `submitted_operation_and_target`. |
+| `prediction` | keep | `allow`, `deny`, `unavailable`. Native verdict or its absence. |
+| `observation` | keep | `succeeded`, `permission_failure`, `other_failure`, `unavailable`. The controller's `permission_failures_without_record` reads this field; it must survive unchanged. |
+| `observation_basis` | keep | Names the worker fields that support `observation`. |
+| `operation_relation` | keep | `matched`, `different`, `unresolved`. |
+| `target_relation` | keep | `same_submitted`, `different_submitted`, `unresolved`. |
+| `order` | keep | `query_first`, `unestablished`. A claim about PW's own actions, already gated by the eligibility rule and the encoder. |
+| `conclusion` | **remove** | No replacement. |
+| `steps[].drift` | **remove** | No replacement. |
+| `limitations` | restructure | See below. |
+
+`limitations` today is a flat list of strings rendered from a typed Swift value
+(`ComparisonEvidence`) plus descriptive notes appended by the classifier. The
+typed part becomes a typed wire object; the descriptive notes stay a list.
+
+Proposed shape (D1-B):
+
+```json
+"comparison": {
+  "scope": "submitted_operation_and_target",
+  "prediction": "deny",
+  "observation": "succeeded",
+  "observation_basis": "completed_worker_status",
+  "operation_relation": "matched",
+  "target_relation": "same_submitted",
+  "order": "query_first",
+  "obligations": {
+    "sandbox_attribution":     { "status": "not_required" },
+    "runtime_target_identity": { "status": "unestablished" },
+    "target_mutation":         { "status": "none", "steps": [] }
+  },
+  "limitations": []
+}
+```
+
+Rules for `obligations`:
+
+- Only obligations whose status varies per step are per-step fields.
+  `sandbox_attribution` is `not_required` for a success and `unestablished` for
+  any failure. `runtime_target_identity` is `unestablished` for a path scope
+  and `not_applicable` otherwise. `target_mutation` is `none`, `unordered` (a
+  worker-reported successful unlink of the queried path anywhere in the run
+  while order is unestablished) or `after_query` (the same with `query_first`),
+  and names the steps that reported the unlink.
+- No obligation's value space contains `established`. State stability and
+  runtime identity have no established case in this runner, so they never
+  appear as per-step fields that could one day flip. State stability is stated
+  once, at run level, in the dossier (D2), as a condition of every comparison
+  this runner produces.
+- `query_attempt_order_unestablished` disappears from `limitations`. It was
+  defined as exactly `order != query_first` and the consumer already enforces
+  that equivalence.
+- `limitations` keeps only descriptive notes that have no typed home:
+  `query_plan:*`, `prediction:*`, `attempt:*` (including the lifecycle
+  limitations), `exec_query_not_full_spawn_prediction`, `compound_attempt`,
+  `attempt_operation_unestablished`, `broad_query_operation`, `operation:*`,
+  `target:*`, `query_filter_scope_unestablished`, `submitted_target_unavailable`,
+  `exec_result_failed_after_spawn`, `host_path_resolution_changed`. Their
+  vocabulary does not change.
+
+Fallback (D1-A): remove `conclusion` and `drift` only and leave `limitations`
+byte-for-byte as it is. This satisfies D0. It is the fallback if the REPAIR
+surface for D1-B proves too large to land in one increment. The decision is
+recorded under D6.
+
+### D2. Layer two: the specimen dossier
+
+A reader investigating one run needs, in one place: what was compiled, what
+each channel was asked, what the evaluator returned, what the kernel reported,
+and the conditions of the run. Most of this exists in the envelope today,
+scattered under `data.*`. Two pieces are missing from every normal run.
+
+Proposed: a new controller-owned object `data.specimen`. Adding a field does not
+bump the envelope. Existing fields are not moved; the dossier holds the new
+pieces and the user guide carries a map of where the rest lives.
+
+| Item | Today | Dossier disposition |
+| --- | --- | --- |
+| Policy source hash, format | `runner_result.policy_sha256`, `policy_format` | reference |
+| Submitted vs applied source, augments | `data.policy_augmentation` (only when augments applied) | reference |
+| Parameter identity, compiled bytecode | `runner_result.applied_profile` (opt-in receipt) | reference; stays opt-in |
+| Imports closure (`policy_closure_sha256`, per-import path/hash/mtime, truncation, cycle) | only in `sbpl-check` output, which runs only on the `xpc_error` path | **add**: resolve imports for every run; decision on cost under D6 |
+| macOS product version and build | only `sbpl-check` (`macos_build_version` via `sw_vers`) | **add**: `host.macos_version`, `host.macos_build`, `host.kernel_release`, `host.arch` |
+| libsandbox identity | none | **add**: path plus SHA-256 of the dylib the worker loads (decision under D6; the shared cache complicates this) |
+| Runner identity and entitlements | `data.runner_provenance` | reference |
+| Worker binary hash and entitlements | in the evidence manifest on disk, referenced by `data.app_provenance.evidence_manifest_path` | **add**: inline the worker's and validator's manifest entries |
+| Build stamp, contract versions | `build`, `runner_result.schema_version`, envelope `schema_version`, `worker_evidence.abi_version` | reference |
+| What each query asked | `validator_subprocess.records[]` (operation, filter type and ID, value, rc, errno, raw line) | reference |
+| What each attempt did | `steps[].attempt` (requested kind/action/path, observed path, errno, child status) | reference |
+| Host path forms | `steps[].sandbox_check.path_diagnostics`, `steps[].attempt.path_diagnostics` | reference |
+| Ordering | `runner_subprocess.ordering`, `steps[].comparison.order` | reference |
+| Planning exclusions in this run | `steps[].sandbox_check.outcome == prediction_unavailable` plus `query_plan:*` | **add**: `conditions.prediction_unavailable_pairs` listing the pairs excluded in this run |
+| Kernel's own account | `data.sandbox_log_capture` with its capture status and known omission | reference |
+| Run-level comparison conditions | nowhere; today rendered as `state_stability_unestablished` on every step | **add**: `conditions.unestablishable: ["state_stability"]` with one sentence of meaning in the guide |
+
+The dossier is a closed list: inputs each channel fed the evaluator, the
+evaluator's outputs, the kernel's independent account, and the run conditions.
+Anything else proposed for it needs a reason under one of those four heads.
+
+### D3. Invariants
+
+- Producer: `PWRunnerStepResult` has no `drift` property. `PWRunnerComparison`
+  has no `conclusion` property and no `drift` accessor. The reply-shape golden
+  (`tests/fixtures/contract/response_shape.json`) has neither key under
+  `steps[]` and has `obligations` under `comparison`.
+- Encoder: the response 8 clause that rejects `disagreement` becomes a clause
+  that rejects a `comparison` whose `obligations` contradict its inputs (for
+  example `target_mutation.status: after_query` with `order: unestablished`).
+  The `query_first` eligibility check is unchanged.
+- Reply degradation: `runner_reporting_failed` still omits every `comparison`.
+  `order` is a claim about PW's actions and is withheld with the rest.
+- Consumer (`tests/lib/consumer.py`): at response 13 or later, reject the
+  presence of `drift` or `conclusion` on any step, reject `established` as any
+  obligation status, and keep the legacy branches for 12 and earlier untouched.
+- Controller: no production reader of `drift` or `conclusion` exists; the only
+  production reader of `comparison` is `permission_failures_without_record`,
+  which reads `observation`.
+
+### D4. The reader-side reducer
+
+The four historical labels do not vanish; they move to the reader. Ship, in
+`tests/lib/consumer.py`, a pure function over one step that returns a label
+computed only from wire fields, and document the same derivation in the user
+guide with a `jq` recipe. The function is test equipment and documentation of
+one possible reading. It is not imported by any producer and never appears in
+an envelope. Tests that today assert `conclusion: agreement` may assert the
+reducer's output instead; that keeps scenario expectations with the test.
+
+### D5. Versioning
+
+- Response schema 12 → 13. Removing a key requires a bump under
+  [CONTRACT.md](docs/CONTRACT.md). Proposed row text: "`steps[].drift` and
+  `steps[].comparison.conclusion` are gone. `comparison.obligations` carries
+  the typed sandbox-attribution, runtime-identity and target-mutation
+  obligations that earlier replies rendered as `limitations` strings;
+  `query_attempt_order_unestablished` is gone because it equalled
+  `order != query_first`. Readers derive any joint label themselves. Replies
+  before this number keep their original `drift` and `conclusion` meaning."
+- Controller envelope: no bump. `data.specimen` is additive.
+- Request schema and worker ABI: unchanged.
+- Stored replies at 12 and earlier keep their meaning. `consumer.py` already
+  branches on the number.
+
+### D6. Decisions to record before REMOVAL is final
+
+| # | Decision | Recommendation |
+| --- | --- | --- |
+| 1 | D1-B (typed obligations) or D1-A (flat limitations unchanged) | D1-B. It is the design; D1-A is the fallback if I2+I3 cannot land together. |
+| 2 | One bump with two increments on `main`, or two bumps | One bump. Response 13 means the final shape; commits between increments are not release candidates. Pre-1.0 and no CI make this workable. Record it in the plan status when it happens. |
+| 3 | Ride the bump with other removals: `steps[].deny_signal` (explicit null since response 5, never measured) | Yes, if the REPAIR cost is small; it is the same kind of key-presence assertion. Decide after the R5 pass. |
+| 4 | Imports closure on every run: always, opt-out, or opt-in | Always, with the existing `sbpl-check` resolver caps. Resolution walks files; it does not compile. Measure on the WebProcess-size profile before committing. |
+| 5 | libsandbox identity in the dossier | Path plus the identity `dlopen` resolves; hash only if the file exists on disk outside the shared cache. Otherwise record `unavailable` with the reason. |
+| 6 | Move existing provenance fields under `data.specimen` | No. Reference them; moving is an envelope bump for no new information. |
+| 7 | Name of the reducer's labels | Keep the four historical words in the reducer only, so old readers can map. Add none. |
+
+## REMOVAL
+
+This section is an inventory. "Removed" means: the wire keys, the code that
+computes them, the invariants that police them, the tests that assert them, and
+the sentences that promise them. Everything listed under R9 is not removed, even
+though it contains the word.
+
+### R1. Wire keys
+
+| Key | Where | Disposition |
+| --- | --- | --- |
+| `steps[].drift` | runner reply | removed |
+| `steps[].comparison.conclusion` | runner reply | removed |
+| `comparison.limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | removed from `limitations` (D1-B); the first is stated once at run level, the middle three become `obligations`, the last is dropped |
+| `steps[].deny_signal` | runner reply | rider candidate (D6.3) |
+
+### R2. Producer code
+
+| File | Symbol or site | Disposition |
+| --- | --- | --- |
+| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `PWRunnerComparison.drift` (computed, ~906) | delete |
+| same | `PWRunnerComparison.limitations` | keep; vocabulary shrinks |
+| same | `PWRunnerComparison.conclusion` | delete; add `obligations` |
+| same | `PWRunnerStepResult.drift`, its `init` parameter, `CodingKeys.drift`, the explicit-null `encode` branch and `decodeIfPresent` (~929–987) | delete for 13; the decoder must still read `drift` from stored 12-and-earlier replies, so decoding keeps a legacy-only property or a version-gated read |
+| same | encoder invariant: `steps.allSatisfy({ $0.comparison == nil && $0.drift == nil })` (~1817) and `comparison.conclusion != "disagreement", step.drift != true` (~1847) | rewrite per D3 |
+| same | doc comments at ~133 ("known to drift from kernel enforcement"), ~157 ("`drift` is null for these steps"), ~726 ("the orchestrator's drift classifier") | reword |
+| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837) | delete |
+| same | `ComparisonEvidence.renderLimitations()` (~843) | becomes `renderObligations()` plus the descriptive list |
+| same | `drift: comparison.drift` in step assembly (~632) | delete |
+| same | header comment (~24–26), comments at ~722, ~763, ~890 | reword |
+| `runner/Sources/PWRunnerCore/PWRunnerService.swift` | degrade path `failed.steps[index].drift = nil` (~128) | delete the line; `comparison = nil` stays |
+| `runner/Sources/PWRunnerCore/ProbeRunner.swift` | comment ~151 ("userland-vs-kernel drift is broader than iokit") | reword; the pair set itself is untouched |
+
+No C code changes. No Rust production code changes.
+
+### R3. Controller fixtures
+
+Production Rust reads neither key. These test fixtures construct steps with
+them and must become 13-shaped or be marked as legacy replies:
+
+- `controller/src/run_flow.rs` at ~1638, ~2022, ~2071 (legacy, keep as legacy),
+  ~2252, ~2394, ~2593, ~2652.
+- `controller/src/runner_client.rs` ~163–173.
+- `controller/src/log_replay_tests.rs` ~14–22.
+
+### R4. Shared consumers
+
+| File | Sites | Disposition |
+| --- | --- | --- |
+| `tests/lib/consumer.py` | `comparison_groups` keyed by `conclusion` (~79–80); `drift_present`/`drift` in step answers (~98); allowed `conclusion` set (~185); reporting-failure rule (~194); projection check (~213–215); disagreement rejections (~286, ~361); mutation rule reading `conclusion` (~296) | rewrite: groups keyed by the reducer (D4) for ≥13, by `conclusion` for ≤12; presence rejections per D3 |
+| `tests/lib/blackbox.py` | explicit-null check (~110–111); type and expected-value checks (~154–160) | delete for ≥13; keep under a version gate for stored legacy envelopes |
+| `tests/lib/lifecycle_oracle.py` | constructed reply steps carry `drift: None` and `conclusion` (~338–341) | update the constructed shape |
+| `tests/lib/path_diagnostics_contract.py` | constructed step carries `drift=None` and `conclusion` (~26–32) | update |
+
+### R5. Test assertions
+
+Classes: **a** asserts a `drift` value; **b** asserts a `conclusion` value;
+**c** tests the disagreement prohibition or the projection rule; **d** asserts
+explicit-null key presence; **e** name or description only.
+
+| Suite or target | Files | Classes | Notes |
+| --- | --- | --- | --- |
+| `runner_unit` | `DriftClassifierTests.swift` (53 refs) | a b c | Rename to `ComparisonEvidenceTests.swift`; the scenarios stay, the assertions move to fields and obligations |
+| `runner_unit` | `EnvelopeInvariantTests.swift` (30) | a b c | Legacy round-trips for versions 4–7 stay as legacy; current-shape cases change |
+| `runner_unit` | `OrderingTests.swift` (10), `ReplyFailureTests.swift` (12 plus the field-complete fixture), `ReplyMaximumTests.swift` (2), `WorkerEvidenceTests.swift` (1), `main.swift` comment | a c d | The reply-shape golden regenerates from `ReplyFailureTests` |
+| `runner_unit` | `AttemptOutcomeMappingTests.swift`, `CWorkerTests.swift` | e | Comments say "drift classifier"; reword |
+| `unit/rust.unit` | R3 fixtures | a b | |
+| `blackbox_e2e` | `checker_controls.py` (21) | a b c d | Negative controls that mutate `conclusion`/`drift` become controls that inject the removed keys and expect rejection |
+| `blackbox_menagerie` | `checker_controls.py` (13), `validate_run.py` (1), `cases/core.json` (23 of 23 steps carry `expect.drift`) | a d | `expect.drift` becomes an expectation on the reducer or on `prediction`/`observation` |
+| `failure_boundaries` | `check.py` (4) | a | |
+| `run_effects` | `check_file_actions.py` (2) | a b | |
+| `runner_exec_dac` | `check.py` (7), `check_query_scope.py` (6), `run.sh` (2) | a b e | Case id `execute_permission_is_not_sandbox_drift` renamed |
+| `runner_exec_inheritance` | `check.py` (1) | a | |
+| `runner_exec_lifecycle` | `check.py` (2), `check_edges.py` (2) | a b | |
+| `runner_filter_sysctl_name` | `checker_controls.py` (6) | a d | |
+| `runner_outcome_runner_timeout` | `check.py` (2) | a | |
+| `runner_outcome_validator_no_reply` | `check.py` (2) | a | |
+| `runner_specimen_isolation` | `check.py` (1) | a | |
+| `runner_use_c_worker` | `run.sh` (63) | a e | Case ids `drift_null_for_dac_eacces`, `drift_null_for_non_policy_failure` renamed; five descriptions in the catalog |
+| `runner_validator_failure` | `check.py` (3), `check_signal.py` (1) | a b d | |
+| `witness_contract` | `check_comparison.py` (11), `check_ordering.py` (10), `check_prediction_targets.py` (6), `check_removed_target.py` (2), `check_attempt_in_flight.py` (1), `check_create_existing.py` (3), `check_diagnostic_transport.py` (3), `check_pre_apply_failure.py` (3), `check_termination_correlation.py` (1), `check_worker_evidence.py` (1), `check_worker_sparse.py` (1) | a b | `check_comparison.py` is the primary C1 owner beside the seam case |
+| `witness_contract` | `drift_determination_via_validator_seam.sh` (12), `run.sh` (6) | a b e | Rename the case; it stays the C1 owner |
+
+Total as counted on df333b4: about 245 references across 30 test files, 120
+across 10 Swift test files, 14 in `tests/catalog.json`.
+
+### R6. Goldens and fixtures
+
+| Fixture | Contains | Disposition |
+| --- | --- | --- |
+| `tests/fixtures/contract/response_shape.json` | `drift: boolean` (~178), `conclusion: string`, `limitations: array` (~220–221) | regenerate from the updated `ReplyFailureTests` fixture; the reviewed diff is the acknowledgement |
+| `tests/fixtures/blackbox_menagerie/cases/core.json` | `expect.drift` on every step | rewrite expectations |
+| `tests/fixtures/blackbox_e2e/checker/missing_path_run.json` | 3 refs | confirm its schema number; if it is a stored legacy envelope it stays and is labelled; if it is a current-shape control it is regenerated |
+| `tests/fixtures/disposition/a1_expected.json`, `a1_known_loss.json` | 4 refs each | same rule; these are oracle fixtures, so check whether a tool writes them |
+
+### R7. Registries
+
+- `tests/catalog.json`: four case ids and five descriptions name drift (listed
+  in R5). Renaming an id changes evidence paths; `tests/RETAINED.json` and
+  release acceptance records under `dist/` reference old ids and are not
+  rewritten.
+- `tests/README.md` suite-coverage rows for `blackbox_e2e` (~300),
+  `witness_contract` (~312, ~457, ~462), `runner_use_c_worker` (~296),
+  `runner_validator_failure` (~293). `source_drift` checks this table against
+  the suites on disk.
+- `tests/COVERAGE.md` rows ~25, ~27, ~30, ~31, ~83, ~84, ~86, ~87.
+- Suite READMEs with references: `witness_contract` (20), `runner_use_c_worker`
+  (12), `runner_exec_dac` (7), `blackbox_e2e` (4), `blackbox_menagerie` (3),
+  `runner_specimen_isolation` (3), `runner_validator_failure` (3),
+  `runner_filter_sysctl_name` (2), and one each in `run_effects`,
+  `runner_exec_lifecycle`, `runner_outcome_runner_timeout`,
+  `runner_outcome_validator_no_reply`, `runner_c_worker_harness`,
+  `runner_byoxpc`, both iokit filter suites.
+
+### R8. Contract text that states the removed claims
+
+These are implementation-level documents. They belong to REMOVAL and REPAIR,
+not to DOCUMENTATION, because they are read by contributors rather than users.
+
+- [tests/FAILURE-PROPAGATION-CONTRACT.md](tests/FAILURE-PROPAGATION-CONTRACT.md):
+  the "Supported public conclusion" column of the claim/evidence review; the C1
+  row of the consumer-question baseline (it asks "which steps report
+  established agreement"); the accepted-answer table, which speaks of
+  agreement, unavailable and directional consistency throughout; the
+  `drift=false projects…` and `drift=null covers…` paragraphs under "Public
+  representation and meaning"; the "Ordering protocol names" row for
+  `runner_reporting_failed` ("comparisons absent, drift null"); the "Permanent
+  consumer enforcement" table and its "explicit drift projection" sentence; the
+  "Compatibility and acceptance gate" paragraph on preserved drift values and the
+  encoder's disagreement rejection. The baseline says a change to C1 needs a
+  recorded design reason; this plan is that reason and the record goes into
+  that document, not here.
+- [docs/CONTRACT.md](docs/CONTRACT.md): add row 13. Rows 4, 7 and 8 are
+  historical clauses and stay as written.
+- [AGENTS.md](AGENTS.md) core idea "Predictions precede attempts" ends with
+  "`drift: true` is unreachable until a separate evidence contract exists."
+  Reword; the barrier claim stays.
+- [runner/README.md](runner/README.md) ~74, ~230, ~240, ~260–267, ~314;
+  [runner/AGENTS.md](runner/AGENTS.md) ~15 ("the orchestrator's drift
+  computation"); [runner/augments/README.md](runner/augments/README.md) ~154;
+  [controller/README.md](controller/README.md) ~137–145 (output contract),
+  ~369, ~378.
+
+### R9. Not removed
+
+- The `source_drift` suite and every use of "drift" meaning docs-versus-code
+  divergence: `tests/suites/source_drift/*`, `runner_abi_layout` ("layout
+  drift"), comments "can't silently drift apart" in
+  `CWorkerOrchestrator.swift` ~712, `AttemptOutcomeMappingTests.swift` ~96,
+  `controller/src/runner_manager.rs` ~1080, `sb_api_validator.c` ~605,
+  `CWorker.swift` ~47, `tests/lib/artifact.py` ~38,
+  `tests/suites/dispatcher/check_selection.py` ~126.
+- The `prediction_unavailable` planning set in `ProbeRunner.swift`, its
+  `source_drift` agreement check against the user guide, and
+  `tests/suites/witness_contract/harness/VERIFICATIONS.md`. The pair set is
+  evidence; only its description changes (see DOCUMENTATION).
+- `records/` is never edited.
+- `comparison.order`, `runner_subprocess.ordering`, `eligibleOrderedStep`, the
+  release barrier and the opt-in `order_barrier_mutations` control.
+- `comparison.observation` and the controller's
+  `permission_failures_without_record`.
+- Stored legacy replies and the legacy branches that read them.
+- `dist/evidence` and `dist/archive` release acceptance records.
+
+### R10. Still to secure before REMOVAL is final
+
+1. Decide D6.3 (`deny_signal` rider) after a count of its assertion sites.
+2. Confirm the schema number of the three fixtures in R6 and whether any tool
+   regenerates the disposition fixtures.
+3. Confirm no out-of-tree reader. The controller README's consumer audit covers
+   this checkout only; the retained release acceptance envelopes are records,
+   not readers.
+4. Count the `limitations` string assertions separately from the `drift` and
+   `conclusion` assertions, since D1-B moves five strings and D1-A moves none.
+   This count decides D6.1.
+5. Confirm the reply-shape golden regeneration path writes a candidate on
+   mismatch and that the `runner_unit` failure text names the three cases
+   ("gained fields", "removed or changed", "manifest moved").
+
+## REPAIR
+
+Held lightly. Increments are ordered; each is one turn of work followed by an
+audit, and each leaves the default battery green.
+
+### I1. Contract first
+
+- Edit `docs/contract.json` (response 13), run `python3 docs/generate_contract.py`,
+  commit the regenerated copies.
+- Add the CONTRACT.md row (D5).
+- Rewrite the affected sections of `tests/FAILURE-PROPAGATION-CONTRACT.md`
+  (R8): revise C1 with the recorded reason, restate the accepted answers
+  without the four labels, replace the projection paragraphs with the
+  obligations rules (D1), update the enforcement table's owners.
+- Nothing else changes in I1. The battery stays green because no producer or
+  consumer moved.
+
+### I2 and I3. Producer and consumers together
+
+These must land in one increment; a producer at 13 with consumers expecting
+12 fails everything.
+
+- Swift producer changes per R2. Legacy decoding keeps `drift` and
+  `conclusion` readable for stored replies under a version gate.
+- Regenerate the reply-shape golden; review the diff as the acknowledgement.
+- `consumer.py`: the reducer (D4), the ≥13 presence rejections (D3), groups
+  keyed by reducer output.
+- `blackbox.py`, `lifecycle_oracle.py`, `path_diagnostics_contract.py` per R4.
+- Every suite in R5: delete class-a assertions, convert class-b to reducer or
+  field assertions, convert class-c to injected-key rejections, delete
+  class-d, rename class-e.
+- Fixtures per R6, registries per R7.
+- Rust fixtures per R3.
+- Renames: `DriftClassifierTests.swift` → `ComparisonEvidenceTests.swift`
+  (and its registration in `main.swift`);
+  `drift_determination_via_validator_seam` → `comparison_evidence_via_validator_seam`;
+  the two `runner_use_c_worker` ids and the `runner_exec_dac` id. Update
+  `tests/catalog.json`, `tests/README.md` and `tests/COVERAGE.md` in the same
+  increment so `source_drift` passes.
+
+### I4. The dossier
+
+- Controller: `data.specimen` per D2. Reuse the `sw_vers` helper and the import
+  resolver from `controller/src/bin/sbpl-check.rs`; factor them into the
+  controller library rather than shelling out to the helper.
+- Inline the worker's and validator's evidence-manifest entries.
+- Tests: presence and shape under `unit/rust.unit`; a live case in
+  `witness_contract` that checks the dossier against the specimen it ran and
+  the `sw_vers` output the test captures independently.
+- Limits: if the import walk is bounded, its caps are already in
+  `docs/limits.json` under the sbpl-check entries; confirm they apply to the
+  run path and adjust the limits document.
+
+### I5. Implementation documents
+
+The R8 list minus the contract documents already done in I1: `runner/README.md`,
+`runner/AGENTS.md`, `runner/augments/README.md`, `controller/README.md`,
+`tests/README.md`, `tests/COVERAGE.md`, the suite READMEs, and the AGENTS.md
+core idea. `source_drift` enforces the parts of these that are tabulated.
+
+### Verification
+
+- Default battery after each increment; `tests/run.sh --all` once at the end
+  and retained as the acceptance record for the bump.
+- The rule in AGENTS.md requires `order_barrier_mutations` only when the wait,
+  release store or eligibility rule changes. None of them changes here. Run it
+  once anyway after I2/I3, because comparison assembly is on its path.
+- Before and after I2/I3, run the three fixtures under
+  `tests/fixtures/pw_runner/` and diff the envelopes. The only per-step
+  differences should be the removed keys and the new `obligations` object.
+- Sub-agents cannot run the built app; live verification runs from the main
+  session.
+
+## DOCUMENTATION
+
+Held lightly, except for the method. Scope: `README.md` and
+`docs/PolicyWitness.md`. The guide mechanically entrains `docs/QUESTIONS.md`
+(between the `SHARED QUESTIONS` markers) and `docs/LIMITS.md` (between the
+`SHARED LIMITS` markers) through `python3 docs/generate_limits.py`; the copied
+blocks in the guide are never edited by hand, and `source_drift` checks the
+copies and the guide's `prediction_unavailable` list against the Swift set.
+
+### Why this section is separate
+
+Humans and agents read these two documents first and form durable assumptions
+about what PW is for and what it can do. A sentence that survives the edit
+while still promising a verdict will be believed. So the edit is preceded by a
+ledger, and the ledger is reviewed before any prose changes.
+
+### The ledger
+
+Every sentence in the two documents that states a goal or a capability gets a
+row: the sentence, its classification (keep, revise, remove), and the
+replacement text if revised. Seed rows found so far:
+
+| Document | Sentence (abridged) | Class | Direction |
+| --- | --- | --- | --- |
+| README ¶1 | "harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement" | revise | PW witnesses what a policy does to a process through two channels evaluated by the same kernel evaluator; it does not adjudicate between them |
+| README ¶2 | "Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles" | revise | Keep the lifecycle argument; drop "measuring against" |
+| README Flow | "Each step records two evidence channels plus their comparison" | keep | With the comparison bullet rewritten |
+| README Flow | the **Drift** bullet | remove | Replace with a **Comparison** bullet: submitted-scope relations, order, obligations, no label |
+| README Flow | "Eligible `query_first` records establish this ordering; they do not establish a shared state snapshot" | keep | |
+| FAQ | "When should I use PolicyWitness?" ("compares … predictions with the observed results … investigating disagreement") | revise | Use it to witness a policy's effect on specific operations and targets, with both channels and the kernel log attached |
+| FAQ | "Beyond observing drift, what does PolicyWitness's attempt channel record?" | revise | Heading loses "drift" |
+| FAQ | "How does PolicyWitness handle uncertainty in its verdicts?" | remove and replace | New question: "What does a comparison record contain, and what does it not claim?" |
+| FAQ | "Can PolicyWitness return a verdict of `drift: true`?" | remove and replace | New question: "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?" Answer: no, by design; what it gives you instead; how to read it |
+| FAQ | "Which happens first, the prediction or the attempt?" | keep | |
+| Guide, Output envelope → Top-level fields | the `steps[].drift` and `steps[].comparison` bullets | revise | Per D1; add `obligations` |
+| Guide, Per-step shape | "`steps[].drift`: `bool \| null`" | remove | |
+| Guide, attempt outcome notes (~800, ~829, ~860, ~863, ~923, ~1071, ~1099) | "`drift` is null …" | revise | Say what the comparison fields show instead |
+| Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement", "the drift pattern is not iokit-specific" | revise | State the verified fact: no filter ID in 1..200 produced a verdict matching enforcement, so the query cannot be made to ask the hook's question; keep the "Currently in this category:" marker and the pair list format that `source_drift` parses |
+| Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | Drop "drift" |
+| Guide | new section: the specimen dossier | add | The D2 map: where each item lives, what it can and cannot show, the reducer recipe |
+| LIMITS | no verdict language found | none | New entries only if I4 adds a bounded capture |
+
+### A proposed statement of what PolicyWitness is
+
+To be agreed before editing, then placed at the top of the README and the guide:
+
+> PolicyWitness is a macOS harness that witnesses what a sandbox policy does to
+> a process. For each probe step it records two independent observations
+> against the same sandboxed PID: the answer `sandbox_check` gives for a
+> submitted operation and filter, and the result of attempting that operation
+> inside the worker. It records what each channel was asked, what it returned,
+> whether the two submitted scopes match, the order PolicyWitness established
+> between them, and which obligations of a comparison remain undischarged. It
+> attaches the policy, the runner's identity and entitlements, the host's OS
+> build, and the kernel's own deny log where available. PolicyWitness does not
+> decide whether the prediction and the enforcement agree. It gives a reader the
+> materials to decide and states what those materials cannot show.
+
+### Method
+
+1. Complete the ledger for both documents. Grep is the starting point
+   (`drift`, `verdict`, `agreement`, `disagreement`, `consistent`,
+   `prediction`, `enforcement`, `mismatch`), but the ledger is built by reading
+   the documents end to end, since the sentences that mislead most need none
+   of those words.
+2. Review the ledger as a whole before any edit. Check that the kept sentences
+   still make sense once the removed ones are gone.
+3. Edit `QUESTIONS.md` and `LIMITS.md` first, run `generate_limits.py`, then
+   edit the guide's own prose, then the README.
+4. Re-read both documents as a new reader. Then run `source_drift`.
+5. Confirm `AGENTS.md`'s core ideas and the runner and controller READMEs say
+   nothing the README and guide no longer say.
+
+### Held lightly
+
+- Whether `comparison` keeps its name. It is accurate and renaming it is churn
+  across every consumer; the recommendation is to keep it.
+- How prominent the "witness" framing should be. The name of the project
+  argues for very.
+- No history in the documents. `git log` is authoritative, per AGENTS.md.
+- Whether the FAQ should gain a question on reading the deny log as the
+  kernel's account, given the known intermittent omission. Probably yes, short.
