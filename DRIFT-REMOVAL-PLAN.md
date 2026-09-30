@@ -1154,20 +1154,42 @@ To be agreed before editing, then placed at the top of the README and the guide:
 
 ### Method
 
-1. Complete the ledger for both documents. Use multiple `rg` searches with the
-   vocabulary and surface coverage in R11, including signal terminology and
-   former provenance paths. Build the ledger by reading the documents end to
-   end, since misleading claims may contain none of the search terms.
-2. Review the ledger as a whole before any edit. Check that the kept sentences
+1. Complete both ledgers. The user-facing one is built by reading the two
+   documents end to end, since the sentences that mislead most contain none of
+   the search terms; `rg` over the R11 vocabulary is only the starting point.
+2. Before opening a document, write a current-state brief in scratch from the
+   DESIGN sections, the matrix and the built app, without reading the old
+   prose. Edit against the brief. Open the old text only to find what to
+   delete and what a reader still needs. Where the plan says a passage is
+   replaced, the old text is not an input.
+3. Review each ledger as a whole before editing. Check that the kept sentences
    still make sense once the removed ones are gone.
-3. Edit `QUESTIONS.md` and `LIMITS.md` first, run `generate_limits.py`, then
-   edit the guide's own prose, then the README.
-4. Re-read both documents as a new reader. Then run `source_drift`.
-5. Reconcile `AGENTS.md`'s core ideas, runner/controller/test READMEs, CLI help,
-   diagnostics, comments and docstrings with the current evidence model. They
-   may retain audience-specific detail and different wording, but must not
-   contradict the guide or preserve retired claims. Use R11 to account for
-   remaining matches.
+4. History has one sanctioned form. A past-tense clause is allowed only when it
+   changes what the reader does now: "a stored reply is reported as
+   unsupported" is current behavior; "replies before 13 carried drift" is not.
+   Beyond that, one history sentence per document, as a pointer to `git log`,
+   never an account. A sentence whose subject is a deleted artifact is deleted,
+   not annotated; the ledgers say which artifacts those are.
+5. Write in the register of one existing paragraph per document kind, chosen
+   because it describes current behavior with no history: the user guide's
+   three-state `path_diagnostics` paragraph; the README's "Entitlements + SBPL"
+   section; the AGENTS.md "Bundle layout is a contract" section; the
+   controller README's "Execution and log-evidence ownership" table.
+6. Edit `QUESTIONS.md` and `LIMITS.md` first, run `generate_limits.py`, then
+   the guide's own prose, then the README, then the infrastructure documents.
+7. Check-in after each document. The next turn reads the document cold, with
+   only this section loaded, and lists every sentence that would puzzle a
+   reader who never saw the previous version. Those are fixed before the next
+   document is opened. When a bridge seems necessary, the check-in carries
+   the sentence with and without it and asks whether the bare version is
+   nonsensical, rather than deciding alone.
+8. Completion. Run `source_drift`. Then search for the tell-words (no longer,
+   previously, formerly, now, instead, replaces, legacy, historical, used to,
+   since response, before response) and read every hit; each that stays is
+   kept with a one-line reason, as R11 does for surviving semantic
+   references. Reconcile `AGENTS.md`, the runner, controller and test READMEs,
+   CLI help, diagnostics, comments and docstrings with the guide: different
+   wording is fine, contradiction and retired claims are not.
 
 ### Holding pen: overlapping documentation (deferred)
 
