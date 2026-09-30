@@ -1,8 +1,9 @@
 # Removing the drift verdict
 
-Status: design decisions and removal pins recorded, 2026-09-30; the R10
-inventories are closed except the I4 budget measurement. Nothing here is
-implemented. The inventory baseline is df333b4
+Status: DESIGN firming in progress, 2026-09-30. The D1 scenario matrix and the
+D2 dossier fragment are written from live output. Two items are open for
+discussion and marked OPEN below: who observes library identity (D2) and where
+run-level comparison conditions live (D1). Nothing here is implemented. The inventory baseline is df333b4
 with request schema 3, response schema 12, worker ABI 7 and controller envelope
 4. Source line numbers below are as of that commit and will move.
 
@@ -77,7 +78,7 @@ submitted scopes and records what each channel observed. Its content changes.
 
 | Field | Disposition | Notes |
 | --- | --- | --- |
-| `scope` | keep | Constant `submitted_operation_and_target`. |
+| `scope` | **remove** | Constant `submitted_operation_and_target` on every step. The guide states the scope once (D6.13). |
 | `prediction` | keep | `allow`, `deny`, `unavailable`. Native verdict or its absence. |
 | `observation` | keep | `succeeded`, `permission_failure`, `other_failure`, `unavailable`. The controller's `permission_failures_without_record` reads this field; it must survive unchanged. |
 | `observation_basis` | keep | Names the worker fields that support `observation`. |
@@ -96,7 +97,6 @@ Selected shape (D1-B):
 
 ```json
 "comparison": {
-  "scope": "submitted_operation_and_target",
   "prediction": "deny",
   "observation": "succeeded",
   "observation_basis": "completed_worker_status",
@@ -115,8 +115,9 @@ Selected shape (D1-B):
 Rules for `obligations`:
 
 - Only obligations whose status varies per step are per-step fields.
-  `sandbox_attribution` is `not_required` for a success and `unestablished` for
-  any failure. `runtime_target_identity` is `unestablished` for a path scope
+  `sandbox_attribution` is `not_required` for a success, `unestablished` for
+  any failure, and `not_applicable` when there is no completed observation
+  (D6.14). `runtime_target_identity` is `unestablished` for a path scope
   and `not_applicable` otherwise. `target_mutation` is `none`, `unordered` (a
   worker-reported successful unlink of the queried path anywhere in the run
   while order is unestablished) or `after_query` (the same with `query_first`),
@@ -146,7 +147,7 @@ Wire fragment for response 13, as the shape golden will record it:
 
 | Path | Type | Rule |
 | --- | --- | --- |
-| `comparison.obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_required` otherwise, including an unavailable observation |
+| `comparison.obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_applicable` when `observation` is `unavailable`; `not_required` otherwise |
 | `comparison.obligations.runtime_target_identity.status` | string | `unestablished` when the query's `filter_kind` is `path` or the mapped attempt filter is `path`; `not_applicable` otherwise |
 | `comparison.obligations.target_mutation.status` | string | `none`, `unordered` or `after_query` |
 | `comparison.obligations.target_mutation.steps` | array of string | step IDs, in plan order, of every step whose worker-reported successful unlink names the queried path, including the current step; empty exactly when `status` is `none` |
@@ -158,6 +159,82 @@ emits the reply on its own. The reply gains
 `comparison_conditions: { "unestablishable": ["state_stability"] }` beside
 `steps`, present whenever `steps` is present and withheld with the comparisons
 on a `runner_reporting_failed` reply. The dossier references it (D2).
+**OPEN**: whether the bare reply is a reader surface. If it is not, the field
+moves to the dossier alone and response 13 shrinks by one field.
+
+#### Scenario matrix
+
+Every controlled scenario the repository exercises, run live on 2026-09-30
+against the built app (three specimens: a real-validator plan of 24 steps, a
+steered-validator plan of 7, and a pre-apply failure), then rewritten into the
+response 13 shape by the rules above. Columns: prediction; observation with its
+basis; operation and target relation; order; obligations as A (sandbox
+attribution), I (runtime target identity), M (target mutation), with `nr` =
+`not_required`, `na` = `not_applicable`, `un` = `unestablished`; then the
+remaining `limitations`.
+
+| ID | Scenario | Pred | Observation / basis | Op | Target | Order | A | I | M | Limitations |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S01 | allow, read succeeds | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | none | |
+| S02 | deny, read EPERM | deny | permission_failure / permission_errno | matched | same | query_first | un | un | none | |
+| S03 | allow, mode-000 file EACCES | allow | permission_failure / permission_errno | matched | same | query_first | un | un | none | |
+| S05 | query denied path, attempt other path | deny | succeeded / completed_worker_status | matched | different | query_first | nr | un | none | `target:different_submitted` |
+| S06 | query write, attempt read | allow | succeeded / completed_worker_status | different | same | query_first | nr | un | none | `operation:different` |
+| S07 | absent path, both channels | unavailable | other_failure / completed_worker_status | matched | same | unestablished | un | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested` |
+| S08 | compound create | unavailable | succeeded / completed_worker_status | unresolved | same | unestablished | nr | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested`, `compound_attempt`, `operation:unresolved` |
+| S09 | unsupported attempt kind | allow | unavailable / no_completed_worker_result | unresolved | unresolved | query_first | na | un | none | `attempt:attempt_not_supported`, `attempt_operation_unestablished`, `operation:unresolved`, `target:unresolved`, `attempt:unsupported` |
+| S10 | sysctl planning exclusion | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | na | none | `query_plan:prediction_unavailable_pair`, `prediction:query_not_requested` |
+| S11 | bare `process-exec` query, spawn ok | unavailable | succeeded / spawned_child | different | same | unestablished | nr | un | none | `prediction:no_usable_verdict`, `exec_query_not_full_spawn_prediction`, `operation:different` |
+| S12 | `file-read*` query | allow | succeeded / completed_worker_status | unresolved | same | query_first | nr | un | none | `broad_query_operation`, `operation:unresolved` |
+| S13 | mach deny, kr=1100 | deny | permission_failure / bootstrap_permission_result | matched | same | query_first | un | na | none | |
+| S14 | mach unknown service, kr=1102 | allow | other_failure / completed_worker_status | matched | same | query_first | un | na | none | |
+| S15 | `process-exec*`, spawn ok, exit 0 | allow | succeeded / spawned_child | matched | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction` |
+| S16 | spawn ok, child exits 1 | allow | succeeded / spawned_child | matched | same | query_first | un | un | none | `exec_result_failed_after_spawn`, `exec_query_not_full_spawn_prediction` |
+| S17 | spawn of mode-000 target, EACCES | allow | permission_failure / permission_errno | matched | same | query_first | un | un | none | `exec_query_not_full_spawn_prediction` |
+| S18 | spawn of absent target | unavailable | other_failure / completed_worker_status | matched | same | unestablished | un | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested`, `exec_query_not_full_spawn_prediction` |
+| S19 | ordered unlink of queried path | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query [S19] | `host_path_resolution_changed` |
+| S20 | `process-exec-interpreter` query, binary spawn | allow | succeeded / spawned_child | different | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction`, `operation:different` |
+| S21 | `local_name` query, kr=1100 | allow | permission_failure / bootstrap_permission_result | matched | unresolved | query_first | un | na | none | `query_filter_scope_unestablished`, `target:unresolved` |
+| S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | nr | un | none | `query_filter_scope_unestablished`, `target:unresolved` |
+| S23 | allow, `access` succeeds | as S01 | | | | | | | | |
+| S24 | allow, `open_write` succeeds | as S01 | | | | | | | | |
+| S25 | read of the path S19 unlinked, ENOENT | allow | other_failure / completed_worker_status | matched | same | query_first | un | un | after_query [S19] | `host_path_resolution_changed` |
+| B1 | steered deny, read succeeds, ordered | deny | succeeded / completed_worker_status | matched | same | query_first | nr | un | none | |
+| B2 | verdict omitted, read succeeds | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:validator_no_verdict` |
+| B3 | verdict omitted, unlink of queried path | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered [B3] | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
+| B4 | validator error record | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:no_usable_verdict` |
+| B5 | verdict omitted, read of a path B6 unlinks | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered [B6] | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
+| B6 | allow, ordered unlink | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query [B6] | `host_path_resolution_changed` |
+| B7 | allow, read succeeds (control) | as S01 | | | | | | | | |
+| C1 | policy fails to compile, nothing runs | unavailable | unavailable / no_completed_worker_result | matched | same | unestablished | na | un | none | `prediction:validator_not_invoked`, `attempt:slot_incomplete`, `attempt:not_reached` |
+| R | `runner_reporting_failed` | no `comparison` object and no `comparison_conditions`; not run live | | | | | | | | |
+| T | worker deadline, slot started without result | as C1 with `attempt:started_without_result`; not run live | | | | | | | | |
+
+What the matrix establishes:
+
+- **No collapse.** Rows with identical objects (S01, S23, S24, B7) are the same
+  scenario under different attempt actions, which `attempt.requested_action`
+  distinguishes. Every pair of rows that means something different differs in
+  at least one field. B1, the case that today reads `unavailable` like S07 and
+  S09, is now the only row with deny, succeeded, matched, same, `query_first`,
+  no obligation outstanding and no limitation.
+- **New information.** S19, S25 and B6 today render nothing for an ordered
+  unlink; `after_query` with the unlinking step now says so. B3 and B5 today
+  carry the same string; the `steps` list now says whether the step unlinked
+  the path itself or another step did.
+- **Every string has a home.** The five removed strings map to obligations, to
+  `order`, or to the run-level condition. Every other string observed live
+  appears unchanged in the last column. The pairs `attempt:attempt_not_supported`
+  with `attempt:unsupported` (S09) and `attempt:slot_incomplete` with
+  `attempt:not_reached` (C1) come from two sources, the missing reason and the
+  disposition record, and both stay.
+- **Readable without a label.** Each row answers what each channel saw, whether
+  the scopes match, whether PW ordered the query first, and what is
+  outstanding. Nothing in a row needs the reader to know a mapping.
+
+The live outputs are retained in the session scratchpad, not in the repository;
+the matrix is the record. During I2/I3 the same three specimens become the
+`check_comparison.py` expectations and the shape golden's fixture.
 
 ### D2. Layer two: the specimen dossier
 
@@ -200,26 +277,91 @@ is omitted to signal failure.
 | Item | Today | Dossier disposition |
 | --- | --- | --- |
 | Policy source hash, format | `runner_result.policy_sha256`, `policy_format` | reference |
-| Submitted vs applied source, augments | `data.policy_augmentation` (only when augments applied) | **move** to `data.specimen.policy_augmentation` |
+| Submitted vs applied source, augments | `data.policy_augmentation` (only when augments applied) | **move** to `specimen.policy.augmentation`, always present, `applied: []` when no augment was used (D6.15) |
 | Parameter identity, compiled bytecode | `runner_result.applied_profile` (opt-in receipt) | reference; stays opt-in |
-| Imports scan (`policy_closure_sha256`, per-import path/hash/mtime, completeness, truncation, cycle) | only in `sbpl-check` output, which runs only on the `xpc_error` path | **add**: collect on every applicable source-policy run, with explicit scan basis, limits and failures |
-| macOS product version and build | only `sbpl-check` (`macos_build_version` via `sw_vers`) | **add**: `host.macos_version`, `host.macos_build`, `host.kernel_release`, `host.arch` |
-| libsandbox identity | none | **add**: available image identity with observing process and basis; hash only when supported, otherwise an explicit unavailability reason |
-| Runner identity and entitlements | `data.runner_provenance` | **move** to `data.specimen.runner_provenance` |
-| App evidence metadata and verification | `data.app_provenance` | **move** to `data.specimen.app_provenance` |
-| Worker binary hash and entitlements | in the evidence manifest on disk, referenced by `data.app_provenance.evidence_manifest_path` | **add**: inline the worker's and validator's manifest entries, preserving their manifest basis |
+| Imports scan (`policy_closure_sha256`, per-import path/hash/mtime, completeness, truncation, cycle) | only in `sbpl-check` output, which runs only on the `xpc_error` path | **add** as `specimen.policy.imports`: collect on every applicable source-policy run, with explicit scan basis, limits and failures |
+| macOS product version and build | only `sbpl-check` (`macos_build_version` via `sw_vers`) | **add** as `specimen.host`: `macos_version`, `macos_build`, `kernel_release`, `arch`, read with `sysctlbyname` (D6.16) |
+| libsandbox identity | none | **add**: per-function image identity with observing process and basis (see below; observer **OPEN**) |
+| Runner identity and entitlements | `data.runner_provenance` | **move** to `specimen.runner_provenance`, shape unchanged |
+| App evidence metadata and verification | `data.app_provenance` | **move** to `specimen.app_provenance`, shape unchanged |
+| Worker binary hash and entitlements | in the evidence manifest on disk, referenced by `data.app_provenance.evidence_manifest_path` | **add** as `specimen.binaries`: the service, worker and validator manifest entries, each verified against the file the run uses (D6.17) |
 | Build stamp, contract versions | `build`, `runner_result.schema_version`, envelope `schema_version`, `worker_evidence.abi_version` | reference |
 | What each query asked | `validator_subprocess.records[]` (operation, filter type and ID, value, rc, errno, raw line) | reference |
 | What each attempt did | `steps[].attempt` (requested kind/action/path, observed path, errno, child status) | reference |
 | Host path forms | `steps[].sandbox_check.path_diagnostics`, `steps[].attempt.path_diagnostics` | reference |
 | Ordering | `runner_subprocess.ordering`, `steps[].comparison.order` | reference |
-| Planning exclusions in this run | `steps[].sandbox_check.outcome == prediction_unavailable` plus `query_plan:*` | **add**: `conditions.prediction_unavailable_pairs` listing the pairs excluded in this run |
+| Planning exclusions in this run | `steps[].sandbox_check.outcome == prediction_unavailable` plus `query_plan:*` | **add** as `specimen.conditions.prediction_unavailable_pairs`: the distinct pairs excluded in this run |
 | Kernel's own account | `data.sandbox_log_capture` with its capture status and known omission | reference |
 | Run-level comparison conditions | nowhere; today rendered as `state_stability_unestablished` on every step | **add** in the runner reply as `comparison_conditions.unestablishable: ["state_stability"]` (D1); the dossier references it, and the guide gives it one sentence of meaning |
 
 The dossier is a closed list: inputs each channel fed the evaluator, the
 evaluator's outputs, the kernel's independent account, and the run conditions.
 Anything else proposed for it needs a reason under one of those four heads.
+
+#### Dossier fragment
+
+The shape for envelope 5, with the two open items marked:
+
+```json
+"specimen": {
+  "request_path": "tests/fixtures/pw_runner/specimen_file_read_deny.json",
+  "policy": {
+    "format": "sbpl",
+    "augmentation": { "applied": [], "original_sha256": "…", "applied_sha256": "…" },
+    "imports": {
+      "status": "complete",
+      "basis": "controller_scan_of_applied_source",
+      "closure_sha256": "…",
+      "records": [
+        { "name": "system.sb", "resolved_path": "/System/Library/Sandbox/Profiles/system.sb",
+          "sha256": "…", "size_bytes": 12345, "mtime_unix": 1700000000, "error": null }
+      ],
+      "cycle": null,
+      "limits": { "depth": 8, "count": 64, "file_bytes": 1048576, "total_bytes": 8388608, "wall_ms": 1000 },
+      "exceeded": null,
+      "failure": null
+    }
+  },
+  "host": { "macos_version": "14.8.3", "macos_build": "23J220", "kernel_release": "23.6.0",
+            "arch": "arm64", "basis": "sysctlbyname" },
+  "runner_provenance": { "…": "unchanged shape" },
+  "app_provenance": { "…": "unchanged shape" },
+  "binaries": {
+    "service":   { "manifest_id": "com.yourteam.policy-witness.PWRunner", "path": "…", "manifest_sha256": "…",
+                   "lc_uuid": "…", "entitlements": {}, "entitlements_error": null,
+                   "verification": { "status": "match", "actual_sha256": "…", "reason": null } },
+    "worker":    { "manifest_id": "PWRunner/pw-probe-runner", "…": "same shape" },
+    "validator": { "manifest_id": "PWRunner/sb_api_validator", "…": "same shape" }
+  },
+  "library_identity": "OPEN: see the identity paragraph",
+  "conditions": {
+    "prediction_unavailable_pairs": [ { "operation": "sysctl-read", "filter_kind": "sysctl_name" } ],
+    "comparison": "OPEN: reference to runner_result.comparison_conditions, or the list itself"
+  }
+}
+```
+
+| Path | Type | Rule |
+| --- | --- | --- |
+| `request_path` | string | the path given to `run`, as today |
+| `policy.format` | string | from the request; `sbpl` today |
+| `policy.augmentation` | object | today's `policy_augmentation` shape, always present; `applied` is `[]` and the two hashes are equal when no augment was used |
+| `policy.imports.status` | string | `complete`, `incomplete`, `failed`, `not_applicable` |
+| `policy.imports.basis` | string | constant `controller_scan_of_applied_source`: the controller walks the source after augments, before invoking the runner; it is not evidence of what the worker's compiler read |
+| `policy.imports.closure_sha256` | string or null | over the resolved records, computed whenever the scan ran; `status` says whether the closure is complete |
+| `policy.imports.records[]` | array | the `sbpl-check` import record shape, unchanged |
+| `policy.imports.cycle` | array or null | as `sbpl-check` |
+| `policy.imports.limits` | object | the five bounds in force, so a reader knows what `incomplete` was measured against |
+| `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
+| `policy.imports.failure` | string or null | why `failed`, when the scan could not run at all |
+| `host.*` | string or null each | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails |
+| `binaries.*` | object | the manifest entry for the service, worker and validator the run uses, with `path` the file hashed and `verification.status` one of `match`, `mismatch`, `unavailable`; for a BYOXPC runner the bundle's own copies are hashed against the app manifest's embedded-helper entries |
+| `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair`; `[]` when none |
+
+Collection order: host facts, binaries and the imports scan are gathered before
+the runner is invoked, so a hung or refused runner still leaves a complete
+dossier. A `not_applicable` scan still carries `limits`, `records: []` and null
+hashes; nothing is omitted to signal a state.
 
 Imports collection is a controller-side scan of source and files, not proof of
 the exact inputs consumed by the worker's compiler. Report unresolved imports,
@@ -239,17 +381,38 @@ largest is 43.6 KB, so these bounds are generous for real inputs and exist to
 keep a hostile import chain from stalling a run. Exceeding any bound yields
 `incomplete` with the bound named.
 
-Library identity names what was observed and in which process. On this host
-no `/usr/lib/libsandbox*` file exists; the image is in the dyld shared cache,
-which every process on the system maps. The dossier therefore records
-`{ image_path, shared_cache_uuid, on_disk: { present, sha256 | null },
-observer: "runner_host", basis: "dlopen" }`: the path the host's `dlopen`
-resolved, the shared cache UUID the host maps, and whether a file exists at that
-path on disk (a root, which dyld prefers over the cache). The claim is exactly
-that: the identity of the cache image the host maps, plus the presence or
-absence of an on-disk override. It is not a worker-side observation, and the
-guide says so. Worker-published identity would need shared-memory transport and
-an ABI bump; that is not part of this change, and the ABI stays at 7.
+Library identity names what was observed and in which process, per function.
+Verified on this host on 2026-09-30: `sandbox_check` and `sandbox_init` resolve
+to `/usr/lib/system/libsystem_sandbox.dylib`; `sandbox_compile_string`,
+`sandbox_apply` and `sandbox_free_profile` resolve to
+`/usr/lib/libsandbox.1.dylib`. Neither file exists on disk; both are served from
+the dyld shared cache (`_dyld_shared_cache_contains_path` is true for each), and
+two separate processes report the same cache UUID. The record is therefore one
+entry per function group:
+
+```json
+"library_identity": {
+  "observer": "OPEN",
+  "shared_cache_uuid": "ca11c3f5-…",
+  "images": [
+    { "functions": ["sandbox_check"], "image_path": "/usr/lib/system/libsystem_sandbox.dylib",
+      "in_shared_cache": true, "on_disk": { "present": false, "sha256": null }, "basis": "dladdr" },
+    { "functions": ["sandbox_compile_string", "sandbox_apply"], "image_path": "/usr/lib/libsandbox.1.dylib",
+      "in_shared_cache": true, "on_disk": { "present": false, "sha256": null }, "basis": "dladdr" }
+  ]
+}
+```
+
+The claim is exactly this: the cache image every process on the host maps for
+each function, plus the presence or absence of an on-disk override at
+observation time. It is not a worker-side observation, and the guide says so.
+**OPEN**: which process observes. The XPC host already loads libsandbox in
+`SandboxLib.load`, shares the bundle with both children and spawns the worker
+with an empty environment, so it is the nearest observer; publishing from it
+means a response 13 field that the dossier references. Observing in the
+controller keeps the dossier self-contained but is one process further from the
+worker. Worker-published identity would need shared-memory transport and an ABI
+bump; that is not part of this change, and the ABI stays at 7.
 
 ### D3. Invariants
 
@@ -271,7 +434,7 @@ an ABI bump; that is not part of this change, and the ABI stays at 7.
   | `target_mutation.status` other than `none` | `steps` is empty, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
   | `sandbox_attribution.status` | disagrees with the D1 fragment's rule for this step's `observation` and `limitations` |
   | `runtime_target_identity.status` | disagrees with the D1 fragment's rule for this step's filter kinds |
-  | any step | carries `drift`, `conclusion` or `deny_signal`, or one of the five removed limitation strings |
+  | any step | carries `drift`, `conclusion`, `deny_signal` or `comparison.scope`, or one of the five removed limitation strings |
   | `comparison_conditions` | absent while `steps` is present, or present on a `runner_reporting_failed` reply |
 - Reply degradation: `runner_reporting_failed` still omits every `comparison`.
   `order` is a claim about PW's actions and is withheld with the rest.
@@ -341,6 +504,12 @@ joint `unavailable` verdict. Single-channel absence values such as
 | 10 | The `data` boundary | The table in D2: four keys move, four duplicates are removed, seven stay. `data.specimen` is present on every run envelope. |
 | 11 | Library identity transport | Host-observed only, with the shared-cache basis stated. No ABI change. |
 | 12 | Integration mechanics | Preparation lands on `main` as behavior-preserving commits. The contract integration (I2, I3, I4) is done in a worktree on a branch with as many commits as it needs, verified there with the default battery and `--all`, and reaches `main` as one fast-forward. No intermediate shape is ever on `main` under the final numbers. |
+| 13 | `comparison.scope` | Removed. It was the same constant on every step; the guide states the scope once. |
+| 14 | `sandbox_attribution` with no observation | `not_applicable`. Today's code renders nothing for this case, which reads as `not_required`; a missing observation has nothing to attribute. |
+| 15 | `policy.augmentation` presence | Always present in the dossier, with `applied: []` and equal hashes when no augment was used. |
+| 16 | Host facts | Read with `sysctlbyname` (`kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`), no subprocess; the values equal `sw_vers` output on this host. |
+| 17 | Binary verification | The service, worker and validator the run uses are hashed on every run and compared with their manifest entries. The whole-manifest `PW_VERIFY_EVIDENCE` path is untouched. |
+| 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source; provisional budgets in D2. |
 
 ### Legacy readers and retained evidence
 
@@ -384,6 +553,7 @@ legacy-reader policy governs compatibility code.
 | `steps[].comparison.conclusion` | runner reply | removed |
 | `comparison.limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | removed from `limitations` (D1-B); the first is stated once at run level, the middle three become `obligations`, the last is dropped |
 | `steps[].deny_signal` | runner reply | removed, regardless of repair cost |
+| `steps[].comparison.scope` | runner reply | removed (D6.13) |
 | `deny_signal_total` | runner reply | audit with the signal channel; remove if it serves only historical behavior |
 | `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocate under `data.specimen`; remove former paths without compatibility aliases |
 | `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed; each duplicates or derives from `runner_provenance` |
