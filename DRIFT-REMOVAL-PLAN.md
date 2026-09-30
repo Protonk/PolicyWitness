@@ -2,7 +2,8 @@
 
 Status: REVISED for readiness review as of 2026-09-30; implementation has not
 started. The matrix's response 12 columns are verified against live output
-(see the scenario matrix); one design question is open, recorded as D6.36. The readiness gate below separates settled decisions from execution
+(see the scenario matrix). Every readiness box below is checked; D6.41's
+mutation-list shape is under review, and a change there would edit D1. The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -196,7 +197,9 @@ reply boundary, so it is not fed through `comparisonEvidence(...)` (D6.32).
 ### D2. The specimen dossier
 
 `data.specimen` is a controller-owned object under envelope 5, present on
-every `kind: "run"` envelope including `bad_request` and `xpc_error`. It records
+every `kind: "run"` envelope — a completed run, `bad_request`, `xpc_error` and
+the pre-execution `tool_error` failures alike, all of which carry one `data`
+skeleton (D6.36). It records
 the controller's request-source identity and pre-invocation observations;
 whether anything ran is established by the execution records it references.
 It does not embed the source or parameter values. No alias remains at a former
@@ -302,13 +305,27 @@ failure reports no applied names and no applied hash.
 | Augments successfully applied | submitted string or null | `applied`, applied names and hashes; original hash null if no original string existed | scan the resulting source |
 | Augment resolution refused | submitted string or null | `failed`, `applied: []`, original hash if available, applied hash null, refusal diagnostic | `not_applicable`, `failure: augmentation_failed` |
 | Missing/malformed policy or source, no augments applied | submitted string or null | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
+| No request value: the file is absent, unreadable, not JSON, or not an object | null | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
+| No request path: the argument is missing or a flag value is invalid | null | as above, with `specimen.request_path: null` | `not_applicable`, no records or hash |
 | Runner refusal or XPC failure after successful resolution | as collected before invocation | preserve the collected record | preserve the collected record |
 
 Every imports object carries its basis, limits, records, cycle, exceeded and
 failure keys. A scan that does not run has `records: []`, `cycle: null`,
-`closure_sha256: null` and `exceeded: null`. The table governs run envelopes;
-CLI usage and unreadable/non-JSON request errors retain their existing envelope
-kind. Dossier collection does not convert them into runs.
+`closure_sha256: null` and `exceeded: null`.
+
+The table governs every `kind: "run"` envelope, because every failure before
+execution already produces one. A missing argument, an invalid flag value, an
+absent request file and a request that is not a JSON object all print a run
+envelope today; under envelope 5 they carry the same `data` skeleton as a
+completed run, with every key present and the dossier at its collected state.
+One writer owns that: `cmd_run` prints the envelope for each of these, and the
+`cli.rs` catch-all stays only as a last resort for an error that escapes it. The
+`data.error` constant string that path emits now is removed, since `result.error`
+already carries the message (R1). The uniform shape does not unify the verdict:
+these keep `normalized_outcome: tool_error` and exit 2, distinct from
+`bad_request` at exit 1. Dossier collection does not change any of that, and it
+never converts a CLI failure into an execution: what ran is established by the
+execution records the dossier references, all of which are null here.
 
 After runner selection and augmentation, serialize the request value once to
 an owned temporary file even when no patch was needed. Scan that same source
@@ -517,7 +534,9 @@ succeeded, and show its scope, order and obligations; they assign no label.
   `library_identity`, and the removal of `drift`, `conclusion`,
   `comparison.scope`, `deny_signal`, `deny_signal_total`, `attempt.exit_code`,
   `attempt.syscall_errno` and `sandbox_check.scope`.
-- Controller envelope 4 → 5: `data.specimen` and the `data` key dispositions.
+- Controller envelope 4 → 5: `data.specimen`, the `data` key dispositions, and
+  one `data` skeleton for every run envelope, which removes the pre-execution
+  `data.error` constant.
 - Request schema, request-version admission behavior and worker ABI unchanged.
   The exact-version rule here governs semantic readers of runner responses
   and controller envelopes; it does not reject existing request-1 specimens.
@@ -617,7 +636,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
 
 | 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
-| 36 | Dossier presence on non-execution run envelopes | Open. `cli.rs`'s pre-execution `tool_error` path emits `kind: "run"` with a bare `{"error": …}` data object and no `RunData`, so D2's "every run envelope" rule has no collection point there. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all take that path, so D2's sentence about those errors "retaining their existing envelope kind" describes a kind that is already `run`. The `data.error` string there is a constant; the real message is in `result.error`. Recommended resolution: one `data` skeleton for every run envelope, emitted from `cmd_run`, with the dossier at its collected state. Resolve before implementation. |
+| 36 | Dossier presence on non-execution run envelopes | One `data` skeleton for every `kind: "run"` envelope, printed by `cmd_run`, with the dossier at its collected state and the pre-execution `data.error` constant removed; `tool_error` and its exit 2 are unchanged. No envelope is exempted. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all already print a run envelope, so the superseded claim that they kept a different kind was wrong. |
 | 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
 | 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. |
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. |
@@ -657,6 +676,7 @@ what stays.
 | `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno`, `steps[].sandbox_check.scope` | runner reply | removed (D6.22, D6.23) |
 | `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocated under `data.specimen` |
 | `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed |
+| `data.error` on the pre-execution `tool_error` envelope | controller envelope | removed; a constant string, superseded by the uniform `data` skeleton and `result.error` |
 
 ### R2. Producer code
 
@@ -686,7 +706,9 @@ paths per D5. Three Rust tests also embed inline Python that imports the
 consumer functions I3 removes — `run_flow.rs` ~2321 and ~2523 and
 `log_replay_tests.rs` ~172 import `recover_evidence` and
 `validate_evidence_shape` — so they move to `validate`/`denials` in the same
-increment or `cargo test` breaks (D6.40). Implement the dossier and request snapshot per D2. Update tests
+increment or `cargo test` breaks (D6.40). Implement the dossier and request snapshot per D2, and move the pre-execution
+failure envelopes into `cmd_run` so one writer owns the run `data` skeleton;
+`cli.rs`'s catch-all keeps only errors that escape it. Update tests
 for unsupported/malformed replies and current-version fragment transport.
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
@@ -1230,8 +1252,8 @@ The readiness review checks:
   expectations by construction.
 - [x] The removal inventory is complete for shared equipment: R4 lists every
   caller of the five removed consumer functions, including inside Rust tests.
-- [ ] D6.36: the dossier's presence rule covers every `kind: "run"` envelope,
-  including the pre-execution `tool_error` path.
+- [x] D6.36: the dossier's presence rule covers every `kind: "run"` envelope,
+  including the pre-execution `tool_error` path, through one `data` skeleton.
 - [x] The documentation opening and FAQ defaults are chosen, with ledgers,
   generation rules and a semantic completion review assigned.
 
