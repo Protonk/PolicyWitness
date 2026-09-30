@@ -1,9 +1,9 @@
 # Removing the drift verdict
 
 Status: DESIGN firming in progress, 2026-09-30. The D1 scenario matrix and the
-D2 dossier fragment are written from live output. Two items are open for
-discussion and marked OPEN below: who observes library identity (D2) and where
-run-level comparison conditions live (D1). Nothing here is implemented. The inventory baseline is df333b4
+D2 dossier fragment are written from live output. One item is open for
+discussion and marked OPEN below: where run-level comparison conditions live
+(D1). Library identity is observed by the XPC host (D6.11). Nothing here is implemented. The inventory baseline is df333b4
 with request schema 3, response schema 12, worker ABI 7 and controller envelope
 4. Source line numbers below are as of that commit and will move.
 
@@ -281,7 +281,7 @@ is omitted to signal failure.
 | Parameter identity, compiled bytecode | `runner_result.applied_profile` (opt-in receipt) | reference; stays opt-in |
 | Imports scan (`policy_closure_sha256`, per-import path/hash/mtime, completeness, truncation, cycle) | only in `sbpl-check` output, which runs only on the `xpc_error` path | **add** as `specimen.policy.imports`: collect on every applicable source-policy run, with explicit scan basis, limits and failures |
 | macOS product version and build | only `sbpl-check` (`macos_build_version` via `sw_vers`) | **add** as `specimen.host`: `macos_version`, `macos_build`, `kernel_release`, `arch`, read with `sysctlbyname` (D6.16) |
-| libsandbox identity | none | **add**: per-function image identity with observing process and basis (see below; observer **OPEN**) |
+| libsandbox identity | none | **add** in the runner reply as `library_identity`, observed by the XPC host per function group (see below); the dossier references it (D6.11) |
 | Runner identity and entitlements | `data.runner_provenance` | **move** to `specimen.runner_provenance`, shape unchanged |
 | App evidence metadata and verification | `data.app_provenance` | **move** to `specimen.app_provenance`, shape unchanged |
 | Worker binary hash and entitlements | in the evidence manifest on disk, referenced by `data.app_provenance.evidence_manifest_path` | **add** as `specimen.binaries`: the service, worker and validator manifest entries, each verified against the file the run uses (D6.17) |
@@ -333,7 +333,6 @@ The shape for envelope 5, with the two open items marked:
     "worker":    { "manifest_id": "PWRunner/pw-probe-runner", "…": "same shape" },
     "validator": { "manifest_id": "PWRunner/sb_api_validator", "…": "same shape" }
   },
-  "library_identity": "OPEN: see the identity paragraph",
   "conditions": {
     "prediction_unavailable_pairs": [ { "operation": "sysctl-read", "filter_kind": "sysctl_name" } ],
     "comparison": "OPEN: reference to runner_result.comparison_conditions, or the list itself"
@@ -387,12 +386,13 @@ to `/usr/lib/system/libsystem_sandbox.dylib`; `sandbox_compile_string`,
 `sandbox_apply` and `sandbox_free_profile` resolve to
 `/usr/lib/libsandbox.1.dylib`. Neither file exists on disk; both are served from
 the dyld shared cache (`_dyld_shared_cache_contains_path` is true for each), and
-two separate processes report the same cache UUID. The record is therefore one
-entry per function group:
+two separate processes report the same cache UUID. The record lives in the
+runner reply as `library_identity`, one entry per function group:
 
 ```json
 "library_identity": {
-  "observer": "OPEN",
+  "status": "observed",
+  "observer": "runner_host",
   "shared_cache_uuid": "ca11c3f5-…",
   "images": [
     { "functions": ["sandbox_check"], "image_path": "/usr/lib/system/libsystem_sandbox.dylib",
@@ -406,13 +406,22 @@ entry per function group:
 The claim is exactly this: the cache image every process on the host maps for
 each function, plus the presence or absence of an on-disk override at
 observation time. It is not a worker-side observation, and the guide says so.
-**OPEN**: which process observes. The XPC host already loads libsandbox in
-`SandboxLib.load`, shares the bundle with both children and spawns the worker
-with an empty environment, so it is the nearest observer; publishing from it
-means a response 13 field that the dossier references. Observing in the
-controller keeps the dossier self-contained but is one process further from the
-worker. Worker-published identity would need shared-memory transport and an ABI
-bump; that is not part of this change, and the ABI stays at 7.
+
+The XPC host observes (D6.11). It already loads libsandbox in `SandboxLib.load`
+as its pre-spawn check, shares the bundle with both children and spawns the
+worker with an empty environment, so it is the nearest observer short of the
+worker. From its existing handle it resolves the functions the children use,
+`sandbox_check` for the validator and `sandbox_compile_string` and
+`sandbox_apply` for the worker, calls `dladdr` on each, reads
+`_dyld_get_shared_cache_uuid` and `_dyld_shared_cache_contains_path`, and stats
+each image path. The record is present with `status: observed` on every reply
+whose host performed the load check, and with `status: unavailable` plus the
+`dlopen` diagnostic when that check failed (`libsandbox_unavailable`); a
+`bad_request` refusal carries none, since no process work happened. It is
+retained on a degraded `runner_reporting_failed` reply because it is an
+observation, not a comparison claim. Worker-published identity would need
+shared-memory transport and an ABI bump; that is not part of this change, and
+the ABI stays at 7.
 
 ### D3. Invariants
 
@@ -438,6 +447,11 @@ bump; that is not part of this change, and the ABI stays at 7.
   | `comparison_conditions` | absent while `steps` is present, or present on a `runner_reporting_failed` reply |
 - Reply degradation: `runner_reporting_failed` still omits every `comparison`.
   `order` is a claim about PW's actions and is withheld with the rest.
+  `library_identity` is an observation and is retained.
+- `library_identity`: present exactly when the host performed its libsandbox
+  load check; `observer` is `runner_host` and every image's `basis` is `dladdr`;
+  `status: observed` requires a non-empty `images` array and a shared cache
+  UUID, `status: unavailable` requires a diagnostic and no images.
 - Consumer (`tests/lib/consumer.py`): for the new contract, reject
   `steps[].drift`, `steps[].deny_signal` and
   `steps[].comparison.conclusion`, reject `established` as any obligation
@@ -466,8 +480,9 @@ joint `unavailable` verdict. Single-channel absence values such as
 
 ### D5. Versioning
 
-- Response schema 12 → 13 for the completed comparison, the signal removal and
-  the run-level `comparison_conditions` field. The current contract description
+- Response schema 12 → 13 for the completed comparison, the signal removal,
+  the run-level `comparison_conditions` field and the host-observed
+  `library_identity` record. The current contract description
   must specify the descriptive fields and typed obligations, the absence of joint
   verdicts and unobserved signal keys, and the scope of each claim.
 - Controller envelope 4 → 5 for `data.specimen` and provenance relocation.
@@ -496,13 +511,13 @@ joint `unavailable` verdict. Single-channel absence values such as
 | 2 | Schema bumps and integration | One response bump to 13 for the final response shape, plus envelope 5 for the dossier. Each bump lands with its implementation. Request/ABI bump if their contracts change. |
 | 3 | Remove `steps[].deny_signal` | Yes, regardless of repair size. Audit `deny_signal_total`, types, helpers, fixtures and prose; remove parts serving only the abandoned channel. |
 | 4 | Imports collection | Every applicable source-policy run, with explicit scan basis, completeness, limits and failures. Measure large profiles to set budgets; collection is not conditional on being cheap. |
-| 5 | libsandbox identity in the dossier | Include available identity with observing process and evidence basis. Collect the relevant process evidence; explain unavailable hashes or identity components. Host `dlopen` alone is not worker-image evidence. |
+| 5 | libsandbox identity | Per function group, observed by the XPC host (D6.11): image path, whether the shared cache serves it, on-disk presence and hash, and the shared cache UUID, with `observer` and `basis` stated. Unavailable components are explained. The claim names the cache image every process maps; it is not a worker-side observation, and the guide says so. |
 | 6 | Move existing provenance under `data.specimen` | Yes for relevant controller-owned provenance and augmentation. Give each a canonical home without compatibility aliases; preserve raw channel records where their ownership matters. |
 | 7 | Historical labels and reducer | Remove both the labels and the proposed canonical reducer. Tests assert evidence directly; recipes select concrete combinations without joint verdicts. |
 | 8 | Supported versions for every reader | Exactly the manifest numbers. Any other version is reported as `unsupported`; no version branches remain. The one legacy artifact that survives is the captured `a1_known_loss.json`, kept as bytes to check that rejection. |
 | 9 | Where run-level comparison conditions live | In the runner reply as `comparison_conditions`, because the runner produces comparisons and `pw-runner-client` emits the reply alone. The dossier references it. |
 | 10 | The `data` boundary | The table in D2: four keys move, four duplicates are removed, seven stay. `data.specimen` is present on every run envelope. |
-| 11 | Library identity transport | Host-observed only, with the shared-cache basis stated. No ABI change. |
+| 11 | Library identity observer | The XPC host, in `SandboxLib.load`, published in the runner reply as `library_identity`; the dossier references it. No ABI change. |
 | 12 | Integration mechanics | Preparation lands on `main` as behavior-preserving commits. The contract integration (I2, I3, I4) is done in a worktree on a branch with as many commits as it needs, verified there with the default battery and `--all`, and reaches `main` as one fast-forward. No intermediate shape is ever on `main` under the final numbers. |
 | 13 | `comparison.scope` | Removed. It was the same constant on every step; the guide states the scope once. |
 | 14 | `sandbox_attribution` with no observation | `not_applicable`. Today's code renders nothing for this case, which reads as `not_required`; a missing observation has nothing to attribute. |
@@ -579,8 +594,9 @@ legacy-reader policy governs compatibility code.
 | `runner/Sources/PWRunnerCore/Signals.swift` | `installDenySignalHandler`, `denySignalCount`, the SIGUSR1 handler | delete the file; nothing under `runner/Sources` calls either function. Remove its `XPC_RUNNER_SIGNALS_FILE` line from `build.sh`, which `source_drift` checks against the tree |
 
 The verdict-key removal needs no C change and no Rust production reader change.
-The dossier is Rust only. Library identity is host-observed (D6.11), so no
-runner or C change and no ABI bump is required.
+The dossier is Rust only. Library identity is observed by the XPC host
+(D6.11): a Swift addition in `SandboxLib.swift` and the reply model, with no C
+change and no ABI bump.
 
 ### R3. Controller fixtures
 
@@ -798,7 +814,10 @@ and I4 are work packages, not permission to publish intermediate shapes under
 the final numbers. In particular, moving state stability out of step limitations
 must land with the reply's `comparison_conditions` field.
 
-- Swift producer changes per R2, including signal-channel removal. Remove legacy
+- Swift producer changes per R2, including signal-channel removal, plus the
+  `library_identity` observation in `SandboxLib.load` and its reply field. The
+  field-complete fixture in `ReplyFailureTests` gains the record so the golden
+  records it. Remove legacy
   decoding unless the audit identifies a current workflow that needs it; scope
   any retained support explicitly without restoring removed current fields.
 - Edit `docs/contract.json` for response 13 and envelope 5 with the implementation,
@@ -841,8 +860,8 @@ must land with the reply's `comparison_conditions` field.
   rather than shelling out to the helper. Collect imports for every applicable
   source-policy run with the scan basis, completeness, budgets and failure states
   described in D2. Preserve the distinct not-applicable case.
-- Collect libsandbox identity as the host observes it (D2), with the on-disk
-  override check, and report unavailable components explicitly.
+- Library identity is produced by the runner (I2, D6.11); the dossier
+  references it.
 - Inline the worker's and validator's evidence-manifest entries.
 - Tests: presence, ownership and shape under `unit/rust.unit`; meaningful cases
   for incomplete/failed import collection, its limits, non-applicable specimens
