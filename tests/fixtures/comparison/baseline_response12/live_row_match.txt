@@ -1,0 +1,15 @@
+
+### run_a.json  (run outcome: ok)
+  S06  s06  MATCH
+  S10  s10  MATCH
+  S12  s12  MATCH
+  S18  s18  MATCH
+  S21  s21  MATCH
+  S22  s22  MATCH
+
+### run_b.json  (run outcome: validator_no_reply)
+  B1   b1   MATCH
+  B3   b3   MATCH
+  B5   b5   MATCH
+  B6   b6   MATCH
+  B7   b7   MATCH

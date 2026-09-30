@@ -1,0 +1,871 @@
+{
+  "build": {
+    "commit": "ff2b192728268b5dc33024b2ce01ec4e830f0c32",
+    "describe": "v0.2.4",
+    "number": "321",
+    "version": "0.2.4"
+  },
+  "data": {
+    "app_provenance": {
+      "app_binary_rel_path": "Contents/MacOS/policy-witness",
+      "app_bundle_id": "com.yourteam.policy-witness",
+      "app_entitlements": {},
+      "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+      "evidence_notes": [
+        "Main app binary hash is omitted because the manifest is signed by the app bundle."
+      ],
+      "evidence_verify": null
+    },
+    "policy_augmentation": null,
+    "policy_check": null,
+    "request_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/specimen_b.json",
+    "runner_client": {
+      "argv": [
+        "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "com.yourteam.policy-witness.PWRunner",
+        "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/specimen_b.json"
+      ],
+      "capture_limit_bytes": 75497472,
+      "ended_at_unix_ms": 1790804785065,
+      "exit_code": 0,
+      "started_at_unix_ms": 1790804783157,
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 18283,
+      "stdout_bytes_retained": 18283,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_raw": null,
+      "stdout_truncated": false
+    },
+    "runner_provenance": {
+      "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+      "runner_entitlements": {
+        "error": null,
+        "keys": [],
+        "raw_plist": "{}"
+      },
+      "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "runner_kind": "standard",
+      "runner_registry_id": null,
+      "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+      "runner_signature": null
+    },
+    "runner_registry_id": null,
+    "runner_result": {
+      "bundle_id": "com.yourteam.policy-witness.PWRunner",
+      "error": "read(verdicts): exceeded 500 ms I/O deadline; wrote 1128 of 1128 probe bytes; drained 1030 stdout bytes",
+      "normalized_outcome": "validator_no_reply",
+      "pid": 56819,
+      "policy_format": "sbpl",
+      "policy_sha256": "d130f968d5a3351927ae34b556c1e9821242ff5af875a761bffed57aa40e765c",
+      "rc": 1,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "b1"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 1,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "b3"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 2,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "b5"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 3,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "b6"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 4,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "b7"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "ordering": {
+          "collection_closed_before_proceed": true,
+          "proceed_observed": true,
+          "proceed_set": true,
+          "protocol_violations": [],
+          "validator_disposition": "reaped",
+          "worker_lifetime_established": true
+        },
+        "partial_steps": false,
+        "pid": 56819,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "reaped": true,
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_version": 7,
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "progress": {
+            "operation": 10,
+            "phase": 2,
+            "raw": 169869312
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "schema_version": 12,
+      "specimen_id": "matrix_check_b",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "exit_code": 0,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "native_rc": null,
+            "observed_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "open_read",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "result_source": "worker",
+            "syscall_errno": null
+          },
+          "comparison": {
+            "conclusion": "unavailable",
+            "limitations": [
+              "state_stability_unestablished",
+              "runtime_target_identity_unestablished"
+            ],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "prediction": "deny",
+            "scope": "submitted_operation_and_target",
+            "target_relation": "same_submitted"
+          },
+          "deny_signal": null,
+          "drift": null,
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "native_rc": 1,
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 56819,
+            "rc": 1,
+            "result_source": "validator",
+            "scope": "post_sandbox"
+          },
+          "step_id": "b1"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "exit_code": 0,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "native_rc": null,
+            "observed_path": null,
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": [
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "unlink",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1",
+            "result_source": "worker",
+            "syscall_errno": null
+          },
+          "comparison": {
+            "conclusion": "unavailable",
+            "limitations": [
+              "query_attempt_order_unestablished",
+              "state_stability_unestablished",
+              "runtime_target_identity_unestablished",
+              "attempt_mutation_order_unestablished",
+              "prediction:validator_no_verdict",
+              "host_path_resolution_changed"
+            ],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "unestablished",
+            "prediction": "unavailable",
+            "scope": "submitted_operation_and_target",
+            "target_relation": "same_submitted"
+          },
+          "deny_signal": null,
+          "drift": null,
+          "sandbox_check": {
+            "errno": null,
+            "error": "no validator verdict for this step",
+            "filter_kind": "path",
+            "filter_type_id": null,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1",
+            "missing_reason": "validator_no_verdict",
+            "native_rc": null,
+            "operation": "file-write-unlink",
+            "outcome": "error",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1",
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": []
+            },
+            "pid": 56819,
+            "rc": 0,
+            "result_source": "synthetic",
+            "scope": "post_sandbox"
+          },
+          "step_id": "b3"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "exit_code": 0,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "native_rc": null,
+            "observed_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": [
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "open_read",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "result_source": "worker",
+            "syscall_errno": null
+          },
+          "comparison": {
+            "conclusion": "unavailable",
+            "limitations": [
+              "query_attempt_order_unestablished",
+              "state_stability_unestablished",
+              "runtime_target_identity_unestablished",
+              "attempt_mutation_order_unestablished",
+              "prediction:validator_no_verdict",
+              "host_path_resolution_changed"
+            ],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "unestablished",
+            "prediction": "unavailable",
+            "scope": "submitted_operation_and_target",
+            "target_relation": "same_submitted"
+          },
+          "deny_signal": null,
+          "drift": null,
+          "sandbox_check": {
+            "errno": null,
+            "error": "no validator verdict for this step",
+            "filter_kind": "path",
+            "filter_type_id": null,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "missing_reason": "validator_no_verdict",
+            "native_rc": null,
+            "operation": "file-read-data",
+            "outcome": "error",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": []
+            },
+            "pid": 56819,
+            "rc": 0,
+            "result_source": "synthetic",
+            "scope": "post_sandbox"
+          },
+          "step_id": "b5"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "exit_code": 0,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "native_rc": null,
+            "observed_path": null,
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": [
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "unlink",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "result_source": "worker",
+            "syscall_errno": null
+          },
+          "comparison": {
+            "conclusion": "agreement",
+            "limitations": [
+              "state_stability_unestablished",
+              "runtime_target_identity_unestablished",
+              "host_path_resolution_changed"
+            ],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "prediction": "allow",
+            "scope": "submitted_operation_and_target",
+            "target_relation": "same_submitted"
+          },
+          "deny_signal": null,
+          "drift": false,
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "native_rc": 0,
+            "operation": "file-write-unlink",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "realpath_resolved": null,
+              "same_as_input": []
+            },
+            "pid": 56819,
+            "rc": 0,
+            "result_source": "validator",
+            "scope": "post_sandbox"
+          },
+          "step_id": "b6"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "exit_code": 0,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "native_rc": null,
+            "observed_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "open_read",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "result_source": "worker",
+            "syscall_errno": null
+          },
+          "comparison": {
+            "conclusion": "agreement",
+            "limitations": [
+              "state_stability_unestablished",
+              "runtime_target_identity_unestablished"
+            ],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "prediction": "allow",
+            "scope": "submitted_operation_and_target",
+            "target_relation": "same_submitted"
+          },
+          "deny_signal": null,
+          "drift": false,
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "native_rc": 0,
+            "operation": "file-read-data",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "input": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 56819,
+            "rc": 0,
+            "result_source": "validator",
+            "scope": "post_sandbox"
+          },
+          "step_id": "b7"
+        }
+      ],
+      "test_overrides": {
+        "validator_executable_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/stub_validator.py",
+        "validator_io_timeout_ms": 500
+      },
+      "validator_subprocess": {
+        "association_issues": [
+          {
+            "count": 0,
+            "kind": "missing_id",
+            "origin": "runner_host",
+            "step_id": "b3"
+          },
+          {
+            "count": 0,
+            "kind": "missing_id",
+            "origin": "runner_host",
+            "step_id": "b5"
+          }
+        ],
+        "expected_step_ids": [
+          "b1",
+          "b3",
+          "b5",
+          "b6",
+          "b7"
+        ],
+        "io_error": "read(verdicts): exceeded 500 ms I/O deadline; wrote 1128 of 1128 probe bytes; drained 1030 stdout bytes",
+        "pid": 56820,
+        "probe_bytes_expected": 1128,
+        "probe_bytes_written": 1128,
+        "read_error": "read(verdicts): exceeded 500 ms I/O deadline; wrote 1128 of 1128 probe bytes; drained 1030 stdout bytes",
+        "reaped": true,
+        "records": [
+          {
+            "errno": 0,
+            "filter_type": "PATH",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "operation": "file-read-data",
+            "outcome": "deny",
+            "raw_line": "{\"kind\": \"sb_api_validator_verdict\", \"schema_version\": 1, \"step_id\": \"b1\", \"operation\": \"file-read-data\", \"filter_type\": \"PATH\", \"filter_type_id\": 1, \"filter_value\": \"/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable\", \"rc\": 1, \"errno\": 0, \"outcome\": \"deny\"}",
+            "rc": 1,
+            "step_id": "b1"
+          },
+          {
+            "errno": 0,
+            "filter_type": "PATH",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2",
+            "operation": "file-write-unlink",
+            "outcome": "allow",
+            "raw_line": "{\"kind\": \"sb_api_validator_verdict\", \"schema_version\": 1, \"step_id\": \"b6\", \"operation\": \"file-write-unlink\", \"filter_type\": \"PATH\", \"filter_type_id\": 1, \"filter_value\": \"/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2\", \"rc\": 0, \"errno\": 0, \"outcome\": \"allow\"}",
+            "rc": 0,
+            "step_id": "b6"
+          },
+          {
+            "errno": 0,
+            "filter_type": "PATH",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable",
+            "operation": "file-read-data",
+            "outcome": "allow",
+            "raw_line": "{\"kind\": \"sb_api_validator_verdict\", \"schema_version\": 1, \"step_id\": \"b7\", \"operation\": \"file-read-data\", \"filter_type\": \"PATH\", \"filter_type_id\": 1, \"filter_value\": \"/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable\", \"rc\": 0, \"errno\": 0, \"outcome\": \"allow\"}",
+            "rc": 0,
+            "step_id": "b7"
+          }
+        ],
+        "stdout_bytes_received": 1030,
+        "stdout_collection_stop": "deadline",
+        "term_signal": 9,
+        "termination_request": {
+          "rc": 0,
+          "signal": 9
+        },
+        "wait_errors": []
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "capture_status": "disabled",
+      "correlation_status": "not_attempted",
+      "disposition_integrity": "valid",
+      "disposition_issues": [],
+      "first_deny": null,
+      "permission_failures_without_record": null,
+      "process_disposition": "clean_exit",
+      "stop_reason": "done",
+      "termination_cause": null,
+      "worker_pid": 56819
+    },
+    "runner_service_bundle_id": "com.yourteam.policy-witness.PWRunner",
+    "runner_service_executable": "PWRunner",
+    "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+    "runner_startup_diagnostics": null,
+    "sandbox_log_capture": null,
+    "timeout_ms": 240000
+  },
+  "generated_at_unix_ms": 1790804785065,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": "read(verdicts): exceeded 500 ms I/O deadline; wrote 1128 of 1128 probe bytes; drained 1030 stdout bytes",
+    "exit_code": 1,
+    "normalized_outcome": "validator_no_reply",
+    "ok": false,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  },
+  "schema_version": 4
+}

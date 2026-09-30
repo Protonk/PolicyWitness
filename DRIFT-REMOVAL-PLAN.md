@@ -1,7 +1,8 @@
 # Removing the drift verdict
 
 Status: REVISED for readiness review as of 2026-09-30; implementation has not
-started. The readiness gate below separates settled decisions from execution
+started. The matrix's response 12 columns are verified against live output
+(see the scenario matrix); one design question is open, recorded as D6.36. The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -94,12 +95,23 @@ vary per step: the reply carries `comparison_conditions:
 
 The S, B and C rows specify 32 scenario expectations: a real-validator plan of
 24 steps, a steered-validator plan of 7, and a pre-apply failure. R and T are
-two additional failure controls with separate owners. These are response 13
-design expectations, not captured response 13 output. No linked receipt for
-the earlier claimed 2026-09-30 exploratory run was located during this review;
-that claim is not acceptance evidence. I2 must capture the specimens, controls,
-raw replies and app identity in managed output before replacement coverage is
-credited. The deadline example has an existing
+two additional failure controls with separate owners.
+
+Seven of the nine columns — `prediction`, `observation`, `observation_basis`,
+`operation_relation`, `target_relation`, `order` and `limitations` — are
+unchanged by this plan, so every row's values for them were checked against
+response 12 output on 2026-09-30. Twenty-five rows (including the three `as
+S01` aliases) matched captured tuples in the retained `release-0.2.4-default`
+evidence; the remaining rows were run live. Two live specimens and their raw
+envelopes are preserved under
+[tests/fixtures/comparison/baseline_response12/](tests/fixtures/comparison/baseline_response12/)
+with the method and per-row provenance in that directory's README. One row was
+wrong and is corrected here: S22 also carries `submitted_target_unavailable`,
+because a `none` filter submits no target to compare. The `obligations` object
+and `comparison_conditions` remain design expectations, since no build emits
+them; I2 still owns capturing response 13 receipts, app identity and checker
+output in managed output before replacement coverage is credited. The deadline
+example has an existing
 [generated control](tests/fixtures/disposition/a1_expected.json), whose source
 and captured-versus-generated distinction are documented in the
 [fixture README](tests/fixtures/disposition/README.md).
@@ -129,7 +141,7 @@ identity), M (target mutation); `nr` = `not_required`, `na` =
 | S19 | ordered unlink of queried path | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query [S19] | `host_path_resolution_changed` |
 | S20 | `process-exec-interpreter` query, binary spawn | allow | succeeded / spawned_child | different | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction`, `operation:different` |
 | S21 | `local_name` query, kr=1100 | allow | permission_failure / bootstrap_permission_result | matched | unresolved | query_first | un | na | none | `query_filter_scope_unestablished`, `target:unresolved` |
-| S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | nr | un | none | `query_filter_scope_unestablished`, `target:unresolved` |
+| S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | nr | un | none | `query_filter_scope_unestablished`, `submitted_target_unavailable`, `target:unresolved` |
 | S23 | allow, `access` succeeds | as S01 | | | | | | | | |
 | S24 | allow, `open_write` succeeds | as S01 | | | | | | | | |
 | S25 | read of the path S19 unlinked, ENOENT | allow | other_failure / completed_worker_status | matched | same | query_first | un | un | after_query [S19] | `host_path_resolution_changed` |
@@ -149,6 +161,29 @@ different attempt actions, which `attempt.requested_action` distinguishes.
 The pairs `attempt:attempt_not_supported` with `attempt:unsupported` (S09) and
 `attempt:slot_incomplete` with `attempt:not_reached` (C1) come from the missing
 reason and the disposition record respectively; both stay.
+
+#### Specimen mechanics the rows depend on
+
+Three facts constrain how the matrix specimens are built; all three were
+established by running them.
+
+- A step whose attempt is `unlink` reaches `operation_relation: matched` only
+  when its query operation is `file-write-unlink`. S19, S25, B3, B5 and B6
+  depend on this.
+- A steered validator cannot omit a verdict by skipping an output line. The
+  host counts uniquely associated records and refuses a short batch run-level
+  with `validator_unavailable` before any comparison exists. The omitted-verdict
+  rows (B2, B3, B5) require the validator I/O deadline seam that
+  `runner_outcome_validator_no_reply` already uses: `_test_overrides`
+  `validator_executable_path` plus `validator_io_timeout_ms`, with a stub that
+  answers the other steps and then stalls. Specimen B therefore ends in
+  `normalized_outcome: validator_no_reply`, not `ok`, while B1, B6 and B7 keep
+  their verdicts and `query_first` order in that same reply. The matrix reader
+  asserts the per-step records against a run whose run-level outcome is a
+  validator failure.
+- Specimen B is not idempotent: it unlinks the paths it queries, and a run that
+  fails after release still performs its attempts. The case owns recreating its
+  files before every run, including after a failed one.
 
 T uses the existing `worker_attempt_in_flight_at_deadline` setup: an existing
 FIFO with no writer, an allow policy, a completed validator query, the release
@@ -221,6 +256,7 @@ path.
     "comparison_conditions": "/data/runner_result/comparison_conditions",
     "library_identity": "/data/runner_result/library_identity",
     "sandbox_log_capture": "/data/sandbox_log_capture",
+    "policy_check": "/data/policy_check",
     "build": "/build"
   }
 }
@@ -235,7 +271,7 @@ path.
 | `policy.imports.basis` | string | constant `controller_scan_of_applied_source`: the controller walks the source after augments, before invoking the runner; it is not evidence of what the worker's compiler read |
 | `policy.imports.closure_sha256` | string or null | over the applied source and successfully hashed import records whenever the scan ran; `status` says whether the scanned closure is complete |
 | `policy.imports.records[]`, `cycle` | as `sbpl-check` | unchanged shapes |
-| `policy.imports.limits` | object | depth 8, count 64, imported file 1 MiB, total 8 MiB, cooperative work budget 1,000 ms; provisional until I4 measurement, then recorded with counting rules in `docs/limits.json` |
+| `policy.imports.limits` | object | depth 8, count 64, imported file 1 MiB, total 8 MiB, cooperative work budget 1,000 ms, recorded with counting rules in `docs/limits.json`. Measured against the real closure: `sbpl-check` over `(import "system.sb")` resolves 2 records totalling ~13 KB and returns in 0.02 s including the compile, so the budget has roughly fifty times the headroom a representative profile needs. I4 measures the WebProcess-size specimen and the cutoff behavior before the numbers are published (D6.37) |
 | `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
 | `policy.imports.failure` | string or null | the first scan problem, including why the scan could not start; null for a complete scan or an ordinary absence of source |
 | `host.*` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine` via `sysctlbyname`; null when the read fails (D6.16) |
@@ -281,6 +317,17 @@ value and pass that file to the runner client and any fallback policy check.
 file through both readers and clean it up on all exits. Replacing the original
 request during collection must not change the submitted bytes (D6.30).
 
+Two facts about the existing helper govern that change. Nothing resolves a
+request field relative to the request file's directory — augments resolve
+against the app root and the runner never receives the path — so moving the
+selected request into `$TMPDIR/policy-witness/` cannot change how any field is
+interpreted. But `write_temp_request` has no cleanup today, and its directory
+held 40 leftover request files on the development machine when this was
+measured, each carrying policy source. Making the snapshot unconditional turns
+that into one file per run, so the lifetime fix is part of the same change, not
+a follow-up: a guard that removes the file on every exit from `cmd_run`,
+including the error returns (D6.38).
+
 #### Binary selection and comparison
 
 The service path comes from the selected runner's executable path. Worker and
@@ -309,6 +356,19 @@ only for `match`. A mismatch reason identifies the baseline comparison; an
 unavailable reason identifies selection, manifest or file-read failure.
 
 #### Import collection and bounds
+
+The dossier's object is the envelope's import inventory of record: the
+controller's own scan of the source it selected for invocation, identified by
+its `basis`. `data.policy_check` keeps `sbpl-check`'s separate flat `imports`
+array, `imports_cycle` and `imports_truncated` verbatim; it is null except on
+the fallback paths that run that tool, so the two inventories coexist only
+there. They are different observations — a different scanner, a different
+moment, and only one of them bounded by these limits — and neither is a claim
+about what the worker's compiler read. They may disagree, and a disagreement is
+not an error. `references.policy_check` points at the tool's record so the
+relation is explicit; the dossier never copies it. Because the shared I1
+extraction serves both, it must keep `sbpl-check`'s existing output byte-identical
+while the dossier renders the object shape (D6.35).
 
 `complete` means the scanner exhausted the literal import closure under its
 documented search paths with no unresolved names, cycles, nonliteral import
@@ -397,7 +457,11 @@ the original loader diagnostic, including `dlsym` failures, not only `dlopen`.
 Identity values and diagnostics must be bounded and made JSON-native during
 collection, so the minimal backstop can retain them without invoking another
 custom encoder. Partial observation is a data state, never a serialization
-failure. Reply-failure tests exercise both fallback levels with each presence
+failure. The minimal backstop is a hand-built dictionary serialized with `try!`,
+so it must not be handed a structure that can be rejected: it checks the
+collected identity with `JSONSerialization.isValidJSONObject` and omits the key
+if that fails, recording the omission in its diagnostic. Reporting failure never
+becomes a host trap (D6.39). Reply-failure tests exercise both fallback levels with each presence
 case, including the absence before loading.
 
 ### D3. Invariants
@@ -552,6 +616,14 @@ current-version fixtures for unfamiliar-value transport tests.
 | 33 | Integration order (supersedes 24's deletion order) | Only behavior-preserving preparation on `main`. Retire contract tests in the worktree; retire live scenarios only with passing replacement controls in the same increment. |
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
 
+| 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
+| 36 | Dossier presence on non-execution run envelopes | Open. `cli.rs`'s pre-execution `tool_error` path emits `kind: "run"` with a bare `{"error": …}` data object and no `RunData`, so D2's "every run envelope" rule has no collection point there. Resolve before implementation. |
+| 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
+| 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. |
+| 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. |
+| 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
+| 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. |
+
 Reader inventory behind D6.8 and D6.31: the Swift decoder gates at 8, 9 and 10;
 `consumer.py` branches at 7, 8, 9 and 12; the Python lifecycle tools branch at
 the disposition version; production Rust `project_disposition` branches at 10;
@@ -604,7 +676,11 @@ No C change. The dossier is Rust only.
 Production Rust reads no removed comparison key. It does interpret legacy
 lifecycle replies: remove `project_disposition`'s pre-response-10 branch and
 gate semantic work in `complete_execution` and its downstream diagnostics/log
-paths per D5. Implement the dossier and request snapshot per D2. Update tests
+paths per D5. Three Rust tests also embed inline Python that imports the
+consumer functions I3 removes — `run_flow.rs` ~2321 and ~2523 and
+`log_replay_tests.rs` ~172 import `recover_evidence` and
+`validate_evidence_shape` — so they move to `validate`/`denials` in the same
+increment or `cargo test` breaks (D6.40). Implement the dossier and request snapshot per D2. Update tests
 for unsupported/malformed replies and current-version fragment transport.
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
@@ -620,6 +696,23 @@ become current-shaped; the legacy-shape case at ~2071 is deleted:
 | `tests/lib/blackbox.py` | explicit-null check (~110–111); drift checks (~154–160); alias-agreement rule; `effective_filter_value` fallback | delete |
 | `tests/lib/lifecycle_oracle.py` (~338–341), `tests/lib/path_diagnostics_contract.py` (~26–32) | constructed steps carry `drift` and `conclusion` | update the constructed shape |
 | `tests/lib/lifecycle_contract.py`, `lifecycle_adapter.py`, `lifecycle_oracle.py`, document readers of log/path evidence | legacy projection rules and document entry points | remove legacy interpretation; preserve malformed/missing-current-evidence distinctions; apply D5 gates before recovery |
+
+Every caller of the five functions I3 removes, found by exact search on
+2026-09-30. Each moves to the named replacement in the same increment; the
+removal is not complete while any of these still imports the old name.
+
+| Caller | Imports | Replacement |
+| --- | --- | --- |
+| `tests/suites/witness_contract/check_comparison.py` | `recover_evidence`, `comparison_groups`, `failure_groups`, `path_reporting`, `validate_evidence_shape`, `validate_current_build_evidence` | absorbed by `comparison_matrix` (I2); no port |
+| `tests/suites/blackbox_e2e/checker_controls.py` | all five, plus both validators | rebuilt in I3 against `validate`/`steps`/`select` |
+| `tests/suites/witness_contract/check_pre_apply_failure.py`, `check_termination_correlation.py`, `check_prediction_targets.py` | `recover_evidence`, `comparison_groups`/`failure_groups` | `validate` + `select` on the C1/S-row fields they assert |
+| `tests/suites/witness_contract/check_deny_capture_window.py`, `log_capture_controls.py` | `recover_evidence`, `validate_evidence_shape` | `validate` + `denials` |
+| `tests/suites/runner_validator_failure/check.py` | `recover_evidence`, `comparison_groups`, `failure_groups` | `validate` + `select` (B2, B4) |
+| `tests/suites/runner_exec_dac/check_query_scope.py` | `recover_evidence`, `comparison_groups`, `failure_groups`, `validate_evidence_shape` | `validate` + `select` (S15, S17) |
+| `tests/lib/unavailable_prediction.py` | `recover_evidence`, `comparison_groups`, `failure_groups`, `path_reporting` | field selections per I3 |
+| `tests/lib/path_diagnostics_contract.py` | `recover_evidence`, `validate_evidence_shape` | field selections per I3 |
+| `tests/suites/blackbox_e2e/disposition_controls.py`, `runner_outcome_validator_no_reply/check.py`, `witness_contract/check_ordering.py`, `check_max_target_reply.py`, `check_removed_target.py` | the merged validators only | `validate` |
+| `controller/src/run_flow.rs` ~2321, ~2523; `controller/src/log_replay_tests.rs` ~172 | inline Python importing `recover_evidence`, `validate_evidence_shape` | `validate` + `denials`, per R3 |
 
 ### R5. Test assertions
 
@@ -753,7 +846,12 @@ control), raw inputs needed by the unit reader (channel results, ordering and
 all run attempts with IDs), and the expected response 13 `comparison` object.
 R is a reply-boundary control, recorded in the ownership table rather than as
 a comparison object. Expectations are reviewed from D1 and independent
-controls; they are not generated from the producer under test. Two reader
+controls; they are not generated from the producer under test. The response 12
+columns already carry per-row provenance from the verification receipts under
+[tests/fixtures/comparison/baseline_response12/](tests/fixtures/comparison/baseline_response12/);
+the fixture records the same values with the obligations added. Specimen B
+follows the validator I/O deadline seam and the non-idempotent setup rule in
+Specimen mechanics above. Two reader
 families:
 
 - `witness_contract/comparison_matrix`, new: runs the three S/B/C specimens through
@@ -846,8 +944,14 @@ same verified increment.
   gains every new string key. Also construct the maximum legal number of
   mutation references per step, with unique maximal-length IDs, across the
   maximum step count; do not merely duplicate a fixture with an empty list.
-  Check the resulting reply against receiver budgets and update generated
-  limits if their sizing rule requires it. The shape golden regenerates.
+  That shape is quadratic in the step count, and the synthesizer's sizing rule
+  fills request-derived strings with U+0001 at six JSON bytes per byte: 256
+  steps × 256 IDs × 63-byte IDs is about 97.5 KB per step and ~23.8 MB in all,
+  so `runner_reply_maximum` roughly doubles from 24,869,018 bytes and the
+  derived `controller_output` budget follows it to about 144 MiB. Recompute both
+  from the synthesizer and edit `docs/limits.json` to whatever it reports; a
+  bound on the list length instead would be a D1 change, not a limits edit
+  (D6.41). The shape golden regenerates.
 - Controller per D2 with Rust tests for shape, statuses, budgets, the fixed
   reference set, relocated paths, request snapshot and D5 version gates.
   Scan controls include nonregular files, changing originals, a single read
@@ -922,6 +1026,10 @@ same verified increment.
   contract changes and run-varying values explicitly accounted for. Preserve
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
+- The response 12 matrix verification is already recorded under
+  `tests/fixtures/comparison/baseline_response12/`. Rerunning it on the
+  integration candidate is the response 13 acceptance capture, and the two
+  specimens there are reused for it.
 - The finished consumer exposes no joint prediction/enforcement verdict.
   Descriptive validation and selection may use both channels. All D5 semantic
   readers gate versions by equality and contain no legacy interpretation branch;
@@ -1110,6 +1218,14 @@ The readiness review checks:
 - [x] I2–I4 assign owners to all matrix/failure cases, version gates, dossier
   failures and maximum-size controls; I1 preserves coverage until replacements
   run. Unlinked exploratory claims are not counted as evidence.
+- [x] Every matrix row's response 12 columns are verified against live output,
+  with receipts, and the specimen mechanics the rows depend on are recorded.
+  The obligations and `comparison_conditions` columns remain design
+  expectations by construction.
+- [x] The removal inventory is complete for shared equipment: R4 lists every
+  caller of the five removed consumer functions, including inside Rust tests.
+- [ ] D6.36: the dossier's presence rule covers every `kind: "run"` envelope,
+  including the pre-execution `tool_error` path.
 - [x] The documentation opening and FAQ defaults are chosen, with ledgers,
   generation rules and a semantic completion review assigned.
 

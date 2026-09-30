@@ -1,0 +1,67 @@
+live distinct tuples: 61
+
+EXACT LIVE MATCH (22):
+  B1   steered deny, read succeeds, ordered  (witness_contract/drift_determination_via_validator_seam / step p1)
+  B2   verdict omitted, read succeeds  (runner_outcome_validator_no_reply/validator_io_deadline_releases_worker / step write-1)
+  B4   validator error record  (failure_boundaries/validator_frames / step last)
+  B6   allow, ordered unlink  (run_effects/file_actions_have_exact_effects / step 3929fcff639104db)
+  C1   policy fails to compile, nothing runs  (witness_contract/pre_apply_failure_reports_no_policy_verdict / step 2b30e43132e29aec6fd8c244)
+  S01  allow, read succeeds  (runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe / step fr1)
+  S02  deny, read EPERM  (smoke/specimen_file_read_deny_standard / step fr1)
+  S03  allow, mode-000 file EACCES  (runner_use_c_worker/drift_null_for_dac_eacces / step s_dac)
+  S05  query denied path, attempt other path  (witness_contract/drift_determination_via_validator_seam / step different_target)
+  S07  absent path, both channels  (runner_use_c_worker/sandbox_check_path_unresolved_prediction_unavailable / step absent)
+  S08  compound create  (run_effects/file_actions_have_exact_effects / step 85925cf6c1ddafad)
+  S09  unsupported attempt kind  (failure_boundaries/admission / step s)
+  S11  bare `process-exec` query, spawn ok  (runner_exec_dac/execute_permission_is_not_sandbox_drift / step bare)
+  S13  mach deny, kr=1100  (blackbox_e2e/BBX-001 / step mach_lookup_denied)
+  S14  mach unknown service, kr=1102  (runner_use_c_worker/drift_null_for_non_policy_failure / step s_unknown_service)
+  S15  `process-exec*`, spawn ok, exit 0  (run_effects/exec_helper_effect_is_real / step a07c9b7d1f09862e)
+  S16  spawn ok, child exits 1  (run_effects/exec_helper_effect_is_real / step 0c65e99802440f91)
+  S17  spawn of mode-000 target, EACCES  (runner_exec_dac/execute_permission_is_not_sandbox_drift / step exec)
+  S19  ordered unlink of queried path  (run_effects/file_actions_have_exact_effects / step 3929fcff639104db)
+  S20  `process-exec-interpreter` query, binary spa  (runner_exec_dac/execute_permission_is_not_sandbox_drift / step read)
+  S25  read of the path S19 unlinked, ENOENT  (witness_contract/query_interval_is_not_a_snapshot / step 0)
+  T    allow policy, FIFO read starts after release  (blackbox_e2e/checker_controls / step fifo)
+
+ALIAS ROWS (3): B7->S01, S23->S01, S24->S01
+
+NO EXACT LIVE MATCH (8):
+
+  B3   verdict omitted, unlink of queried path
+       plan: unavailable/succeeded/completed_worker_status matched same unestablished  lim=['host_path_resolution_changed', 'prediction:validator_no_verdict']
+       live: same six, lim=['prediction:validator_no_verdict']   (runner_outcome_validator_no_reply/validator_io_deadline_releases_worker / write-1)
+       live: same six, lim=['prediction:no_usable_verdict']   (failure_boundaries/validator_frames / last)
+       live: same six, lim=['prediction:validator_not_invoked']   (failure_boundaries/admission / s)
+
+  B5   verdict omitted, read of a path B6 unlinks
+       plan: unavailable/succeeded/completed_worker_status matched same unestablished  lim=['host_path_resolution_changed', 'prediction:validator_no_verdict']
+       live: same six, lim=['prediction:validator_no_verdict']   (runner_outcome_validator_no_reply/validator_io_deadline_releases_worker / write-1)
+       live: same six, lim=['prediction:no_usable_verdict']   (failure_boundaries/validator_frames / last)
+       live: same six, lim=['prediction:validator_not_invoked']   (failure_boundaries/admission / s)
+
+  S06  query write, attempt read
+       plan: allow/succeeded/completed_worker_status different same query_first  lim=['operation:different']
+       live: same six, lim=['host_path_resolution_changed', 'operation:different']   (failure_boundaries/validator_removed_target / last)
+
+  S10  sysctl planning exclusion
+       plan: unavailable/succeeded/completed_worker_status matched same unestablished  lim=['prediction:query_not_requested', 'query_plan:prediction_unavailable_pair']
+       live: same six, lim=['prediction:validator_no_verdict']   (runner_outcome_validator_no_reply/validator_io_deadline_releases_worker / write-1)
+       live: same six, lim=['prediction:no_usable_verdict']   (failure_boundaries/validator_frames / last)
+       live: same six, lim=['prediction:validator_not_invoked']   (failure_boundaries/admission / s)
+
+  S12  `file-read*` query
+       plan: allow/succeeded/completed_worker_status unresolved same query_first  lim=['broad_query_operation', 'operation:unresolved']
+       live: same six, lim=['compound_attempt', 'operation:unresolved']   (run_effects/file_actions_have_exact_effects / a346625b40e69820)
+
+  S18  spawn of absent target
+       plan: unavailable/other_failure/completed_worker_status matched same unestablished  lim=['exec_query_not_full_spawn_prediction', 'prediction:query_not_requested', 'query_plan:path_unresolved_at_planning']
+       live: same six, lim=['prediction:query_not_requested', 'query_plan:path_unresolved_at_planning']   (runner_use_c_worker/sandbox_check_path_unresolved_prediction_unavailable / absent)
+
+  S21  `local_name` query, kr=1100
+       plan: allow/permission_failure/bootstrap_permission_result matched unresolved query_first  lim=['query_filter_scope_unestablished', 'target:unresolved']
+       no live tuple with those six fields
+
+  S22  `none` filter on a file query
+       plan: allow/succeeded/completed_worker_status matched unresolved query_first  lim=['query_filter_scope_unestablished', 'submitted_target_unavailable', 'target:unresolved']
+       no live tuple with those six fields

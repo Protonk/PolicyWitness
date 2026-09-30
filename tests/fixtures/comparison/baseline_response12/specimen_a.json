@@ -1,0 +1,99 @@
+{
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)\n(deny mach-lookup (global-name \"com.apple.logd\"))\n"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+        },
+        "operation": "file-write-data"
+      },
+      "step_id": "s06"
+    },
+    {
+      "attempt": {
+        "action": "read",
+        "kind": "sysctl",
+        "target": "kern.osrelease"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "sysctl_name",
+          "value": "kern.osrelease"
+        },
+        "operation": "sysctl-read"
+      },
+      "step_id": "s10"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+        },
+        "operation": "file-read*"
+      },
+      "step_id": "s12"
+    },
+    {
+      "attempt": {
+        "action": "spawn",
+        "kind": "exec",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/absent_target"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/absent_target"
+        },
+        "operation": "process-exec*"
+      },
+      "step_id": "s18"
+    },
+    {
+      "attempt": {
+        "action": "bootstrap_look_up",
+        "kind": "mach_lookup",
+        "target": "com.apple.logd"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "local_name",
+          "value": "com.apple.logd"
+        },
+        "operation": "mach-lookup"
+      },
+      "step_id": "s21"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "none"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "s22"
+    }
+  ],
+  "schema_version": 1,
+  "specimen_id": "matrix_check_a"
+}

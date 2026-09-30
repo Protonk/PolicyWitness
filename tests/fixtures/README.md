@@ -58,6 +58,11 @@ deterministic, and checked into the repo so tests are hermetic.
 - `blackbox_e2e/`: per-case directories (`BBX-*`) with specimen templates and
   expected outcomes for strict evidence validation, plus synthetic envelopes
   under `checker/` for independent controls of the evidence checker.
+- `comparison/`: comparison-record expectations shared by a live reader and the
+  Swift unit reader. `baseline_response12/` holds the specimens, raw replies and
+  match reports that verified the scenario matrix against the shipped producer;
+  its [README](comparison/baseline_response12/README.md) records the method and
+  what the runs established about the specimens. No suite reads it yet.
 
 ## Adding fixtures
 

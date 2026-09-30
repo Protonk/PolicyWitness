@@ -1,0 +1,89 @@
+{
+  "_test_overrides": {
+    "validator_executable_path": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/stub_validator.py",
+    "validator_io_timeout_ms": 500
+  },
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)\n"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "b1"
+    },
+    {
+      "attempt": {
+        "action": "unlink",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink1"
+        },
+        "operation": "file-write-unlink"
+      },
+      "step_id": "b3"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "b5"
+    },
+    {
+      "attempt": {
+        "action": "unlink",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/unlink2"
+        },
+        "operation": "file-write-unlink"
+      },
+      "step_id": "b6"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/claude-501/-Users-achyland-Desktop-Security-PolicyWitness/166bdf2c-8db1-466a-82c7-51cd8c3dfe52/scratchpad/scen/readable"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "b7"
+    }
+  ],
+  "schema_version": 1,
+  "specimen_id": "matrix_check_b"
+}
