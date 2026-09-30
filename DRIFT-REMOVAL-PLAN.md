@@ -866,6 +866,9 @@ unsupported versions is removed ahead of the code that produced it.
   only a reply before the record could produce. The record is required.
 - `tests/lib/blackbox.py`: the `effective_filter_value` fallback in
   `submitted_filter_value`.
+- Before any deletion in this list, the rationale lines of DOCUMENTATION's
+  infrastructure ledger are confirmed captured; they are the only record of
+  why the deleted artifacts existed.
 - Cases: `runner_use_c_worker/drift_null_for_dac_eacces` (matrix S03, S17)
   and `drift_null_for_non_policy_failure` (S14);
   `witness_contract/drift_determination_via_validator_seam` (specimen B,
@@ -1065,6 +1068,73 @@ replacement text if revised. Seed rows found so far:
 | Guide, Output envelope | fields are described by envelope path only | revise | Document the bare reply printed by `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture (D6.19); the dossier's `references` are the map |
 | Guide and FAQ | signal-channel descriptions and old provenance paths | revise/remove | Describe surviving evidence channels and canonical dossier paths; no historical aliases or migration narrative |
 | LIMITS | import and dossier collection bounds | revise/add | Describe the normal-run depth/count, byte and collection budgets selected in I4 |
+
+### Infrastructure ledger (from REPAIR)
+
+The user-facing ledger above is built by reading. This one is built from the
+REPAIR classification: one row per artifact REPAIR deletes, replaces, rewrites
+or adds, with every document that names it found by exact search on
+2026-09-30, and whether any part of that document is mechanically checked.
+Everything not marked checked is prose that only reading will fix. `records/`
+also matches and stays untouched by policy.
+
+Two sequencing facts. The rationale lines below are captured now, before I1
+deletes the files that carry them; that is the one place DOCUMENTATION work
+precedes REPAIR execution. After I5, R11's test-tree pass reruns the same
+search patterns against the finished tree, so completion is measured against
+the names this ledger started from.
+
+| Artifact | REPAIR | Documents naming it (hits) | Mechanically checked part |
+| --- | --- | --- | --- |
+| `witness_contract/drift_determination_via_validator_seam` | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/suites/witness_contract/README.md` (section) | suite table row, README presence |
+| `runner_use_c_worker/drift_null_for_dac_eacces` | I1 delete | `tests/README.md` (1), `tests/suites/runner_exec_dac/README.md` (1), `tests/suites/runner_use_c_worker/README.md` (1), `tests/suites/witness_contract/README.md` (1) | suite table row |
+| `runner_use_c_worker/drift_null_for_non_policy_failure` | I1 delete | `tests/suites/runner_use_c_worker/README.md` (2), `tests/README.md` (1), `tests/COVERAGE.md` (1), `docs/PolicyWitness.md` (1) | suite table row; outcome matrix |
+| `runner_exec_dac/execute_permission_is_not_sandbox_drift` | rename | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/COVERAGE.md` (1), `tests/suites/runner_exec_dac/README.md` (whole file is in the verdict frame), `tests/suites/run_capture/README.md` (1) | suite table row; outcome matrix |
+| `witness_contract/check_comparison.py` | I2 absorbed | `tests/suites/witness_contract/README.md` (1) | none |
+| `DriftClassifierTests.swift` | I2 replaced | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
+| `EnvelopeInvariantTests` legacy groups | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (3), `tests/COVERAGE.md` (2) | outcome matrix |
+| `runner_client.rs` version loop | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
+| `checker_controls.py` legacy and drift controls | I1 delete, I3 rebuild | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/README.md` (6), `tests/COVERAGE.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `tests/suites/runner_filter_sysctl_name/README.md` (2), `controller/README.md` (1), and one each in the `smoke`, `run_effects`, `runner_byoxpc` and both iokit filter suite READMEs | suite table rows; outcome matrix |
+| `consumer.py` `recover_evidence` and its groups | I3 rewrite | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `controller/README.md` (consumer-audit table) | none |
+| `consumer.py` three validators | I3 merge | `tests/FAILURE-PROPAGATION-CONTRACT.md` (2) | none |
+| `blackbox.py` `effective_filter_value` fallback | I1 delete | `docs/CONTRACT.md` (1, goes with the tables) | none |
+| `blackbox.py` alias-agreement rule | I3 delete (D6.22) | `tests/README.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `runner/README.md` (1), `docs/PolicyWitness.md` (1), and one each in the `runner_filter_sysctl_name`, `runner_specimen_isolation` and `runner_outcome_runner_timeout` READMEs | suite table rows; guide per-step shape line |
+| lifecycle legacy rows and sentinels | I1 delete | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/suites/blackbox_e2e/README.md` (2), `docs/CONTRACT.md` (1), `controller/README.md` (1), `tests/fixtures/disposition/README.md` (1), `tests/suites/witness_contract/README.md` (1) | none |
+| `missing_path_run.json` | I3 regenerate | `tests/suites/blackbox_e2e/README.md` (1) | none |
+| `a1_expected.json`, `a1_known_loss.json` | I3 regenerate, keep | `tests/fixtures/disposition/README.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `controller/README.md` (1) | none |
+| menagerie `expect.drift` | I3 delete key | `tests/FAILURE-PROPAGATION-CONTRACT.md` (2), `controller/README.md` (1), `tests/suites/blackbox_e2e/README.md` (1), `tests/suites/blackbox_menagerie/README.md` (1), `tests/suites/witness_contract/README.md` (1) | none |
+| BBX `expected.json` drift keys | I3 delete key | `tests/suites/blackbox_e2e/README.md` (3), `tests/OPT_IN_TESTS.md` (1), `tests/suites/runner_byoxpc/README.md` (1) | none |
+| `tests/fixtures/comparison/matrix.json` | I2 new | none yet; needs `tests/fixtures/README.md`, the `witness_contract` README and the `runner_unit` README | README presence |
+| `witness_contract/dossier_witness` | I4 new | none yet; needs the `witness_contract` README and `tests/README.md` | suite table row |
+| legacy-reading vocabulary (`legacy`, `older replies`, `stored replies`, `historical`) | D6.8 | `tests/FAILURE-PROPAGATION-CONTRACT.md` (33), `tests/COVERAGE.md` (7), `docs/CONTRACT.md` (6), `tests/README.md` (5), `runner/README.md` (4), `controller/README.md` (4), `tests/suites/blackbox_e2e/README.md` (4), `tests/suites/witness_contract/README.md` (2), and one each in `tests/fixtures/README.md`, `tests/fixtures/disposition/README.md`, `tests/fixtures/worker_lifecycle/README.md`, and the `runner_filter_sysctl_name`, `runner_unit`, `blackbox_menagerie` and `runner_c_worker_harness` READMEs | none beyond the rows above |
+
+Rationale that must survive the deletion of the artifact that carries it,
+captured from the READMEs before I1:
+
+- **Seam case.** A stub validator supplies the verdicts so the comparison is
+  exercised independently of libsandbox's answers; the transcript is not a
+  native result, and expectations come from submitted scopes and independent
+  file and permission controls. Survives as the matrix README's description
+  of specimen B and its use of `_test_overrides.validator_executable_path`.
+- **DAC EACCES case.** A permission failure under an allow prediction is not
+  evidence about the sandbox. Survives as matrix row S03 and the
+  `sandbox_attribution` obligation; the `runner_exec_dac` README's first
+  sentence keeps the idea for exec, reworded without "drift".
+- **Unknown-service case.** `kr=1102` means the service is not registered; it
+  is not a permission result. Survives as matrix row S14 and the guide's
+  `lookup_failed` note, which already says this.
+- **Checker controls.** Controls run without the app before the live cases;
+  controlled changes must fail; combined failures must report each independent
+  problem; controls exercise the checker CLI without importing its
+  implementation. These four sentences move to the rebuilt controls' README.
+- **Disposition fixtures.** The captured-versus-generated distinction stays as
+  written; the captured reply's sentence changes from "accepted as the legacy
+  reply it is" to "reported as unsupported, which is the check".
+- **Transport test.** The controller forwards the reply unchanged, including
+  unfamiliar strings. Survives as a current-version transport test; the
+  "legacy absences" half of its name goes.
+- **Legacy round-trips and lifecycle legacy rows.** Nothing to preserve;
+  CONTRACT.md's "Supported versions" sentence is the whole replacement.
 
 ### A proposed statement of what PolicyWitness is
 
