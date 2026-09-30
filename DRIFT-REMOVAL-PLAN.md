@@ -1,9 +1,9 @@
 # Removing the drift verdict
 
-Status: DESIGN firming in progress, 2026-09-30. The D1 scenario matrix and the
-D2 dossier fragment are written from live output. One item is open for
-discussion and marked OPEN below: where run-level comparison conditions live
-(D1). Library identity is observed by the XPC host (D6.11). Nothing here is implemented. The inventory baseline is df333b4
+Status: DESIGN firm as of 2026-09-30. The D1 scenario matrix and the D2
+dossier fragment are written from live output; every decision is a numbered
+D6 row, and any later change to DESIGN or REMOVAL is a new row. Nothing here is
+implemented. The inventory baseline is df333b4
 with request schema 3, response schema 12, worker ABI 7 and controller envelope
 4. Source line numbers below are as of that commit and will move.
 
@@ -50,10 +50,9 @@ explicitly, including an envelope bump for the dossier. An anticipated schema
 reset before 0.5.0 does not excuse mismatched schema numbers and emitted shapes
 in the meantime.
 
-The four sections below are executed in order. DESIGN and REMOVAL are meant to
-be pinned down before work starts; REMOVAL is written as design because the
-exact set of things removed is still being secured. REPAIR and DOCUMENTATION are
-held lightly and will be rewritten once the first two are settled.
+The four sections below are executed in order. DESIGN is firm and REMOVAL is
+secured. REPAIR and DOCUMENTATION are held lightly and are the next sections to
+firm before execution.
 
 ## DESIGN
 
@@ -159,8 +158,8 @@ emits the reply on its own. The reply gains
 `comparison_conditions: { "unestablishable": ["state_stability"] }` beside
 `steps`, present whenever `steps` is present and withheld with the comparisons
 on a `runner_reporting_failed` reply. The dossier references it (D2).
-**OPEN**: whether the bare reply is a reader surface. If it is not, the field
-moves to the dossier alone and response 13 shrinks by one field.
+The bare reply is a reader surface (D6.19), so the field stays in the reply and
+the dossier points at it through `references` (D2, D6.20).
 
 #### Scenario matrix
 
@@ -334,8 +333,18 @@ The shape for envelope 5, with the two open items marked:
     "validator": { "manifest_id": "PWRunner/sb_api_validator", "…": "same shape" }
   },
   "conditions": {
-    "prediction_unavailable_pairs": [ { "operation": "sysctl-read", "filter_kind": "sysctl_name" } ],
-    "comparison": "OPEN: reference to runner_result.comparison_conditions, or the list itself"
+    "prediction_unavailable_pairs": [ { "operation": "sysctl-read", "filter_kind": "sysctl_name" } ]
+  },
+  "references": {
+    "policy_sha256": "/data/runner_result/policy_sha256",
+    "applied_profile": "/data/runner_result/applied_profile",
+    "steps": "/data/runner_result/steps",
+    "validator_records": "/data/runner_result/validator_subprocess/records",
+    "ordering": "/data/runner_result/runner_subprocess/ordering",
+    "comparison_conditions": "/data/runner_result/comparison_conditions",
+    "library_identity": "/data/runner_result/library_identity",
+    "sandbox_log_capture": "/data/sandbox_log_capture",
+    "build": "/build"
   }
 }
 ```
@@ -356,6 +365,7 @@ The shape for envelope 5, with the two open items marked:
 | `host.*` | string or null each | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails |
 | `binaries.*` | object | the manifest entry for the service, worker and validator the run uses, with `path` the file hashed and `verification.status` one of `match`, `mismatch`, `unavailable`; for a BYOXPC runner the bundle's own copies are hashed against the app manifest's embedded-helper entries |
 | `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair`; `[]` when none |
+| `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own, one key per row marked reference in the table above. The key set and the pointer values are fixed by envelope 5, not computed from presence: a pointer to a record the reply withheld or never produced is still present, and the reader finds the withholding where the reply states it. Nothing is copied. |
 
 Collection order: host facts, binaries and the imports scan are gathered before
 the runner is invoked, so a hung or refused runner still leaves a complete
@@ -461,6 +471,9 @@ the ABI stays at 7.
 - Controller: no production reader of `drift` or `conclusion` exists; the only
   production reader of `comparison` is `permission_failures_without_record`,
   which reads `observation`.
+- Dossier: `references` carries exactly the fixed key set with the fixed
+  pointer values. The consumer rejects a missing key, an extra key or a
+  different pointer.
 
 ### D4. Direct evidence assertions and reader recipes
 
@@ -494,14 +507,31 @@ joint `unavailable` verdict. Single-channel absence values such as
   that emits the corresponding shape. A preparatory manifest bump would make
   `PWRunnerRunResult` label the old shape with the new number, because its
   initializer defaults to `PWContract.responseSchema`.
-- Revise [CONTRACT.md](docs/CONTRACT.md)'s categorical "Adding a field never
-  bumps" rule. Removals, type/meaning changes and new reader requirements still
-  require bumps; deliberate bumps for additive contract changes are also
-  permitted and are planned here. Keep schema numbers and emitted behavior
-  aligned at every integration point.
-- Replace blanket backward-reading promises with the policy below. Historical
-  contract prose survives only where it explains an explicitly supported
-  current workflow; the user guide describes the shipped app.
+- Revise [CONTRACT.md](docs/CONTRACT.md) as follows (D6.21). Its "When a
+  number moves" paragraph becomes: "Bump a number when the rules for reading
+  change: a field removed, its type or meaning changed, or a new requirement
+  placed on readers. An added field alone does not require a bump, since an
+  absent field means unknown, never false. A bump may still be chosen for an
+  additive change when the addition is a deliberate contract; the manifest's
+  history says so. Because host and worker ship together, the worker ABI bumps
+  on any change to the shared-memory layout or the handshake over it." Its
+  "Reading older replies" section, the three version tables and "Naming numbers
+  in prose" are removed; `git log -- docs/contract.json` is the history. In
+  their place, a "Supported versions" section: "Every reader in this repository
+  accepts exactly the numbers in the manifest and reports any other number as
+  unsupported. A stored reply keeps its bytes and the meaning it had when
+  written; no current tool reads it." The "What each number identifies" list
+  gains one sentence per contract describing the current shape. Response:
+  "`steps[].comparison` records each channel's observation, the submitted-scope
+  relations, the order PW established and the typed obligations, with
+  `comparison_conditions` and `library_identity` at run level; it carries no
+  joint verdict and no signal channel." Envelope: "`data.specimen` is the
+  dossier: request path, policy augmentation and imports, host facts, runner
+  and app provenance, verified binaries, run conditions and `references` to
+  the records it does not own; the raw runner reply, transport, diagnostics and
+  log capture stay beside it."
+- Keep schema numbers and emitted behavior aligned at every integration point.
+  The user guide describes the shipped app.
 
 ### D6. Recorded decisions
 
@@ -525,6 +555,9 @@ joint `unavailable` verdict. Single-channel absence values such as
 | 16 | Host facts | Read with `sysctlbyname` (`kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`), no subprocess; the values equal `sw_vers` output on this host. |
 | 17 | Binary verification | The service, worker and validator the run uses are hashed on every run and compared with their manifest entries. The whole-manifest `PW_VERIFY_EVIDENCE` path is untouched. |
 | 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source; provisional budgets in D2. |
+| 19 | Reader surfaces | The controller envelope and the bare runner reply printed by `pw-runner-client` are both reader surfaces. Run-level evidence the runner produces (`comparison_conditions`, `library_identity`) lives in the reply; the dossier points at it. |
+| 20 | How the dossier references records it does not own | A `references` object of RFC 6901 JSON pointers from the envelope root, one per referenced record, with a fixed key set and fixed values. No copies. |
+| 21 | CONTRACT.md | The version tables, "Reading older replies" and "Naming numbers in prose" go; a "Supported versions" section and one current-shape sentence per contract replace them; the bump rule permits deliberate additive bumps (text in D5). |
 
 ### Legacy readers and retained evidence
 
@@ -829,8 +862,10 @@ must land with the reply's `comparison_conditions` field.
   obligations, and update enforcement owners and supported reader behavior.
 - Regenerate the reply-shape golden; review the diff as the acknowledgement.
 - `consumer.py`: direct evidence access and selections (D4), removed-key
-  rejections and obligation validation (D3), and explicit supported-version
-  handling. No canonical joint-label reducer.
+  rejections and obligation validation (D3), explicit supported-version
+  handling, and acceptance of a bare runner reply as well as an envelope
+  (D6.19). One checker control exercises `pw-runner-client` output directly.
+  No canonical joint-label reducer.
 - `blackbox.py`, `lifecycle_oracle.py`, `path_diagnostics_contract.py` per R4.
 - Every suite in R5: replace class-a and class-b assertions with the scenario's
   direct evidence expectations, convert class-c to injected-key rejections and
@@ -952,6 +987,7 @@ replacement text if revised. Seed rows found so far:
 | Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | Drop "drift" |
 | Guide | new section: the specimen dossier | add | Canonical provenance paths and the map to raw channel records; collection basis and limits; concrete evidence-selection recipes without joint verdicts |
 | Guide, dossier section | library identity | add | State the host-observed basis and the on-disk override check; say plainly that it is not a worker-side observation |
+| Guide, Output envelope | fields are described by envelope path only | revise | Document the bare reply printed by `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture (D6.19); the dossier's `references` are the map |
 | Guide and FAQ | signal-channel descriptions and old provenance paths | revise/remove | Describe surviving evidence channels and canonical dossier paths; no historical aliases or migration narrative |
 | LIMITS | import and dossier collection bounds | revise/add | Describe the normal-run depth/count, byte and collection budgets selected in I4 |
 
