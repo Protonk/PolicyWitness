@@ -132,15 +132,73 @@ current home, with the destination the plan assigns.
    and the real worker/validator failure drivers. State these in the
    runner-unit and failure-contract descriptions when the helper-only tests go.
 
-### Increment progress
+### Matrix fixture
 
-- Completed: pre-I1 captures (three specimens, two modes), shipped helper
-  corpus and binary copy, pre-removal `nm -u` receipt
-  (`_sandbox_check` undefined in the shipped `PWRunner`), shared Rust modules,
-  helper rewired with byte-identical output, limits manifest/docs regenerated,
-  two new specimens with pre-I1 captures.
-- Remaining in I1: matrix fixture and README, `tests/fixtures/README.md`
-  entry, commit, signed build, five response 12 baseline captures validated
-  by the response 12 consumer, post-build `nm -u` receipt, default battery,
-  attach receipts under the checkout lock, `tests/RETAINED.json` entry,
-  closing entry here.
+- `tests/fixtures/comparison/matrix.json` carries 33 rows (S01–S25 without
+  S04, B1–B7, C1, T). Every row was cross-checked against a response 12 reply
+  on disk: the five comparison values, the limitations pruned to the D1
+  vocabulary and the query column agreed for all 33 (`matrix-review/` in the
+  retained receipts). Row inputs are the matrix's own choices, reviewed
+  against D1; where they differ from the retained control that supplied the
+  response 12 match (service name, child exit code 1 instead of 3, read
+  instead of write, stub error text) the comparison shape is identical.
+- C1's raw shape came from a compile-failure probe against the shipped app
+  (`pre-i1-captures/c1_compile_failure.nolog.json`): `runner_failed`, exit 1,
+  validator not invoked, worker slot incomplete with lifecycle `not_reached`.
+  The retained `pre_apply_failure_reports_no_policy_verdict` case uses a
+  pre-ready hang (`runner_timeout`), not a compile failure, so it is not C1's
+  live owner; `comparison_matrix` will own C1.
+- Two row facts were verified against retained output before writing them:
+  the native query accepts `process-exec-interpreter` (allow under allow
+  default, relation `different`, `query_first`), and a validator diagnostic
+  record yields `result_source: validator`, `outcome: error`, no
+  `missing_reason`, null `native_rc` and `order: unestablished` (B4).
+- The assert convention says null means absent or JSON null because the Swift
+  encoder omits nil optionals (`missing_reason` is absent, not null, on a
+  validator error record).
+
+### I1 completed (2026-10-01)
+
+- Source commit `e010509`. Signed build from that commit
+  (`build/build-e010509.log`); the app inventory recorded by the run is
+  unchanged across the battery.
+- Default battery `tests/out/runs/drift-i1-baseline-01`, run ID
+  `20261001T232648Z_b2156eef`: 166 selected, 166 completed, 0 skipped, 0
+  unrun, no harness errors, `ok: true`. Registered in `tests/RETAINED.json`
+  with source `e010509` and the run-relative `artifact-integrity/before.json`.
+- Receipts attached under the checkout lock after verifying the run ID, at
+  `supplemental/drift-i1/` inside that run: `pre-i1-captures/` (the three
+  existing specimens, two modes, against the shipped `ff2b192` app; the two
+  new specimens; the compile-failure probe), `response12-baseline/` (the five
+  specimens, two modes, against the I1 build; `app_identity.txt`;
+  `validation/consumer_response12.json` with zero shape, current-build or
+  ordering errors for all ten captures; `nm-receipt/` for the I1 build),
+  `sbpl-check-identity/` (corpus, shipped helper copy, old/new outputs,
+  `identity_report.txt`), `nm-receipt/` (shipped `PWRunner`: `_sandbox_check`
+  undefined), `matrix-review/`, `build/` and `console/`.
+- Both `nm -u` receipts (shipped `ff2b192` and the I1 build) report exactly
+  one undefined `_sandbox_*` symbol, `_sandbox_check`, so the planned binary
+  check fails on the pre-removal service and will have a before/after pair.
+- I1 exit conditions: shared Rust modules exist with byte-identical helper
+  output (16-input corpus; only the build stamp and timestamp differ); the two
+  specimens are added; the five response 12 captures and the `nm -u` receipt
+  are retained and registered; the matrix fixture is written against D1; the
+  default battery is green. Nothing was deleted; no active contract check was
+  retired.
+- Observation for later increments: the dispatcher's own `PYTHONOPTIMIZE`
+  guard and the `cargo fmt --check` case both passed with the new Rust files;
+  the first `cargo test` flake (`launch_exit_and_closed_pipe_hang_have_explicit_facts`)
+  did not recur in the battery's `unit/rust.unit` case.
+
+### Next: I2–I4 on one integrated candidate
+
+Order chosen (dependencies): Swift producer and unit tests with the response
+13 bump; then the controller (dossier, delivery, version gates, manifest
+selection) with the envelope 5 bump; then the Python equipment, checker
+controls, new live cases and registries; then build, `runner_unit`,
+`source_drift`, `unit`, the default battery, repair, `--all` with
+`order_barrier_mutations`; then I5 documentation. Each landing is a commit on
+`main`; the response and envelope numbers move in the same commit as the
+producer that emits the new shape. Drafts written during the I1 battery
+(outside the tree) are the consumer rewrite, the Swift matrix reader, the
+live matrix checker and the dossier module.
