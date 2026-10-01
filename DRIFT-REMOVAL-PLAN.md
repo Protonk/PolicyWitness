@@ -3,8 +3,8 @@
 Status: REVISED for readiness review as of 2026-10-01; implementation has not
 started. The matrix's response 12 columns are verified against live output
 (see the scenario matrix). The S1–S3 helper removals are included, with the
-host sandbox-library loader they leave without callers (D6.47). D6.45 is the
-only open decision. The readiness gate below separates settled decisions from execution
+host sandbox-library loader they leave without callers (D6.47). No decision
+remains open; the gate is the review itself. The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -673,7 +673,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
 | 43 | Unused Swift execution helpers (S1–S3) | Remove the attempt executor, query helper and sandbox-application helper, their exclusive dependencies and helper-only tests per R2/R5. Keep production planning, path diagnostics, policy hashing, structural policy refusal and C worker/validator behavior. Coordinate source, build, test and documentation changes in I3–I5 under D6.33. |
 | 44 | Retired outcome spellings (S1, S3) | DECIDED. One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
-| 45 | C-function-pointer stubbing guidance (S3) | OPEN. Removing `SandboxApplyTests.swift` removes the worked example linked from `runner/AGENTS.md`, and no other example survives: the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. So the choice is a self-contained explanation in `runner/AGENTS.md` or retiring the guidance; there is no surviving example to point at. The unused helper and its tests are removed in every case. |
+| 45 | C-function-pointer stubbing guidance (S3) | DECIDED: retire it. Delete the "Stubbing C function pointers" paragraph from `runner/AGENTS.md` rather than rewriting it self-contained. Its subject does not survive: every `@convention(c)` declaration under `runner/Sources/` is in `SandboxLib.swift`, which 47 deletes, so after this plan the runner has no function-pointer slots to stub. Its worked example is deleted by 43, and no other example exists — the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. A technique for a construct the tree no longer contains is a retired claim, not guidance; D6.48's name-set check would catch a reintroduction, and whoever reintroduces one writes the guidance that fits it. |
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The dossier reports `specimen.host.sandbox_cache_uuid`, read by the controller; the runner reports no identity and `SandboxLib.swift` is deleted. Measured 2026-10-01 on a stock host: `sandbox_check` resolves through libSystem with no load, `sandbox_compile_string` and `sandbox_apply` are unreachable without loading a library the host never calls into, all three images are shared-cache resident, and none exists as a file — so a per-function host observation adds only a path implied by the cache UUID, about a process that neither predicts nor applies. Non-stock library detection is a non-goal. Identifying the images the validator and worker mapped would need the ABI change 11 declined. This removes D2's identity section, D3's identity invariant and reply-fallback retention, the consumer's presence-by-load-stage rule and I4's loader-observation controls. |
 | 48 | Host invariance rule and its checks (refines 43) | The service header's prohibition is rewritten to state the rule without naming deleted symbols, in a delimited block that cites two live deny-default cases. Two non-redundant checks protect it: a `source_drift` name-set assertion that nothing under `runner/Sources/` references `libsandbox` or the sandbox SPI, and a `preflight` assertion that `nm -u` on the shipped `PWRunner` reports no undefined `_sandbox_*` symbol. Measured basis: a direct call is visible only to the binary check, a `dlopen` by string literal only to the source check, and `otool -L` is blind to both. Neither adds a catalog case; no new live case is needed; nothing asserts the comment's text. |
@@ -776,8 +776,8 @@ dependencies; the enclosing source files also contain production code.
   from `SandboxApply.swift`. Keep `computePolicyHash`, `PolicyHashError` and
   `sha256Hex`, along with the file's build entry: the service uses that code
   for source identity and structural policy refusal. Remove
-  `SandboxApplyTests.swift` and its `main.swift` registration. D6.45 owns the
-  contributor-example decision. With `applySandboxPolicy` gone, nothing calls
+  `SandboxApplyTests.swift` and its `main.swift` registration, and the
+  `runner/AGENTS.md` paragraph that links it (D6.45). With `applySandboxPolicy` gone, nothing calls
   any of the loader's seven resolved functions, so `SandboxLib.swift` goes too,
   along with the `libsandbox_path` test override and the
   `libsandbox_unavailable` outcome, under D6.44 and D6.47. The hashing kept above
@@ -911,7 +911,7 @@ Swift sites and 1 controller site; 14 catalog entries.
 | `runner_unit` | `DriftClassifierTests.swift` (53) | replaced by `ComparisonEvidenceTests.swift` (REPAIR I2) |
 | `runner_unit` | `EnvelopeInvariantTests.swift` (30) | version 4–7 round-trips deleted; current-shape cases updated |
 | `runner_unit` | `PredictionUnavailableTests.swift` | delete only the `predictionUnavailable` group calling `runSandboxCheck` and its exclusive assertion helper; keep `predictionUnavailableQueryPlanning`, its literal expectations and `runPredictionUnavailableTests` registration; rewrite the file and registry descriptions |
-| `runner_unit` | `SandboxApplyTests.swift`, `main.swift` | delete the helper-only file, `runSandboxApplyTests` registration and its comment; resolve the linked contributor example per D6.45 |
+| `runner_unit` | `SandboxApplyTests.swift`, `main.swift` | delete the helper-only file, `runSandboxApplyTests` registration and its comment; the `runner/AGENTS.md` paragraph linking it is deleted too (D6.45) |
 | `runner_unit` | `OrderingTests.swift` (10), `ReplyFailureTests.swift` (12 plus the field-complete fixture), `ReplyMaximumTests.swift` (2), `WorkerEvidenceTests.swift` (1), comments in `AttemptOutcomeMappingTests.swift`, `CWorkerTests.swift`, `main.swift` | updated; the golden regenerates from `ReplyFailureTests` |
 | `unit/rust.unit` | R3 fixtures | updated |
 | `blackbox_e2e` | `checker_controls.py` (21) | rebuilt (REPAIR I3) |
@@ -977,8 +977,9 @@ Swift sites and 1 controller site; 14 catalog entries.
   row in `tests/README.md`, `tests/suites/runner_unit/README.md`, and the unused
   apply-helper descriptions in `tests/COVERAGE.md` and
   `tests/FAILURE-PROPAGATION-CONTRACT.md`. The latter's statement that helper
-  cleanup is outside the effort is superseded by D6.43. Resolve the stubbing
-  example in `runner/AGENTS.md` under D6.45. Update
+  cleanup is outside the effort is superseded by D6.43. Delete the "Stubbing C
+  function pointers" paragraph from `runner/AGENTS.md`, whose subject, technique
+  and example all leave with `SandboxLib.swift` (D6.45). Update
   `tests/suites/source_drift/README.md`'s target list and claim that both Swift
   query callers use the exclusion set, and record the host-invariance name set
   there and in `tests/suites/preflight/README.md` with what each check sees and
@@ -1027,13 +1028,13 @@ removed-key rejection. Completion is the explained residue, not a zero count.
 Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 `XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests`,
 `bootstrap_port_failed`, `SandboxLib`, `libsandbox_path`,
-`libsandbox_unavailable` and `library_identity`. Also search
+`libsandbox_unavailable`, `library_identity` and `@convention(c)`. Also search
 `write_temp_request`, `sw_vers` and `macos_build_version`, whose call sites
 change under D6.50 and D6.51. The host-invariance name set
 in R2 is the standing version of this search for `runner/Sources/`. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
 and this plan may name removed artifacts; active implementation and contributor
-instructions must match the selected scope and the D6.45 resolution.
+instructions must match the selected scope and the recorded resolutions.
 
 ## REPAIR
 
@@ -1181,8 +1182,9 @@ same verified increment.
   commit, rewrite the service header's invariance block and add its two checks
   per R2: the `source_drift` name-set assertion and the `preflight` `nm -u`
   assertion, whose failing state on the pre-removal build is recorded with the
-  change (D6.48). D6.45 must be resolved for the contributor-documentation
-  edit; no pending option is an instruction to change C behavior.
+  change (D6.48). The `runner/AGENTS.md` stubbing paragraph is deleted in the
+  same increment as its subject (D6.45); no decision here is an instruction to
+  change C behavior.
 - Swift per R2, D6.22 and D6.23, plus `comparison_conditions`. The comparison producer already receives the run
   attempts and already tests for a qualifying removal, so the obligation needs
   no new plumbing. The field-complete fixture in `ReplyFailureTests`
@@ -1353,7 +1355,7 @@ reruns the same searches against the finished tree.
 | `runner_exec_dac/execute_permission_is_not_sandbox_drift` | rename | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1), `tests/README.md` (1), `tests/COVERAGE.md` (1), `tests/suites/runner_exec_dac/README.md` (whole file), `tests/suites/run_capture/README.md` (1) | suite table row; outcome matrix |
 | `witness_contract/check_comparison.py` | I2 absorbed | `tests/suites/witness_contract/README.md` (1) | none |
 | `DriftClassifierTests.swift` | I2 replaced | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
-| S1–S3 unused Swift helpers, `SandboxApplyTests.swift` and `SandboxLib.swift` | I3/I4 remove exclusive code/tests; retain hashing and planning | `runner/README.md`, `runner/AGENTS.md`, `tests/README.md`, `tests/COVERAGE.md`, `tests/FAILURE-PROPAGATION-CONTRACT.md`, `tests/suites/runner_unit/README.md` | internal test registration and builds; contributor example pending D6.45 |
+| S1–S3 unused Swift helpers, `SandboxApplyTests.swift` and `SandboxLib.swift` | I3/I4 remove exclusive code/tests; retain hashing and planning | `runner/README.md`, `runner/AGENTS.md` (its stubbing paragraph is deleted, D6.45), `tests/README.md`, `tests/COVERAGE.md`, `tests/FAILURE-PROPAGATION-CONTRACT.md`, `tests/suites/runner_unit/README.md` | internal test registration and builds |
 | `PWSandboxCheckShim` and Swift query-helper group | I3/I4 remove target/build dependency and helper-only tests | `tests/suites/source_drift/README.md`; `runner/Package.swift` and test/production source comments | source-set agreement, surviving planner controls and both builds |
 | `bootstrap_port_failed` | D6.44 retires the spelling | `docs/PolicyWitness.md`, `tests/COVERAGE.md` | outcome inventory and mapping controls |
 | `runner_outcome_libsandbox_unavailable` and `libsandbox_unavailable` | D6.44/D6.47 delete the suite with the outcome | `tests/catalog.json`, `tests/README.md`, `tests/COVERAGE.md`, `tests/suites/runner_outcome_libsandbox_unavailable/README.md`, the `_test_overrides` table in `PWRunnerAPI.swift` | catalog entry, suite table row, suite count, outcome matrix, override-key count |
@@ -1400,8 +1402,9 @@ captured before I1:
 - **Unused Swift helpers.** The removed query/apply tests exercised their own
   unused implementations. Production planner tests, source-set checks and C
   failure controls remain the coverage owners. Preserve that distinction in
-  the runner-unit and failure-contract descriptions; resolve the stubbing
-  guidance under D6.45 before deleting its linked example.
+  the runner-unit and failure-contract descriptions. The stubbing guidance is
+  not rationale to preserve: it described how to stub `SandboxLib`'s
+  `@convention(c)` slots, and no such slot survives (D6.45).
 
 ### Opening statement and defaults
 
@@ -1522,11 +1525,11 @@ The readiness review checks:
 - [x] D6.44 retires both `bootstrap_port_failed` and `libsandbox_unavailable`
   in response 13, with the API constants, override table, guide, coverage table
   and the `runner_outcome_libsandbox_unavailable` suite moving with it.
-- [ ] D6.45: settle the contributor stubbing guidance without the deleted
-  example.
+- [x] D6.45 retires the contributor stubbing guidance with its subject: no
+  `@convention(c)` slot survives under `runner/Sources/`.
 
 The status remains REVISED for review of these decisions. Mark it READY only
-after that review and resolution of D6.45; implementation is a separate
+after that review; implementation is a separate
 step. During implementation, acceptance requires the I4 profile measurements
 and final limits, retained live
 matrix/dossier receipts, the completed documentation ledgers, reviewed shape
