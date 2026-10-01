@@ -198,7 +198,7 @@ Example with a worker executable override:
 | `policy.imports.exceeded` | string or null | the first bound hit: `depth` or `count`, the scanner's existing bounds |
 | `policy.imports.failure` | string or null | the first scan problem, including why the scan could not start; null for a complete scan or an ordinary absence of source |
 | `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails. Document the mechanism once; emit no `basis` or sandbox-library identity field |
-| `binaries.<role>` | object or null | null when the selected path is the app manifest's own entry for that role; otherwise `path`, `actual_sha256`, `baseline_sha256` from the manifest entry, `verification` of `match`, `mismatch` or `unavailable`, and `reason`, null only for `match` |
+| `binaries.<role>` | object or null | null when the selected path is the app manifest's uniquely selected, correctly typed entry for that role; otherwise `path`, `actual_sha256`, `baseline_sha256` from the manifest entry, `verification` of `match`, `mismatch` or `unavailable`, and `reason`, null only for `match` |
 
 Host facts, binaries and the imports scan are gathered before invocation.
 Dossier collection failures are recorded and do not change whether the request
@@ -315,13 +315,33 @@ override never falls back to the bundle helper. These observations do not
 reject or rewrite the request, enforce executable permission, or predict
 runner admission. Hashing does not prove launch or mapped bytes.
 
-For both built-in and BYOXPC selections, the baselines are the app manifest's
-built-in `PWRunner` service, `PWRunner/pw-probe-runner` and
-`PWRunner/sb_api_validator` entries, selected by their shipped bundle paths.
-The external service identifier does not select a different baseline.
+Select the built-in service entry and all three binary baselines by exact
+`rel_path`. Define these fixed shipped paths in `app_layout.rs`, relative to
+the app root:
 
-When the selected path is the manifest's own entry for that role, emit null
-and do not hash the binary. Keep `PW_VERIFY_EVIDENCE` behavior unchanged.
+| Role | `rel_path` | Required `kind` |
+| --- | --- | --- |
+| Service | `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner` | `xpc-service` |
+| Worker | `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner` | `xpc-embedded-helper` |
+| Validator | `Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator` | `xpc-embedded-helper` |
+
+Add a uniqueness-checking exact-path lookup in `evidence.rs`. Require exactly
+one entry at the expected path, then check its kind. Missing entries, duplicate
+paths and wrong kinds make that role's entry unusable. Do not select or fall
+back by `id`, `bundle_id` or `service_name`; no new `service_name` decoding is
+needed. Built-in and BYOXPC runs use the same baseline paths, including the
+bundle-local validator rather than the app-level helper.
+
+An unusable helper entry makes only that role's baseline unavailable and does
+not prevent invocation. BYOXPC selection is independent of all three baseline
+lookups. A missing or malformed `sha256` string makes a requested hash comparison
+unavailable, not the entry unselectable; accept 64 hexadecimal digits and
+compare decoded hash values. For a parsed manifest, neither hash availability
+nor helper-entry lookup failures gate built-in service selection.
+
+When the selected path is the uniquely selected, correctly typed manifest
+entry for that role, emit null and do not hash the binary. This requires no
+hash comparison. Keep `PW_VERIFY_EVIDENCE` behavior unchanged.
 
 For an executable override or BYOXPC copy, hash the selected file before
 invocation and compare against the baseline entry's hash: equal hashes produce
@@ -339,11 +359,13 @@ are not echoed; existing runner provenance stays separate.
 
 Attempt to parse the app evidence manifest once in `cmd_run`, before runner
 selection, and retain either the parsed value or its error for selection,
-app provenance and binary records. The built-in service entry supplies
-`bundle_id` and `rel_path`; use `bundle_id` as the service name and resolve
-the executable path from `rel_path`. Delete `resolve_pw_runner_bundle_info`
-and `PWRunnerBundleInfo`. `plist.rs` and `read_bundle_info` stay for BYOXPC
-install and verify.
+app provenance and binary records. For built-in selection, the service entry
+selected above must also supply a nonempty, NUL-free `bundle_id`; a missing,
+empty or NUL-containing value makes it unusable for connection. Use `bundle_id`
+as the XPC connection name and resolve the executable path from `rel_path`.
+Baseline hash lookup does not require `bundle_id`.
+Delete `resolve_pw_runner_bundle_info` and `PWRunnerBundleInfo`.
+`plist.rs` and `read_bundle_info` stay for BYOXPC install and verify.
 
 A missing, unreadable, malformed or unsupported-schema manifest, or a missing
 or unusable built-in service entry, fails built-in selection through `cmd_run`'s
@@ -595,8 +617,9 @@ equality checks in ordering eligibility. Only the attempt-side alias is removed.
 | `runner/Sources/PWRunnerCore/SandboxLib.swift` | whole file | delete with its symbol resolutions, `libsandbox_path` override and `libsandbox_unavailable` outcome |
 | `controller/src/run_flow.rs` | `RunnerStartupDiagnostics` (~133), `fallback_policy_note` (~162) and their construction in `cmd_run` (~379–396); `RunnerExecutionDiagnostics.worker_pid` (~98), `RunnerLogDiagnostics.capture_status` (~112), `first_deny` (~116) and `DenyEventReference` | delete; the log window still takes the worker PID from the reply internally, and `policy_check` keeps the fallback compile record |
 | same | `write_temp_request` and its call in `cmd_run` (~353–358); `load_app_provenance`'s own manifest read (~141–143) and the four echoed header fields of `AppProvenance` (~41–45) | delete; `load_app_provenance` takes the parsed manifest |
-| `controller/src/app_layout.rs` | `resolve_pw_runner_bundle_info` (~62–77), `PWRunnerBundleInfo` (~13) and the `plist` import | delete; `builtin_runner_target` reads the manifest entry |
-| `controller/src/runner_select.rs` | `builtin_runner_target`'s manifest read (~159–161) | takes the parsed manifest from `cmd_run`, uses the service entry's `bundle_id` as the service name, and resolves its executable from `rel_path` |
+| `controller/src/app_layout.rs` | `resolve_pw_runner_bundle_info` (~62–77), `PWRunnerBundleInfo` (~13) and the `plist` import | delete; define the three fixed shipped relative paths for selection and baselines |
+| `controller/src/evidence.rs` | manifest entry lookup for built-in selection and binary baselines | add exact `rel_path` lookup that rejects duplicate matches; check the role's required `kind` |
+| `controller/src/runner_select.rs` | `builtin_runner_target`'s manifest read (~159–161) and Info.plist-based entry selection | takes the parsed manifest from `cmd_run`, selects the fixed service path with uniqueness/kind checks, validates `bundle_id` for the connection name, and resolves the executable from `rel_path` |
 | `controller/src/policy_check.rs` | `run_policy_check(request_path)` (~65) | takes the held request string and delivers it on stdin with `--request -` |
 | `controller/src/bin/sbpl-check.rs` | `--request <path>` read (~518, ~543) | add `--request -` reading stdin to EOF; file input retained for direct use |
 
@@ -695,8 +718,8 @@ to `validate`/`denials` in the same increment as the consumer changes.
 
 Implement the dossier, shared request delivery and manifest flow in D2 through
 `run_flow.rs`, `runner_client.rs`, `policy_check.rs`, `runner_select.rs` and
-`app_layout.rs`. Update unsupported/malformed reply and current-version
-fragment-transport controls.
+`app_layout.rs`, with manifest entry lookup in `evidence.rs`.
+Update unsupported/malformed reply and current-version fragment-transport controls.
 
 `runner_commands.rs::cmd_runner_verify` is the helper's other production caller.
 Keep its file-input call supported, its 5-second default and its existing data
@@ -1043,7 +1066,13 @@ same verified increment.
   bytes stay unchanged. Assert built-in selection failure through the uniform
   dossier envelope and successful BYOXPC invocation without a manifest; the
   latter reports unavailable baselines while retaining observable paths and
-  hashes. Override controls cover wrong types, NUL/overlength strings, empty
+  hashes. Manifest-entry controls cover missing, duplicate and wrong-kind
+  entries for each role; missing/empty/NUL-containing service bundle IDs;
+  and absent/malformed hash strings without refusing service selection. Include
+  entries whose IDs, bundle IDs or service names match at other paths and
+  the app-level validator as decoys; none may substitute for a required path.
+  Assert helper-entry failures affect only their baseline and do not block
+  invocation. Override controls cover wrong types, NUL/overlength strings, empty
   and relative paths, missing/unreadable/nonregular files, and valid paths;
   confirm they do not change request bytes or runner admission. One control
   asserts that an ordinary built-in run hashes no app binary and reports null
