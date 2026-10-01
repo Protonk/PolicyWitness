@@ -1,13 +1,13 @@
 # Potential additions to the drift removal plan
 
-Status: proposals for review. S6 and S9 are adopted by the plan's D6.57 as
-consequences of its projection rule; S4, S7, S8 and S14 are not adopted.
+Status: proposals for review. S6 and S9 are included in the plan's removal
+inventory; S4, S7, S8 and S14 are not adopted.
 
 The identifiers S4 and S6–S9 come from the
 [second sweep](FIVE-FOLLIES.md#second-sweep). S1–S3 are incorporated directly
-in [DRIFT-REMOVAL-PLAN.md](DRIFT-REMOVAL-PLAN.md), with their remaining decisions
-recorded there. S14 is not a sweep finding: it records a capability the plan
-gives up when it retires the host sandbox-library loader, so that the reasoning
+in [DRIFT-REMOVAL-PLAN.md](DRIFT-REMOVAL-PLAN.md). S14 is not a sweep finding:
+it records a capability the plan gives up when it retires the host
+sandbox-library loader, so that the reasoning
 survives the deletion. Its number continues the sweep's sequence without
 claiming one of its entries. S5 and the original five entries are outside this document's
 selected scope. These IDs are unrelated to the plan's scenario-matrix row IDs.
@@ -19,18 +19,18 @@ decision. Validation counts as a reader when its failure affects another
 result. Human use of stored output also counts, and source searches cannot
 rule out external readers.
 
-Adoption requires a new D6 row in the plan and coordinated changes to its
-design, removal inventory, test owners and acceptance criteria. The existing
-plan remains controlling until that happens. Stored evidence and release
+Adoption requires coordinated changes to the plan's design, removal inventory,
+test owners and acceptance criteria. The existing plan remains controlling
+until that happens. Stored evidence and release
 artifacts keep their bytes.
 
 | Finding | Potential addition | Principal unresolved decision |
 | --- | --- | --- |
 | S4 | Remove the copied `attempt.lifecycle.boundary` and `.result` claims | Whether an attempt should carry the full local claims or readers should join to disposition evidence |
-| S6 | Remove the always-null `attempt.native_rc` | Adopted by D6.57: a constant null is a restatement of the schema; the guide states that `attempt.rc` is PW status |
+| S6 | Remove the always-null `attempt.native_rc` | Included in the plan's wire removal inventory; the guide states that `attempt.rc` is PW status |
 | S7 | Remove the observer's duplicate `deny_lines` list | Whether raw-denial extraction convenience warrants a second list, and which observer contract changes |
 | S8 | Remove some or all constant log disclaimers | Which limitations must remain explicit in each stored record |
-| S9 | Remove or narrow the whole-run target-removal calculation | Adopted by D6.57: the calculation is D4's sixth reading rule, and no status ships |
+| S9 | Remove or narrow the whole-run target-removal calculation | Included in the plan: the calculation is D4's sixth reading rule, and no status ships |
 | S14 | Restore a named distinction between an unusable sandbox library and a failed worker launch | Whether that distinction is wanted, and whether the worker's dyld diagnostic can carry it |
 
 ## S4. Copied attempt lifecycle claims
@@ -213,10 +213,9 @@ uses `sameTargetUnordered` to prevent an allow/success pair from becoming
 corresponding limitation and conclusion. This is a present verdict-producing
 use, not merely a self-validation loop.
 
-The drift plan removes the verdict but retains this calculation as
-`comparison.obligations.target_mutation.status`, with `none`, `unordered` and
-`after_query`. D6.42 has already removed the proposed list of matching step
-IDs. This candidate asks about the retained status and its run-wide derivation.
+The drift plan removes the verdict and the producer's target-removal
+calculation. D4's sixth reading rule specifies the interpretation of the raw
+unlink records; no derived status or matching-step list ships.
 
 **Reading cost.** Without the derived status, a reader seeking this confound
 would compare submitted query paths against the run's reported unlinks and
@@ -224,34 +223,16 @@ apply any chosen query-eligibility and ordering rules. Those inputs are
 exposed in the reply. The current verdict's need for the calculation does not
 settle whether the replacement has a task that warrants it.
 
-**Decisions remaining.**
-
-- Identify the reader task, if any, for a producer-calculated target-removal
-  status after the verdict is removed. Decide whether to retain D1's status,
-  narrow its derivation, or leave this cross-step interpretation to readers.
-- If a derived status remains, specify its applicability: whether the current
-  query-exclusion guard and distinction between unordered and after-query
-  removals serve that task, and exactly what `none` means. If it is removed,
-  specify which obligations and limitation checks disappear with it.
-- Assign the surviving expectations of the existing mutation and ordering
-  scenarios. Their file effects, validator records and release observations
-  can still be evidence even when a verdict-derived assertion is retired.
-
-**If adopted.** Revisit D1/D3, D6.26/42, R2/R4, I2's matrix inputs and ownership
-table, the `ComparisonEvidence` plumbing, consumer checks, shape/size fixtures
-and explanatory text together. Review the mutation-bearing matrix rows and
-kept scenarios against their independent controls rather than deleting them
-because a derived field disappears. Preserve the query-before-attempt release
-barrier and its evidence. Any change to barrier or eligibility behavior still
-requires the opt-in `order_barrier_mutations` control under `AGENTS.md`.
-
-Until this decision is adopted, the plan continues to require the D1 status
-and its existing query-exclusion rule. This document does not supersede them.
+**Adopted scope.** The plan's R2/R4 and I2–I4 remove the producer calculation
+and consumer checks, update shape/size fixtures, and retain mutation and
+ordering scenarios against file effects, validator records and release
+observations. The query-before-attempt barrier and eligibility behavior remain
+unchanged, with the `order_barrier_mutations` acceptance control.
 
 ## S14. The distinction the retired loader used to draw
 
-**Recorded so the reasoning is not lost; the loader itself is already retired
-in the plan under D6.44 and D6.47.**
+**Recorded so the reasoning is not lost; the loader itself is removed by the
+plan's R2 producer inventory.**
 
 **What the loader did.** `SandboxLib.load` dlopened `/usr/lib/libsandbox.dylib`
 and resolved seven symbols — `sandbox_create_params`, `sandbox_free_params`,
@@ -287,9 +268,8 @@ distinction itself may still be wanted.
   have to be captured and attached to the existing launch-failure record. Decide
   whether the launch-failure outcome gains a distinct spelling or keeps one with
   the diagnostic attached.
-- Decide nothing about reinstating a host-side check. A second forecast from a
-  process that neither predicts nor applies would reintroduce what D6.47
-  removed.
+- Do not reinstate the host-side check removed by the plan's R2 producer
+  inventory.
 
 **If adopted.** This is a worker-launch diagnostic change, not a reinstatement:
 the capture path for a failed worker exec, the outcome or diagnostic shape, a
