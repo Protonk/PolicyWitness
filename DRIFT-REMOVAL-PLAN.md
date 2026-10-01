@@ -7,7 +7,9 @@ host sandbox-library admission check (D6.47). No sandbox-library identity is
 collected (D6.52). D6.57 classifies every derived wire value and drops
 restatements, D6.58 drops wire constants, D6.59 reduces the stdin handoff to a
 writer thread and one delivery record, and D6.60 keeps the existing import
-scanner bounds.
+scanner bounds. D6.62–64 remove the fallback's temporary file, the two
+PlistBuddy spawns and the second manifest parse on every run, and the
+manifest header echoed in `app_provenance`.
 The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
@@ -214,7 +216,7 @@ path.
 
 | `data` key | Disposition |
 | --- | --- |
-| `app_provenance`, `runner_provenance` | move to `specimen.*`, shape unchanged |
+| `app_provenance`, `runner_provenance` | move to `specimen.*`; `runner_provenance` shape unchanged; `app_provenance` keeps `evidence_manifest_path` and `evidence_verify` (D6.64) |
 | `policy_augmentation` | move to `specimen.policy.augmentation`, always present (D6.15) |
 | `request_path` | move to `specimen.request_path` |
 | `runner_service_bundle_id`, `runner_service_name`, `runner_registry_id`, `runner_service_executable` | remove; each equals or derives from a `runner_provenance` field |
@@ -244,7 +246,7 @@ path.
   "host": { "macos_version": "14.8.3", "macos_build": "23J220", "kernel_release": "23.6.0",
             "arch": "arm64" },
   "runner_provenance": { "…": "unchanged shape" },
-  "app_provenance": { "…": "unchanged shape" },
+  "app_provenance": { "evidence_manifest_path": "…", "evidence_verify": null },
   "binaries": { "service": null, "worker": null, "validator": null }
 }
 ```
@@ -340,20 +342,22 @@ version of the same-bytes guarantee than a shared file, and it is the shared
 data structure the guarantee actually wants. So give the client `--request -`
 and pass the serialized request on its stdin; its `usage()` text and the
 client's documented surface gain that option, which is additive and is not the
-`policy-witness` CLI contract. D6.59 leaves `--timeout-ms` and its meaning
+`policy-witness` CLI contract. `sbpl-check`, the only other reader, gains the
+same option for the same reason (D6.62). D6.59 leaves `--timeout-ms` and its meaning
 unchanged; it adds no controller flag.
 
-A file survives in exactly one place: the `xpc_error` fallback that invokes
-`sbpl-check --request <path>`. Write it there, from the same held string, and
-remove it before returning; that path is rare and already an error path. This
-is not only fewer calls. `write_temp_request` has no cleanup today and its
-directory held 40 leftover request files on the development machine when this
-was measured, each carrying policy source; the ordinary run now creates none at
-all, so the leak ends by deletion rather than by a cleanup guard on every exit
-(D6.50, superseding D6.38). Nothing resolves a request field relative to the
-request file's directory — augments resolve against the app root and the runner
-never receives a path — so no field's meaning depends on where the bytes came
-from.
+No file survives. The `xpc_error` fallback that invokes `sbpl-check` reads a
+path today; it is PW's own binary, so it reads the same held string on stdin
+through `--request -` by the same writer-thread mechanism, and
+`write_temp_request` is deleted (D6.62, superseding the surviving file in
+D6.50). This is not only fewer calls. `write_temp_request` has no cleanup
+today and its directory held 40 leftover request files on the development
+machine when this was measured, each carrying policy source; no run now
+creates one, so the leak ends by deletion rather than by a cleanup guard on
+every exit (D6.50, superseding D6.38). Nothing resolves a request field
+relative to the request file's directory — augments resolve against the app
+root and neither reader receives a path — so no field's meaning depends on
+where the bytes came from.
 
 #### Request delivery and transport failures
 
@@ -391,12 +395,12 @@ version-result selection applies, and a nonzero client exit alone must not
 overwrite a valid failure reply.
 
 The `xpc_error` fallback remains an independent diagnostic of a supported
-reply. Failure to create or write its temporary request file becomes
-`PolicyCheckCapture::unavailable`, as helper launch failure already does;
-retain the original reply. Remove any owned temporary file on every fallback
-exit, preserving cleanup errors without replacing the original failure. A
-delivery error alone does not trigger fallback compilation. I4 owns the
-delivery and fallback controls; I5 documents `--request -` and
+reply. It receives the same held string on stdin through `sbpl-check
+--request -`, written by the same writer-thread mechanism; a delivery failure
+to the helper becomes `PolicyCheckCapture::unavailable`, as helper launch
+failure already does, and the original reply is retained (D6.62). A delivery
+error to the client alone does not trigger fallback compilation. I4 owns the
+delivery and fallback controls; I5 documents `--request -` on both tools and
 `request_delivery`.
 
 #### Binary selection and comparison
@@ -432,6 +436,34 @@ manifest or file-read failure. A mismatch reason identifies the baseline
 comparison. `path` is null when selection is unavailable. Neither mismatch
 nor unavailable changes the run outcome. The manifest's UUID and entitlements
 are not echoed; existing runner provenance stays separate.
+
+#### Controller reads on a run
+
+An ordinary built-in run reads the app's own files to identify what it is
+about to invoke. Today that costs two `/usr/libexec/PlistBuddy` spawns, for
+the shipped service's `CFBundleIdentifier` and `CFBundleExecutable` from the
+XPC bundle's Info.plist, and two parses of the Evidence manifest, one in
+runner selection and one in app provenance. The manifest already records the
+service entry's `bundle_id`, `service_name` and `rel_path`, which is the
+executable's path, so the plist spawns resolve values the controller has
+already parsed (D6.63).
+
+Parse the manifest once in `cmd_run`, before runner selection, and pass the
+parsed value to runner selection, app provenance and the dossier's binary
+records. Resolve the built-in runner's bundle id, service name and executable
+path from its manifest entry; delete `resolve_pw_runner_bundle_info` and
+`PWRunnerBundleInfo`. `plist.rs` and `read_bundle_info` stay for BYOXPC
+install and verify, which read an external bundle the manifest does not
+describe. A missing or unreadable manifest fails built-in runner selection, as
+a missing Info.plist does today, with the manifest path in the diagnostic;
+`app_provenance` stays null in that case, as today.
+
+`app_provenance` keeps `evidence_manifest_path` and `evidence_verify`. Its
+`app_bundle_id`, `app_binary_rel_path`, `app_entitlements` and `evidence_notes`
+were the manifest's own header echoed into every envelope: constant for a
+given build, which `/build` already identifies, and readable from the
+manifest at the path the envelope names (D6.58, D6.64). `runner_provenance`
+is unchanged: it records which runner was selected, and that varies per run.
 
 #### Import collection and bounds
 
@@ -585,7 +617,8 @@ one section, one sentence each, in this order (D6.57):
   skeleton for every run envelope, which removes the pre-execution `data.error`
   constant and `runner_startup_diagnostics`; `runner_client` gains
   `request_delivery`, with controller delivery failures per D6.59;
-  `runner_sandbox_diagnostics` loses its three copies (D6.57).
+  `runner_sandbox_diagnostics` loses its three copies (D6.57);
+  `app_provenance` keeps only its manifest path and verify report (D6.64).
 - Request schema, request-version admission behavior and worker ABI unchanged.
   The exact-version rule here governs semantic readers of runner responses
   and controller envelopes; it does not reject existing request-1 specimens.
@@ -653,7 +686,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 3 | `steps[].deny_signal` | Removed with `deny_signal_total`, `PWRunnerSignalResult` and `Signals.swift`. |
 | 4 | Imports collection | Every run with an `sbpl_source`, with basis, status, limits and failure; budgets confirmed by measurement. 58 drops the basis and limits fields; 60 keeps the scanner's existing bounds and retires the pending measurements. |
 | 5 | Library identity | Per function group, with `observer` and `basis`; unavailable components explained; not a worker-side observation. Superseded by 47. |
-| 6 | Provenance | Moved under `data.specimen`; no aliases at former paths. |
+| 6 | Provenance | Moved under `data.specimen`; no aliases at former paths. 64 thins `app_provenance` to its manifest path and verify report. |
 | 7 | Joint labels | None on the wire, in test equipment or in recipes. |
 | 8 | Supported versions | Exactly the manifest numbers; any other is `unsupported`; no version branches. The captured `a1_known_loss.json` stays as bytes to check that rejection. |
 | 9 | `comparison_conditions` | In the runner reply; the dossier references it. Superseded by 58: a constant, removed; state stability is D4's fifth reading rule. |
@@ -697,7 +730,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The controller cache UUID was selected in place of per-function host observations, while `SandboxLib.swift` and its admission check were removed. D6.52 supersedes the identity choice and its claim about worker/validator libraries; loader retirement remains in scope. Reply-side identity, load-stage presence rules and identity-specific fallback controls are removed. |
 | 48 | Host invariance rule and its checks (refines 43) | Keep the service-header rule and existing live isolation cases, with source and shipped-binary checks and no new catalog case. D6.53 supersedes the blanket source-name ban and comment-marker exception; the `preflight` assertion that `nm -u` reports no undefined `_sandbox_*` symbol remains. `otool -L` alone cannot cover direct calls through libSystem or dynamic symbol resolution. |
 | 49 | Binary hashing is not duplicated (supersedes 17, narrows 29) | The controller already reads the Evidence manifest every run, and `verify_manifest` already hashes every declared entry under `PW_VERIFY_EVIDENCE=1`. The dossier therefore hashes nothing the manifest describes: a built-in selection reports baseline metadata with `verification.status: not_compared`, and only an override or BYOXPC path — which no manifest entry describes — is hashed before invocation. Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of it the `PWRunner` binary, with a constant answer for a given build. App-file integrity stays with `PW_VERIFY_EVIDENCE` and the signature. `basis` distinguishes the two record kinds. 58 replaces the built-in record and `basis` with null; 61 withdraws the "already reads" justification. |
-| 50 | The request is a string, not a file (supersedes 38, refines 30) | One serialization held in the controller feeds the scan and every reader. `pw-runner-client` gains `--request -` and receives the bytes on stdin, since it only read the path into memory to send it; a temporary file survives only on the `xpc_error` path that invokes `sbpl-check --request <path>`, written from the same string and removed before returning. The ordinary run creates no file, so the existing leak ends by deletion rather than by a cleanup guard. The client's `usage()` and documented surface gain the option; the `policy-witness` CLI contract is unchanged. |
+| 50 | The request is a string, not a file (supersedes 38, refines 30) | One serialization held in the controller feeds the scan and every reader. `pw-runner-client` gains `--request -` and receives the bytes on stdin, since it only read the path into memory to send it; a temporary file survives only on the `xpc_error` path that invokes `sbpl-check --request <path>`, written from the same string and removed before returning. The ordinary run creates no file, so the existing leak ends by deletion rather than by a cleanup guard. The client's `usage()` and documented surface gain the option; the `policy-witness` CLI contract is unchanged. 62 removes the surviving fallback file as well. |
 | 51 | One OS-facts reader (refines 16 and 35) | The I1 extraction makes the shared reader the `sysctlbyname` one, so `sbpl-check` stops spawning `/usr/bin/sw_vers -buildVersion` for a fact `kern.osversion` returns (verified identical on the development host) while its output stays byte-identical. One mechanism, one fewer process spawn, and the dossier's no-subprocess rule holds for every consumer. |
 | 52 | No sandbox-library identity (supersedes 47's identity choice) | Drop `host.sandbox_cache_uuid`, its dyld read, consumer shape rule and collection/failure controls. The API observes the caller's cache; native and x86_64 probes on the same stock host return different UUIDs, so a controller observation does not identify a selected worker's or validator's libraries. No identified planned reader needs the narrower controller fact. OS build and architecture remain environment context, not an inferred library identity. Loader retirement under 44/47 is unchanged. |
 | 53 | Check native sandbox API use, not wire vocabulary (supersedes 48's source rule) | The source check rejects native API bindings/calls, dynamic sandbox-symbol lookup and libsandbox loading in executable contexts. Permit schema properties, coding keys, labels, diagnostics, comments and documentation that name `sandbox_check` or libsandbox. R2 defines the checked contexts, positive/negative controls and limits of this source convention. Keep the shipped-binary check and live isolation cases. No comment-marker exemption or prose assertion is needed. |
@@ -709,6 +742,9 @@ current-version fixtures for unfamiliar-value transport tests.
 | 59 | Stdin handoff reduced (supersedes 56; resolves 55) | The controller writes the held request from a writer thread, closes stdin after the last byte, and collects and waits as today. No controller deadline, no supervisor extraction, no client argument; `--timeout-ms` keeps its default, minimum and reply-wait meaning. `data.runner_client.request_delivery` carries `bytes_written` and a nullable `error`. A delivery error is a controller `tool_error`, exit 2, with any captured reply retained unchanged. The shipped client reads its whole request before connecting or writing, so delivery either completes or fails with EPIPE, and the controller is no less bounded than it is today. |
 | 60 | Scanner bounds (refines 4, 30 and 37; resolves the I1/D2 conflict) | The dossier scan is `sbpl-check`'s resolver with its existing depth 8, count 64 and 4 MiB source bounds, already in `docs/limits.json`; no file, total or wall budget is added, so the shared scanner has no new cutoff and `sbpl-check` output stays byte-identical. Each import is opened once, checked regular with `fstat`, and hashed and lexed from the same bytes. The I4 WebProcess measurement and cutoff tasks are retired; `exceeded` is `depth` or `count`. |
 | 61 | Binary record justification (refines 49) | 49's "the controller already reads the Evidence manifest every run" is withdrawn as a reason: the manifest is parsed twice per run today, and a third consumer is not justified by the first two. The decision stands on the measured 2.93 MB avoided and on the constant answer for a given build. |
+| 62 | No temporary request file on any path (supersedes the surviving file in 50) | `sbpl-check` gains `--request -`, reading stdin to EOF, and the `xpc_error` fallback writes the held string to it by the same writer-thread mechanism as the client. `write_temp_request` is deleted. A helper delivery failure is `PolicyCheckCapture::unavailable` with the original reply retained. No run writes a request file; the control that checked the temp directory after an ordinary run now checks it after the fallback control too. |
+| 63 | One manifest parse and no PlistBuddy spawn on a run | `cmd_run` parses the Evidence manifest once and passes it to runner selection, app provenance and the dossier's binary records. The built-in runner's bundle id, service name and executable path come from its manifest entry, which already carries them; `resolve_pw_runner_bundle_info`, `PWRunnerBundleInfo` and their two `/usr/libexec/PlistBuddy` spawns are deleted. `plist.rs` and `read_bundle_info` serve BYOXPC install and verify only. A missing manifest still fails built-in selection with a diagnostic naming the manifest path. |
+| 64 | `app_provenance` thinned (refines 6; applies 58) | Keeps `evidence_manifest_path` and `evidence_verify`. `app_bundle_id`, `app_binary_rel_path`, `app_entitlements` and `evidence_notes` were the manifest header echoed per run: constant for a given build and readable at the named path. `runner_provenance` is unchanged because the selected runner varies. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -744,6 +780,7 @@ what stays.
 | `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno`, `steps[].sandbox_check.scope`, `steps[].attempt.native_rc` | runner reply | removed (D6.22, D6.23); `native_rc` was a constant null (D6.57, S6) |
 | `data.runner_startup_diagnostics` | controller envelope | removed; `status` was constant on its only path, `xpc_error` copied `runner_result.error`, `policy_check_status` copied `policy_check.status`, and `note` was a sentence formatted from `policy_check` (D6.57) |
 | `data.runner_sandbox_diagnostics.worker_pid`, `.capture_status`, `.first_deny` | controller envelope | removed; copies of the reply's PID, of `sandbox_log_capture.capture_status`, and the index of the first PID match (D6.57) |
+| `data.app_provenance.app_bundle_id`, `.app_binary_rel_path`, `.app_entitlements`, `.evidence_notes` | controller envelope | removed; the manifest header echoed per run (D6.64) |
 | `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocated under `data.specimen` |
 | `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed |
 | `data.error` on the pre-execution `tool_error` envelope | controller envelope | removed; a constant string, superseded by the uniform `data` skeleton and `result.error` |
@@ -768,6 +805,11 @@ what stays.
 | `runner/Sources/PWRunnerCore/Signals.swift` | whole file; no caller under `runner/Sources` | delete, and its `XPC_RUNNER_SIGNALS_FILE` line in `build.sh` |
 | `runner/Sources/PWRunnerCore/SandboxLib.swift` | whole file | delete with its seven symbol resolutions, the `libsandbox_path` override and the `libsandbox_unavailable` outcome, under D6.44 and D6.47 |
 | `controller/src/run_flow.rs` | `RunnerStartupDiagnostics` (~133), `fallback_policy_note` (~162) and their construction in `cmd_run` (~379–396); `RunnerExecutionDiagnostics.worker_pid` (~98), `RunnerLogDiagnostics.capture_status` (~112), `first_deny` (~116) and `DenyEventReference` | delete (D6.57); the log window still takes the worker PID from the reply internally, and `policy_check` keeps the fallback compile record |
+| same | `write_temp_request` and its call in `cmd_run` (~353–358); `load_app_provenance`'s own manifest read (~141–143) and the four echoed header fields of `AppProvenance` (~41–45) | delete; `load_app_provenance` takes the parsed manifest (D6.62, D6.63, D6.64) |
+| `controller/src/app_layout.rs` | `resolve_pw_runner_bundle_info` (~62–77), `PWRunnerBundleInfo` (~13) and the `plist` import | delete; `builtin_runner_target` reads the manifest entry (D6.63) |
+| `controller/src/runner_select.rs` | `builtin_runner_target`'s manifest read (~159–161) | takes the parsed manifest from `cmd_run` and resolves `bundle_id`, `service_name` and `rel_path` from the service entry |
+| `controller/src/policy_check.rs` | `run_policy_check(request_path)` (~65) | takes the held request string and delivers it on stdin with `--request -` |
+| `controller/src/bin/sbpl-check.rs` | `--request <path>` read (~518, ~543) | add `--request -` reading stdin to EOF; file input retained for direct use |
 
 Production C worker and validator behavior is unchanged. S2 removes the unused
 C query shim and its build wiring; it does not remove the production validator.
@@ -900,11 +942,14 @@ consumer functions I3 removes — `run_flow.rs` ~2321 and ~2523 and
 `validate_evidence_shape` — so they move to `validate`/`denials` in the same
 increment or `cargo test` breaks (D6.40).
 
-Implement the dossier per D2: the held request string with `--request -` on the
-client and a fallback-only temporary file (D6.50), binary records that hash only
-non-manifest selections (D6.49, D6.58), and the shared sysctl OS reader
-(D6.51). Write the request from a writer thread and record `request_delivery`
-per D6.59; extend fallback-unavailable handling to temporary-file failures.
+Implement the dossier per D2: the held request string with `--request -` on
+both the client and `sbpl-check`, with no temporary file on any path (D6.50,
+D6.62), binary records that hash only non-manifest selections (D6.49, D6.58),
+the shared sysctl OS reader (D6.51), one manifest parse in `cmd_run` with the
+built-in runner resolved from its manifest entry (D6.63), and the thinned
+`app_provenance` (D6.64). Write the request from a writer thread and record
+`request_delivery` per D6.59; extend fallback-unavailable handling to helper
+delivery failures.
 Move the pre-execution failure envelopes into `cmd_run` so one writer owns the
 run `data` skeleton; `cli.rs`'s catch-all keeps only errors that escape it.
 Update tests for unsupported/malformed replies and current-version fragment
@@ -1021,10 +1066,14 @@ Swift sites and 1 controller site; 14 catalog entries.
 - `runner/README.md` ~74, ~230, ~240, ~260–267, ~314; `runner/AGENTS.md` ~15;
   `runner/augments/README.md` ~154; `controller/README.md` ~137–145, ~369,
   ~378 and its consumer-audit table.
-- D6.50: document `--request -` in `pw-runner-client`'s `usage()` and wherever
-  the client's surface is described, and remove any account of a per-run
-  temporary request file. D6.59: document `request_delivery` and the delivery
-  failure result beside the unchanged `--timeout-ms` description.
+- D6.50 and D6.62: document `--request -` in `pw-runner-client`'s and
+  `sbpl-check`'s `usage()` and wherever either tool's surface is described,
+  and remove every account of a temporary request file. D6.59: document
+  `request_delivery` and the delivery failure result beside the unchanged
+  `--timeout-ms` description. D6.63 and D6.64: the controller README's
+  account of runner selection names the manifest entry, not Info.plist, and
+  its output contract describes `app_provenance` as the manifest path plus
+  the verify report.
 - S1–S3: revise the source inventory in `runner/README.md`, the `runner_unit`
   row in `tests/README.md`, `tests/suites/runner_unit/README.md`, and the unused
   apply-helper descriptions in `tests/COVERAGE.md` and
@@ -1087,7 +1136,9 @@ Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 `libsandbox_unavailable`, `library_identity`, `sandbox_cache_uuid` and
 `@convention(c)`. Also search
 `write_temp_request`, `sw_vers` and `macos_build_version`, whose call sites
-change under D6.50 and D6.51. R2's standing source check applies the narrower
+change under D6.50 and D6.51, and `resolve_pw_runner_bundle_info`,
+`PWRunnerBundleInfo`, `PlistBuddy`, `app_bundle_id`, `app_binary_rel_path`,
+`app_entitlements` and `evidence_notes`, which leave under D6.63 and D6.64. R2's standing source check applies the narrower
 native-use rule; it does not forbid retained wire vocabulary or explanatory
 text. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
@@ -1271,25 +1322,31 @@ same verified increment.
   Controlled Rust collectors own missing/malformed manifest, unreadable
   override file, hash mismatch on a non-manifest selection, and host-read
   failures so signed app bytes stay unchanged. One control asserts that an
-  ordinary built-in run hashes no app binary and reports null binary records,
-  and one asserts that an ordinary run leaves no file in the temp request
-  directory. The dossier case includes or links those control receipts and
-  checks every failure-table shape. Host-read controls cover the four sysctl
-  facts. There is no shared-cache UUID collector or sandbox-library identity
-  control (D6.52/54).
+  ordinary built-in run hashes no app binary and reports null binary records;
+  one asserts that no run, the `xpc_error` control included, leaves a file in
+  the temp request directory (D6.62); one resolves the built-in runner from a
+  synthetic app root whose service Info.plist is absent and whose manifest
+  carries the entry, proving selection reads the manifest and not the plist
+  (D6.63); and one asserts that `app_provenance` carries exactly the manifest
+  path and the verify report (D6.64). The dossier case includes or links
+  those control receipts and checks every failure-table shape. Host-read
+  controls cover the four sysctl facts. There is no shared-cache UUID
+  collector or sandbox-library identity control (D6.52/54).
 - Implement D6.59 in `runner_client.rs`, `run_flow.rs` and the Swift client.
   Rust subprocess controls in `runner_client.rs` own a request larger than the
   pipe buffer delivered in full to a child that reads it after a delay, a
   child that exits without reading so the write fails with EPIPE and the
   controller records the error without terminating, and a delivery error
   alongside a captured failure reply. `run_flow.rs` controls own `tool_error`
-  precedence, unchanged reply retention, D5 gating and fallback file
-  create/write/cleanup failures preserving the original `xpc_error`. The live
-  `dossier_witness` case exercises the shipped client's stdin path and
-  verifies the submitted request bytes. Keep direct client file-input
-  coverage for its existing interface; `runner_commands.rs` controls cover
-  verification's preserved default and refusal to report success after a
-  delivery failure or an unsupported reply.
+  precedence, unchanged reply retention, D5 gating and a helper delivery
+  failure on the fallback path preserving the original `xpc_error` (D6.62).
+  A `sbpl-check` control feeds the same request by file and by `--request -`
+  and requires byte-identical output. The live `dossier_witness` case
+  exercises the shipped client's stdin path and verifies the submitted
+  request bytes. Keep direct client and helper file-input coverage for their
+  existing interfaces; `runner_commands.rs` controls cover verification's
+  preserved default and refusal to report success after a delivery failure
+  or an unsupported reply.
 
 ### I5. Contract and registry documents
 
@@ -1304,10 +1361,12 @@ same verified increment.
   acceptance gate" go.
 - `docs/CONTRACT.md` per D5. `ContractVersionTests.swift`'s header comment
   ("Added keys need no bump") changes with it.
-- `controller/README.md`, the runner-client usage/documentation,
-  `tests/FAILURE-PROPAGATION-CONTRACT.md` and the guide document `--request -`,
-  `request_delivery`, and controller `tool_error` precedence with the retained
-  reply (D6.59). `docs/limits.json`'s `client_rpc_wait` and `controller_output`
+- `controller/README.md`, the runner-client and `sbpl-check` usage and
+  documentation, `tests/FAILURE-PROPAGATION-CONTRACT.md` and the guide
+  document `--request -` on both tools, `request_delivery`, and controller
+  `tool_error` precedence with the retained reply (D6.59, D6.62). The
+  controller README's runner-selection and output-contract passages follow
+  D6.63 and D6.64. `docs/limits.json`'s `client_rpc_wait` and `controller_output`
   entries and the Limits interaction prose keep their meaning; the
   `helper_import_depth`, `helper_import_count` and `helper_source` entries say
   the dossier scan shares them (D6.60); `runner_reply_maximum` and
@@ -1357,9 +1416,10 @@ same verified increment.
   contract changes and run-varying values explicitly accounted for. Preserve
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
-- An ordinary built-in run writes no file into the temp request directory and
-  hashes no app binary: both are checked as controls in I4, and both are
-  measurable on the integration candidate rather than argued.
+- No run writes a file into the temp request directory, and an ordinary
+  built-in run hashes no app binary, spawns no PlistBuddy and parses the
+  manifest once: each is checked as a control in I4, and each is measurable
+  on the integration candidate rather than argued.
 - D6.59's delivery controls pass; the live stdin receipt and direct
   file-input coverage accompany them.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
@@ -1426,6 +1486,7 @@ direction. Seed rows:
 | LIMITS | the helper import and source entries | revise | the existing bounds also bound the dossier scan; no new bound (D6.60) |
 | Controller and client usage | the request file argument | revise | `--request -` and `request_delivery`; `--timeout-ms` unchanged (D6.59) |
 | Guide and controller output contract | runner-client transport facts and controller failure | revise | the delivery observation beside the unchanged reply; a delivery failure is a controller `tool_error` and does not rewrite worker/XPC evidence |
+| Guide and controller README | `app_provenance` fields; runner selection reads Info.plist | revise | the manifest path and verify report only, with the manifest named as where the header lives; selection reads the manifest entry (D6.63, D6.64) |
 | FAQ | reading the deny log | add | optional, possibly incomplete evidence; candidate correlation does not establish attempt attribution or a comparison verdict |
 
 ### Infrastructure ledger (from REPAIR)
@@ -1615,7 +1676,9 @@ The readiness review checks:
 - [x] D6.49–51 remove the duplicated work the dossier would have added: no
   per-run hash of a file the manifest already describes, no temporary file on an
   ordinary run, and one OS-facts reader without a subprocess. D6.61 rests 49
-  on the measurement alone.
+  on the measurement alone. D6.62–64 extend it: no temporary file on any
+  path, no PlistBuddy spawn and one manifest parse per run, and
+  `app_provenance` without the manifest header.
 - [x] D6.44 retires both `bootstrap_port_failed` and `libsandbox_unavailable`
   in response 13, with the API constants, override table, guide, coverage table
   and the `runner_outcome_libsandbox_unavailable` suite moving with it.
