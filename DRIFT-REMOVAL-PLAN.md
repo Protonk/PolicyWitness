@@ -1,10 +1,12 @@
 # Removing the drift verdict
 
-Status: REVISED for readiness review as of 2026-10-01; implementation has not
+Status: READY for implementation as of 2026-10-01; implementation has not
 started. The matrix's response 12 columns are verified against live output
-(see the scenario matrix). The S1–S3 helper removals are included, with the
-host sandbox-library loader they leave without callers (D6.47). No decision
-remains open; the gate is the review itself. The readiness gate below separates settled decisions from execution
+(see the scenario matrix). The S1–S3 helper removals include retirement of the
+host sandbox-library admission check (D6.47). No sandbox-library identity is
+collected (D6.52). One overall client deadline and controller-owned transport
+failures settle the stdin handoff contract (D6.56, resolving D6.55).
+The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -29,8 +31,7 @@ implementation that emits the new shape, never before it.
 The unused Swift attempt, query and sandbox-application implementations from
 [FIVE-FOLLIES.md, S1–S3](FIVE-FOLLIES.md#second-sweep) are also removed, with
 their exclusive tests and build dependencies, and with the host
-sandbox-library loader that S3 leaves with no caller (D6.47). The dossier
-reports the dyld shared cache UUID in its place. R2 defines the boundaries around
+sandbox-library loader and its admission check (D6.47). R2 defines the boundaries around
 the production code they share files with. S4 and S6–S9 are separately recorded
 in [potential additions](DRIFT-REMOVAL-CANDIDATES.md); they are not adopted by
 this plan.
@@ -229,7 +230,8 @@ path.
 | `request_path` | move to `specimen.request_path` |
 | `runner_service_bundle_id`, `runner_service_name`, `runner_registry_id`, `runner_service_executable` | remove; each equals or derives from a `runner_provenance` field |
 | `policy_check` | stay; its `sbpl-check` output is kept verbatim, including that tool's own imports block |
-| `runner_client`, `runner_result`, `runner_sandbox_diagnostics`, `runner_startup_diagnostics`, `sandbox_log_capture`, `timeout_ms` | stay |
+| `runner_client` | stay; extend with delivery and supervision facts under D6.56 |
+| `runner_result`, `runner_sandbox_diagnostics`, `runner_startup_diagnostics`, `sandbox_log_capture`, `timeout_ms` | stay; `timeout_ms` now covers the whole client operation under D6.56 |
 
 ```json
 "specimen": {
@@ -253,8 +255,7 @@ path.
     }
   },
   "host": { "macos_version": "14.8.3", "macos_build": "23J220", "kernel_release": "23.6.0",
-            "arch": "arm64", "basis": "sysctlbyname",
-            "sandbox_cache_uuid": "ca11c3f5-…" },
+            "arch": "arm64", "basis": "sysctlbyname" },
   "runner_provenance": { "…": "unchanged shape" },
   "app_provenance": { "…": "unchanged shape" },
   "binaries": {
@@ -296,8 +297,7 @@ path.
 | `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
 | `policy.imports.failure` | string or null | the first scan problem, including why the scan could not start; null for a complete scan or an ordinary absence of source |
 | `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails (D6.16) |
-| `host.basis` | string | constant `sysctlbyname`: the mechanism for the four facts above, and for those only |
-| `host.sandbox_cache_uuid` | string or null | the dyld shared cache UUID, read by the controller through the dyld API, not through `sysctlbyname`; null when the read fails. The sole sandbox-library identity PW reports (D6.47) |
+| `host.basis` | string | constant `sysctlbyname`: the mechanism for the four facts above |
 | `binaries.*` | object | each selected executable path and its baseline metadata from the app manifest the controller already reads; `manifest_*` fields are baseline metadata, never observations of the selected binary; `verification.status` is `not_compared`, `match`, `mismatch` or `unavailable` (D6.29, D6.49) |
 | `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair` |
 | `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own. Key set and values are fixed by envelope 5, not computed from presence; a pointer to a withheld or absent record is still present (D6.20) |
@@ -362,7 +362,8 @@ version of the same-bytes guarantee than a shared file, and it is the shared
 data structure the guarantee actually wants. So give the client `--request -`
 and pass the serialized request on its stdin; its `usage()` text and the
 client's documented surface gain that option, which is additive and is not the
-`policy-witness` CLI contract.
+`policy-witness` CLI contract. D6.56 changes the meaning of the existing
+`--timeout-ms` allowance as specified below; it adds no controller flag.
 
 A file survives in exactly one place: the `xpc_error` fallback that invokes
 `sbpl-check --request <path>`. Write it there, from the same held string, and
@@ -375,6 +376,89 @@ all, so the leak ends by deletion rather than by a cleanup guard on every exit
 request file's directory — augments resolve against the app root and the runner
 never receives a path — so no field's meaning depends on where the bytes came
 from.
+
+#### Client deadline and transport failures
+
+The controller owns one absolute `CLOCK_MONOTONIC` deadline, established just
+before client spawn from `--timeout-ms`. Startup, stdin delivery and EOF,
+request acquisition in the client, XPC reply wait, output collection and client
+exit consume that same allowance. Pass the deadline across the private
+controller/client boundary using the existing shared-budget mechanism's clock
+and validation rules; never start a fresh allowance after input delivery or
+before the RPC wait. A standalone client establishes its deadline before
+request acquisition. Keep the current default and minimum, and reject values
+that cannot form a finite deadline. This deliberately replaces the current
+reply-wait-only meaning (D6.56).
+
+At expiry, stop request delivery and ordinary collection and start bounded
+cleanup. Reuse the supervisor's fixed 1,000 ms cleanup grace for closing pipes,
+owned-child termination and reaping, retaining any output collected during
+cleanup. This grace buys no further request or RPC work. Record unconfirmed
+cleanup as such. Ownership covers the spawned client, not its launchd-owned
+XPC service or that service's children; client cleanup does not establish their
+termination. Worker and validator budgets remain independent. Request
+preparation/dossier collection, fallback diagnostics and optional log capture
+are outside this client allowance; it is not an end-to-end CLI runtime promise.
+
+Factor the reusable nonblocking I/O, absolute-budget, process-observation and
+owned-cleanup core out of `controller/src/log_capture.rs`, then add optional
+stdin delivery for `runner_client.rs`. Preserve the log boundary's behavior.
+The runner-client boundary writes input while draining both output streams;
+close stdin immediately after the last byte so the client can observe EOF.
+Partial writes, interruptions and backpressure must not deadlock, and a broken
+pipe must not terminate the controller. On a write failure, close stdin and
+continue collecting available output under the original deadline. Use
+`ValidatorClient.swift`'s duplex collection and write-failure controls as the
+behavioral model, with Rust subprocess controls for this boundary.
+
+Keep `JsonOutputCapture`'s strict parsing, diagnostic retention and existing
+runner capture limits. The log supervisor's overflow-stop and zero-exit
+requirements are boundary policies, not defaults for the runner client:
+retain up to the runner limits while continuing to drain/count excess bytes
+within the deadline, and keep nonzero client exit independent of received JSON.
+Never parse a truncated or incompletely collected stdout prefix as a reply,
+even when that prefix is valid JSON. Streaming counts describe bytes actually
+read, with EOF/read-error/cutoff observations explaining incomplete collection;
+do not reconstruct an `Output` from a retained prefix and call its length the
+total received. Share the capture finalization rules with `utils.rs` rather
+than replacing its other receivers.
+
+Extend `data.runner_client` with `request_delivery` containing
+`bytes_expected`, `bytes_written`, `stdin_closed` and nullable `error`, and a
+`supervision` report using the shared budget, stream, process and cleanup
+observations with a runner-client boundary. Delivery is null for a helper
+invocation using the retained file-input interface; normal runs use stdin.
+These are controller observations:
+accepted pipe writes and closing the writer do not prove that the client read
+the bytes or that XPC delivered them. Preserve existing capture and timing
+fields; `exit_code` is null when no numeric exit code was observed, with signal
+and reaping facts in supervision. Retain separate delivery, output, wait and
+cleanup errors when they coexist. Once a child exists, return its capture and
+observations on failure instead of escaping through an error path that discards
+them. Before invocation, the uniform run skeleton still has null execution
+records.
+
+A delivery failure, expiry of the controller's overall deadline or failed
+transport supervision makes the envelope's `result.ok` false,
+`result.normalized_outcome: tool_error`, with exit 2 and a controller diagnostic.
+Use this existing controller failure category; do not invent a worker or XPC
+failure to represent the handoff. This result takes precedence even if captured
+stdout contains an `ok` reply. Retain that complete reply unchanged in
+`data.runner_result`, along with all capture and process diagnostics. D5's
+version gate still controls any interpretation of it; a transport failure does
+not authorize reading an unsupported reply. Where transport completes, existing
+runner-result and D5 version-result selection applies. Nonzero client exit
+alone must not overwrite a valid failure reply. A client-generated XPC failure
+received within the allowance remains that client's reported failure.
+
+The `xpc_error` fallback remains an independent diagnostic of a supported
+reply. Failure to create or write its temporary request file becomes
+`PolicyCheckCapture::unavailable`, as helper launch failure already does; retain
+the original reply and startup diagnostics. Remove any owned temporary file
+on every fallback exit, preserving cleanup errors without replacing the
+original failure. A controller delivery error alone does not trigger fallback
+compilation. I4 owns transport and fallback controls; I5 updates the documented
+timeout, capture and result contracts.
 
 #### Binary selection and comparison
 
@@ -476,37 +560,14 @@ The normal-run scanner is synchronous and introduces no background task or new
 shipped helper. Measure both representative-profile cost and cutoff behavior
 in I4; a hard elapsed-time guarantee would require a new design decision.
 
-#### Sandbox library identity
+#### Host facts and library identity
 
-The dossier reports one machine fact: the dyld shared cache UUID, in
-`specimen.host.sandbox_cache_uuid`, read by the controller through the dyld API
-beside the `sysctlbyname` facts already collected there. Null with no further
-explanation when the read fails; a failed read does not change admission or the
-execution result.
-
-That UUID is the identity, in one narrow role: deciding whether two runs ran
-against the same sandbox library. On a stock host every libsandbox image lives
-in the shared cache and none of them exists as a file, so the UUID names the
-artifact the validator and the worker each linked from. It is a machine
-observation, not a claim about which image any particular process mapped.
-
-It is kept rather than inferred, deliberately. `host.macos_build` and
-`host.arch` already determine the cache on a stock host, so the UUID's
-discriminating power over facts the dossier already collects exists only when a
-cache has been rebuilt or replaced — which is the non-stock case this plan
-excludes. One dyld call buys an observation of the artifact instead of an
-inference from the OS release, which is the trade this repo makes elsewhere.
-That also fixes its failure case: when the UUID is null, `(macos_build, arch)`
-answers the same question, so the null is a lost witness and not a gap (D6.47).
-
-The runner reports no library identity. A per-function, per-image observation
-from the XPC host was considered and rejected: the host neither predicts nor
-applies, so its resolved images describe a third process; `sandbox_check`
-resolves through libSystem in any process without a load; the compile and apply
-image is reachable only by loading a library the host never calls into, and its
-path, cache membership and absent disk file are all implied by the cache UUID.
-Identifying the images the validator and worker actually mapped would require
-each of them to report it, which is the worker ABI change D6.11 declined.
+The dossier's four sysctl facts describe the environment. They do not identify
+the sandbox libraries used by the worker or validator. Neither the dossier nor
+the runner collects a sandbox-library identity or a shared-cache UUID (D6.52).
+There is no identity-specific collector, presence rule, fallback-retention
+requirement or test control. The loader and its admission check are still
+removed under D6.44/47; worker and validator observations remain unchanged.
 
 ### D3. Invariants
 
@@ -533,13 +594,12 @@ each of them to report it, which is the worker ABI change D6.11 declined.
 - Reply degradation: `runner_reporting_failed` omits every `comparison` and
   `comparison_conditions`, even when `steps: []`. `evidence_retained: false`
   still withholds step and subprocess evidence. The reply carries no library
-  identity at either fallback level, because the runner reports none (D6.47).
+  identity at either fallback level, because the runner reports none (D6.52).
 - Consumer (`tests/lib/consumer.py`): applies D5's envelope/response gates and
   reports a different version as `unsupported`; rejects the removed keys; rejects
   `established` as any obligation status; validates obligations against raw
   evidence; requires `references` to carry exactly the fixed keys and values.
-  `host.sandbox_cache_uuid` is a string or null; the consumer has no reply-side
-  identity rule, because the reply carries none.
+  There is no sandbox-library identity rule for the reply or dossier (D6.52).
 - Controller: `permission_failures_without_record` reads `comparison.observation`;
   `validate_disposition` also checks the lifecycle entries in
   `comparison.limitations`. Failed disposition validation withholds the
@@ -563,10 +623,10 @@ assign no label. There is no `scope` field to show (D6.13).
   `deny_signal_total`, `attempt.exit_code`, `attempt.syscall_errno`,
   `sandbox_check.scope`, and the `normalized_outcome` and `attempt.outcome`
   spellings retired under D6.44.
-- Controller envelope 4 → 5: `data.specimen` including
-  `host.sandbox_cache_uuid`, the `data` key dispositions, and one `data`
+- Controller envelope 4 → 5: `data.specimen`, the `data` key dispositions, and one `data`
   skeleton for every run envelope, which removes the pre-execution `data.error`
-  constant.
+  constant; `runner_client` gains delivery/supervision facts and a nullable
+  observed exit code, with controller transport failures per D6.56.
 - Request schema, request-version admission behavior and worker ABI unchanged.
   The exact-version rule here governs semantic readers of runner responses
   and controller envelopes; it does not reject existing request-1 specimens.
@@ -613,8 +673,8 @@ previous version.
 | Swift `PWRunnerRunResult` decoder/encoder | Require `PWContract.responseSchema` before semantic decoding/encoding; other versions fail with an `unsupported` diagnostic. Remove the 8/9/10 gates and legacy-only decode fallbacks; current invariants apply directly. |
 | Python `consumer.py` public document readers | Share envelope/response gates; `validate` returns the single version error, and evidence accessors refuse unsupported input. `select` operates on already validated steps. Bare replies require only the response gate. |
 | Python lifecycle adapter/oracle, blackbox and path/log evidence helpers | Route public document entry points through the same gates before projecting; remove legacy projections and fallbacks. Standalone raw-record validators do not pretend a fragment is a versioned document. Audit direct callers as part of I3. |
-| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use the corresponding `malformed_runner_response` result. |
-| Swift `pw-runner-client` and Rust `runner_client.rs` capture | Preserve received bytes/JSON as transport, including unsupported versions and unfamiliar strings. They do not reinterpret or coerce the version. Client-generated failure replies use the current response schema and D2's absence rule. |
+| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; when transport completes, the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use the corresponding `malformed_runner_response` result. A concurrent controller transport failure keeps D6.56's `tool_error` precedence without interpreting the unsupported/malformed reply. |
+| Swift `pw-runner-client` and Rust `runner_client.rs` capture | Preserve received bytes/JSON as transport, including unsupported versions and unfamiliar strings. They do not reinterpret or coerce the version. Client-generated failure replies use the current response schema and D1/D3's empty-step and reporting-failure rules. |
 | Requests, worker ABI, evidence manifest and validator transcript | Retain their existing separate admission/reading rules. This plan's equality rule is not a new request-version or nested-transcript-version restriction. |
 
 For an unsupported/malformed reply, the dossier retains controller-collected
@@ -644,7 +704,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 13 | `comparison.scope` | Removed; the guide states the scope once. |
 | 14 | `sandbox_attribution` with no observation | `not_applicable`. |
 | 15 | `policy.augmentation` | Always present. |
-| 16 | Host facts | `sysctlbyname`, no subprocess. Refined by 47: `host.basis` covers those four facts only, and the shared cache UUID beside them is a dyld read. |
+| 16 | Host facts | `sysctlbyname`, no subprocess. D6.52 leaves just the four sysctl facts and their basis; they do not stand in for sandbox-library identity. |
 | 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. Superseded by 49. |
 | 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source. |
 | 19 | Reader surfaces | The envelope and the bare reply from `pw-runner-client`. |
@@ -673,13 +733,18 @@ current-version fixtures for unfamiliar-value transport tests.
 | 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
 | 43 | Unused Swift execution helpers (S1–S3) | Remove the attempt executor, query helper and sandbox-application helper, their exclusive dependencies and helper-only tests per R2/R5. Keep production planning, path diagnostics, policy hashing, structural policy refusal and C worker/validator behavior. Coordinate source, build, test and documentation changes in I3–I5 under D6.33. |
 | 44 | Retired outcome spellings (S1, S3) | DECIDED. One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
-| 45 | C-function-pointer stubbing guidance (S3) | DECIDED: retire it. Delete the "Stubbing C function pointers" paragraph from `runner/AGENTS.md` rather than rewriting it self-contained. Its subject does not survive: every `@convention(c)` declaration under `runner/Sources/` is in `SandboxLib.swift`, which 47 deletes, so after this plan the runner has no function-pointer slots to stub. Its worked example is deleted by 43, and no other example exists — the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. A technique for a construct the tree no longer contains is a retired claim, not guidance; D6.48's name-set check would catch a reintroduction, and whoever reintroduces one writes the guidance that fits it. |
+| 45 | C-function-pointer stubbing guidance (S3) | DECIDED: retire it. Delete the "Stubbing C function pointers" paragraph from `runner/AGENTS.md` rather than rewriting it self-contained. Its subject does not survive: every `@convention(c)` declaration under `runner/Sources/` is in `SandboxLib.swift`, which 47 deletes, so after this plan the runner has no function-pointer slots to stub. Its worked example is deleted by 43, and no other example exists — the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. A technique for a construct the tree no longer contains is a retired claim, not guidance. Whoever introduces a new function-pointer use writes guidance that fits it; D6.53 checks sandbox API use specifically, not arbitrary C function pointers. |
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
-| 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The dossier reports `specimen.host.sandbox_cache_uuid`, read by the controller; the runner reports no identity and `SandboxLib.swift` is deleted. Measured 2026-10-01 on a stock host: `sandbox_check` resolves through libSystem with no load, `sandbox_compile_string` and `sandbox_apply` are unreachable without loading a library the host never calls into, all three images are shared-cache resident, and none exists as a file — so a per-function host observation adds only a path implied by the cache UUID, about a process that neither predicts nor applies. Non-stock library detection is a non-goal. Identifying the images the validator and worker mapped would need the ABI change 11 declined. This removes D2's identity section, D3's identity invariant and reply-fallback retention, the consumer's presence-by-load-stage rule and I4's loader-observation controls. |
-| 48 | Host invariance rule and its checks (refines 43) | The service header's prohibition is rewritten to state the rule without naming deleted symbols, in a delimited block that cites two live deny-default cases. Two non-redundant checks protect it: a `source_drift` name-set assertion that nothing under `runner/Sources/` references `libsandbox` or the sandbox SPI, and a `preflight` assertion that `nm -u` on the shipped `PWRunner` reports no undefined `_sandbox_*` symbol. Measured basis: a direct call is visible only to the binary check, a `dlopen` by string literal only to the source check, and `otool -L` is blind to both. Neither adds a catalog case; no new live case is needed; nothing asserts the comment's text. |
+| 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The controller cache UUID was selected in place of per-function host observations, while `SandboxLib.swift` and its admission check were removed. D6.52 supersedes the identity choice and its claim about worker/validator libraries; loader retirement remains in scope. Reply-side identity, load-stage presence rules and identity-specific fallback controls are removed. |
+| 48 | Host invariance rule and its checks (refines 43) | Keep the service-header rule and existing live isolation cases, with source and shipped-binary checks and no new catalog case. D6.53 supersedes the blanket source-name ban and comment-marker exception; the `preflight` assertion that `nm -u` reports no undefined `_sandbox_*` symbol remains. `otool -L` alone cannot cover direct calls through libSystem or dynamic symbol resolution. |
 | 49 | Binary hashing is not duplicated (supersedes 17, narrows 29) | The controller already reads the Evidence manifest every run, and `verify_manifest` already hashes every declared entry under `PW_VERIFY_EVIDENCE=1`. The dossier therefore hashes nothing the manifest describes: a built-in selection reports baseline metadata with `verification.status: not_compared`, and only an override or BYOXPC path — which no manifest entry describes — is hashed before invocation. Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of it the `PWRunner` binary, with a constant answer for a given build. App-file integrity stays with `PW_VERIFY_EVIDENCE` and the signature. `basis` distinguishes the two record kinds. |
 | 50 | The request is a string, not a file (supersedes 38, refines 30) | One serialization held in the controller feeds the scan and every reader. `pw-runner-client` gains `--request -` and receives the bytes on stdin, since it only read the path into memory to send it; a temporary file survives only on the `xpc_error` path that invokes `sbpl-check --request <path>`, written from the same string and removed before returning. The ordinary run creates no file, so the existing leak ends by deletion rather than by a cleanup guard. The client's `usage()` and documented surface gain the option; the `policy-witness` CLI contract is unchanged. |
 | 51 | One OS-facts reader (refines 16 and 35) | The I1 extraction makes the shared reader the `sysctlbyname` one, so `sbpl-check` stops spawning `/usr/bin/sw_vers -buildVersion` for a fact `kern.osversion` returns (verified identical on the development host) while its output stays byte-identical. One mechanism, one fewer process spawn, and the dossier's no-subprocess rule holds for every consumer. |
+| 52 | No sandbox-library identity (supersedes 47's identity choice) | Drop `host.sandbox_cache_uuid`, its dyld read, consumer shape rule and collection/failure controls. The API observes the caller's cache; native and x86_64 probes on the same stock host return different UUIDs, so a controller observation does not identify a selected worker's or validator's libraries. No identified planned reader needs the narrower controller fact. OS build and architecture remain environment context, not an inferred library identity. Loader retirement under 44/47 is unchanged. |
+| 53 | Check native sandbox API use, not wire vocabulary (supersedes 48's source rule) | The source check rejects native API bindings/calls, dynamic sandbox-symbol lookup and libsandbox loading in executable contexts. Permit schema properties, coding keys, labels, diagnostics, comments and documentation that name `sandbox_check` or libsandbox. R2 defines the checked contexts, positive/negative controls and limits of this source convention. Keep the shipped-binary check and live isolation cases. No comment-marker exemption or prose assertion is needed. |
+| 54 | Retire the remaining identity test instructions (implements 47/52) | I2's R owner covers reply degradation only. I3 has no partial-identity or pre-/post-load presence controls; I4 has no UUID collector control. D5's client-generated failure rule points to D1/D3 rather than the retired D2 identity-absence rule. Preserve reporting-failure, version, channel and remaining dossier controls. |
+| 55 | Stdin handoff transport review (refines 50) | D6.50 left request-delivery timeout ownership, failure reporting and transport reuse unspecified. Resolved by 56 and the D2 contract, with I4/I5 implementation, acceptance and documentation owners. |
+| 56 | One client deadline and independent failure evidence (resolves 55, refines 50) | One controller-owned absolute monotonic deadline covers client startup, request delivery/acquisition, XPC wait, output collection and exit; no delivery allowance or timer restart. Existing bounded cleanup follows expiry. Reuse the Rust supervisor's core with optional stdin and boundary-specific policies, plus existing JSON capture and fallback-unavailable handling. Delivery/supervision failure produces controller `tool_error` and exit 2 while retaining any complete reply and all diagnostics unchanged; it never synthesizes a worker/XPC failure. D2 defines the observations and precedence, I4 the controls and I5 the changed timeout/capture documentation. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -738,7 +803,7 @@ what stays.
 
 Production C worker and validator behavior is unchanged. S2 removes the unused
 C query shim and its build wiring; it does not remove the production validator.
-D6.44 must be resolved before any change to production Mach-lookup outcomes.
+D6.44 retires the unused Mach-lookup spelling without changing the C producer.
 The dossier is Rust only.
 
 #### S1–S3. Unused Swift execution helpers
@@ -754,7 +819,7 @@ dependencies; the enclosing source files also contain production code.
   point. Keep `canonicalizePath`, `parentRealpathResolved`, the lazy firmlink
   map and fallback data, `firmlinkResolved` and `wellKnownSymlinksResolved`:
   they serve query planning and host path diagnostics. No existing test calls
-  `runAttempt`. The remaining outcome-vocabulary decision is D6.44; the guide
+  `runAttempt`. D6.44 settles the outcome vocabulary; the guide
   and coverage table currently attribute `bootstrap_port_failed` to a C
   producer that does not emit it.
 - **S2 — queries.** Remove `runSandboxCheck`, `currentProcessIsSandboxed`,
@@ -801,11 +866,11 @@ state the rule without naming deleted symbols; do not delete it.** After these
 removals the rule is also stronger and simpler, because the host no longer
 links, loads or calls libsandbox at all.
 
-State it in a delimited block whose markers are part of the check contract
-below, and cite two of the live cases that would fail if the rule broke, so the
-rule points at its own proof rather than at code that may be deleted later:
-`runner_c_worker_harness/bare_deny_default` and
-`runner_apply_isolation_v3/deny_default_v3_worker_reply`.
+Keep the explanation in the service header, with links to the live
+`runner_apply_isolation_v3/deny_default_v3_worker_reply` host/worker case and
+the separate `runner_c_worker_harness/bare_deny_default` worker control. The
+latter invokes the C worker directly and does not establish XPC-host behavior.
+No comment text or delimiter is part of the source-check contract.
 
 Two checks protect the rule, and they are not redundant. Measured on the
 2026-10-01 build: `nm -u` on the shipped `PWRunner` executable reports
@@ -817,23 +882,29 @@ runtime. So a direct call is visible to the binary check and not to a link
 check, a `dlopen` by string literal is visible only in source, and no single
 instrument covers both.
 
-- **Source (`source_drift`, in its existing runner-source case).** No file under
-  `runner/Sources/` references `libsandbox` or any of the sandbox SPI names:
+- **Source (`source_drift`, in its existing runner-source case).** Check native
+  API use under `runner/Sources/`, with an explicit sandbox SPI name set:
   `sandbox_check`, `sandbox_apply`, `sandbox_compile_string`,
   `sandbox_create_params`, `sandbox_set_param`, `sandbox_free_params`,
-  `sandbox_free_profile`, `sandbox_free_error`. An explicit name set, not a
-  pattern over `sandbox_*`: "sandbox", `sandbox-exec`, SBPL text and
-  `sandbox_log` appear legitimately throughout, and a check that fires on them
-  gets suppressed. `libsandbox` is the token that catches a `dlopen` of the
-  library by path. Do not ban `dlopen` itself; that is broader than the rule and
-  a legitimate later use would force an exemption that weakens it. The scope is
-  `runner/Sources/` only — `pw_probe_runner.c` and `sb_api_validator.c` keep
-  their `extern` declarations, because they are the processes that use the
-  library. The invariance block is the one exempt region, named by its markers,
-  since the sentence stating the rule has to name what it forbids. The failure
-  message says what to do: the XPC host must not reference libsandbox, and if
-  the reference is deliberate then the invariance block and D6.47 change in the
-  same commit.
+  `sandbox_free_profile`, `sandbox_free_error`. Reject declarations/bindings
+  to those native symbols (including Swift `@_silgen_name` bindings), direct
+  calls, literal symbol lookups through `dlsym`, and literal libsandbox paths
+  passed to `dlopen`. Include simple named constants supplying those lookup
+  arguments, as in the loader being removed. This is a check of executable
+  contexts, not token presence: `sandbox_check` remains a required request and
+  response property, coding key and diagnostic label. Those uses, comments,
+  SBPL text and explanatory strings are allowed. Do not ban unrelated `dlopen`
+  calls or arbitrary `@convention(c)` declarations.
+  Source controls must accept the retained schema/planner code and explanatory
+  text, and reject reintroduced bindings, calls and dynamic lookup/load forms,
+  including constants feeding them. Handle comments and string literals by
+  context so examples cannot count as executable calls or hide actual lookup
+  arguments. This is a mechanical source convention, not complete Swift/C
+  analysis or proof against computed library/symbol names. Its limits are
+  documented alongside the binary and live controls. The worker and validator
+  C sources are outside this host-source scope and retain their native calls.
+  The failure message identifies the prohibited native use and the host
+  invariance rule; changing that rule requires an explicit design review.
 - **Binary (`preflight`, in its existing artifact case).** `nm -u` on
   `PWRunner.xpc`'s executable reports no undefined `_sandbox_*` symbol. This
   catches a reintroduction arriving through a dependency or a new target, which
@@ -847,8 +918,8 @@ run. No new live case is needed — `bare_deny_default`,
 `proceed_under_bare_deny_default`, `max_slots_deny_default`,
 `deny_default_v2_worker_reply`, `deny_default_v3_worker_reply` and
 `witness_contract/shm_sentinel_under_deny_default` already exercise the
-guarantee. Nothing asserts the text of the comment; that would pin prose rather
-than behavior (D6.48).
+guarantee at their respective boundaries. Nothing asserts the text of the
+comment; that would pin prose rather than behavior (D6.48/53).
 
 ### R3. Controller implementation and fixtures
 
@@ -864,9 +935,22 @@ increment or `cargo test` breaks (D6.40).
 Implement the dossier per D2: the held request string with `--request -` on the
 client and a fallback-only temporary file (D6.50), binary records that hash only
 non-manifest selections (D6.49), and the shared sysctl OS reader (D6.51). Move
-the pre-execution failure envelopes into `cmd_run` so one writer owns the run
-`data` skeleton; `cli.rs`'s catch-all keeps only errors that escape it. Update tests for
-unsupported/malformed replies and current-version fragment transport.
+client invocation to shared supervision with optional stdin, one deadline and
+independent failure evidence per D2/D6.56. Keep log policies at their existing
+boundary and extend fallback-unavailable handling to temporary-file failures.
+Move the pre-execution failure envelopes into `cmd_run` so one writer owns the
+run `data` skeleton; `cli.rs`'s catch-all keeps only errors that escape it.
+Update tests for unsupported/malformed replies and current-version fragment
+transport.
+
+`runner_commands.rs::cmd_runner_verify` is the helper's other production caller.
+Keep its file-input call supported, its 5-second default and its existing data
+shape; adapt it to the shared deadline and check transport failure before using
+the reply to report verification success. Apply D5's version gate before its
+reply projections too. Its transport failure uses controller `tool_error` and
+exit 2. The run envelope's new capture fields do not require a verification
+dossier or a redesign of management-command data.
+
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
 `controller/src/run_flow.rs` ~1638, ~2022, ~2071, ~2252, ~2394, ~2593, ~2652;
@@ -981,7 +1065,7 @@ Swift sites and 1 controller site; 14 catalog entries.
   function pointers" paragraph from `runner/AGENTS.md`, whose subject, technique
   and example all leave with `SandboxLib.swift` (D6.45). Update
   `tests/suites/source_drift/README.md`'s target list and claim that both Swift
-  query callers use the exclusion set, and record the host-invariance name set
+  query callers use the exclusion set, and record the native sandbox API check
   there and in `tests/suites/preflight/README.md` with what each check sees and
   does not see. Reconcile the Mach-lookup outcome and the retired
   `libsandbox_unavailable` in `docs/PolicyWitness.md`, `tests/COVERAGE.md` and
@@ -1028,10 +1112,12 @@ removed-key rejection. Completion is the explained residue, not a zero count.
 Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 `XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests`,
 `bootstrap_port_failed`, `SandboxLib`, `libsandbox_path`,
-`libsandbox_unavailable`, `library_identity` and `@convention(c)`. Also search
+`libsandbox_unavailable`, `library_identity`, `sandbox_cache_uuid` and
+`@convention(c)`. Also search
 `write_temp_request`, `sw_vers` and `macos_build_version`, whose call sites
-change under D6.50 and D6.51. The host-invariance name set
-in R2 is the standing version of this search for `runner/Sources/`. Follow build variables, target dependencies, test
+change under D6.50 and D6.51. R2's standing source check applies the narrower
+native-use rule; it does not forbid retained wire vocabulary or explanatory
+text. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
 and this plan may name removed artifacts; active implementation and contributor
 instructions must match the selected scope and the recorded resolutions.
@@ -1105,7 +1191,7 @@ families:
 | --- | --- | --- |
 | S01–S25 (S04 unused), B1–B7, C1 | `witness_contract/comparison_matrix` | native/file controls and steered-validator transcript; preserve each specimen, raw run, checker output and app inventory in managed test artifacts |
 | T | `witness_contract/worker_attempt_in_flight_at_deadline` | FIFO, raw progress, validator record and release chain; assert the comparison selected from the shared fixture |
-| R and D2 identity retention | `runner_unit` / `ReplyFailureTests` | internal encoder faults at both fallback levels; no live-policy claim |
+| R: reply degradation | `runner_unit` / `ReplyFailureTests` | internal encoder faults at both fallback levels; retain the specified evidence and withhold comparisons/conditions; no library-identity control |
 | `target_mutation` status and exclusion | `ComparisonEvidenceTests`, encoder invariants and checker controls | excluded-query create/unlink, a qualifying removal in another step, unrelated/failed/synthetic unlinks, and an injected `steps` key |
 
 The T setup already has a retained
@@ -1149,9 +1235,10 @@ same verified increment.
   withholding at both fallback levels; every version-boundary control in D5;
   one control feeding `pw-runner-client`
   output to `validate`. The mutation-order controls are re-expressed against
-  `target_mutation`, including the exclusion and another-step cases in I2. Identity controls
-  cover partial observations and pre-load/post-load refusals, using independent
-  stage expectations rather than inferring the stage from `bad_request` alone.
+  `target_mutation`, including the exclusion and another-step cases in I2.
+  Reporting-failure controls cover evidence retention and comparison/condition
+  withholding at both fallback levels. No identity or load-stage control is
+  carried forward (D6.54).
 - Menagerie: `expect.drift` deleted from `core.json`; `validate_run.py` passes
   `expect.comparison` through. `BBX-001` and `BBX-002` `expected.json` lose
   their drift keys. Other fixtures per R6.
@@ -1179,10 +1266,11 @@ same verified increment.
 
 - Remove the S1–S3 implementations and exclusive shim/build dependencies per
   R2, coordinated with I3. Preserve the named production helpers. In the same
-  commit, rewrite the service header's invariance block and add its two checks
-  per R2: the `source_drift` name-set assertion and the `preflight` `nm -u`
+  commit, rewrite the service header's invariance explanation and add its two checks
+  per R2: the `source_drift` native-use assertion and its positive/negative
+  controls, and the `preflight` `nm -u`
   assertion, whose failing state on the pre-removal build is recorded with the
-  change (D6.48). The `runner/AGENTS.md` stubbing paragraph is deleted in the
+  change (D6.48/53). The `runner/AGENTS.md` stubbing paragraph is deleted in the
   same increment as its subject (D6.45); no decision here is an instruction to
   change C behavior.
 - Swift per R2, D6.22 and D6.23, plus `comparison_conditions`. The comparison producer already receives the run
@@ -1214,9 +1302,28 @@ same verified increment.
   ordinary built-in run hashes no app binary and reports `not_compared`, and one
   asserts that an ordinary run leaves no file in the temp request directory.
   The dossier case includes or links those control receipts and checks every
-  failure-table shape. The controller owns the cache-UUID read and its
-  null-on-failure control; no Swift loader control survives, because the host
-  makes no library observation (D6.47).
+  failure-table shape. Host-read controls cover the four sysctl facts. There
+  is no shared-cache UUID collector or sandbox-library identity control
+  (D6.52/54).
+- Implement D2/D6.56 in the shared Rust supervision core, `runner_client.rs`,
+  `run_flow.rs` and the Swift client. Keep the extraction and behavior changes
+  in I4's integration increment; I1 remains behavior-preserving preparation.
+  Rust subprocess controls in `runner_client.rs` own slow/partial delivery,
+  simultaneous input/stdout/stderr beyond pipe capacity, early stdin closure
+  with retained JSON/stderr, a non-reading child, output cutoff, signaled exit
+  and failed/unconfirmed cleanup. Assert that delivery consumes the reply
+  allowance and that write failure cannot restart it; check byte counts, EOF,
+  truncation and concurrent faults against the independently controlled child.
+  Include nonzero exit with a valid failure reply and an `ok` reply alongside
+  failed delivery. `run_flow.rs` controls own `tool_error` precedence, unchanged
+  reply retention, D5 gating and fallback file create/write/cleanup failures
+  preserving the original `xpc_error`. Re-run the existing log-supervision
+  controls to prove extraction preserves that channel's policies. The live
+  `dossier_witness` case exercises the shipped client's stdin/EOF path, verifies
+  the submitted request bytes and ordinary capture, and links these failure
+  controls. Keep direct client file-input coverage for its existing interface;
+  `runner_commands.rs` controls cover verification's preserved default and
+  refusal to report success after transport failure or an unsupported reply.
 
 ### I5. Contract and registry documents
 
@@ -1230,6 +1337,18 @@ same verified increment.
   acceptance gate" go.
 - `docs/CONTRACT.md` per D5. `ContractVersionTests.swift`'s header comment
   ("Added keys need no bump") changes with it.
+- `controller/README.md`, the runner-client usage/documentation,
+  `tests/FAILURE-PROPAGATION-CONTRACT.md` and the guide explain the shared
+  client deadline, controller `tool_error` precedence and independent retained
+  reply. Revise `docs/limits.json`'s `client_rpc_wait` entry and the Limits
+  interaction prose for the new start/end boundaries and fixed cleanup grace;
+  update `controller_output` to describe bounded streaming retention, actual
+  bytes read and incomplete-stdout rejection. The `sbpl-check` receiver's
+  existing collection policy is unchanged. Regenerate the documented limit
+  tables and guide copies with `docs/generate_limits.py`; no reply-wait-only or
+  whole-stream-buffering claim may remain for the runner-client boundary.
+  The `runner verify` timeout description adopts the shared deadline while
+  retaining its own default.
 - `tests/catalog.json`: `comparison_matrix` and `dossier_witness` added;
   `execute_permission_is_not_sandbox_drift` becomes
   `execute_permission_controls_spawn`.
@@ -1276,9 +1395,13 @@ same verified increment.
 - An ordinary built-in run writes no file into the temp request directory and
   hashes no app binary: both are checked as controls in I4, and both are
   measurable on the integration candidate rather than argued.
+- D6.56's shared-deadline, duplex capture, failure-preservation and bounded
+  cleanup controls pass, including the existing log-supervision controls.
+  The live stdin/EOF receipt and direct file-input coverage accompany them;
+  client cleanup is never credited as XPC host or worker termination evidence.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
   build through `runner_unit`; run `source_drift` including planner controls and
-  the new host-invariance name-set assertion, `preflight` including the `nm -u`
+  the native-use assertion and its positive/negative controls, `preflight` including the `nm -u`
   assertion, and `runner_c_worker_harness` including its deny-default cases. The
   integrated baseline diff must show no helper-removal change to queries,
   attempts or hashing beyond separately approved contract changes. The
@@ -1333,10 +1456,12 @@ direction. Seed rows:
 | Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement"; "the drift pattern is not iokit-specific" | revise | state the verified fact: no filter ID in 1..200 produced a verdict matching enforcement; keep the "Currently in this category:" marker and list format that `source_drift` parses |
 | Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | drop "drift" |
 | Guide | the specimen dossier | add | canonical paths, `references` as the map to raw records, collection basis and limits, evidence-selection recipes without labels |
-| Guide, dossier section | sandbox library identity | add | the shared cache UUID as a machine fact, and what it supports: deciding whether two runs ran against the same sandbox library. No per-process mapping claim, and no host library observation, which the runner no longer makes |
+| Guide, dossier section | host facts | add | OS version/build, kernel release and architecture as environment context; no claim that they identify the worker's or validator's sandbox libraries |
 | Guide, Output envelope | fields described by envelope path only | revise | the bare reply from `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture |
 | Guide and FAQ | signal-channel descriptions and old provenance paths | remove | |
 | LIMITS | import scan bounds | add | depth/count/byte limits and the cooperative time budget from I4, including filesystem-call limitations |
+| LIMITS and controller/client usage | `--timeout-ms` as reply wait; runner output buffered in full | revise | one overall client deadline plus bounded cleanup, streaming retention and incomplete-stdout rules under D6.56; worker/validator and optional log budgets stay independent |
+| Guide and controller output contract | runner-client transport facts and controller failure | revise | delivery and supervision observations beside the unchanged reply; controller `tool_error` precedence does not rewrite worker/XPC evidence |
 | FAQ | reading the deny log | add | optional, possibly incomplete evidence; candidate correlation does not establish attempt attribution or a comparison verdict |
 
 ### Infrastructure ledger (from REPAIR)
@@ -1515,10 +1640,11 @@ The readiness review checks:
   generation rules and a semantic completion review assigned.
 - [x] S1–S3 have explicit removal/preservation boundaries and coordinated
   source, build, test and documentation owners under D6.43.
-- [x] D6.47 settles what sandbox-library identity PW reports and who collects
-  it, with the per-function host observation and its loader retired.
-- [x] D6.48 keeps the host invariance rule as a rule when its illustrations are
-  deleted, with two measured, non-redundant checks and no new case.
+- [x] D6.52 drops sandbox-library identity collection, including the controller
+  cache UUID; D6.54 reconciles the test owners. Loader retirement remains.
+- [x] D6.53 scopes the host source check to native API use and allows retained
+  wire vocabulary and explanatory text, with positive/negative controls and
+  the shipped-binary check under D6.48.
 - [x] D6.49–51 remove the duplicated work the dossier would have added: no
   per-run hash of a file the manifest already describes, no temporary file on an
   ordinary run, and one OS-facts reader without a subprocess.
@@ -1527,12 +1653,14 @@ The readiness review checks:
   and the `runner_outcome_libsandbox_unavailable` suite moving with it.
 - [x] D6.45 retires the contributor stubbing guidance with its subject: no
   `@convention(c)` slot survives under `runner/Sources/`.
+- [x] D6.56 resolves D6.55: one overall client deadline, controller failure
+  with preserved reply/capture, shared supervision and boundary-specific
+  policies, with I4 controls and I5 documentation assigned.
 
-The status remains REVISED for review of these decisions. Mark it READY only
-after that review; implementation is a separate
-step. During implementation, acceptance requires the I4 profile measurements
-and final limits, retained live
-matrix/dossier receipts, the completed documentation ledgers, reviewed shape
-goldens and maximum-reply budgets, D5 negative controls, R10's explained search
+The readiness review is complete and the status is READY. Implementation is a
+separate step. During implementation, acceptance requires the I4 profile
+measurements and final limits, retained live matrix/dossier receipts, the
+completed documentation ledgers, reviewed shape goldens and maximum-reply
+budgets, D5 negative controls, D6.56 transport controls, R10's explained search
 residue, and the Verification battery on the integration candidate. No box
 above credits those future checks as complete.
