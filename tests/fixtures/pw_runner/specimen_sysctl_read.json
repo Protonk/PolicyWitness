@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "specimen_id": "sysctl_read",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "sy1",
+      "sandbox_check": {
+        "operation": "sysctl-read",
+        "filter": {
+          "kind": "sysctl_name",
+          "value": "kern.osrelease"
+        }
+      },
+      "attempt": {
+        "kind": "sysctl",
+        "action": "read",
+        "target": "kern.osrelease"
+      }
+    }
+  ]
+}

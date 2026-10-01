@@ -58,11 +58,19 @@ deterministic, and checked into the repo so tests are hermetic.
 - `blackbox_e2e/`: per-case directories (`BBX-*`) with specimen templates and
   expected outcomes for strict evidence validation, plus synthetic envelopes
   under `checker/` for independent controls of the evidence checker.
-- `comparison/`: comparison-record expectations shared by a live reader and the
-  Swift unit reader. `baseline_response12/` holds the specimens, raw replies and
-  match reports that verified the scenario matrix against the shipped producer;
-  its [README](comparison/baseline_response12/README.md) records the method and
-  what the runs established about the specimens. No suite reads it yet.
+- `comparison/`: the comparison-record scenario matrix. `matrix.json` holds
+  every S, B, C and T row with its specimen inputs, the raw channel inputs the
+  Swift unit reader feeds to `comparisonEvidence(...)`, the raw fields the
+  live case asserts beside the record, and the expected response 13
+  `comparison` object; `stub_validator.py` is specimen B's steered validator.
+  Its [README](comparison/README.md) records the placeholder convention, the
+  files each specimen needs and the row provenance. `baseline_response12/`
+  holds the specimens, raw replies and match reports that verified the rows
+  against the response 12 producer; its
+  [README](comparison/baseline_response12/README.md) records that method.
+  Readers: `witness_contract/comparison_matrix` (live) and
+  `runner_unit`'s `ComparisonEvidenceTests` (unit), both added by the drift
+  removal plan; until they land no suite reads the fixture.
 
 ## Adding fixtures
 

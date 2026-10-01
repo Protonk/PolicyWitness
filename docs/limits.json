@@ -1787,7 +1787,7 @@
       "control": "Fixed; no public override.",
       "sources": [
         {
-          "path": "controller/src/bin/sbpl-check.rs",
+          "path": "controller/src/sbpl_imports.rs",
           "symbol": "MAX_SBPL_SOURCE_BYTES"
         }
       ],
@@ -1816,7 +1816,7 @@
       "control": "Fixed; no public override.",
       "sources": [
         {
-          "path": "controller/src/bin/sbpl-check.rs",
+          "path": "controller/src/sbpl_imports.rs",
           "symbol": "IMPORT_MAX_DEPTH"
         }
       ],
@@ -1827,7 +1827,7 @@
           "kind": "value"
         },
         {
-          "path": "controller/src/bin/sbpl-check.rs",
+          "path": "controller/src/sbpl_imports.rs",
           "symbol": "mod tests",
           "kind": "path"
         }
@@ -1845,7 +1845,7 @@
       "control": "Fixed; no public override.",
       "sources": [
         {
-          "path": "controller/src/bin/sbpl-check.rs",
+          "path": "controller/src/sbpl_imports.rs",
           "symbol": "IMPORT_MAX_COUNT"
         }
       ],
@@ -1856,7 +1856,7 @@
           "kind": "value"
         },
         {
-          "path": "controller/src/bin/sbpl-check.rs",
+          "path": "controller/src/sbpl_imports.rs",
           "symbol": "mod tests",
           "kind": "path"
         }

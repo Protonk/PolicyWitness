@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "specimen_id": "exec_spawn",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "ex1",
+      "sandbox_check": {
+        "operation": "process-exec*",
+        "filter": {
+          "kind": "path",
+          "value": "/usr/bin/true"
+        }
+      },
+      "attempt": {
+        "kind": "exec",
+        "action": "spawn",
+        "target": "/usr/bin/true"
+      }
+    }
+  ]
+}

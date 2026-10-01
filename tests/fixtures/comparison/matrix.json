@@ -1,0 +1,2453 @@
+{
+  "schema_version": 1,
+  "description": "Comparison-record scenario matrix for the drift removal plan (D1). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected response 13 comparison object.",
+  "contract": {
+    "response_schema": 13,
+    "request_schema": 1
+  },
+  "placeholders": {
+    "SCEN_ROOT": "absolute directory the live reader creates under /private/tmp; the unit reader substitutes any fixed absolute string",
+    "STUB_VALIDATOR": "absolute path of stub_validator.py beside this fixture",
+    "FIFO": "the FIFO the deadline case creates under /private/tmp"
+  },
+  "limitations_vocabulary": [
+    "query_plan:path_unresolved_at_planning",
+    "query_plan:prediction_unavailable_pair",
+    "query_plan:unrecognized_filter_kind",
+    "attempt:lifecycle_unresolved",
+    "attempt:lifecycle_conflicting",
+    "attempt:unsupported",
+    "attempt:not_reached",
+    "attempt:started_without_result"
+  ],
+  "query_column_rule": "sandbox_check.outcome when result_source is validator and the outcome is allow or deny; otherwise unavailable",
+  "unit_reader": {
+    "inputs": "unit.sandbox_check and unit.attempt are PWRunnerSandboxCheckResult and PWRunnerAttemptResult field values; unit.query_exclusion_reason and unit.order are the comparisonEvidence(...) arguments",
+    "lifecycle": "append PWDisposition.limitationForSummary[unit.lifecycle_summary] (nothing for completed) to the rendered limitations, as buildStepResults does",
+    "assert_value_conventions": "\">0\" means any positive integer; null means the field is absent or JSON null (the Swift encoder omits nil optionals)"
+  },
+  "files": {
+    "readable": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "unchanged bytes"
+    },
+    "denied": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "unchanged bytes"
+    },
+    "locked": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0000",
+      "effect": "unchanged bytes; the live reader restores a readable mode before removing it"
+    },
+    "writable": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "truncated to zero bytes by S24's open_write (O_WRONLY|O_TRUNC)"
+    },
+    "created": {
+      "state": "absent",
+      "effect": "present after the run: created by S08"
+    },
+    "absent": {
+      "state": "absent",
+      "effect": "still absent"
+    },
+    "absent_target": {
+      "state": "absent",
+      "effect": "still absent"
+    },
+    "unlink_s19": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "absent after the run: unlinked by S19 before S25 reads it"
+    },
+    "helper_true": {
+      "state": "copy_of",
+      "source": "/usr/bin/true",
+      "mode": "0755",
+      "effect": "unchanged bytes"
+    },
+    "helper_false": {
+      "state": "copy_of",
+      "source": "/usr/bin/false",
+      "mode": "0755",
+      "effect": "unchanged bytes"
+    },
+    "helper_locked": {
+      "state": "copy_of",
+      "source": "/usr/bin/true",
+      "mode": "0000",
+      "effect": "unchanged bytes; the live reader restores a readable mode before removing it"
+    },
+    "b_readable": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "unchanged bytes"
+    },
+    "unlink_b3": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "absent after the run: unlinked by B3"
+    },
+    "unlink_b6": {
+      "state": "regular",
+      "content": "independent witness\n",
+      "mode": "0600",
+      "effect": "absent after the run: unlinked by B6 after B5 reads it"
+    }
+  },
+  "specimens": {
+    "S": {
+      "specimen_id": "matrix_s",
+      "policy": "(version 1)\n(allow default)\n(deny file-read-data (literal \"{{SCEN_ROOT}}/denied\"))\n(deny mach-lookup (global-name \"com.apple.logd\"))\n",
+      "test_overrides": null,
+      "probe_plan": [
+        {
+          "step_id": "s01",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s02",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/denied"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/denied"
+          }
+        },
+        {
+          "step_id": "s03",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/locked"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/locked"
+          }
+        },
+        {
+          "step_id": "s05",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/denied"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s06",
+          "sandbox_check": {
+            "operation": "file-write-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s07",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/absent"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/absent"
+          }
+        },
+        {
+          "step_id": "s08",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/created"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "{{SCEN_ROOT}}/created"
+          }
+        },
+        {
+          "step_id": "s09",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "future",
+            "action": "future",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s10",
+          "sandbox_check": {
+            "operation": "sysctl-read",
+            "filter": {
+              "kind": "sysctl_name",
+              "value": "kern.osrelease"
+            }
+          },
+          "attempt": {
+            "kind": "sysctl",
+            "action": "read",
+            "target": "kern.osrelease"
+          }
+        },
+        {
+          "step_id": "s11",
+          "sandbox_check": {
+            "operation": "process-exec",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/helper_true"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/helper_true"
+          }
+        },
+        {
+          "step_id": "s12",
+          "sandbox_check": {
+            "operation": "file-read*",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s13",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "global_name",
+              "value": "com.apple.logd"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.apple.logd"
+          }
+        },
+        {
+          "step_id": "s14",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "global_name",
+              "value": "com.pw.matrix.no-such-service"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.pw.matrix.no-such-service"
+          }
+        },
+        {
+          "step_id": "s15",
+          "sandbox_check": {
+            "operation": "process-exec*",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/helper_true"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/helper_true"
+          }
+        },
+        {
+          "step_id": "s16",
+          "sandbox_check": {
+            "operation": "process-exec*",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/helper_false"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/helper_false"
+          }
+        },
+        {
+          "step_id": "s17",
+          "sandbox_check": {
+            "operation": "process-exec*",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/helper_locked"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/helper_locked"
+          }
+        },
+        {
+          "step_id": "s18",
+          "sandbox_check": {
+            "operation": "process-exec*",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/absent_target"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/absent_target"
+          }
+        },
+        {
+          "step_id": "s19",
+          "sandbox_check": {
+            "operation": "file-write-unlink",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/unlink_s19"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "unlink",
+            "target": "{{SCEN_ROOT}}/unlink_s19"
+          }
+        },
+        {
+          "step_id": "s20",
+          "sandbox_check": {
+            "operation": "process-exec-interpreter",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/helper_true"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "{{SCEN_ROOT}}/helper_true"
+          }
+        },
+        {
+          "step_id": "s21",
+          "sandbox_check": {
+            "operation": "mach-lookup",
+            "filter": {
+              "kind": "local_name",
+              "value": "com.apple.logd"
+            }
+          },
+          "attempt": {
+            "kind": "mach_lookup",
+            "action": "bootstrap_look_up",
+            "target": "com.apple.logd"
+          }
+        },
+        {
+          "step_id": "s22",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "none"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s23",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "access",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        },
+        {
+          "step_id": "s24",
+          "sandbox_check": {
+            "operation": "file-write-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/writable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_write",
+            "target": "{{SCEN_ROOT}}/writable"
+          }
+        },
+        {
+          "step_id": "s25",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/unlink_s19"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/unlink_s19"
+          }
+        }
+      ],
+      "expected": {
+        "result.normalized_outcome": "ok",
+        "runner_result.normalized_outcome": "ok",
+        "runner_result.sandboxed_after_apply": true,
+        "runner_subprocess.exit_code": 0,
+        "validator_subprocess.exit_code": 0,
+        "runner_subprocess.ordering.validator_disposition": "reaped"
+      }
+    },
+    "B": {
+      "specimen_id": "matrix_b",
+      "policy": "(version 1)\n(allow default)\n",
+      "test_overrides": {
+        "validator_executable_path": "{{STUB_VALIDATOR}}",
+        "validator_io_timeout_ms": 500
+      },
+      "probe_plan": [
+        {
+          "step_id": "b1",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/b_readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/b_readable"
+          }
+        },
+        {
+          "step_id": "b2",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/b_readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/b_readable"
+          }
+        },
+        {
+          "step_id": "b3",
+          "sandbox_check": {
+            "operation": "file-write-unlink",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/unlink_b3"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "unlink",
+            "target": "{{SCEN_ROOT}}/unlink_b3"
+          }
+        },
+        {
+          "step_id": "b4",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/b_readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/b_readable"
+          }
+        },
+        {
+          "step_id": "b5",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/unlink_b6"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/unlink_b6"
+          }
+        },
+        {
+          "step_id": "b6",
+          "sandbox_check": {
+            "operation": "file-write-unlink",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/unlink_b6"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "unlink",
+            "target": "{{SCEN_ROOT}}/unlink_b6"
+          }
+        },
+        {
+          "step_id": "b7",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/b_readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/b_readable"
+          }
+        }
+      ],
+      "expected": {
+        "result.normalized_outcome": "validator_no_reply",
+        "runner_result.normalized_outcome": "validator_no_reply",
+        "runner_result.sandboxed_after_apply": true,
+        "runner_result.test_overrides": {
+          "validator_executable_path": "{{STUB_VALIDATOR}}",
+          "validator_io_timeout_ms": 500
+        },
+        "runner_subprocess.exit_code": 0,
+        "steps.length": 7,
+        "note": "every emitted stub record is associated; b1, b6 and b7 retain query_first; a short batch followed by clean EOF would instead produce validator_unavailable"
+      }
+    },
+    "C": {
+      "specimen_id": "matrix_c",
+      "policy": "(version 1)\n(allow default\n",
+      "test_overrides": null,
+      "probe_plan": [
+        {
+          "step_id": "c1",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{SCEN_ROOT}}/readable"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{SCEN_ROOT}}/readable"
+          }
+        }
+      ],
+      "expected": {
+        "result.normalized_outcome": "runner_failed",
+        "result.exit_code": 1,
+        "runner_result.normalized_outcome": "runner_failed",
+        "runner_result.sandboxed_after_apply": false,
+        "runner_subprocess.ordering.validator_disposition": "not_invoked",
+        "runner_subprocess.ordering.proceed_set": false,
+        "runner_subprocess.worker_evidence.failure.operation": 5,
+        "runner_subprocess.worker_evidence.failure_state": "published",
+        "validator_subprocess": null
+      }
+    },
+    "T": {
+      "specimen_id": "a1_fifo_then_file",
+      "policy": "(version 1) (allow default)",
+      "test_overrides": {
+        "worker_timeout_ms": 2000
+      },
+      "probe_plan": [
+        {
+          "step_id": "fifo",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "{{FIFO}}"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "{{FIFO}}"
+          }
+        },
+        {
+          "step_id": "hosts",
+          "sandbox_check": {
+            "operation": "file-read-data",
+            "filter": {
+              "kind": "path",
+              "value": "/etc/hosts"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "open_read",
+            "target": "/etc/hosts"
+          }
+        }
+      ],
+      "owner": "witness_contract/worker_attempt_in_flight_at_deadline (existing case; it establishes the boundary and reads this row)",
+      "expected": {
+        "result.normalized_outcome": "runner_timeout",
+        "runner_subprocess.poll_stop_reason": "sentinel_deadline",
+        "runner_subprocess.termination_request": {
+          "rc": 0,
+          "signal": 9
+        },
+        "runner_subprocess.term_signal": 9,
+        "runner_subprocess.reaped": true,
+        "runner_subprocess.partial_steps": true,
+        "runner_subprocess.worker_evidence.progress": {
+          "operation": 9,
+          "phase": 1,
+          "index": 0
+        },
+        "runner_subprocess.ordering.proceed_set": true,
+        "runner_subprocess.ordering.proceed_observed": true
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "S01",
+      "scenario": "allow, read succeeds",
+      "specimen": "S",
+      "step_id": "s01",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "open_read",
+        "attempt.result_source": "worker"
+      },
+      "control": "readable bytes unchanged after the run",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S02",
+      "scenario": "deny, read EPERM",
+      "specimen": "S",
+      "step_id": "s02",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/denied",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": 1,
+          "outcome": "open_failed",
+          "error": "open(O_RDONLY): Operation not permitted",
+          "requested_path": "{{SCEN_ROOT}}/denied",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "deny",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "open_failed",
+        "attempt.rc": 1,
+        "attempt.errno": 1,
+        "attempt.requested_action": "open_read"
+      },
+      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under D4 rule 3 (no attribution without a captured denial record)",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S03",
+      "scenario": "allow, mode-000 file EACCES",
+      "specimen": "S",
+      "step_id": "s03",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/locked",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": 13,
+          "outcome": "open_failed",
+          "error": "open(O_RDONLY): Permission denied",
+          "requested_path": "{{SCEN_ROOT}}/locked",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "open_failed",
+        "attempt.rc": 1,
+        "attempt.errno": 13,
+        "attempt.requested_kind": "file",
+        "attempt.requested_action": "open_read"
+      },
+      "control": "direct open of locked outside PW fails with EACCES before the run; mode 0000 is a DAC condition, not policy",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S05",
+      "scenario": "query denied path, attempt other path",
+      "specimen": "S",
+      "step_id": "s05",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/denied",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "deny",
+        "sandbox_check.filter_value": "{{SCEN_ROOT}}/denied",
+        "attempt.requested_path": "{{SCEN_ROOT}}/readable",
+        "attempt.rc": 0
+      },
+      "control": "readable and denied bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "different_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S06",
+      "scenario": "query write, attempt read",
+      "specimen": "S",
+      "step_id": "s06",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-write-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.operation": "file-write-data",
+        "attempt.requested_action": "open_read",
+        "attempt.rc": 0
+      },
+      "control": "readable bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "different",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S07",
+      "scenario": "absent path, both channels",
+      "specimen": "S",
+      "step_id": "s07",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "prediction_unavailable",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/absent",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "query_not_requested",
+          "error": "target path did not resolve on the host when the query was planned"
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": 2,
+          "outcome": "open_failed",
+          "error": "open(O_RDONLY): No such file or directory",
+          "requested_path": "{{SCEN_ROOT}}/absent",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": "path_unresolved_at_planning",
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "prediction_unavailable",
+        "sandbox_check.result_source": "synthetic",
+        "sandbox_check.missing_reason": "query_not_requested",
+        "attempt.outcome": "open_failed",
+        "attempt.errno": 2,
+        "attempt.requested_kind": "file"
+      },
+      "control": "absent does not exist before or after the run",
+      "comparison": {
+        "observation": "other_failure",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "query_plan:path_unresolved_at_planning"
+        ]
+      }
+    },
+    {
+      "id": "S08",
+      "scenario": "compound create",
+      "specimen": "S",
+      "step_id": "s08",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "prediction_unavailable",
+          "operation": "file-write-create",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/created",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "query_not_requested",
+          "error": "target path did not resolve on the host when the query was planned"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/created",
+          "requested_kind": "file",
+          "requested_action": "create",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": "path_unresolved_at_planning",
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.missing_reason": "query_not_requested",
+        "attempt.requested_action": "create",
+        "attempt.rc": 0
+      },
+      "control": "created is absent before the run and present after it",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "unresolved",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "query_plan:path_unresolved_at_planning"
+        ]
+      },
+      "effects": {
+        "created": "present"
+      }
+    },
+    {
+      "id": "S09",
+      "scenario": "unsupported attempt kind",
+      "specimen": "S",
+      "step_id": "s09",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": null,
+          "outcome": "unsupported",
+          "error": "kind='future', action='future' not implemented",
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "future",
+          "requested_action": "future",
+          "result_source": "synthetic",
+          "missing_reason": "attempt_not_supported",
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "unsupported"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "unsupported",
+        "attempt.result_source": "synthetic",
+        "attempt.missing_reason": "attempt_not_supported",
+        "attempt.lifecycle.summary": "unsupported"
+      },
+      "control": "readable bytes unchanged; admission accepts the kind and the worker no-ops it",
+      "comparison": {
+        "observation": "unavailable",
+        "observation_basis": "no_completed_worker_result",
+        "operation_relation": "unresolved",
+        "target_relation": "unresolved",
+        "order": "query_first",
+        "limitations": [
+          "attempt:unsupported"
+        ]
+      }
+    },
+    {
+      "id": "S10",
+      "scenario": "sysctl planning exclusion",
+      "specimen": "S",
+      "step_id": "s10",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "prediction_unavailable",
+          "operation": "sysctl-read",
+          "filter_kind": "sysctl_name",
+          "filter_value": "kern.osrelease",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "query_not_requested",
+          "error": "prediction unavailable for this operation and filter"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "kern.osrelease",
+          "requested_kind": "sysctl",
+          "requested_action": "read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": "prediction_unavailable_pair",
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.missing_reason": "query_not_requested",
+        "sandbox_check.result_source": "synthetic",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_kind": "sysctl"
+      },
+      "control": "the planner's prediction_unavailable set lists (sysctl-read, sysctl_name); a direct sysctlbyname of kern.osrelease succeeds",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "query_plan:prediction_unavailable_pair"
+        ]
+      }
+    },
+    {
+      "id": "S11",
+      "scenario": "bare process-exec query, spawn ok",
+      "specimen": "S",
+      "step_id": "s11",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "unsupported_operation",
+          "operation": "process-exec",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/helper_true",
+          "result_source": "validator",
+          "native_rc": null,
+          "missing_reason": null,
+          "error": "sandbox_check returned EINVAL for operation 'process-exec'"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/helper_true",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 12345,
+          "child_exit_code": 0
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "unsupported_operation",
+        "sandbox_check.result_source": "validator",
+        "attempt.rc": 0,
+        "attempt.child_exit_code": 0,
+        "attempt.child_pid": ">0"
+      },
+      "control": "direct spawn of helper_true exits 0; the native API rejects the bare spelling",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "spawned_child",
+        "operation_relation": "different",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": []
+      },
+      "notes": "sandbox_check.error carries the validator's EINVAL explanation; its exact text is not asserted"
+    },
+    {
+      "id": "S12",
+      "scenario": "file-read* query",
+      "specimen": "S",
+      "step_id": "s12",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read*",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.operation": "file-read*",
+        "sandbox_check.outcome": "allow",
+        "attempt.rc": 0
+      },
+      "control": "readable bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "unresolved",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S13",
+      "scenario": "mach deny, kr=1100",
+      "specimen": "S",
+      "step_id": "s13",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "mach-lookup",
+          "filter_kind": "global_name",
+          "filter_value": "com.apple.logd",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": null,
+          "outcome": "lookup_failed",
+          "error": "bootstrap_look_up: kr=1100",
+          "requested_path": "com.apple.logd",
+          "requested_kind": "mach_lookup",
+          "requested_action": "bootstrap_look_up",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "deny",
+        "sandbox_check.filter_kind": "global_name",
+        "attempt.outcome": "lookup_failed",
+        "attempt.error": "bootstrap_look_up: kr=1100"
+      },
+      "control": "policy denies mach-lookup of this global name; kr=1100 is BOOTSTRAP_NOT_PRIVILEGED, read under D4 rule 3",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "bootstrap_permission_result",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S14",
+      "scenario": "mach unknown service, kr=1102",
+      "specimen": "S",
+      "step_id": "s14",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "mach-lookup",
+          "filter_kind": "global_name",
+          "filter_value": "com.pw.matrix.no-such-service",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": null,
+          "outcome": "lookup_failed",
+          "error": "bootstrap_look_up: kr=1102",
+          "requested_path": "com.pw.matrix.no-such-service",
+          "requested_kind": "mach_lookup",
+          "requested_action": "bootstrap_look_up",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "lookup_failed",
+        "attempt.error": "bootstrap_look_up: kr=1102",
+        "attempt.errno": null
+      },
+      "control": "no service registers this name; kr=1102 is BOOTSTRAP_UNKNOWN_SERVICE, not a permission result",
+      "comparison": {
+        "observation": "other_failure",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S15",
+      "scenario": "process-exec*, spawn ok, exit 0",
+      "specimen": "S",
+      "step_id": "s15",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "process-exec*",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/helper_true",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/helper_true",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 12345,
+          "child_exit_code": 0
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.child_exit_code": 0,
+        "attempt.child_pid": ">0"
+      },
+      "control": "direct spawn of helper_true (copy of /usr/bin/true) exits 0; helper bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "spawned_child",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S16",
+      "scenario": "spawn ok, child exits 1",
+      "specimen": "S",
+      "step_id": "s16",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "process-exec*",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/helper_false",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": null,
+          "outcome": "exec_failed",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/helper_false",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 12346,
+          "child_exit_code": 1
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "exec_failed",
+        "attempt.rc": 1,
+        "attempt.child_exit_code": 1,
+        "attempt.child_pid": ">0"
+      },
+      "control": "direct spawn of helper_false (copy of /usr/bin/false) exits 1; the child's exit is in attempt.rc and child_exit_code (D4 rule 7)",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "spawned_child",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "notes": "as S15"
+    },
+    {
+      "id": "S17",
+      "scenario": "spawn of mode-000 target, EACCES",
+      "specimen": "S",
+      "step_id": "s17",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "process-exec*",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/helper_locked",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 13,
+          "outcome": "exec_failed",
+          "error": "posix_spawn: Permission denied",
+          "requested_path": "{{SCEN_ROOT}}/helper_locked",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 0,
+          "child_exit_code": -1
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "exec_failed",
+        "attempt.errno": 13,
+        "attempt.child_pid": 0,
+        "attempt.requested_kind": "exec"
+      },
+      "control": "direct posix_spawn of helper_locked outside PW fails with EACCES before the run",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "permission_errno",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S18",
+      "scenario": "spawn of absent target",
+      "specimen": "S",
+      "step_id": "s18",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": -1,
+          "outcome": "prediction_unavailable",
+          "operation": "process-exec*",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/absent_target",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "query_not_requested",
+          "error": "target path did not resolve on the host when the query was planned"
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": 2,
+          "outcome": "exec_failed",
+          "error": "posix_spawn: No such file or directory",
+          "requested_path": "{{SCEN_ROOT}}/absent_target",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 0,
+          "child_exit_code": -1
+        },
+        "query_exclusion_reason": "path_unresolved_at_planning",
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.missing_reason": "query_not_requested",
+        "attempt.outcome": "exec_failed",
+        "attempt.errno": 2,
+        "attempt.child_pid": 0,
+        "attempt.requested_kind": "exec"
+      },
+      "control": "absent_target does not exist before or after the run",
+      "comparison": {
+        "observation": "other_failure",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "query_plan:path_unresolved_at_planning"
+        ]
+      }
+    },
+    {
+      "id": "S19",
+      "scenario": "ordered unlink of queried path",
+      "specimen": "S",
+      "step_id": "s19",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-write-unlink",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/unlink_s19",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/unlink_s19",
+          "requested_kind": "file",
+          "requested_action": "unlink",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.requested_action": "unlink",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "unlink_s19 exists before the run and is absent after it (D4 rule 6: this step removed it, after its query)",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "effects": {
+        "unlink_s19": "absent"
+      },
+      "notes": "as S01"
+    },
+    {
+      "id": "S20",
+      "scenario": "process-exec-interpreter query, binary spawn",
+      "specimen": "S",
+      "step_id": "s20",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "process-exec-interpreter",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/helper_true",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/helper_true",
+          "requested_kind": "exec",
+          "requested_action": "spawn",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": 12347,
+          "child_exit_code": 0
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.operation": "process-exec-interpreter",
+        "sandbox_check.outcome": "allow",
+        "attempt.rc": 0,
+        "attempt.child_pid": ">0"
+      },
+      "control": "direct spawn exits 0; an accepted interpreter query cannot substitute for the exec query",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "spawned_child",
+        "operation_relation": "different",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S21",
+      "scenario": "local_name query, kr=1100",
+      "specimen": "S",
+      "step_id": "s21",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "mach-lookup",
+          "filter_kind": "local_name",
+          "filter_value": "com.apple.logd",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": null,
+          "outcome": "lookup_failed",
+          "error": "bootstrap_look_up: kr=1100",
+          "requested_path": "com.apple.logd",
+          "requested_kind": "mach_lookup",
+          "requested_action": "bootstrap_look_up",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.filter_kind": "local_name",
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "lookup_failed",
+        "attempt.error": "bootstrap_look_up: kr=1100"
+      },
+      "control": "the global-name deny does not match a local-name query; the attempt maps to the global_name filter, so the target relation is unresolved (D4 rule 10)",
+      "comparison": {
+        "observation": "permission_failure",
+        "observation_basis": "bootstrap_permission_result",
+        "operation_relation": "matched",
+        "target_relation": "unresolved",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S22",
+      "scenario": "none filter on a file query",
+      "specimen": "S",
+      "step_id": "s22",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "none",
+          "filter_value": null,
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.filter_kind": "none",
+        "sandbox_check.filter_value": null,
+        "sandbox_check.outcome": "allow",
+        "attempt.rc": 0
+      },
+      "control": "readable bytes unchanged; no filter value was submitted, so the target relation is unresolved (D4 rule 10)",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "unresolved",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "S23",
+      "scenario": "allow, access succeeds",
+      "specimen": "S",
+      "step_id": "s23",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "access",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.requested_action": "access",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "readable bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "notes": "as S01"
+    },
+    {
+      "id": "S24",
+      "scenario": "allow, open_write succeeds",
+      "specimen": "S",
+      "step_id": "s24",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-write-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/writable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/writable",
+          "requested_kind": "file",
+          "requested_action": "open_write",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.requested_action": "open_write",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "writable exists before the run and is zero bytes after it",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "effects": {
+        "writable": "present, zero bytes"
+      },
+      "notes": "as S01"
+    },
+    {
+      "id": "S25",
+      "scenario": "read of the path S19 unlinked, ENOENT",
+      "specimen": "S",
+      "step_id": "s25",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/unlink_s19",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 1,
+          "errno": 2,
+          "outcome": "open_failed",
+          "error": "open(O_RDONLY): No such file or directory",
+          "requested_path": "{{SCEN_ROOT}}/unlink_s19",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "open_failed",
+        "attempt.errno": 2,
+        "attempt.requested_action": "open_read"
+      },
+      "control": "the query ran before release while unlink_s19 existed; S19's unlink preceded this read",
+      "comparison": {
+        "observation": "other_failure",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "notes": "as S14"
+    },
+    {
+      "id": "B1",
+      "scenario": "steered deny, read succeeds, ordered",
+      "specimen": "B",
+      "step_id": "b1",
+      "query": "deny",
+      "unit": {
+        "sandbox_check": {
+          "rc": 1,
+          "outcome": "deny",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/b_readable",
+          "result_source": "validator",
+          "native_rc": 1,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/b_readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "deny",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "open_read"
+      },
+      "control": "stub transcript supplies deny; b_readable bytes unchanged; the real read succeeds under (allow default)",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      }
+    },
+    {
+      "id": "B2",
+      "scenario": "verdict omitted, read succeeds",
+      "specimen": "B",
+      "step_id": "b2",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "error",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/b_readable",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "validator_no_verdict",
+          "error": "no validator verdict for this step"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/b_readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "error",
+        "sandbox_check.result_source": "synthetic",
+        "sandbox_check.missing_reason": "validator_no_verdict",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "open_read"
+      },
+      "control": "stub omits b2; b_readable bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": []
+      }
+    },
+    {
+      "id": "B3",
+      "scenario": "verdict omitted, unlink of queried path",
+      "specimen": "B",
+      "step_id": "b3",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "error",
+          "operation": "file-write-unlink",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/unlink_b3",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "validator_no_verdict",
+          "error": "no validator verdict for this step"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/unlink_b3",
+          "requested_kind": "file",
+          "requested_action": "unlink",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.missing_reason": "validator_no_verdict",
+        "attempt.requested_action": "unlink",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "stub omits b3; unlink_b3 exists before the run and is absent after it",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": []
+      },
+      "effects": {
+        "unlink_b3": "absent"
+      },
+      "notes": "as B2"
+    },
+    {
+      "id": "B4",
+      "scenario": "validator error record",
+      "specimen": "B",
+      "step_id": "b4",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "error",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/b_readable",
+          "result_source": "validator",
+          "native_rc": null,
+          "missing_reason": null,
+          "error": "stub diagnostic: no native query was made for this step"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/b_readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "error",
+        "sandbox_check.result_source": "validator",
+        "sandbox_check.missing_reason": null,
+        "sandbox_check.native_rc": null,
+        "sandbox_check.error": "stub diagnostic: no native query was made for this step",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "stub emits a diagnostic record (outcome error, string error, matching step and query metadata); the record is associated, not missing",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": []
+      },
+      "notes": "as B2; the record's rc is absent so native_rc is null"
+    },
+    {
+      "id": "B5",
+      "scenario": "verdict omitted, read of a path B6 unlinks",
+      "specimen": "B",
+      "step_id": "b5",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "error",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/unlink_b6",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "validator_no_verdict",
+          "error": "no validator verdict for this step"
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/unlink_b6",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.missing_reason": "validator_no_verdict",
+        "attempt.requested_action": "open_read",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "stub omits b5; unlink_b6 exists at attempt time because b6 runs after b5 in plan order",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": []
+      },
+      "notes": "as B2"
+    },
+    {
+      "id": "B6",
+      "scenario": "allow, ordered unlink",
+      "specimen": "B",
+      "step_id": "b6",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-write-unlink",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/unlink_b6",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/unlink_b6",
+          "requested_kind": "file",
+          "requested_action": "unlink",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "sandbox_check.result_source": "validator",
+        "attempt.requested_action": "unlink",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0
+      },
+      "control": "stub supplies allow; unlink_b6 is absent after the run",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "effects": {
+        "unlink_b6": "absent"
+      },
+      "notes": "as S01"
+    },
+    {
+      "id": "B7",
+      "scenario": "allow, read succeeds (control)",
+      "specimen": "B",
+      "step_id": "b7",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/b_readable",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": 0,
+          "errno": null,
+          "outcome": "ok",
+          "error": null,
+          "requested_path": "{{SCEN_ROOT}}/b_readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "worker",
+          "missing_reason": null,
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "completed"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "attempt.outcome": "ok",
+        "attempt.rc": 0,
+        "attempt.requested_action": "open_read"
+      },
+      "control": "stub supplies allow; b_readable bytes unchanged",
+      "comparison": {
+        "observation": "succeeded",
+        "observation_basis": "completed_worker_status",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": []
+      },
+      "notes": "as S01"
+    },
+    {
+      "id": "C1",
+      "scenario": "policy fails to compile, nothing runs",
+      "specimen": "C",
+      "step_id": "c1",
+      "query": "unavailable",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "error",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{SCEN_ROOT}}/readable",
+          "result_source": "synthetic",
+          "native_rc": null,
+          "missing_reason": "validator_not_invoked",
+          "error": "no validator verdict for this step"
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": null,
+          "outcome": "not_run_worker_died",
+          "error": "no completed attempt result: slot publication incomplete",
+          "requested_path": "{{SCEN_ROOT}}/readable",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "synthetic",
+          "missing_reason": "slot_incomplete",
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "unestablished",
+        "lifecycle_summary": "not_reached"
+      },
+      "assert": {
+        "sandbox_check.outcome": "error",
+        "sandbox_check.result_source": "synthetic",
+        "sandbox_check.missing_reason": "validator_not_invoked",
+        "attempt.outcome": "not_run_worker_died",
+        "attempt.result_source": "synthetic",
+        "attempt.missing_reason": "slot_incomplete",
+        "attempt.lifecycle.summary": "not_reached"
+      },
+      "control": "the worker publishes a compile failure record (operation 5) and exits before applying; no validator is spawned; readable bytes unchanged",
+      "comparison": {
+        "observation": "unavailable",
+        "observation_basis": "no_completed_worker_result",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "unestablished",
+        "limitations": [
+          "attempt:not_reached"
+        ]
+      }
+    },
+    {
+      "id": "T",
+      "scenario": "allow policy, FIFO read starts after release, then worker deadline",
+      "specimen": "T",
+      "step_id": "fifo",
+      "query": "allow",
+      "unit": {
+        "sandbox_check": {
+          "rc": 0,
+          "outcome": "allow",
+          "operation": "file-read-data",
+          "filter_kind": "path",
+          "filter_value": "{{FIFO}}",
+          "result_source": "validator",
+          "native_rc": 0,
+          "missing_reason": null,
+          "error": null
+        },
+        "attempt": {
+          "rc": -1,
+          "errno": null,
+          "outcome": "not_run_worker_died",
+          "error": "no completed attempt result: slot publication incomplete",
+          "requested_path": "{{FIFO}}",
+          "requested_kind": "file",
+          "requested_action": "open_read",
+          "result_source": "synthetic",
+          "missing_reason": "slot_incomplete",
+          "child_pid": null,
+          "child_exit_code": null
+        },
+        "query_exclusion_reason": null,
+        "order": "query_first",
+        "lifecycle_summary": "started_without_result"
+      },
+      "assert": {
+        "sandbox_check.outcome": "allow",
+        "sandbox_check.result_source": "validator",
+        "attempt.outcome": "not_run_worker_died",
+        "attempt.result_source": "synthetic",
+        "attempt.missing_reason": "slot_incomplete",
+        "attempt.lifecycle.summary": "started_without_result"
+      },
+      "control": "a FIFO with no writer blocks the worker's open inside attempt 0 until the host's sentinel deadline; raw progress, the validator record and the release chain are asserted by the owning case before this row is compared",
+      "comparison": {
+        "observation": "unavailable",
+        "observation_basis": "no_completed_worker_result",
+        "operation_relation": "matched",
+        "target_relation": "same_submitted",
+        "order": "query_first",
+        "limitations": [
+          "attempt:started_without_result"
+        ]
+      },
+      "notes": "the later 'hosts' step may retain an allow query answer and query_first with attempt:not_reached; failure to complete an attempt does not erase an earlier query"
+    }
+  ]
+}
