@@ -1,10 +1,14 @@
 # Removing the drift verdict
 
-Status: READY for implementation; implementation has not started.
+Status: READY for implementation; implementation has not started. The
+EXECUTION section at the end states how an agent runs this plan end to end
+without operator check-ins.
 
 Inventory baseline: df333b4 (request schema 3, response schema 12, worker ABI 7,
 controller envelope 4). Source line numbers and reference counts use that
-baseline.
+baseline. Symbols, not line numbers, are authoritative: I1 moves code, so later
+references drift. Locate each site by its symbol and record the resolved
+location in the decision log when it differs from the plan.
 
 ## DESIGN
 
@@ -784,7 +788,7 @@ removed. Acceptance requires no imports of the removed names.
 
 | Fixture | Contains | Disposition |
 | --- | --- | --- |
-| `tests/fixtures/contract/response_shape.json` | `drift`, `conclusion`, `limitations`, `deny_signal`, `deny_signal_total` | regenerate from `ReplyFailureTests`; the reviewed diff is the acknowledgement |
+| `tests/fixtures/contract/response_shape.json` | `drift`, `conclusion`, `limitations`, `deny_signal`, `deny_signal_total` | regenerate from `ReplyFailureTests`; self-accepted under EXECUTION's golden rule, with the diff summary in the acceptance record |
 | `tests/fixtures/blackbox_menagerie/cases/core.json` | `expect.drift` on every step | delete the key |
 | `tests/fixtures/blackbox_e2e/checker/missing_path_run.json` | synthetic response 5; baseline for both checker-control files | regenerate at 13 and 5 from a live run |
 | `tests/fixtures/disposition/a1_expected.json` | generated control, envelope 3, response 10; read by `disposition_controls.py` and three `run_flow.rs` tests | regenerate at 13 and 5 |
@@ -930,7 +934,9 @@ Write the unregistered matrix fixture; add exec and sysctl specimens under
 `tests/fixtures/pw_runner/`; run the response 12 default battery. Delete no
 scenario or active contract check in I1.
 
-For Git operations, follow repo policy. Coordinate producer, consumer, registry
+Commit directly to `main`; no branch or worktree. Make one commit per
+increment or coherent sub-step, under EXECUTION's exit conditions; do not push
+unless the operator asks. Coordinate producer, consumer, registry
 and documentation changes in each increment. Register and pass replacement
 controls before retiring their predecessors in that increment.
 
@@ -944,7 +950,10 @@ the raw fields the live case asserts beside the record (`sandbox_check.outcome`,
 the unlink records), and the expected response 13 `comparison` object.
 Review expectations against the D1 matrix and independent controls; do not
 generate them from the producer under test. Use D1's specimen mechanics for B.
-R is a reply-boundary control outside the comparison fixture.
+R is a reply-boundary control outside the comparison fixture. Absolute paths
+use the fixtures' existing `{{NAME}}` placeholder convention, expanded by both
+readers. The B stub, the matrix README and the fixture live under
+`tests/fixtures/comparison/`; raw captures live with their acceptance record.
 
 Specimen B requires a new combined seven-step receipt. The retained baseline
 has five steps; B2 and B4 have separate suite receipts. Keep those as row-level
@@ -1047,7 +1056,7 @@ same verified increment.
   classification in `ReplyMaximumTests`. Recompute `runner_reply_maximum` and
   derived `controller_output` from the synthesizer; both must be no larger
   than their baseline values. Record the values in `docs/limits.json` and
-  regenerate the shape golden.
+  regenerate the shape golden under EXECUTION's golden rule.
 - Controller per D2 with Rust tests for shape, statuses, relocated paths, the
   held request string and D5 version gates. Scan controls include a
   nonregular file, a single read used for both hash and recursion, nonliteral
@@ -1129,7 +1138,12 @@ same verified increment.
   tables and guide copies with `docs/generate_limits.py`.
 - `tests/catalog.json`: `comparison_matrix` and `dossier_witness` added;
   `execute_permission_is_not_sandbox_drift` becomes
-  `execute_permission_controls_spawn`.
+  `execute_permission_controls_spawn`. Both new cases are default cases of
+  the `witness_contract` suite, which already carries `requires: ["app"]`.
+  The BYOXPC part of `dossier_witness` is a separate `default: false` case
+  with a wrapper under `tests/suites/witness_contract/opt_in/`, listed in the
+  `opt_in` suite's include list beside `order_barrier_mutations`; it needs a
+  logged-in GUI session.
 - `tests/README.md`: the "Comparison evidence coverage" section becomes one
   paragraph pointing at the matrix fixture and its live and Swift readers; affected suite
   rows rewritten. `tests/COVERAGE.md` rows likewise. Suite and fixture READMEs
@@ -1167,12 +1181,14 @@ same verified increment.
   `tests/fixtures/pw_runner/`. After behavior-preserving preparation and the two
   added specimens, capture all five as the response 12 baseline. On the verified
   integration candidate, diff all five against that baseline with intended
-  contract changes and run-varying values explicitly accounted for. Preserve
+  contract changes and run-varying values explicitly accounted for; the
+  run-varying set and the acceptance rule are in EXECUTION. Preserve
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
 - No `policy-witness run` writes a temporary request file, and an ordinary
   built-in run hashes no app binary, spawns no PlistBuddy and parses the
-  manifest once. Retain the I4 control receipts for each condition.
+  manifest once. Retain the I4 control receipts for each condition; the
+  PlistBuddy and manifest-once conditions use EXECUTION's static receipts.
 - The delivery controls pass; the live stdin receipt and direct
   file-input coverage accompany them.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
@@ -1187,13 +1203,14 @@ same verified increment.
   and is not expected to run.
 - Retain response 13 matrix/dossier receipts, using the matrix's baseline
   specimens on the integration candidate. Complete the documentation ledgers,
-  review shape-golden diffs and record recomputed reply/capture limits.
+  accept shape-golden diffs under EXECUTION's golden rule and record
+  recomputed reply/capture limits.
 - The finished consumer exposes no joint prediction/enforcement verdict.
   Descriptive validation and selection may use both channels. All D5 semantic
   readers gate versions by equality and contain no legacy interpretation branch;
   raw transport remains covered independently.
 - Sub-agents cannot run the built app; live verification runs from the main
-  session.
+  session, under EXECUTION's division of labor.
 
 ## DOCUMENTATION
 
@@ -1332,13 +1349,158 @@ establish allowance.
    README's "Execution and log-evidence ownership" table.
 5. Edit `QUESTIONS.md` and `LIMITS.md` first, run `generate_limits.py`, then
    the guide's own prose, then the README, then the infrastructure documents.
-6. Check in after each document. On the next turn, read it with only this
-   section for context and fix passages that require knowledge of prior
-   versions before editing the next document. For a proposed explanatory
-   bridge, present the sentence with and without it at the check-in.
+6. After each document, a fresh-context reviewer (a sub-agent given only this
+   Method section and the document) reads it and lists the passages that
+   require knowledge of prior versions; fix those before editing the next
+   document. A proposed explanatory bridge is omitted by default; record the
+   sentence with and without it in the decision log. No operator check-in.
 7. Run `source_drift`. Search for historical wording (no longer,
    previously, formerly, now, instead, replaces, legacy, historical, used to,
    since response, before response) and read every hit; each that stays is
    kept with a one-line reason. Reconcile `AGENTS.md`, the runner, controller
    and test READMEs, CLI help, diagnostics, comments and docstrings with the
    guide; remove contradictions and retired claims.
+
+## EXECUTION
+
+One orchestrating agent runs this plan end to end with no operator check-ins.
+Choices the plan leaves open are made under these rules and recorded for
+review afterwards, not approved beforehand.
+
+### Decision log
+
+`DRIFT-REMOVAL-DECISIONS.md` at the repository root, created in I1 and
+committed with every increment. Dated entries hold: each judgment call with
+the alternatives and the rule applied; each R10 remaining match with its
+classification; the completed documentation ledgers; bridge sentences with
+and without the bridge; resolved locations for plan references whose line
+numbers moved; and increment progress (increment, commits, `PW_TEST_OUT_DIR`
+names, receipts). On resumption after a context break, read this file before
+anything else. It is review material, not documentation, and is removed at
+closeout on the operator's instruction.
+
+### Pre-authorized actions
+
+Do not ask before: any deletion enumerated in REMOVAL; the R6 regenerations;
+the catalog, `tests/RETAINED.json` and `docs/contract.json` edits named in
+this plan; `tests/run.sh --prune --apply` on output directories this
+execution created; BYOXPC install, verify and removal for `dossier_witness`
+and the opt-in cases through the existing ownership and cleanup machinery,
+with absence verified after removal; commits to `main`; writes under the
+scratchpad and `tests/out/runs/`. Pushing is not pre-authorized.
+
+### Commands and environment
+
+| Purpose | Command |
+| --- | --- |
+| Build and sign | `YOLO=1 ./build.sh`, or `IDENTITY='Developer ID Application: …' ./build.sh` |
+| Rust unit tests | `cargo test` in `controller/` |
+| Swift unit tests | `tests/run.sh --suite runner_unit` |
+| Default battery | `PW_TEST_OUT_DIR=tests/out/runs/drift-<increment> tests/run.sh` |
+| Integrated candidate | `PW_TEST_OUT_DIR=tests/out/runs/drift-candidate-all tests/run.sh --all` |
+| Barrier control | `tests/run.sh --case witness_contract/order_barrier_mutations` |
+| One case | `tests/run.sh --case <suite>/<case>` |
+
+Use a fresh `PW_TEST_OUT_DIR` per increment: `drift-i1-baseline` for the five
+response 12 captures, `drift-i<n>` for each later default battery, and
+`drift-candidate-all` for the integrated run. Register `drift-i1-baseline` and
+`drift-candidate-all` in `tests/RETAINED.json` under `runs` with `path`,
+`run_id`, `reason`, `source` and `app_inventory`, as the existing entries do.
+Opt-in cases need a logged-in GUI session and unsandboxed execution; signing
+identity resolution follows `tests/OPT_IN_TESTS.md`.
+
+### Division of labor
+
+Sub-agents edit source, run `cargo test` and the SwiftPM build, and act as
+fresh-context reviewers. Only the orchestrating session builds the app, runs
+`tests/run.sh`, touches launchd and captures receipts. Scope sub-agent tasks
+so none needs the built app.
+
+### Retry and environment policy
+
+A live case that fails is rerun once. A failure that reproduces is a finding,
+reported with its output, never recorded as flaky. The exceptions are the three
+refusal signatures in AGENTS.md "Sandboxed automation harnesses": XPC lookup
+refused with code 4099 or error 159, `log: Cannot run while sandboxed`, and
+`codesign` reporting an unchanged signed app invalid. For those, rerun once
+outside the sandbox and treat the failure as environmental only when the
+unsandboxed rerun passes. Deny-line omission by the Sandbox kext is
+intermittent and known: a case that fails only on missing deny lines is rerun
+once and, if it reproduces, reported as a finding with its log capture.
+
+### Static receipts
+
+Two acceptance conditions cannot be observed at runtime without root tracing,
+so their receipts are static checks in `cargo test` or `source_drift`:
+
+- `spawns no PlistBuddy`: no caller of `plist_key_string` or `read_bundle_info`
+  is reachable from `cmd_run`. Today's callers are `app_layout.rs`,
+  `bundle.rs` and `runner_commands.rs`; after R2 only the BYOXPC install and
+  verify paths remain.
+- `parses the manifest once`: `evidence::load_manifest` has exactly one call
+  site reachable from `cmd_run`. Today's two are in `run_flow.rs` and
+  `runner_select.rs`.
+
+The synthetic-app-root control with no service Info.plist is the live
+complement.
+
+### Run-varying set
+
+For the five-specimen baseline diff and every fixture regenerated from a live
+run, normalize these before comparing: process ids, including worker and
+validator pids; every timestamp, `*_unix_ms`, duration and deadline value;
+scratch and `tests/out` paths; `run_id` and `PW_TEST_RUN_ID` labels; the build
+stamp; `sandbox_log_capture` bodies and counts; `runner_client.argv`;
+`capture_nonce`; and hashes of binaries this change rebuilt. `policy_sha256`
+and `applied_sha256` are not run-varying and must equal the baseline for an
+unchanged specimen. Anything else that differs is either an intended contract
+change listed in D1, D2 or D5, recorded as such, or a stop condition.
+
+### Golden rule
+
+A regenerated golden, fixture or shape diff is self-accepted when every
+removed key is in R1, every added key is a D1 or D2 name, and every changed
+value is in the run-varying set or is a version moving to 13 or 5. Write the
+diff summary to the acceptance record and the decision log. Any other
+difference is a stop condition.
+
+### Increment exit conditions
+
+- **I1 done when** the shared Rust modules exist with byte-identical
+  `sbpl-check` output, the two specimens are added, the five response 12
+  captures are retained and registered, the matrix fixture is written against
+  D1, the default battery is green, the decision log exists, and the work is
+  committed.
+- **I2–I4 done when**, on one integrated candidate in whatever order the
+  dependencies allow: `./build.sh`, `cargo test`, `runner_unit`, the default
+  battery and `order_barrier_mutations` are green; every D1 row and every D2
+  failure-table shape has a receipt; `docs/contract.json` is at 13 and 5 with
+  generated copies regenerated; the R10 search is done with every remaining
+  match classified in the decision log; and each sub-step is committed.
+- **I5 done when** both ledgers are complete, `generate_limits.py` and
+  `generate_contract.py` outputs are committed, `source_drift` is green,
+  `--all` is green on the candidate and registered in `tests/RETAINED.json`,
+  the five-specimen diff is accepted under the golden rule, and the work is
+  committed.
+
+### Stop conditions
+
+Stop and report only when: a live run contradicts a D1 row or a D2
+failure-table row; a receipt cannot be produced after the unsandboxed retry; a
+change outside D1, D2 or D5 appears necessary; `--all` fails on the candidate
+for a reason not already classified in the decision log; or a destructive
+action outside the pre-authorized list is needed. Everything else: decide,
+log, continue. No check-in is required. If the operator wants touchpoints, the
+natural ones are after I1, the last point before deletions begin, and before
+the final `--all` and closeout.
+
+### Closeout
+
+After the integrated `--all` passes and is registered: update the
+`baseline_response12` README's plan references to point at
+`tests/FAILURE-PROPAGATION-CONTRACT.md` and keep that directory as the
+response 12 receipts; delete `DRIFT-REMOVAL-PLAN.md`,
+`DRIFT-REMOVAL-CANDIDATES.md` and `FIVE-FOLLIES.md` in the closeout commit,
+since `git log` is authoritative and documentation describes current
+behavior; leave `DRIFT-REMOVAL-DECISIONS.md` in place for operator review and
+remove it only on their instruction.
