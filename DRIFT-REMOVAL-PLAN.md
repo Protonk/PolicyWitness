@@ -3,8 +3,8 @@
 Status: REVISED for readiness review as of 2026-10-01; implementation has not
 started. The matrix's response 12 columns are verified against live output
 (see the scenario matrix). The S1–S3 helper removals are included, with the
-host sandbox-library loader they leave without callers (D6.47). D6.44–45
-remain open. The readiness gate below separates settled decisions from execution
+host sandbox-library loader they leave without callers (D6.47). D6.45 is the
+only open decision. The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
 inventory baseline is df333b4 (request schema 3, response schema 12, worker ABI 7, controller
@@ -284,7 +284,7 @@ path.
 
 | Path | Type | Rule |
 | --- | --- | --- |
-| `request_path` | string | the path given to `run` |
+| `request_path` | string or null | the path given to `run`; null when no path was given (see the failure table) |
 | `policy.format` | string or null | the submitted string, even when unsupported; null when absent or not a string |
 | `policy.augmentation` | object | always present; `status`, `applied`, nullable `original_sha256` and `applied_sha256`, and nullable `error`, under the failure rules below (D6.28) |
 | `policy.imports.status` | string | `complete`, `incomplete`, `failed`, `not_applicable`, under the scan rules below |
@@ -294,8 +294,9 @@ path.
 | `policy.imports.limits` | object | depth 8, count 64, imported file 1 MiB, total 8 MiB, cooperative work budget 1,000 ms, recorded with counting rules in `docs/limits.json`. Measured against the real closure: `sbpl-check` over `(import "system.sb")` resolves 2 records totalling ~13 KB and returns in 0.02 s including the compile, so the budget has roughly fifty times the headroom a representative profile needs. I4 measures the WebProcess-size specimen and the cutoff behavior before the numbers are published (D6.37) |
 | `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
 | `policy.imports.failure` | string or null | the first scan problem, including why the scan could not start; null for a complete scan or an ordinary absence of source |
-| `host.*` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine` via `sysctlbyname`; null when the read fails (D6.16) |
-| `host.sandbox_cache_uuid` | string or null | the dyld shared cache UUID, read by the controller; null when the read fails. The sole sandbox-library identity PW reports (D6.47) |
+| `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails (D6.16) |
+| `host.basis` | string | constant `sysctlbyname`: the mechanism for the four facts above, and for those only |
+| `host.sandbox_cache_uuid` | string or null | the dyld shared cache UUID, read by the controller through the dyld API, not through `sysctlbyname`; null when the read fails. The sole sandbox-library identity PW reports (D6.47) |
 | `binaries.*` | object | each selected executable path and its pre-invocation file hash against the app's baseline; `manifest_*` fields are baseline metadata, never observations of the selected binary; `verification.status` is `match`, `mismatch` or `unavailable` (D6.29) |
 | `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair` |
 | `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own. Key set and values are fixed by envelope 5, not computed from presence; a pointer to a withheld or absent record is still present (D6.20) |
@@ -480,6 +481,7 @@ each of them to report it, which is the worker ABI change D6.11 declined.
   | --- | --- |
   | `target_mutation.status: after_query` | `order` is not `query_first` |
   | `target_mutation.status: unordered` | `order` is `query_first` |
+  | `target_mutation.status: none` | a run step qualifies under D1 |
   | `target_mutation.status` other than `none` | no run step qualifies under D1, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
   | `target_mutation` | carries any key but `status`; producer and consumer both check this |
   | `sandbox_attribution.status`, `runtime_target_identity.status` | disagree with the D1 rules for this step |
@@ -508,7 +510,8 @@ Tests assert the evidence each scenario establishes, by field. The consumer
 validates and selects and may compare raw fields to test descriptive
 invariants. It returns no joint prediction/enforcement verdict. Guide
 recipes select an explicit combination, such as deny predicted plus attempt
-succeeded, and show its scope, order and obligations; they assign no label.
+succeeded, and show its submitted-scope relations, order and obligations; they
+assign no label. There is no `scope` field to show (D6.13).
 
 ### D5. Versioning
 
@@ -598,7 +601,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 13 | `comparison.scope` | Removed; the guide states the scope once. |
 | 14 | `sandbox_attribution` with no observation | `not_applicable`. |
 | 15 | `policy.augmentation` | Always present. |
-| 16 | Host facts | `sysctlbyname`, no subprocess. |
+| 16 | Host facts | `sysctlbyname`, no subprocess. Refined by 47: `host.basis` covers those four facts only, and the shared cache UUID beside them is a dyld read. |
 | 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. |
 | 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source. |
 | 19 | Reader surfaces | The envelope and the bare reply from `pw-runner-client`. |
@@ -617,7 +620,6 @@ current-version fixtures for unfamiliar-value transport tests.
 | 32 | Matrix evidence and size controls | 32 S/B/C expectations plus R/T with explicit owners; T retains its completed prediction/order. Unlinked exploratory claims are not acceptance evidence. |
 | 33 | Integration order (supersedes 24's deletion order) | Only behavior-preserving preparation on `main`. Retire contract tests in the worktree; retire live scenarios only with passing replacement controls in the same increment. |
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
-
 | 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
 | 36 | Dossier presence on non-execution run envelopes | One `data` skeleton for every `kind: "run"` envelope, printed by `cmd_run`, with the dossier at its collected state and the pre-execution `data.error` constant removed; `tool_error` and its exit 2 are unchanged. No envelope is exempted. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all already print a run envelope, so the superseded claim that they kept a different kind was wrong. |
 | 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
@@ -627,7 +629,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. Superseded by 42. |
 | 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
 | 43 | Unused Swift execution helpers (S1–S3) | Remove the attempt executor, query helper and sandbox-application helper, their exclusive dependencies and helper-only tests per R2/R5. Keep production planning, path diagnostics, policy hashing, structural policy refusal and C worker/validator behavior. Coordinate source, build, test and documentation changes in I3–I5 under D6.33. |
-| 44 | Retired outcome spellings (S1, S3) | One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
+| 44 | Retired outcome spellings (S1, S3) | DECIDED. One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
 | 45 | C-function-pointer stubbing guidance (S3) | OPEN. Removing `SandboxApplyTests.swift` removes the worked example linked from `runner/AGENTS.md`, and no other example survives: the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. So the choice is a self-contained explanation in `runner/AGENTS.md` or retiring the guidance; there is no surviving example to point at. The unused helper and its tests are removed in every case. |
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The dossier reports `specimen.host.sandbox_cache_uuid`, read by the controller; the runner reports no identity and `SandboxLib.swift` is deleted. Measured 2026-10-01 on a stock host: `sandbox_check` resolves through libSystem with no load, `sandbox_compile_string` and `sandbox_apply` are unreachable without loading a library the host never calls into, all three images are shared-cache resident, and none exists as a file — so a per-function host observation adds only a path implied by the cache UUID, about a process that neither predicts nor applies. Non-stock library detection is a non-goal. Identifying the images the validator and worker mapped would need the ABI change 11 declined. This removes D2's identity section, D3's identity invariant and reply-fallback retention, the consumer's presence-by-load-stage rule and I4's loader-observation controls. |
@@ -678,13 +680,13 @@ what stays.
 | same | `PWRunnerAttemptResult.exit_code`, `.syscall_errno` (~704–803); `PWRunnerSandboxCheckResult.scope`, `PWRunnerWire.sandboxCheckScopePost` (~41) | delete |
 | same | encoder clauses `steps.allSatisfy({ $0.comparison == nil && $0.drift == nil })` (~1817) and `comparison.conclusion != "disagreement", step.drift != true` (~1847) | rewrite per D3 |
 | same | `PWRunnerRunResult` decoder/encoder version gates and legacy-only field fallbacks | exact response gate and current invariants per D5 |
+| same | `AttemptOutcome.bootstrapPortFailed` and the `libsandbox_path` row of the `_test_overrides` table (~213) | delete with the outcomes retired under D6.44 |
 | same | doc comments ~133, ~157, ~726 | reword |
 | `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837); `renderLimitations()` (~843); `drift: comparison.drift` (~632); `deny_signal: nil`, `deny_signal_total: nil` (~162, ~631); comments ~24–26, ~722, ~763, ~890 | delete or reword; `renderLimitations` becomes `renderObligations` plus the descriptive list |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift` | reply degradation; the `SandboxLib.load` call site and its `libsandbox_unavailable` return | remove drift clearing and withhold comparisons/conditions through both fallback levels; delete the load call site and its refusal under D6.44 |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift` | unused execution helpers and exclusive bindings/constants; retained exclusion-set comments | remove helpers per S1/S2 below, rather than porting their `scope:` arguments; reword retained comments |
 | `runner/Sources/PWRunnerCore/PathUtils.swift` | `observedPathForFd`, its `fcntl_getpath` binding, `warmFirmlinkMap` | remove; keep production path helpers and lazy firmlink map |
 | `runner/Sources/PWRunnerCore/SandboxApply.swift` | `applySandboxPolicy`, `ApplyError` | remove; keep policy hashing in this file |
-| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `AttemptOutcome.bootstrapPortFailed` | resolve with the public outcome descriptions under D6.44 |
 | `runner/Sources/PWRunnerCore/Signals.swift` | whole file; no caller under `runner/Sources` | delete, and its `XPC_RUNNER_SIGNALS_FILE` line in `build.sh` |
 | `runner/Sources/PWRunnerCore/SandboxLib.swift` | whole file | delete with its seven symbol resolutions, the `libsandbox_path` override and the `libsandbox_unavailable` outcome, under D6.44 and D6.47 |
 
@@ -732,10 +734,9 @@ dependencies; the enclosing source files also contain production code.
   contributor-example decision. With `applySandboxPolicy` gone, nothing calls
   any of the loader's seven resolved functions, so `SandboxLib.swift` goes too,
   along with the `libsandbox_path` test override and the
-  `libsandbox_unavailable` outcome, under D6.44 and D6.47. Keep
-  `computePolicyHash` and structural policy refusal, which are not loader
-  functions: `SandboxApply.swift` retains only hashing, and R10's search will
-  flag a filename that no longer describes its contents.
+  `libsandbox_unavailable` outcome, under D6.44 and D6.47. The hashing kept above
+  is not a loader function, so `SandboxApply.swift` retains only hashing, and
+  R10's search will flag a filename that no longer describes its contents.
 
 Remove imports and comments made obsolete by these deletions. Keep the existing
 filenames for files that retain production code. R5 assigns the precise test
@@ -812,10 +813,12 @@ paths per D5. Three Rust tests also embed inline Python that imports the
 consumer functions I3 removes — `run_flow.rs` ~2321 and ~2523 and
 `log_replay_tests.rs` ~172 import `recover_evidence` and
 `validate_evidence_shape` — so they move to `validate`/`denials` in the same
-increment or `cargo test` breaks (D6.40). Implement the dossier and request snapshot per D2, and move the pre-execution
+increment or `cargo test` breaks (D6.40).
+
+Implement the dossier and request snapshot per D2, and move the pre-execution
 failure envelopes into `cmd_run` so one writer owns the run `data` skeleton;
-`cli.rs`'s catch-all keeps only errors that escape it. Update tests
-for unsupported/malformed replies and current-version fragment transport.
+`cli.rs`'s catch-all keeps only errors that escape it. Update tests for
+unsupported/malformed replies and current-version fragment transport.
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
 `controller/src/run_flow.rs` ~1638, ~2022, ~2071, ~2252, ~2394, ~2593, ~2652;
@@ -867,6 +870,7 @@ Swift sites and 1 controller site; 14 catalog entries.
 | `blackbox_menagerie` | `checker_controls.py` (13), `validate_run.py` (1), `cases/core.json` (23 steps carry `expect.drift`) | `expect.drift` deleted |
 | `failure_boundaries` (4), `run_effects` (2), `runner_exec_inheritance` (1), `runner_exec_lifecycle` (4), `runner_filter_sysctl_name` (6), `runner_outcome_runner_timeout` (2), `runner_outcome_validator_no_reply` (2), `runner_specimen_isolation` (1), `runner_validator_failure` (4) | check scripts | field assertions |
 | `runner_exec_dac` | `check.py` (7), `check_query_scope.py` (6), `run.sh` (2) | field assertions; case id becomes `execute_permission_controls_spawn` |
+| `runner_outcome_libsandbox_unavailable` | whole suite: `run.sh`, `README.md`, catalog entry | deleted with the loader under D6.44/D6.47. Its only subject is a `normalized_outcome` that ceases to exist, so nothing replaces it and no coverage moves; a successor control belongs to S14 if that distinction is ever rebuilt from the worker's dyld diagnostic |
 | `runner_use_c_worker` | `run.sh` (63) | retire `drift_null_for_dac_eacces` and `drift_null_for_non_policy_failure` with passing S03, S17, S14 replacement controls in I2/I4; other assertions become field assertions |
 | `witness_contract` | `check_ordering.py` (10), `check_prediction_targets.py` (6), `check_create_existing.py` (3), `check_diagnostic_transport.py` (3), `check_pre_apply_failure.py` (3), `check_removed_target.py` (2), `check_attempt_in_flight.py`, `check_termination_correlation.py`, `check_worker_evidence.py`, `check_worker_sparse.py` (1 each) | field assertions |
 | `witness_contract` | `check_comparison.py` (11), `drift_determination_via_validator_seam.sh` (12), `run.sh` (6) | absorbed by `comparison_matrix` (REPAIR I2); retire the seam case with passing replacement controls |
@@ -884,15 +888,20 @@ Swift sites and 1 controller site; 14 catalog entries.
 
 ### R7. Registries
 
-- `tests/catalog.json`: three ids deleted, one renamed, two added (REPAIR I5).
+- `tests/catalog.json`: four ids deleted, one renamed, two added (REPAIR I5).
+  One of the four, `runner_outcome_libsandbox_unavailable`, is a whole suite
+  directory, so `tests/README.md`'s suite table and the suite count
+  `source_drift` derives from the suites on disk both move with it.
   `tests/RETAINED.json` and release acceptance records under `dist/` reference
   old ids and are not rewritten.
 - `tests/README.md` suite-coverage rows (~293, ~296, ~300, ~312) and the
   "Comparison evidence coverage" section (~455–465); `source_drift` checks the
   table against the suites on disk.
 - `tests/COVERAGE.md` rows ~25, ~27, ~30, ~31, ~83, ~84, ~86, ~87.
-- S1–S3 remove no catalog case. The internal `runner_unit` registration and
-  descriptions change per R5; its production planner and driver groups stay.
+- S1–S3 remove one catalog case, `runner_outcome_libsandbox_unavailable`, with
+  its suite directory; the helper removals themselves remove none. The internal
+  `runner_unit` registration and descriptions change per R5; its production
+  planner and driver groups stay.
 - Suite READMEs: `witness_contract` (20 references), `runner_use_c_worker`
   (12), `runner_exec_dac` (7), `blackbox_e2e` (4), `blackbox_menagerie` (3),
   `runner_specimen_isolation` (3), `runner_validator_failure` (3),
@@ -940,9 +949,11 @@ Swift sites and 1 controller site; 14 catalog entries.
   check against the guide, and `harness/VERIFICATIONS.md`; only its
   description changes.
 - S1–S3's retained production helpers listed in R2, including policy hashing
-  and structural policy refusal; the planner unit controls, C worker harness, real
-  worker/validator drivers and live failure controls. No removed Swift-helper
-  test is credited as coverage of those production paths.
+  and structural policy refusal; the planner unit controls, C worker harness,
+  real worker/validator drivers and the live failure controls other than
+  `runner_outcome_libsandbox_unavailable`, which goes with the outcome it
+  exercises (D6.44). No removed Swift-helper test is credited as coverage of
+  those production paths.
 - `comparison.order`, `runner_subprocess.ordering`, `eligibleOrderedStep`, the
   release barrier and the opt-in `order_barrier_mutations` control;
   `legacy_worker_abi6` in `OrderingTests` (the ABI tripwire).
@@ -969,7 +980,7 @@ Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 in R2 is the standing version of this search for `runner/Sources/`. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
 and this plan may name removed artifacts; active implementation and contributor
-instructions must match the selected scope and the D6.44–45 resolutions.
+instructions must match the selected scope and the D6.45 resolution.
 
 ## REPAIR
 
@@ -1111,8 +1122,8 @@ same verified increment.
   commit, rewrite the service header's invariance block and add its two checks
   per R2: the `source_drift` name-set assertion and the `preflight` `nm -u`
   assertion, whose failing state on the pre-removal build is recorded with the
-  change (D6.48). D6.44–45 must be resolved for the associated outcome and
-  documentation edits; no pending option is an instruction to change C behavior.
+  change (D6.48). D6.45 must be resolved for the contributor-documentation
+  edit; no pending option is an instruction to change C behavior.
 - Swift per R2, D6.22 and D6.23, plus `comparison_conditions`. The comparison producer already receives the run
   attempts and already tests for a qualifying removal, so the obligation needs
   no new plumbing. The field-complete fixture in `ReplyFailureTests`
@@ -1201,10 +1212,14 @@ same verified increment.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
   build through `runner_unit`; run `source_drift` including planner controls and
   the new host-invariance name-set assertion, `preflight` including the `nm -u`
-  assertion, and `runner_c_worker_harness` including its deny-default cases. The integrated baseline diff must show no
-  helper-removal change to queries, attempts, hashing or load failures beyond
-  separately approved contract changes. Retain the existing live worker,
-  validator and library-load failure controls in the default/`--all` battery.
+  assertion, and `runner_c_worker_harness` including its deny-default cases. The
+  integrated baseline diff must show no helper-removal change to queries,
+  attempts or hashing beyond separately approved contract changes. The
+  disappearance of `libsandbox_unavailable` is such an approved change, so the
+  baseline diff accounts for it rather than treating it as a regression. Retain
+  the existing live worker and validator failure controls in the default/`--all`
+  battery; `runner_outcome_libsandbox_unavailable` is deleted with its outcome
+  and is not expected to run.
 - The response 12 matrix verification is already recorded under
   `tests/fixtures/comparison/baseline_response12/`. Rerunning it on the
   integration candidate is the response 13 acceptance capture, and the two
@@ -1275,7 +1290,8 @@ reruns the same searches against the finished tree.
 | `DriftClassifierTests.swift` | I2 replaced | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
 | S1–S3 unused Swift helpers, `SandboxApplyTests.swift` and `SandboxLib.swift` | I3/I4 remove exclusive code/tests; retain hashing and planning | `runner/README.md`, `runner/AGENTS.md`, `tests/README.md`, `tests/COVERAGE.md`, `tests/FAILURE-PROPAGATION-CONTRACT.md`, `tests/suites/runner_unit/README.md` | internal test registration and builds; contributor example pending D6.45 |
 | `PWSandboxCheckShim` and Swift query-helper group | I3/I4 remove target/build dependency and helper-only tests | `tests/suites/source_drift/README.md`; `runner/Package.swift` and test/production source comments | source-set agreement, surviving planner controls and both builds |
-| `bootstrap_port_failed` | D6.44 pending outcome-vocabulary decision | `docs/PolicyWitness.md`, `tests/COVERAGE.md` | outcome inventory and mapping controls must match the chosen producer contract |
+| `bootstrap_port_failed` | D6.44 retires the spelling | `docs/PolicyWitness.md`, `tests/COVERAGE.md` | outcome inventory and mapping controls |
+| `runner_outcome_libsandbox_unavailable` and `libsandbox_unavailable` | D6.44/D6.47 delete the suite with the outcome | `tests/catalog.json`, `tests/README.md`, `tests/COVERAGE.md`, `tests/suites/runner_outcome_libsandbox_unavailable/README.md`, the `_test_overrides` table in `PWRunnerAPI.swift` | catalog entry, suite table row, suite count, outcome matrix, override-key count |
 | `EnvelopeInvariantTests` legacy groups | I3 retire with contract change | `tests/FAILURE-PROPAGATION-CONTRACT.md` (3), `tests/COVERAGE.md` (2) | outcome matrix |
 | `runner_client.rs` version loop | I3 replace transport/version controls | `tests/FAILURE-PROPAGATION-CONTRACT.md` (1) | none |
 | `checker_controls.py` legacy and drift controls | I3 rebuild with contract change | `tests/FAILURE-PROPAGATION-CONTRACT.md` (7), `tests/README.md` (6), `tests/COVERAGE.md` (2), `tests/suites/blackbox_e2e/README.md` (2), `tests/suites/blackbox_menagerie/README.md` (2), `tests/suites/runner_filter_sysctl_name/README.md` (2), `controller/README.md` (1), one each in the `smoke`, `run_effects`, `runner_byoxpc` and both iokit filter suite READMEs | suite table rows; outcome matrix |
@@ -1435,14 +1451,14 @@ The readiness review checks:
   it, with the per-function host observation and its loader retired.
 - [x] D6.48 keeps the host invariance rule as a rule when its illustrations are
   deleted, with two measured, non-redundant checks and no new case.
-- [ ] D6.44: confirm retiring both `bootstrap_port_failed` and
-  `libsandbox_unavailable` in response 13, and align the API constants,
-  override table, guide and coverage table with it.
+- [x] D6.44 retires both `bootstrap_port_failed` and `libsandbox_unavailable`
+  in response 13, with the API constants, override table, guide, coverage table
+  and the `runner_outcome_libsandbox_unavailable` suite moving with it.
 - [ ] D6.45: settle the contributor stubbing guidance without the deleted
   example.
 
 The status remains REVISED for review of these decisions. Mark it READY only
-after that review and resolution of D6.44–45; implementation is a separate
+after that review and resolution of D6.45; implementation is a separate
 step. During implementation, acceptance requires the I4 profile measurements
 and final limits, retained live
 matrix/dossier receipts, the completed documentation ledgers, reviewed shape
