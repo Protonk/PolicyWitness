@@ -2,10 +2,13 @@
 
 Status: proposals for review; none of these removals is adopted.
 
-The identifiers below are S4 and S6–S9 from the
+The identifiers S4 and S6–S9 come from the
 [second sweep](FIVE-FOLLIES.md#second-sweep). S1–S3 are incorporated directly
 in [DRIFT-REMOVAL-PLAN.md](DRIFT-REMOVAL-PLAN.md), with their remaining decisions
-recorded there. S5 and the original five entries are outside this document's
+recorded there. S14 is not a sweep finding: it records a capability the plan
+gives up when it retires the host sandbox-library loader, so that the reasoning
+survives the deletion. Its number continues the sweep's sequence without
+claiming one of its entries. S5 and the original five entries are outside this document's
 selected scope. These IDs are unrelated to the plan's scenario-matrix row IDs.
 
 Each entry records current producers, readers and reading costs, then the
@@ -27,6 +30,7 @@ artifacts keep their bytes.
 | S7 | Remove the observer's duplicate `deny_lines` list | Whether raw-denial extraction convenience warrants a second list, and which observer contract changes |
 | S8 | Remove some or all constant log disclaimers | Which limitations must remain explicit in each stored record |
 | S9 | Remove or narrow the whole-run target-removal calculation | Which reader task warrants that derivation after the verdict disappears |
+| S14 | Restore a named distinction between an unusable sandbox library and a failed worker launch | Whether that distinction is wanted, and whether the worker's dyld diagnostic can carry it |
 
 ## S4. Copied attempt lifecycle claims
 
@@ -242,3 +246,52 @@ requires the opt-in `order_barrier_mutations` control under `AGENTS.md`.
 
 Until this decision is adopted, the plan continues to require the D1 status
 and its existing query-exclusion rule. This document does not supersede them.
+
+## S14. The distinction the retired loader used to draw
+
+**Recorded so the reasoning is not lost; the loader itself is already retired
+in the plan under D6.44 and D6.47.**
+
+**What the loader did.** `SandboxLib.load` dlopened `/usr/lib/libsandbox.dylib`
+and resolved seven symbols — `sandbox_create_params`, `sandbox_free_params`,
+`sandbox_set_param`, `sandbox_compile_string`, `sandbox_free_profile`,
+`sandbox_free_error`, `sandbox_apply` — all of which were passed only to
+`applySandboxPolicy`. Its call site in `PWRunnerService.swift` was
+`case .success: break`: the handle and every pointer were discarded, so once S3
+removes the apply helper the loader's entire production effect is its failure
+branch, `libsandbox_unavailable`.
+
+**What that branch was worth.** Measured 2026-10-01 on a stock host: none of
+`/usr/lib/libsandbox.dylib`, `/usr/lib/libsandbox.1.dylib` or
+`/usr/lib/system/libsystem_sandbox.dylib` exists as a file; all are shared-cache
+resident. The worker and validator each declare the SPI `extern` and link
+`-lsandbox`, so they bind through the linker and the cache, not through the
+host's dlopen of a hardcoded path. The refusal was therefore a forecast about
+two other processes using a different mechanism: it can pass while a worker's
+bind fails, and if that hardcoded path ever moves it refuses runs the worker
+could have performed.
+
+**What is actually lost.** A named, early, test-reachable distinction between
+"the sandbox library is unusable on this machine" and "the worker failed to
+launch." On a SIP-protected stock system the first has no realistic trigger,
+and the only producer in practice was `_test_overrides.libsandbox_path`. But the
+distinction itself may still be wanted.
+
+**Decisions remaining.**
+
+- Decide whether the distinction is wanted at all, given that a machine whose
+  libsandbox cannot load is a broken macOS install.
+- If it is, establish it from the process that binds the library: a worker that
+  cannot bind dies at dyld time with a diagnostic, and that diagnostic would
+  have to be captured and attached to the existing launch-failure record. Decide
+  whether the launch-failure outcome gains a distinct spelling or keeps one with
+  the diagnostic attached.
+- Decide nothing about reinstating a host-side check. A second forecast from a
+  process that neither predicts nor applies would reintroduce what D6.47
+  removed.
+
+**If adopted.** This is a worker-launch diagnostic change, not a reinstatement:
+the capture path for a failed worker exec, the outcome or diagnostic shape, a
+control that produces a real bind failure without a broken host, and the guide's
+account of launch failures. It does not restore `SandboxLib.swift`, the
+`libsandbox_path` override or any host library observation.
