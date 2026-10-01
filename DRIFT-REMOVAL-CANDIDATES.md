@@ -1,6 +1,7 @@
 # Potential additions to the drift removal plan
 
-Status: proposals for review; none of these removals is adopted.
+Status: proposals for review. S6 and S9 are adopted by the plan's D6.57 as
+consequences of its projection rule; S4, S7, S8 and S14 are not adopted.
 
 The identifiers S4 and S6–S9 come from the
 [second sweep](FIVE-FOLLIES.md#second-sweep). S1–S3 are incorporated directly
@@ -26,10 +27,10 @@ artifacts keep their bytes.
 | Finding | Potential addition | Principal unresolved decision |
 | --- | --- | --- |
 | S4 | Remove the copied `attempt.lifecycle.boundary` and `.result` claims | Whether an attempt should carry the full local claims or readers should join to disposition evidence |
-| S6 | Remove the always-null `attempt.native_rc` | Whether explicit unknown native return belongs in the attempt shape |
+| S6 | Remove the always-null `attempt.native_rc` | Adopted by D6.57: a constant null is a restatement of the schema; the guide states that `attempt.rc` is PW status |
 | S7 | Remove the observer's duplicate `deny_lines` list | Whether raw-denial extraction convenience warrants a second list, and which observer contract changes |
 | S8 | Remove some or all constant log disclaimers | Which limitations must remain explicit in each stored record |
-| S9 | Remove or narrow the whole-run target-removal calculation | Which reader task warrants that derivation after the verdict disappears |
+| S9 | Remove or narrow the whole-run target-removal calculation | Adopted by D6.57: the calculation is D4's sixth reading rule, and no status ships |
 | S14 | Restore a named distinction between an unusable sandbox library and a failed worker launch | Whether that distinction is wanted, and whether the worker's dyld diagnostic can carry it |
 
 ## S4. Copied attempt lifecycle claims

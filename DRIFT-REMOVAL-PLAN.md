@@ -4,8 +4,10 @@ Status: READY for implementation as of 2026-10-01; implementation has not
 started. The matrix's response 12 columns are verified against live output
 (see the scenario matrix). The S1–S3 helper removals include retirement of the
 host sandbox-library admission check (D6.47). No sandbox-library identity is
-collected (D6.52). One overall client deadline and controller-owned transport
-failures settle the stdin handoff contract (D6.56, resolving D6.55).
+collected (D6.52). D6.57 classifies every derived wire value and drops
+restatements, D6.58 drops wire constants, D6.59 reduces the stdin handoff to a
+writer thread and one delivery record, and D6.60 keeps the existing import
+scanner bounds.
 The readiness gate below separates settled decisions from execution
 checks. Every decision is a numbered D6 row and any later change to DESIGN or
 REMOVAL is a new row; a later row supersedes an earlier row where stated. The
@@ -18,11 +20,11 @@ PolicyWitness reports `steps[].drift` (`true`, `false`, `null`) and
 `steps[].comparison.conclusion` (`agreement`, `disagreement`,
 `directional_consistency`, `unavailable`): verdicts about the relation between
 a `sandbox_check` answer and observed enforcement. This plan removes them, the
-unobserved deny-signal channel and four duplicate or constant fields; keeps
-every observation and relation that fed them as typed obligations; adds a
-specimen dossier; and drops reading of earlier reply versions. The reader
-computes any label. PW supplies none on the wire, in test equipment or in a
-guide recipe.
+unobserved deny-signal channel, and every field that restates another field
+or a constant (D6.57, D6.58); keeps every observation and classification that
+fed them; adds a specimen dossier; and drops reading of earlier reply
+versions. The reader computes any label and applies the reading rules in D4.
+PW supplies no label on the wire, in test equipment or in a guide recipe.
 
 Code and documentation describe the shipped app. Historical names, paths and
 interpretations earn no compatibility machinery. Schema numbers move with the
@@ -44,71 +46,53 @@ The reply may describe. It may not conclude. No field in a response 13 reply
 has a value space that includes a claim about the relation between the
 prediction and enforcement. Descriptive values are: what was submitted, what
 each channel returned and on what basis, whether the two submitted scopes
-match, the order PW established by its own actions, and which obligations of a
-comparison are or are not discharged, with the evidence that discharges them.
-Descriptive derivations from the raw records are permitted, including channel
-summaries, submitted-scope relations, ordering eligibility and obligations.
-Evidence validation and selection may inspect both channels. A proposed field
-fails when its value asserts agreement, disagreement, drift or consistency
-between prediction and enforcement, whatever name the field uses. Derivability
-alone is not a rejection rule (D6.25).
+match, and the order PW established by its own actions. Descriptive
+derivations from the raw records are permitted when they are classifications
+under D6.57: channel summaries that apply a PW-owned table, submitted-scope
+relations and ordering eligibility. A restatement of other fields in the same
+document does not ship (D6.57). Evidence validation and selection may inspect
+both channels. A proposed field fails when its value asserts agreement,
+disagreement, drift or consistency between prediction and enforcement,
+whatever name the field uses. Derivability rejects restatements and does not
+reject classifications (D6.25 as restated by D6.57).
 
 ### D1. The per-step comparison record
 
-`steps[].comparison` keeps `prediction`, `observation`, `observation_basis`,
-`operation_relation`, `target_relation` and `order` unchanged. `conclusion`,
-`scope` (D6.13) and `steps[].drift` are removed. Of the five removed
-`limitations` strings, three become `obligations`, state stability moves to
-`comparison_conditions`, and the duplicate ordering string disappears; the
-remaining strings stay a list.
+`steps[].comparison` keeps `observation`, `observation_basis`,
+`operation_relation`, `target_relation` and `order` unchanged. `prediction`,
+`conclusion`, `scope` (D6.13) and `steps[].drift` are removed; `prediction`
+restated `sandbox_check.outcome` and `result_source` (D6.57). Of the five
+removed `limitations` strings none becomes a field: state stability and the
+three obligations are reading rules in D4, and the ordering string equalled
+`order`. `limitations` keeps only the strings that carry information found
+nowhere else in the step: the planner's exclusion code and the lifecycle
+entries the controller validates.
 
 ```json
 "comparison": {
-  "prediction": "deny",
   "observation": "succeeded",
   "observation_basis": "completed_worker_status",
   "operation_relation": "matched",
   "target_relation": "same_submitted",
   "order": "query_first",
-  "obligations": {
-    "sandbox_attribution":     { "status": "not_required" },
-    "runtime_target_identity": { "status": "unestablished" },
-    "target_mutation":         { "status": "none" }
-  },
   "limitations": []
 }
 ```
 
 | Path | Type | Rule |
 | --- | --- | --- |
-| `obligations.sandbox_attribution.status` | string | `unestablished` when `observation` is `permission_failure` or `other_failure`, or when `limitations` contains `exec_result_failed_after_spawn`; `not_applicable` when `observation` is `unavailable`; `not_required` otherwise (D6.14) |
-| `obligations.runtime_target_identity.status` | string | `unestablished` when the query's `filter_kind` is `path` or the mapped attempt filter is `path`; `not_applicable` otherwise |
-| `obligations.target_mutation.status` | string | `none` when no run step qualifies under the rule below; otherwise `unordered` when `order` is `unestablished`, or `after_query` when `order` is `query_first`. `none` does not establish an unchanged target. The obligation names no step: which step removed the target is in the attempt records (D6.42) |
-| `limitations` | array of string | may be empty; vocabulary unchanged: `query_plan:*`, `prediction:*`, `attempt:*` (including the lifecycle entries), `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `operation:*`, `target:*`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed`. `query_attempt_order_unestablished` is gone (it equalled `order != query_first`) |
+| `observation`, `observation_basis` | string | unchanged: the attempt channel classified by the errno set, the `kr=1100` result and the spawned-child rule |
+| `operation_relation`, `target_relation` | string | unchanged: the attempt mapped through PW's operation and filter table against the submitted query |
+| `order` | string | unchanged: `query_first` or `unestablished` under the existing eligibility rule |
+| `limitations` | array of string | may be empty; vocabulary: `query_plan:<code>` with the planner's exclusion codes (`path_unresolved_at_planning`, `prediction_unavailable_pair`, `unrecognized_filter_kind`), and the lifecycle entries `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached` and `attempt:started_without_result`. Every other former string restated a field of the same step and is removed (D6.57): `prediction:*`, the non-lifecycle `attempt:*`, `operation:*`, `target:*`, `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed`, and the five named in R1 |
 
-No step qualifies unless the query has `filter_kind: path`, a nonnull submitted
-`filter_value`, and no `query_plan:*` limitation. Given that, a run step
-qualifies when its attempt has `result_source: worker`, `requested_kind: file`,
-`requested_action: unlink`, `outcome: ok`, `rc: 0`, and `requested_path` equal to
-that submitted filter value; the current step counts as a run step. Host-resolved
-paths do not participate. An excluded query therefore keeps `none` even if a
-later attempt removes its submitted path. That exclusion is the obligation's
-whole content beyond existence, and it is a reading rule, not an otherwise
-unavailable observation: the query's `filter_kind`, `filter_value`, its
-`query_plan:*` limitation and every unlink attempt are all in the reply, so a
-reader has every input and can apply the rule unaided. The status ships as a
-convenience projection — the rule applied once by the producer instead of by
-each reader — and because it replaces a field the wire carries today. Whether
-that warrants a producer-side derivation at all is open, and belongs to S9 in
-[the candidates document](DRIFT-REMOVAL-CANDIDATES.md); this plan retains it
-(D6.26, D6.42).
-
-No obligation's value space contains `established`. State stability does not
-vary per step: the reply carries `comparison_conditions:
-{ "unestablishable": ["state_stability"] }` beside `steps`, present whenever
-`steps` is present, including an empty array, except on a
-`runner_reporting_failed` reply, where it is withheld with every comparison
-(D6.9, D6.19, D6.26).
+The exclusion code is an observation: the planner records it nowhere else,
+since `sandbox_check.missing_reason` says only `query_not_requested`. The
+lifecycle entries restate `attempt.lifecycle.summary` and ship because
+`validate_disposition` in the controller reads them with an effect on the
+envelope (D6.46, D6.57). The reading rules that replace every removed string
+are listed in D4. No `comparison_conditions` object exists: state stability is
+one of those rules, and the object was a constant (D6.58).
 
 #### Scenario matrix
 
@@ -116,70 +100,75 @@ The S, B and C rows specify 32 scenario expectations: a real-validator plan of
 24 steps, a steered-validator plan of 7, and a pre-apply failure. R and T are
 two additional failure controls with separate owners.
 
-Seven of the nine columns — `prediction`, `observation`, `observation_basis`,
-`operation_relation`, `target_relation`, `order` and `limitations` — are
-unchanged by this plan, so every row's values for them were checked against
-response 12 output on 2026-09-30. Twenty-five rows (including the three `as
-S01` aliases) matched captured tuples in the retained `release-0.2.4-default`
-evidence; the remaining rows were run live. Two live specimens and their raw
-envelopes are preserved under
+Five of the record's columns — `observation`, `observation_basis`,
+`operation_relation`, `target_relation` and `order` — are unchanged by this
+plan, and every surviving `limitations` string is a member of a verified
+response 12 list, so every row's values were checked against response 12
+output on 2026-09-30. Twenty-five rows (including the three `as S01` aliases)
+matched captured tuples in the retained `release-0.2.4-default` evidence; the
+remaining rows were run live. Two live specimens and their raw envelopes are
+preserved under
 [tests/fixtures/comparison/baseline_response12/](tests/fixtures/comparison/baseline_response12/)
-with the method and per-row provenance in that directory's README. One row was
-wrong and is corrected here: S22 also carries `submitted_target_unavailable`,
-because a `none` filter submits no target to compare. The `obligations` object
-and `comparison_conditions` remain design expectations, since no build emits
-them; I2 still owns capturing response 13 receipts, app identity and checker
-output in managed output before replacement coverage is credited. The deadline
-example has an existing
-[generated control](tests/fixtures/disposition/a1_expected.json), whose source
-and captured-versus-generated distinction are documented in the
+with the method and per-row provenance in that directory's README. The
+`Query` column is not a record field: it shows `sandbox_check.outcome` when
+`result_source` is `validator` and the outcome is `allow` or `deny`, and
+`unavailable` otherwise, which is the first reading rule in D4; the response
+12 `prediction` values verified on that date are exactly these. I2 still owns
+capturing response 13 receipts, app identity and checker output in managed
+output before replacement coverage is credited. The deadline example has an
+existing [generated control](tests/fixtures/disposition/a1_expected.json),
+whose source and captured-versus-generated distinction are documented in the
 [fixture README](tests/fixtures/disposition/README.md).
-Obligations are abbreviated A (sandbox attribution), I (runtime target
-identity), M (target mutation); `nr` = `not_required`, `na` =
-`not_applicable`, `un` = `unestablished`.
 
-| ID | Scenario | Pred | Observation / basis | Op | Target | Order | A | I | M | Limitations |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S01 | allow, read succeeds | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | none | |
-| S02 | deny, read EPERM | deny | permission_failure / permission_errno | matched | same | query_first | un | un | none | |
-| S03 | allow, mode-000 file EACCES | allow | permission_failure / permission_errno | matched | same | query_first | un | un | none | |
-| S05 | query denied path, attempt other path | deny | succeeded / completed_worker_status | matched | different | query_first | nr | un | none | `target:different_submitted` |
-| S06 | query write, attempt read | allow | succeeded / completed_worker_status | different | same | query_first | nr | un | none | `operation:different` |
-| S07 | absent path, both channels | unavailable | other_failure / completed_worker_status | matched | same | unestablished | un | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested` |
-| S08 | compound create | unavailable | succeeded / completed_worker_status | unresolved | same | unestablished | nr | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested`, `compound_attempt`, `operation:unresolved` |
-| S09 | unsupported attempt kind | allow | unavailable / no_completed_worker_result | unresolved | unresolved | query_first | na | un | none | `attempt:attempt_not_supported`, `attempt_operation_unestablished`, `operation:unresolved`, `target:unresolved`, `attempt:unsupported` |
-| S10 | sysctl planning exclusion | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | na | none | `query_plan:prediction_unavailable_pair`, `prediction:query_not_requested` |
-| S11 | bare `process-exec` query, spawn ok | unavailable | succeeded / spawned_child | different | same | unestablished | nr | un | none | `prediction:no_usable_verdict`, `exec_query_not_full_spawn_prediction`, `operation:different` |
-| S12 | `file-read*` query | allow | succeeded / completed_worker_status | unresolved | same | query_first | nr | un | none | `broad_query_operation`, `operation:unresolved` |
-| S13 | mach deny, kr=1100 | deny | permission_failure / bootstrap_permission_result | matched | same | query_first | un | na | none | |
-| S14 | mach unknown service, kr=1102 | allow | other_failure / completed_worker_status | matched | same | query_first | un | na | none | |
-| S15 | `process-exec*`, spawn ok, exit 0 | allow | succeeded / spawned_child | matched | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction` |
-| S16 | spawn ok, child exits 1 | allow | succeeded / spawned_child | matched | same | query_first | un | un | none | `exec_result_failed_after_spawn`, `exec_query_not_full_spawn_prediction` |
-| S17 | spawn of mode-000 target, EACCES | allow | permission_failure / permission_errno | matched | same | query_first | un | un | none | `exec_query_not_full_spawn_prediction` |
-| S18 | spawn of absent target | unavailable | other_failure / completed_worker_status | matched | same | unestablished | un | un | none | `query_plan:path_unresolved_at_planning`, `prediction:query_not_requested`, `exec_query_not_full_spawn_prediction` |
-| S19 | ordered unlink of queried path | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query | `host_path_resolution_changed` |
-| S20 | `process-exec-interpreter` query, binary spawn | allow | succeeded / spawned_child | different | same | query_first | nr | un | none | `exec_query_not_full_spawn_prediction`, `operation:different` |
-| S21 | `local_name` query, kr=1100 | allow | permission_failure / bootstrap_permission_result | matched | unresolved | query_first | un | na | none | `query_filter_scope_unestablished`, `target:unresolved` |
-| S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | nr | un | none | `query_filter_scope_unestablished`, `submitted_target_unavailable`, `target:unresolved` |
-| S23 | allow, `access` succeeds | as S01 | | | | | | | | |
-| S24 | allow, `open_write` succeeds | as S01 | | | | | | | | |
-| S25 | read of the path S19 unlinked, ENOENT | allow | other_failure / completed_worker_status | matched | same | query_first | un | un | after_query | `host_path_resolution_changed` |
-| B1 | steered deny, read succeeds, ordered | deny | succeeded / completed_worker_status | matched | same | query_first | nr | un | none | |
-| B2 | verdict omitted, read succeeds | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:validator_no_verdict` |
-| B3 | verdict omitted, unlink of queried path | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
-| B4 | validator error record | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | none | `prediction:no_usable_verdict` |
-| B5 | verdict omitted, read of a path B6 unlinks | unavailable | succeeded / completed_worker_status | matched | same | unestablished | nr | un | unordered | `prediction:validator_no_verdict`, `host_path_resolution_changed` |
-| B6 | allow, ordered unlink | allow | succeeded / completed_worker_status | matched | same | query_first | nr | un | after_query | `host_path_resolution_changed` |
-| B7 | allow, read succeeds (control) | as S01 | | | | | | | | |
-| C1 | policy fails to compile, nothing runs | unavailable | unavailable / no_completed_worker_result | matched | same | unestablished | na | un | none | `prediction:validator_not_invoked`, `attempt:slot_incomplete`, `attempt:not_reached` |
-| R | `runner_reporting_failed` | no `comparison` object and no `comparison_conditions`; both fallback levels tested in `ReplyFailureTests` | | | | | | | | |
-| T | allow policy, FIFO read starts after release, then worker deadline | allow | unavailable / no_completed_worker_result | matched | same | query_first | na | un | none | `attempt:slot_incomplete`, `attempt:started_without_result` |
+| ID | Scenario | Query | Observation / basis | Op | Target | Order | Limitations |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| S01 | allow, read succeeds | allow | succeeded / completed_worker_status | matched | same | query_first | |
+| S02 | deny, read EPERM | deny | permission_failure / permission_errno | matched | same | query_first | |
+| S03 | allow, mode-000 file EACCES | allow | permission_failure / permission_errno | matched | same | query_first | |
+| S05 | query denied path, attempt other path | deny | succeeded / completed_worker_status | matched | different | query_first | |
+| S06 | query write, attempt read | allow | succeeded / completed_worker_status | different | same | query_first | |
+| S07 | absent path, both channels | unavailable | other_failure / completed_worker_status | matched | same | unestablished | `query_plan:path_unresolved_at_planning` |
+| S08 | compound create | unavailable | succeeded / completed_worker_status | unresolved | same | unestablished | `query_plan:path_unresolved_at_planning` |
+| S09 | unsupported attempt kind | allow | unavailable / no_completed_worker_result | unresolved | unresolved | query_first | `attempt:unsupported` |
+| S10 | sysctl planning exclusion | unavailable | succeeded / completed_worker_status | matched | same | unestablished | `query_plan:prediction_unavailable_pair` |
+| S11 | bare `process-exec` query, spawn ok | unavailable | succeeded / spawned_child | different | same | unestablished | |
+| S12 | `file-read*` query | allow | succeeded / completed_worker_status | unresolved | same | query_first | |
+| S13 | mach deny, kr=1100 | deny | permission_failure / bootstrap_permission_result | matched | same | query_first | |
+| S14 | mach unknown service, kr=1102 | allow | other_failure / completed_worker_status | matched | same | query_first | |
+| S15 | `process-exec*`, spawn ok, exit 0 | allow | succeeded / spawned_child | matched | same | query_first | |
+| S16 | spawn ok, child exits 1 | as S15 | | | | | |
+| S17 | spawn of mode-000 target, EACCES | allow | permission_failure / permission_errno | matched | same | query_first | |
+| S18 | spawn of absent target | unavailable | other_failure / completed_worker_status | matched | same | unestablished | `query_plan:path_unresolved_at_planning` |
+| S19 | ordered unlink of queried path | as S01 | | | | | |
+| S20 | `process-exec-interpreter` query, binary spawn | allow | succeeded / spawned_child | different | same | query_first | |
+| S21 | `local_name` query, kr=1100 | allow | permission_failure / bootstrap_permission_result | matched | unresolved | query_first | |
+| S22 | `none` filter on a file query | allow | succeeded / completed_worker_status | matched | unresolved | query_first | |
+| S23 | allow, `access` succeeds | as S01 | | | | | |
+| S24 | allow, `open_write` succeeds | as S01 | | | | | |
+| S25 | read of the path S19 unlinked, ENOENT | as S14 | | | | | |
+| B1 | steered deny, read succeeds, ordered | deny | succeeded / completed_worker_status | matched | same | query_first | |
+| B2 | verdict omitted, read succeeds | unavailable | succeeded / completed_worker_status | matched | same | unestablished | |
+| B3 | verdict omitted, unlink of queried path | as B2 | | | | | |
+| B4 | validator error record | as B2 | | | | | |
+| B5 | verdict omitted, read of a path B6 unlinks | as B2 | | | | | |
+| B6 | allow, ordered unlink | as S01 | | | | | |
+| B7 | allow, read succeeds (control) | as S01 | | | | | |
+| C1 | policy fails to compile, nothing runs | unavailable | unavailable / no_completed_worker_result | matched | same | unestablished | `attempt:not_reached` |
+| R | `runner_reporting_failed` | no `comparison` object; both fallback levels tested in `ReplyFailureTests` | | | | | |
+| T | allow policy, FIFO read starts after release, then worker deadline | allow | unavailable / no_completed_worker_result | matched | same | query_first | `attempt:started_without_result` |
 
-Rows with identical objects (S01, S23, S24, B7) are one scenario under
-different attempt actions, which `attempt.requested_action` distinguishes.
-The pairs `attempt:attempt_not_supported` with `attempt:unsupported` (S09) and
-`attempt:slot_incomplete` with `attempt:not_reached` (C1) come from the missing
-reason and the disposition record respectively; both stay.
+Rows with identical objects are one record under different raw fields, and
+the raw fields distinguish them: S01, S19, S23, S24, B6 and B7 by
+`attempt.requested_action` and the run's unlink records; S03 and S17, and S07
+and S18, by `attempt.requested_kind`; S14 and S25 by `attempt.errno`; S15 and
+S16 by `attempt.rc` and `child_exit_code`; B2 through B5 by
+`sandbox_check.missing_reason`, `attempt.requested_action` and the other
+steps' unlink records. That is D6.57's intended effect: the matrix asserts
+the record, and a reader applies D4's rules to the raw fields it names. Each
+specimen still runs, because the raw fields are what the live case asserts.
+The lifecycle entries `attempt:unsupported` (S09), `attempt:not_reached` (C1)
+and `attempt:started_without_result` (T) come from the disposition record and
+stay under D6.46.
 
 #### Specimen mechanics the rows depend on
 
@@ -208,8 +197,8 @@ T uses the existing `worker_attempt_in_flight_at_deadline` setup: an existing
 FIFO with no writer, an allow policy, a completed validator query, the release
 and acknowledgement chain, and a worker deadline while `open_read` is in
 flight. The test must establish those raw facts before comparing T. Its later
-unreached step may also retain an allow prediction and `query_first`; failure
-to complete an attempt does not erase an earlier query. R belongs to the
+unreached step may also retain an allow query answer and `query_first`;
+failure to complete an attempt does not erase an earlier query. R belongs to the
 reply boundary, so it is not fed through `comparisonEvidence(...)` (D6.32).
 
 ### D2. The specimen dossier
@@ -230,77 +219,67 @@ path.
 | `request_path` | move to `specimen.request_path` |
 | `runner_service_bundle_id`, `runner_service_name`, `runner_registry_id`, `runner_service_executable` | remove; each equals or derives from a `runner_provenance` field |
 | `policy_check` | stay; its `sbpl-check` output is kept verbatim, including that tool's own imports block |
-| `runner_client` | stay; extend with delivery and supervision facts under D6.56 |
-| `runner_result`, `runner_sandbox_diagnostics`, `runner_startup_diagnostics`, `sandbox_log_capture`, `timeout_ms` | stay; `timeout_ms` now covers the whole client operation under D6.56 |
+| `runner_client` | stay; gains `request_delivery` under D6.59 |
+| `runner_result`, `runner_sandbox_diagnostics`, `sandbox_log_capture`, `timeout_ms` | stay; `runner_sandbox_diagnostics` loses its `worker_pid`, `capture_status` and `first_deny` copies (D6.57); `timeout_ms` keeps its meaning |
+| `runner_startup_diagnostics` | remove; every field restated `runner_result` or `policy_check` (D6.57) |
 
 ```json
 "specimen": {
   "request_path": "tests/fixtures/pw_runner/specimen_file_read_deny.json",
   "policy": {
-    "format": "sbpl",
     "augmentation": { "status": "not_requested", "applied": [],
                       "original_sha256": "…", "applied_sha256": "…", "error": null },
     "imports": {
       "status": "complete",
-      "basis": "controller_scan_of_applied_source",
       "closure_sha256": "…",
       "records": [
         { "name": "system.sb", "resolved_path": "/System/Library/Sandbox/Profiles/system.sb",
           "sha256": "…", "size_bytes": 12345, "mtime_unix": 1700000000, "error": null }
       ],
       "cycle": null,
-      "limits": { "depth": 8, "count": 64, "file_bytes": 1048576, "total_bytes": 8388608, "wall_ms": 1000 },
       "exceeded": null,
       "failure": null
     }
   },
   "host": { "macos_version": "14.8.3", "macos_build": "23J220", "kernel_release": "23.6.0",
-            "arch": "arm64", "basis": "sysctlbyname" },
+            "arch": "arm64" },
   "runner_provenance": { "…": "unchanged shape" },
   "app_provenance": { "…": "unchanged shape" },
-  "binaries": {
-    "service":   { "manifest_id": "com.yourteam.policy-witness.PWRunner", "path": "…", "manifest_sha256": "…",
-                   "manifest_lc_uuid": "…", "manifest_entitlements": {}, "manifest_entitlements_error": null,
-                   "basis": "app_manifest_entry",
-                   "verification": { "status": "not_compared", "actual_sha256": null,
-                                     "reason": "selection is the app's own manifest entry" } },
-    "worker":    { "manifest_id": "PWRunner/pw-probe-runner", "…": "same shape" },
-    "validator": { "manifest_id": "PWRunner/sb_api_validator", "…": "same shape" }
-  },
-  "conditions": {
-    "prediction_unavailable_pairs": [ { "operation": "sysctl-read", "filter_kind": "sysctl_name" } ]
-  },
-  "references": {
-    "policy_sha256": "/data/runner_result/policy_sha256",
-    "applied_profile": "/data/runner_result/applied_profile",
-    "steps": "/data/runner_result/steps",
-    "validator_records": "/data/runner_result/validator_subprocess/records",
-    "ordering": "/data/runner_result/runner_subprocess/ordering",
-    "comparison_conditions": "/data/runner_result/comparison_conditions",
-    "sandbox_log_capture": "/data/sandbox_log_capture",
-    "policy_check": "/data/policy_check",
-    "build": "/build"
-  }
+  "binaries": { "service": null, "worker": null, "validator": null }
+}
+```
+
+A run with a worker executable override carries the one record that observes
+something:
+
+```json
+"binaries": {
+  "service": null,
+  "worker": { "path": "/tmp/pw-probe-runner", "actual_sha256": "…",
+              "baseline_sha256": "…", "verification": "mismatch",
+              "reason": "selected bytes differ from the manifest baseline" },
+  "validator": null
 }
 ```
 
 | Path | Type | Rule |
 | --- | --- | --- |
 | `request_path` | string or null | the path given to `run`; null when no path was given (see the failure table) |
-| `policy.format` | string or null | the submitted string, even when unsupported; null when absent or not a string |
-| `policy.augmentation` | object | always present; `status`, `applied`, nullable `original_sha256` and `applied_sha256`, and nullable `error`, under the failure rules below (D6.28) |
+| `policy.augmentation` | object | always present; `status`, `applied`, nullable `original_sha256` and `applied_sha256`, and nullable `error`, under the failure rules below (D6.28). On a completed run `applied_sha256` equals the reply's `policy_sha256`, since both hash the same source string; it ships because it is an independent hash of bytes outside the envelope and the only one on a run with no reply |
 | `policy.imports.status` | string | `complete`, `incomplete`, `failed`, `not_applicable`, under the scan rules below |
-| `policy.imports.basis` | string | constant `controller_scan_of_applied_source`: the controller walks the source after augments, before invoking the runner; it is not evidence of what the worker's compiler read |
 | `policy.imports.closure_sha256` | string or null | over the applied source and successfully hashed import records whenever the scan ran; `status` says whether the scanned closure is complete |
 | `policy.imports.records[]`, `cycle` | as `sbpl-check` | unchanged shapes |
-| `policy.imports.limits` | object | depth 8, count 64, imported file 1 MiB, total 8 MiB, cooperative work budget 1,000 ms, recorded with counting rules in `docs/limits.json`. Measured against the real closure: `sbpl-check` over `(import "system.sb")` resolves 2 records totalling ~13 KB and returns in 0.02 s including the compile, so the budget has roughly fifty times the headroom a representative profile needs. I4 measures the WebProcess-size specimen and the cutoff behavior before the numbers are published (D6.37) |
-| `policy.imports.exceeded` | string or null | the first bound hit: `depth`, `count`, `file_bytes`, `total_bytes` or `wall_ms` |
+| `policy.imports.exceeded` | string or null | the first bound hit: `depth` or `count`, the scanner's existing bounds (D6.60) |
 | `policy.imports.failure` | string or null | the first scan problem, including why the scan could not start; null for a complete scan or an ordinary absence of source |
-| `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails (D6.16) |
-| `host.basis` | string | constant `sysctlbyname`: the mechanism for the four facts above |
-| `binaries.*` | object | each selected executable path and its baseline metadata from the app manifest the controller already reads; `manifest_*` fields are baseline metadata, never observations of the selected binary; `verification.status` is `not_compared`, `match`, `mismatch` or `unavailable` (D6.29, D6.49) |
-| `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair` |
-| `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own. Key set and values are fixed by envelope 5, not computed from presence; a pointer to a withheld or absent record is still present (D6.20) |
+| `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails (D6.16). The guide states the mechanism once; no `basis` field (D6.58) |
+| `binaries.<role>` | object or null | null when the selected path is the app manifest's own entry for that role, whose content is constant for a given build (D6.58, D6.61); otherwise `path`, `actual_sha256`, `baseline_sha256` from the manifest entry, `verification` of `match`, `mismatch` or `unavailable`, and `reason`, null only for `match` (D6.29, D6.49) |
+
+The submitted `policy.format`, the scan and host mechanisms, the scanner's
+bounds, a run-level list of `prediction_unavailable_pair` steps and a table of
+JSON pointers to the records beside the dossier were all in earlier drafts of
+this object. Each restated a field of the same envelope, a constant, or the
+schema, and none ships (D6.57, D6.58); the guide names the records a reader
+joins to.
 
 Host facts, binaries and the imports scan are gathered before invocation.
 Dossier collection failures are recorded and do not change whether the request
@@ -308,8 +287,7 @@ is admitted or the runner is invoked. For a controller refusal, collect what
 is available without invoking the runner. All dossier keys stay present;
 unavailable scalar facts are null, lists are empty when no records exist, and
 statuses explain unavailable collections. `app_provenance` may remain null,
-as in its existing shape. An envelope without a runner reply has
-`conditions.prediction_unavailable_pairs: []`; this means no reported pairs.
+as in its existing shape.
 
 #### Request and augmentation failures
 
@@ -319,19 +297,19 @@ string selected for invocation, including the unchanged source. Neither hash
 identifies parameters or proves worker compilation. Augmentation is atomic:
 failure reports no applied names and no applied hash.
 
-| Request state | `policy.format` | Augmentation | Imports |
-| --- | --- | --- | --- |
-| String source, no augments (also null or empty augments) | submitted string or null | `not_requested`, `applied: []`, equal source hashes, `error: null` | scan that source |
-| Augments successfully applied | submitted string or null | `applied`, applied names and hashes; original hash null if no original string existed | scan the resulting source |
-| Augment resolution refused | submitted string or null | `failed`, `applied: []`, original hash if available, applied hash null, refusal diagnostic | `not_applicable`, `failure: augmentation_failed` |
-| Missing/malformed policy or source, no augments applied | submitted string or null | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
-| No request value: the file is absent, unreadable, not JSON, or not an object | null | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
-| No request path: the argument is missing or a flag value is invalid | null | as above, with `specimen.request_path: null` | `not_applicable`, no records or hash |
-| Runner refusal or XPC failure after successful resolution | as collected before invocation | preserve the collected record | preserve the collected record |
+| Request state | Augmentation | Imports |
+| --- | --- | --- |
+| String source, no augments (also null or empty augments) | `not_requested`, `applied: []`, equal source hashes, `error: null` | scan that source |
+| Augments successfully applied | `applied`, applied names and hashes; original hash null if no original string existed | scan the resulting source |
+| Augment resolution refused | `failed`, `applied: []`, original hash if available, applied hash null, refusal diagnostic | `not_applicable`, `failure: augmentation_failed` |
+| Missing/malformed policy or source, no augments applied | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
+| No request value: the file is absent, unreadable, not JSON, or not an object | `not_applicable`, `applied: []`, both hashes null, `error: null` | `not_applicable`, no records or hash |
+| No request path: the argument is missing or a flag value is invalid | as above, with `specimen.request_path: null` | `not_applicable`, no records or hash |
+| Runner refusal or XPC failure after successful resolution | preserve the collected record | preserve the collected record |
 
-Every imports object carries its basis, limits, records, cycle, exceeded and
-failure keys. A scan that does not run has `records: []`, `cycle: null`,
-`closure_sha256: null` and `exceeded: null`.
+Every imports object carries its status, records, cycle, closure hash,
+exceeded and failure keys. A scan that does not run has `records: []`,
+`cycle: null`, `closure_sha256: null` and `exceeded: null`.
 
 The table governs every `kind: "run"` envelope, because every failure before
 execution already produces one. A missing argument, an invalid flag value, an
@@ -362,8 +340,8 @@ version of the same-bytes guarantee than a shared file, and it is the shared
 data structure the guarantee actually wants. So give the client `--request -`
 and pass the serialized request on its stdin; its `usage()` text and the
 client's documented surface gain that option, which is additive and is not the
-`policy-witness` CLI contract. D6.56 changes the meaning of the existing
-`--timeout-ms` allowance as specified below; it adds no controller flag.
+`policy-witness` CLI contract. D6.59 leaves `--timeout-ms` and its meaning
+unchanged; it adds no controller flag.
 
 A file survives in exactly one place: the `xpc_error` fallback that invokes
 `sbpl-check --request <path>`. Write it there, from the same held string, and
@@ -377,88 +355,49 @@ request file's directory — augments resolve against the app root and the runne
 never receives a path — so no field's meaning depends on where the bytes came
 from.
 
-#### Client deadline and transport failures
+#### Request delivery and transport failures
 
-The controller owns one absolute `CLOCK_MONOTONIC` deadline, established just
-before client spawn from `--timeout-ms`. Startup, stdin delivery and EOF,
-request acquisition in the client, XPC reply wait, output collection and client
-exit consume that same allowance. Pass the deadline across the private
-controller/client boundary using the existing shared-budget mechanism's clock
-and validation rules; never start a fresh allowance after input delivery or
-before the RPC wait. A standalone client establishes its deadline before
-request acquisition. Keep the current default and minimum, and reject values
-that cannot form a finite deadline. This deliberately replaces the current
-reply-wait-only meaning (D6.56).
-
-At expiry, stop request delivery and ordinary collection and start bounded
-cleanup. Reuse the supervisor's fixed 1,000 ms cleanup grace for closing pipes,
-owned-child termination and reaping, retaining any output collected during
-cleanup. This grace buys no further request or RPC work. Record unconfirmed
-cleanup as such. Ownership covers the spawned client, not its launchd-owned
-XPC service or that service's children; client cleanup does not establish their
-termination. Worker and validator budgets remain independent. Request
-preparation/dossier collection, fallback diagnostics and optional log capture
-are outside this client allowance; it is not an end-to-end CLI runtime promise.
-
-Factor the reusable nonblocking I/O, absolute-budget, process-observation and
-owned-cleanup core out of `controller/src/log_capture.rs`, then add optional
-stdin delivery for `runner_client.rs`. Preserve the log boundary's behavior.
-The runner-client boundary writes input while draining both output streams;
-close stdin immediately after the last byte so the client can observe EOF.
-Partial writes, interruptions and backpressure must not deadlock, and a broken
-pipe must not terminate the controller. On a write failure, close stdin and
-continue collecting available output under the original deadline. Use
-`ValidatorClient.swift`'s duplex collection and write-failure controls as the
-behavioral model, with Rust subprocess controls for this boundary.
-
+The controller spawns the client with stdin piped, writes the held request
+string from a writer thread, and closes the write end after the last byte so
+the client observes EOF. The main thread then collects stdout and stderr and
+waits for exit exactly as today. The shipped client reads its whole request
+before it opens the connection or writes any output, so the write either
+completes or fails with EPIPE; the thread exists only so that a child which
+fills its output pipes before reading its input cannot deadlock the
+controller, which the shipped client does not do. The client's reply-wait
+allowance, `--timeout-ms`, keeps its current default, minimum and meaning.
+The controller acquires no deadline of its own, does not reuse the log
+supervisor, and adds no argument to the client (D6.59, superseding D6.56).
 Keep `JsonOutputCapture`'s strict parsing, diagnostic retention and existing
-runner capture limits. The log supervisor's overflow-stop and zero-exit
-requirements are boundary policies, not defaults for the runner client:
-retain up to the runner limits while continuing to drain/count excess bytes
-within the deadline, and keep nonzero client exit independent of received JSON.
-Never parse a truncated or incompletely collected stdout prefix as a reply,
-even when that prefix is valid JSON. Streaming counts describe bytes actually
-read, with EOF/read-error/cutoff observations explaining incomplete collection;
-do not reconstruct an `Output` from a retained prefix and call its length the
-total received. Share the capture finalization rules with `utils.rs` rather
-than replacing its other receivers.
+runner capture limits unchanged.
 
-Extend `data.runner_client` with `request_delivery` containing
-`bytes_expected`, `bytes_written`, `stdin_closed` and nullable `error`, and a
-`supervision` report using the shared budget, stream, process and cleanup
-observations with a runner-client boundary. Delivery is null for a helper
-invocation using the retained file-input interface; normal runs use stdin.
-These are controller observations:
-accepted pipe writes and closing the writer do not prove that the client read
-the bytes or that XPC delivered them. Preserve existing capture and timing
-fields; `exit_code` is null when no numeric exit code was observed, with signal
-and reaping facts in supervision. Retain separate delivery, output, wait and
-cleanup errors when they coexist. Once a child exists, return its capture and
-observations on failure instead of escaping through an error path that discards
-them. Before invocation, the uniform run skeleton still has null execution
-records.
+`data.runner_client` gains `request_delivery: { "bytes_written": n, "error": null | string }`.
+It is null for a helper invocation using the retained file-input interface;
+normal runs use stdin. It is a controller observation: an accepted pipe write
+and a closed writer do not prove that the client read the bytes or that XPC
+delivered them. Existing capture and timing fields and the meaning of
+`exit_code` are unchanged.
 
-A delivery failure, expiry of the controller's overall deadline or failed
-transport supervision makes the envelope's `result.ok` false,
-`result.normalized_outcome: tool_error`, with exit 2 and a controller diagnostic.
-Use this existing controller failure category; do not invent a worker or XPC
-failure to represent the handoff. This result takes precedence even if captured
-stdout contains an `ok` reply. Retain that complete reply unchanged in
-`data.runner_result`, along with all capture and process diagnostics. D5's
-version gate still controls any interpretation of it; a transport failure does
-not authorize reading an unsupported reply. Where transport completes, existing
-runner-result and D5 version-result selection applies. Nonzero client exit
-alone must not overwrite a valid failure reply. A client-generated XPC failure
-received within the allowance remains that client's reported failure.
+A delivery error makes the envelope's `result.ok` false with
+`result.normalized_outcome: tool_error`, exit 2 and a controller diagnostic,
+because the submitted bytes did not reach the client. Use this existing
+controller failure category; do not invent a worker or XPC failure to
+represent the handoff. It takes precedence over any captured reply, which can
+only be the client's own failure reply, and that reply is retained unchanged
+in `data.runner_result` with the full capture. D5's version gate still
+controls any interpretation of it. A broken pipe must not terminate the
+controller. Where delivery completes, the existing runner-result and D5
+version-result selection applies, and a nonzero client exit alone must not
+overwrite a valid failure reply.
 
 The `xpc_error` fallback remains an independent diagnostic of a supported
 reply. Failure to create or write its temporary request file becomes
-`PolicyCheckCapture::unavailable`, as helper launch failure already does; retain
-the original reply and startup diagnostics. Remove any owned temporary file
-on every fallback exit, preserving cleanup errors without replacing the
-original failure. A controller delivery error alone does not trigger fallback
-compilation. I4 owns transport and fallback controls; I5 updates the documented
-timeout, capture and result contracts.
+`PolicyCheckCapture::unavailable`, as helper launch failure already does;
+retain the original reply. Remove any owned temporary file on every fallback
+exit, preserving cleanup errors without replacing the original failure. A
+delivery error alone does not trigger fallback compilation. I4 owns the
+delivery and fallback controls; I5 documents `--request -` and
+`request_delivery`.
 
 #### Binary selection and comparison
 
@@ -473,92 +412,73 @@ For both built-in and BYOXPC selections, the baselines are the app manifest's
 built-in `PWRunner` service, `PWRunner/pw-probe-runner` and
 `PWRunner/sb_api_validator` entries, selected by their shipped bundle paths.
 The external service identifier does not select a different baseline.
-`manifest_id` names the expected baseline entry even if it is missing.
-Missing, unreadable or invalid manifests/entries produce null unavailable
-metadata and `verification.status: unavailable` with a reason.
 
-The dossier does not hash a file the app already describes. `load_app_provenance`
-reads the Evidence manifest on every run, and `evidence::verify_manifest`
-already hashes every entry that declares a hash and reports each mismatch,
-under `PW_VERIFY_EVIDENCE=1`. A per-run hash of three hand-picked entries would
-be a narrower second copy of that mechanism, always on, beside the complete one
-this plan leaves untouched — and for a built-in selection its answer is
-constant for a given build. So:
+When the selected path is the manifest's own entry for that role, the record
+is null. For a given build its content is constant, the build stamp already
+identifies the build, and app-file integrity belongs to `PW_VERIFY_EVIDENCE`,
+which hashes every declared entry, and to the signature; a manifest that ships
+inside the bundle it describes cannot establish more than that (D6.49, D6.58,
+D6.61). Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of
+it the `PWRunner` binary, for an answer that cannot vary.
 
-- When the selected path is one of those manifest entries, report the baseline
-  metadata from the manifest already in memory and set
-  `verification.status: not_compared` with that reason and a null
-  `actual_sha256`. Integrity of the app's own files belongs to
-  `PW_VERIFY_EVIDENCE`, which covers every entry rather than three, and to the
-  signature; a manifest that ships inside the bundle it describes cannot
-  establish more than that.
-- When the selected path is an executable override or a BYOXPC copy — not a
-  manifest entry — hash it before invocation, because nothing else in the
-  envelope identifies those bytes. Compare against the built-in baseline as
-  above: equal hashes produce `match`, complete hashes that differ produce
-  `mismatch`, and a re-signed BYOXPC copy may legitimately differ. An
-  unreadable selected file has `actual_sha256: null` and
-  `verification.status: unavailable`.
-
-`basis` says which of these produced the record: `app_manifest_entry` or
-`controller_file_hash_before_invocation`. Neither mismatch nor unavailable
-changes the run outcome (D6.49). Manifest UUID and
-entitlements are labeled `manifest_lc_uuid`, `manifest_entitlements` and
-`manifest_entitlements_error`; existing runner provenance stays separate.
-Each binary object keeps all its keys: `path` is null when selection is
-unavailable, hashes and baseline metadata are nullable, and `reason` is null
-only for `match`. A mismatch reason identifies the baseline comparison; an
-unavailable reason identifies selection, manifest or file-read failure.
+When the selected path is an executable override or a BYOXPC copy, nothing
+else in the envelope identifies those bytes, so hash it before invocation and
+compare against the baseline entry's hash: equal hashes produce `match`,
+complete hashes that differ produce `mismatch`, and a re-signed BYOXPC copy
+may legitimately differ. An unreadable selected file, or a missing, unreadable
+or invalid manifest or entry, leaves `actual_sha256` or `baseline_sha256`
+null with `verification: unavailable` and a reason that identifies selection,
+manifest or file-read failure. A mismatch reason identifies the baseline
+comparison. `path` is null when selection is unavailable. Neither mismatch
+nor unavailable changes the run outcome. The manifest's UUID and entitlements
+are not echoed; existing runner provenance stays separate.
 
 #### Import collection and bounds
 
 The dossier's object is the envelope's import inventory of record: the
-controller's own scan of the source it selected for invocation, identified by
-its `basis`. `data.policy_check` keeps `sbpl-check`'s separate flat `imports`
-array, `imports_cycle` and `imports_truncated` verbatim; it is null except on
-the fallback paths that run that tool, so the two inventories coexist only
-there. They are different observations — a different scanner, a different
-moment, and only one of them bounded by these limits — and neither is a claim
-about what the worker's compiler read. They may disagree, and a disagreement is
-not an error. `references.policy_check` points at the tool's record so the
-relation is explicit; the dossier never copies it. Because the shared I1
-extraction serves both, it must keep `sbpl-check`'s existing output byte-identical
-while the dossier renders the object shape (D6.35).
+controller's own scan of the source it selected for invocation, before the
+runner is invoked. `data.policy_check` keeps `sbpl-check`'s separate flat
+`imports` array, `imports_cycle` and `imports_truncated` verbatim; it is null
+except on the fallback paths that run that tool, so the two inventories
+coexist only there. They are different observations — a different moment, by
+a different process — and neither is a claim about what the worker's compiler
+read. They may disagree, and a disagreement is not an error. The guide names
+`data.policy_check` as the tool's record so the relation is explicit; the
+dossier never copies it. The shared I1 extraction serves both and keeps
+`sbpl-check`'s existing output byte-identical (D6.35).
+
+The scanner is the one `sbpl-check` has today, with its existing bounds:
+import depth 8, import count 64 and the 4 MiB source cap, already published
+in `docs/limits.json` as `helper_import_depth`, `helper_import_count` and
+`helper_source`. No bound is added, so the shared scanner has no new cutoff
+that could change `sbpl-check`'s output (D6.60). Those entries' prose changes
+to say the dossier scan shares them; their ids and values do not. The one
+change to the traversal is that each unique resolved import is opened once:
+check with `fstat` that the descriptor is a regular file, read it, and hash
+and lex those same bytes, instead of hashing the path and then reading it
+again for recursion as `dfs_visit_import` does today. A nonregular file
+becomes an error record, which makes the inventory incomplete. This prevents
+the hash and the traversal from describing different reads, without claiming
+an atomic snapshot of a concurrently modified file. Search paths are the two
+system profile directories plus absolute import paths, as today.
 
 `complete` means the scanner exhausted the literal import closure under its
 documented search paths with no unresolved names, cycles, nonliteral import
-forms, decoding errors or exceeded limits. It does not mean compiler-complete:
+forms, decoding errors or exceeded bounds. It does not mean compiler-complete:
 macro evaluation and the files the worker compiler actually reads are outside
 this observation. An incomplete traversal keeps every collected record and a
 hash of the source plus successfully hashed imports under the existing closure
-hash algorithm. `failed` means collection could not start because of a
-collector failure; `not_applicable` means no post-resolution source was
-available. Neither receives a closure hash.
-
-Use one opened descriptor per unique resolved import. Open nonblocking, check
-the descriptor is a regular file before reading, then read bounded chunks with
-at most one extra byte to detect overflow. Reject FIFOs, devices and other
-nonregular files as incomplete inventory. Hash and lex the same buffered bytes;
-do not reopen a path for recursion. Collect metadata from that descriptor.
-This prevents the hash and traversal from describing different reads, without
-claiming an atomic snapshot of a concurrently modified file.
-
-Top-level imports have depth 0; depth 8 is recorded without expansion. Count
-each emitted unique record, including unresolved/error records, toward 64.
-The 1 MiB limit applies to each imported file; 8 MiB counts the applied source
-and unique imported bytes retained for hashing/lexing. Stop at the first bound,
-record `exceeded`, and mark `incomplete`; no truncated file gets a full-file
-hash or recursive expansion. Do not read an entire file and then check its
-size. Nonliteral forms and invalid UTF-8 must not silently count as completion.
-
-`wall_ms` is a cooperative monotonic work budget starting before the root scan.
-Check it between resolution, metadata, read, hashing and lexing work, using
-bounded chunks inside long loops. Stop scheduling work at expiry and report
-`exceeded: wall_ms`. It does not interrupt an in-flight filesystem syscall or
-bound OS scheduling delays; the docs must not promise a hard one-second return.
-The normal-run scanner is synchronous and introduces no background task or new
-shipped helper. Measure both representative-profile cost and cutoff behavior
-in I4; a hard elapsed-time guarantee would require a new design decision.
+hash algorithm, with `exceeded` naming the first bound hit, `depth` or
+`count`. Top-level imports have depth 0; depth 8 is recorded without
+expansion, and each emitted unique record, including unresolved and error
+records, counts toward 64. `failed` means collection could not start because
+of a collector failure; `not_applicable` means no post-resolution source was
+available. Neither receives a closure hash. Nonliteral forms and invalid
+UTF-8 must not silently count as completion. The scan is synchronous and
+introduces no background task, time budget or new shipped helper. The
+representative cost is already measured, 0.02 s including a compile over the
+real `system.sb` closure (D6.37), and no further measurement gates the
+published numbers.
 
 #### Host facts and library identity
 
@@ -572,61 +492,100 @@ removed under D6.44/47; worker and validator observations remain unchanged.
 ### D3. Invariants
 
 - Producer: `PWRunnerStepResult` has no `drift` or `deny_signal` property;
-  `PWRunnerComparison` has no `conclusion`, `scope` or `drift`;
-  `PWRunnerAttemptResult` has no `exit_code` or `syscall_errno`;
-  `PWRunnerSandboxCheckResult` has no `scope`; `PWRunnerRunResult` has no
-  `deny_signal_total`; `PWRunnerSignalResult` and `Signals.swift` are gone.
-  The reply-shape golden (`tests/fixtures/contract/response_shape.json`)
-  records the response 13 shape.
+  `PWRunnerComparison` has no `prediction`, `conclusion`, `scope`, `drift` or
+  `obligations`; `PWRunnerAttemptResult` has no `exit_code`, `syscall_errno`
+  or `native_rc`; `PWRunnerSandboxCheckResult` has no `scope`;
+  `PWRunnerRunResult` has no `deny_signal_total` or `comparison_conditions`;
+  `PWRunnerSignalResult` and `Signals.swift` are gone. The reply-shape golden
+  (`tests/fixtures/contract/response_shape.json`) records the response 13
+  shape.
 - Encoder, replacing the clause that rejected `disagreement`; the
   `query_first` eligibility check is unchanged:
 
   | Condition | Rejected when |
   | --- | --- |
-  | `target_mutation.status: after_query` | `order` is not `query_first` |
-  | `target_mutation.status: unordered` | `order` is `query_first` |
-  | `target_mutation.status: none` | a run step qualifies under D1 |
-  | `target_mutation.status` other than `none` | no run step qualifies under D1, the query's `filter_kind` is not `path`, or `limitations` carries a `query_plan:*` entry |
-  | `target_mutation` | carries any key but `status`; producer and consumer both check this |
-  | `sandbox_attribution.status`, `runtime_target_identity.status` | disagree with the D1 rules for this step |
-  | any step | carries `drift`, `conclusion`, `deny_signal`, `comparison.scope`, `sandbox_check.scope`, `attempt.exit_code` or `attempt.syscall_errno`, or one of the five removed limitation strings |
-  | `comparison_conditions` | absent or not exactly `{ "unestablishable": ["state_stability"] }` while `steps` is present on an ordinary reply; present on either `runner_reporting_failed` fallback |
-- Reply degradation: `runner_reporting_failed` omits every `comparison` and
-  `comparison_conditions`, even when `steps: []`. `evidence_retained: false`
-  still withholds step and subprocess evidence. The reply carries no library
-  identity at either fallback level, because the runner reports none (D6.52).
+  | `limitations` | carries a string outside D1's vocabulary: anything but `query_plan:<code>` and the five lifecycle entries |
+  | any step | carries `prediction`, `obligations`, `drift`, `conclusion`, `deny_signal`, `comparison.scope`, `sandbox_check.scope`, `attempt.exit_code`, `attempt.syscall_errno` or `attempt.native_rc` |
+  | the reply | carries `comparison_conditions` |
+- Reply degradation: `runner_reporting_failed` omits every `comparison`, even
+  when `steps: []`. `evidence_retained: false` still withholds step and
+  subprocess evidence. The reply carries no library identity at either
+  fallback level, because the runner reports none (D6.52).
 - Consumer (`tests/lib/consumer.py`): applies D5's envelope/response gates and
-  reports a different version as `unsupported`; rejects the removed keys; rejects
-  `established` as any obligation status; validates obligations against raw
-  evidence; requires `references` to carry exactly the fixed keys and values.
-  There is no sandbox-library identity rule for the reply or dossier (D6.52).
+  reports a different version as `unsupported`; rejects the removed keys and
+  any `limitations` string outside D1's vocabulary; validates `observation`,
+  the two relations and `order` against the raw channel fields and
+  `ordering`. It carries no obligation, `references` or
+  `comparison_conditions` rule, and no sandbox-library identity rule for the
+  reply or dossier (D6.52).
 - Controller: `permission_failures_without_record` reads `comparison.observation`;
   `validate_disposition` also checks the lifecycle entries in
   `comparison.limitations`. Failed disposition validation withholds the
   projected disposition and termination cause. Preserve those lifecycle
-  checks and the reporting-failure exception. These readers and every other
+  checks and the reporting-failure exception. `runner_startup_diagnostics`
+  and the `worker_pid`, `capture_status` and `first_deny` copies in
+  `runner_sandbox_diagnostics` are removed (D6.57); the log window still takes
+  the worker PID from the reply internally. These readers and every other
   semantic projection use the response-version gate (D6.46).
 
-### D4. Assertions and recipes
+### D4. Assertions, recipes and reading rules
 
 Tests assert the evidence each scenario establishes, by field. The consumer
 validates and selects and may compare raw fields to test descriptive
 invariants. It returns no joint prediction/enforcement verdict. Guide
-recipes select an explicit combination, such as deny predicted plus attempt
-succeeded, and show its submitted-scope relations, order and obligations; they
-assign no label. There is no `scope` field to show (D6.13).
+recipes select an explicit combination, such as `sandbox_check.outcome: deny`
+plus `observation: succeeded`, and show its submitted-scope relations and
+order; they assign no label. There is no `scope` field to show (D6.13).
+
+The guide carries the reading rules that replace the removed restatements, in
+one section, one sentence each, in this order (D6.57):
+
+1. The query channel's answer is `sandbox_check.outcome` when `result_source`
+   is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
+   was available and `sandbox_check.missing_reason` says why.
+2. `attempt.missing_reason` explains an unavailable attempt channel.
+3. A `permission_failure` or `other_failure` observation, or an exec attempt
+   whose spawned child exited nonzero, does not attribute the failure to the
+   sandbox; attribution needs a captured denial record, and
+   `permission_failures_without_record` lists the steps that have none.
+4. A `path` query, or an attempt whose mapped filter is `path`, never
+   establishes that both channels resolved the same object at runtime.
+5. No record establishes that the state the query saw is the state the
+   attempt met; nothing in a reply discharges this.
+6. When a query has `filter_kind: path`, a nonnull `filter_value` and no
+   `query_plan:*` limitation, and any step's attempt is a worker `unlink` of
+   that same submitted path with `outcome: ok` and `rc: 0`, the target was
+   removed during the run; `order` says whether the removal followed the
+   query, and the unlink attempt's step is the step that removed it.
+7. A `process-exec*` query predicts target admission only, not every spawn
+   prerequisite; the child's result is in `attempt.rc` and
+   `attempt.child_exit_code`.
+8. A `file`/`create` attempt has no single query operation, so
+   `operation_relation` is `unresolved`.
+9. A query operation containing `*`, other than `process-exec*`, resolves to
+   no single attempt operation.
+10. `target_relation: unresolved` means the attempt's mapped filter kind
+    differs from the query's `filter_kind`, or `filter_value` or
+    `requested_path` is absent; those fields show which.
+11. `sandbox_check.path_diagnostics.realpath_resolved` null on a query the
+    planner did not exclude means the host could not resolve the submitted
+    path after the run.
+12. An attempt the worker does not support has `attempt.outcome` and
+    `missing_reason` saying so, and both relations `unresolved`.
 
 ### D5. Versioning
 
-- Response schema 12 → 13: the comparison record, `comparison_conditions`, and
-  the removal of `drift`, `conclusion`, `comparison.scope`, `deny_signal`,
-  `deny_signal_total`, `attempt.exit_code`, `attempt.syscall_errno`,
+- Response schema 12 → 13: the comparison record, the `limitations`
+  vocabulary, and the removal of `drift`, `conclusion`, `comparison.scope`,
+  `comparison.prediction`, `deny_signal`, `deny_signal_total`,
+  `attempt.exit_code`, `attempt.syscall_errno`, `attempt.native_rc`,
   `sandbox_check.scope`, and the `normalized_outcome` and `attempt.outcome`
   spellings retired under D6.44.
 - Controller envelope 4 → 5: `data.specimen`, the `data` key dispositions, and one `data`
   skeleton for every run envelope, which removes the pre-execution `data.error`
-  constant; `runner_client` gains delivery/supervision facts and a nullable
-  observed exit code, with controller transport failures per D6.56.
+  constant and `runner_startup_diagnostics`; `runner_client` gains
+  `request_delivery`, with controller delivery failures per D6.59;
+  `runner_sandbox_diagnostics` loses its three copies (D6.57).
 - Request schema, request-version admission behavior and worker ABI unchanged.
   The exact-version rule here governs semantic readers of runner responses
   and controller envelopes; it does not reject existing request-1 specimens.
@@ -650,13 +609,14 @@ assign no label. There is no `scope` field to show (D6.13).
   without interpreting unsupported records. Stored evidence keeps its bytes;
   current semantic readers reject unsupported versions. Request admission and
   the worker ABI follow their own contracts." "What each number identifies" gains
-  one sentence per contract. Response: "`steps[].comparison` records each
-  channel's observation, the submitted-scope relations, the order PW
-  established and the typed obligations, with `comparison_conditions` at run
-  level; it carries no joint verdict and no signal channel." Envelope: "`data.specimen` is the dossier: request path, policy
-  augmentation and imports, host facts, runner and app provenance, binary
-  hash comparisons, run conditions and `references` to the records it does not own;
-  the raw runner reply, transport, diagnostics and log capture stay beside it."
+  one sentence per contract. Response: "`steps[].comparison` records the
+  attempt channel's classified observation, the submitted-scope relations, the
+  order PW established and the planner's exclusion or lifecycle limitations;
+  it carries no joint verdict, no signal channel and no restatement of another
+  field." Envelope: "`data.specimen` is the dossier: request path, policy
+  augmentation and imports, host facts, runner and app provenance, and hashes
+  of any selected binary the app manifest does not describe; the raw runner
+  reply, transport, diagnostics and log capture stay beside it."
 
 #### Reader boundaries and unsupported results
 
@@ -673,13 +633,12 @@ previous version.
 | Swift `PWRunnerRunResult` decoder/encoder | Require `PWContract.responseSchema` before semantic decoding/encoding; other versions fail with an `unsupported` diagnostic. Remove the 8/9/10 gates and legacy-only decode fallbacks; current invariants apply directly. |
 | Python `consumer.py` public document readers | Share envelope/response gates; `validate` returns the single version error, and evidence accessors refuse unsupported input. `select` operates on already validated steps. Bare replies require only the response gate. |
 | Python lifecycle adapter/oracle, blackbox and path/log evidence helpers | Route public document entry points through the same gates before projecting; remove legacy projections and fallbacks. Standalone raw-record validators do not pretend a fragment is a versioned document. Audit direct callers as part of I3. |
-| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; when transport completes, the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use the corresponding `malformed_runner_response` result. A concurrent controller transport failure keeps D6.56's `tool_error` precedence without interpreting the unsupported/malformed reply. |
+| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; when transport completes, the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use the corresponding `malformed_runner_response` result. A concurrent controller delivery failure keeps D6.59's `tool_error` precedence without interpreting the unsupported/malformed reply. |
 | Swift `pw-runner-client` and Rust `runner_client.rs` capture | Preserve received bytes/JSON as transport, including unsupported versions and unfamiliar strings. They do not reinterpret or coerce the version. Client-generated failure replies use the current response schema and D1/D3's empty-step and reporting-failure rules. |
 | Requests, worker ABI, evidence manifest and validator transcript | Retain their existing separate admission/reading rules. This plan's equality rule is not a new request-version or nested-transcript-version restriction. |
 
 For an unsupported/malformed reply, the dossier retains controller-collected
-facts and fixed references, but `prediction_unavailable_pairs` is empty; no
-runner-derived condition is computed. Rust transport tests preserve unknown
+facts; no runner-derived value is computed. Rust transport tests preserve unknown
 bytes while semantic tests require the unsupported result. Independently test
 an old and a future response, an old and a future envelope, a current envelope
 containing an unsupported reply, malformed version fields, and no reply. Use
@@ -689,62 +648,67 @@ current-version fixtures for unfamiliar-value transport tests.
 
 | # | Decision | Resolution |
 | --- | --- | --- |
-| 1 | Obligations | Typed (`obligations` object). No flat-limitations fallback. |
+| 1 | Obligations | Typed (`obligations` object). No flat-limitations fallback. Superseded by 57: no obligation ships; the three rules are reading rules in D4. |
 | 2 | Bumps | Response 13 and envelope 5, each landing with its implementation. |
 | 3 | `steps[].deny_signal` | Removed with `deny_signal_total`, `PWRunnerSignalResult` and `Signals.swift`. |
-| 4 | Imports collection | Every run with an `sbpl_source`, with basis, status, limits and failure; budgets confirmed by measurement. |
+| 4 | Imports collection | Every run with an `sbpl_source`, with basis, status, limits and failure; budgets confirmed by measurement. 58 drops the basis and limits fields; 60 keeps the scanner's existing bounds and retires the pending measurements. |
 | 5 | Library identity | Per function group, with `observer` and `basis`; unavailable components explained; not a worker-side observation. Superseded by 47. |
 | 6 | Provenance | Moved under `data.specimen`; no aliases at former paths. |
 | 7 | Joint labels | None on the wire, in test equipment or in recipes. |
 | 8 | Supported versions | Exactly the manifest numbers; any other is `unsupported`; no version branches. The captured `a1_known_loss.json` stays as bytes to check that rejection. |
-| 9 | `comparison_conditions` | In the runner reply; the dossier references it. |
+| 9 | `comparison_conditions` | In the runner reply; the dossier references it. Superseded by 58: a constant, removed; state stability is D4's fifth reading rule. |
 | 10 | `data` boundary | The D2 table. `data.specimen` on every run envelope. |
 | 11 | Identity observer | The XPC host, in `SandboxLib.load`, publishing `library_identity` in the reply. No ABI change. Superseded by 47. |
 | 12 | Integration mechanics | Behavior-preserving preparation on `main`; the contract integration in a worktree branch with as many commits as it needs, verified with the default battery and `--all`, reaching `main` as one fast-forward. |
 | 13 | `comparison.scope` | Removed; the guide states the scope once. |
-| 14 | `sandbox_attribution` with no observation | `not_applicable`. |
+| 14 | `sandbox_attribution` with no observation | `not_applicable`. Superseded by 57. |
 | 15 | `policy.augmentation` | Always present. |
-| 16 | Host facts | `sysctlbyname`, no subprocess. D6.52 leaves just the four sysctl facts and their basis; they do not stand in for sandbox-library identity. |
+| 16 | Host facts | `sysctlbyname`, no subprocess. D6.52 leaves just the four sysctl facts and their basis; they do not stand in for sandbox-library identity. 58 drops the `basis` field. |
 | 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. Superseded by 49. |
 | 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source. |
 | 19 | Reader surfaces | The envelope and the bare reply from `pw-runner-client`. |
-| 20 | References | RFC 6901 pointers, fixed keys and values, no copies. |
+| 20 | References | RFC 6901 pointers, fixed keys and values, no copies. Superseded by 58: a constant table, removed; the guide names the records a reader joins to. |
 | 21 | CONTRACT.md | Text in D5. |
 | 22 | `attempt.exit_code`, `attempt.syscall_errno` | Removed; assigned from `rc` and `errno`. |
 | 23 | `sandbox_check.scope` | Removed; constant `post_sandbox`. |
 | 24 | REPAIR principle | Port scenarios and invariants, never assertions or code; delete on `main` first; the matrix fixture is the single source of comparison expectations. |
-| 25 | Descriptive derivation (clarifies 7) | D0 permits computed descriptive fields, validation and selection across channels. Only joint prediction/enforcement verdicts are prohibited. |
-| 26 | Mutation and conditions | D1's query-exclusion guard governs both encoder and consumer (see D6.42 for the retired ID list). Both reporting-failure levels omit `comparison_conditions`; ordinary empty-step replies carry it. |
+| 25 | Descriptive derivation (clarifies 7) | D0 permits computed descriptive fields, validation and selection across channels. Only joint prediction/enforcement verdicts are prohibited. Restated by 57: derivability rejects restatements and does not reject classifications. |
+| 26 | Mutation and conditions | D1's query-exclusion guard governs both encoder and consumer (see D6.42 for the retired ID list). Both reporting-failure levels omit `comparison_conditions`; ordinary empty-step replies carry it. Superseded by 57 and 58: the guard is D4's sixth reading rule and the conditions object is gone. |
 | 27 | Library observation (refines 5 and 11) | Host-resolved functions only; explicit partial observations and issues. Presence follows collection stage, including post-load refusals; both reply fallbacks retain pre-materialized identity. Superseded by 47. |
 | 28 | Dossier failures (refines 10 and 15) | Nullable format/hashes, augmentation status/error and the D2 failure table. Collection failures do not change execution admission or outcome. |
 | 29 | Binary provenance (refines 17) | Hash selected paths, including overrides and BYOXPC copies, against built-in manifest baselines. Prefix baseline metadata with `manifest_`; unavailable/mismatched verification is descriptive. Narrowed by 49 to selections the manifest does not already describe. |
-| 30 | Import observation (refines 4 and 18) | One serialized request for all readers; hash and lex the same bounded import bytes. Nonregular files are not read. `wall_ms` is a cooperative budget, not a hard filesystem timeout. |
+| 30 | Import observation (refines 4 and 18) | One serialized request for all readers; hash and lex the same bounded import bytes. Nonregular files are not read. `wall_ms` is a cooperative budget, not a hard filesystem timeout. 60 drops `wall_ms` and the byte budgets; the single read and the regular-file check stay. |
 | 31 | Reader scope (refines 8 and 21) | Exact versions at response/envelope semantic boundaries, including production Rust; raw transport remains lossless. Request admission is unchanged. D5 defines unsupported and malformed results. |
 | 32 | Matrix evidence and size controls | 32 S/B/C expectations plus R/T with explicit owners; T retains its completed prediction/order. Unlinked exploratory claims are not acceptance evidence. |
 | 33 | Integration order (supersedes 24's deletion order) | Only behavior-preserving preparation on `main`. Retire contract tests in the worktree; retire live scenarios only with passing replacement controls in the same increment. |
 | 34 | Documentation and readiness | Use the corrected witness introduction, add the deny-log FAQ with delivery/attribution limits, and apply the readiness checklist below. Implementation receipts and measurements remain acceptance work. |
-| 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
+| 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. 58 drops `references`; the guide names the record instead. |
 | 36 | Dossier presence on non-execution run envelopes | One `data` skeleton for every `kind: "run"` envelope, printed by `cmd_run`, with the dossier at its collected state and the pre-execution `data.error` constant removed; `tool_error` and its exit 2 are unchanged. No envelope is exempted. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all already print a run envelope, so the superseded claim that they kept a different kind was wrong. |
-| 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
+| 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. 60 retires those measurements: no new number is published. |
 | 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. Superseded by 50. |
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. Superseded by 47: the reply carries no identity, so the backstop keeps its literal shape. |
 | 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
 | 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. Superseded by 42. |
-| 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
+| 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. Superseded by 57: no status ships; the rule is D4's sixth reading rule, and the unlink attempt's step names the remover. |
 | 43 | Unused Swift execution helpers (S1–S3) | Remove the attempt executor, query helper and sandbox-application helper, their exclusive dependencies and helper-only tests per R2/R5. Keep production planning, path diagnostics, policy hashing, structural policy refusal and C worker/validator behavior. Coordinate source, build, test and documentation changes in I3–I5 under D6.33. |
 | 44 | Retired outcome spellings (S1, S3) | DECIDED. One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
 | 45 | C-function-pointer stubbing guidance (S3) | DECIDED: retire it. Delete the "Stubbing C function pointers" paragraph from `runner/AGENTS.md` rather than rewriting it self-contained. Its subject does not survive: every `@convention(c)` declaration under `runner/Sources/` is in `SandboxLib.swift`, which 47 deletes, so after this plan the runner has no function-pointer slots to stub. Its worked example is deleted by 43, and no other example exists — the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. A technique for a construct the tree no longer contains is a retired claim, not guidance. Whoever introduces a new function-pointer use writes guidance that fits it; D6.53 checks sandbox API use specifically, not arbitrary C function pointers. |
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The controller cache UUID was selected in place of per-function host observations, while `SandboxLib.swift` and its admission check were removed. D6.52 supersedes the identity choice and its claim about worker/validator libraries; loader retirement remains in scope. Reply-side identity, load-stage presence rules and identity-specific fallback controls are removed. |
 | 48 | Host invariance rule and its checks (refines 43) | Keep the service-header rule and existing live isolation cases, with source and shipped-binary checks and no new catalog case. D6.53 supersedes the blanket source-name ban and comment-marker exception; the `preflight` assertion that `nm -u` reports no undefined `_sandbox_*` symbol remains. `otool -L` alone cannot cover direct calls through libSystem or dynamic symbol resolution. |
-| 49 | Binary hashing is not duplicated (supersedes 17, narrows 29) | The controller already reads the Evidence manifest every run, and `verify_manifest` already hashes every declared entry under `PW_VERIFY_EVIDENCE=1`. The dossier therefore hashes nothing the manifest describes: a built-in selection reports baseline metadata with `verification.status: not_compared`, and only an override or BYOXPC path — which no manifest entry describes — is hashed before invocation. Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of it the `PWRunner` binary, with a constant answer for a given build. App-file integrity stays with `PW_VERIFY_EVIDENCE` and the signature. `basis` distinguishes the two record kinds. |
+| 49 | Binary hashing is not duplicated (supersedes 17, narrows 29) | The controller already reads the Evidence manifest every run, and `verify_manifest` already hashes every declared entry under `PW_VERIFY_EVIDENCE=1`. The dossier therefore hashes nothing the manifest describes: a built-in selection reports baseline metadata with `verification.status: not_compared`, and only an override or BYOXPC path — which no manifest entry describes — is hashed before invocation. Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of it the `PWRunner` binary, with a constant answer for a given build. App-file integrity stays with `PW_VERIFY_EVIDENCE` and the signature. `basis` distinguishes the two record kinds. 58 replaces the built-in record and `basis` with null; 61 withdraws the "already reads" justification. |
 | 50 | The request is a string, not a file (supersedes 38, refines 30) | One serialization held in the controller feeds the scan and every reader. `pw-runner-client` gains `--request -` and receives the bytes on stdin, since it only read the path into memory to send it; a temporary file survives only on the `xpc_error` path that invokes `sbpl-check --request <path>`, written from the same string and removed before returning. The ordinary run creates no file, so the existing leak ends by deletion rather than by a cleanup guard. The client's `usage()` and documented surface gain the option; the `policy-witness` CLI contract is unchanged. |
 | 51 | One OS-facts reader (refines 16 and 35) | The I1 extraction makes the shared reader the `sysctlbyname` one, so `sbpl-check` stops spawning `/usr/bin/sw_vers -buildVersion` for a fact `kern.osversion` returns (verified identical on the development host) while its output stays byte-identical. One mechanism, one fewer process spawn, and the dossier's no-subprocess rule holds for every consumer. |
 | 52 | No sandbox-library identity (supersedes 47's identity choice) | Drop `host.sandbox_cache_uuid`, its dyld read, consumer shape rule and collection/failure controls. The API observes the caller's cache; native and x86_64 probes on the same stock host return different UUIDs, so a controller observation does not identify a selected worker's or validator's libraries. No identified planned reader needs the narrower controller fact. OS build and architecture remain environment context, not an inferred library identity. Loader retirement under 44/47 is unchanged. |
 | 53 | Check native sandbox API use, not wire vocabulary (supersedes 48's source rule) | The source check rejects native API bindings/calls, dynamic sandbox-symbol lookup and libsandbox loading in executable contexts. Permit schema properties, coding keys, labels, diagnostics, comments and documentation that name `sandbox_check` or libsandbox. R2 defines the checked contexts, positive/negative controls and limits of this source convention. Keep the shipped-binary check and live isolation cases. No comment-marker exemption or prose assertion is needed. |
 | 54 | Retire the remaining identity test instructions (implements 47/52) | I2's R owner covers reply degradation only. I3 has no partial-identity or pre-/post-load presence controls; I4 has no UUID collector control. D5's client-generated failure rule points to D1/D3 rather than the retired D2 identity-absence rule. Preserve reporting-failure, version, channel and remaining dossier controls. |
-| 55 | Stdin handoff transport review (refines 50) | D6.50 left request-delivery timeout ownership, failure reporting and transport reuse unspecified. Resolved by 56 and the D2 contract, with I4/I5 implementation, acceptance and documentation owners. |
-| 56 | One client deadline and independent failure evidence (resolves 55, refines 50) | One controller-owned absolute monotonic deadline covers client startup, request delivery/acquisition, XPC wait, output collection and exit; no delivery allowance or timer restart. Existing bounded cleanup follows expiry. Reuse the Rust supervisor's core with optional stdin and boundary-specific policies, plus existing JSON capture and fallback-unavailable handling. Delivery/supervision failure produces controller `tool_error` and exit 2 while retaining any complete reply and all diagnostics unchanged; it never synthesizes a worker/XPC failure. D2 defines the observations and precedence, I4 the controls and I5 the changed timeout/capture documentation. |
+| 55 | Stdin handoff transport review (refines 50) | D6.50 left request-delivery timeout ownership, failure reporting and transport reuse unspecified. Resolved by 56 and the D2 contract, with I4/I5 implementation, acceptance and documentation owners. 59 replaces 56's resolution. |
+| 56 | One client deadline and independent failure evidence (resolves 55, refines 50) | One controller-owned absolute monotonic deadline covers client startup, request delivery/acquisition, XPC wait, output collection and exit; no delivery allowance or timer restart. Existing bounded cleanup follows expiry. Reuse the Rust supervisor's core with optional stdin and boundary-specific policies, plus existing JSON capture and fallback-unavailable handling. Delivery/supervision failure produces controller `tool_error` and exit 2 while retaining any complete reply and all diagnostics unchanged; it never synthesizes a worker/XPC failure. D2 defines the observations and precedence, I4 the controls and I5 the changed timeout/capture documentation. Superseded by 59. |
+| 57 | Projections (supersedes 1, 14, 26 and 42; restates 25; keeps 46) | A wire value is one of three kinds. An observation records something the document does not otherwise contain: a measurement, a received result, a hash of bytes outside the document, a decision a PW process made at the time. A classification is assigned by applying a PW-owned table to raw results, where the table is PW's claim about meaning: the errno and kern_return sets, the attempt-to-operation and filter map, the exec query spelling, the termination-cause table, the ordering eligibility rule. A restatement is fixed by a one-sentence document-local rule from other fields of the same document using only equality, presence, membership in a schema-named set, or a constant. Observations and classifications ship. A restatement ships only when a production reader consumes it precomputed and its absence would change that reader's output on the wire; test equipment, a checker that recomputes it to verify it, and guide prose are not readers. Dropped by this rule: `comparison.prediction`; the three obligations, adopting S9; every `limitations` string except `query_plan:*` and the five lifecycle entries; `specimen.policy.format`; `specimen.conditions.prediction_unavailable_pairs`; `data.runner_startup_diagnostics`; the `worker_pid`, `capture_status` and `first_deny` copies in `runner_sandbox_diagnostics`; and `attempt.native_rc`, adopting S6. The lifecycle copies and entries stay under 46 because `validate_disposition` reads them with an effect on the envelope. The twelve reading rules in D4 replace the dropped strings. Every removal made before this row already satisfies it. |
+| 58 | Constants (refines 57; harmonizes with 23) | A constant is a restatement of the schema and never ships, the rule 23 applied to `sandbox_check.scope`. Dropped: `comparison_conditions` (superseding 9), `specimen.references` (superseding 20), `specimen.policy.imports.basis` and `.limits`, `specimen.host.basis`, and the built-in `binaries` records, which become null. A hashed override or BYOXPC record carries `path`, `actual_sha256`, `baseline_sha256`, `verification` and `reason`. The guide and CONTRACT.md state each constant once. |
+| 59 | Stdin handoff reduced (supersedes 56; resolves 55) | The controller writes the held request from a writer thread, closes stdin after the last byte, and collects and waits as today. No controller deadline, no supervisor extraction, no client argument; `--timeout-ms` keeps its default, minimum and reply-wait meaning. `data.runner_client.request_delivery` carries `bytes_written` and a nullable `error`. A delivery error is a controller `tool_error`, exit 2, with any captured reply retained unchanged. The shipped client reads its whole request before connecting or writing, so delivery either completes or fails with EPIPE, and the controller is no less bounded than it is today. |
+| 60 | Scanner bounds (refines 4, 30 and 37; resolves the I1/D2 conflict) | The dossier scan is `sbpl-check`'s resolver with its existing depth 8, count 64 and 4 MiB source bounds, already in `docs/limits.json`; no file, total or wall budget is added, so the shared scanner has no new cutoff and `sbpl-check` output stays byte-identical. Each import is opened once, checked regular with `fstat`, and hashed and lexed from the same bytes. The I4 WebProcess measurement and cutoff tasks are retired; `exceeded` is `depth` or `count`. |
+| 61 | Binary record justification (refines 49) | 49's "the controller already reads the Evidence manifest every run" is withdrawn as a reason: the manifest is parsed twice per run today, and a third consumer is not justified by the first two. The decision stands on the measured 2.93 MB avoided and on the constant answer for a given build. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -773,10 +737,13 @@ what stays.
 
 | Key | Where | Disposition |
 | --- | --- | --- |
-| `steps[].drift`, `steps[].comparison.conclusion`, `steps[].comparison.scope` | runner reply | removed |
-| `limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | the first becomes `comparison_conditions`, the middle three become `obligations`, the last is dropped |
+| `steps[].drift`, `steps[].comparison.conclusion`, `steps[].comparison.scope`, `steps[].comparison.prediction` | runner reply | removed; `prediction` restated `sandbox_check` (D6.57) |
+| `limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | all five dropped; D4's reading rules replace them (D6.57, D6.58) |
+| every other `limitations` string outside D1's vocabulary: `prediction:*`, non-lifecycle `attempt:*`, `operation:*`, `target:*`, `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed` | runner reply | removed; each restated a field of the same step (D6.57) |
 | `steps[].deny_signal`, `deny_signal_total` | runner reply | removed |
-| `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno`, `steps[].sandbox_check.scope` | runner reply | removed (D6.22, D6.23) |
+| `steps[].attempt.exit_code`, `steps[].attempt.syscall_errno`, `steps[].sandbox_check.scope`, `steps[].attempt.native_rc` | runner reply | removed (D6.22, D6.23); `native_rc` was a constant null (D6.57, S6) |
+| `data.runner_startup_diagnostics` | controller envelope | removed; `status` was constant on its only path, `xpc_error` copied `runner_result.error`, `policy_check_status` copied `policy_check.status`, and `note` was a sentence formatted from `policy_check` (D6.57) |
+| `data.runner_sandbox_diagnostics.worker_pid`, `.capture_status`, `.first_deny` | controller envelope | removed; copies of the reply's PID, of `sandbox_log_capture.capture_status`, and the index of the first PID match (D6.57) |
 | `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocated under `data.specimen` |
 | `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed |
 | `data.error` on the pre-execution `tool_error` envelope | controller envelope | removed; a constant string, superseded by the uniform `data` skeleton and `result.error` |
@@ -785,21 +752,22 @@ what stays.
 
 | File | Symbol or site | Disposition |
 | --- | --- | --- |
-| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `PWRunnerComparison.drift` (~906), `.conclusion`, `.scope` | delete; add `obligations` |
+| `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` | `PWRunnerComparison.drift` (~906), `.conclusion`, `.scope`, `.prediction` | delete; nothing is added (D6.57) |
 | same | `PWRunnerStepResult.drift`: init parameter, `CodingKeys.drift`, explicit-null `encode` branch, `decodeIfPresent` (~929–987) | delete, with no legacy-only property or version-gated read |
 | same | `PWRunnerStepResult.deny_signal` (~921–982), `PWRunnerRunResult.deny_signal_total` (~1720–1873), `PWRunnerSignalResult` (~857) | delete |
-| same | `PWRunnerAttemptResult.exit_code`, `.syscall_errno` (~704–803); `PWRunnerSandboxCheckResult.scope`, `PWRunnerWire.sandboxCheckScopePost` (~41) | delete |
+| same | `PWRunnerAttemptResult.exit_code`, `.syscall_errno`, `.native_rc` and its explicit-null encode branch (~704–803); `PWRunnerSandboxCheckResult.scope`, `PWRunnerWire.sandboxCheckScopePost` (~41) | delete |
 | same | encoder clauses `steps.allSatisfy({ $0.comparison == nil && $0.drift == nil })` (~1817) and `comparison.conclusion != "disagreement", step.drift != true` (~1847) | rewrite per D3 |
 | same | `PWRunnerRunResult` decoder/encoder version gates and legacy-only field fallbacks | exact response gate and current invariants per D5 |
 | same | `AttemptOutcome.bootstrapPortFailed` and the `libsandbox_path` row of the `_test_overrides` table (~213) | delete with the outcomes retired under D6.44 |
 | same | doc comments ~133, ~157, ~726 | reword |
-| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837); `renderLimitations()` (~843); `drift: comparison.drift` (~632); `deny_signal: nil`, `deny_signal_total: nil` (~162, ~631); comments ~24–26, ~722, ~763, ~890 | delete or reword; `renderLimitations` becomes `renderObligations` plus the descriptive list |
-| `runner/Sources/PWRunnerCore/PWRunnerService.swift` | reply degradation; the `SandboxLib.load` call site and its `libsandbox_unavailable` return | remove drift clearing and withhold comparisons/conditions through both fallback levels; delete the load call site and its refusal under D6.44 |
+| `runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift` | `ComparisonEvidence.conclusion` (~837) and `.prediction`; the `state`, `identity`, `attribution` and `mutation` members and their enums (~816–820); `reportsTargetRemoval` (~808) and the `runAttempts` parameter of `comparisonEvidence` (~895); every `limits.append` of a string outside D1's vocabulary (~904–1000); `renderLimitations()` (~843); `drift: comparison.drift` (~632); `deny_signal: nil`, `deny_signal_total: nil` (~162, ~631); comments ~24–26, ~722, ~763, ~890 | delete or reword; `renderLimitations` returns the `query_plan:*` entry plus the lifecycle entries and nothing else |
+| `runner/Sources/PWRunnerCore/PWRunnerService.swift` | reply degradation; the `host_path_resolution_changed` append (~424); the `SandboxLib.load` call site and its `libsandbox_unavailable` return | remove drift clearing and withhold comparisons through both fallback levels; delete the limitation append, since `path_diagnostics` already records the fact (D6.57); delete the load call site and its refusal under D6.44 |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift` | unused execution helpers and exclusive bindings/constants; retained exclusion-set comments | remove helpers per S1/S2 below, rather than porting their `scope:` arguments; reword retained comments |
 | `runner/Sources/PWRunnerCore/PathUtils.swift` | `observedPathForFd`, its `fcntl_getpath` binding, `warmFirmlinkMap` | remove; keep production path helpers and lazy firmlink map |
 | `runner/Sources/PWRunnerCore/SandboxApply.swift` | `applySandboxPolicy`, `ApplyError` | remove; keep policy hashing in this file |
 | `runner/Sources/PWRunnerCore/Signals.swift` | whole file; no caller under `runner/Sources` | delete, and its `XPC_RUNNER_SIGNALS_FILE` line in `build.sh` |
 | `runner/Sources/PWRunnerCore/SandboxLib.swift` | whole file | delete with its seven symbol resolutions, the `libsandbox_path` override and the `libsandbox_unavailable` outcome, under D6.44 and D6.47 |
+| `controller/src/run_flow.rs` | `RunnerStartupDiagnostics` (~133), `fallback_policy_note` (~162) and their construction in `cmd_run` (~379–396); `RunnerExecutionDiagnostics.worker_pid` (~98), `RunnerLogDiagnostics.capture_status` (~112), `first_deny` (~116) and `DenyEventReference` | delete (D6.57); the log window still takes the worker PID from the reply internally, and `policy_check` keeps the fallback compile record |
 
 Production C worker and validator behavior is unchanged. S2 removes the unused
 C query shim and its build wiring; it does not remove the production validator.
@@ -934,10 +902,9 @@ increment or `cargo test` breaks (D6.40).
 
 Implement the dossier per D2: the held request string with `--request -` on the
 client and a fallback-only temporary file (D6.50), binary records that hash only
-non-manifest selections (D6.49), and the shared sysctl OS reader (D6.51). Move
-client invocation to shared supervision with optional stdin, one deadline and
-independent failure evidence per D2/D6.56. Keep log policies at their existing
-boundary and extend fallback-unavailable handling to temporary-file failures.
+non-manifest selections (D6.49, D6.58), and the shared sysctl OS reader
+(D6.51). Write the request from a writer thread and record `request_delivery`
+per D6.59; extend fallback-unavailable handling to temporary-file failures.
 Move the pre-execution failure envelopes into `cmd_run` so one writer owns the
 run `data` skeleton; `cli.rs`'s catch-all keeps only errors that escape it.
 Update tests for unsupported/malformed replies and current-version fragment
@@ -945,11 +912,11 @@ transport.
 
 `runner_commands.rs::cmd_runner_verify` is the helper's other production caller.
 Keep its file-input call supported, its 5-second default and its existing data
-shape; adapt it to the shared deadline and check transport failure before using
-the reply to report verification success. Apply D5's version gate before its
-reply projections too. Its transport failure uses controller `tool_error` and
-exit 2. The run envelope's new capture fields do not require a verification
-dossier or a redesign of management-command data.
+shape; check delivery failure before using the reply to report verification
+success. Apply D5's version gate before its reply projections too. Its
+delivery failure uses controller `tool_error` and exit 2. The run envelope's
+new delivery field does not require a verification dossier or a redesign of
+management-command data.
 
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
@@ -1056,7 +1023,8 @@ Swift sites and 1 controller site; 14 catalog entries.
   ~378 and its consumer-audit table.
 - D6.50: document `--request -` in `pw-runner-client`'s `usage()` and wherever
   the client's surface is described, and remove any account of a per-run
-  temporary request file.
+  temporary request file. D6.59: document `request_delivery` and the delivery
+  failure result beside the unchanged `--timeout-ms` description.
 - S1–S3: revise the source inventory in `runner/README.md`, the `runner_unit`
   row in `tests/README.md`, `tests/suites/runner_unit/README.md`, and the unused
   apply-helper descriptions in `tests/COVERAGE.md` and
@@ -1094,6 +1062,8 @@ Swift sites and 1 controller site; 14 catalog entries.
   release barrier and the opt-in `order_barrier_mutations` control;
   `legacy_worker_abi6` in `OrderingTests` (the ABI tripwire).
 - `comparison.observation` and `permission_failures_without_record`.
+- The lifecycle copies in `attempt.lifecycle` and the lifecycle entries in
+  `comparison.limitations`, with their Rust validation (D6.46, D6.57).
 - `records/`, `dist/evidence`, `dist/archive`.
 
 ### R10. Semantic completion criterion
@@ -1101,7 +1071,9 @@ Swift sites and 1 controller site; 14 catalog entries.
 Before and after implementation, search the vocabulary `drift`, `conclusion`,
 `agreement`, `disagreement`, `consistent`, `directional_consistency`,
 `verdict`, `prediction`, `enforcement`, `mismatch`, the signal-channel names,
-the removed limitation strings and the former provenance paths, across CLI
+every removed limitation string, `obligations`, `comparison_conditions`,
+`references`, `prediction_unavailable_pairs`, `runner_startup_diagnostics`,
+`first_deny`, `native_rc`, `supervision` and the former provenance paths, across CLI
 help, diagnostics, test names and descriptions, identifiers, comments,
 docstrings, fixtures, registries and documentation; follow aliases, callers
 and generated copies; read affected passages for claims that survive without
@@ -1165,14 +1137,17 @@ evidence of preserved coverage.
 
 `tests/fixtures/comparison/matrix.json` holds the 32 S/B/C rows and T: for each,
 the specimen inputs (policy, query, attempt, steered verdict if any, independent
-control), raw inputs needed by the unit reader (channel results, ordering and
-all run attempts with IDs), and the expected response 13 `comparison` object.
+control), raw inputs needed by the unit reader (channel results and ordering),
+the raw fields the live case asserts beside the record (`sandbox_check.outcome`,
+`result_source`, `missing_reason`, `attempt.rc`, `errno`, `child_exit_code`,
+the unlink records), and the expected response 13 `comparison` object.
 R is a reply-boundary control, recorded in the ownership table rather than as
 a comparison object. Expectations are reviewed from D1 and independent
 controls; they are not generated from the producer under test. The response 12
 columns already carry per-row provenance from the verification receipts under
 [tests/fixtures/comparison/baseline_response12/](tests/fixtures/comparison/baseline_response12/);
-the fixture records the same values with the obligations added. Specimen B
+the fixture records the same values with each `limitations` list pruned to
+D1's vocabulary. Specimen B
 follows the validator I/O deadline seam and the non-idempotent setup rule in
 Specimen mechanics above. Two reader
 families:
@@ -1192,7 +1167,7 @@ families:
 | S01–S25 (S04 unused), B1–B7, C1 | `witness_contract/comparison_matrix` | native/file controls and steered-validator transcript; preserve each specimen, raw run, checker output and app inventory in managed test artifacts |
 | T | `witness_contract/worker_attempt_in_flight_at_deadline` | FIFO, raw progress, validator record and release chain; assert the comparison selected from the shared fixture |
 | R: reply degradation | `runner_unit` / `ReplyFailureTests` | internal encoder faults at both fallback levels; retain the specified evidence and withhold comparisons/conditions; no library-identity control |
-| `target_mutation` status and exclusion | `ComparisonEvidenceTests`, encoder invariants and checker controls | excluded-query create/unlink, a qualifying removal in another step, unrelated/failed/synthetic unlinks, and an injected `steps` key |
+| `limitations` vocabulary | `ComparisonEvidenceTests`, encoder invariants and checker controls | a planner exclusion for each code, each lifecycle entry, and an injected string outside D1's vocabulary |
 
 The T setup already has a retained
 [live reply](tests/out/runs/release-0.2.4-default/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/run.json)
@@ -1216,29 +1191,29 @@ same verified increment.
   manifest's yields one `unsupported` error under D5; malformed versions and
   no-reply envelopes follow D5's separate rules. `validate` merges
   `validate_evidence_shape`, `validate_current_build_evidence` and
-  `validate_ordering` and checks obligations against raw evidence:
-  `target_mutation` from D1's eligible query and qualifying rule,
-  `sandbox_attribution` from `observation` and
-  `exec_result_failed_after_spawn`, `runtime_target_identity` from the filter
-  kinds, `references` against the fixed set. `recover_evidence`,
+  `validate_ordering`, checks `observation` and the two relations against the
+  raw channel fields, checks `order` against `ordering`, and rejects a
+  `limitations` string outside D1's vocabulary. It carries no obligation,
+  `references` or `comparison_conditions` rule. `recover_evidence`,
   `comparison_groups`, `failure_groups`, `path_reporting` and
   `step_reporting` are gone.
 - `tests/lib/blackbox.py`: `validate_step` loses the drift checks and the
-  alias-agreement rule; `expected.comparison` may carry `obligations`;
+  alias-agreement rule; `expected.comparison` carries the D1 record;
   `validate_run_shape` calls `validate`.
 - `tests/lib/unavailable_prediction.py`, `path_diagnostics_contract.py`: field
   selections.
 - `blackbox_e2e/checker_controls.py` rebuilt against `missing_path_run.json`
   regenerated at 13 and 5 from a live run. Surviving controls: injected
-  removed keys; obligation contradictions per D3; missing or wrong
-  `references`; missing `comparison_conditions` where required; path provenance; the ordering chain; reporting-failure
-  withholding at both fallback levels; every version-boundary control in D5;
-  one control feeding `pw-runner-client`
-  output to `validate`. The mutation-order controls are re-expressed against
-  `target_mutation`, including the exclusion and another-step cases in I2.
-  Reporting-failure controls cover evidence retention and comparison/condition
-  withholding at both fallback levels. No identity or load-stage control is
-  carried forward (D6.54).
+  removed keys, including `prediction`, `obligations` and
+  `comparison_conditions`; a `limitations` string outside D1's vocabulary;
+  path provenance; the ordering chain; reporting-failure withholding at both
+  fallback levels; every version-boundary control in D5; one control feeding
+  `pw-runner-client` output to `validate`. The mutation-order scenarios keep
+  their file-effect and release-chain controls and assert the unlink attempt
+  records and `order`; no derived mutation status exists to assert (S9,
+  adopted by D6.57). Reporting-failure controls cover evidence retention and
+  comparison withholding at both fallback levels. No identity or load-stage
+  control is carried forward (D6.54).
 - Menagerie: `expect.drift` deleted from `core.json`; `validate_run.py` passes
   `expect.comparison` through. `BBX-001` and `BBX-002` `expected.json` lose
   their drift keys. Other fixtures per R6.
@@ -1273,64 +1248,56 @@ same verified increment.
   change (D6.48/53). The `runner/AGENTS.md` stubbing paragraph is deleted in the
   same increment as its subject (D6.45); no decision here is an instruction to
   change C behavior.
-- Swift per R2, D6.22 and D6.23, plus `comparison_conditions`. The comparison producer already receives the run
-  attempts and already tests for a qualifying removal, so the obligation needs
-  no new plumbing. The field-complete fixture in `ReplyFailureTests`
-  gains the new records; the string classification in `ReplyMaximumTests`
-  gains every new string key. The obligations add three short status strings per
-  step and no repeated container, so `runner_reply_maximum` and the derived
-  `controller_output` keep their documented values; confirm that from the
-  synthesizer rather than assuming it (D6.42). The shape golden regenerates.
-- Controller per D2 with Rust tests for shape, statuses, budgets, the fixed
-  reference set, relocated paths, request snapshot and D5 version gates.
-  Scan controls include nonregular files, changing originals, a single read
-  used for both hash and recursion, nonliteral imports, decoding/read errors,
-  each cutoff and cooperative deadline behavior; `docs/limits.json` gains the
-  scan budgets after measurement on the largest system profile and a
-  WebProcess-size specimen.
+- Swift per R2, D6.22, D6.23 and D6.57: the comparison producer loses its
+  run-attempt parameter, its state, identity, attribution and mutation
+  members, and every removed string. The field-complete fixture in
+  `ReplyFailureTests` and the string classification in `ReplyMaximumTests`
+  lose the removed keys and strings; `runner_reply_maximum` and the derived
+  `controller_output` are recomputed from the synthesizer, can only fall, and
+  `docs/limits.json` records the new values. The shape golden regenerates.
+- Controller per D2 with Rust tests for shape, statuses, relocated paths, the
+  held request string and D5 version gates. Scan controls include a
+  nonregular file, a single read used for both hash and recursion, nonliteral
+  imports, decoding/read errors and the existing depth and count cutoffs;
+  `docs/limits.json` changes prose only for the scan (D6.60).
 - `docs/contract.json` to 13 and 5 with these changes, then
   `python3 docs/generate_contract.py`.
 - `witness_contract/dossier_witness`, new: the dossier against the specimen
   that ran and host facts the test captures independently (`sw_vers`,
-  `uname`, the manifest, hashes of the selected executables). It owns live
+  `uname`, the manifest, and a hash of an override executable). It owns live
   examples for no augments, applied augments, refused augments, malformed or
   missing policy/source, and XPC failure, plus executable overrides and
   BYOXPC selection. Use the existing BYOXPC ownership/cleanup machinery.
   Controlled Rust collectors own missing/malformed manifest, unreadable
   override file, hash mismatch on a non-manifest selection, and host-read
   failures so signed app bytes stay unchanged. One control asserts that an
-  ordinary built-in run hashes no app binary and reports `not_compared`, and one
-  asserts that an ordinary run leaves no file in the temp request directory.
-  The dossier case includes or links those control receipts and checks every
-  failure-table shape. Host-read controls cover the four sysctl facts. There
-  is no shared-cache UUID collector or sandbox-library identity control
-  (D6.52/54).
-- Implement D2/D6.56 in the shared Rust supervision core, `runner_client.rs`,
-  `run_flow.rs` and the Swift client. Keep the extraction and behavior changes
-  in I4's integration increment; I1 remains behavior-preserving preparation.
-  Rust subprocess controls in `runner_client.rs` own slow/partial delivery,
-  simultaneous input/stdout/stderr beyond pipe capacity, early stdin closure
-  with retained JSON/stderr, a non-reading child, output cutoff, signaled exit
-  and failed/unconfirmed cleanup. Assert that delivery consumes the reply
-  allowance and that write failure cannot restart it; check byte counts, EOF,
-  truncation and concurrent faults against the independently controlled child.
-  Include nonzero exit with a valid failure reply and an `ok` reply alongside
-  failed delivery. `run_flow.rs` controls own `tool_error` precedence, unchanged
-  reply retention, D5 gating and fallback file create/write/cleanup failures
-  preserving the original `xpc_error`. Re-run the existing log-supervision
-  controls to prove extraction preserves that channel's policies. The live
-  `dossier_witness` case exercises the shipped client's stdin/EOF path, verifies
-  the submitted request bytes and ordinary capture, and links these failure
-  controls. Keep direct client file-input coverage for its existing interface;
-  `runner_commands.rs` controls cover verification's preserved default and
-  refusal to report success after transport failure or an unsupported reply.
+  ordinary built-in run hashes no app binary and reports null binary records,
+  and one asserts that an ordinary run leaves no file in the temp request
+  directory. The dossier case includes or links those control receipts and
+  checks every failure-table shape. Host-read controls cover the four sysctl
+  facts. There is no shared-cache UUID collector or sandbox-library identity
+  control (D6.52/54).
+- Implement D6.59 in `runner_client.rs`, `run_flow.rs` and the Swift client.
+  Rust subprocess controls in `runner_client.rs` own a request larger than the
+  pipe buffer delivered in full to a child that reads it after a delay, a
+  child that exits without reading so the write fails with EPIPE and the
+  controller records the error without terminating, and a delivery error
+  alongside a captured failure reply. `run_flow.rs` controls own `tool_error`
+  precedence, unchanged reply retention, D5 gating and fallback file
+  create/write/cleanup failures preserving the original `xpc_error`. The live
+  `dossier_witness` case exercises the shipped client's stdin path and
+  verifies the submitted request bytes. Keep direct client file-input
+  coverage for its existing interface; `runner_commands.rs` controls cover
+  verification's preserved default and refusal to report success after a
+  delivery failure or an unsupported reply.
 
 ### I5. Contract and registry documents
 
 - `tests/FAILURE-PROPAGATION-CONTRACT.md`: the chapter "Derived comparisons
   and evidence joins" is replaced by the comparison record (D1), the
-  invariants (D3), the scenario matrix, an ownership table naming which case
-  owns which rows and invariants, and supported versions. The join table stays
+  invariants (D3), the reading rules (D4), the scenario matrix, an ownership
+  table naming which case owns which rows and invariants, and supported
+  versions. The join table stays
   with its "Supported public conclusion" column renamed "What the record
   states". C1 through C6, the accepted-answers table, "Public representation
   and meaning", "Permanent consumer enforcement" and "Compatibility and
@@ -1338,17 +1305,15 @@ same verified increment.
 - `docs/CONTRACT.md` per D5. `ContractVersionTests.swift`'s header comment
   ("Added keys need no bump") changes with it.
 - `controller/README.md`, the runner-client usage/documentation,
-  `tests/FAILURE-PROPAGATION-CONTRACT.md` and the guide explain the shared
-  client deadline, controller `tool_error` precedence and independent retained
-  reply. Revise `docs/limits.json`'s `client_rpc_wait` entry and the Limits
-  interaction prose for the new start/end boundaries and fixed cleanup grace;
-  update `controller_output` to describe bounded streaming retention, actual
-  bytes read and incomplete-stdout rejection. The `sbpl-check` receiver's
+  `tests/FAILURE-PROPAGATION-CONTRACT.md` and the guide document `--request -`,
+  `request_delivery`, and controller `tool_error` precedence with the retained
+  reply (D6.59). `docs/limits.json`'s `client_rpc_wait` and `controller_output`
+  entries and the Limits interaction prose keep their meaning; the
+  `helper_import_depth`, `helper_import_count` and `helper_source` entries say
+  the dossier scan shares them (D6.60); `runner_reply_maximum` and
+  `controller_output` take their recomputed values. The `sbpl-check` receiver's
   existing collection policy is unchanged. Regenerate the documented limit
-  tables and guide copies with `docs/generate_limits.py`; no reply-wait-only or
-  whole-stream-buffering claim may remain for the runner-client boundary.
-  The `runner verify` timeout description adopts the shared deadline while
-  retaining its own default.
+  tables and guide copies with `docs/generate_limits.py`.
 - `tests/catalog.json`: `comparison_matrix` and `dossier_witness` added;
   `execute_permission_is_not_sandbox_drift` becomes
   `execute_permission_controls_spawn`.
@@ -1367,8 +1332,8 @@ same verified increment.
 
 | Case | Independent control | Expectation source |
 | --- | --- | --- |
-| `runner_exec_dac/execute_permission_controls_spawn` | direct `posix_spawn` before and after `chmod` | S15, S17; the deny-query run expects prediction `deny`, `permission_failure`, attribution `unestablished` |
-| `witness_contract/queries_precede_attempts`, `queries_use_a_pre_attempt_interval`, `query_interval_is_not_a_snapshot`, `external_mutation_between_query_and_attempt` | file bytes, native receipts, timing | S19, S25, the B rows; `order` and `target_mutation` |
+| `runner_exec_dac/execute_permission_controls_spawn` | direct `posix_spawn` before and after `chmod` | S15, S17; the deny-query run expects `sandbox_check.outcome: deny`, `permission_failure` and `attempt.errno`, read under D4's third rule |
+| `witness_contract/queries_precede_attempts`, `queries_use_a_pre_attempt_interval`, `query_interval_is_not_a_snapshot`, `external_mutation_between_query_and_attempt` | file bytes, native receipts, timing | S19, S25, the B rows; `order` and the unlink attempt records |
 | `witness_contract/prediction_target_is_independent_of_attempt_target` | file bytes | S01, S02, S05 |
 | `witness_contract/create_existing_file_preserves_contents`, `run_effects/*` | file bytes and modes | S08, S24 |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict`, `worker_sparse_failure`, `worker_progress_and_failure` | worker evidence | C1, T |
@@ -1395,10 +1360,8 @@ same verified increment.
 - An ordinary built-in run writes no file into the temp request directory and
   hashes no app binary: both are checked as controls in I4, and both are
   measurable on the integration candidate rather than argued.
-- D6.56's shared-deadline, duplex capture, failure-preservation and bounded
-  cleanup controls pass, including the existing log-supervision controls.
-  The live stdin/EOF receipt and direct file-input coverage accompany them;
-  client cleanup is never credited as XPC host or worker termination evidence.
+- D6.59's delivery controls pass; the live stdin receipt and direct
+  file-input coverage accompany them.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
   build through `runner_unit`; run `source_drift` including planner controls and
   the native-use assertion and its positive/negative controls, `preflight` including the `nm -u`
@@ -1443,7 +1406,7 @@ direction. Seed rows:
 | README ¶1 | "harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement" | revise | PW witnesses what a policy does to a process through two channels; it does not adjudicate between them |
 | README ¶2 | "Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles" | revise | keep the lifecycle argument; drop "measuring against" |
 | README Flow | "Each step records two evidence channels plus their comparison" | keep | with the comparison bullet rewritten |
-| README Flow | the **Drift** bullet | remove | a **Comparison** bullet: submitted-scope relations, order, obligations |
+| README Flow | the **Drift** bullet | remove | a **Comparison** bullet: observation, submitted-scope relations, order, and a pointer to the guide's reading rules |
 | README Flow | "Eligible `query_first` records establish this ordering; they do not establish a shared state snapshot" | keep | |
 | FAQ | "When should I use PolicyWitness?" | revise | to witness a policy's effect on specific operations and targets, with both channels and the kernel log attached |
 | FAQ | "Beyond observing drift, what does PolicyWitness's attempt channel record?" | revise | heading loses "drift" |
@@ -1451,17 +1414,18 @@ direction. Seed rows:
 | FAQ | "Can PolicyWitness return a verdict of `drift: true`?" | replace | "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?": no; what it gives instead; how to read it |
 | FAQ | "Which happens first, the prediction or the attempt?" | keep | |
 | Guide, Top-level fields | the `steps[].drift` and `steps[].comparison` bullets | revise | per D1 |
-| Guide, Per-step shape | "`steps[].drift`: `bool \| null`"; the `exit_code` and `syscall_errno` aliases; `scope` | remove | |
+| Guide, Per-step shape | "`steps[].drift`: `bool \| null`"; the `exit_code` and `syscall_errno` aliases; `scope`; `comparison.prediction`; `attempt.native_rc`; every removed limitation string | remove | |
+| Guide | reading a comparison record | add | the twelve D4 rules, in order, one sentence each, in one section |
 | Guide, attempt outcome notes (~800, ~829, ~860, ~863, ~923, ~1071, ~1099) | "`drift` is null …" | revise | say what the comparison fields show |
 | Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement"; "the drift pattern is not iokit-specific" | revise | state the verified fact: no filter ID in 1..200 produced a verdict matching enforcement; keep the "Currently in this category:" marker and list format that `source_drift` parses |
 | Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | drop "drift" |
-| Guide | the specimen dossier | add | canonical paths, `references` as the map to raw records, collection basis and limits, evidence-selection recipes without labels |
+| Guide | the specimen dossier | add | canonical paths, the raw records a reader joins to, the collection mechanisms and the shared scan bounds stated once, evidence-selection recipes without labels |
 | Guide, dossier section | host facts | add | OS version/build, kernel release and architecture as environment context; no claim that they identify the worker's or validator's sandbox libraries |
 | Guide, Output envelope | fields described by envelope path only | revise | the bare reply from `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture |
 | Guide and FAQ | signal-channel descriptions and old provenance paths | remove | |
-| LIMITS | import scan bounds | add | depth/count/byte limits and the cooperative time budget from I4, including filesystem-call limitations |
-| LIMITS and controller/client usage | `--timeout-ms` as reply wait; runner output buffered in full | revise | one overall client deadline plus bounded cleanup, streaming retention and incomplete-stdout rules under D6.56; worker/validator and optional log budgets stay independent |
-| Guide and controller output contract | runner-client transport facts and controller failure | revise | delivery and supervision observations beside the unchanged reply; controller `tool_error` precedence does not rewrite worker/XPC evidence |
+| LIMITS | the helper import and source entries | revise | the existing bounds also bound the dossier scan; no new bound (D6.60) |
+| Controller and client usage | the request file argument | revise | `--request -` and `request_delivery`; `--timeout-ms` unchanged (D6.59) |
+| Guide and controller output contract | runner-client transport facts and controller failure | revise | the delivery observation beside the unchanged reply; a delivery failure is a controller `tool_error` and does not rewrite worker/XPC evidence |
 | FAQ | reading the deny log | add | optional, possibly incomplete evidence; candidate correlation does not establish attempt attribution or a comparison verdict |
 
 ### Infrastructure ledger (from REPAIR)
@@ -1510,8 +1474,8 @@ captured before I1:
   file and permission controls. Goes to the matrix README's description of
   specimen B and its use of `_test_overrides.validator_executable_path`.
 - **DAC EACCES case.** A permission failure under an allow prediction is not
-  evidence about the sandbox. Matrix row S03 and the `sandbox_attribution`
-  obligation; the `runner_exec_dac` README's first sentence keeps it for exec.
+  evidence about the sandbox. Matrix row S03 and D4's third reading rule; the
+  `runner_exec_dac` README's first sentence keeps it for exec.
 - **Unknown-service case.** `kr=1102` means the service is not registered; it
   is not a permission result. Matrix row S14 and the guide's `lookup_failed`
   note.
@@ -1541,11 +1505,12 @@ Use this framing prominently at the top of the README and the guide (D6.34):
 > is available; the worker attempts its submitted operation after applying the
 > policy and receiving release from the host. PolicyWitness records each
 > available result and explains missing observations. It describes what each
-> channel was asked, whether their submitted scopes match, the order it
-> established, and the outstanding obligations of a comparison. The controller
-> adds the request path, source hashes and import inventory, runner and app
-> provenance, binary hash comparisons and host facts. These records identify
-> observed inputs and conditions; they do not embed the full specimen. Optional
+> channel was asked and answered, whether their submitted scopes match, and
+> the order it established; the guide states what no record can establish.
+> The controller adds the request path, source hashes and import inventory,
+> runner and app provenance, a hash of any selected binary the app's manifest
+> does not describe, and host facts. These records identify observed inputs
+> and conditions; they do not embed the full specimen. Optional
 > log capture adds available kernel denial records with correlation limits.
 > PolicyWitness supplies evidence for a reader's interpretation and does not
 > decide whether prediction and enforcement agree.
@@ -1609,9 +1574,11 @@ That is a separate change, outside this plan, and nothing here forecloses it.
 
 [DRIFT-REMOVAL-CANDIDATES.md](DRIFT-REMOVAL-CANDIDATES.md) records S4 and
 S6–S9 as potential additions, with unresolved decisions and the sections each
-would affect. In particular, S9 does not supersede D1 or D6.26/42: this plan
-still retains `target_mutation.status`. Adoption requires a new D6 decision
-and coordinated changes to the affected design, removal and acceptance text.
+would affect. D6.57 adopts S6 and S9 by consequence of its rule; S4, S7, S8
+and S14 remain potential additions, and S4's lifecycle copies stay only under
+D6.46's production-reader clause. Adoption of any of those requires a new D6
+decision and coordinated changes to the affected design, removal and
+acceptance text.
 
 ## Readiness and acceptance
 
@@ -1619,19 +1586,19 @@ READY means the implementation can proceed from settled contracts and assigned
 checks. It does not mean the implementation exists or acceptance has passed.
 The readiness review checks:
 
-- [x] D0/D4 permit descriptive derivation and prohibit joint verdicts; D1/D3
-  share one mutation rule and explicit reporting-failure exceptions.
+- [x] D0/D4 permit classifications and prohibit joint verdicts; D6.57
+  classifies every derived field, D1/D3 carry no restatement, D6.58 drops
+  every wire constant, and D4 lists the twelve reading rules.
 - [x] D2 defines collection stages, partial observations, every failure shape,
-  binary baselines, request identity and implementable scanner budgets.
+  binary baselines, request identity and the existing scanner bounds (D6.60).
 - [x] D5 inventories semantic and transport boundaries, including production
   Rust, and preserves request admission while specifying unsupported results.
 - [x] I2–I4 assign owners to all matrix/failure cases, version gates, dossier
   failures and maximum-size controls; I1 preserves coverage until replacements
   run. Unlinked exploratory claims are not counted as evidence.
-- [x] Every matrix row's response 12 columns are verified against live output,
-  with receipts, and the specimen mechanics the rows depend on are recorded.
-  The obligations and `comparison_conditions` columns remain design
-  expectations by construction.
+- [x] Every matrix row's surviving column values are verified response 12
+  values, with receipts, and the specimen mechanics the rows depend on are
+  recorded.
 - [x] The removal inventory is complete for shared equipment: R4 lists every
   caller of the five removed consumer functions, including inside Rust tests.
 - [x] D6.36: the dossier's presence rule covers every `kind: "run"` envelope,
@@ -1647,20 +1614,21 @@ The readiness review checks:
   the shipped-binary check under D6.48.
 - [x] D6.49–51 remove the duplicated work the dossier would have added: no
   per-run hash of a file the manifest already describes, no temporary file on an
-  ordinary run, and one OS-facts reader without a subprocess.
+  ordinary run, and one OS-facts reader without a subprocess. D6.61 rests 49
+  on the measurement alone.
 - [x] D6.44 retires both `bootstrap_port_failed` and `libsandbox_unavailable`
   in response 13, with the API constants, override table, guide, coverage table
   and the `runner_outcome_libsandbox_unavailable` suite moving with it.
 - [x] D6.45 retires the contributor stubbing guidance with its subject: no
   `@convention(c)` slot survives under `runner/Sources/`.
-- [x] D6.56 resolves D6.55: one overall client deadline, controller failure
-  with preserved reply/capture, shared supervision and boundary-specific
-  policies, with I4 controls and I5 documentation assigned.
+- [x] D6.59 resolves D6.55: a writer thread, one delivery record, controller
+  `tool_error` with the preserved reply, no controller deadline, with I4
+  controls and I5 documentation assigned.
 
 The readiness review is complete and the status is READY. Implementation is a
-separate step. During implementation, acceptance requires the I4 profile
-measurements and final limits, retained live matrix/dossier receipts, the
-completed documentation ledgers, reviewed shape goldens and maximum-reply
-budgets, D5 negative controls, D6.56 transport controls, R10's explained search
-residue, and the Verification battery on the integration candidate. No box
-above credits those future checks as complete.
+separate step. During implementation, acceptance requires retained live
+matrix/dossier receipts, the completed documentation ledgers, reviewed shape
+goldens and recomputed maximum-reply budgets, D5 negative controls, D6.59
+delivery controls, R10's explained search residue, and the Verification
+battery on the integration candidate. No box above credits those future
+checks as complete.
