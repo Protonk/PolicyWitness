@@ -92,12 +92,15 @@ qualifies when its attempt has `result_source: worker`, `requested_kind: file`,
 that submitted filter value; the current step counts as a run step. Host-resolved
 paths do not participate. An excluded query therefore keeps `none` even if a
 later attempt removes its submitted path. That exclusion is the obligation's
-whole content beyond existence: it is producer knowledge a reader recomputing
-from the attempt records would not apply, which is why the status ships and the
-matching step IDs do not. A reader who wants the step compares
-`attempt.requested_path` against the query's `filter_value` across the steps,
-exactly as the producer does. This preserves the producer's query-exclusion
-boundary (D6.26, D6.42).
+whole content beyond existence, and it is a reading rule, not an otherwise
+unavailable observation: the query's `filter_kind`, `filter_value`, its
+`query_plan:*` limitation and every unlink attempt are all in the reply, so a
+reader has every input and can apply the rule unaided. The status ships as a
+convenience projection — the rule applied once by the producer instead of by
+each reader — and because it replaces a field the wire carries today. Whether
+that warrants a producer-side derivation at all is open, and belongs to S9 in
+[the candidates document](DRIFT-REMOVAL-CANDIDATES.md); this plan retains it
+(D6.26, D6.42).
 
 No obligation's value space contains `established`. State stability does not
 vary per step: the reply carries `comparison_conditions:
@@ -622,12 +625,13 @@ current-version fixtures for unfamiliar-value transport tests.
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. Superseded by 47: the reply carries no identity, so the backstop keeps its literal shape. |
 | 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
 | 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. Superseded by 42. |
-| 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships because the query-exclusion guard is producer knowledge; the step IDs did not, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
+| 42 | `target_mutation` carries no step list (supersedes 41, refines 26) | The obligation is `{ "status": … }` alone. The status ships as a convenience projection — the query-exclusion rule applied once by the producer rather than by each reader — and because it replaces a field the wire carries today; its inputs are all exposed in the reply, so this is a reading rule and not knowledge a reader lacks, and whether it warrants producer-side derivation is S9's open question. The step IDs did not ship, because nothing read them: the producer emitted them, the encoder checked them and the consumer rederived them from the same attempt records a reader can read. Removing them leaves the reply bound and every documented limit unchanged, and retires the ordering, duplication and invention failure modes. The cost is that a step whose queried path another step removed reports its status without naming that step. |
 | 43 | Unused Swift execution helpers (S1–S3) | Remove the attempt executor, query helper and sandbox-application helper, their exclusive dependencies and helper-only tests per R2/R5. Keep production planning, path diagnostics, policy hashing, structural policy refusal and C worker/validator behavior. Coordinate source, build, test and documentation changes in I3–I5 under D6.33. |
 | 44 | Retired outcome spellings (S1, S3) | One vocabulary decision covering two spellings whose mechanisms do not survive. `bootstrap_port_failed` is produced only by the deleted Swift Mach-lookup branch; the C-worker path yields `lookup_failed` with a `task_get_special_port` diagnostic, so the information survives. `libsandbox_unavailable` is produced only by the host loader deleted under 47. Retire both, with the API constants, the `libsandbox_path` override key, the guide, `COVERAGE.md`'s outcome matrix, `source_drift`'s counts (19 → 18 normalized outcomes, 10 → 9 attempt outcomes, 8 → 7 override keys) and the live load-failure control moving together. Both ride response 13: a vocabulary retirement after this plan lands would need its own bump. Giving either spelling a real production producer instead would amend R2's unchanged-C boundary and is not proposed. |
 | 45 | C-function-pointer stubbing guidance (S3) | OPEN. Removing `SandboxApplyTests.swift` removes the worked example linked from `runner/AGENTS.md`, and no other example survives: the only other `@convention(c)` occurrence in the test tree is `main.swift`'s registry comment describing that same file. So the choice is a self-contained explanation in `runner/AGENTS.md` or retiring the guidance; there is no surviving example to point at. The unused helper and its tests are removed in every case. |
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The dossier reports `specimen.host.sandbox_cache_uuid`, read by the controller; the runner reports no identity and `SandboxLib.swift` is deleted. Measured 2026-10-01 on a stock host: `sandbox_check` resolves through libSystem with no load, `sandbox_compile_string` and `sandbox_apply` are unreachable without loading a library the host never calls into, all three images are shared-cache resident, and none exists as a file — so a per-function host observation adds only a path implied by the cache UUID, about a process that neither predicts nor applies. Non-stock library detection is a non-goal. Identifying the images the validator and worker mapped would need the ABI change 11 declined. This removes D2's identity section, D3's identity invariant and reply-fallback retention, the consumer's presence-by-load-stage rule and I4's loader-observation controls. |
+| 48 | Host invariance rule and its checks (refines 43) | The service header's prohibition is rewritten to state the rule without naming deleted symbols, in a delimited block that cites two live deny-default cases. Two non-redundant checks protect it: a `source_drift` name-set assertion that nothing under `runner/Sources/` references `libsandbox` or the sandbox SPI, and a `preflight` assertion that `nm -u` on the shipped `PWRunner` reports no undefined `_sandbox_*` symbol. Measured basis: a direct call is visible only to the binary check, a `dlopen` by string literal only to the source check, and `otool -L` is blind to both. Neither adds a catalog case; no new live case is needed; nothing asserts the comment's text. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -733,11 +737,71 @@ dependencies; the enclosing source files also contain production code.
   functions: `SandboxApply.swift` retains only hashing, and R10's search will
   flag a filename that no longer describes its contents.
 
-Remove imports and comments made obsolete by these deletions, including the
-service header's references to the deleted helpers. Keep the existing filenames
-for files that retain production code. R5 assigns the precise test deletions;
-R8 assigns the documentation changes. The helper removals themselves introduce
-no new request, response or worker ABI contract.
+Remove imports and comments made obsolete by these deletions. Keep the existing
+filenames for files that retain production code. R5 assigns the precise test
+deletions; R8 assigns the documentation changes. The helper removals themselves
+introduce no new request, response or worker ABI contract.
+
+#### The host invariance rule and its checks
+
+The service header currently states what must not be in that file as a list of
+four things S1–S3 delete — `applySandboxPolicy`, libsandbox state surviving the
+load check, `runSandboxCheck`, `runAttempt` — followed by the rule they
+illustrate: the host stays invariant under the policy under test so the XPC
+reply path is never disrupted by a `(deny default)` specimen. The symbols are
+examples; the rule is one of AGENTS.md's core ideas. **Rewrite that passage to
+state the rule without naming deleted symbols; do not delete it.** After these
+removals the rule is also stronger and simpler, because the host no longer
+links, loads or calls libsandbox at all.
+
+State it in a delimited block whose markers are part of the check contract
+below, and cite two of the live cases that would fail if the rule broke, so the
+rule points at its own proof rather than at code that may be deleted later:
+`runner_c_worker_harness/bare_deny_default` and
+`runner_apply_isolation_v3/deny_default_v3_worker_reply`.
+
+Two checks protect the rule, and they are not redundant. Measured on the
+2026-10-01 build: `nm -u` on the shipped `PWRunner` executable reports
+`_sandbox_check` — the shim call S2 deletes — and does not report
+`_sandbox_apply`, because the loader resolves that by string through `dlsym`.
+`otool -L` reports no sandbox dependency at all, in the present state, because
+`sandbox_check` arrives through libSystem and the loader's symbols arrive at
+runtime. So a direct call is visible to the binary check and not to a link
+check, a `dlopen` by string literal is visible only in source, and no single
+instrument covers both.
+
+- **Source (`source_drift`, in its existing runner-source case).** No file under
+  `runner/Sources/` references `libsandbox` or any of the sandbox SPI names:
+  `sandbox_check`, `sandbox_apply`, `sandbox_compile_string`,
+  `sandbox_create_params`, `sandbox_set_param`, `sandbox_free_params`,
+  `sandbox_free_profile`, `sandbox_free_error`. An explicit name set, not a
+  pattern over `sandbox_*`: "sandbox", `sandbox-exec`, SBPL text and
+  `sandbox_log` appear legitimately throughout, and a check that fires on them
+  gets suppressed. `libsandbox` is the token that catches a `dlopen` of the
+  library by path. Do not ban `dlopen` itself; that is broader than the rule and
+  a legitimate later use would force an exemption that weakens it. The scope is
+  `runner/Sources/` only — `pw_probe_runner.c` and `sb_api_validator.c` keep
+  their `extern` declarations, because they are the processes that use the
+  library. The invariance block is the one exempt region, named by its markers,
+  since the sentence stating the rule has to name what it forbids. The failure
+  message says what to do: the XPC host must not reference libsandbox, and if
+  the reference is deliberate then the invariance block and D6.47 change in the
+  same commit.
+- **Binary (`preflight`, in its existing artifact case).** `nm -u` on
+  `PWRunner.xpc`'s executable reports no undefined `_sandbox_*` symbol. This
+  catches a reintroduction arriving through a dependency or a new target, which
+  a grep over `runner/Sources/` would not see. Land it in the same commit as the
+  removal, so its failing state on the present build and its passing state after
+  are both on the record. Do not use `otool -L`: it passes in the state the rule
+  forbids, and a later reader who believes it covers this will stop looking.
+
+Neither check adds a catalog case: both are assertions inside cases that already
+run. No new live case is needed — `bare_deny_default`,
+`proceed_under_bare_deny_default`, `max_slots_deny_default`,
+`deny_default_v2_worker_reply`, `deny_default_v3_worker_reply` and
+`witness_contract/shm_sentinel_under_deny_default` already exercise the
+guarantee. Nothing asserts the text of the comment; that would pin prose rather
+than behavior (D6.48).
 
 ### R3. Controller implementation and fixtures
 
@@ -856,8 +920,13 @@ Swift sites and 1 controller site; 14 catalog entries.
   cleanup is outside the effort is superseded by D6.43. Resolve the stubbing
   example in `runner/AGENTS.md` under D6.45. Update
   `tests/suites/source_drift/README.md`'s target list and claim that both Swift
-  query callers use the exclusion set. Reconcile the Mach-lookup outcome in
-  `docs/PolicyWitness.md` and `tests/COVERAGE.md` under D6.44.
+  query callers use the exclusion set, and record the host-invariance name set
+  there and in `tests/suites/preflight/README.md` with what each check sees and
+  does not see. Reconcile the Mach-lookup outcome and the retired
+  `libsandbox_unavailable` in `docs/PolicyWitness.md`, `tests/COVERAGE.md` and
+  the `_test_overrides` table in
+  [PWRunnerAPI.swift](runner/Sources/PWRunnerCore/PWRunnerAPI.swift) under
+  D6.44.
 
 ### R9. Not removed
 
@@ -894,8 +963,10 @@ descriptive value, an unrelated use, immutable evidence, an explicit
 removed-key rejection. Completion is the explained residue, not a zero count.
 
 Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
-`XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests` and
-`bootstrap_port_failed`. Follow build variables, target dependencies, test
+`XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests`,
+`bootstrap_port_failed`, `SandboxLib`, `libsandbox_path`,
+`libsandbox_unavailable` and `library_identity`. The host-invariance name set
+in R2 is the standing version of this search for `runner/Sources/`. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
 and this plan may name removed artifacts; active implementation and contributor
 instructions must match the selected scope and the D6.44–45 resolutions.
@@ -1036,8 +1107,11 @@ same verified increment.
 ### I4. Producer and dossier, in the worktree
 
 - Remove the S1–S3 implementations and exclusive shim/build dependencies per
-  R2, coordinated with I3. Preserve the named production helpers and loader
-  failure behavior. D6.44–45 must be resolved for the associated outcome and
+  R2, coordinated with I3. Preserve the named production helpers. In the same
+  commit, rewrite the service header's invariance block and add its two checks
+  per R2: the `source_drift` name-set assertion and the `preflight` `nm -u`
+  assertion, whose failing state on the pre-removal build is recorded with the
+  change (D6.48). D6.44–45 must be resolved for the associated outcome and
   documentation edits; no pending option is an instruction to change C behavior.
 - Swift per R2, D6.22 and D6.23, plus `comparison_conditions`. The comparison producer already receives the run
   attempts and already tests for a qualifying removal, so the obligation needs
@@ -1125,8 +1199,9 @@ same verified increment.
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
-  build through `runner_unit`; run `source_drift` including planner controls
-  and `runner_c_worker_harness`. The integrated baseline diff must show no
+  build through `runner_unit`; run `source_drift` including planner controls and
+  the new host-invariance name-set assertion, `preflight` including the `nm -u`
+  assertion, and `runner_c_worker_harness` including its deny-default cases. The integrated baseline diff must show no
   helper-removal change to queries, attempts, hashing or load failures beyond
   separately approved contract changes. Retain the existing live worker,
   validator and library-load failure controls in the default/`--all` battery.
@@ -1176,7 +1251,7 @@ direction. Seed rows:
 | Guide, "Filter kinds where prediction is unavailable" | "documented mismatch between `sandbox_check`'s userland verdict and the kernel's actual enforcement"; "the drift pattern is not iokit-specific" | revise | state the verified fact: no filter ID in 1..200 produced a verdict matching enforcement; keep the "Currently in this category:" marker and list format that `source_drift` parses |
 | Guide, Denial-log correlation | "never rewrites a comparison, drift, failure attribution or termination cause" | revise | drop "drift" |
 | Guide | the specimen dossier | add | canonical paths, `references` as the map to raw records, collection basis and limits, evidence-selection recipes without labels |
-| Guide, dossier section | library identity | add | host-resolved functions and observed disk-path presence, partial failures and stage-based absence; no claim about child mappings or an active override |
+| Guide, dossier section | sandbox library identity | add | the shared cache UUID as a machine fact, and what it supports: deciding whether two runs ran against the same sandbox library. No per-process mapping claim, and no host library observation, which the runner no longer makes |
 | Guide, Output envelope | fields described by envelope path only | revise | the bare reply from `pw-runner-client` as readable on its own, then the envelope as that reply plus the dossier, transport and log capture |
 | Guide and FAQ | signal-channel descriptions and old provenance paths | remove | |
 | LIMITS | import scan bounds | add | depth/count/byte limits and the cooperative time budget from I4, including filesystem-call limitations |
@@ -1358,6 +1433,8 @@ The readiness review checks:
   source, build, test and documentation owners under D6.43.
 - [x] D6.47 settles what sandbox-library identity PW reports and who collects
   it, with the per-function host observation and its loader retired.
+- [x] D6.48 keeps the host invariance rule as a rule when its illustrations are
+  deleted, with two measured, non-redundant checks and no new case.
 - [ ] D6.44: confirm retiring both `bootstrap_port_failed` and
   `libsandbox_unavailable` in response 13, and align the API constants,
   override table, guide and coverage table with it.
