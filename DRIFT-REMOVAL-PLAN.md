@@ -109,17 +109,17 @@ records for B2–B5.
 - A step whose attempt is `unlink` reaches `operation_relation: matched` only
   when its query operation is `file-write-unlink`. S19, S25, B3, B5 and B6
   depend on this.
-- A steered validator cannot omit a verdict by skipping an output line. The
-  host counts uniquely associated records and refuses a short batch run-level
-  with `validator_unavailable` before any comparison exists. The omitted-verdict
-  rows (B2, B3, B5) require the validator I/O deadline seam that
-  `runner_outcome_validator_no_reply` already uses: `_test_overrides`
-  `validator_executable_path` plus `validator_io_timeout_ms`, with a stub that
-  answers the other steps and then stalls. Specimen B therefore ends in
-  `normalized_outcome: validator_no_reply`, not `ok`, while B1, B6 and B7 keep
-  their verdicts and `query_first` order in that same reply. The matrix reader
-  asserts the per-step records against a run whose run-level outcome is a
-  validator failure.
+- Specimen B uses `_test_overrides.validator_executable_path` and
+  `validator_io_timeout_ms`. The stub emits deny for B1, allow for B6 and B7,
+  and a valid diagnostic record for B4 (`outcome: error`, a string `error`,
+  and matching step/query metadata). It omits B2, B3 and B5, flushes the four
+  records, then holds stdout open until the validator I/O deadline. The host
+  retains and associates those records, releases the worker and builds all
+  seven step results. With the worker completing normally, the run ends in
+  `normalized_outcome: validator_no_reply`; B1, B6 and B7 retain `query_first`.
+  A short batch followed by clean EOF instead produces
+  `validator_unavailable`; partial records remain available in either case.
+  Assert the timeout outcome and every per-step record in the same reply.
 - Specimen B is not idempotent: it unlinks the paths it queries, and a run that
   fails after release still performs its attempts. The case owns recreating its
   files before every run, including after a failed one.
@@ -232,7 +232,8 @@ exceeded and failure keys. A scan that does not run has `records: []`,
 `cycle: null`, `closure_sha256: null` and `exceeded: null`.
 
 `cmd_run` writes the uniform envelope for missing arguments, invalid flag
-values, absent request files and invalid request objects. Keep the `cli.rs`
+values, absent request files, invalid request objects and runner-selection
+failures, including manifest failures. Keep the `cli.rs`
 catch-all for errors that escape `cmd_run`. These failures use
 `normalized_outcome: tool_error`, exit 2 and null execution records;
 `bad_request` remains exit 1. Remove `data.error`; use `result.error`.
@@ -242,10 +243,20 @@ held string, including when no patch was needed. Scan that string and deliver
 its bytes to both readers. `specimen.request_path` remains the original path;
 replacing the file during collection must not change submitted bytes.
 
-Add `--request -` to `pw-runner-client` and `sbpl-check`, retaining their direct
-file-input interfaces. Both read stdin to EOF. Use stdin for normal invocation
-and the `xpc_error` fallback; delete `write_temp_request`. No run path writes a
-temporary request file. Preserve augment resolution against the app root.
+Support these helper input forms:
+
+- `pw-runner-client run [options] <service> <request.json>`: existing file input.
+- `pw-runner-client run [options] --request - <service>`: new stdin input.
+- `sbpl-check --request <path|->`: existing file input, with `-` selecting stdin.
+
+The client parses `--request -` before the service name, accepts only `-` as
+that flag's value, and rejects duplicate or mixed input forms and extra
+arguments. Its positional request argument remains a literal file path.
+Both tools read stdin to EOF. `policy-witness run` uses stdin for normal
+invocation and the `xpc_error` fallback; delete `write_temp_request`.
+No `policy-witness run` path writes a temporary request file.
+`policy-witness runner verify` retains its file under `pw-runner-verify`.
+Preserve augment resolution against the app root.
 
 #### Request delivery and transport failures
 
@@ -259,8 +270,11 @@ deadline or log-supervisor dependency. Keep `JsonOutputCapture`'s parsing,
 diagnostic retention, capture limits and collection behavior unchanged.
 
 `data.runner_client` gains `request_delivery: { "bytes_written": n, "error": null | string }`.
-It is null for a helper invocation using the retained file-input interface;
-normal runs use stdin. It is a controller observation: an accepted pipe write
+On a `kind: run` envelope, a nonnull `runner_client` always carries this object;
+before client invocation, `runner_client` itself is null. The shared capture
+type permits null delivery for file-input calls; `runner verify` uses that
+form but does not emit the capture in its management envelope.
+It is a controller observation: an accepted pipe write
 and a closed writer do not prove that the client read the bytes or that XPC
 delivered them. Existing capture and timing fields and the meaning of
 `exit_code` are unchanged.
@@ -281,12 +295,25 @@ trigger fallback compilation.
 
 #### Binary selection and comparison
 
-The service path comes from the selected runner's executable path. Worker and
-validator paths come from their admitted executable overrides when present,
-otherwise from the selected XPC bundle's `Contents/MacOS` helpers. An invalid
-override is reported as an unavailable selection, not silently replaced with
-the built-in helper. These paths describe intended invocation; hashing does
-not prove that a process launched or mapped those bytes.
+The service path comes from the selected runner's executable path. The
+controller reads `_test_overrides.worker_executable_path` and
+`_test_overrides.validator_executable_path` from the same parsed request value
+that is serialized for invocation.
+This is an observation of requested paths; the runner retains admission
+ownership. Apply these rules independently to the two helper roles:
+
+| Override value | Binary observation |
+| --- | --- |
+| Absent or null override object/key | Use the selected XPC bundle's `Contents/MacOS` helper. |
+| Nonobject override container or nonstring nonnull key | `path: null`, `actual_sha256: null`, `verification: unavailable`, with a type diagnostic; a malformed container affects both roles. |
+| String containing NUL or exceeding the runner's 1023-byte UTF-8 path echo bound | Null path and actual hash, unavailable with a NUL/length diagnostic; do not echo, truncate or read the path. |
+| Empty or relative string | Retain the submitted path, null actual hash, unavailable with an empty-path or unknown runner-working-directory diagnostic. Do not resolve it against the controller's working directory. |
+| Absolute string within the echo bound | Apply the manifest-path null rule below; otherwise retain the path and hash a readable regular file. A missing, unreadable or nonregular file has a null actual hash and an unavailable reason. |
+
+Retain any available baseline hash in unavailable records. A present unusable
+override never falls back to the bundle helper. These observations do not
+reject or rewrite the request, enforce executable permission, or predict
+runner admission. Hashing does not prove launch or mapped bytes.
 
 For both built-in and BYOXPC selections, the baselines are the app manifest's
 built-in `PWRunner` service, `PWRunner/pw-probe-runner` and
@@ -303,20 +330,33 @@ file, or a missing, unreadable
 or invalid manifest or entry, leaves `actual_sha256` or `baseline_sha256`
 null with `verification: unavailable` and a reason that identifies selection,
 manifest or file-read failure. A mismatch reason identifies the baseline
-comparison. `path` is null when selection is unavailable. Neither mismatch
+comparison. `path` is null when no path was selected or it cannot be represented
+under the rules above; a known but unreadable path stays present. Neither mismatch
 nor unavailable changes the run outcome. The manifest's UUID and entitlements
 are not echoed; existing runner provenance stays separate.
 
 #### Controller reads on a run
 
-Parse the manifest once in `cmd_run`, before runner selection, and pass the
-parsed value to runner selection, app provenance and the dossier's binary
-records. Resolve the built-in runner's bundle id, service name and executable
-path from its manifest entry; delete `resolve_pw_runner_bundle_info` and
-`PWRunnerBundleInfo`. `plist.rs` and `read_bundle_info` stay for BYOXPC
-install and verify. A missing or unreadable manifest fails built-in runner
-selection, with the manifest path in the diagnostic; `app_provenance` is null
-in that case.
+Attempt to parse the app evidence manifest once in `cmd_run`, before runner
+selection, and retain either the parsed value or its error for selection,
+app provenance and binary records. The built-in service entry supplies
+`bundle_id` and `rel_path`; use `bundle_id` as the service name and resolve
+the executable path from `rel_path`. Delete `resolve_pw_runner_bundle_info`
+and `PWRunnerBundleInfo`. `plist.rs` and `read_bundle_info` stay for BYOXPC
+install and verify.
+
+A missing, unreadable, malformed or unsupported-schema manifest, or a missing
+or unusable built-in service entry, fails built-in selection through `cmd_run`'s
+uniform `tool_error` envelope and exit 2. Include the manifest path in the
+diagnostic, retain available dossier facts and do not invoke the client.
+`app_provenance` is null when the manifest could not be parsed and accepted.
+
+BYOXPC selection continues through its existing registry, signature and
+entitlement checks without an app manifest. If those checks pass, invoke the
+runner. If the manifest itself is unavailable, all three binary roles are objects
+with `verification: unavailable`, `baseline_sha256: null` and a manifest
+diagnostic; retain selected paths and actual hashes where observable.
+Do not emit a null binary record without the manifest entry that justifies it.
 
 `app_provenance` contains only `evidence_manifest_path` and `evidence_verify`.
 Keep `runner_provenance` unchanged.
@@ -367,20 +407,20 @@ background task or new shipped helper.
   `PWRunnerSignalResult` and `Signals.swift` are gone. The reply-shape golden
   (`tests/fixtures/contract/response_shape.json`) records the response 13
   shape.
-- Encoder, replacing the clause that rejected `disagreement`; the
-  `query_first` eligibility check is unchanged:
-
-  | Condition | Rejected when |
-  | --- | --- |
-  | `limitations` | carries a string outside D1's vocabulary: anything but `query_plan:<code>` and the five lifecycle entries |
-  | any step | carries `prediction`, `obligations`, `drift`, `conclusion`, `deny_signal`, `comparison.scope`, `sandbox_check.scope`, `attempt.exit_code`, `attempt.syscall_errno` or `attempt.native_rc` |
-  | the reply | carries `comparison_conditions` |
+- Encoder: reject `limitations` strings outside D1's vocabulary and retain
+  the `query_first`, disposition and reply-degradation checks on remaining
+  properties. Remove checks on deleted properties. Assert absence of removed
+  wire keys in encoded fixtures and the shape golden; do not add a strict
+  unknown-key Swift decoder. Swift keeps ignoring unknown keys after the
+  version gate.
 - Reply degradation: `runner_reporting_failed` omits every `comparison`, even
   when `steps: []`. `evidence_retained: false` still withholds step and
   subprocess evidence.
 - Consumer (`tests/lib/consumer.py`): applies D5's envelope/response gates and
-  reports a different version as `unsupported`; rejects the removed keys and
-  any `limitations` string outside D1's vocabulary; validates `observation`,
+  reports a different version as `unsupported`; rejects removed keys at the
+  specific wire paths in R1, including `comparison.prediction`,
+  `comparison.obligations` and reply-level `comparison_conditions`, and any
+  `limitations` string outside D1's vocabulary; validates `observation`,
   the two relations and `order` against the raw channel fields and
   `ordering`.
 - Controller: `permission_failures_without_record` reads `comparison.observation`;
@@ -449,12 +489,14 @@ Put these reading rules in one guide section, in this order:
   "Bump a number when the rules for reading change: a field removed, its type
   or meaning changed, or a new requirement placed on readers. An added field
   alone does not require a bump. An absent field means unknown, never false.
-  An additive contract change may also carry a bump, recorded in the manifest.
+  An additive contract change may also carry a bump, recorded in
+  `docs/contract.json`.
   Bump the worker ABI on any change to the shared-memory layout or handshake."
   The "Reading older replies"
   section, the historical version tables and "Naming numbers in prose" are removed.
   A "Supported versions" section replaces them: "Semantic readers of runner
-  responses and controller envelopes accept exactly their manifest versions;
+  responses and controller envelopes accept exactly the versions in
+  `docs/contract.json`;
   another version is unsupported. Raw transport retains the received bytes
   without interpreting unsupported records. Stored evidence keeps its bytes;
   current semantic readers reject unsupported versions. Request admission and
@@ -482,9 +524,18 @@ previous version.
 | Swift `PWRunnerRunResult` decoder/encoder | Require `PWContract.responseSchema` before semantic decoding/encoding; other versions fail with an `unsupported` diagnostic. Remove the 8/9/10 gates and legacy-only decode fallbacks; current invariants apply directly. |
 | Python `consumer.py` public document readers | Share envelope/response gates; `validate` returns the single version error, and evidence accessors refuse unsupported input. `select` operates on already validated steps. Bare replies require only the response gate. |
 | Python lifecycle adapter/oracle, blackbox and path/log evidence helpers | Route public document entry points through the same gates before projecting; remove legacy projections and fallbacks. Standalone raw-record validators do not pretend a fragment is a versioned document. Audit direct callers as part of I3. |
-| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; when transport completes, the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use the corresponding `malformed_runner_response` result. A concurrent delivery failure takes precedence as `tool_error`; do not interpret the unsupported/malformed reply. |
+| Rust `run_flow.rs`, including `complete_execution`, `project_disposition` and log correlation | Gate received reply version before reading summaries, worker PID, lifecycle or comparisons. Remove the pre-response-10 disposition fallback. Unsupported replies remain intact in `data.runner_result`; when transport completes, the controller reports `result.ok: false`, exit 1, `result.normalized_outcome: unsupported_runner_response`, a version diagnostic and no runner-derived diagnostics or log capture. Malformed version fields use `malformed_runner_response`, also with `ok: false` and exit 1. A concurrent delivery failure takes precedence as `tool_error`; do not interpret the unsupported/malformed reply. |
 | Swift `pw-runner-client` and Rust `runner_client.rs` capture | Preserve received bytes/JSON as transport, including unsupported versions and unfamiliar strings. They do not reinterpret or coerce the version. Client-generated failure replies use the current response schema and the empty-step and reporting-failure rules. |
 | Requests, worker ABI, evidence manifest and validator transcript | Retain their existing separate admission/reading rules. This plan's equality rule is not a new request-version or nested-transcript-version restriction. |
+
+`unsupported_runner_response` and `malformed_runner_response` are
+controller-only outcomes, like `tool_error`; do not add them to Swift's
+`NormalizedOutcome` or the runner-outcome matrix in `tests/COVERAGE.md`.
+Document them, their version diagnostics and exit 1 in `controller/README.md`'s
+output contract and the supported-reader rules in
+`tests/FAILURE-PROPAGATION-CONTRACT.md`. `malformed_runner_response` covers
+missing or noninteger response versions in received JSON; retain the existing
+`runner_output_not_json` handling when no JSON reply was parsed.
 
 For an unsupported/malformed reply, the dossier retains controller-collected
 facts; no runner-derived value is computed. Rust transport tests preserve unknown
@@ -508,7 +559,7 @@ what stays.
 
 | Key | Where | Disposition |
 | --- | --- | --- |
-| `steps[].drift`, `steps[].comparison.conclusion`, `steps[].comparison.scope`, `steps[].comparison.prediction` | runner reply | removed |
+| `steps[].drift`, `steps[].comparison.conclusion`, `steps[].comparison.scope`, `steps[].comparison.prediction`, `steps[].comparison.obligations`, `comparison_conditions` | runner reply | removed |
 | `limitations` strings `state_stability_unestablished`, `runtime_target_identity_unestablished`, `sandbox_attribution_unestablished`, `attempt_mutation_order_unestablished`, `query_attempt_order_unestablished` | runner reply | removed |
 | every other `limitations` string outside D1's vocabulary: `prediction:*`, non-lifecycle `attempt:*`, `operation:*`, `target:*`, `exec_query_not_full_spawn_prediction`, `compound_attempt`, `attempt_operation_unestablished`, `broad_query_operation`, `query_filter_scope_unestablished`, `submitted_target_unavailable`, `exec_result_failed_after_spawn`, `host_path_resolution_changed` | runner reply | removed |
 | `steps[].deny_signal`, `deny_signal_total` | runner reply | removed |
@@ -519,6 +570,9 @@ what stays.
 | `data.policy_augmentation`, `data.runner_provenance`, `data.app_provenance`, `data.request_path` | controller envelope | relocated under `data.specimen` |
 | `data.runner_service_bundle_id`, `data.runner_service_name`, `data.runner_registry_id`, `data.runner_service_executable` | controller envelope | removed |
 | `data.error` on the pre-execution `tool_error` envelope | controller envelope | removed; use `result.error` |
+
+`steps[].sandbox_check.native_rc` stays, including its validator-record
+equality checks in ordering eligibility. Only the attempt-side alias is removed.
 
 ### R2. Producer code
 
@@ -542,7 +596,7 @@ what stays.
 | `controller/src/run_flow.rs` | `RunnerStartupDiagnostics` (~133), `fallback_policy_note` (~162) and their construction in `cmd_run` (~379–396); `RunnerExecutionDiagnostics.worker_pid` (~98), `RunnerLogDiagnostics.capture_status` (~112), `first_deny` (~116) and `DenyEventReference` | delete; the log window still takes the worker PID from the reply internally, and `policy_check` keeps the fallback compile record |
 | same | `write_temp_request` and its call in `cmd_run` (~353–358); `load_app_provenance`'s own manifest read (~141–143) and the four echoed header fields of `AppProvenance` (~41–45) | delete; `load_app_provenance` takes the parsed manifest |
 | `controller/src/app_layout.rs` | `resolve_pw_runner_bundle_info` (~62–77), `PWRunnerBundleInfo` (~13) and the `plist` import | delete; `builtin_runner_target` reads the manifest entry |
-| `controller/src/runner_select.rs` | `builtin_runner_target`'s manifest read (~159–161) | takes the parsed manifest from `cmd_run` and resolves `bundle_id`, `service_name` and `rel_path` from the service entry |
+| `controller/src/runner_select.rs` | `builtin_runner_target`'s manifest read (~159–161) | takes the parsed manifest from `cmd_run`, uses the service entry's `bundle_id` as the service name, and resolves its executable from `rel_path` |
 | `controller/src/policy_check.rs` | `run_policy_check(request_path)` (~65) | takes the held request string and delivers it on stdin with `--request -` |
 | `controller/src/bin/sbpl-check.rs` | `--request <path>` read (~518, ~543) | add `--request -` reading stdin to EOF; file input retained for direct use |
 
@@ -646,9 +700,12 @@ fragment-transport controls.
 
 `runner_commands.rs::cmd_runner_verify` is the helper's other production caller.
 Keep its file-input call supported, its 5-second default and its existing data
-shape; check delivery failure before using the reply to report verification
-success. Apply D5's version gate before its reply projections too. Its
-delivery failure uses controller `tool_error` and exit 2.
+shape. Its temporary request file is outside the `policy-witness run` no-temp-file
+rule; it has no stdin delivery observation or delivery-failure branch.
+Temporary-directory/write and client-launch errors retain `tool_error`, exit 2.
+Apply D5's version gate before reply projections: unsupported or malformed
+versions report the corresponding controller outcome, `ok: false`, exit 1
+and null `runner_pid`, in the existing verification data shape.
 
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
@@ -724,7 +781,9 @@ removed. Acceptance requires no imports of the removed names.
   table against the suites on disk.
 - `tests/COVERAGE.md` rows ~25, ~27, ~30, ~31, ~83, ~84, ~86, ~87.
 - Update `source_drift` inventories with the API removals: normalized outcomes
-  19 → 18, attempt outcomes 10 → 9, and override keys 8 → 7.
+  19 → 18, attempt outcomes 10 → 9, and override keys 8 → 7. The normalized
+  count and bidirectional coverage check remain Swift-only; controller-only
+  version failures do not add matrix rows.
 - Suite READMEs: `witness_contract` (20 references), `runner_use_c_worker`
   (12), `runner_exec_dac` (7), `blackbox_e2e` (4), `blackbox_menagerie` (3),
   `runner_specimen_isolation` (3), `runner_validator_failure` (3),
@@ -746,7 +805,8 @@ removed. Acceptance requires no imports of the removed names.
   `runner/augments/README.md` ~154; `controller/README.md` ~137–145, ~369,
   ~378 and its consumer-audit table.
 - Document `--request -` in both tools' `usage()` and surface descriptions;
-  remove accounts of temporary request files. Document `request_delivery` and
+  remove accounts of temporary request files for `policy-witness run` and
+  retain verification's file-input description. Document `request_delivery` and
   its failure result beside the unchanged `--timeout-ms` description. Describe
   built-in runner selection from the manifest entry and `app_provenance` as
   the manifest path plus verify report.
@@ -773,14 +833,16 @@ removed. Acceptance requires no imports of the removed names.
   `CWorker.swift` ~47, `tests/lib/artifact.py` ~38,
   `tests/suites/dispatcher/check_selection.py` ~126.
 - The `prediction_unavailable` set in `ProbeRunner.swift`, its `source_drift`
-  check against the guide, and `harness/VERIFICATIONS.md`; only its
+  check against the guide, and
+  `tests/suites/witness_contract/harness/VERIFICATIONS.md`; only its
   description changes.
 - S1–S3's retained production helpers listed in R2, including policy hashing
   and structural policy refusal; the planner unit controls, C worker harness,
   real worker/validator drivers and the live failure controls other than
   `runner_outcome_libsandbox_unavailable`.
 - `comparison.order`, `runner_subprocess.ordering`, `eligibleOrderedStep`, the
-  release barrier and the opt-in `order_barrier_mutations` control;
+  query-side `sandbox_check.native_rc`, the release barrier and the opt-in
+  `order_barrier_mutations` control;
   `legacy_worker_abi6` in `OrderingTests` (the ABI tripwire).
 - `comparison.observation` and `permission_failures_without_record`.
 - The lifecycle copies in `attempt.lifecycle` and the lifecycle entries in
@@ -802,6 +864,8 @@ and generated copies; read affected passages for claims that survive without
 any search term. Record every remaining match by its meaning: a current
 descriptive value, an unrelated use, immutable evidence, an explicit
 removed-key rejection.
+For `native_rc`, remove attempt-side aliases and classify query-side uses as
+retained evidence and ordering checks.
 
 Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 `XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests`,
@@ -830,7 +894,7 @@ Classify each affected test artifact:
 Keeping anything requires naming the matrix row, independent scenario control,
 or D2/D3/D5 invariant it serves.
 
-### I1. Behavior-preserving preparation on `main`
+### I1. Behavior-preserving preparation
 
 Before retiring artifacts, capture the documentation requirements listed in
 the infrastructure ledger. Extract `resolve_imports`, `compute_closure_hash`
@@ -843,11 +907,9 @@ Write the unregistered matrix fixture; add exec and sysctl specimens under
 `tests/fixtures/pw_runner/`; run the response 12 default battery. Delete no
 scenario or active contract check in I1.
 
-Create a worktree branch for I2–I5. Coordinate producer, consumer, registry and
-documentation changes in each increment. Register and pass replacement controls
-before retiring their predecessors in that increment. Merge to `main` by one
-fast-forward only after the default and `--all` batteries pass on the integrated
-candidate.
+For Git operations, follow repo policy. Coordinate producer, consumer, registry
+and documentation changes in each increment. Register and pass replacement
+controls before retiring their predecessors in that increment.
 
 ### I2. The matrix fixture
 
@@ -860,6 +922,13 @@ the unlink records), and the expected response 13 `comparison` object.
 Review expectations against the D1 matrix and independent controls; do not
 generate them from the producer under test. Use D1's specimen mechanics for B.
 R is a reply-boundary control outside the comparison fixture.
+
+Specimen B requires a new combined seven-step receipt. The retained baseline
+has five steps; B2 and B4 have separate suite receipts. Keep those as row-level
+baselines, and require the mixed verdict/error/stall transcript specified in
+D1 before crediting B1–B7 coverage. Add a validator decode/association control
+for the mixed records and retain the live transcript, all seven step results,
+file effects and timeout outcome together.
 
 Two readers share the fixture:
 
@@ -898,14 +967,14 @@ same verified increment.
 - `tests/lib/consumer.py` exposes `validate(document)`, `steps(document)`,
   `select(steps, **fields)`, `lifecycle(document)` and `denials(document)`.
   `document` is an envelope or a bare runner reply. A version other than the
-  manifest's yields one `unsupported` error under D5; malformed versions and
-  no-reply envelopes follow D5's separate rules. `validate` merges
+  contract manifest's yields one `unsupported` error under D5; malformed
+  versions and no-reply envelopes follow D5's separate rules. `validate` merges
   `validate_evidence_shape`, `validate_current_build_evidence` and
   `validate_ordering`, checks `observation` and the two relations against the
   raw channel fields, checks `order` against `ordering`, and rejects a
-  `limitations` string outside D1's vocabulary. It carries no obligation,
-  `references` or `comparison_conditions` rule. `recover_evidence`,
-  `comparison_groups`, `failure_groups`, `path_reporting` and
+  `limitations` string outside D1's vocabulary. Reject the removed keys without
+  reconstructing obligations, `references` or `comparison_conditions`.
+  `recover_evidence`, `comparison_groups`, `failure_groups`, `path_reporting` and
   `step_reporting` are gone.
 - `tests/lib/blackbox.py`: `validate_step` loses the drift checks and the
   alias-agreement rule; `expected.comparison` carries the D1 record;
@@ -945,9 +1014,9 @@ same verified increment.
   evidence; remove `MISSING` or `not_reported` only where their sole purpose was
   reading legacy replies.
 
-### I4. Producer and dossier, in the worktree
+### I4. Producer and dossier
 
-- Remove the R2 source/build artifacts with their I3 tests. In the same commit,
+- Remove the R2 source/build artifacts with their I3 tests. In the same increment,
   update the service header and contributor guidance, add the source check and
   its positive/negative controls, and add the binary check with before/after
   receipts.
@@ -969,15 +1038,21 @@ same verified increment.
   examples for no augments, applied augments, refused augments, malformed or
   missing policy/source, and XPC failure, plus executable overrides and
   BYOXPC selection. Use the existing BYOXPC ownership/cleanup machinery.
-  Controlled Rust collectors own missing/malformed manifest, unreadable
-  override file, hash mismatch on a non-manifest selection, and host-read
-  failures so signed app bytes stay unchanged. One control asserts that an
-  ordinary built-in run hashes no app binary and reports null binary records;
-  one asserts that no run, the `xpc_error` control included, leaves a file in
-  the temp request directory; one resolves the built-in runner from a
-  synthetic app root whose service Info.plist is absent and whose manifest
-  carries the entry; and one asserts that `app_provenance` carries exactly the manifest
-  path and the verify report. The dossier case includes or links
+  Controlled Rust collectors own the D2 manifest and override cases, hash
+  mismatch on a non-manifest selection, and host-read failures so signed app
+  bytes stay unchanged. Assert built-in selection failure through the uniform
+  dossier envelope and successful BYOXPC invocation without a manifest; the
+  latter reports unavailable baselines while retaining observable paths and
+  hashes. Override controls cover wrong types, NUL/overlength strings, empty
+  and relative paths, missing/unreadable/nonregular files, and valid paths;
+  confirm they do not change request bytes or runner admission. One control
+  asserts that an ordinary built-in run hashes no app binary and reports null
+  binary records; one asserts that no `policy-witness run`, the `xpc_error`
+  control included, leaves a file in the temp request directory; one resolves
+  the built-in runner from a synthetic app root whose service Info.plist is
+  absent and whose manifest carries the entry; and one asserts that
+  `app_provenance` carries exactly the manifest path and the verify report.
+  The dossier case includes or links
   those control receipts and checks every failure-table shape. Host-read
   controls cover the four sysctl facts.
 - Implement request delivery in `runner_client.rs`, `run_flow.rs` and the Swift
@@ -992,9 +1067,11 @@ same verified increment.
   and requires byte-identical output. The live `dossier_witness` case
   exercises the shipped client's stdin path and verifies the submitted
   request bytes. Keep direct client and helper file-input coverage for their
-  existing interfaces; `runner_commands.rs` controls cover verification's
-  preserved default and refusal to report success after a delivery failure
-  or an unsupported reply.
+  existing interfaces. Client argument controls cover the two forms and
+  rejection of duplicate/mixed input, missing values and extra arguments.
+  `runner_commands.rs` controls cover verification's file-input path,
+  preserved default, temporary-file/launch failures and refusal to project
+  unsupported or malformed replies.
 
 ### I5. Contract and registry documents
 
@@ -1053,10 +1130,10 @@ same verified increment.
 
 ### Acceptance criteria
 
-- Default battery after I1 on `main` and after each worktree increment;
-  `tests/run.sh --all` before the fast-forward, retained as the acceptance
+- Default battery after I1 and after each implementation increment;
+  `tests/run.sh --all` on the integrated candidate, retained as the acceptance
   record, with replacement owners and dossier controls all accounted for.
-  `order_barrier_mutations` runs on the integrated candidate before fast-forward.
+  `order_barrier_mutations` runs on the integrated candidate.
 - Before I1, capture the existing three specimens under
   `tests/fixtures/pw_runner/`. After behavior-preserving preparation and the two
   added specimens, capture all five as the response 12 baseline. On the verified
@@ -1064,7 +1141,7 @@ same verified increment.
   contract changes and run-varying values explicitly accounted for. Preserve
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
-- No run writes a file into the temp request directory, and an ordinary
+- No `policy-witness run` writes a temporary request file, and an ordinary
   built-in run hashes no app binary, spawns no PlistBuddy and parses the
   manifest once. Retain the I4 control receipts for each condition.
 - The delivery controls pass; the live stdin receipt and direct
