@@ -260,8 +260,9 @@ path.
   "binaries": {
     "service":   { "manifest_id": "com.yourteam.policy-witness.PWRunner", "path": "…", "manifest_sha256": "…",
                    "manifest_lc_uuid": "…", "manifest_entitlements": {}, "manifest_entitlements_error": null,
-                   "basis": "controller_file_hash_before_invocation",
-                   "verification": { "status": "match", "actual_sha256": "…", "reason": null } },
+                   "basis": "app_manifest_entry",
+                   "verification": { "status": "not_compared", "actual_sha256": null,
+                                     "reason": "selection is the app's own manifest entry" } },
     "worker":    { "manifest_id": "PWRunner/pw-probe-runner", "…": "same shape" },
     "validator": { "manifest_id": "PWRunner/sb_api_validator", "…": "same shape" }
   },
@@ -297,7 +298,7 @@ path.
 | `host.macos_version`, `macos_build`, `kernel_release`, `arch` | string or null | `kern.osproductversion`, `kern.osversion`, `kern.osrelease`, `hw.machine`; null when the read fails (D6.16) |
 | `host.basis` | string | constant `sysctlbyname`: the mechanism for the four facts above, and for those only |
 | `host.sandbox_cache_uuid` | string or null | the dyld shared cache UUID, read by the controller through the dyld API, not through `sysctlbyname`; null when the read fails. The sole sandbox-library identity PW reports (D6.47) |
-| `binaries.*` | object | each selected executable path and its pre-invocation file hash against the app's baseline; `manifest_*` fields are baseline metadata, never observations of the selected binary; `verification.status` is `match`, `mismatch` or `unavailable` (D6.29) |
+| `binaries.*` | object | each selected executable path and its baseline metadata from the app manifest the controller already reads; `manifest_*` fields are baseline metadata, never observations of the selected binary; `verification.status` is `not_compared`, `match`, `mismatch` or `unavailable` (D6.29, D6.49) |
 | `conditions.prediction_unavailable_pairs` | array | distinct `(operation, filter_kind)` pairs of steps carrying `query_plan:prediction_unavailable_pair` |
 | `references` | object | RFC 6901 JSON pointers from the envelope root to every record the dossier does not own. Key set and values are fixed by envelope 5, not computed from presence; a pointer to a withheld or absent record is still present (D6.20) |
 
@@ -346,23 +347,34 @@ these keep `normalized_outcome: tool_error` and exit 2, distinct from
 never converts a CLI failure into an execution: what ran is established by the
 execution records the dossier references, all of which are null here.
 
-After runner selection and augmentation, serialize the request value once to
-an owned temporary file even when no patch was needed. Scan that same source
-value and pass that file to the runner client and any fallback policy check.
-`specimen.request_path` remains the user's original path. Hold the temporary
-file through both readers and clean it up on all exits. Replacing the original
-request during collection must not change the submitted bytes (D6.30).
+After runner selection and augmentation, serialize the request value **once, to
+a string the controller holds**, even when no patch was needed. Scan that same
+string, and hand that same string to every reader. `specimen.request_path`
+remains the user's original path. Replacing the original request during
+collection must not change the submitted bytes (D6.30).
 
-Two facts about the existing helper govern that change. Nothing resolves a
-request field relative to the request file's directory — augments resolve
-against the app root and the runner never receives the path — so moving the
-selected request into `$TMPDIR/policy-witness/` cannot change how any field is
-interpreted. But `write_temp_request` has no cleanup today, and its directory
-held 40 leftover request files on the development machine when this was
-measured, each carrying policy source. Making the snapshot unconditional turns
-that into one file per run, so the lifetime fix is part of the same change, not
-a follow-up: a guard that removes the file on every exit from `cmd_run`,
-including the error returns (D6.38).
+The readers are subprocesses, so the question is how the bytes reach them, and
+the answer is not a file. `pw-runner-client` reads its request path into memory
+and sends those bytes over XPC, so a temporary file is an IPC medium between two
+processes PW owns: the controller writes it, the client reads it back, and
+nothing else ever looks at it. One string in the controller is a stronger
+version of the same-bytes guarantee than a shared file, and it is the shared
+data structure the guarantee actually wants. So give the client `--request -`
+and pass the serialized request on its stdin; its `usage()` text and the
+client's documented surface gain that option, which is additive and is not the
+`policy-witness` CLI contract.
+
+A file survives in exactly one place: the `xpc_error` fallback that invokes
+`sbpl-check --request <path>`. Write it there, from the same held string, and
+remove it before returning; that path is rare and already an error path. This
+is not only fewer calls. `write_temp_request` has no cleanup today and its
+directory held 40 leftover request files on the development machine when this
+was measured, each carrying policy source; the ordinary run now creates none at
+all, so the leak ends by deletion rather than by a cleanup guard on every exit
+(D6.50, superseding D6.38). Nothing resolves a request field relative to the
+request file's directory — augments resolve against the app root and the runner
+never receives a path — so no field's meaning depends on where the bytes came
+from.
 
 #### Binary selection and comparison
 
@@ -379,11 +391,34 @@ built-in `PWRunner` service, `PWRunner/pw-probe-runner` and
 The external service identifier does not select a different baseline.
 `manifest_id` names the expected baseline entry even if it is missing.
 Missing, unreadable or invalid manifests/entries produce null unavailable
-metadata and `verification.status: unavailable` with a reason. Retain an actual
-hash whenever the selected file can be read, even without a usable baseline.
-An unreadable selected file has `actual_sha256: null`. Complete hashes that
-differ produce `mismatch`; a re-signed BYOXPC copy may legitimately differ.
-Neither mismatch nor unavailable changes the run outcome. Manifest UUID and
+metadata and `verification.status: unavailable` with a reason.
+
+The dossier does not hash a file the app already describes. `load_app_provenance`
+reads the Evidence manifest on every run, and `evidence::verify_manifest`
+already hashes every entry that declares a hash and reports each mismatch,
+under `PW_VERIFY_EVIDENCE=1`. A per-run hash of three hand-picked entries would
+be a narrower second copy of that mechanism, always on, beside the complete one
+this plan leaves untouched — and for a built-in selection its answer is
+constant for a given build. So:
+
+- When the selected path is one of those manifest entries, report the baseline
+  metadata from the manifest already in memory and set
+  `verification.status: not_compared` with that reason and a null
+  `actual_sha256`. Integrity of the app's own files belongs to
+  `PW_VERIFY_EVIDENCE`, which covers every entry rather than three, and to the
+  signature; a manifest that ships inside the bundle it describes cannot
+  establish more than that.
+- When the selected path is an executable override or a BYOXPC copy — not a
+  manifest entry — hash it before invocation, because nothing else in the
+  envelope identifies those bytes. Compare against the built-in baseline as
+  above: equal hashes produce `match`, complete hashes that differ produce
+  `mismatch`, and a re-signed BYOXPC copy may legitimately differ. An
+  unreadable selected file has `actual_sha256: null` and
+  `verification.status: unavailable`.
+
+`basis` says which of these produced the record: `app_manifest_entry` or
+`controller_file_hash_before_invocation`. Neither mismatch nor unavailable
+changes the run outcome (D6.49). Manifest UUID and
 entitlements are labeled `manifest_lc_uuid`, `manifest_entitlements` and
 `manifest_entitlements_error`; existing runner provenance stays separate.
 Each binary object keeps all its keys: `path` is null when selection is
@@ -449,12 +484,20 @@ beside the `sysctlbyname` facts already collected there. Null with no further
 explanation when the read fails; a failed read does not change admission or the
 execution result.
 
-That UUID is the identity. On a stock host every libsandbox image lives in the
-shared cache and none of them exists as a file, so the cache UUID pins the
-implementation that the validator and the worker each linked. It supports the
-one reader task: deciding whether two runs ran against the same sandbox
-library. It is a machine observation, not a claim about which image any
-particular process mapped (D6.47).
+That UUID is the identity, in one narrow role: deciding whether two runs ran
+against the same sandbox library. On a stock host every libsandbox image lives
+in the shared cache and none of them exists as a file, so the UUID names the
+artifact the validator and the worker each linked from. It is a machine
+observation, not a claim about which image any particular process mapped.
+
+It is kept rather than inferred, deliberately. `host.macos_build` and
+`host.arch` already determine the cache on a stock host, so the UUID's
+discriminating power over facts the dossier already collects exists only when a
+cache has been rebuilt or replaced — which is the non-stock case this plan
+excludes. One dyld call buys an observation of the artifact instead of an
+inference from the OS release, which is the trade this repo makes elsewhere.
+That also fixes its failure case: when the UUID is null, `(macos_build, arch)`
+answers the same question, so the null is a lost witness and not a gap (D6.47).
 
 The runner reports no library identity. A per-function, per-image observation
 from the XPC host was considered and rejected: the host neither predicts nor
@@ -602,7 +645,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 14 | `sandbox_attribution` with no observation | `not_applicable`. |
 | 15 | `policy.augmentation` | Always present. |
 | 16 | Host facts | `sysctlbyname`, no subprocess. Refined by 47: `host.basis` covers those four facts only, and the shared cache UUID beside them is a dyld read. |
-| 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. |
+| 17 | Binary verification | Service, worker and validator hashed on every run against their manifest entries. `PW_VERIFY_EVIDENCE` untouched. Superseded by 49. |
 | 18 | Imports scan placement | Before the runner is invoked, synchronously, on the applied source. |
 | 19 | Reader surfaces | The envelope and the bare reply from `pw-runner-client`. |
 | 20 | References | RFC 6901 pointers, fixed keys and values, no copies. |
@@ -614,7 +657,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 26 | Mutation and conditions | D1's query-exclusion guard governs both encoder and consumer (see D6.42 for the retired ID list). Both reporting-failure levels omit `comparison_conditions`; ordinary empty-step replies carry it. |
 | 27 | Library observation (refines 5 and 11) | Host-resolved functions only; explicit partial observations and issues. Presence follows collection stage, including post-load refusals; both reply fallbacks retain pre-materialized identity. Superseded by 47. |
 | 28 | Dossier failures (refines 10 and 15) | Nullable format/hashes, augmentation status/error and the D2 failure table. Collection failures do not change execution admission or outcome. |
-| 29 | Binary provenance (refines 17) | Hash selected paths, including overrides and BYOXPC copies, against built-in manifest baselines. Prefix baseline metadata with `manifest_`; unavailable/mismatched verification is descriptive. |
+| 29 | Binary provenance (refines 17) | Hash selected paths, including overrides and BYOXPC copies, against built-in manifest baselines. Prefix baseline metadata with `manifest_`; unavailable/mismatched verification is descriptive. Narrowed by 49 to selections the manifest does not already describe. |
 | 30 | Import observation (refines 4 and 18) | One serialized request for all readers; hash and lex the same bounded import bytes. Nonregular files are not read. `wall_ms` is a cooperative budget, not a hard filesystem timeout. |
 | 31 | Reader scope (refines 8 and 21) | Exact versions at response/envelope semantic boundaries, including production Rust; raw transport remains lossless. Request admission is unchanged. D5 defines unsupported and malformed results. |
 | 32 | Matrix evidence and size controls | 32 S/B/C expectations plus R/T with explicit owners; T retains its completed prediction/order. Unlinked exploratory claims are not acceptance evidence. |
@@ -623,7 +666,7 @@ current-version fixtures for unfamiliar-value transport tests.
 | 35 | Import inventories (refines 4 and 30) | The dossier object is the envelope's inventory of record; `data.policy_check` keeps `sbpl-check`'s flat block verbatim on the paths that run it, referenced by `references.policy_check`. Disagreement between them is expected, not an error. The I1 extraction keeps `sbpl-check`'s output byte-identical. |
 | 36 | Dossier presence on non-execution run envelopes | One `data` skeleton for every `kind: "run"` envelope, printed by `cmd_run`, with the dossier at its collected state and the pre-execution `data.error` constant removed; `tool_error` and its exit 2 are unchanged. No envelope is exempted. Verified 2026-09-30: a missing argument, an absent request file and a non-JSON or non-object request all already print a run envelope, so the superseded claim that they kept a different kind was wrong. |
 | 37 | Scanner budgets (refines 4) | Measured on the real closure: 2 records, ~13 KB, 0.02 s including compile. The published numbers still wait on I4's WebProcess-size and cutoff measurements. |
-| 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. |
+| 38 | Request snapshot lifetime (refines 30) | The unconditional snapshot lands with a cleanup guard covering every exit from `cmd_run`. Nothing resolves request fields relative to the request file, so relocation is safe. Superseded by 50. |
 | 39 | Identity in the minimal backstop (refines 27) | The backstop validates the collected identity with `JSONSerialization.isValidJSONObject` and omits it on failure, recording the omission. Reporting failure never traps. Superseded by 47: the reply carries no identity, so the backstop keeps its literal shape. |
 | 40 | Consumer caller inventory (refines 24) | The R4 table is the complete caller list for the five removed functions, including the inline Python inside three Rust tests. Each caller moves in the same increment as the removal. |
 | 41 | Maximal reply size (refines 32) | Mutation lists roughly double `runner_reply_maximum` and carry `controller_output` with them; the numbers are accepted and recomputed from the synthesizer in I4. Bounding the list instead would be a D1 change. Superseded by 42. |
@@ -634,6 +677,9 @@ current-version fixtures for unfamiliar-value transport tests.
 | 46 | Controller comparison readers (inventory correction) | D3 names both the observation reader and `validate_disposition`'s lifecycle-limitation check. Their existing effects survive; S4's possible lifecycle-copy removal is not adopted. |
 | 47 | Library identity is the shared cache UUID (supersedes 5, 11, 27, 39) | The dossier reports `specimen.host.sandbox_cache_uuid`, read by the controller; the runner reports no identity and `SandboxLib.swift` is deleted. Measured 2026-10-01 on a stock host: `sandbox_check` resolves through libSystem with no load, `sandbox_compile_string` and `sandbox_apply` are unreachable without loading a library the host never calls into, all three images are shared-cache resident, and none exists as a file — so a per-function host observation adds only a path implied by the cache UUID, about a process that neither predicts nor applies. Non-stock library detection is a non-goal. Identifying the images the validator and worker mapped would need the ABI change 11 declined. This removes D2's identity section, D3's identity invariant and reply-fallback retention, the consumer's presence-by-load-stage rule and I4's loader-observation controls. |
 | 48 | Host invariance rule and its checks (refines 43) | The service header's prohibition is rewritten to state the rule without naming deleted symbols, in a delimited block that cites two live deny-default cases. Two non-redundant checks protect it: a `source_drift` name-set assertion that nothing under `runner/Sources/` references `libsandbox` or the sandbox SPI, and a `preflight` assertion that `nm -u` on the shipped `PWRunner` reports no undefined `_sandbox_*` symbol. Measured basis: a direct call is visible only to the binary check, a `dlopen` by string literal only to the source check, and `otool -L` is blind to both. Neither adds a catalog case; no new live case is needed; nothing asserts the comment's text. |
+| 49 | Binary hashing is not duplicated (supersedes 17, narrows 29) | The controller already reads the Evidence manifest every run, and `verify_manifest` already hashes every declared entry under `PW_VERIFY_EVIDENCE=1`. The dossier therefore hashes nothing the manifest describes: a built-in selection reports baseline metadata with `verification.status: not_compared`, and only an override or BYOXPC path — which no manifest entry describes — is hashed before invocation. Measured cost avoided: 2.93 MB read and hashed per ordinary run, 96% of it the `PWRunner` binary, with a constant answer for a given build. App-file integrity stays with `PW_VERIFY_EVIDENCE` and the signature. `basis` distinguishes the two record kinds. |
+| 50 | The request is a string, not a file (supersedes 38, refines 30) | One serialization held in the controller feeds the scan and every reader. `pw-runner-client` gains `--request -` and receives the bytes on stdin, since it only read the path into memory to send it; a temporary file survives only on the `xpc_error` path that invokes `sbpl-check --request <path>`, written from the same string and removed before returning. The ordinary run creates no file, so the existing leak ends by deletion rather than by a cleanup guard. The client's `usage()` and documented surface gain the option; the `policy-witness` CLI contract is unchanged. |
+| 51 | One OS-facts reader (refines 16 and 35) | The I1 extraction makes the shared reader the `sysctlbyname` one, so `sbpl-check` stops spawning `/usr/bin/sw_vers -buildVersion` for a fact `kern.osversion` returns (verified identical on the development host) while its output stays byte-identical. One mechanism, one fewer process spawn, and the dossier's no-subprocess rule holds for every consumer. |
 
 `kind: "run"` is not the only kind whose `data` shape varies within one kind:
 `runner_status`, `runner_verify` and `runner_remove` emit `RunnerNotFoundData`
@@ -815,9 +861,11 @@ consumer functions I3 removes — `run_flow.rs` ~2321 and ~2523 and
 `validate_evidence_shape` — so they move to `validate`/`denials` in the same
 increment or `cargo test` breaks (D6.40).
 
-Implement the dossier and request snapshot per D2, and move the pre-execution
-failure envelopes into `cmd_run` so one writer owns the run `data` skeleton;
-`cli.rs`'s catch-all keeps only errors that escape it. Update tests for
+Implement the dossier per D2: the held request string with `--request -` on the
+client and a fallback-only temporary file (D6.50), binary records that hash only
+non-manifest selections (D6.49), and the shared sysctl OS reader (D6.51). Move
+the pre-execution failure envelopes into `cmd_run` so one writer owns the run
+`data` skeleton; `cli.rs`'s catch-all keeps only errors that escape it. Update tests for
 unsupported/malformed replies and current-version fragment transport.
 Fixtures that construct steps with removed keys
 become current-shaped; the legacy-shape case at ~2071 is deleted:
@@ -922,6 +970,9 @@ Swift sites and 1 controller site; 14 catalog entries.
 - `runner/README.md` ~74, ~230, ~240, ~260–267, ~314; `runner/AGENTS.md` ~15;
   `runner/augments/README.md` ~154; `controller/README.md` ~137–145, ~369,
   ~378 and its consumer-audit table.
+- D6.50: document `--request -` in `pw-runner-client`'s `usage()` and wherever
+  the client's surface is described, and remove any account of a per-run
+  temporary request file.
 - S1–S3: revise the source inventory in `runner/README.md`, the `runner_unit`
   row in `tests/README.md`, `tests/suites/runner_unit/README.md`, and the unused
   apply-helper descriptions in `tests/COVERAGE.md` and
@@ -976,7 +1027,9 @@ removed-key rejection. Completion is the explained residue, not a zero count.
 Also search the S1–S3 function/type names, `PWSandboxCheckShim`,
 `XPC_RUNNER_SANDBOX_SHIM`, `SandboxApplyTests`, `runSandboxApplyTests`,
 `bootstrap_port_failed`, `SandboxLib`, `libsandbox_path`,
-`libsandbox_unavailable` and `library_identity`. The host-invariance name set
+`libsandbox_unavailable` and `library_identity`. Also search
+`write_temp_request`, `sw_vers` and `macos_build_version`, whose call sites
+change under D6.50 and D6.51. The host-invariance name set
 in R2 is the standing version of this search for `runner/Sources/`. Follow build variables, target dependencies, test
 registrations and contributor links as well as code callers. Search records
 and this plan may name removed artifacts; active implementation and contributor
@@ -1002,9 +1055,15 @@ or D2/D3/D5 invariant it serves.
 
 Capture the infrastructure-ledger rationale before retiring anything. Factor
 `resolve_imports`, `compute_closure_hash` and the OS-facts read out of
-`sbpl-check.rs` into shared Rust modules without changing output. Budgeting,
-single-read traversal and the new sysctl collection belong to I4, not this
-extraction. Write the unregistered matrix fixture (I2); add an exec and a sysctl
+`sbpl-check.rs` into shared Rust modules without changing output. The OS-facts
+extraction also drops a subprocess: `sbpl-check`'s `macos_build_version()`
+spawns `/usr/bin/sw_vers -buildVersion` for a fact `sysctlbyname("kern.osversion")`
+returns, which D6.16 requires the dossier to read without a subprocess.
+Verified on the development host: both return `23J220`. The shared reader is
+the sysctl one and both consumers use it, so `sbpl-check`'s output stays
+byte-identical while one process spawn leaves the tree; keep its
+once-per-process caching (D6.51). Budgeting, single-read traversal and the
+remaining dossier collection belong to I4, not this extraction. Write the unregistered matrix fixture (I2); add an exec and a sysctl
 specimen under `tests/fixtures/pw_runner/`; verify the response 12 default
 battery, then create the worktree (D6.12, D6.33).
 
@@ -1147,8 +1206,11 @@ same verified increment.
   examples for no augments, applied augments, refused augments, malformed or
   missing policy/source, and XPC failure, plus executable overrides and
   BYOXPC selection. Use the existing BYOXPC ownership/cleanup machinery.
-  Controlled Rust collectors own missing/malformed manifest, unreadable file,
-  hash mismatch and host-read failures so signed app bytes stay unchanged.
+  Controlled Rust collectors own missing/malformed manifest, unreadable
+  override file, hash mismatch on a non-manifest selection, and host-read
+  failures so signed app bytes stay unchanged. One control asserts that an
+  ordinary built-in run hashes no app binary and reports `not_compared`, and one
+  asserts that an ordinary run leaves no file in the temp request directory.
   The dossier case includes or links those control receipts and checks every
   failure-table shape. The controller owns the cache-UUID read and its
   null-on-failure control; no Swift loader control survives, because the host
@@ -1209,6 +1271,9 @@ same verified increment.
   contract changes and run-varying values explicitly accounted for. Preserve
   the inputs, app inventory and raw envelopes with the acceptance record.
 - R10 over the test tree and equipment.
+- An ordinary built-in run writes no file into the temp request directory and
+  hashes no app binary: both are checked as controls in I4, and both are
+  measurable on the integration candidate rather than argued.
 - For S1–S3, verify both the shipped `build.sh` build and the test-only SwiftPM
   build through `runner_unit`; run `source_drift` including planner controls and
   the new host-invariance name-set assertion, `preflight` including the `nm -u`
@@ -1451,6 +1516,9 @@ The readiness review checks:
   it, with the per-function host observation and its loader retired.
 - [x] D6.48 keeps the host invariance rule as a rule when its illustrations are
   deleted, with two measured, non-redundant checks and no new case.
+- [x] D6.49–51 remove the duplicated work the dossier would have added: no
+  per-run hash of a file the manifest already describes, no temporary file on an
+  ordinary run, and one OS-facts reader without a subprocess.
 - [x] D6.44 retires both `bootstrap_port_failed` and `libsandbox_unavailable`
   in response 13, with the API constants, override table, guide, coverage table
   and the `runner_outcome_libsandbox_unavailable` suite moving with it.
