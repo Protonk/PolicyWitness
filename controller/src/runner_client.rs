@@ -1,14 +1,15 @@
 //! Wrapper for invoking the Swift pw-runner-client helper.
 //!
 //! The Rust controller shells out to the Swift client to perform NSXPC wiring;
-//! the JSON output is captured and embedded in the controller envelope. A run
-//! delivers the held request string on the client's stdin (`--request -`);
-//! `runner verify` keeps the file-input form.
+//! the JSON output is captured and embedded in the controller envelope. Every
+//! controller invocation, a run and `runner verify` alike, delivers the held
+//! request string on the client's stdin (`--request -`); the client's
+//! positional file form remains for direct use.
 
 use serde::Serialize;
 use serde_json::Value;
 use std::ffi::OsString;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
@@ -24,7 +25,8 @@ pub struct RunnerClientRun {
     pub started_at_unix_ms: u64,
     pub ended_at_unix_ms: u64,
     pub exit_code: i32,
-    /// The stdin delivery observation; null for a file-input invocation.
+    /// The stdin delivery observation: bytes the pipe accepted and the first
+    /// write error. Null only in constructed fixtures.
     pub request_delivery: Option<RequestDelivery>,
     #[serde(flatten)]
     pub output: JsonOutputCapture,
@@ -93,42 +95,10 @@ pub fn run_pw_runner_client(
     run_client_stdin(&argv, request.as_bytes().to_vec())
 }
 
-/// The file-input form, used by `runner verify`; it has no delivery observation.
-pub fn run_pw_runner_client_file(
-    service_name: &str,
-    request_path: &std::path::Path,
-    timeout_ms: u64,
-    connection: &RunnerConnectionKind,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
-    let mut argv = client_argv(timeout_ms, connection)?;
-    argv.push(OsString::from(service_name));
-    argv.push(request_path.as_os_str().to_os_string());
-    run_client_argv(&argv)
-}
-
 /// The recorded span brackets the child's whole lifetime: `started` is taken
 /// before the spawn and `ended` after the exit is collected. Deny-log capture
 /// requests this wall-clock span and rejects reversed endpoints. Two readings
 /// do not establish clock continuity throughout execution.
-fn run_client_argv(argv: &[OsString]) -> Result<(RunnerClientRun, Option<Value>), String> {
-    run_client_argv_with_clock(argv, now_unix_ms)
-}
-
-fn run_client_argv_with_clock(
-    argv: &[OsString],
-    mut clock: impl FnMut() -> u64,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
-    let started = clock();
-    let out = Command::new(&argv[0])
-        .args(&argv[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
-    let ended = clock();
-    Ok(parse_runner_client_output(argv, started, ended, &out, None))
-}
-
 fn run_client_stdin(
     argv: &[OsString],
     request: Vec<u8>,
@@ -159,6 +129,7 @@ fn run_client_stdin_with_clock(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::Stdio;
 
     #[test]
     fn path_wire_fixtures_survive_capture_serialization_and_independent_consumer() {
@@ -340,16 +311,6 @@ mod tests {
     }
 
     #[test]
-    fn the_file_input_form_carries_no_delivery_observation() {
-        let argv = vec![OsString::from("/usr/bin/true")];
-        let (run, reply) = run_client_argv(&argv).unwrap();
-        assert!(run.request_delivery.is_none());
-        assert!(reply.is_none());
-        let wire = serde_json::to_value(&run).unwrap();
-        assert!(wire["request_delivery"].is_null());
-    }
-
-    #[test]
     fn unfamiliar_diagnostics_survive_runner_capture() {
         let records = crate::utils::transport_diagnostics();
         let original = serde_json::json!({"data": {"diagnostics": records},
@@ -385,7 +346,7 @@ mod tests {
                  b = int(time.time() * 1000); print(json.dumps({'a': a, 'b': b}))",
             ),
         ];
-        let (run, parsed) = run_client_argv(&argv).unwrap();
+        let (run, parsed) = run_client_stdin(&argv, Vec::new()).unwrap();
         let reply = parsed.expect("child reply is JSON");
         let (a, b) = (reply["a"].as_u64().unwrap(), reply["b"].as_u64().unwrap());
         assert!(
@@ -404,7 +365,9 @@ mod tests {
         let argv = vec![OsString::from("/usr/bin/true")];
         for (started, ended) in [(5_000, 4_000), (5_999, 5_001)] {
             let mut readings = [started, ended].into_iter();
-            let (run, _) = run_client_argv_with_clock(&argv, || readings.next().unwrap()).unwrap();
+            let (run, _) =
+                run_client_stdin_with_clock(&argv, Vec::new(), || readings.next().unwrap())
+                    .unwrap();
             assert!(readings.next().is_none());
             assert_eq!(
                 (run.started_at_unix_ms, run.ended_at_unix_ms),

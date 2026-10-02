@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
-use crate::runner_client::run_pw_runner_client_file;
+use crate::runner_client::run_pw_runner_client;
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
 };
@@ -517,19 +517,6 @@ fn verify_request() -> Value {
     })
 }
 
-/// Write the verification request under `temp_dir`. Verification keeps the
-/// client's file-input form; it has no stdin delivery observation.
-fn write_verify_request(temp_dir: &Path) -> Result<PathBuf, String> {
-    std::fs::create_dir_all(temp_dir).map_err(|e| format!("failed to create temp dir: {e}"))?;
-    let request_path = temp_dir.join(format!("verify-{}.json", now_unix_ms()));
-    std::fs::write(
-        &request_path,
-        serde_json::to_string_pretty(&verify_request()).unwrap(),
-    )
-    .map_err(|e| format!("failed to write verify request: {e}"))?;
-    Ok(request_path)
-}
-
 /// The verification projection of a received reply: its PID and outcome are
 /// read only under the current response schema. Another or a malformed version
 /// is reported as the corresponding controller outcome with a null PID, never
@@ -611,7 +598,10 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         }
     };
 
-    let request_path = write_verify_request(&std::env::temp_dir().join("pw-runner-verify"))?;
+    // The held verification request, delivered on the client's stdin like a
+    // run's request; no temporary file is written.
+    let held = serde_json::to_string_pretty(&verify_request())
+        .map_err(|e| format!("failed to encode verify request: {e}"))?;
 
     let record_kind = infer_record_kind(record);
     let connection = match record_kind {
@@ -623,7 +613,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         }
     };
     let (_, runner_result) =
-        run_pw_runner_client_file(&record.service_name, &request_path, timeout_ms, &connection)?;
+        run_pw_runner_client(&record.service_name, &held, timeout_ms, &connection)?;
     let (runner_pid, outcome) = project_verify_reply(runner_result.as_ref());
 
     let ok = outcome == "ok";
@@ -927,36 +917,24 @@ mod verify_tests {
     }
 
     #[test]
-    fn verification_request_is_written_as_a_file_for_the_file_input_form() {
-        let dir = std::env::temp_dir().join(format!(
-            "pw-verify-test-{}-{}",
-            std::process::id(),
-            now_unix_ms()
-        ));
-        let path = write_verify_request(&dir).unwrap();
-        assert!(path.starts_with(&dir));
-        let written: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-        assert_eq!(written, verify_request());
-        assert_eq!(written["probe_plan"], json!([]));
-        assert_eq!(written["run_kind"], "runner_verify");
-        // A temporary-directory failure is an error, never a projected reply.
-        let blocker = dir.join("not-a-directory");
-        std::fs::write(&blocker, b"x").unwrap();
-        let error = write_verify_request(&blocker).unwrap_err();
-        assert!(error.contains("failed to create temp dir"), "{error}");
-        std::fs::remove_dir_all(&dir).unwrap();
+    fn verification_request_is_the_fixed_allow_all_specimen() {
+        let request = verify_request();
+        assert_eq!(request["probe_plan"], json!([]));
+        assert_eq!(request["run_kind"], "runner_verify");
+        assert_eq!(request["specimen_id"], "runner_verify");
+        assert_eq!(request["policy"]["format"], "sbpl");
+        // Delivered as one held string; the client reads it from stdin.
+        let held = serde_json::to_string_pretty(&request).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&held).unwrap(), request);
     }
 
     #[test]
-    fn verification_file_input_launch_failure_is_an_error() {
+    fn verification_launch_failure_is_an_error() {
         // A unit-test binary has no embedded client beside it: launch fails
         // before any reply exists and the error carries the tool's name.
-        let request =
-            std::env::temp_dir().join(format!("pw-verify-launch-{}.json", std::process::id()));
-        std::fs::write(&request, b"{}").unwrap();
-        let error = match run_pw_runner_client_file(
+        let error = match run_pw_runner_client(
             "controlled.service",
-            &request,
+            "{}",
             1,
             &RunnerConnectionKind::XpcService,
         ) {
@@ -964,7 +942,6 @@ mod verify_tests {
             Err(error) => error,
         };
         assert!(error.contains("pw-runner-client"), "{error}");
-        std::fs::remove_file(&request).unwrap();
     }
 
     #[test]

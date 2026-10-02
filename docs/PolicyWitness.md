@@ -1540,8 +1540,10 @@ never answered (e.g. it crashed on launch).
 $PW runner verify --service-name <service-name>
 ```
 
-`runner verify` defaults to a 5-second timeout; pass `--timeout-ms <n>` for
-slow cold-spawn cases.
+`runner verify` sends a fixed allow-all specimen with no probe steps to the
+runner on the client's stdin, as a run does, and reports the runner's PID and
+outcome. It defaults to a 5-second timeout; pass `--timeout-ms <n>` for slow
+cold-spawn cases.
 
 ### Use the runner in a specimen
 
