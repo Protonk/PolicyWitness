@@ -343,6 +343,7 @@ class LimitsDocumentationTests(unittest.TestCase):
             'controller/src/log_capture.rs',
             'controller/src/bin/sbpl-check.rs',
             'controller/src/bin/sandbox-log-observer.rs',
+            'controller/src/runner_manager.rs',
         }
         for row in self.manifest['limits']:
             paths = {ref['path'] for ref in row['checks'] if ref['kind'] == 'value'}

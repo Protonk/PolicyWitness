@@ -531,6 +531,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Exec attempt descriptors (`exec_step_descriptors`) | 4 items | Descriptors opened before sandbox application per exec step: both ends of stdout and stderr pipes. Before opening any, the worker scans for free descriptor numbers, accounting for inherited descriptors, and raises its soft limit to fit the plan plus the descriptor reserve. Raises are capped at the hard limit and OPEN_MAX (10,240); an already higher soft limit is preserved. Only exec slots that fit without spending the reserve get pipes. Excess slots report exec_failed with errno 24 and an exec descriptor budget diagnostic naming the limit; no pipe syscall or child spawn is claimed. Actual pipe failures report their own syscall and errno. Budget refusal is per-step evidence, with sandbox attribution unestablished; imports and other attempts retain descriptor headroom. | Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it. |
 | Exec descriptor reserve (`exec_descriptor_reserve`) | 64 items | Free descriptor slots withheld from exec pipe setup, in addition to descriptors already open. The worker scans with fcntl(F_GETFD) to find room for this reserve plus four descriptors per exec step. Preserves headroom for policy compilation/imports, file probes, and spawn file actions. If the inherited/hard limit already leaves fewer free slots than the reserve, exec setup opens no pipes. This bounds exec pipe consumption; it does not guarantee that arbitrary imports or other resource users fit. | Fixed; no public override. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms. An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
+| Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait. A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery. | Fixed; no public override. Nothing is awaited when the call issued no bootout. |
 
 ### Queries and transport
 
@@ -1642,7 +1643,8 @@ $PW runner remove --id runner-<id>
 External runners install a launchd background item. `runner remove` first moves
 the record from `runners` to durable `pending_cleanup`, then checks ownership
 before bootout or plist removal. It retires recovery only after verifying both
-service and plist absence. Failed or uncertain cleanup reports `data.warnings`
+service and plist absence, waiting up to a second for launchd to finish tearing
+the job down after a bootout. Failed or uncertain cleanup reports `data.warnings`
 and `data.cleanup_retained: true`, with the retained record. Retrying the same
 remove command continues recovery, including when the plist has already gone.
 `--skip-bootout` keeps recovery until service absence is observed.

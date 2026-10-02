@@ -1013,6 +1013,35 @@
       "behavior": "The production wait and timeout response are source-inspected; compiled default agreement is tested."
     },
     {
+      "id": "runner_remove_teardown_wait",
+      "section": "execution",
+      "title": "Runner removal teardown wait",
+      "value": 1000,
+      "unit": "milliseconds",
+      "counting": "Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait.",
+      "effect": "A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery.",
+      "control": "Fixed; no public override. Nothing is awaited when the call issued no bootout.",
+      "sources": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "TEARDOWN_WAIT_MS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "documented_removal_limits",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "bootout_waits_out_launchd_teardown_within_the_budget",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
+    },
+    {
       "id": "validator_query_payload",
       "section": "transport",
       "title": "Validator query payload",

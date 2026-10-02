@@ -16,6 +16,12 @@ use std::process::{Command, Stdio};
 
 pub const RUNNER_REGISTRY_SCHEMA_VERSION: u32 = 1;
 pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
+/// After `launchctl bootout` returns, launchd can still list the job for a
+/// moment. `runner remove` re-reads the service every poll interval until it
+/// is absent or this nominal allowance is spent, then judges completion from
+/// the last observation (docs/limits.json: `runner_remove_teardown_wait`).
+pub const TEARDOWN_WAIT_MS: u64 = 1_000;
+pub const TEARDOWN_POLL_INTERVAL_MS: u64 = 50;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -866,6 +872,8 @@ pub trait CleanupSystem {
     fn plist(&mut self, path: &Path) -> PlistObservation;
     fn bootout(&mut self, domain: &str, name: &str) -> Result<(), String>;
     fn remove_plist(&mut self, path: &Path) -> std::io::Result<()>;
+    /// Pause between service re-reads while launchd tears a job down.
+    fn wait(&mut self, interval: std::time::Duration);
 }
 
 pub struct NativeCleanup;
@@ -885,6 +893,37 @@ impl CleanupSystem for NativeCleanup {
     fn remove_plist(&mut self, path: &Path) -> std::io::Result<()> {
         fs::remove_file(path)
     }
+    fn wait(&mut self, interval: std::time::Duration) {
+        std::thread::sleep(interval)
+    }
+}
+
+/// Read the service after this call's bootout, waiting out launchd's
+/// asynchronous teardown: while the job is still listed, re-read every
+/// `TEARDOWN_POLL_INTERVAL_MS` until `TEARDOWN_WAIT_MS` of nominal waiting is
+/// spent. Without a bootout here there is nothing to wait for. The record
+/// says how many reads were made and how long was waited; the last
+/// observation is the one judged.
+fn service_after_bootout(
+    system: &mut impl CleanupSystem,
+    domain: &str,
+    name: &str,
+    booted_out: bool,
+) -> (ServiceObservation, Value) {
+    let mut observation = system.service(domain, name);
+    let mut reads = 1u64;
+    let mut waited_ms = 0u64;
+    while booted_out && observation.presence == Presence::Present && waited_ms < TEARDOWN_WAIT_MS {
+        system.wait(std::time::Duration::from_millis(TEARDOWN_POLL_INTERVAL_MS));
+        waited_ms += TEARDOWN_POLL_INTERVAL_MS;
+        observation = system.service(domain, name);
+        reads += 1;
+    }
+    let record = json!({
+        "reads": reads, "waited_ms": waited_ms,
+        "poll_interval_ms": TEARDOWN_POLL_INTERVAL_MS, "budget_ms": TEARDOWN_WAIT_MS,
+    });
+    (observation, record)
 }
 
 pub fn remove_record(
@@ -974,12 +1013,14 @@ pub fn remove_record(
                     ));
                 }
             }
-            let service_after = system.service(&domain, &record.service_name);
+            let (service_after, teardown) =
+                service_after_bootout(system, &domain, &record.service_name, booted_out);
             let plist_after = system.plist(&plist_path);
             complete = cleanup_complete(&service_after, &plist_after) && warnings.is_empty();
-            cleanup
-                .observations
-                .push(json!({"phase":"after", "service":service_after, "plist":plist_after}));
+            cleanup.observations.push(json!({
+                "phase":"after", "service":service_after, "plist":plist_after,
+                "teardown_wait":teardown,
+            }));
             if !complete {
                 warnings
                     .push("service/plist absence is not confirmed; cleanup record retained".into());
@@ -1371,6 +1412,9 @@ mod tests {
         fail_retirement: bool,
         crash_after_bootout: bool,
         actions: Vec<&'static str>,
+        /// Service reads after a bootout that still list the job before it clears.
+        teardown_reads: usize,
+        pending_teardown: usize,
     }
     impl CleanupSystem for SuppliedCleanup {
         fn location(&mut self, _: &RunnerRecord) -> Result<(PathBuf, String), String> {
@@ -1386,8 +1430,14 @@ mod tests {
             ))
         }
         fn service(&mut self, _: &str, _: &str) -> ServiceObservation {
+            let presence = if self.pending_teardown > 0 {
+                self.pending_teardown = self.pending_teardown.saturating_sub(1);
+                Presence::Present
+            } else {
+                self.loaded
+            };
             ServiceObservation {
-                presence: self.loaded,
+                presence,
                 error: None,
                 executable_path: Some(if self.owned {
                     recovery_record().executable_path
@@ -1428,11 +1478,16 @@ mod tests {
                 return Err("controlled bootout failure".into());
             }
             self.loaded = Presence::Absent;
+            self.pending_teardown = self.teardown_reads;
             assert!(
                 !self.crash_after_bootout,
                 "controlled process loss after bootout"
             );
             Ok(())
+        }
+        fn wait(&mut self, interval: std::time::Duration) {
+            assert_eq!(interval.as_millis() as u64, TEARDOWN_POLL_INTERVAL_MS);
+            self.actions.push("wait");
         }
         fn remove_plist(&mut self, _: &Path) -> std::io::Result<()> {
             self.actions.push("unlink");
@@ -1476,6 +1531,8 @@ mod tests {
                 fail_retirement: mode == "retirement",
                 crash_after_bootout: mode == "crash",
                 actions: vec![],
+                teardown_reads: 0,
+                pending_teardown: 0,
             };
             if mode == "initial_save" {
                 fixture.writable(false);
@@ -1548,6 +1605,84 @@ mod tests {
             }
             assert!(load_registry(&path).unwrap().pending_cleanup.is_empty());
             assert!(!system.plist_exists && system.loaded == Presence::Absent);
+        }
+    }
+
+    #[test]
+    fn documented_removal_limits() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let row = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "runner_remove_teardown_wait")
+            .expect("limits.json documents the removal teardown wait");
+        assert_eq!(row["value"].as_u64(), Some(TEARDOWN_WAIT_MS));
+        assert_eq!(row["unit"], "milliseconds");
+    }
+
+    #[test]
+    fn bootout_waits_out_launchd_teardown_within_the_budget() {
+        let polls = TEARDOWN_WAIT_MS / TEARDOWN_POLL_INTERVAL_MS;
+        for (label, reads, skip, complete, waits) in [
+            ("clears_after_two_reads", 2usize, false, true, 2u64),
+            ("never_clears", usize::MAX, false, false, polls),
+            ("skipped_bootout_awaits_nothing", usize::MAX, true, false, 0),
+        ] {
+            let fixture = RegistryFixture::new();
+            let path = fixture.path();
+            let mut registry = load_registry(&path).unwrap();
+            registry.runners.push(recovery_record());
+            save_registry(&path, &registry).unwrap();
+            let mut system = SuppliedCleanup {
+                registry: path.clone(),
+                loaded: Presence::Present,
+                plist_exists: true,
+                owned: true,
+                fail_bootout: false,
+                fail_unlink: false,
+                fail_retirement: false,
+                crash_after_bootout: false,
+                actions: vec![],
+                teardown_reads: reads,
+                pending_teardown: 0,
+            };
+            let report = remove_record(
+                &path,
+                &mut registry,
+                Some("runner-owned"),
+                None,
+                skip,
+                &mut system,
+            )
+            .unwrap()
+            .unwrap();
+            let waited = system.actions.iter().filter(|a| **a == "wait").count() as u64;
+            assert_eq!(waited, waits, "{label}");
+            assert_eq!(report.cleanup_retained, !complete, "{label}");
+            let disk = load_registry(&path).unwrap();
+            if complete {
+                assert!(disk.pending_cleanup.is_empty(), "{label}");
+                continue;
+            }
+            let after = disk.pending_cleanup[0].observations.last().unwrap().clone();
+            assert_eq!(after["phase"], "after", "{label}");
+            assert_eq!(after["service"]["presence"], "present", "{label}");
+            assert_eq!(after["teardown_wait"]["reads"], waits + 1, "{label}");
+            assert_eq!(
+                after["teardown_wait"]["waited_ms"],
+                waits * TEARDOWN_POLL_INTERVAL_MS,
+                "{label}"
+            );
+            assert!(
+                report
+                    .warnings
+                    .iter()
+                    .any(|w| w.contains("absence is not confirmed")),
+                "{label}: {:?}",
+                report.warnings
+            );
         }
     }
 }
