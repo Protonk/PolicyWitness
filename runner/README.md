@@ -55,8 +55,9 @@ bundle scaffolding under `runner/Services/PWRunner/`.
 - `Sources/PWRunnerCore/PathUtils.swift`
   - Path normalization for query planning and host path diagnostics.
 - `Sources/PWCWorkerShim/`
-  - The one C shim: shared-memory, atomics and spawn helpers the host driver
-    calls to drive `pw-probe-runner` (`PWCWorkerShim.h`).
+  - The one C shim: the fixed-argument `shm_open` wrapper and the two
+    `uint32_t` acquire-load/release-store helpers the host driver calls to
+    drive `pw-probe-runner` (`PWCWorkerShim.h`). Spawning is Swift's.
 - `Sources/PWRunnerCore/CWorker.swift`
   - Host-side driver for `pw-probe-runner`: shm_open + mmap + posix_spawn,
     sentinel polling, and the post-apply hook.
