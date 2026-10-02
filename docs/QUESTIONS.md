@@ -56,4 +56,8 @@ A `query_first` comparison identifies an eligible native prediction collected be
 
 As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator's own `sandbox_check` queries can generate denial records naming the worker PID before any attempt begins. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
 
+## How long does a run take?
+
+One runner client span plus, by default, one unified-log scan, plus the controller's own startup and output. Your reply records the first two: the runner's work is `data.runner_client.ended_at_unix_ms` minus `started_at_unix_ms`, and the scan is `data.sandbox_log_capture.supervision.elapsed_ms`.
+
 <!-- END SHARED QUESTIONS -->

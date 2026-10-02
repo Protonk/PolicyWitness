@@ -981,7 +981,7 @@
       "title": "Runner RPC wait",
       "value": 240000,
       "unit": "milliseconds",
-      "counting": "Client wait for the runner reply.",
+      "counting": "Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms.",
       "effect": "An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets.",
       "control": "Default; --timeout-ms changes only this wait and floors its value at 1 ms.",
       "sources": [
@@ -1293,7 +1293,7 @@
       "title": "Default log collection timeout",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default.",
+      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default. The reply records the actual cost as data.sandbox_log_capture.supervision.elapsed_ms at the observer boundary and observer.data.collection.elapsed_ms for the log child.",
       "effect": "Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations.",
       "control": "Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture.",
       "sources": [
