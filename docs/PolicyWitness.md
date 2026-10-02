@@ -223,6 +223,11 @@ exposes:
 
 - `params_referenced`: names found in `(param "...")` forms in the source
   (string literals and `;` line comments are skipped).
+- `params_present`: whether the request carried a `policy.params` map at
+  all. An empty map is present; a missing or null map is not.
+- `params_count`: the number of entries in that map, counted even when the
+  check stops before scanning the source (unsupported format, missing or
+  oversized source) and the name lists below are empty.
 - `params_supplied`: keys from `policy.params`.
 - `params_missing`: referenced but not supplied. If non-empty, sbpl-check
   returns `result.normalized_outcome = "missing_params"` and exits 1 with a

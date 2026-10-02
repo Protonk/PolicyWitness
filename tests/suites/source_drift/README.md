@@ -44,7 +44,13 @@ loads and C calling conventions are accepted. Controls exercise both groups.
 Computed library/symbol names and complete Swift/C analysis are outside this
 check. The companion [artifact check](../preflight/README.md) inspects the
 shipped host's undefined symbols; the production C worker and validator retain
-their sandbox API calls outside this source scope.
+their sandbox API calls outside this source scope. Both checks look at symbols
+and literal lookup forms rather than file paths because libsandbox is resident
+in the dyld shared cache on a current macOS install: none of
+`/usr/lib/libsandbox.dylib`, `/usr/lib/libsandbox.1.dylib` or
+`/usr/lib/system/libsystem_sandbox.dylib` exists as a file, and the worker and
+validator bind the library through the linker, so a path's presence or absence
+says nothing about whether a process uses it.
 
 The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
