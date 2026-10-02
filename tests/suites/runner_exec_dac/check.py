@@ -61,7 +61,6 @@ def main():
         step = runner["steps"][0]
         assert step["step_id"] == "exec"
         assert step["sandbox_check"]["outcome"] == ("deny" if name == "deny_prediction_dac" else "allow"), (name, step)
-        assert "drift" not in step and "deny_signal" not in step, step
         steps[name] = step
 
     assert records["nonexecutable"][0] == {"spawned": False, "errno": errno.EACCES}

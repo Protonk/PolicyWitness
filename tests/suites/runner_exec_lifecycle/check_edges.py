@@ -11,6 +11,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/exec'))
 from control import TreeControl, ExitObserver, process_snapshot
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 from run_capture import RunCapture
 
 
@@ -73,7 +74,9 @@ def main():
             assert (after.read_bytes() == seed) == (mode == 'worker_dies_during_exec')
             (out / 'observations.json').write_text(json.dumps(dict(pids=pids, groups=groups,
                 exited=sorted(control.exited), elapsed=run.elapsed_seconds), indent=2))
-            runner = run.load_json()['data']['runner_result']
+            envelope = run.load_json()
+            assert not consumer.validate(envelope), consumer.validate(envelope)
+            runner = envelope['data']['runner_result']
             first, middle, last = runner['steps']
             assert first['attempt']['outcome'] == 'ok'
             attempt = middle['attempt']
@@ -86,7 +89,6 @@ def main():
                         assert step['attempt'].get(field) is None, step
                     assert step['comparison']['observation'] == 'unavailable', step
                     assert step['comparison']['observation_basis'] == 'no_completed_worker_result', step
-                    assert 'drift' not in step and 'deny_signal' not in step, step
                 assert runner['runner_subprocess']['partial_steps'] is True
             else:
                 assert rc == 0 and runner['normalized_outcome'] == 'ok'

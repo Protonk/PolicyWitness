@@ -167,8 +167,6 @@ def main():
             for key in ('interpreter', 'fork', 'read'):
                 assert records[key]['comparison']['operation_relation'] == 'different'
             assert records['different_target']['comparison']['target_relation'] == 'different_submitted'
-            for step in records.values():
-                assert 'drift' not in step and 'conclusion' not in step['comparison'], step
 
         # Scenario-authored expectations protect the observed success, the
         # permission failure by errno and the matching scopes independently of

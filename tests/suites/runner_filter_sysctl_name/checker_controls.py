@@ -137,17 +137,11 @@ def main():
         del step["attempt"]["requested_action"]
         check("missing_current_evidence", changed,
               ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"))
-        for label, mutate_step, diagnostic in (
-            ("drift", lambda s: s.update(drift=None), "removed key steps[].drift"),
-            ("deny_signal", lambda s: s.update(deny_signal=None), "removed key steps[].deny_signal"),
-            ("query_scope", lambda s: s["sandbox_check"].update(scope="post_sandbox"), "removed key sandbox_check.scope"),
-            ("attempt_exit_code", lambda s: s["attempt"].update(exit_code=0), "removed key attempt.exit_code"),
-            ("attempt_syscall_errno", lambda s: s["attempt"].update(syscall_errno=None), "removed key attempt.syscall_errno"),
-            ("comparison_prediction", lambda s: s["comparison"].update(prediction="unavailable"), "removed key comparison.prediction"),
-        ):
-            changed, step = mutate()
-            mutate_step(step)
-            check("removed_key_" + label, changed, (diagnostic,))
+        # One unknown key proves this CLI reaches the shared shape allowlist;
+        # blackbox_e2e/checker_controls owns the validator's own controls.
+        changed, step = mutate()
+        step["drift"] = None
+        check("unknown_key_reaches_consumer", changed, ("unknown key reply.steps[].drift",))
         changed, step = mutate()
         step["comparison"]["limitations"].append("sandbox_attribution_unestablished")
         check("foreign_limitation", changed, ("outside the vocabulary",))

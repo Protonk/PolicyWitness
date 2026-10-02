@@ -6,6 +6,7 @@ import secrets
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 from run_capture import RunCapture
 
 
@@ -55,6 +56,7 @@ def main():
             f"round {round_number}: denied write changed the file"
         assert rc == 0, f"PW exit={rc}; see {run.stdout_path}"
         envelope = run.load_json()
+        assert not consumer.validate(envelope), consumer.validate(envelope)
         assert envelope["kind"] == "run" and envelope["result"]["ok"] is True
         runner = envelope["data"]["runner_result"]
         assert runner["normalized_outcome"] == "ok"
@@ -74,7 +76,6 @@ def main():
             if i == allowed_index:
                 assert step["sandbox_check"]["outcome"] == "allow"
                 assert attempt["rc"] == 0 and attempt["errno"] is None
-                assert "deny_signal" not in step and "drift" not in step
             else:
                 assert step["sandbox_check"]["outcome"] == "deny"
                 assert attempt["rc"] != 0 and attempt["errno"] in (1, 13)

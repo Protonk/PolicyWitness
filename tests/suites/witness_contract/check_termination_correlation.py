@@ -86,7 +86,6 @@ def main():
                 assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
             assert [s['step_id'] for s in runner['steps']] == ids, runner['steps']
             for step in runner['steps']:
-                assert 'deny_signal' not in step and 'drift' not in step, step
                 assert step['sandbox_check']['operation'] == 'file-read-data', step
                 assert step['sandbox_check']['outcome'] == 'allow', step
                 attempt = step['attempt']

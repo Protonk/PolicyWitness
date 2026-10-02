@@ -375,7 +375,7 @@ control. Optional subprocess objects may be omitted or null; a null per-step
 `errno` requires key presence.
 
 `check_pre_apply_failure.py` collects separate attribution, step/process evidence,
-file-effect, lifecycle, cause and removed-key assertion groups in `assertions.json`. Lifecycle
+file-effect, lifecycle and cause assertion groups in `assertions.json`. Lifecycle
 groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group

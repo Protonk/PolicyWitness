@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 from run_capture import RunCapture
 
 pw, output, fixture = sys.argv[1:]
@@ -31,6 +32,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         with RunCapture(pw, out / mode, request, cli_args=['--no-log-capture']) as capture:
             rc = capture.wait(timeout=30)
             envelope = capture.load_json()
+        assert not consumer.validate(envelope), consumer.validate(envelope)
         after = target.read_bytes()
         (out / mode / 'before.bin').write_bytes(before)
         (out / mode / 'after.bin').write_bytes(after)
@@ -41,7 +43,6 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         assert runner.get('test_overrides') == override, runner
         assert process['reaped'] and process['exit_code'] == 0, process
         step = runner['steps'][0]
-        assert 'deny_signal' not in step and 'drift' not in step, step
         assert rc == (0 if mode == 'success' else 1), envelope
         assert runner['normalized_outcome'] == ('ok' if mode == 'success' else 'runner_failed'), runner
         if mode == 'success':

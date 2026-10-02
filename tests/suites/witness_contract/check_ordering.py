@@ -55,11 +55,11 @@ def envelope(run, rc, spec, outcome='ok'):
 
 
 def limited(row):
-    # The record carries only the vocabulary and no removed keys; what the
-    # interval cannot establish is said by `order`, not by a drift claim.
+    # The record carries only the vocabulary; what the interval cannot
+    # establish is said by `order`. The consumer's shape allowlist already
+    # rejected any key outside the current contract.
     limits = row['comparison']['limitations']
     assert set(limits) <= consumer.LIMITATIONS, row
-    assert 'drift' not in row and 'conclusion' not in row['comparison'], row
 
 
 def native_rows(runner, records):

@@ -168,7 +168,6 @@ def check_cli(case, out, pw):
             gap = steps[2]
             assert gap['sandbox_check']['outcome'] == 'error', gap
             assert 'no validator verdict' in gap['sandbox_check']['error'], gap
-            assert 'drift' not in gap, 'removed key present on the gap'
             print(f'{case}: partial verdicts joined by ID, all three attempt outcomes/effects preserved, gap explicit')
 
 

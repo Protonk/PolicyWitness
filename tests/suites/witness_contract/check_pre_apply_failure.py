@@ -182,13 +182,6 @@ def lifecycle_observations(envelope, failure):
         assert request is None, worker
 
 
-def removed_keys_absent(envelope):
-    steps = envelope['data']['runner_result']['steps']
-    assert len(steps) == 2, steps
-    present = [f"{s.get('step_id')}: {key}" for s in steps for key in ('deny_signal', 'drift') if key in s]
-    assert not present, 'removed step keys present: ' + '; '.join(present)
-
-
 def main():
     pw, out_arg = sys.argv[1:]
     out = Path(out_arg).resolve()
@@ -269,7 +262,6 @@ def main():
 
                 check('pre_apply.outcome_attribution', outcome)
                 check('pre_apply.library_result_attribution', no_library_result)
-            check(f'{name}.removed_keys_absent', lambda: removed_keys_absent(envelope))
             runner = envelope['data']['runner_result']
             observations[name] = {'schema_version': runner.get('schema_version'),
                                   'validator_subprocess': runner.get('validator_subprocess'),

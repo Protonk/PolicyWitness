@@ -204,12 +204,11 @@ def exercise_checker(witnesses, envelopes, out):
                 check(f"{witness['label']}_step{index}_{key}_{mutation}", changed, witness,
                       [planned['step_id'], diagnostic] if diagnostic else ())
 
-            # Removed aliases are rejected at their path, never read back.
-            for key in ('exit_code', 'syscall_errno'):
-                changed = copy.deepcopy(envelope)
-                changed['data']['runner_result']['steps'][index]['attempt'][key] = 0
-                check(f"{witness['label']}_step{index}_{key}_removed", changed, witness,
-                      [planned['step_id'], f'removed key attempt.{key}'])
+            # One unknown key proves this CLI reaches the shared shape allowlist.
+            changed = copy.deepcopy(envelope)
+            changed['data']['runner_result']['steps'][index]['attempt']['exit_code'] = 0
+            check(f"{witness['label']}_step{index}_unknown_key", changed, witness,
+                  ['unknown key reply.steps[].attempt.exit_code'])
             if not allowed:
                 for error in (1, 13):
                     changed = copy.deepcopy(envelope)

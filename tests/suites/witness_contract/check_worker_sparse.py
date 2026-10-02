@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 from run_capture import RunCapture
 
 pw, output, fixture = sys.argv[1:]
@@ -30,6 +31,7 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
         with RunCapture(pw, out / mode, request, cli_args=['--no-log-capture']) as capture:
             rc = capture.wait(timeout=30)
             envelope = capture.load_json()
+        assert not consumer.validate(envelope), consumer.validate(envelope)
         after = target.read_bytes()
         (out / mode / 'before.bin').write_bytes(before)
         (out / mode / 'after.bin').write_bytes(after)
@@ -41,7 +43,6 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
         assert process['reaped'] is True, process
         assert process.get('termination_request') is None, process
         step = runner['steps'][0]
-        assert 'deny_signal' not in step and 'drift' not in step, step
         if mode == 'after_probes':
             assert process['term_signal'] == 9 and process['done_observed'] is False, process
             assert runner['sandboxed_after_apply'] is True, runner

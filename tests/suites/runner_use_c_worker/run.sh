@@ -74,9 +74,12 @@ EOF
 
   local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
   set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
+  /usr/bin/python3 - "${run_stdout}" "${ROOT_DIR}/tests/lib" >"${assert_log}" 2>&1 <<'PY'
 import json, sys
+sys.path.insert(0, sys.argv[2])
+import consumer
 env = json.loads(open(sys.argv[1]).read())
+assert not consumer.validate(env), consumer.validate(env)
 r = env["data"]["runner_result"]
 
 # Envelope shape: both subprocess records + override mirrored back.
@@ -101,7 +104,6 @@ assert s["attempt"]["outcome"] == "ok"
 assert s["attempt"]["observed_path"] == "/private/etc/hosts"
 assert s["comparison"]["observation"] == "succeeded", s["comparison"]
 assert s["comparison"]["order"] == "query_first" and s["comparison"]["limitations"] == [], s["comparison"]
-assert "drift" not in s and "deny_signal" not in s, s
 print("ok: current-schema envelope, validator+worker subprocesses present, succeeded record")
 PY
   local arc=$?

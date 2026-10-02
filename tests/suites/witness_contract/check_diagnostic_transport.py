@@ -7,6 +7,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 import contract
 from run_capture import RunCapture
 
@@ -18,6 +19,7 @@ def run(pw, output, request):
     with RunCapture(pw, output, request, cli_args=['--no-log-capture']) as capture:
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
+    assert not consumer.validate(envelope), consumer.validate(envelope)
     runner = envelope['data']['runner_result']
     assert runner['schema_version'] == contract.RESPONSE_SCHEMA, runner
     assert runner.get('test_overrides') == request['_test_overrides'], runner
@@ -59,7 +61,6 @@ def check_worker(pw, output, fixture, mode):
     for channel in ('sandbox_check', 'attempt'):
         assert step[channel]['result_source'] == 'synthetic', step
     assert step['sandbox_check']['native_rc'] is None and 'native_rc' not in step['attempt'], step
-    assert 'drift' not in step and 'deny_signal' not in step, step
     evidence = process.get('worker_evidence')
     if mode == 'transport_incompatible':
         assert evidence is None, evidence

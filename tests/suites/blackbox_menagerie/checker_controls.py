@@ -125,18 +125,11 @@ def main():
         steps[0]["attempt"]["error"] = value
         check(f"optional_attempt_error_{value is None}", changed)
 
-    # Removed keys are rejected by the shared document validator, for both checkers.
-    for label, mutate_step, diagnostic in (
-        ("drift", lambda s: s.update(drift=None), "removed key steps[].drift"),
-        ("deny_signal", lambda s: s.update(deny_signal=None), "removed key steps[].deny_signal"),
-        ("conclusion", lambda s: s["comparison"].update(conclusion="agreement"), "removed key comparison.conclusion"),
-        ("attempt_exit_code", lambda s: s["attempt"].update(exit_code=0), "removed key attempt.exit_code"),
-        ("attempt_syscall_errno", lambda s: s["attempt"].update(syscall_errno=None), "removed key attempt.syscall_errno"),
-        ("query_scope", lambda s: s["sandbox_check"].update(scope="post_sandbox"), "removed key sandbox_check.scope"),
-    ):
-        broken, steps = mutate()
-        mutate_step(steps[2])
-        check(f"removed_key_{label}", broken, (diagnostic,), status=1)
+    # One unknown key proves this CLI reaches the shared shape allowlist;
+    # blackbox_e2e/checker_controls owns the validator's own controls.
+    broken, steps = mutate()
+    steps[2]["drift"] = None
+    check("unknown_key_reaches_consumer", broken, ("unknown key reply.steps[].drift",), status=1)
     broken, steps = mutate()
     steps[2]["comparison"]["limitations"].append("state_stability_unestablished")
     check("limitation_outside_vocabulary", broken, ("limitation outside the vocabulary",), status=1)

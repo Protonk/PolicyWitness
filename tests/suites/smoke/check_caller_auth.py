@@ -9,6 +9,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'fixtures/caller_auth'))
 from bundle import CLIENT, SERVICE, candidate, cleanup_processes, command, digest, inventory, prepare, save, signature
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import consumer
 import contract
 from blackbox import validate_step
 
@@ -36,11 +37,10 @@ def call(fixture, work, label, *, authorized=False, service=None):
     (out / 'after.bin').write_bytes(after)
     result = json.loads((out / 'client/stdout').read_text())
     # Both actual XPC replies and the client's locally generated error replies
-    # carry the current response schema; no process status is invented on
-    # rejection and no removed key is carried.
+    # carry the current response schema and validate as current documents; no
+    # process status is invented on rejection.
     assert result['schema_version'] == contract.RESPONSE_SCHEMA, result
-    for step in result['steps']:
-        assert 'deny_signal' not in step and 'drift' not in step, step
+    assert not consumer.validate(result), consumer.validate(result)
     observation = {'command': meta, 'result': result, 'specimen': spec,
                    'service': service or fixture['service'], 'changed': after != seed,
                    'nonempty': bool(after), 'client_sha256': digest(client)}
