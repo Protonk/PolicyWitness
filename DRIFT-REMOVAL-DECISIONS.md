@@ -334,3 +334,65 @@ cases are green; the battery evidence is listed below.
   of commit 7765be8 so that `match_live.py` and `match_retained.py` still
   parse after the plan's deletion; `match_live.py` reproduces
   `live_row_match.txt` byte for byte.
+
+### Closeout (2026-10-02)
+
+- Landing commit `ed0bd3d` on `main` (not pushed, per local policy): the
+  whole I2–I5 candidate, 176 files, with `DRIFT-REMOVAL-PLAN.md` deleted.
+  The candidate app was built from that tree before the commit
+  (`v0.2.4-36-g4d3fdf4-dirty`, `build/build-i4.log`); the run's
+  `artifact-integrity/before.json` is its inventory and the inspection
+  reports `valid_before: true`, `unchanged: true` and a clean
+  `host_invariance` receipt.
+- Acceptance record `tests/out/runs/drift-i5-all-02`, run ID
+  `20261002T015030Z_a37db665`, `tests/run.sh --all`: 183 selected, 183
+  completed, 0 skipped, 0 unrun, no harness errors, `ok: true`, including
+  `order_barrier_mutations`, `dossier_witness_byoxpc` and the BYOXPC and
+  signing opt-ins. Registered in `tests/RETAINED.json` with source
+  `ed0bd3d`. The preceding `--all` run (`drift-i5-all-01`) completed 183/183
+  with one failure, `preflight/release_controls`, whose synthetic release
+  envelope still wrote `data.runner_provenance`; the fixture now writes
+  `data.specimen.runner_provenance`, the control passes directly (20
+  controls) and in the acceptance run.
+- Five-specimen diff (golden rule), attached at
+  `supplemental/drift-i5/five-specimen-diff/`: the five response 12 baseline
+  requests (byte-identical to `tests/fixtures/pw_runner/`) replayed in both
+  modes against the candidate; every field-path difference is classified and
+  no unexpected difference or failed named check remains in any of the ten
+  envelopes. Per envelope: 22 removed paths (R1: `drift`, `deny_signal`,
+  `comparison.prediction/conclusion/scope`, `attempt.exit_code/syscall_errno/native_rc`,
+  `sandbox_check.scope`, the diagnostics copies `worker_pid/capture_status/first_deny`,
+  `runner_startup_diagnostics`, `policy_augmentation`, the four
+  `runner_service_*`/`runner_registry_id` keys and the four reduced
+  `app_provenance` fields); 13 relocated paths with equal values
+  (`request_path`, `runner_provenance.*`, `app_provenance.evidence_manifest_path/evidence_verify`
+  under `data.specimen`); 20 added paths (`specimen.policy.augmentation`
+  with hashes equal to the reply's `policy_sha256`, `specimen.policy.imports`
+  complete with no records, `specimen.host`, `specimen.binaries` all null,
+  `runner_client.request_delivery` with `bytes_written` equal to the held
+  request length); 7–8 changed paths (envelope 4→5, response 12→13, the
+  observer report's envelope number 4→5 with `observer_schema_version`
+  unchanged at 1, `runner_client.argv` from the file argument to
+  `--request -` before the service, and the client stdout counts); the
+  limitation lists equal the baseline lists restricted to the D1 vocabulary;
+  `policy_sha256`, `normalized_outcome` and `result` are unchanged; every
+  candidate validates under the current consumer. Run-varying paths
+  (PIDs, timestamps, build stamp, window bounds, observer output and the
+  kernel log's event set) each carry a named check; `permission_failures_without_record`
+  is recomputed from the candidate's own events (the mach specimen captured
+  a `mach-lookup` denial record the baseline run had not).
+- `nm -u` pair: the shipped `ff2b192` and I1 hosts import `_sandbox_check`;
+  the candidate host imports no `_sandbox_*` symbol
+  (`supplemental/drift-i5/nm-receipt/`).
+- Exit conditions: both ledgers applied, document reviews done (see the I5
+  entry), generated limits/contract files current (`source_drift` green in
+  the acceptance run), `--all` green, the credited run registered, the
+  five-specimen diff accepted, the plan deleted, `DRIFT-REMOVAL-DECISIONS.md`
+  kept for operator review, `DRIFT-REMOVAL-CANDIDATES.md` and
+  `FIVE-FOLLIES.md` updated with implemented status and current references.
+- Out-of-scope findings left open: S4 (copied lifecycle claims), S7 (the
+  observer's duplicate `deny_lines`), S8 (constant log disclaimers), S10–S12
+  and S14 (a named distinction for an unusable sandbox library at worker
+  launch), all in `DRIFT-REMOVAL-CANDIDATES.md` and `FIVE-FOLLIES.md`; the
+  pre-existing unused-function warning for `log_capture::capture_reserving`
+  in the `policy-witness` binary.

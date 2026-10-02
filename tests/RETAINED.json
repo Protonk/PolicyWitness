@@ -28,6 +28,13 @@
       "reason": "Drift removal plan, increment I1: response 12 baseline. All 166 default cases passed against the I1 build (shared Rust import/host-fact modules, matrix fixture, two added specimens) with no skips, unrun cases or harness errors and an unchanged app. supplemental/drift-i1/ holds the five-specimen response 12 captures (two modes each) validated by the response 12 consumer, the pre-I1 captures against the shipped ff2b192 app, the sbpl-check byte-identity corpus, the pre-removal nm -u receipts, the matrix cross-check and the build/console logs.",
       "source": "e01050923a37942b394e370f3f0710face7b4730",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/drift-i5-all-02",
+      "run_id": "20261002T015030Z_a37db665",
+      "reason": "Drift removal acceptance record: every registered case including opt-ins (183) passed on the candidate with no skips, unrun cases or harness errors and an unchanged app. supplemental/drift-i5 holds the accepted five-specimen diff against the response 12 baseline, the candidate nm -u receipt, the build log and console logs.",
+      "source": "ed0bd3da84f3b4020e243061b21ff7a460c04e4d",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
