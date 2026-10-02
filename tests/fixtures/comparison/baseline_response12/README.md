@@ -11,25 +11,27 @@ expectations; the columns that producer carried and the record dropped
 strings) are not part of the fixture. The query column of the fixture is the
 answer that producer reported as `prediction`.
 
-Two sources cover the rows.
+Two sources cover the rows, and the two stored outputs are the receipts; they
+stand alone with `run_a.json` and `run_b.json`.
 
-**Retained evidence.** `match_retained.py` walks every reply under
-`tests/out/runs/`, reduces each `steps[].comparison` to the seven columns with
-the five removed `limitations` strings dropped, and looks for each matrix row's
-tuple. Twenty-five rows matched, counting the three `as S01` aliases (S23, S24,
-B7). `retained_row_match.txt` is its output, naming the suite and step that
-supplied each match. Its `NO EXACT LIVE MATCH` list is exactly the set the live
-runs below cover, plus S22 as corrected.
+**Retained evidence.** `retained_row_match.txt` names, for each matrix row,
+the retained battery suite and step whose `steps[].comparison` reduced to the
+row's seven columns (the five removed `limitations` strings dropped).
+Twenty-five rows matched, counting the three `as S01` aliases (S23, S24, B7).
+Its `NO EXACT LIVE MATCH` list is exactly the set the live runs below cover,
+plus S22 as corrected. The run directories it walked are test output that
+pruning may since have removed; the file records what they held.
 
 **Live runs.** The rows retained evidence did not cover were run directly
 against `dist/PolicyWitness.app`. `specimen_a.json` covers S06, S10, S12, S18,
 S21 and S22 with the real validator; `specimen_b.json` covers B1, B3, B5, B6 and
 B7 with `stub_validator.py` steering the verdicts. `run_a.json` and
-`run_b.json` are the raw envelopes. `match_live.py` prints the per-row
-comparison; `live_row_match.txt` is its output.
+`run_b.json` are the raw envelopes; `live_row_match.txt` is the per-row
+comparison of their records with the rows.
 
 One row was wrong: S22 also carries `submitted_target_unavailable`, because a
-`none` filter submits no target to compare. The plan is corrected.
+`none` filter submits no target to compare; the matrix carries the corrected
+row.
 
 ## What the runs established about the specimens
 
