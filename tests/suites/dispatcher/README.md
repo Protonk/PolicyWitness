@@ -95,7 +95,10 @@ an ignored override must fail even when the fallback app is usable.
 
 `artifact_controls` runs real file damage through the public command: missing
 helper, broken signature, validly resealed stale manifest, omitted/duplicate
-entries, malformed manifest, and a helper escaping the app through a symlink.
+entries, malformed manifest, a helper escaping the app through a symlink, and
+an intact bundle whose XPC host executable imports `_sandbox_check` (the host
+invariance check, through `nm -u` on a compiled control binary; the valid
+bundle's host is a compiled binary with no such import).
 App and worker cases must remain unrun while the independent offline case runs.
 Mutations during passing, failing, and crashing commands must produce precise
 final diffs covering bytes, modes, additions, deletions, and symlinks.

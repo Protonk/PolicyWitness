@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
         assert process['reaped'] is True, process
         assert process.get('termination_request') is None, process
         step = runner['steps'][0]
-        assert step['deny_signal'] is None, step
+        assert 'deny_signal' not in step and 'drift' not in step, step
         if mode == 'after_probes':
             assert process['term_signal'] == 9 and process['done_observed'] is False, process
             assert runner['sandboxed_after_apply'] is True, runner
@@ -51,8 +51,8 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
             assert evidence['failure_state'] == 'absent', evidence
         else:
             assert after == before and runner['sandboxed_after_apply'] is False, runner
-            assert step['attempt']['native_rc'] is None and step['sandbox_check']['native_rc'] is None, step
-            assert step['drift'] is None, step
+            assert 'native_rc' not in step['attempt'] and step['sandbox_check']['native_rc'] is None, step
+            assert step['comparison']['observation'] == 'unavailable', step
             assert 'sandbox_apply' not in runner['error'], runner
             if mode == 'mapping':
                 assert process['exit_code'] == 3, process

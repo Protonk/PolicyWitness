@@ -21,6 +21,7 @@ Findings are dicts: {'rule', 'kind', 'question', 'step_index', 'detail'}.
 from copy import deepcopy
 import itertools
 
+import contract
 import lifecycle_contract as C
 from lifecycle_adapter import read_lifecycle
 
@@ -44,8 +45,8 @@ def extract_observations(envelope, view):
         reaped=sub.get('reaped'), exit_code=sub.get('exit_code'), term_signal=sub.get('term_signal'),
         poll_stop_reason=field('poll_stop_reason'), exit_requested=sub.get('exit_requested'),
         # The host encodes an observed non-request as an absent object once it has
-        # recorded the cleanup phase (exit_requested); before that phase was recorded
-        # (legacy replies) absence is not an observation.
+        # recorded the cleanup phase (exit_requested); without that phase recorded,
+        # absence is not an observation.
         termination_request=(sub['termination_request'] if 'termination_request' in sub
                              else None if 'exit_requested' in sub else MISSING),
         cleanup_trigger=field('cleanup_trigger'), grace_end=field('grace_end'),
@@ -293,7 +294,7 @@ def build_record(claims, steps, issues, step_ids, obs):
     }
 
 
-def build_envelope(obs, schema_version=C.RESPONSE_WITH_DISPOSITION, envelope_version=C.ENVELOPE_WITH_HOST_CAUSE):
+def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_version=contract.CONTROLLER_ENVELOPE):
     """A contract-valid envelope for normalized observations; a fixture, not a live result."""
     claims, steps, issues = expected_claims(obs)
     projections = expected_projections(claims, steps, obs)
@@ -321,7 +322,7 @@ def build_envelope(obs, schema_version=C.RESPONSE_WITH_DISPOSITION, envelope_ver
         summary = projections['summaries'][i]
         completed = entry['slot'] == 'completed' and entry['supported']
         attempt = {'requested_kind': 'file', 'requested_action': 'open_read', 'requested_path': f'/target{i}',
-                   'rc': 0 if completed else -1, 'exit_code': 0, 'errno': None, 'native_rc': None,
+                   'rc': 0 if completed else -1, 'errno': None, 'error': None, 'observed_path': None,
                    'outcome': 'ok' if completed else C.COMPAT_MISSING_OUTCOME,
                    'result_source': 'worker' if completed else 'synthetic',
                    C.STEP_LIFECYCLE_KEY: {'summary': summary,
@@ -330,25 +331,25 @@ def build_envelope(obs, schema_version=C.RESPONSE_WITH_DISPOSITION, envelope_ver
         if not completed:
             attempt['missing_reason'] = ('attempt_not_supported' if not entry['supported']
                                          else 'slot_absent' if entry['slot'] == 'absent' else 'slot_incomplete')
-        limitations = ['state_stability_unestablished', 'query_attempt_order_unestablished']
-        if summary != 'completed':
-            limitations.append(C.LIMITATION_FOR_SUMMARY[summary])
-            if attempt.get('missing_reason') == 'slot_incomplete':
-                limitations.append('attempt:slot_incomplete')
-        reply_steps.append({'step_id': step_ids[i], 'attempt': attempt, 'drift': None,
-                            'sandbox_check': {'operation': 'file-read-data', 'outcome': 'allow', 'rc': 0},
-                            'comparison': {'conclusion': 'agreement' if completed else 'unavailable',
+        limitations = [] if summary == 'completed' else [C.LIMITATION_FOR_SUMMARY[summary]]
+        reply_steps.append({'step_id': step_ids[i], 'attempt': attempt,
+                            'sandbox_check': {'operation': 'file-read-data', 'filter_kind': 'path',
+                                              'filter_value': f'/target{i}', 'outcome': 'allow', 'rc': 0,
+                                              'native_rc': 0, 'errno': 0, 'result_source': 'validator', 'pid': 4242},
+                            'comparison': {'observation': 'succeeded' if completed else 'unavailable',
+                                           'observation_basis': 'completed_worker_status' if completed
+                                           else 'no_completed_worker_result',
+                                           'operation_relation': 'matched', 'target_relation': 'same_submitted',
                                            'order': 'unestablished', 'limitations': limitations}})
     clauses = expected_error_clauses(claims)
     error = '; '.join(clauses) if clauses else None
     runner = {'schema_version': schema_version, 'specimen_id': 'constructed', 'rc': 0 if error is None else 1,
               'normalized_outcome': 'runner_timeout' if clauses else 'ok', 'error': error, 'pid': 4242,
               'policy_format': 'sbpl', 'sandboxed_after_apply': True, 'steps': reply_steps, 'runner_subprocess': sub}
-    diagnostics = {'worker_pid': 4242, 'process_disposition': projections['process_disposition'],
+    diagnostics = {'process_disposition': projections['process_disposition'],
                    'termination_cause': projections['termination_cause'], 'stop_reason': projections['stop_reason'],
                    'disposition_integrity': 'valid', 'disposition_issues': [],
-                   'capture_status': 'disabled', 'correlation_status': 'not_attempted', 'first_deny': None,
-                   'permission_failures_without_record': None}
+                   'correlation_status': 'not_attempted', 'permission_failures_without_record': None}
     return {'schema_version': envelope_version, 'kind': 'run', 'result': {'ok': error is None},
             'data': {'runner_result': runner, 'runner_sandbox_diagnostics': diagnostics, 'sandbox_log_capture': None}}
 
@@ -455,25 +456,26 @@ def check_record(envelope):
     proj = view['projections']
     if view['reporting'] == 'no_runner_reply':
         return findings
+    # D5: the record is read under the contract manifest's response version only.
     schema = view['schema_version']
     envelope_version = envelope.get('schema_version') if isinstance(envelope, dict) else None
-    new_reply = type(schema) is int and schema >= C.RESPONSE_WITH_DISPOSITION
-    new_envelope = type(envelope_version) is int and envelope_version >= C.ENVELOPE_WITH_HOST_CAUSE
+    if schema != contract.RESPONSE_SCHEMA:
+        findings.append(_finding('D8', 'unsupported_version',
+                                 f'runner response schema_version {schema!r} is not {contract.RESPONSE_SCHEMA}'))
+        return findings
+    if envelope_version is not None and envelope_version != contract.CONTROLLER_ENVELOPE:
+        findings.append(_finding('D8', 'unsupported_version',
+                                 f'controller envelope schema_version {envelope_version!r} is not {contract.CONTROLLER_ENVELOPE}'))
+        return findings
     if view['reporting'] == 'no_worker':
         if proj.get('process_disposition') not in (None, 'no_worker'):
             findings.append(_finding('D7', 'invented_worker', f'no worker but disposition {proj["process_disposition"]!r}'))
         return findings
     if view['reporting'] == 'not_reported':
-        if new_reply:
-            findings.append(_finding('D8', 'missing_record', 'response carries a worker subprocess without the record'))
-        elif new_envelope:
-            # Legacy reply through a current controller: compatibility projections only.
-            if proj.get('termination_cause') not in (None, C.CAUSE_UNKNOWN):
-                findings.append(_finding('D8', 'legacy_cause', f'legacy reply projects cause {proj["termination_cause"]!r}'))
-            if proj.get('stop_reason') is not None:
-                findings.append(_finding('D8', 'legacy_stop_reason', 'legacy reply projects a stop reason'))
-            if proj.get('disposition_integrity') not in (None, 'not_reported'):
-                findings.append(_finding('D8', 'legacy_integrity', 'legacy reply integrity must be not_reported'))
+        findings.append(_finding('D8', 'missing_record', 'response carries a worker subprocess without the record'))
+        if proj.get('process_disposition') not in (None, 'withheld'):
+            findings.append(_finding('D7', 'unwithheld_projection',
+                                     f'missing record projected as {proj["process_disposition"]!r} instead of withheld'))
         return findings
     if view['reporting'] == 'malformed':
         for reason in view['malformed']:
@@ -558,7 +560,7 @@ def check_record(envelope):
         for present in limits:
             if present in C.LIMITATION_FOR_SUMMARY.values() and present != required:
                 findings.append(_finding('D7', 'limitation', f'comparison carries {present} for summary {summary!r}', step_index=i))
-    if new_envelope and proj.get('process_disposition') is not None:
+    if proj.get('process_disposition') is not None:
         integrity = proj.get('disposition_integrity')
         if integrity == 'invalid':
             if proj.get('process_disposition') != 'withheld' or proj.get('termination_cause') != C.CAUSE_UNKNOWN:
@@ -805,11 +807,17 @@ def self_check():
         for step in runner['steps']:
             step['comparison'] = None
         assert not check_record(degraded), (example.name, check_record(degraded))
-        legacy = build_envelope(example.observations, schema_version=9, envelope_version=2)
-        del legacy['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
-        legacy['data']['runner_sandbox_diagnostics'].update(termination_cause=C.CAUSE_UNKNOWN, stop_reason=None,
-                                                            disposition_integrity=None)
-        assert not check_record(legacy), (example.name, check_record(legacy))
+        # Another response version is refused before any claim is read, even
+        # when its record would be accepted under the current version.
+        other = build_envelope(example.observations, schema_version=contract.RESPONSE_SCHEMA - 1)
+        refused = check_record(other)
+        assert refused and refused[0]['kind'] == 'unsupported_version', (example.name, refused)
+        without = build_envelope(example.observations)
+        del without['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
+        without['data']['runner_sandbox_diagnostics'].update(process_disposition='withheld', termination_cause=C.CAUSE_UNKNOWN,
+                                                             stop_reason=None, disposition_integrity='invalid')
+        missing = check_record(without)
+        assert any(f['kind'] == 'missing_record' for f in missing), (example.name, missing)
         for name, rule, mutated in _mutations(example):
             findings = check_record(mutated)
             assert findings, (example.name, name, 'accepted')

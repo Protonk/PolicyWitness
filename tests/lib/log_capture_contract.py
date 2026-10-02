@@ -9,6 +9,7 @@ import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import contract
 
 LIMITS = {row['id']: row['value'] for row in json.loads(
     (Path(__file__).resolve().parents[2] / 'docs/limits.json').read_text())['limits']}
@@ -168,15 +169,17 @@ def check_observer_report(observer, pid, start, end, *, timeout_ms=10000, timeou
 def check_live_capture(envelope, *, timeout_ms=10000, timeout_source='default', now_ns=None):
     """Return a classification; raise for missing evidence or unexpected failures."""
     now_ns = time.clock_gettime_ns(time.CLOCK_MONOTONIC) if now_ns is None else now_ns
-    require(integer(envelope.get('schema_version'), 4), 'collection facts require controller envelope 4')
+    require(envelope.get('schema_version') == contract.CONTROLLER_ENVELOPE,
+            'collection facts are read under controller envelope %d only' % contract.CONTROLLER_ENVELOPE)
     data = envelope['data']
     capture, diag = data.get('sandbox_log_capture'), data.get('runner_sandbox_diagnostics')
     require(isinstance(capture, dict) and isinstance(diag, dict), 'known worker requires capture and diagnostics')
     status = capture.get('capture_status')
     require(status in ('captured', 'timeout', 'overflow'), 'unexpected live capture status: %s' % status)
-    require(diag.get('capture_status') == status, 'capture status projection changed')
+    for key in ('capture_status', 'worker_pid', 'first_deny'):
+        require(key not in diag, 'removed diagnostic copy present: %s' % key)
     pid = data['runner_result']['runner_subprocess']['pid']
-    require(integer(pid, 1) and diag.get('worker_pid') == pid, 'missing authoritative worker identity')
+    require(integer(pid, 1), 'missing authoritative worker identity')
     check_window(capture.get('window'), data['runner_client'])
     outer = capture.get('supervision')
     outer_cutoff = check_supervision(outer, 'observer', timeout_ms, timeout_source, now_ns)
@@ -218,8 +221,7 @@ def check_live_capture(envelope, *, timeout_ms=10000, timeout_source='default', 
         events, associations = capture['deny_events'], capture.get('step_denies')
         require(isinstance(associations, list), 'complete capture lacks correlation result')
         matches = [i for i, event in enumerate(events) if event.get('pid') == pid]
-        require(diag.get('correlation_status') == ('pid_match' if matches else 'no_match') and
-                diag.get('first_deny') == ({'event_index': matches[0]} if matches else None), 'incorrect first-deny/correlation projection')
+        require(diag.get('correlation_status') == ('pid_match' if matches else 'no_match'), 'incorrect correlation projection')
         seen, candidates = set(), set()
         steps = {s['step_id']: s for s in data['runner_result']['steps']}
         for association in associations:
@@ -241,5 +243,5 @@ def check_live_capture(envelope, *, timeout_ms=10000, timeout_source='default', 
         first = outer_cutoff or processing_cutoff or inner_cutoff
         require(status == ('timeout' if first['reason'] == 'deadline' else 'overflow'), 'budget status disagrees with cutoff')
         require(diag.get('correlation_status') == 'unavailable' and capture.get('step_denies') is None and
-                diag.get('first_deny') is None and diag.get('permission_failures_without_record') is None, 'partial capture gained correlation')
+                diag.get('permission_failures_without_record') is None, 'partial capture gained correlation')
     return {'capture_status': status, 'outcome': 'captured' if status == 'captured' else 'budget_exhausted', 'cutoffs': cutoffs}

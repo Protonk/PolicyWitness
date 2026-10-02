@@ -11,7 +11,7 @@ deterministic, and checked into the repo so tests are hermetic.
   comparison writes a candidate into the case artifacts; replace the golden
   after review, and bump the number in `docs/contract.json` first when the
   failure says so. See `docs/CONTRACT.md`.
-  `path_diagnostics.json` contains independent compact/legacy path states,
+  `path_diagnostics.json` contains independent compact path states,
   Unicode byte distinctions and malformed representations shared by Swift
   encoding/decoding, Rust forwarding and Python consumer checks.
 - `dispatcher/`: controlled suite runners and evidence alterations exercised
@@ -69,8 +69,7 @@ deterministic, and checked into the repo so tests are hermetic.
   against the response 12 producer; its
   [README](comparison/baseline_response12/README.md) records that method.
   Readers: `witness_contract/comparison_matrix` (live) and
-  `runner_unit`'s `ComparisonEvidenceTests` (unit), both added by the drift
-  removal plan; until they land no suite reads the fixture.
+  `runner_unit`'s `ComparisonEvidenceTests` (unit).
 
 ## Adding fixtures
 

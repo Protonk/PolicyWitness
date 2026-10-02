@@ -27,11 +27,11 @@ private func maximal(_ bytes: Int) -> String { String(repeating: maximalUnit, co
 private let stringPolicy: [String: Int?] = [
     // Fixed vocabulary or host constants.
     "normalized_outcome": nil, "bundle_id": nil, "policy_format": nil, "policy_sha256": nil,
-    "status": nil, "reason": nil, "outcome": nil, "scope": nil, "result_source": nil,
+    "status": nil, "reason": nil, "outcome": nil, "result_source": nil,
     "missing_reason": nil, "observer": nil, "phase": nil, "same_as_input": nil, "summary": nil,
-    "state": nil, "answer": nil, "basis": nil, "prediction": nil, "observation": nil,
+    "state": nil, "answer": nil, "basis": nil, "observation": nil,
     "observation_basis": nil, "operation_relation": nil, "target_relation": nil,
-    "conclusion": nil, "order": nil, "limitations": nil, "poll_stop_reason": nil,
+    "order": nil, "limitations": nil, "poll_stop_reason": nil,
     "cleanup_trigger": nil, "grace_end": nil, "collection_basis": nil, "slot": nil,
     "attempt_support": nil, "validator_disposition": nil, "protocol_violations": nil,
     "failure_state": nil, "origin": nil, "field": nil, "unit": nil, "kind": nil,
@@ -44,7 +44,7 @@ private let stringPolicy: [String: Int?] = [
     "input": sandboxCheckFilterValueMaxBytes, "requested_kind": probePlanLabelMaxBytes,
     "requested_action": probePlanLabelMaxBytes, "requested_path": PWShmLayout.targetMax - 1,
     "parameter_key": PWShmLayout.paramKeyMax - 1, "expected_step_ids": PWShmLayout.stepIdMax - 1,
-    "libsandbox_path": testOverridePathMaxBytes, "worker_executable_path": testOverridePathMaxBytes,
+    "worker_executable_path": testOverridePathMaxBytes,
     "validator_executable_path": testOverridePathMaxBytes, "executable_path": testOverridePathMaxBytes,
     // Bounded host-derived strings.
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
@@ -103,15 +103,16 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     attempt["stdout"] = maximal(PWShmLayout.childOutputBytes - 1)
     attempt["stderr"] = maximal(PWShmLayout.childOutputBytes - 1)
     attempt["child_pid"] = 4_294_967_295; attempt["child_exit_code"] = 255; attempt["child_term_signal"] = 31
-    attempt["errno"] = 2_147_483_647; attempt["syscall_errno"] = 2_147_483_647; attempt["exit_code"] = 255
+    attempt["errno"] = 2_147_483_647
     step["attempt"] = attempt
     // The maximal validator records do not describe this step's query, so the
-    // comparison cannot claim query_first; the unestablished form is the same size.
+    // comparison cannot claim query_first. The record beside the step says the
+    // attempt completed, so the one limitation a completed step can carry is
+    // the planner's exclusion code (the longest of the three).
     var comparison = step["comparison"] as! [String: Any]
     comparison["order"] = "unestablished"
-    comparison["limitations"] = (comparison["limitations"] as! [String]) + ["query_attempt_order_unestablished"]
+    comparison["limitations"] = ["query_plan:path_unresolved_at_planning"]
     step["comparison"] = comparison
-    step["drift"] = NSNull()
     steps[0] = step
     reply["steps"] = steps
 

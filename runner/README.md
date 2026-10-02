@@ -41,26 +41,22 @@ bundle scaffolding under `runner/Services/PWRunner/`.
 - `Sources/PWRunnerCore/PWRunnerAPI.swift`
   - `PWRunnerProtocol` (`runSpecimen(Data) -> Data`)
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
-- `Sources/PWRunnerCore/SandboxLib.swift`
-  - Explicit `dlopen` + `dlsym` bindings for libsandbox.
-  - `SandboxLib.load(path:)` defaults to `/usr/lib/libsandbox.dylib`;
-    re-routed by `_test_overrides.libsandbox_path` (see "Test seam"
-    below).
 - `Sources/PWRunnerCore/SandboxApply.swift`
-  - `computePolicyHash` is used by the host. The `applySandboxPolicy` helper
-    has unit-test callers only; production compilation and application run in
-    the C worker.
+  - `computePolicyHash`: the host's structural policy check (`bad_policy` for a
+    missing source or wrong format) and `policy_sha256`. Compilation and
+    application run only in the C worker.
 - `Sources/PWRunnerCore/ProbeRunner.swift`
-  - `sandbox_check` helpers and shared prediction-unavailable metadata.
-    `predictionUnavailableOpFilters` is the set of `(operation, filter_kind)`
+  - Query planning metadata: `knownFilterKinds`, `validateSandboxChecks` and
+    `predictionUnavailableOpFilters`, the set of `(operation, filter_kind)`
     pairs the runner never predicts. Adding a pair requires empirical
     verification with `tests/suites/witness_contract/harness/verify_filter_id.sh`;
     the `source_drift` suite checks the set against the pairs listed in the
-    user guide.
+    user guide. The host never calls `sandbox_check`; the validator does.
 - `Sources/PWRunnerCore/PathUtils.swift`
   - Path normalization and fd-based observation helpers.
-- `Sources/PWRunnerCore/Signals.swift`
-  - Deny-signal handler and counters.
+- `Sources/PWCWorkerShim/`
+  - The one C shim: shared-memory, atomics and spawn helpers the host driver
+    calls to drive `pw-probe-runner` (`PWCWorkerShim.h`).
 - `Sources/PWRunnerCore/CWorker.swift`
   - Host-side driver for `pw-probe-runner`: shm_open + mmap + posix_spawn,
     sentinel polling, and the post-apply hook.
@@ -71,13 +67,17 @@ bundle scaffolding under `runner/Services/PWRunner/`.
 - `Sources/PWRunnerCore/CWorkerOrchestrator.swift`
   - Joins the C worker and the validator child into a single
     `PWRunnerRunResult`. Owns probe-plan validation,
-    `prediction_unavailable` query planning, classification, and drift.
+    `prediction_unavailable` query planning, outcome classification and the
+    per-step comparison record.
 - `Sources/PWRunnerCore/PWRunnerService.swift`
   - Orchestrates the host flow (decode → validate → drive C worker +
     validator → reply).
-  - The host enforces caller authorization, loads libsandbox once to fail
-    fast on missing dynamic loaders, computes `policy_sha256`, and never
-    calls `sandbox_apply` on itself.
+  - The host enforces caller authorization and computes `policy_sha256`. It
+    never links, loads or calls libsandbox: the worker and the validator are
+    the only processes that touch the native API. `source_drift` checks the
+    host sources for bindings, calls and dynamic lookups, and the artifact
+    inspection fails a shipped `PWRunner` whose undefined symbols include any
+    `_sandbox_*` import.
 - `Clients/PWRunnerClient/main.swift`
   - Builds `dist/PolicyWitness.app/Contents/MacOS/pw-runner-client`: a
     thin `NSXPCConnection` wrapper that forwards JSON bytes and prints
@@ -119,22 +119,21 @@ target works on Command Line Tools alone (full Xcode not required).
 SwiftPM's `.build/` tree is gitignored.
 
 See `runner/AGENTS.md` → "Swift runner unit tests (SwiftPM)" for the
-contract, when to reach for a unit test vs an e2e suite, the rules around
-stubbing `@convention(c)` C function pointers, and how to add a new test file.
+contract, when to reach for a unit test vs an e2e suite, and how to add a new
+test file.
 
 ## Test seam: `_test_overrides`
 
 The request JSON accepts an optional `_test_overrides` block that
 re-routes narrow boundaries through real production code so the test
-suite can reach failure outcomes (`libsandbox_unavailable`,
-`worker_spawn_failed`, `runner_timeout`) without stubbing returns.
+suite can reach failure outcomes (`worker_spawn_failed`,
+`validator_spawn_failed`, `runner_timeout`) without stubbing returns.
 Every honored override is mirrored back into
 `data.runner_result.test_overrides`; production runs leave that field
 unset.
 
 | Key | Type | Default | Re-routed boundary | Outcome it lets you reach |
 | --- | --- | --- | --- | --- |
-| `libsandbox_path` | string | `/usr/lib/libsandbox.dylib` | `SandboxLib.load(path:)` → `dlopen(path)` in the host's pre-spawn check | `libsandbox_unavailable` |
 | `worker_executable_path` | string | bundle-local `pw-probe-runner` | `posix_spawn(path, ...)` inside `CWorker.spawn` | `worker_spawn_failed` |
 | `worker_timeout_ms` | integer (ms, floored at 50) | 120000 | Host-side sentinel deadline in `CWorker.run`; the C worker's exec attempt budget stays at its production value | `runner_timeout` |
 | `validator_io_timeout_ms` | integer (ms, floored at 50; no ceiling) | 30000 | Monotonic I/O deadline in `ValidatorClient.runValidator`; may intentionally exceed the worker release budget | `validator_no_reply` or earlier worker failure |
@@ -176,15 +175,15 @@ Top-level fields:
 - `runner_subprocess` carries the worker PID, exit/signal status, partial-step
   flag, worker publications and independent host lifecycle observations.
   Outcome precedence is host admission failure, published worker failure,
-  host transfer failure, invalid publication/legacy failure, observed sentinel
+  host transfer failure, invalid or imprecise publication, observed sentinel
   deadline, other worker/reporting/process failure, validator failure, then `ok`. A recovered EINTR alone is not failure. The authoritative
   table is [the failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md).
-  Ambiguous legacy failures, incomplete reports, abnormal/unconfirmed exits and
+  Imprecise published failures, incomplete reports, abnormal/unconfirmed exits and
   cleanup faults use `runner_failed`; cause may remain unknown. Deadline expiry
   uses `runner_timeout` even after voluntary grace exit. A cleanup request alone
-  is not a timeout. `runner_sandbox_denied` and `sandbox_apply_failed` remain
-  legacy/reserved spellings; current producers retain specific native failure
-  evidence under `runner_failed`.
+  is not a timeout. `runner_sandbox_denied` and `sandbox_apply_failed` are
+  recognized constants that no producer emits; specific native failure
+  evidence lives under `runner_failed`.
 - `validator_subprocess` carries the validator child's process observations,
   accepted records, expected IDs, association issues, byte counts, and independent
   I/O/decode faults, or is `null` when no validator
@@ -195,8 +194,8 @@ Top-level fields:
   `executable_path`, the numeric `return_code`, and a descriptive `diagnostic`.
   The code is the direct return, not ambient errno. Every nonzero return is a
   failure, including unfamiliar codes; diagnostic wording never selects the
-  outcome. There is no validator subprocess on this path. Older replies may
-  omit this optional record; absence does not establish successful spawning.
+  outcome. There is no validator subprocess on this path. The record is
+  optional; absence does not establish successful spawning.
 
 The host also writes `runner_subprocess.ready_byte_received`, `done_observed`,
 `poll_stop_reason`, `exit_requested`, `termination_request`, `reaped`, and
@@ -207,7 +206,7 @@ the signal and `kill` return, with errno only on failure. Exit code and signal
 are populated only after `waitpid` returned the child's PID. If reaping is
 unconfirmed, both are absent/null even when the termination request succeeded.
 Wait errors retain their phase, return and errno, including recovered EINTR.
-Older replies omit these observations; missing booleans mean unknown.
+Missing booleans mean unknown.
 
 The driver allows two EINTR retries across all wait phases. A terminal wait error
 ends that phase; ECHILD stops further waits and signals to that PID. Failed kill
@@ -218,60 +217,57 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
-Legacy replies remain decodable. Typed readers that require a signal object must migrate
-to a nullable field. Optional subprocess objects retain omitted-or-null absence.
+Readers accept exactly the current response schema; the Swift decoder and
+encoder refuse another version with an `unsupported` diagnostic. Optional
+subprocess objects are omitted or null when absent.
 
 The reply boundary converts encoding failures to `runner_reporting_failed`
 with a `reporting_failure` diagnostic and the original execution summary.
-It retains queries, attempts and subprocess observations, omits all comparisons
-and emits drift nulls. If that degraded response also cannot be encoded,
+It retains queries, attempts and subprocess observations and omits all
+comparisons. If that degraded response also cannot be encoded,
 `evidence_retained: false` explicitly marks a minimal reply without child
 evidence. The [reply failure contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#reply-construction-failure)
 defines this exception; ordinary result encoding still rejects invalid claims.
 
 Per-step fields under `steps[]`:
 
-- `deny_signal` is explicit null on every new step, including failures. The C
-  worker does not measure this channel; zero counts would invent evidence.
-- `not_run_worker_died` is a compatibility attempt-outcome spelling for no
-  completed result, not proof that an operation never began. Errno/drift stay
-  null when no result supports them. `attempt.lifecycle` distinguishes
+- `not_run_worker_died` is the attempt-outcome spelling for no completed
+  result, not proof that an operation never began. Errno stays null when no
+  result supports it. `attempt.lifecycle` distinguishes
   `started_without_result`, `not_reached`, `unsupported`, `unresolved` and
   `conflicting` from `completed`, projecting the per-step claims of
   `runner_subprocess.disposition`, the host's canonical lifecycle account
   (tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record"). The
   subprocess also records `cleanup_trigger`, `grace_end` and `collection_basis`.
 
-- `sandbox_check` includes `scope` (`post_sandbox`) plus the original
-  `filter_value` (the exact string passed to the check). It also reports `pid`,
-  `operation`, `filter_type_id`, and `errno`/`error` when the check
-  call fails.
-- `attempt` always includes `exit_code` and `syscall_errno` (explicit
-  `null` when not applicable). `requested_path` echoes the attempt
-  target for every attempt kind; `normalized_path` and `observed_path`
-  are file-path diagnostics and are `null` for non-file attempts. The
-  `rc` and `errno` fields are retained for compatibility.
+- `sandbox_check` reports the original `filter_value` (the exact string passed
+  to the check), `pid`, `operation`, `filter_kind`, `filter_type_id`,
+  `result_source`, `native_rc`, and `errno`/`error` when the check call fails;
+  `missing_reason` says why no answer exists.
+- `attempt` reports `rc` (PW attempt status), `errno`, `outcome`, `error`,
+  `result_source`, `missing_reason` when no result exists, and `lifecycle`.
+  `requested_path` echoes the attempt target for every attempt kind;
+  `observed_path` is the worker's `F_GETPATH` observation of a successful open
+  and `null` otherwise; `path_diagnostics` is the host's after-orchestration
+  resolution of a file or exec target. The attempt channel carries no native
+  return.
 - `attempt.requested_kind` and `requested_action` retain submitted intent.
 - `comparison.order` reports `query_first` only for eligible native records with a complete collection/release/acknowledgement chain and worker lifetime evidence; all others are `unestablished`.
 - `runner_subprocess.ordering` retains host collection/release, worker acknowledgement, `worker_lifetime_established`, validator disposition and protocol violations. Collection closure releases attempts after every validator terminal path, including unconfirmed cleanup. No later record joins predictions.
-- `comparison` distinguishes supported agreement, disagreement, directional
-  consistency and unavailable comparison, with explicit operation/target relations
-  and simultaneous limits. `drift` projects only agreement/disagreement to bool;
-  unattributed failures and unresolved scope retain null. The current runner
-  cannot establish state stability or runtime target identity and therefore emits no disagreement/true claims, even for `query_first`.
-  With unestablished query order, a successful unlink of the planned query target in any step of the run
-  records `attempt_mutation_order_unestablished` and prevents allow/success
-  agreement too; step position does not bound the confound while order is
-  unknown. Later host nonresolution adds `host_path_resolution_changed`
-  without reclassifying the result. Historical response-7 values remain intact
-  on decode. Exec/spawn maps specifically
-  to the native `process-exec*` query for target execution admission, with
-  `exec_query_not_full_spawn_prediction` preserving its limited scope. A spawned
-  child's later failure does not erase the successful spawn. See the
-  [comparison contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#public-representation-and-meaning).
+- `comparison` carries `observation`, `observation_basis`,
+  `operation_relation`, `target_relation`, `order` and `limitations`: the
+  attempt channel's classification, the submitted-scope relations, the order
+  the host established and the planner's exclusion or the attempt's lifecycle
+  state. The encoder rejects any limitation outside that vocabulary and any
+  `query_first` claim without its full chain. The record never says whether
+  the channels agree; the query's own answer stays in `sandbox_check`.
+  Exec/spawn maps to the native `process-exec*` query for target execution
+  admission only. A spawned child's later failure does not erase the
+  successful spawn. See the
+  [comparison record](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
 - `sandbox_check.path_diagnostics` records `observer="runner_host"` and
   `phase="after_orchestration"`; later host resolution is not validator evidence.
 
@@ -310,8 +306,8 @@ Sandbox policy variation is driven by the specimen itself:
 - the controller supplies SBPL,
 - `pw-probe-runner` applies it once to itself before running probes,
 - the runner's witness pairs the attempt result with the validator's
-  `sandbox_check` verdict for each probe and records its supported comparison
-  and uncertainty in `steps[].comparison` and `steps[].drift`.
+  `sandbox_check` answer for each probe and records how the two submitted
+  scopes relate in `steps[].comparison`.
 
 ## External runner services
 
@@ -322,9 +318,9 @@ runner: a signed `.xpc` bundle, addressed by `CFBundleIdentifier`.
 
 Invariants:
 
-- The protocol is unchanged (`PWRunnerProtocol` JSON-over-Data).
+- The protocol is the built-in runner's (`PWRunnerProtocol` JSON-over-Data).
 - One specimen -> one runner process; the runner applies the sandbox once and exits.
-- Evidence schema remains identical; the controller records runner provenance.
+- The reply schema is the built-in runner's; the controller records runner provenance in `data.specimen.runner_provenance`.
 
 The controller provides a `policy-witness runner` manager to install/register
 these services and to enforce entitlements supersets before dispatch.
@@ -346,9 +342,9 @@ The name “nested sandbox” fits: the harness's sandbox sits outside the one t
 worker would apply to itself, and it wins first, at XPC lookup, before any code
 in this directory runs. In the envelope the refusal is `normalized_outcome:
 "xpc_error"` with `error` carrying the domain, code and message, empty `steps`,
-and no `runner_subprocess`, because no host ran. The controller then fills
-`runner_startup_diagnostics` and runs `sbpl-check` as a fallback, so a
-`policy_check_status` of `ok` there says only that the policy compiles; it says
+and no `runner_subprocess`, because no host ran. The controller then runs
+`sbpl-check` as a fallback and records it in `data.policy_check`, so a
+`compiled: true` there says only that the policy compiles; it says
 nothing about the worker. Nothing here produced that outcome and nothing here
 can fix it. The other symptom is the controller's, not the runner's: if the
 runner does launch but `sandbox_log_capture.capture_status` is `blocked` with
@@ -388,15 +384,14 @@ rules and remaining observation/liveness limitations.
 
 `steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
 worker exists. It never substitutes the host PID. Typed readers must accept
-null; replies before schema 6 carry an integer PID and remain decodable. The
-top-level legacy PID convention is unchanged. Request schema and worker ABI are
-separate contracts.
+null. Request schema and worker ABI are separate contracts.
 
-Per-step `native_rc` is authoritative for native returns. A received diagnostic
-without a native return retains `result_source="validator"`, `native_rc=null`
-and compatibility `rc=-1`; this is not a synthetic validator record or a claimed
-native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
-missing reason. `outcome="error"` alone does not identify a native call failure.
+The query channel's `native_rc` is authoritative for native returns. A received
+diagnostic without a native return retains `result_source="validator"`,
+`native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
+claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"`
+with a missing reason. `outcome="error"` alone does not identify a native call
+failure.
 
 See [the query and receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
 for immutable query planning, query association, independent pipe collection,

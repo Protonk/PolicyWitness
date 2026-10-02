@@ -214,7 +214,7 @@ def check_completed(name, completed):
     assert attempt.get('outcome') == 'ok', (name, attempt)
     assert attempt.get('result_source') == 'worker', (name, attempt)
     assert attempt.get('rc') == 0 and attempt.get('missing_reason') is None, (name, attempt)
-    assert comparison.get('conclusion') == 'agreement', (name, comparison)
+    assert comparison.get('observation') == 'succeeded', (name, comparison)
     assert not any(l.startswith('attempt') for l in comparison.get('limitations', [])), (name, comparison)
 
 
@@ -257,13 +257,9 @@ def check_cause(seen, diagnostics):
 def check_wave2(name, envelope, expected_summaries, artifacts):
     """A2, A3 and A4 semantic claims through the adapter and the independent oracle.
 
-    Gated on the reply version: a producer that predates the record fails here
-    as version gating, which is not the behavioral red (the plan's two waves).
+    The oracle reads the record under the contract manifest's exact version;
+    another version is its own finding, not a behavioral failure.
     """
-    schema = envelope['data']['runner_result'].get('schema_version')
-    assert type(schema) is int and schema >= C.RESPONSE_WITH_DISPOSITION, (
-        f'{name}: wave 2 gated; producer reports response schema {schema!r}, before the disposition record '
-        f'(requires {C.RESPONSE_WITH_DISPOSITION})')
     findings = lifecycle_oracle.check_record(envelope)
     (artifacts / 'oracle_findings.json').write_text(json.dumps(findings, indent=2) + '\n', encoding='utf-8')
     assert not findings, f'{name}: oracle findings {findings}'

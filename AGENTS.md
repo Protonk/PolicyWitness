@@ -2,7 +2,7 @@
 
 This file is for contributors and agents. It says how to act in this repository. What is here is described in [README.md](README.md); this file points at those descriptions rather than repeating them.
 
-PolicyWitness is a sandbox witness harness. Each run hands a specimen (an SBPL policy plus a probe plan) to a fresh, unsandboxed XPC host, which spawns one sandboxed worker and one validator child, joins their outputs into one JSON envelope, replies, and exits. The architecture and the path from specimens to evidence are in [README.md → Flow](README.md#flow).
+PolicyWitness is a sandbox witness harness. Each run hands a specimen (an SBPL policy plus a probe plan) to a fresh, unsandboxed XPC host, which spawns one sandboxed worker and one validator child, joins their outputs into one JSON reply, replies, and exits; the controller wraps that reply in the envelope it prints. The architecture and the path from specimens to evidence are in [README.md → Flow](README.md#flow).
 
 ## Quick Router (open first)
 
@@ -54,7 +54,7 @@ Describe current behavior. Don't add change-history notes to docs — `git log` 
 - **One-way sandbox per process**: the worker applies exactly one sandbox to itself and exits. A new specimen means a fresh XPC host plus a fresh worker.
 - **Host/worker split**: the XPC host never applies the specimen policy. That keeps the reply path alive under arbitrary `(deny default)` profiles and makes worker exit status (signal vs clean exit, partial vs full report) the source of truth for `runner_subprocess` + `normalized_outcome`.
 - **Witness over interpretation**: “rc == 0” is never sufficient evidence of effect; the system must record the observation that supports a claim.
-- **Predictions precede attempts**: the worker attempts nothing until the host has closed validator collection and stored `proceed`; `comparison.order: "query_first"` claims only that interval, never equal state or runtime identity, so `drift: true` is unreachable until a separate evidence contract exists. Changes to the wait, the release store or the eligibility rule must rerun the opt-in `witness_contract/order_barrier_mutations` control.
+- **Predictions precede attempts**: the worker attempts nothing until the host has closed validator collection and stored `proceed`; `comparison.order: "query_first"` claims only that interval, never equal state or runtime identity; no record asserts agreement or disagreement between the channels. Changes to the wait, the release store or the eligibility rule must rerun the opt-in `witness_contract/order_barrier_mutations` control.
 - **No dishonest attribution**: permission-shaped failures must not be collapsed into “sandbox denied” unless the run includes supporting evidence.
 - **Runner simplicity**: runner code is meant to be inspectable and boring (avoid clever abstractions and avoid hidden pre-sandbox resource acquisition). Host-side orchestration belongs in `PWRunnerService.swift` and `CWorkerOrchestrator.swift`; post-apply work belongs in `pw-probe-runner` (the C worker).
 

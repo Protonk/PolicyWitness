@@ -248,11 +248,10 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectEqual(got.sandbox_check.missing_reason, invoked ? "validator_no_verdict" : "validator_not_invoked")
                 try expectNil(got.sandbox_check.native_rc)
                 try expectEqual(got.attempt.missing_reason, "slot_incomplete")
-                try expectNil(got.attempt.native_rc)
-                try expectNil(got.drift)
+                try expectEqual(got.comparison?.observation, "unavailable")
                 let json = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(got)) as! [String: Any]
                 try expectTrue((json["sandbox_check"] as! [String: Any])["native_rc"] is NSNull)
-                try expectTrue((json["attempt"] as! [String: Any])["native_rc"] is NSNull)
+                try expectNil((json["attempt"] as! [String: Any])["native_rc"])
             }
         }
     }

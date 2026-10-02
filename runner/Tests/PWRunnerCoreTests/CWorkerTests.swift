@@ -535,8 +535,8 @@ func runCWorkerTests(_ tk: TestKit) {
         // ---- exec attempt: target missing -----------------------------------
         // posix_spawn returns ENOENT (errno-style return value). The
         // worker never produces a child, so child_pid stays 0 (the
-        // sentinel that lets the drift classifier distinguish "sandbox
-        // blocked spawn" from "child exited non-zero").
+        // sentinel that lets comparisonEvidence distinguish a failed
+        // spawn from a child that exited non-zero).
         tk.run("exec /nonexistent → exec_failed with child_pid=0, errno=ENOENT") {
             guard workerExists() else {
                 throw TestFailure(message: "required equipment: pw-probe-runner missing")
@@ -559,7 +559,7 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectEqual(s.rc, Int32(-1), "spawn failure: rc=-1 sentinel")
             try expectEqual(s.errnoVal, Int32(ENOENT))
             try expectEqual(s.childPid, Int32(0),
-                            "child_pid must be 0 when spawn failed — drift classifier keys on this")
+                            "child_pid must be 0 when spawn failed — comparisonEvidence keys on this")
             try expectEqual(s.childExitCode, Int32(-1),
                             "child_exit_code stays at -1 sentinel when no child ran")
         }
@@ -784,7 +784,9 @@ func runCWorkerTests(_ tk: TestKit) {
                 try expectEqual(decoded.attempt.child_exit_code, Int(childExit))
                 try expectEqual(decoded.attempt.child_term_signal, 0)
                 try expectEqual(decoded.attempt.error, "unfamiliar cleanup diagnostic")
-                try expectTrue(decoded.comparison?.limitations.contains("sandbox_attribution_unestablished") == true)
+                // A positive child PID establishes spawning; the failed result stays
+                // beside it in rc and child_exit_code.
+                try expectEqual(decoded.comparison?.observation_basis, "spawned_child")
             }
             let refusals = wire.filter { $0.attempt.errno == Int(ETIMEDOUT) }
             try expectFalse(refusals.isEmpty)
@@ -793,7 +795,7 @@ func runCWorkerTests(_ tk: TestKit) {
                 try expectEqual(refused.attempt.child_exit_code, -1)
                 try expectEqual(refused.attempt.child_term_signal, 0)
                 try expectEqual(refused.attempt.outcome, AttemptOutcome.execFailed)
-                try expectTrue(refused.comparison?.limitations.contains("sandbox_attribution_unestablished") == true)
+                try expectEqual(refused.comparison?.observation, "other_failure")
             }
         }
 

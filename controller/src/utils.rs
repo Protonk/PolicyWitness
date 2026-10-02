@@ -14,6 +14,72 @@ pub const RUNNER_CAPTURE_BYTES: usize = 72 * 1024 * 1024;
 pub const HELPER_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
 pub const OBSERVER_CAPTURE_BYTES: usize = crate::log_capture::OBSERVER_STDOUT_BYTES;
 
+/// The controller's observation of writing a request to a child's stdin: how
+/// many bytes the pipe accepted and the first write error, if any. An accepted
+/// write and a closed writer do not prove that the child read the bytes.
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RequestDelivery {
+    pub bytes_written: usize,
+    pub error: Option<String>,
+}
+
+/// Run `command` with `input` delivered on its stdin by a writer thread while
+/// stdout and stderr are collected concurrently. The writer closes stdin after
+/// the last byte. A write failure (for example EPIPE from a child that exited
+/// without reading) is recorded in the delivery record, never raised as a
+/// signal: the controller ignores SIGPIPE and reads the error from `write`.
+pub fn run_with_stdin(
+    mut command: std::process::Command,
+    input: Vec<u8>,
+) -> Result<(std::process::Output, RequestDelivery), String> {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut child = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to launch {:?}: {e}", command.get_program()))?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "child stdin was not piped".to_string())?;
+    let writer = std::thread::spawn(move || {
+        let mut written = 0usize;
+        let mut error = None;
+        for chunk in input.chunks(64 * 1024) {
+            match stdin.write_all(chunk) {
+                Ok(()) => written += chunk.len(),
+                Err(e) => {
+                    error = Some(format!(
+                        "request delivery failed after {written} bytes: {e}"
+                    ));
+                    break;
+                }
+            }
+        }
+        if error.is_none() {
+            if let Err(e) = stdin.flush() {
+                error = Some(format!(
+                    "request delivery flush failed after {written} bytes: {e}"
+                ));
+            }
+        }
+        drop(stdin);
+        RequestDelivery {
+            bytes_written: written,
+            error,
+        }
+    });
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("failed to collect child output: {e}"))?;
+    let delivery = writer
+        .join()
+        .map_err(|_| "request writer thread panicked".to_string())?;
+    Ok((output, delivery))
+}
+
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

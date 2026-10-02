@@ -14,7 +14,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from consumer import recover_evidence, validate_evidence_shape
+import consumer
 from log_capture_contract import check_live_capture
 
 # The target is a real path under /private/tmp, so the host's after-orchestration
@@ -65,12 +65,10 @@ def main():
             (run.out / 'file.after').write_bytes(after)
             assert after == seed, 'denied attempts changed file contents'
             assert rc == (1 if signaled else 0), rc
-            assert envelope['schema_version'] >= 2, envelope['schema_version']
             data = envelope['data']
             assert 'log_last' not in data, data.keys()
             runner = data['runner_result']
             expected = 'runner_failed' if signaled else 'ok'
-            assert runner['schema_version'] >= 7, runner  # comparison groups: response 7
             assert runner['normalized_outcome'] == expected, runner
             assert envelope['result']['normalized_outcome'] == expected, envelope['result']
             assert envelope['result']['ok'] is (not signaled), envelope['result']
@@ -88,41 +86,40 @@ def main():
                 assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
             assert [s['step_id'] for s in runner['steps']] == ids, runner['steps']
             for step in runner['steps']:
-                assert step['deny_signal'] is None, step
+                assert 'deny_signal' not in step and 'drift' not in step, step
                 assert step['sandbox_check']['operation'] == 'file-read-data', step
                 assert step['sandbox_check']['outcome'] == 'allow', step
                 attempt = step['attempt']
                 assert attempt['outcome'] == 'open_failed', attempt
                 assert attempt['errno'] in (errno.EPERM, errno.EACCES), attempt
                 assert attempt['requested_path'] == str(target), attempt
-                assert step['drift'] is None, step  # permission failure is ambiguous against predicted allow
             diag = data['runner_sandbox_diagnostics']
-            assert diag['worker_pid'] == worker['pid'], diag
             assert diag['process_disposition'] == ('signaled' if signaled else 'clean_exit'), diag
+            # The self-signal was not a host cleanup: the record projects no cause.
             assert diag['termination_cause'] == ('unknown' if signaled else None), diag
             capture = data['sandbox_log_capture']
-            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
-            answers = recover_evidence(envelope)
-            (run.out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
-            assert answers['failure_groups']['unattributed_failure'] == ids
-            assert answers['comparison_groups']['unavailable'] == ids
-            recovered = answers['denials']
-            assert recovered['capture_status'] == diag['capture_status']
+            assert not consumer.validate(envelope), consumer.validate(envelope)
+            rows = consumer.steps(envelope)
+            # Permission failures by errno against a different query operation.
+            failed = consumer.select(rows, observation='permission_failure', observation_basis='permission_errno',
+                                     operation_relation='different', target_relation='same_submitted')
+            assert [s['step_id'] for s in failed] == ids, rows
+            recovered = consumer.denials(envelope)
+            (run.out / 'consumer-denials.json').write_text(json.dumps(recovered, indent=2) + '\n')
             assert recovered['correlation_status'] == diag['correlation_status']
             assert recovered['diagnostics']['termination_cause'] == ('unknown' if signaled else None)
             live_result = {'outcome': 'disabled'}
             if not capture_enabled:
-                assert recovered['capture_status'] == 'disabled'
+                assert recovered['capture_status'] == 'not_reported'
                 assert recovered['association_reporting'] == 'not_reported'
                 assert recovered['candidates'] is None
                 assert capture is None, capture
-                assert diag['capture_status'] == 'disabled' and diag['correlation_status'] == 'not_attempted', diag
-                assert diag['first_deny'] is None, diag
+                assert diag['correlation_status'] == 'not_attempted', diag
                 assert diag['permission_failures_without_record'] is None, diag
             else:
                 live_result = check_live_capture(envelope)
                 assert isinstance(capture, dict), 'observer must be invoked for both failure and success'
-                assert diag['capture_status'] == capture['capture_status'], diag
+                assert recovered['capture_status'] == capture['capture_status']
                 window = capture['window']
                 assert recovered['window'] == window
                 client = data['runner_client']
@@ -142,7 +139,6 @@ def main():
                 if capture['capture_status'] == 'captured' and events is not None:
                     matches = [i for i, event in enumerate(events) if event.get('pid') == worker['pid']]
                     assert diag['correlation_status'] == ('pid_match' if matches else 'no_match'), diag
-                    assert diag['first_deny'] == ({'event_index': matches[0]} if matches else None), diag
                     # Both denied writes are permission failures by the runner's own account;
                     # the ones no captured event names stay listed beside the status.
                     assert diag['permission_failures_without_record'] == ([] if matches else ids), diag
@@ -181,11 +177,10 @@ def main():
                         assert 'deny_events' not in association, association
                 else:
                     assert diag['correlation_status'] == 'unavailable', diag
-                    assert diag['first_deny'] is None, diag
                     assert diag['permission_failures_without_record'] is None, diag
             observations.append({'run': name, 'outcome': expected, 'diagnostics': diag, 'live_result': live_result})
             (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
-            print(f'{name}: disposition and independent denied attempts verified; capture={diag["capture_status"]}', flush=True)
+            print(f'{name}: disposition and independent denied attempts verified; capture={recovered["capture_status"]}', flush=True)
 
 
 if __name__ == '__main__':

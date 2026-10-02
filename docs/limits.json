@@ -539,7 +539,7 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "counting": "Each of _test_overrides.libsandbox_path, worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first.",
+      "counting": "Each of _test_overrides.worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first.",
       "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
@@ -1054,7 +1054,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Synthesized maximal reply",
-      "value": 24869018,
+      "value": 24810311,
       "unit": "bytes",
       "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions.",
       "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",

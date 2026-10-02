@@ -46,21 +46,6 @@ pub enum AugmentResolution {
     BadRequest(String),
 }
 
-impl AugmentResolution {
-    /// True when `resolve_augments` mutated the request and the caller
-    /// must persist the result to a temp file before forwarding to
-    /// the runner. False only when the request was left
-    /// untouched (`NotPresent`) or when resolution failed (`BadRequest`,
-    /// in which case the caller short-circuits and doesn't forward
-    /// anything).
-    pub fn request_was_mutated(&self) -> bool {
-        matches!(
-            self,
-            AugmentResolution::StrippedNoOp | AugmentResolution::Applied(_)
-        )
-    }
-}
-
 /// Augment names are the one request string the controller itself echoes into
 /// an envelope diagnostic. Bound the echo like the runner's labels (127 bytes)
 /// so a refusal never repeats an unbounded value; the length still identifies it.
@@ -106,11 +91,9 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         Some(v) => v,
         None => return AugmentResolution::NotPresent,
     };
-    // From here on we have mutated `request_value` (the augments key is
-    // stripped). Any non-error return must be a variant whose
-    // `request_was_mutated()` is true so the caller persists the
-    // mutated request to a temp file and the runner sees the
-    // augment-free shape.
+    // From here on `request_value` is mutated (the augments key is stripped).
+    // The caller serializes the resolved value once and delivers that string
+    // to every reader, so the runner sees the augment-free shape.
 
     let names: Vec<String> = match augments_field {
         Value::Null => return AugmentResolution::StrippedNoOp,
@@ -224,7 +207,6 @@ mod tests {
         });
         let resolution = resolve_augments(&mut req, &app);
         assert!(matches!(resolution, AugmentResolution::NotPresent));
-        assert!(!resolution.request_was_mutated());
         // Request must remain untouched.
         assert_eq!(req["policy"]["sbpl_source"].as_str(), Some("(version 1)\n"));
     }
@@ -237,11 +219,7 @@ mod tests {
         });
         let resolution = resolve_augments(&mut req, &app);
         assert!(matches!(resolution, AugmentResolution::StrippedNoOp));
-        // The mutation marker MUST be set so the caller persists the
-        // stripped request to a temp file. Without this the runner
-        // would read the original on-disk file with the augments key
-        // still present.
-        assert!(resolution.request_was_mutated());
+        // The stripped value is what the caller serializes for the runner.
         assert!(req["policy"].as_object().unwrap().get("augments").is_none());
     }
 
@@ -257,7 +235,6 @@ mod tests {
         });
         let resolution = resolve_augments(&mut req, &app);
         assert!(matches!(resolution, AugmentResolution::StrippedNoOp));
-        assert!(resolution.request_was_mutated());
         assert!(req["policy"].as_object().unwrap().get("augments").is_none());
     }
 
@@ -270,7 +247,6 @@ mod tests {
             "policy": { "format": "sbpl", "sbpl_source": original, "augments": ["exec_baseline"] }
         });
         let resolution = resolve_augments(&mut req, &app);
-        assert!(resolution.request_was_mutated());
         match &resolution {
             AugmentResolution::Applied(aug) => {
                 assert_eq!(aug.applied, vec!["exec_baseline".to_string()]);

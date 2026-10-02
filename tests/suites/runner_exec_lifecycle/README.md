@@ -15,7 +15,8 @@ The run must finish within a generous outer bound around the public
 10-second exec deadline (8–25 seconds), while the fixture itself has a
 45-second backstop. JSON must retain stdout and a fresh stderr marker,
 report the observed leader as killed by the deadline, and keep that failure
-out of sandbox-denial attribution (`drift=null`). The next step must appear
+out of sandbox-denial attribution (an `other_failure` observation beside the
+allow answer). The next step must appear
 as successful and actually change the target's bytes. The whole specimen
 must succeed with complete evidence.
 

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 sys.path.insert(0, str(ROOT / 'tests/fixtures/validator'))
 from run_capture import RunCapture
-from consumer import validate_current_build_evidence
+import consumer
 from gate import Gate, install_bridge
 from control import TreeControl, process_snapshot, ExitObserver
 
@@ -48,17 +48,18 @@ def envelope(run, rc, spec, outcome='ok'):
     assert runner['normalized_outcome'] == outcome, runner
     assert runner.get('test_overrides') == spec.get('_test_overrides'), runner
     assert runner['runner_subprocess']['exit_code'] == 0, runner
-    errors = validate_current_build_evidence(value)
+    errors = consumer.validate(value)
     assert not errors, errors
     assert [s['step_id'] for s in runner['steps']] == [s['step_id'] for s in spec['probe_plan']]
     return runner
 
 
 def limited(row):
+    # The record carries only the vocabulary and no removed keys; what the
+    # interval cannot establish is said by `order`, not by a drift claim.
     limits = row['comparison']['limitations']
-    assert 'state_stability_unestablished' in limits, row
-    assert 'runtime_target_identity_unestablished' in limits, row
-    assert row['drift'] is not True, row
+    assert set(limits) <= consumer.LIMITATIONS, row
+    assert 'drift' not in row and 'conclusion' not in row['comparison'], row
 
 
 def native_rows(runner, records):
@@ -132,7 +133,8 @@ def held_effects(pw, out, bridge, helper):
             assert runner['pid'] == worker['pid'], runner
             assert all(s['attempt']['outcome'] == 'ok' for s in runner['steps']), runner
             assert runner['steps'][1]['attempt']['child_pid'] == pids['P'], runner
-            assert runner['steps'][0]['drift'] is False, runner
+            assert runner['steps'][0]['comparison']['observation'] == 'succeeded', runner
+            assert runner['steps'][1]['comparison']['observation_basis'] == 'spawned_child', runner
         finally:
             save(out / 'effects.json', observed); gate.save(out / 'gate-events.json')
             try: gate.close()
@@ -162,19 +164,22 @@ def interval(pw, out):
                 assert a['requested_action'] == actions[i] and a['requested_path'] == str(target), row
                 if name == 'absent':
                     assert q['outcome'] == 'prediction_unavailable' and q['missing_reason'] == 'query_not_requested', row
-                    assert c['order'] == 'unestablished' and row['drift'] is None, row
-                    assert a['outcome'] == 'ok', row
+                    assert c['order'] == 'unestablished', row
+                    assert c['limitations'] == ['query_plan:path_unresolved_at_planning'], row
+                    assert a['outcome'] == 'ok' and c['observation'] == 'succeeded', row
                 else:
                     assert q['outcome'] == 'allow' and c['order'] == 'query_first', row
                     limited(row)
                     if name == 'removed' and i == 1:
                         assert a['outcome'] == 'open_failed' and a['errno'] == errno.ENOENT, row
-                        assert c['observation'] == 'other_failure' and c['conclusion'] == 'unavailable' and row['drift'] is None, row
+                        assert c['observation'] == 'other_failure' and c['limitations'] == [], row
                     elif actions[i] == 'create':
-                        assert a['outcome'] == 'ok' and c['conclusion'] == 'unavailable' and row['drift'] is None, row
-                        assert 'compound_attempt' in c['limitations'], row
+                        # A create has no single query operation: the record says so.
+                        assert a['outcome'] == 'ok' and c['observation'] == 'succeeded', row
+                        assert c['operation_relation'] == 'unresolved', row
                     else:
-                        assert a['outcome'] == 'ok' and c['conclusion'] == 'agreement' and row['drift'] is False, row
+                        assert a['outcome'] == 'ok' and c['observation'] == 'succeeded', row
+                        assert c['operation_relation'] == 'matched' and c['target_relation'] == 'same_submitted', row
             if exists:
                 # The earlier mutation remains raw evidence even after re-resolution.
                 assert runner['steps'][0]['attempt']['requested_action'] == 'unlink'
@@ -210,11 +215,11 @@ def mutation_interval(pw, out, bridge, between_queries):
                 ordering(runner); native_rows(runner, records)
                 for row in runner['steps']:
                     assert row['attempt']['outcome'] == 'open_failed' and row['attempt']['errno'] == errno.ENOENT, row
-                    assert row['comparison']['conclusion'] == 'unavailable' and row['drift'] is None, row
-                    assert 'attempt_mutation_order_unestablished' not in row['comparison']['limitations'], row
+                    assert row['comparison']['observation'] == 'other_failure', row
+                    assert row['comparison']['limitations'] == [], row
         finally:
             save(out / 'external-state.json', observations); gate.save(out / 'gate-events.json'); gate.close()
-    print('native query receipts and external mutation precede release; missing-target failures do not establish drift')
+    print('native query receipts and external mutation precede release; missing-target failures are other failures')
 
 
 def ordinary(pw, out, maximum):
@@ -242,8 +247,8 @@ def ordinary(pw, out, maximum):
             assert row['sandbox_check']['outcome'] == ('allow' if allowed else 'deny'), row
             assert row['comparison']['order'] == 'query_first', row
             assert row['attempt']['outcome'] == ('ok' if allowed else 'open_failed'), row
-            assert row['comparison']['conclusion'] == ('agreement' if allowed else 'directional_consistency'), row
-            assert row['drift'] is (False if allowed else None), row
+            assert row['comparison']['observation'] == ('succeeded' if allowed else 'permission_failure'), row
+            assert row['comparison']['limitations'] == [], row
     print(f'{count} native predictions precede attempts, with independent file observations')
 
 
@@ -265,8 +270,8 @@ def spawn_failed(pw, out):
     assert hostile in runner['error'] and failure['operation'] in runner['error'], runner['error']
     assert failure['diagnostic'] in runner['error'], runner['error']
     row = runner['steps'][0]
-    assert row['comparison']['order'] == 'unestablished' and row['drift'] is None, row
-    assert row['attempt']['outcome'] == 'ok', row
+    assert row['comparison']['order'] == 'unestablished', row
+    assert row['attempt']['outcome'] == 'ok' and row['comparison']['observation'] == 'succeeded', row
     print('real spawn failure closes collection and releases an independently observed write')
 
 

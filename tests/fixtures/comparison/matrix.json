@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Comparison-record scenario matrix for the drift removal plan (D1). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected response 13 comparison object.",
+  "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected response 13 comparison object.",
   "contract": {
     "response_schema": 13,
     "request_schema": 1
@@ -49,7 +49,7 @@
       "state": "regular",
       "content": "independent witness\n",
       "mode": "0600",
-      "effect": "truncated to zero bytes by S24's open_write (O_WRONLY|O_TRUNC)"
+      "effect": "truncated by S24's open_write (O_WRONLY|O_TRUNC), which then writes one byte: present, 1 byte after the run"
     },
     "created": {
       "state": "absent",
@@ -70,20 +70,20 @@
       "effect": "absent after the run: unlinked by S19 before S25 reads it"
     },
     "helper_true": {
-      "state": "copy_of",
-      "source": "/usr/bin/true",
+      "state": "compiled",
+      "exit_code": 0,
       "mode": "0755",
       "effect": "unchanged bytes"
     },
     "helper_false": {
-      "state": "copy_of",
-      "source": "/usr/bin/false",
+      "state": "compiled",
+      "exit_code": 1,
       "mode": "0755",
       "effect": "unchanged bytes"
     },
     "helper_locked": {
-      "state": "copy_of",
-      "source": "/usr/bin/true",
+      "state": "compiled",
+      "exit_code": 0,
       "mode": "0000",
       "effect": "unchanged bytes; the live reader restores a readable mode before removing it"
     },
@@ -797,7 +797,7 @@
         "attempt.errno": 1,
         "attempt.requested_action": "open_read"
       },
-      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under D4 rule 3 (no attribution without a captured denial record)",
+      "control": "policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record)",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "permission_errno",
@@ -1323,7 +1323,7 @@
         "attempt.outcome": "lookup_failed",
         "attempt.error": "bootstrap_look_up: kr=1100"
       },
-      "control": "policy denies mach-lookup of this global name; kr=1100 is BOOTSTRAP_NOT_PRIVILEGED, read under D4 rule 3",
+      "control": "policy denies mach-lookup of this global name; kr=1100 is BOOTSTRAP_NOT_PRIVILEGED, read under reading rule 3",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "bootstrap_permission_result",
@@ -1426,7 +1426,7 @@
         "attempt.child_exit_code": 0,
         "attempt.child_pid": ">0"
       },
-      "control": "direct spawn of helper_true (copy of /usr/bin/true) exits 0; helper bytes unchanged",
+      "control": "direct spawn of helper_true (compiled to exit 0) exits 0; helper bytes unchanged",
       "comparison": {
         "observation": "succeeded",
         "observation_basis": "spawned_child",
@@ -1478,7 +1478,7 @@
         "attempt.child_exit_code": 1,
         "attempt.child_pid": ">0"
       },
-      "control": "direct spawn of helper_false (copy of /usr/bin/false) exits 1; the child's exit is in attempt.rc and child_exit_code (D4 rule 7)",
+      "control": "direct spawn of helper_false (compiled to exit 1) exits 1; the child's exit is in attempt.rc and child_exit_code (reading rule 7)",
       "comparison": {
         "observation": "succeeded",
         "observation_basis": "spawned_child",
@@ -1636,7 +1636,7 @@
         "attempt.outcome": "ok",
         "attempt.rc": 0
       },
-      "control": "unlink_s19 exists before the run and is absent after it (D4 rule 6: this step removed it, after its query)",
+      "control": "unlink_s19 exists before the run and is absent after it (reading rule 6: this step removed it, after its query)",
       "comparison": {
         "observation": "succeeded",
         "observation_basis": "completed_worker_status",
@@ -1742,7 +1742,7 @@
         "attempt.outcome": "lookup_failed",
         "attempt.error": "bootstrap_look_up: kr=1100"
       },
-      "control": "the global-name deny does not match a local-name query; the attempt maps to the global_name filter, so the target relation is unresolved (D4 rule 10)",
+      "control": "the global-name deny does not match a local-name query; the attempt maps to the global_name filter, so the target relation is unresolved (reading rule 10)",
       "comparison": {
         "observation": "permission_failure",
         "observation_basis": "bootstrap_permission_result",
@@ -1793,7 +1793,7 @@
         "sandbox_check.outcome": "allow",
         "attempt.rc": 0
       },
-      "control": "readable bytes unchanged; no filter value was submitted, so the target relation is unresolved (D4 rule 10)",
+      "control": "readable bytes unchanged; no filter value was submitted, so the target relation is unresolved (reading rule 10)",
       "comparison": {
         "observation": "succeeded",
         "observation_basis": "completed_worker_status",
@@ -1896,7 +1896,7 @@
         "attempt.outcome": "ok",
         "attempt.rc": 0
       },
-      "control": "writable exists before the run and is zero bytes after it",
+      "control": "writable exists before the run with its 20-byte content and holds exactly the worker's one written byte after it",
       "comparison": {
         "observation": "succeeded",
         "observation_basis": "completed_worker_status",
@@ -1906,7 +1906,7 @@
         "limitations": []
       },
       "effects": {
-        "writable": "present, zero bytes"
+        "writable": "present, 1 byte"
       },
       "notes": "as S01"
     },

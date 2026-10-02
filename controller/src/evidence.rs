@@ -13,11 +13,10 @@ use std::path::{Path, PathBuf};
 pub const EVIDENCE_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
+/// The embedded manifest. Only the fields the controller reads are declared;
+/// other keys the generator writes are ignored.
 pub struct EvidenceManifest {
     pub schema_version: u32,
-    pub app_bundle_id: Option<String>,
-    pub app_binary_rel_path: Option<String>,
-    pub app_entitlements: Option<Value>,
     pub entries: Vec<EvidenceEntry>,
     pub notes: Option<Vec<String>>,
 }
@@ -34,7 +33,7 @@ pub struct EvidenceEntry {
     pub entitlements_error: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct VerifyReport {
     pub ok: bool,
     pub checked: usize,
@@ -44,7 +43,7 @@ pub struct VerifyReport {
     pub notes: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct VerifyMismatch {
     pub id: String,
     pub rel_path: String,
@@ -152,30 +151,33 @@ pub fn verify_manifest(
     }
 }
 
-pub fn find_entry_by_id<'a>(
-    manifest: &'a EvidenceManifest,
-    selector: &str,
-) -> Option<&'a EvidenceEntry> {
-    manifest
-        .entries
-        .iter()
-        .find(|entry| entry.id == selector || entry.bundle_id.as_deref() == Some(selector))
-}
-
-pub fn find_entry_by_rel_path<'a>(
+/// The one entry at `rel_path` with the required `kind`. Selection is by exact
+/// path only: a missing entry, a duplicate path or a wrong kind makes the role
+/// unusable, and no `id`, `bundle_id` or `service_name` is consulted instead.
+pub fn unique_typed_entry<'a>(
     manifest: &'a EvidenceManifest,
     rel_path: &str,
-) -> Option<&'a EvidenceEntry> {
-    manifest
+    kind: &str,
+) -> Result<&'a EvidenceEntry, String> {
+    let mut matches = manifest
         .entries
         .iter()
-        .find(|entry| entry.rel_path == rel_path)
-}
-
-pub fn rel_path_from_absolute(app_root: &Path, abs: &Path) -> Option<String> {
-    abs.strip_prefix(app_root)
-        .ok()
-        .map(|p| p.to_string_lossy().to_string())
+        .filter(|entry| entry.rel_path == rel_path);
+    let entry = matches
+        .next()
+        .ok_or_else(|| format!("evidence manifest has no entry at {rel_path}"))?;
+    if matches.next().is_some() {
+        return Err(format!(
+            "evidence manifest has more than one entry at {rel_path}"
+        ));
+    }
+    if entry.kind != kind {
+        return Err(format!(
+            "evidence manifest entry at {rel_path} has kind {:?} (expected {kind:?})",
+            entry.kind
+        ));
+    }
+    Ok(entry)
 }
 
 pub fn manifest_path_from_app_root(app_root: &Path) -> PathBuf {
@@ -239,9 +241,6 @@ mod tests {
 
         let manifest = EvidenceManifest {
             schema_version: EVIDENCE_SCHEMA_VERSION,
-            app_bundle_id: None,
-            app_binary_rel_path: None,
-            app_entitlements: None,
             entries: vec![EvidenceEntry {
                 id: "tool".to_string(),
                 kind: "helper".to_string(),
@@ -271,9 +270,6 @@ mod tests {
 
         let manifest = EvidenceManifest {
             schema_version: EVIDENCE_SCHEMA_VERSION,
-            app_bundle_id: None,
-            app_binary_rel_path: None,
-            app_entitlements: None,
             entries: vec![EvidenceEntry {
                 id: "tool".to_string(),
                 kind: "helper".to_string(),
@@ -294,26 +290,51 @@ mod tests {
     }
 
     #[test]
-    fn finds_entry_by_id() {
-        let manifest = EvidenceManifest {
+    fn unique_typed_lookup_requires_exactly_one_entry_of_the_right_kind() {
+        let entry = |id: &str, rel_path: &str, kind: &str| EvidenceEntry {
+            id: id.to_string(),
+            kind: kind.to_string(),
+            bundle_id: Some("com.example.service".to_string()),
+            rel_path: rel_path.to_string(),
+            sha256: Some("deadbeef".to_string()),
+            lc_uuid: None,
+            entitlements: None,
+            entitlements_error: None,
+        };
+        let path = "Contents/XPCServices/Service.xpc/Contents/MacOS/Service";
+        let mut manifest = EvidenceManifest {
             schema_version: EVIDENCE_SCHEMA_VERSION,
-            app_bundle_id: None,
-            app_binary_rel_path: None,
-            app_entitlements: None,
-            entries: vec![EvidenceEntry {
-                id: "com.example.service".to_string(),
-                kind: "xpc-service".to_string(),
-                bundle_id: Some("com.example.service".to_string()),
-                rel_path: "Contents/XPCServices/Service.xpc/Contents/MacOS/Service".to_string(),
-                sha256: Some("deadbeef".to_string()),
-                lc_uuid: None,
-                entitlements: None,
-                entitlements_error: None,
-            }],
+            // A decoy with the matching id and bundle_id at another path never substitutes.
+            entries: vec![entry(
+                "com.example.service",
+                "Contents/MacOS/Service",
+                "xpc-service",
+            )],
             notes: None,
         };
-
-        assert!(find_entry_by_id(&manifest, "com.example.service").is_some());
+        assert!(
+            unique_typed_entry(&manifest, path, "xpc-service")
+                .unwrap_err()
+                .contains("no entry at")
+        );
+        manifest.entries.push(entry("svc", path, "xpc-service"));
+        assert_eq!(
+            unique_typed_entry(&manifest, path, "xpc-service")
+                .unwrap()
+                .id,
+            "svc"
+        );
+        assert!(
+            unique_typed_entry(&manifest, path, "xpc-embedded-helper")
+                .unwrap_err()
+                .contains("has kind")
+        );
+        manifest.entries.push(entry("dup", path, "xpc-service"));
+        assert!(
+            unique_typed_entry(&manifest, path, "xpc-service")
+                .unwrap_err()
+                .contains("more than one entry")
+        );
     }
 
     #[derive(Debug, Deserialize)]

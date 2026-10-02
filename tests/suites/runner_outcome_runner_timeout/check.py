@@ -61,7 +61,6 @@ def check_envelope(envelope, rc, specimen, expected):
         prediction, attempt = step['sandbox_check'], step['attempt']
         target = request['attempt']['target']
         assert prediction['pid'] == worker['pid'], prediction
-        assert prediction['scope'] == 'post_sandbox', prediction
         assert prediction['operation'] == 'file-write-data', prediction
         assert prediction['filter_kind'] == 'path' and prediction['filter_type_id'] == 1, prediction
         assert prediction['filter_value'] == target, prediction
@@ -69,7 +68,8 @@ def check_envelope(envelope, rc, specimen, expected):
         assert type(prediction['rc']) is int, prediction
         assert prediction['rc'] == (0 if expectation['attempt_ok'] else 1), prediction
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction
-        assert step['drift'] is (False if expectation['attempt_ok'] else None), step
+        assert step['comparison']['observation'] == ('succeeded' if expectation['attempt_ok'] else 'permission_failure'), step
+        assert step['comparison']['order'] == 'query_first' and step['comparison']['limitations'] == [], step
         assert attempt['requested_path'] == target, attempt
         # The successful open's observed path is independent worker evidence
         # and must be present below.
@@ -104,7 +104,7 @@ def check_cli(variant, pw, out):
                 'attempt': {'kind': 'file', 'action': 'open_write', 'target': str(path)},
             })
             expected.append({'step_id': step_id, 'sandbox_outcome': 'allow' if i == 0 else 'deny',
-                             'attempt_ok': i == 0, 'drift': False if i == 0 else None})
+                             'attempt_ok': i == 0})
         if expected:
             expected[0]['errno'] = None
         policy = {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'}

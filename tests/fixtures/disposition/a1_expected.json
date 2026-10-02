@@ -1,68 +1,46 @@
 {
   "build": {
-    "commit": "22842442624dafa9a89c8c59a0b3b379029a32ae",
-    "describe": "v0.2.3-4-g2284244-dirty",
-    "number": "272",
-    "version": "0.2.3"
+    "commit": "4d3fdf46ba4d8e7d1beb8bdc0cbbca6658398956",
+    "describe": "v0.2.4-36-g4d3fdf4-dirty",
+    "number": "357",
+    "version": "0.2.4"
   },
   "data": {
-    "app_provenance": {
-      "app_binary_rel_path": "Contents/MacOS/policy-witness",
-      "app_bundle_id": "com.yourteam.policy-witness",
-      "app_entitlements": {},
-      "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
-      "evidence_notes": [
-        "Main app binary hash is omitted because the manifest is signed by the app bundle."
-      ],
-      "evidence_verify": null
-    },
-    "policy_augmentation": null,
     "policy_check": null,
-    "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/disposition-accept-audit/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
     "runner_client": {
       "argv": [
         "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
         "run",
         "--timeout-ms",
         "20000",
-        "com.yourteam.policy-witness.PWRunner",
-        "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/disposition-accept-audit/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json"
+        "--request",
+        "-",
+        "com.yourteam.policy-witness.PWRunner"
       ],
-      "capture_limit_bytes": 8388608,
-      "ended_at_unix_ms": 1790538612760,
+      "capture_limit_bytes": 75497472,
+      "ended_at_unix_ms": 1790902400619,
       "exit_code": 0,
-      "started_at_unix_ms": 1790538608981,
+      "request_delivery": {
+        "bytes_written": 932,
+        "error": null
+      },
+      "started_at_unix_ms": 1790902396864,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 4974,
-      "stdout_bytes_retained": 4974,
+      "stdout_bytes_received": 7058,
+      "stdout_bytes_retained": 7058,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
       "stdout_truncated": false
     },
-    "runner_provenance": {
-      "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
-      "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
-      "runner_entitlements": {
-        "error": null,
-        "keys": [],
-        "raw_plist": "{}"
-      },
-      "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
-      "runner_kind": "standard",
-      "runner_registry_id": null,
-      "runner_service_name": "com.yourteam.policy-witness.PWRunner",
-      "runner_signature": null
-    },
-    "runner_registry_id": null,
     "runner_result": {
       "bundle_id": "com.yourteam.policy-witness.PWRunner",
       "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
       "normalized_outcome": "runner_timeout",
-      "pid": 13116,
+      "pid": 79578,
       "policy_format": "sbpl",
       "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
       "rc": 1,
@@ -213,7 +191,7 @@
           "worker_lifetime_established": true
         },
         "partial_steps": true,
-        "pid": 13116,
+        "pid": 79578,
         "poll_stop_reason": "sentinel_deadline",
         "ready_byte_received": true,
         "reaped": true,
@@ -243,14 +221,13 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 10,
+      "schema_version": 13,
       "specimen_id": "a1_fifo_then_file",
       "steps": [
         {
           "attempt": {
             "errno": null,
             "error": "no completed attempt result: slot publication incomplete",
-            "exit_code": -1,
             "lifecycle": {
               "boundary": {
                 "answer": "reached",
@@ -273,57 +250,54 @@
               "summary": "started_without_result"
             },
             "missing_reason": "slot_incomplete",
-            "native_rc": null,
-            "normalized_path": null,
             "observed_path": null,
             "outcome": "not_run_worker_died",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
+              "observer": "runner_host",
+              "phase": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
             "rc": -1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-in-flight-md0ozzem/blocker.fifo",
-            "result_source": "synthetic",
-            "syscall_errno": null
+            "requested_path": "/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
+            "result_source": "synthetic"
           },
           "comparison": {
-            "conclusion": "unavailable",
             "limitations": [
-              "state_stability_unestablished",
-              "runtime_target_identity_unestablished",
-              "attempt:slot_incomplete",
               "attempt:started_without_result"
             ],
             "observation": "unavailable",
             "observation_basis": "no_completed_worker_result",
             "operation_relation": "matched",
             "order": "query_first",
-            "prediction": "allow",
-            "scope": "submitted_operation_and_target",
             "target_relation": "same_submitted"
           },
-          "deny_signal": null,
-          "drift": null,
           "sandbox_check": {
             "errno": 0,
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-md0ozzem/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-md0ozzem/blocker.fifo",
-              "input": "/private/tmp/pw-in-flight-md0ozzem/blocker.fifo",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
                 "realpath_resolved"
               ]
             },
-            "pid": 13116,
+            "pid": 79578,
             "rc": 0,
-            "result_source": "validator",
-            "scope": "post_sandbox"
+            "result_source": "validator"
           },
           "step_id": "fifo"
         },
@@ -331,7 +305,6 @@
           "attempt": {
             "errno": null,
             "error": "no completed attempt result: slot publication incomplete",
-            "exit_code": -1,
             "lifecycle": {
               "boundary": {
                 "answer": "not_reached",
@@ -354,35 +327,32 @@
               "summary": "not_reached"
             },
             "missing_reason": "slot_incomplete",
-            "native_rc": null,
-            "normalized_path": null,
             "observed_path": null,
             "outcome": "not_run_worker_died",
+            "path_diagnostics": {
+              "input": "/etc/hosts",
+              "observer": "runner_host",
+              "parent_realpath_resolved": "/private/etc/hosts",
+              "phase": "after_orchestration",
+              "realpath_resolved": "/private/etc/hosts",
+              "same_as_input": []
+            },
             "rc": -1,
             "requested_action": "open_read",
             "requested_kind": "file",
             "requested_path": "/etc/hosts",
-            "result_source": "synthetic",
-            "syscall_errno": null
+            "result_source": "synthetic"
           },
           "comparison": {
-            "conclusion": "unavailable",
             "limitations": [
-              "state_stability_unestablished",
-              "runtime_target_identity_unestablished",
-              "attempt:slot_incomplete",
               "attempt:not_reached"
             ],
             "observation": "unavailable",
             "observation_basis": "no_completed_worker_result",
             "operation_relation": "matched",
             "order": "query_first",
-            "prediction": "allow",
-            "scope": "submitted_operation_and_target",
             "target_relation": "same_submitted"
           },
-          "deny_signal": null,
-          "drift": null,
           "sandbox_check": {
             "errno": 0,
             "error": null,
@@ -400,10 +370,9 @@
               "realpath_resolved": "/private/etc/hosts",
               "same_as_input": []
             },
-            "pid": 13116,
+            "pid": 79578,
             "rc": 0,
-            "result_source": "validator",
-            "scope": "post_sandbox"
+            "result_source": "validator"
           },
           "step_id": "hosts"
         }
@@ -418,7 +387,7 @@
           "fifo",
           "hosts"
         ],
-        "pid": 13117,
+        "pid": 79579,
         "probe_bytes_expected": 238,
         "probe_bytes_written": 238,
         "reaped": true,
@@ -427,10 +396,10 @@
             "errno": 0,
             "filter_type": "PATH",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-md0ozzem/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo",
             "operation": "file-read-data",
             "outcome": "allow",
-            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-md0ozzem/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-3_qxf17t/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
             "rc": 0,
             "step_id": "fifo"
           },
@@ -452,25 +421,67 @@
       }
     },
     "runner_sandbox_diagnostics": {
-      "capture_status": "disabled",
       "correlation_status": "not_attempted",
       "disposition_integrity": "valid",
       "disposition_issues": [],
-      "first_deny": null,
       "permission_failures_without_record": null,
       "process_disposition": "signaled",
       "stop_reason": "sentinel_deadline",
-      "termination_cause": "host_sentinel_deadline",
-      "worker_pid": 13116
+      "termination_cause": "host_sentinel_deadline"
     },
-    "runner_service_bundle_id": "com.yourteam.policy-witness.PWRunner",
-    "runner_service_executable": "PWRunner",
-    "runner_service_name": "com.yourteam.policy-witness.PWRunner",
-    "runner_startup_diagnostics": null,
     "sandbox_log_capture": null,
+    "specimen": {
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "validator": null,
+        "worker": null
+      },
+      "host": {
+        "arch": "arm64",
+        "kernel_release": "23.6.0",
+        "macos_build": "23J220",
+        "macos_version": "14.8.3"
+      },
+      "policy": {
+        "augmentation": {
+          "applied": [],
+          "applied_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "error": null,
+          "original_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "status": "not_requested"
+        },
+        "imports": {
+          "closure_sha256": "998ba431e5cc432aed959a1243ae42712ce3fc5162acdd7d6ff9c75d109cc570",
+          "cycle": null,
+          "exceeded": null,
+          "failure": null,
+          "records": [],
+          "status": "complete"
+        }
+      },
+      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/drift-i4-fixtures-01/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
+      "runner_provenance": {
+        "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_entitlements": {
+          "error": null,
+          "keys": [],
+          "raw_plist": "{}"
+        },
+        "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.yourteam.policy-witness.PWRunner",
+        "runner_signature": null
+      }
+    },
     "timeout_ms": 20000
   },
-  "generated_at_unix_ms": 1790538612760,
+  "generated_at_unix_ms": 1790902400619,
   "kind": "run",
   "result": {
     "errno": null,
@@ -482,5 +493,5 @@
     "stderr": null,
     "stdout": null
   },
-  "schema_version": 3
+  "schema_version": 5
 }

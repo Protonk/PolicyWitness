@@ -30,6 +30,7 @@ COPIES = {
     "request_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.requestSchema"),
                        ("tests/lib/contract.py", "REQUEST_SCHEMA")],
     "response_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.responseSchema"),
+                        ("controller/src/json_contract.rs", "RESPONSE_SCHEMA_VERSION"),
                         ("tests/lib/contract.py", "RESPONSE_SCHEMA")],
     "worker_abi": [("controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "PW_PROBE_RUNNER_ABI_VERSION"),
                    ("runner/Sources/PWRunnerCore/CWorker.swift", "PWShmLayout.abiVersion"),
@@ -93,7 +94,10 @@ TARGETS = {
             f"    public static let responseSchema: Int = {v['response_schema']}",
             "}"]))],
     "controller/src/json_contract.rs": [
-        (*region("// ", ""), lambda v: f"pub const SCHEMA_VERSION: u32 = {v['controller_envelope']};")],
+        (*region("// ", ""), lambda v: "\n".join([
+            f"pub const SCHEMA_VERSION: u32 = {v['controller_envelope']};",
+            "/// The one runner response schema this controller reads; any other version is refused.",
+            f"pub const RESPONSE_SCHEMA_VERSION: u32 = {v['response_schema']};"]))],
     "tests/lib/contract.py": [
         (*region("# ", ""), lambda v: "\n".join(f"{k.upper()} = {v[k]}" for k in KEYS))],
     "docs/CONTRACT.md": [(*region("<!-- ", " -->"), sentence), (TABLE_BEGIN, TABLE_END, table)],

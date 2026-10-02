@@ -5,12 +5,10 @@
 
 use serde::Serialize;
 use serde_json::Value;
-use std::ffi::OsString;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::app_layout::resolve_contents_macos_tool;
-use crate::utils::{JsonOutputCapture, capture_json_output};
+use crate::utils::{JsonOutputCapture, capture_json_output, run_with_stdin};
 
 #[derive(Serialize)]
 pub struct PolicyCheckCapture {
@@ -62,21 +60,18 @@ fn envelope_normalized_outcome(env: &Value) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-pub fn run_policy_check(request_path: &Path) -> Result<PolicyCheckCapture, String> {
+/// Deliver the held request string to `sbpl-check --request -` on stdin. A
+/// launch or delivery failure is an error; the caller records the capture as
+/// unavailable and keeps the original runner reply.
+pub fn run_policy_check(request: &str) -> Result<PolicyCheckCapture, String> {
     let tool = resolve_contents_macos_tool("sbpl-check")?;
-    let argv = vec![
-        tool.into_os_string(),
-        OsString::from("--request"),
-        request_path.as_os_str().to_os_string(),
-    ];
-
-    let out = Command::new(&argv[0])
-        .args(&argv[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
+    let mut command = Command::new(&tool);
+    command.args(["--request", "-"]);
+    let (out, delivery) = run_with_stdin(command, request.as_bytes().to_vec())
         .map_err(|e| format!("failed to run sbpl-check: {e}"))?;
-
+    if let Some(error) = delivery.error {
+        return Err(format!("sbpl-check request delivery failed: {error}"));
+    }
     Ok(parse_policy_check_output(&out))
 }
 

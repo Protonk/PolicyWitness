@@ -16,8 +16,8 @@ signal.
   build.sh's `XPC_RUNNER_*_FILE` / `XPC_RUNNER_*_SHIM` set) must agree
   on the compiled file set, compared as `runner/`-relative paths.
 - Discovery is recursive under the target dirs
-  (`Sources/PWRunnerCore`, `Sources/PWSandboxCheckShim`,
-  `Sources/PWCWorkerShim`), so moving a file within a target is
+  (`Sources/PWRunnerCore`, `Sources/PWCWorkerShim`), so moving a file
+  within a target is
   invisible here; only adding/removing a compiled file trips the diff.
 - `runner/Tests/`, `runner/Clients/`, `runner/Services/`, and
   `runner/augments/` are managed separately and are not part of the

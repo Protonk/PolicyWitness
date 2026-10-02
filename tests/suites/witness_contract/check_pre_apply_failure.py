@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from blackbox import validate_step
 from run_capture import RunCapture
 from lifecycle_contract import CAUSE_LABELS
-from consumer import recover_evidence, validate_evidence_shape
+import consumer
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
 FORBIDDEN_OUTCOMES = {'ok', 'sandbox_apply_failed', 'bad_policy', 'runner_sandbox_denied'}
@@ -63,7 +63,6 @@ def no_cause_claim(envelope):
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None:
         assert isinstance(diagnostics, dict), diagnostics
-        assert diagnostics.get('first_deny') is None, diagnostics
         # A witnessed host cleanup label is not a sandbox or policy claim; sandbox and
         # policy attributions stay forbidden without pinning the old placeholder.
         for key in ('cause', 'termination_cause'):
@@ -77,21 +76,29 @@ def no_cause_claim(envelope):
 
 
 def common_evidence(envelope, rc, specimen, failure):
-    assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
-    answers = recover_evidence(envelope)
+    assert not consumer.validate(envelope), consumer.validate(envelope)
+    rows = consumer.steps(envelope)
     ids = [s['step_id'] for s in specimen['probe_plan']]
-    assert answers['failure_groups']['missing_result'] == (ids if failure else [])
-    assert answers['failure_groups']['unattributed_failure'] == ([] if failure else ids[1:])
-    assert answers['comparison_groups']['unavailable'] == (ids if failure else [])
-    assert answers['comparison_groups']['agreement'] == ([] if failure else ids[:1])
-    assert answers['comparison_groups']['directional_consistency'] == ([] if failure else ids[1:])
     if failure:
-        for answer in answers['steps']:
-            assert answer['prediction_missing_reason'] == 'validator_not_invoked', answer
-            assert answer['attempt_missing_reason'] == 'slot_incomplete', answer
-            assert {'prediction:validator_not_invoked', 'attempt:slot_incomplete'} <= set(answer['comparison']['limitations'])
-            assert answer['attempt']['native_rc'] is None and answer['attempt']['errno'] is None
-            assert answer['query']['native_rc'] is None and answer['query']['errno'] is None
+        # No query ran and no attempt published: both channels are synthetic,
+        # the record observes nothing, and the lifecycle says the step was
+        # not reached (C1).
+        for row in rows:
+            comparison = row['comparison']
+            assert (comparison['observation'], comparison['observation_basis']) == ('unavailable', 'no_completed_worker_result'), row
+            assert comparison['order'] == 'unestablished', row
+            assert 'attempt:not_reached' in comparison['limitations'], row
+            assert row['sandbox_check']['result_source'] == 'synthetic', row
+            assert row['sandbox_check']['missing_reason'] == 'validator_not_invoked', row
+            assert row['attempt']['missing_reason'] == 'slot_incomplete', row
+            assert row['attempt']['errno'] is None and 'native_rc' not in row['attempt'], row
+            assert row['sandbox_check']['native_rc'] is None and row['sandbox_check']['errno'] is None, row
+    else:
+        allowed = consumer.select(rows, observation='succeeded', order='query_first', target_relation='same_submitted')
+        denied = consumer.select(rows, observation='permission_failure', observation_basis='permission_errno',
+                                 order='query_first', target_relation='same_submitted')
+        assert [s['step_id'] for s in allowed] == ids[:1], allowed
+        assert [s['step_id'] for s in denied] == ids[1:], denied
     assert rc == (1 if failure else 0), f'CLI exit: {rc}'
     assert envelope['kind'] == 'run', envelope
     assert envelope['result']['ok'] is (not failure), envelope['result']
@@ -103,7 +110,6 @@ def common_evidence(envelope, rc, specimen, failure):
     worker = runner['runner_subprocess']
     assert type(worker['pid']) is int and worker['pid'] > 0, worker
     assert runner['pid'] == worker['pid'], runner
-    assert runner['schema_version'] >= 8, runner  # runner_subprocess.ordering: response 8
     ordering = worker['ordering']
     assert ordering['collection_closed_before_proceed'] is (not failure), ordering
     assert ordering['proceed_set'] is (not failure) and ordering['proceed_observed'] is (not failure), ordering
@@ -126,8 +132,7 @@ def common_evidence(envelope, rc, specimen, failure):
             # This compatibility spelling means no completed result. It does
             # not prove the worker never started the operation.
             assert attempt['outcome'] == 'not_run_worker_died', attempt
-            assert attempt['errno'] is None and attempt['syscall_errno'] is None, attempt
-            assert step['drift'] is None, step
+            assert attempt['errno'] is None, attempt
             assert attempt['requested_path'] == submitted['attempt']['target'], attempt
     else:
         assert runner['normalized_outcome'] == 'ok', runner
@@ -142,7 +147,7 @@ def common_evidence(envelope, rc, specimen, failure):
         for i, (step, submitted) in enumerate(zip(steps, specimen['probe_plan'])):
             expectation = {'step_id': submitted['step_id'],
                            'sandbox_outcome': 'allow' if i == 0 else 'deny',
-                           'attempt_ok': i == 0, 'drift': False if i == 0 else None}
+                           'attempt_ok': i == 0}
             failures.extend(validate_step(step, expectation))
             prediction, attempt = step['sandbox_check'], step['attempt']
             target = submitted['attempt']['target']
@@ -150,7 +155,6 @@ def common_evidence(envelope, rc, specimen, failure):
             assert prediction['operation'] == 'file-write-data', prediction
             assert prediction['filter_value'] == target, prediction
             assert type(prediction['rc']) is int and prediction['rc'] == i, prediction
-            assert step['drift'] is (False if i == 0 else None), step
             assert attempt['requested_path'] == target, attempt
             if i == 0:
                 assert attempt['outcome'] == 'ok' and attempt['observed_path'] == target, attempt
@@ -178,12 +182,11 @@ def lifecycle_observations(envelope, failure):
         assert request is None, worker
 
 
-def signal_contract(envelope):
+def removed_keys_absent(envelope):
     steps = envelope['data']['runner_result']['steps']
     assert len(steps) == 2, steps
-    failures = [f"{s.get('step_id')}: {s.get('deny_signal', '<absent>')!r}"
-                for s in steps if 'deny_signal' not in s or s['deny_signal'] is not None]
-    assert not failures, 'every step must contain deny_signal:null: ' + '; '.join(failures)
+    present = [f"{s.get('step_id')}: {key}" for s in steps for key in ('deny_signal', 'drift') if key in s]
+    assert not present, 'removed step keys present: ' + '; '.join(present)
 
 
 def main():
@@ -266,7 +269,7 @@ def main():
 
                 check('pre_apply.outcome_attribution', outcome)
                 check('pre_apply.library_result_attribution', no_library_result)
-            check(f'{name}.signal_contract', lambda: signal_contract(envelope))
+            check(f'{name}.removed_keys_absent', lambda: removed_keys_absent(envelope))
             runner = envelope['data']['runner_result']
             observations[name] = {'schema_version': runner.get('schema_version'),
                                   'validator_subprocess': runner.get('validator_subprocess'),
@@ -290,7 +293,7 @@ def main():
             assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
             assert 'ordering' not in runner, runner
             assert all(s['comparison']['order'] == 'unestablished' for s in runner['steps']), runner
-            assert not validate_evidence_shape(value), validate_evidence_shape(value)
+            assert not consumer.validate(value), consumer.validate(value)
 
     assert all(result['passed'] for result in results), 'contract failures retained in assertions.json'
 

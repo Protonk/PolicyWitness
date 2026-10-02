@@ -1,10 +1,10 @@
 # witness_contract
 
 Pins the load-bearing behaviors PolicyWitness contracts to provide:
-verdicts in the envelope, attempts in the envelope, drift between the
-two surfaced explicitly, validator failures attributed honestly, removed
-fields rejected, the test seam functioning, and the source-drift
-guardrail enforcing the audit trail.
+answers in the envelope, attempts in the envelope, the relation between
+the two recorded explicitly, validator failures attributed honestly, removed
+fields rejected, the specimen dossier collected, the test seam functioning,
+and the source-drift guardrail enforcing the audit trail.
 
 Each test asserts one contract claim. The suite reads as a
 behavior specification — what PolicyWitness promises, regardless of
@@ -33,7 +33,7 @@ the architecture behind it.
   `tests/fixtures/validator` transcripts and `runner_validator_failure`
   contract checks. Both require reversed partial verdicts to retain step
   association, all three completed attempts to retain their actual outcomes,
-  and the unanswered prediction to have an explicit error and `drift:null`.
+  and the unanswered prediction to have an explicit error and missing reason.
   These two cases also run in the baseline `runner_validator_failure` suite.
 
 ## Independent prediction and attempt targets
@@ -46,16 +46,17 @@ and random step IDs stay fixed. The test reads and retains external file bytes
 before decoding PW's JSON: A must change to nonempty data and B must retain every
 seed byte in both runs.
 
-The matching run requires allow/success with `drift=false` and
- deny/permission-failure with `drift=null`. The swapped run retains both predictions
-and attempts with `drift=null`: different submitted targets prevent comparison.
+The matching run requires an allow answer beside `observation: succeeded` and
+a deny answer beside `permission_failure`, both `same_submitted`. The swapped
+run retains both answers and attempts with `target_relation:
+different_submitted`: the record names the difference and judges nothing.
 This checks independent channel routing without promoting pairing to comparability.
 Redirecting a validator query to `attempt.target` must fail even if the envelope
 continues to echo the requested filter value. The existing classifier and
 steered-validator tests retain their separate contracts.
 
-The case checks step identity/order, raw attempt evidence and compatibility
-aliases, prediction and attempt paths, worker/validator completion, and drift.
+The case checks step identity/order, raw attempt evidence, prediction and
+attempt paths, worker/validator completion, and the comparison record.
 Shared black-box checks collect both prediction failures rather than stopping
 after the first mismatch. `RunCapture` retains each request, raw envelope,
 stderr, and capture metadata under `matching/` and `swapped/`; these directories
@@ -101,7 +102,7 @@ must have intact replies, matching identities/windows/budgets, finished pipes,
 observed successful exits and confirmed cleanup. Supported timeout/overflow
 requires a cutoff at the identified boundary, the documented deadline or
 limit with its observations, bounded retention and confirmed cleanup. Such
-capture is unavailable for correlation: candidates, `first_deny` and missing-record
+capture is unavailable for correlation: candidates and missing-record
 diagnostics are null. It is not positive capture coverage. Missing helpers,
 blocked access, malformed complete replies, wrong bounds, unexplained process
 failures and unconfirmed cleanup remain failures. Generic `unavailable` is
@@ -113,7 +114,7 @@ Positive preservation coverage is mandatory and independent of live emission:
 - Rust window controls run actual argv against `observer.py`'s fixed event
   timestamps: both padding regions, exact/exterior boundaries, equal spans and
   rollback. Wrong/missing/trailing bounds withhold correlations without losing
-  diagnostic records, including legacy replies and historical envelope windows.
+  diagnostic records.
 - `log_replay_tests.rs` replaces only the inner query command with supplied text,
   calls the production `log_show.rs` parser/collector, transports a bounded reply
   through the supervised receiver, and runs real assembly and consumer recovery.
@@ -152,8 +153,8 @@ through the CLI, using the real validator and no test overrides. Both targets
 already contain distinct random bytes. Policy allows writing one and denies
 writing the other. The allowed attempt must succeed with its observed path;
 the denied attempt must report `open_failed` with a permission errno. Their
-predictions must be allow and deny respectively, with `drift=null` for the
-compound create scope.
+predictions must be allow and deny respectively, with `operation_relation:
+unresolved` for the compound create scope.
 Both children exit cleanly and the steps retain their identities and evidence.
 
 Before decoding the envelope, the test independently reads both files and
@@ -175,11 +176,12 @@ tests/run.sh --case witness_contract/create_existing_file_preserves_contents
 
 `queries_precede_attempts` runs an allowed read and unlink of
 one file with the real validator and no overrides. Both native predictions must
-be allow with `query_first` and allow/success agreement. The test observes file
+be allow with `query_first` beside `observation: succeeded`. The test observes file
 absence before decoding, and retains later host nonresolution separately as
-`host_path_resolution_changed`. Unordered same-target mutation uncertainty,
-including later-step unlink, remains pinned by Swift and offline consumer
-controls. The stronger gated observer and deliberate barrier-bypass controls are
+`sandbox_check.path_diagnostics.realpath_resolved: null`. A later-step unlink
+of the same submitted target is read from `order` and the unlink step's own
+result (reading rule 6), pinned by the matrix rows and consumer controls. The
+stronger gated observer and deliberate barrier-bypass controls are
 separate tests; this ordinary run alone does not replace them.
 
 `queries_use_a_pre_attempt_interval` covers absent/create/unlink,
@@ -202,13 +204,14 @@ native queries. `external_mutation_between_query_and_attempt` removes it after
 a native allow receipt while collection remains open. Both retain real native
 observations and state/identity limits; test-only mutation knowledge is not a
 production attribution. No specific native verdict is required for a missing
-target. The resulting ENOENT read is unavailable/null rather than drift.
+target. The resulting ENOENT read is an `other_failure` observation beside the
+earlier allow answer; the record relates them and judges nothing.
 
 `max_steps_ordered` runs 256 distinct existing targets, half denied for writing
 by literal, and independently checks every file's bytes before decoding.
 `deny_default_ordered` checks an allowed and denied read under `(deny default)`.
-Both require eligible predictions to be `query_first`; allow/success is limited
-agreement, and deny/permission failure is directional consistency with null drift.
+Both require eligible predictions to be `query_first`; allow/`succeeded` and
+deny/`permission_failure` records stay distinct, with no judgment of agreement.
 
 `max_targets_reply_survives` measures five admitted 256-step workloads: denied
 ASCII reads of 511-byte targets with log capture, successful reads of
@@ -271,8 +274,8 @@ premature completion; the baseline supplies the delayed-release coverage.
 `posix_spawn(sb_api_validator)`: the structured native return code, executable
 path, operation and nonempty diagnostic, without requiring English wording.
 It also requires the mirrored hostile executable path, no validator
-subprocess, closed collection with `not_spawned`, unestablished step order/null
-drift, and an independently changed file after the released write.
+subprocess, closed collection with `not_spawned`, unestablished step order,
+and an independently changed file after the released write.
 
 ## Completed observations after a worker timeout
 
@@ -284,8 +287,8 @@ reads must show changed, nonempty bytes for the allowed write and intact seed
 bytes for the denied write before the envelope is decoded.
 
 Both completed attempts retain their distinct outcomes, step IDs/order, paths,
-errno evidence, matching real validator predictions, and `drift=false` for
-allow/success versus null for the unattributed permission failure.
+errno evidence, matching real validator predictions, `observation: succeeded`
+for the allowed write and `permission_failure` for the denied one.
 The validator exits cleanly and `partial_steps=false`: failed run completion
 does not erase completed observations. The shared checker, timing margins,
 and retained artifacts are documented in `runner_outcome_runner_timeout`.
@@ -312,7 +315,7 @@ under `(version 1) (allow default)` with `--no-log-capture`:
   forbids `unknown` or any value attributing the signal to the sandbox.
 - `a3`: `/etc/hosts`, the FIFO, `/etc/hosts`. The same host witnesses appear with
   progress at attempt index 1, and the completed first step keeps `outcome: ok`,
-  `result_source: worker`, `rc: 0` and `conclusion: agreement`.
+  `result_source: worker`, `rc: 0`, `order: query_first` and empty limitations.
 - `a4`: `/etc/hosts` with `worker_timeout_ms: 300` and
   `worker_post_apply_hang_ms: 800`. The deadline fires and the worker exits 0
   during grace: `sentinel_deadline`, `exit_code: 0`, `done_observed: true`, no
@@ -351,12 +354,12 @@ it provides no evidence of compilation failure. Both runs disable log capture.
 
 The failure run must retain its subprocess and both overrides while reporting
 no observed compile/apply return, allow/deny prediction, completed attempt or
-drift comparison. The positive control removes only the overrides and requires
-allow/success with `drift=false` and deny/permission-failure with null. Independent file
+comparison record. The positive control removes only the overrides and requires
+allow/`succeeded` and deny/`permission_failure` records. Independent file
 reads precede JSON checking: both seeds survive the failure run; the positive
 control changes the allowed file and preserves the denied file. Both runs must
-avoid a sandbox-termination claim and explicitly emit `deny_signal: null` on
-every step. Missing attempts use the current compatibility spelling
+avoid a sandbox-termination claim and carry no `deny_signal` or `drift` key on
+any step. Missing attempts use the spelling
 `not_run_worker_died`, meaning no completed result, without proving that the
 operation never started.
 
@@ -368,11 +371,11 @@ outcome, so it protects the absence of library/policy claims across outcome
 renames; classifier tests pin the mapping. It keeps the recipe's other
 assertions: a real failure artifact in the error, both mirrored overrides,
 subprocess and missing-step evidence checks, and the un-overridden positive
-control. Optional subprocess objects may be omitted or null; explicit per-step
-signal/errno/drift nulls require key presence.
+control. Optional subprocess objects may be omitted or null; a null per-step
+`errno` requires key presence.
 
 `check_pre_apply_failure.py` collects separate attribution, step/process evidence,
-file-effect, lifecycle, cause and signal assertion groups in `assertions.json`. Lifecycle
+file-effect, lifecycle, cause and removed-key assertion groups in `assertions.json`. Lifecycle
 groups check polling reason, ready/done observations, termination-call results,
 successful reaping and wait-error arrays through the signed CLI. A failing
 group does not prevent the positive control from running. Any failing group
@@ -465,22 +468,46 @@ The [unfamiliar diagnostic preservation contract](../../FAILURE-PROPAGATION-CONT
 records the required distinctions and their test owners; running the controls
 requires no retained mutation experiment or acceptance output.
 
-The steered-validator case also runs ten bounded comparison scenarios through the
-CLI. `check_comparison.py` records independent expectations, direct DAC EACCES and
-file witnesses. It covers supported agreement and unavailable ordered
-deny/success differences, both permission-failure
-predictions, different target and operation, missing queries, successful attempts
-without predictions, compound create and unsupported attempts. It checks comparison
-scope, provenance and simultaneous limits. The transcript supplies verdicts; the
-worker attempts and direct OS/file witnesses are real. These are interpretation
-controls, not native compiler-drift discoveries. Swift controls separately cover
-legacy absence, unusual errors, exec child evidence and deterministic later host
-path disappearance.
+## Comparison matrix
 
-The removed-target control now expects both native queries to precede read/unlink:
-`query_first`, allow/success agreement, and independent host nonresolution after
-unlink. Unordered same-target mutation protections remain covered by classifier
-and offline consumer controls. Ordered deny/success remains unavailable.
+`comparison_matrix` runs the three live specimens of
+[`tests/fixtures/comparison/matrix.json`](../../fixtures/comparison/README.md)
+through the CLI with `--no-log-capture`: S (real validator, twenty-four rows),
+B (the validator steered by `stub_validator.py` through
+`_test_overrides.validator_executable_path` and the I/O deadline seam; its
+records are stub output, so expectations come from submitted scopes and
+independent file and permission controls, never native verdicts) and C (a
+policy that fails to compile). Before any run it records direct controls:
+mode-000 opens and spawns fail with EACCES outside PW, the compiled helpers
+exit 0 and 1, absent paths are absent. Every file is recreated before every
+specimen, because B unlinks the paths it queries. For each row it asserts the
+six-field record, the raw fields named beside it, selection of the same step
+by field through `tests/lib/consumer.py`, and the file effects after the run
+(bytes unchanged, removed, created, or the one byte `open_write` leaves).
+Combined failures are reported together in `matrix-summary.json`. The T row
+is owned by `worker_attempt_in_flight_at_deadline`; the same fixture rows are
+read by `runner_unit`'s `ComparisonEvidenceTests`.
+
+## Specimen dossier
+
+`dossier_witness` checks `data.specimen` against facts read independently of
+the envelope: the request bytes the controller held, SHA-256 of the submitted
+and applied source, the literal import closure (a specimen with an
+`(import "system.sb")` and one with a refused augment), `sysctl` host facts,
+and the evidence manifest's entries. Seven examples: an ordinary run, a run
+with imports, an applied augment, a refused augment (`failed` with
+`augmentation_failed` imports and no client invocation), a policy without
+source (`not_applicable`, delivered and refused by the runner as
+`bad_policy`), controller refusals (a missing argument, an absent file,
+invalid JSON and a non-object request each print the uniform `tool_error`
+envelope with the dossier collected so far, exit 2 and no temporary request
+file), and executable overrides (a byte-identical worker copy records
+`match`; different bytes record `mismatch`; a nonexistent, relative, NUL or
+overlong path records `unavailable` with its reason; both helper roles are
+independent). `request_delivery` must report the held byte count on every
+invoked run. The opt-in `dossier_witness_byoxpc` repeats the ordinary and
+override examples through an installed BYOXPC copy, where all three
+`binaries` records are objects.
 
 The pre-apply case also attempts a real spawn of a nonexistent worker and
 requires unchanged files, no worker or validator subprocess, and no ordering

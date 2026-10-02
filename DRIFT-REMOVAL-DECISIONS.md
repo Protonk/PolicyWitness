@@ -1,6 +1,6 @@
 # Drift removal: decision log
 
-Review material for the operator, kept beside `DRIFT-REMOVAL-PLAN.md` while the
+Review material for the operator, kept after `DRIFT-REMOVAL-PLAN.md` was deleted at closeout, while the
 plan runs. Not shipped documentation. Entries are dated; each judgment call
 names the alternatives and the plan rule applied. On resumption after a context
 break, read this file with the plan and the repository instructions.
@@ -202,3 +202,135 @@ controls, new live cases and registries; then build, `runner_unit`,
 producer that emits the new shape. Drafts written during the I1 battery
 (outside the tree) are the consumer rewrite, the Swift matrix reader, the
 live matrix checker and the dossier module.
+
+## 2026-10-01 — I2–I4 landed on one integrated candidate
+
+Source snapshot: the working tree on `main` after `4d3fdf4`, committed as the
+landing commit named under Closeout. `docs/contract.json` is at response 13 and
+envelope 5 with every generated copy regenerated. The signed build, `cargo
+test`, `runner_unit`, `source_drift` and the witness, dossier and barrier
+cases are green; the battery evidence is listed below.
+
+### Judgment calls
+
+- **Dispatcher fixture host is a compiled Mach-O.** The artifact inspector's
+  `nm -u` host-invariance receipt cannot read a shell-script stub, so
+  `tests/fixtures/dispatcher/artifacts.py` compiles a one-line C host for the
+  fixture bundle and `dispatcher/artifact_controls` gained the
+  `host_imports_sandbox` control: an intact, sealed bundle whose host links
+  libsandbox and calls `sandbox_check` must fail with `host_invariance` and
+  `sandbox_symbols == ['_sandbox_check']`; the valid bundle's receipt must be
+  `returncode 0` with no symbols. Alternative rejected: tolerating an
+  unreadable host in the inspector, which would let a damaged host pass.
+- **Matrix helpers are compiled, not copied.** A copy of `/usr/bin/false` is
+  killed at launch on this host (exit 137) while a copy of `/usr/bin/true`
+  runs; the fixture's `helper_true`, `helper_false` and `helper_locked` are
+  now compiled (`int main(void) { return N; }`), the `copy_of` state is gone
+  and the row/control text says so. `check_dossier.py` copies the
+  `/usr/bin/true` bytes with `copyfile` because `copy2` fails on the system
+  file's flags. Recorded as host behaviour; not investigated further.
+- **S24's effect is one byte, not zero.** The worker's `open_write` writes
+  one byte after `O_TRUNC`; the fixture said "zero bytes". The row, its
+  control text and the live check's effect parser (`present, N bytes`) were
+  corrected. No producer change.
+- **Bare `process-exec` beside a spawn is `operation_relation: different`.**
+  The producer's rule (`matched` when the submitted operation is the mapped
+  one, `different` otherwise, `unresolved` only for compound create and
+  unsupported attempts) predates the plan and D1 keeps the relations
+  unchanged; the C-worker case's `unresolved` expectation was corrected and
+  the guide's `unsupported_operation` note states the rule.
+- **A policy without `sbpl_source` is `bad_policy`.** The request is
+  delivered and the runner's structural check refuses it; the dossier witness
+  had expected `bad_request`. D2 fixes only the dossier state
+  (`not_applicable`), so the runner-owned outcome was recorded as observed
+  and the diagnostic must name `sbpl_source`.
+- **Exact-version mirrors.** `DispositionResolverTests` dropped its
+  `response_with_disposition == 10` and `responseSchema >= 10` checks (the
+  Python contract module no longer exports introduction versions); the three
+  filter suites dropped `--minimum-schema-version 8` (the rewritten adapter
+  accepts only the current versions); `order_barrier_mutations` no longer
+  compiles `PWSandboxCheckShim`; the smoke, `testlib.sh`, release-acceptance
+  and menagerie readers of `runner_kind` moved to
+  `data.specimen.runner_provenance`.
+- **Integration tests follow the D2 shapes.** A refusal has
+  `data.runner_client: null` (no `(runner not invoked)` placeholder) and the
+  dossier's `failed` augmentation record with `imports.failure:
+  augmentation_failed`; disabled capture has a null capture with
+  `correlation_status: not_attempted`; applied and absent augments are read
+  from `data.specimen.policy.augmentation`; an invalid `--log-timeout-ms`
+  prints the uniform envelope with null execution records and the dossier.
+- **Status-word diagnostic.** The classifier's diagnostic for a worker that
+  published only the status word now reads "published a
+  preparation/application failure through the status word (status=-1;
+  apply_errno=N)"; the word "legacy" was removed from the runner's
+  diagnostics, comments, test labels and contributor text (the `.abi6`
+  ordering control is `abi6_worker`). `HostOutcomeClassifierTests` pins the
+  new text.
+- **Pre-existing warning left alone.** `log_capture::capture_reserving` is
+  unused in the `policy-witness` binary (the observer binary and the tests
+  use it); the module is shared through `#[path]` and unchanged by this work.
+
+### Battery evidence (all under `tests/out/runs/`)
+
+- `drift-i4-default-01`: the first default battery on the candidate, 12
+  failures, every one repaired above; kept unregistered as repair evidence.
+- `drift-i4-repair-live-01`, `-02`, `-03`: targeted reruns; `-03` is the
+  `witness_contract` suite green (36/36 including `comparison_matrix` with 32
+  rows, `dossier_witness` with 7 examples and the opt-in
+  `order_barrier_mutations`); `-02` is `integration` green.
+- `drift-i4-repair-sd-01`, `drift-i5-sd-01`, `drift-i5-sd-02`: `source_drift`
+  reruns during the documentation pass; the last is green on the final text.
+- Receipts for every D1 row are the `comparison_matrix` artifacts
+  (`matrix-summary.json`, three raw envelopes, `direct-controls.json`) and,
+  for T, `worker_attempt_in_flight_at_deadline`; every D2 failure-table shape
+  has its receipt under `dossier_witness` (`controller_refusals`, `refused`,
+  `no-source`, `executable_overrides`).
+
+## 2026-10-01 — I5 documentation and R10
+
+- Order followed: `docs/QUESTIONS.md`, `generate_limits.py` (no
+  `limits.json` description needed a change; the generator refused the
+  guide's `#reading-a-comparison-record` link until that section existed, and
+  `contract_versions`' stale-copy control failed through the same link), the
+  guide, README, `docs/CONTRACT.md` and `AGENTS.md`, the controller and
+  runner READMEs, `runner/AGENTS.md`, `tests/README.md`, `tests/COVERAGE.md`,
+  the failure contract (its final chapter replaced; the scenario table is
+  generated from `tests/fixtures/comparison/matrix.json`), the suite and
+  fixture READMEs, catalog descriptions, `DRIFT-REMOVAL-CANDIDATES.md` and
+  `FIVE-FOLLIES.md` status, then the plan's deletion.
+- Reviewer step (Method 6): four fresh-context sub-agents reviewed the
+  guide; README, CONTRACT and AGENTS; the controller and runner READMEs with
+  `runner/AGENTS.md`; and the failure contract with the tests README and
+  COVERAGE. Fixes applied from the first two reports: "Channel A" and "rather
+  than by a label" wording, the exec stream-field contradiction, the
+  reply/envelope distinction in README and AGENTS, and a definition of
+  `query_first` in README. Findings not acted on, with reasons: regression
+  guards that name rejected request fields (`instrumentation`,
+  `path_membership`, `runner.mode=debuggable`) describe current rejections;
+  dated filter-ID verifications are the record `source_drift` parses; test
+  suite names and `_test_overrides` are project vocabulary outside this
+  change. The suite and fixture READMEs had a dedicated document-only pass
+  without a separate reviewer (limitation recorded).
+- No bridge sentences were proposed; every historical clause was deleted
+  rather than bridged.
+- R10 remaining matches, by meaning: (1) `verdict` describing the validator's
+  `sandbox_check` answer in validator, batch-mode and classifier material is a
+  current descriptive use; (2) `drift` in `source_drift`, `runner_abi_layout`,
+  `artifact.py` and `runner_manager.rs` means source-set, layout, inventory
+  or alias drift, an unrelated use; (3) `legacy` in `runner_select.rs` and
+  `runner_manager.rs` names accepted older request and registry spellings
+  unrelated to the comparison record; (4) removed-key rejections in
+  `consumer.py`, the checker controls, `EnvelopeInvariantTests`,
+  `ContractVersionTests` and the failure contract's invariants name the keys
+  they reject; (5) `tests/fixtures/comparison/baseline_response12/`,
+  `a1_known_loss.json` and `records/` are immutable evidence; (6)
+  `app_bundle_id`, `app_binary_rel_path` and `app_entitlements` remain
+  manifest fields written by `build-evidence.py` and read by the artifact
+  inspection, not by the controller; (7) `macos_build_version` is the
+  `sbpl-check` helper's own output field, now described as `kern.osversion`;
+  (8) the `_malformed_prediction_and_missing_alias` isolation control was
+  renamed `_missing_errno` to say what it mutates.
+- `baseline_response12/plan_matrix.md` carries the plan's scenario table as
+  of commit 7765be8 so that `match_live.py` and `match_retained.py` still
+  parse after the plan's deletion; `match_live.py` reproduces
+  `live_row_match.txt` byte for byte.

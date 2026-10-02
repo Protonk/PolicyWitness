@@ -7,6 +7,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import contract
 from run_capture import RunCapture
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -18,7 +19,7 @@ def run(pw, output, request):
         rc = capture.wait(timeout=30)
         envelope = capture.load_json()
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] >= 6, runner  # worker_evidence: response 6
+    assert runner['schema_version'] == contract.RESPONSE_SCHEMA, runner
     assert runner.get('test_overrides') == request['_test_overrides'], runner
     return rc, runner
 
@@ -56,8 +57,9 @@ def check_worker(pw, output, fixture, mode):
     step = runner['steps'][0]
     assert step['sandbox_check']['pid'] == process['pid'], step
     for channel in ('sandbox_check', 'attempt'):
-        assert step[channel]['result_source'] == 'synthetic' and step[channel]['native_rc'] is None, step
-    assert step['drift'] is None and step['deny_signal'] is None, step
+        assert step[channel]['result_source'] == 'synthetic', step
+    assert step['sandbox_check']['native_rc'] is None and 'native_rc' not in step['attempt'], step
+    assert 'drift' not in step and 'deny_signal' not in step, step
     evidence = process.get('worker_evidence')
     if mode == 'transport_incompatible':
         assert evidence is None, evidence
@@ -136,10 +138,12 @@ def check_validator(pw, output, bad_tail):
         step = runner['steps'][i]
         assert step['sandbox_check']['result_source'] == 'validator', step
         assert step['sandbox_check']['native_rc'] is None and step['sandbox_check']['rc'] == -1, step
-        assert step['sandbox_check']['error'] == 'controlled diagnostic '+str(i) and step['drift'] is None, step
+        assert step['sandbox_check']['error'] == 'controlled diagnostic '+str(i), step
+        assert step['comparison']['order'] == 'unestablished', step
         assert step['attempt']['result_source'] == 'worker' and step['attempt']['rc'] == 0, step
     assert records[2]['outcome'] == 'allow' and records[2]['rc'] == 0, records[2]
-    assert runner['steps'][2]['sandbox_check']['native_rc'] == 0 and runner['steps'][2]['drift'] is False, runner
+    assert runner['steps'][2]['sandbox_check']['native_rc'] == 0, runner
+    assert runner['steps'][2]['comparison']['observation'] == 'succeeded', runner
     if bad_tail:
         assert process['decode_fault']['kind'] == 'utf8' and process['decode_fault']['context_b64'] == '/w==', process
         assert process['decode_fault']['byte_offset'] == len(emitted)-2, process

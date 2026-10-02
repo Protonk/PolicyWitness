@@ -17,13 +17,8 @@ scripts=(
   "${SUITE_DIR}/bug_report_returns_verdicts.sh"
   "${SUITE_DIR}/create_existing_file_preserves_contents.sh"
   "${SUITE_DIR}/debuggable_mode_rejected.sh"
-# drift_surfaced_in_envelope removed: its original premise (BBX-001
-# mach-lookup global-name drift) was a wrong-filter-ID bug, not real
-# drift, and was fixed by GLOBAL_NAME=2. All other known op+filter
-# unreliabilities (iokit, sysctl) are now classified
-# prediction_unavailable — also not drift. Reintroduce when a real
-# current drift case is identified that the R10 steps[].drift field
-# should surface.
+  "${SUITE_DIR}/comparison_matrix.sh"
+  "${SUITE_DIR}/dossier_witness.sh"
   "${SUITE_DIR}/worker_termination_and_log_correlation.sh"
   "${SUITE_DIR}/deny_capture_covers_the_run.sh"
   "${SUITE_DIR}/log_capture_controls.sh"
@@ -50,6 +45,5 @@ scripts=(
   "${SUITE_DIR}/validator_unavailable_reports_degraded.sh"
   "${SUITE_DIR}/worker_post_apply_hang_seam.sh"
   "${SUITE_DIR}/worker_attempt_in_flight_at_deadline.sh"
-  "${SUITE_DIR}/drift_determination_via_validator_seam.sh"
 )
 test_run_scripts "${scripts[@]}"

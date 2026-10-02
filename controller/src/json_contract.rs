@@ -8,7 +8,9 @@ use serde_json::{Map, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
+/// The one runner response schema this controller reads; any other version is refused.
+pub const RESPONSE_SCHEMA_VERSION: u32 = 13;
 // END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]

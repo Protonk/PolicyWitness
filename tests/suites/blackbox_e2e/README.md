@@ -11,9 +11,8 @@ the BYOXPC runner suite.
 - Every probe step has sandbox_check and attempt results; step IDs are unique
   and retain their expected order.
 - Probe actions are idempotent and scoped under a per-run test root.
-- Denial classification uses the prediction plus attempt evidence. Response 5
-  requires explicit `deny_signal: null`; the channel is unobserved. The checker
-  retains support for legacy signal expectations on stored pre-5 replies.
+- Denial classification uses the answer plus attempt evidence; steps carry no
+  signal channel, and the checker rejects a `deny_signal` or `drift` key.
 
 ## How to run
 
@@ -28,20 +27,20 @@ bundle for every step. Failures include mismatched sandbox_check outcomes,
 attempt results, or denial classification.
 
 The checker collects errors across both evidence channels and all returned
-steps. An unexpected prediction is a failure and cannot suppress validation
+steps. An unexpected answer is a failure and cannot suppress validation
 of an attempt or a later step. The shell wrappers treat every nonzero checker
 exit as a failure.
 
 `validate_run.py` uses `tests/lib/blackbox.py` for envelope, step identity/order,
-required evidence fields, scalar types, and explicit prediction/attempt/errno/
-drift expectations. The case files choose the expectations; denial and signal
+required evidence fields, scalar types, and explicit prediction/attempt/errno
+expectations; `tests/lib/consumer.py` validates the envelope and every
+comparison record first. The case files choose the expectations; denial
 checks stay in this suite. The helper performs no setup and makes no skip
 decisions. The menagerie uses the same checks with its own policy requirements.
-The required attempt aliases `rc`/`exit_code` and `errno`/`syscall_errno` must
-agree in type and value. Nullable evidence keys remain present; optional attempt
-`error` text can be omitted or null.
+Nullable evidence keys remain present; optional attempt `error` text can be
+omitted or null.
 
-Missing builds may skip the live cases. Prediction disagreements are never
+Missing builds may skip the live cases. Unexpected answers are never
 inferred to be host limitations. Any supported host variation must be
 expressed as a specific per-step expectation with supporting evidence, and
 must preserve the remaining attempt and correlation assertions.
@@ -49,8 +48,9 @@ must preserve the remaining attempt and correlation assertions.
 BBX-002's missing-file step explicitly expects `prediction_unavailable` and
 an attempted read that fails with ENOENT. As specified in `docs/PolicyWitness.md`,
 an unavailable prediction requires `rc=-1`, null `errno` and `filter_type_id`,
-and an explicit `drift:null`. Real allow/deny verdicts still require an integer
-filter type. This step is validated normally and does not skip the case.
+and the `query_plan:path_unresolved_at_planning` limitation. Real allow/deny
+answers still require an integer filter type. This step is validated normally
+and does not skip the case.
 
 ## Fixtures
 
@@ -84,20 +84,21 @@ claim tables, a record built from it is accepted, its mutations are rejected wit
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
 The expected-fixture controls accept `tests/fixtures/disposition/a1_expected.json`
-(built from the witnessed A1 facts and the reviewed claim row), accept the
-captured `a1_known_loss.json` as the legacy reply it is and reject it at the
-record version, and reject named mutations of the accepted baseline (request
+(a live envelope of the a1 specimen at the current contract), refuse the
+captured `a1_known_loss.json` as the unsupported version it is before any
+claim is read and reject it for the missing record once its versions are
+raised, and reject named mutations of the accepted baseline (request
 removed while the cause is kept, exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step
 answers, with or without differing debug indices), each with its expected rule.
-The consumer library reports the lifecycle account as `not_reported` for legacy
-replies and requires the record at the record version.
+The consumer library reports an envelope of another version as `unsupported`
+and requires the record beside every worker subprocess.
 
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,
-step correlation, alias presence/agreement, and combined failures, alongside
-each suite's own rules. Valid fixtures contain explicit compatibility aliases;
-optional diagnostic text and expected null errno values have positive controls.
+step correlation, removed-key rejection, and combined failures, alongside
+each suite's own rules. Optional diagnostic text and expected null errno
+values have positive controls.
 Paired responses with reordered steps must retain exactly the same step
 diagnostics and add only one order error. These controls cover valid evidence
 and a moved faulty attempt, comparing diagnostic multisets without pinning a
@@ -118,7 +119,12 @@ including when the shared scripts run under BYOXPC. The rendered specimen and
 removes scratch on success or failure. Test correctness does not depend on
 Desktop/Documents privacy consent.
 
-The shared checker requires the comparison, submitted attempt kind/action and
-host path provenance introduced in response 7. Checker controls include a constructed response-7
-positive case, missing comparison and independently malformed channels; the
-stored response-5 fixtures continue to exercise legacy contracts.
+The shared checker requires the six-field comparison record, submitted attempt
+kind/action and host path provenance on every step at the current response
+schema. `checker_controls` exercises the consumer directly: a synthetic
+current-version envelope passes; another or malformed version is reported as
+`unsupported` with no downstream errors; each removed key at its former path,
+each limitation outside the vocabulary, a record that contradicts its raw
+fields and a `query_first` claim without its chain are rejected; the client's
+own failure replies validate; and the ordering of a successful unlink against
+its query is read from `order` alone.

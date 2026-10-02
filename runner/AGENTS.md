@@ -12,7 +12,7 @@ SwiftPM is test-only here. Production builds still go through [build.sh](../buil
 
 **When to add a unit test rather than an e2e suite.** Reach for `runner_unit` when:
 
-1. The behavior is a small pure function that backs an outcome decision (e.g. the orchestrator's drift computation, `CWorker`'s sentinel-deadline math, `ValidatorClient`'s verdict-by-step-id join). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
+1. The behavior is a small pure function that backs an outcome decision (e.g. the orchestrator's comparison record, `CWorker`'s sentinel-deadline math, `ValidatorClient`'s verdict-by-step-id join). A wrong branch here surfaces as the wrong `normalized_outcome` in production, with no obvious crash.
 2. A required observation is unreliable from an ordinary specimen, such as a failed host kill/reap or completed publication followed by an abnormal exit. Use narrow driver controls; constructed classifier rows establish interpretation separately.
 3. You're testing a failure mode of a small helper (validator partial-evidence on EOF, prediction-unavailable query exclusions) where the happy path is already covered by every passing e2e run and you want the failure paths pinned.
 
@@ -36,13 +36,11 @@ Don't reach for `runner_unit` when:
 
 The wrapper keeps the Swift log and rejects an internal `SKIP` or `FAIL` before crediting live cases.
 
-**Stubbing C function pointers.** `SandboxLib`'s function-pointer slots are `@convention(c)`, which forbids closure capture. To observe side effects (call counts, freed-pointer lists) from a stub, route through file-scope `private var`s and reset them at the top of any test that uses them. [SandboxApplyTests.swift](Tests/PWRunnerCoreTests/SandboxApplyTests.swift) is the worked example.
-
 **Promoting `private` symbols to `internal`.** `@testable import` reaches `internal` but not `private`. Promote a helper to `internal` (drop the `private`) when a unit test needs it; production behavior is unchanged. The few we currently expose are documented in their files' top comments.
 
 ## Testing `normalized_outcome` failure paths via `_test_overrides`
 
-Several `normalized_outcome` values are only reachable when a specific boundary fails (`libsandbox_unavailable`, `worker_spawn_failed`, `runner_timeout`). To exercise the real production error-handling code rather than stubbing return values, the request JSON accepts an optional `_test_overrides` block. Each honored override is mirrored back into `data.runner_result.test_overrides`, so the resulting envelope is self-describing: a reader can tell a production run (`test_overrides: null`) from a test-overridden one at a glance.
+Several `normalized_outcome` values are only reachable when a specific boundary fails (`worker_spawn_failed`, `runner_timeout`, `validator_no_reply`). To exercise the real production error-handling code rather than stubbing return values, the request JSON accepts an optional `_test_overrides` block. Each honored override is mirrored back into `data.runner_result.test_overrides`, so the resulting envelope is self-describing: a reader can tell a production run (`test_overrides: null`) from a test-overridden one at a glance.
 
 **Why request-JSON instead of env vars.** launchd spawns the XPC service host with a stripped environment; a shell-set `PW_*` does not reach the host. The request JSON is the only channel that reliably does. The worker inherits the host's process environment via `posix_spawn`, so if a future override is worker-only we can still use env vars there — but anything the host consumes belongs in the request.
 

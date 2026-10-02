@@ -13,6 +13,7 @@ import stat
 import subprocess
 
 CODESIGN = '/usr/bin/codesign'
+NM = '/usr/bin/nm'
 CONTROLLER = 'Contents/MacOS/policy-witness'
 SERVICE = 'Contents/XPCServices/PWRunner.xpc'
 EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
@@ -21,6 +22,16 @@ EXECUTABLES = [CONTROLLER, *('Contents/MacOS/' + name for name in
       ('PWRunner', 'pw-probe-runner', 'sb_api_validator'))]
 MANIFEST = 'Contents/Resources/Evidence/manifest.json'
 SYMBOLS = 'Contents/Resources/Evidence/symbols.json'
+
+
+def sandbox_imports(nm_output):
+    """The undefined `_sandbox_*` symbols in `nm -u` output, sorted and unique."""
+    names = set()
+    for line in nm_output.splitlines():
+        symbol = line.strip().split()[-1] if line.strip() else ''
+        if symbol.startswith('_sandbox_'):
+            names.add(symbol)
+    return sorted(names)
 
 
 def digest(path):
@@ -113,6 +124,25 @@ def inspect(app):
             error('signature', relative, str(exc))
             receipt['error'] = str(exc)
         report['signatures'].append(receipt)
+
+    # Host invariance: the XPC host never links, loads or calls libsandbox. Its
+    # undefined symbols must carry no sandbox_* import; the worker and the
+    # validator are the only processes that touch the native API.
+    host = SERVICE + '/Contents/MacOS/PWRunner'
+    receipt = {'path': host, 'argv': [NM, '-u', str(app / host)], 'returncode': None, 'sandbox_symbols': []}
+    try:
+        contained(host)
+        result = subprocess.run(receipt['argv'], capture_output=True, text=True, timeout=30)
+        receipt.update(returncode=result.returncode)
+        if result.returncode != 0:
+            raise ValueError(result.stderr.strip() or 'nm failed')
+        receipt['sandbox_symbols'] = sandbox_imports(result.stdout)
+        if receipt['sandbox_symbols']:
+            error('host_invariance', host, 'XPC host imports libsandbox symbols: ' + ', '.join(receipt['sandbox_symbols']))
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        error('host_invariance', host, str(exc))
+        receipt['error'] = str(exc)
+    report['host_invariance'] = receipt
 
     try:
         manifest = json.loads(contained(MANIFEST).read_bytes())

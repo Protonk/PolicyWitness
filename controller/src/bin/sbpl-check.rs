@@ -132,10 +132,11 @@ fn empty_param_diff() -> ParamDiff {
 fn usage() -> String {
     "\
 usage:
-  sbpl-check --request <request.json>
+  sbpl-check --request <request.json|->
 
 notes:
-  - reads request.json and compiles policy.sbpl_source
+  - reads the request JSON from the named file, or from stdin to EOF when the value is `-`
+  - compiles policy.sbpl_source with the host's libsandbox and inventories its literal imports
   - prints a JSON envelope with compile status and error details"
         .to_string()
 }
@@ -244,11 +245,20 @@ fn main() {
         }
     };
 
-    let text = match std::fs::read_to_string(&request_path) {
-        Ok(text) => text,
-        Err(err) => {
+    let text = if request_path.as_os_str() == "-" {
+        let mut text = String::new();
+        if let Err(err) = std::io::Read::read_to_string(&mut std::io::stdin().lock(), &mut text) {
             eprintln!("failed to read request: {err}");
             std::process::exit(2);
+        }
+        text
+    } else {
+        match std::fs::read_to_string(&request_path) {
+            Ok(text) => text,
+            Err(err) => {
+                eprintln!("failed to read request: {err}");
+                std::process::exit(2);
+            }
         }
     };
 

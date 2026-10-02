@@ -17,8 +17,8 @@ observations, using the same suite-local `check.py`:
 Both populated cases independently read and retain file bytes before decoding
 the envelope. The allowed file must change to nonempty content; the denied file
 must retain every seed byte. Completed steps retain their IDs/order, prediction
-and attempt paths, outcomes, errno evidence, compatibility aliases, and
-`drift=false` for allow/success and null for unattributed failure. The validator exits cleanly and `partial_steps=false` even though
+and attempt paths, outcomes, errno evidence, and the `succeeded` and
+`permission_failure` observations. The validator exits cleanly and `partial_steps=false` even though
 the run times out. Expectations are supplied by the test, not PW's response.
 
 ## Invariants

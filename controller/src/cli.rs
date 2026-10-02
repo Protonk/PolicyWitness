@@ -21,7 +21,7 @@ usage:
 
 notes:
   - runs the selected PWRunner XPC service once and prints a single JSON result to stdout
-  - request.json is passed through to the runner client (or copied with runner mode injected)
+  - request.json is parsed once; the resolved request is delivered to the runner client on stdin (`--request -`), never through a temporary file
   - the unified-log (`log show`) deny scan requests the runner client's wall-clock span, rounded outward to whole seconds and padded by two seconds at each end; reversed endpoints prevent the scan
   - --log-timeout-ms sets a finite log-collection allowance (default 10000 ms), with a separate fixed 1000 ms cleanup grace
   - --no-log-capture skips that scan; use it when you don't consume the deny evidence and want the per-run cost back
@@ -65,19 +65,8 @@ pub fn run(argv: Vec<OsString>) -> i32 {
         "run" => match run_flow::cmd_run(rest) {
             Ok(code) => code,
             Err(err) => {
-                let result = json_contract::JsonResult {
-                    ok: false,
-                    rc: None,
-                    exit_code: Some(2),
-                    normalized_outcome: Some("tool_error".to_string()),
-                    errno: None,
-                    error: Some(err),
-                    stderr: None,
-                    stdout: None,
-                };
-                let data =
-                    json!({"error": "policy-witness run failed before producing a runner result"});
-                let _ = json_contract::print_envelope("run", result, &data);
+                // Errors that escape cmd_run still use the uniform run envelope.
+                let _ = run_flow::print_escaped_tool_error(err);
                 2
             }
         },

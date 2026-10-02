@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         assert runner.get('test_overrides') == override, runner
         assert process['reaped'] and process['exit_code'] == 0, process
         step = runner['steps'][0]
-        assert step['deny_signal'] is None, step
+        assert 'deny_signal' not in step and 'drift' not in step, step
         assert rc == (0 if mode == 'success' else 1), envelope
         assert runner['normalized_outcome'] == ('ok' if mode == 'success' else 'runner_failed'), runner
         if mode == 'success':
@@ -52,13 +52,15 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
             assert step['sandbox_check']['result_source'] == 'validator', step
             assert step['attempt']['result_source'] == 'worker', step
             assert step['attempt']['rc'] == 0 and after != before, (step, after)
-            assert step['attempt']['native_rc'] is None, 'PW status must not become a raw syscall return'
+            assert 'native_rc' not in step['attempt'], 'PW status must not become a raw syscall return'
+            assert step['comparison']['observation'] == 'succeeded', step
         else:
             assert runner['sandboxed_after_apply'] is False, runner
             assert after == before, (mode, after)
             assert step['sandbox_check']['native_rc'] is None, step
             assert step['sandbox_check']['missing_reason'] == 'validator_not_invoked', step
-            assert step['attempt']['native_rc'] is None and step['drift'] is None, step
+            assert 'native_rc' not in step['attempt'], step
+            assert step['comparison']['observation'] == 'unavailable', step
             f = evidence['failure']
             if mode == 'compile' or mode.startswith('diagnostic_'):
                 assert f['operation'] == 5 and f['native_kind'] == 2 and f['native_result'] == 0, f

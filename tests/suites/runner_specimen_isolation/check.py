@@ -29,10 +29,11 @@ def envelope_errors(envelope, witness):
     for index, planned in enumerate(spec['probe_plan']):
         allowed = index == 0 or index - 1 == witness['allowed_index']
         expected = {'step_id': planned['step_id'], 'index': index,
-                    'sandbox_outcome': 'allow' if allowed else 'deny',
-                    'attempt_ok': allowed, 'drift': False if allowed else None}
+                    'sandbox_outcome': 'allow' if allowed else 'deny', 'attempt_ok': allowed,
+                    'comparison': {'operation_relation': 'matched', 'target_relation': 'same_submitted',
+                                   'observation': 'succeeded' if allowed else 'permission_failure'}}
         if index == 0:
-            expected['comparison'] = {'operation_relation': 'matched', 'observation': 'succeeded'}
+            expected['comparison']['observation_basis'] = 'spawned_child'
         if allowed:
             expected['errno'] = None
         expected_steps.append(expected)
@@ -52,7 +53,8 @@ def envelope_errors(envelope, witness):
     runner = data.get('runner_result')
     if not isinstance(runner, dict):
         return errors
-    provenance = data.get('runner_provenance')
+    specimen = data.get('specimen') if isinstance(data.get('specimen'), dict) else {}
+    provenance = specimen.get('runner_provenance')
     equal('runner_kind', provenance.get('runner_kind') if isinstance(provenance, dict) else None, 'standard')
     worker_pid = witness['processes']['worker']['pid']
     equal('specimen_id', runner.get('specimen_id'), spec['specimen_id'])
@@ -80,8 +82,8 @@ def envelope_errors(envelope, witness):
             continue  # The shared validator already reported the missing channel.
         equal(f'{field} requested_path', attempt.get('requested_path'), planned['attempt']['target'])
         equal(f'{field} attempt outcome', attempt.get('outcome'), 'ok' if allowed else 'open_failed')
-        if not allowed and attempt.get('syscall_errno') not in (1, 13):
-            errors.append(f"{witness['label']}: {field}: expected permission syscall_errno (EPERM/EACCES)")
+        if not allowed and attempt.get('errno') not in (1, 13):
+            errors.append(f"{witness['label']}: {field}: expected permission errno (EPERM/EACCES)")
         if index == 0:
             equal(f'{field} child_pid', attempt.get('child_pid'), witness['processes']['helper']['pid'])
             equal(f'{field} child_exit_code', attempt.get('child_exit_code'), 0)
@@ -177,23 +179,21 @@ def exercise_checker(witnesses, envelopes, out):
         for index, planned in enumerate(witness['specimen']['probe_plan']):
             allowed = index in (0, witness['allowed_index'] + 1)
             if allowed:
-                cases = [('syscall_errno', 'delete', 'missing attempt.syscall_errno'),
-                         ('syscall_errno', 'true', 'invalid attempt.syscall_errno'),
-                         ('syscall_errno', 'false', 'invalid attempt.syscall_errno')]
+                cases = [('errno', 'delete', 'missing attempt.errno'),
+                         ('errno', 'true', 'invalid attempt.errno'),
+                         ('errno', 'false', 'invalid attempt.errno')]
             else:
                 # The bounded audit's complete measurement, including the two
                 # legitimate omissions of optional diagnostic text.
                 cases = [(key, 'delete', f'missing attempt.{key}') for key in
-                         ('rc', 'exit_code', 'errno', 'syscall_errno', 'requested_path', 'observed_path')]
+                         ('rc', 'errno', 'requested_path', 'observed_path')]
                 cases += [('outcome', 'delete', 'attempt outcome:'), ('error', 'delete', None),
-                          ('errno', 'null', 'attempt.errno mismatch'),
-                          ('exit_code', 'null', 'invalid attempt.exit_code'),
+                          ('errno', 'null', 'expected permission errno'),
                           ('rc', 'null', 'invalid attempt.rc'),
-                          ('syscall_errno', 'null', 'expected permission syscall_errno'),
                           ('outcome', 'null', 'attempt outcome:'),
                           ('requested_path', 'null', 'requested_path:'), ('error', 'null', None)]
                 cases += [(key, value, f'invalid attempt.{key}') for key in
-                          ('errno', 'exit_code', 'rc', 'syscall_errno') for value in ('true', 'false')]
+                          ('errno', 'rc') for value in ('true', 'false')]
             for key, mutation, diagnostic in cases:
                 changed = copy.deepcopy(envelope)
                 attempt = changed['data']['runner_result']['steps'][index]['attempt']
@@ -204,21 +204,16 @@ def exercise_checker(witnesses, envelopes, out):
                 check(f"{witness['label']}_step{index}_{key}_{mutation}", changed, witness,
                       [planned['step_id'], diagnostic] if diagnostic else ())
 
-            changed = copy.deepcopy(envelope)
-            # Both values have legal types; agreement is independently required.
-            changed['data']['runner_result']['steps'][index]['attempt']['errno'] = 1 if allowed else 2
-            check(f"{witness['label']}_step{index}_errno_mismatch", changed, witness,
-                  [planned['step_id'], 'attempt.errno mismatch'])
-            if not allowed:
+            # Removed aliases are rejected at their path, never read back.
+            for key in ('exit_code', 'syscall_errno'):
                 changed = copy.deepcopy(envelope)
-                attempt = changed['data']['runner_result']['steps'][index]['attempt']
-                attempt['rc'] = attempt['exit_code'] + 1
-                check(f"{witness['label']}_step{index}_rc_mismatch", changed, witness,
-                      [planned['step_id'], 'attempt.rc mismatch'])
+                changed['data']['runner_result']['steps'][index]['attempt'][key] = 0
+                check(f"{witness['label']}_step{index}_{key}_removed", changed, witness,
+                      [planned['step_id'], f'removed key attempt.{key}'])
+            if not allowed:
                 for error in (1, 13):
                     changed = copy.deepcopy(envelope)
-                    changed['data']['runner_result']['steps'][index]['attempt'].update(
-                        errno=error, syscall_errno=error)
+                    changed['data']['runner_result']['steps'][index]['attempt'].update(errno=error)
                     check(f"{witness['label']}_step{index}_permission_{error}", changed, witness)
 
         # Baseline acceptance and the named attempt failure are independent
@@ -231,7 +226,7 @@ def exercise_checker(witnesses, envelopes, out):
               ['expected step IDs in order'], same_diagnostics_as=valid_diagnostics)
         changed = copy.deepcopy(envelope)
         steps = changed['data']['runner_result']['steps']
-        steps[0]['attempt'].update(rc=1, exit_code=1, errno=13, syscall_errno=13)
+        steps[0]['attempt'].update(rc=1, errno=13)
         step_id = witness['specimen']['probe_plan'][0]['step_id']
         attempt_errors = [f"{step_id}: expected attempt_ok=True", f"{step_id}: expected errno=None"]
         ordered_diagnostics = check(f"{witness['label']}_attribution_bad_attempt", changed, witness,
@@ -243,7 +238,7 @@ def exercise_checker(witnesses, envelopes, out):
         steps = changed['data']['runner_result']['steps']
         steps[0]['sandbox_check'] = None
         del steps[2]['attempt']['errno']
-        check(f"{witness['label']}_malformed_prediction_and_missing_alias", changed, witness,
+        check(f"{witness['label']}_malformed_prediction_and_missing_errno", changed, witness,
               [f"missing sandbox_check for {witness['specimen']['probe_plan'][0]['step_id']}",
                f"{witness['specimen']['probe_plan'][2]['step_id']}: missing attempt.errno"])
     print(f"{counts['rejected']} corruptions rejected with attribution diagnostics; "

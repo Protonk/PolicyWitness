@@ -28,7 +28,22 @@ pub struct ParamScanResult {
 ///
 /// String literals and `;` line comments are skipped — a `(param "X")` spelled
 /// inside a string or a comment does not count.
+///
+/// Two binaries include this module by path: sbpl-check calls this scan and
+/// the controller calls only [`import_scan`].
+#[allow(dead_code)]
 pub fn param_scan(source: &str) -> ParamScanResult {
+    keyword_scan(source, b"param")
+}
+
+/// Scan an SBPL source for `(import "NAME")` references under the same rule:
+/// `scan_complete` is false when an `(import X)` form carried a nonliteral
+/// argument the scanner could not follow.
+pub fn import_scan(source: &str) -> ParamScanResult {
+    keyword_scan(source, b"import")
+}
+
+fn keyword_scan(source: &str, keyword: &[u8]) -> ParamScanResult {
     let bytes = source.as_bytes();
     let mut refs = BTreeSet::new();
     let mut scan_complete = true;
@@ -43,7 +58,7 @@ pub fn param_scan(source: &str) -> ParamScanResult {
             b'"' => {
                 i = skip_string(bytes, i);
             }
-            b'(' => match try_match_param_form(bytes, i) {
+            b'(' => match try_match_param_form(bytes, i, keyword) {
                 Some(ParamFormMatch::Literal { name, next }) => {
                     refs.insert(name);
                     i = next;
@@ -63,42 +78,6 @@ pub fn param_scan(source: &str) -> ParamScanResult {
     }
 }
 
-/// Scan an SBPL source for `(import "NAME")` references and return the
-/// deduplicated set of names found, sorted. Same scanning discipline as
-/// [`param_scan`].
-pub fn import_refs(source: &str) -> BTreeSet<String> {
-    scan_keyword_refs(source, b"import")
-}
-
-fn scan_keyword_refs(source: &str, keyword: &[u8]) -> BTreeSet<String> {
-    let bytes = source.as_bytes();
-    let mut out = BTreeSet::new();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        match bytes[i] {
-            b';' => {
-                // Line comment runs to the next newline.
-                while i < bytes.len() && bytes[i] != b'\n' {
-                    i += 1;
-                }
-            }
-            b'"' => {
-                i = skip_string(bytes, i);
-            }
-            b'(' => {
-                if let Some((name, next)) = try_match_keyword_form(bytes, i, keyword) {
-                    out.insert(name);
-                    i = next;
-                } else {
-                    i += 1;
-                }
-            }
-            _ => i += 1,
-        }
-    }
-    out
-}
-
 enum ParamFormMatch {
     /// `(param "NAME")` — argument is a string literal we can capture.
     Literal { name: String, next: usize },
@@ -108,16 +87,15 @@ enum ParamFormMatch {
     NonLiteral { next: usize },
 }
 
-fn try_match_param_form(bytes: &[u8], start: usize) -> Option<ParamFormMatch> {
+fn try_match_param_form(bytes: &[u8], start: usize, keyword: &[u8]) -> Option<ParamFormMatch> {
     debug_assert_eq!(bytes[start], b'(');
     let mut i = start + 1;
     i = skip_ws(bytes, i);
 
-    const KW: &[u8] = b"param";
-    if i + KW.len() > bytes.len() || &bytes[i..i + KW.len()] != KW {
+    if i + keyword.len() > bytes.len() || &bytes[i..i + keyword.len()] != keyword {
         return None;
     }
-    i += KW.len();
+    i += keyword.len();
 
     if i >= bytes.len() || !is_ws(bytes[i]) {
         return None;
@@ -129,7 +107,7 @@ fn try_match_param_form(bytes: &[u8], start: usize) -> Option<ParamFormMatch> {
     }
     if bytes[i] == b'"' {
         // Literal-form path: reuse the keyword-form matcher's tail logic.
-        if let Some((name, next)) = try_match_keyword_form(bytes, start, b"param") {
+        if let Some((name, next)) = try_match_keyword_form(bytes, start, keyword) {
             return Some(ParamFormMatch::Literal { name, next });
         }
         return None;
@@ -337,7 +315,7 @@ mod tests {
     }
 
     fn imports(source: &str) -> Vec<String> {
-        import_refs(source).into_iter().collect()
+        import_scan(source).refs.into_iter().collect()
     }
 
     #[test]

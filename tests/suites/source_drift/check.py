@@ -8,7 +8,7 @@ The check has two halves:
    files (and C shims) that ship in PWRunner.xpc by explicit path; the
    test-only SwiftPM package (runner/Package.swift) compiles the same set
    but discovers it automatically by SwiftPM convention (everything under
-   Sources/PWRunnerCore and the two Sources/<Shim> dirs). So the SwiftPM
+   Sources/PWRunnerCore and the Sources/<Shim> dir). So the SwiftPM
    side == on-disk by construction, and the drift that can actually ship a
    broken binary is build.sh lagging the tree: a file added under
    Sources/PWRunnerCore but missing from build.sh never reaches the XPC
@@ -37,6 +37,11 @@ The check has two halves:
         heading is identical in AGENTS.md, runner/README.md and
         tests/README.md. The note is carried in three places on purpose;
         each copy adds its own local paragraph after the shared one.
+     j. Host invariance: no file under runner/Sources/PWRunnerCore names a
+        libsandbox entry point or loads the library. The XPC host never
+        links, loads or calls libsandbox; the worker and the validator do.
+        The check masks comments and strings and has positive/negative
+        controls run in-process on constructed text.
 
 Exit codes:
   0 — everything agrees
@@ -61,7 +66,6 @@ BUILD_SH = REPO_ROOT / "build.sh"
 # file within Sources/ — only relocating a target dir touches this list.
 CORE_DIR = RUNNER_DIR / "Sources" / "PWRunnerCore"
 SHIM_DIRS = [
-    RUNNER_DIR / "Sources" / "PWSandboxCheckShim",
     RUNNER_DIR / "Sources" / "PWCWorkerShim",
 ]
 PWRUNNER_API = CORE_DIR / "PWRunnerAPI.swift"
@@ -137,13 +141,12 @@ def build_sh_swift_files() -> set[str]:
 
 def build_sh_c_files() -> set[str]:
     """Collect every C source file build.sh declares as an XPC_RUNNER_*_SHIM
-    relative to XPC_ROOT. Currently two: PWSandboxCheckShim.c (the
-    sandbox_check trampoline) and PWCWorkerShim.c (atomic + shm_open
-    helpers for the Swift CWorker driver). Adding a third shim is a
-    single line edit here and a matching declaration in build.sh."""
+    relative to XPC_ROOT. Currently one: PWCWorkerShim.c (atomic + shm_open
+    helpers for the Swift CWorker driver). Adding another shim is a single
+    line edit here and a matching declaration in build.sh."""
     text = BUILD_SH.read_text(encoding="utf-8")
     shim_re = re.compile(
-        r'^XPC_RUNNER_(?:SANDBOX|CWORKER)_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
+        r'^XPC_RUNNER_(?:CWORKER)_SHIM="\$\{XPC_ROOT\}/([^"]+\.c)"',
         re.MULTILINE,
     )
     return {m.group(1) for m in shim_re.finditer(text)}
@@ -624,6 +627,63 @@ def check_prediction_unavailable_agreement() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Host invariance: the XPC host source never names the native sandbox API.
+#
+# The host must not link, load or call libsandbox. Every native sandbox
+# operation belongs to the worker (pw-probe-runner) or the validator
+# (sb_api_validator). A host that could call sandbox_check or sandbox_init
+# would have a reason to acquire resources before the worker applies its
+# policy, which the host/worker split forbids. The companion binary check is
+# tests/lib/artifact.py (`nm -u` on the shipped PWRunner).
+# ---------------------------------------------------------------------------
+
+# `sandbox_check` is also a wire key, so only call syntax counts: an
+# identifier immediately applied to an argument list.
+HOST_FORBIDDEN = re.compile(
+    r'\b(?:sandbox_(?:check|init|init_with_parameters|apply|compile_string|compile_file|compile_named'
+    r'|create_params|set_param|free_params|free_profile|extension_(?:issue|consume|release)|container_path_for_pid'
+    r'|note|suspend|unsuspend))\s*\('
+    r'|\bdlopen\s*\(|\bdlsym\s*\(|libsandbox(?:\.dylib|\.1\.dylib)|@convention\s*\(\s*c\s*\)')
+
+
+def host_invariance_problems(label: str, text: str) -> list[str]:
+    """Problems in one masked Swift source: forbidden native sandbox entry points."""
+    try:
+        code = swift_code(text)
+    except ValueError as exc:
+        return [f"  host invariance: {label}: {exc}"]
+    problems = []
+    for match in HOST_FORBIDDEN.finditer(code):
+        line = code.count("\n", 0, match.start()) + 1
+        problems.append(f"  host invariance: {label}:{line} names {match.group(0).strip()!r}; "
+                        f"the XPC host never links, loads or calls libsandbox")
+    return problems
+
+
+def check_host_invariance() -> list[str]:
+    problems: list[str] = []
+    for path in sorted(CORE_DIR.rglob("*.swift")):
+        problems.extend(host_invariance_problems(str(path.relative_to(REPO_ROOT)), path.read_text(encoding="utf-8")))
+    return problems
+
+
+def host_invariance_controls() -> list[str]:
+    """Positive and negative controls for the source check, on constructed text."""
+    problems: list[str] = []
+    clean = 'let name = "sandbox_check is only a word in a string" // sandbox_init in a comment\n' \
+            '/* dlopen("x") in a block comment */\nfunc spawnWorker() { posix_spawn() }\n'
+    if host_invariance_problems("control-clean", clean):
+        problems.append("  host invariance control: masked comments/strings were reported")
+    for snippet in ('let rc = sandbox_check(pid, "file-read-data", 0)\n',
+                    'let handle = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)\n',
+                    'let f: @convention(c) (Int32) -> Int32 = ptr\n',
+                    'sandbox_init(profile, 0, &err)\n'):
+        if not host_invariance_problems("control-forbidden", snippet):
+            problems.append(f"  host invariance control: {snippet.strip()!r} was not reported")
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # `_test_overrides` key table agreement.
 #
 # runner/README.md's test-seam table is the only documented list of override
@@ -809,6 +869,8 @@ def main() -> int:
     problems.extend(check_test_overrides_table_agreement())
     problems.extend(check_harness_note_agreement())
     problems.extend(check_cli_surface_agreement())
+    problems.extend(host_invariance_controls())
+    problems.extend(check_host_invariance())
 
     if problems:
         fail("source/test-registry drift detected:")

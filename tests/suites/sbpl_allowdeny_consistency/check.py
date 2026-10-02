@@ -73,11 +73,11 @@ def main():
             assert "observed_path" in attempt
             if i == allowed_index:
                 assert step["sandbox_check"]["outcome"] == "allow"
-                assert attempt["exit_code"] == 0 and attempt["syscall_errno"] is None
-                assert "deny_signal" in step and step["deny_signal"] is None
+                assert attempt["rc"] == 0 and attempt["errno"] is None
+                assert "deny_signal" not in step and "drift" not in step
             else:
                 assert step["sandbox_check"]["outcome"] == "deny"
-                assert attempt["exit_code"] != 0 and attempt["syscall_errno"] in (1, 13)
+                assert attempt["rc"] != 0 and attempt["errno"] in (1, 13)
         print(f"round {round_number}: external bytes and reported decisions agree")
 
 

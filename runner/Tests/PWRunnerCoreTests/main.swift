@@ -7,23 +7,22 @@ FileHandle.standardOutput.write(Data("PWRunnerCore unit tests\n".utf8))
 // This registry is the inventory of what each test file pins. Add a call and a
 // one-line comment together; see runner/AGENTS.md → "Adding a new unit test file".
 
-// Stubbed SandboxLib calls against the Swift apply helper, which has no
-// production callers; the worked example for stubbing @convention(c) pointers.
-runSandboxApplyTests(tk)
 // Structural invariants of PWRunnerRunResult that the mirror-back audit signal
-// depends on (test_overrides echo, runner_subprocess present iff observed).
+// depends on (test_overrides echo, runner_subprocess present iff observed),
+// the exact response-version gate and the removed wire keys.
 runEnvelopeInvariantTests(tk)
-// runSandboxCheck short-circuit for (operation, filter_kind) pairs that skip
-// libsandbox; synthesized verdicts and independent host query-plan exclusions.
+// Host query planning: the shared (operation, filter_kind) exclusion set and the
+// unrecognized-filter exclusion, with literal expectations.
 runPredictionUnavailableTests(tk)
 // validateSandboxChecks tristate: value-required kinds, the no-value kind, and
 // unknown kinds that downgrade rather than reject.
 runFilterKindValidationTests(tk)
-// Constructed drift/comparison interpretation controls from the public scope
-// and attribution promises; they establish no native causes.
-runDriftClassifierTests(tk)
+// The comparison record producer, table-driven over the shared scenario matrix
+// (tests/fixtures/comparison/matrix.json), the limitations vocabulary and host
+// path provenance; it establishes no native causes.
+runComparisonEvidenceTests(tk)
 // Release barrier, eligible-record lifetime, native spawn failures through replies,
-// and response-8 encoding controls.
+// and ordering encoding controls.
 runOrderingTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.
 runReplyFailureTests(tk)

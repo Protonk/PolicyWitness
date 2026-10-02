@@ -179,7 +179,7 @@ def main():
     status, message = validate_run(steps, run_data)
     expected_kind = os.environ.get("PW_TEST_RUNNER_EXPECT_KIND")
     if expected_kind:
-        actual_kind = (run_data.get("data") or {}).get("runner_provenance", {}).get("runner_kind")
+        actual_kind = (((run_data.get("data") or {}).get("specimen") or {}).get("runner_provenance") or {}).get("runner_kind")
         if actual_kind != expected_kind:
             print(f"expected runner_kind={expected_kind!r} (got {actual_kind!r})")
             return 1

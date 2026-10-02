@@ -66,11 +66,11 @@ def admission(pw, out):
             'sandbox_check.operation': 127, 'sandbox_check.filter.value': 511,
             'sandbox_check.filter.kind': 127, 'attempt.kind': 127, 'attempt.action': 127,
             'specimen_id': 255, 'run_kind': 63, 'policy.format': 63,
-            '_test_overrides.libsandbox_path': 1023, '_test_overrides.worker_executable_path': 1023,
+            '_test_overrides.worker_executable_path': 1023,
             '_test_overrides.validator_executable_path': 1023}
     # At-limit strings that pass admission but cannot run: the format is not sbpl
     # and the seam paths do not exist. Each fails later, in its own way.
-    later = {'policy.format': 'bad_policy', '_test_overrides.libsandbox_path': 'libsandbox_unavailable',
+    later = {'policy.format': 'bad_policy',
              '_test_overrides.worker_executable_path': 'worker_spawn_failed',
              '_test_overrides.validator_executable_path': 'validator_spawn_failed'}
     top_level = ('specimen_id', 'run_kind', 'policy.format') + tuple(f for f in caps if f.startswith('_test_overrides.'))
@@ -182,7 +182,7 @@ def admission(pw, out):
         print('PASS admission precedence', name, flush=True)
 
     # A refusal must sanitize every echoed field, not only the first violation.
-    fields = ['specimen_id', 'run_kind', 'policy.format', '_test_overrides.libsandbox_path',
+    fields = ['specimen_id', 'run_kind', 'policy.format',
               '_test_overrides.worker_executable_path', '_test_overrides.validator_executable_path']
     with tempfile.TemporaryDirectory(prefix='pw-admission-', dir='/private/tmp') as temp:
         target = Path(temp) / 'write-target'
@@ -202,6 +202,9 @@ def admission(pw, out):
         # Native C strings must not silently change meaning at the first NUL.
         native = ['step_id', 'target', 'args', 'key', 'value', 'policy.sbpl_source',
                   'sandbox_check.operation', 'sandbox_check.filter.value'] + fields[3:]
+        # The two helper overrides are the controller's observation inputs as
+        # well: a NUL in either is refused by the host and recorded by the
+        # dossier without reading the path.
         for i, field in enumerate(native):
             request = specimen()
             good = request['probe_plan'][0]
@@ -332,16 +335,19 @@ def validator(pw, out, mode):
                 assert process['records'][-1]['outcome'] == 'future_937', process
                 assert '97319' in process['records'][-1]['raw_line'], process
                 assert steps[2]['sandbox_check']['rc'] == -1 and steps[2]['sandbox_check']['result_source'] == 'validator', steps[2]
-                assert steps[2]['sandbox_check']['native_rc'] is None and steps[2]['drift'] is None, steps[2]
+                assert steps[2]['sandbox_check']['native_rc'] is None, steps[2]
+                assert steps[2]['comparison']['order'] == 'unestablished', steps[2]
             else:
                 assert rc == 1 and runner['normalized_outcome'] != 'ok', runner
                 missing = 0 if case == 'duplicate' else 2
                 for i, step in enumerate(steps):
                     if i == missing or (case == 'duplicate' and i == 2):
-                        assert step['sandbox_check']['native_rc'] is None and step['drift'] is None, step
+                        assert step['sandbox_check']['native_rc'] is None, step
                         assert step['sandbox_check']['result_source'] == 'synthetic', step
+                        assert step['comparison']['order'] == 'unestablished', step
                     else:
-                        assert step['sandbox_check']['outcome'] == 'allow' and step['drift'] is False, step
+                        assert step['sandbox_check']['outcome'] == 'allow', step
+                        assert step['comparison']['observation'] == 'succeeded' and step['comparison']['order'] == 'query_first', step
                 if case in ('invalid_utf8', 'incomplete_allow', 'incomplete_deny'):
                     assert runner['normalized_outcome'] == 'validator_decode_failure', runner
                     fault = process['decode_fault']
@@ -384,7 +390,9 @@ def query_planning(pw, out):
             prediction = step['sandbox_check']
             assert prediction['outcome'] == 'prediction_unavailable', prediction
             assert prediction['missing_reason'] == 'query_not_requested', prediction
-            assert prediction['native_rc'] is None and step['drift'] is None, step
+            assert prediction['native_rc'] is None, step
+            assert step['comparison']['order'] == 'unestablished', step
+            assert step['comparison']['limitations'] == ['query_plan:path_unresolved_at_planning'], step
             assert 'when the query was planned' in prediction['error'], prediction
             if mixed: assert runner['validator_subprocess']['expected_step_ids'] == ['s'], runner
             else: assert runner.get('validator_subprocess') is None, runner

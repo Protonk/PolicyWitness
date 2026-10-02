@@ -57,6 +57,24 @@ selection, deduplication, configuration validation, and complete accounting.
   copies under `/private/tmp`; never launches or modifies the selected source app.
 - **When to run:** After changing artifact inspection, inventory, or signing setup.
 
+### BYOXPC dossier witness
+
+- **Case:** `witness_contract/dossier_witness_byoxpc`
+- **Location:** `tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh`
+- **Purpose:** Read `data.specimen` of a run selected through an owned,
+  disposable BYOXPC runner copy: `runner_provenance` names the installed
+  service and registry id, and every binary record carries the bundle-local
+  path, its independently computed hash and the shipped manifest baseline,
+  with `match`/`mismatch` agreeing with the hashes.
+- **Opt-in reason:** Requires launchd service install/bootstrapping, a
+  logged-in GUI session and a matching Developer ID identity.
+- **Resource dependency:** `dist/PolicyWitness.app` built + GUI session +
+  signing identity. Uses the shared BYOXPC session machinery
+  (`tests/fixtures/byoxpc/session.py`) for ownership and verified removal.
+- **When to run:** After changing runner selection, the dossier's binary
+  records or BYOXPC install/verify behavior.
+- **Artifacts:** `<run>/suites/witness_contract/dossier_witness_byoxpc/artifacts/byoxpc/*`
+
 ### built-in caller authentication
 
 - **Case:** `smoke/runner_caller_auth`

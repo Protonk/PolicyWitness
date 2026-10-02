@@ -6,24 +6,23 @@ default to `tests/out/runs/direct`.
 
 Exercises `(sysctl-read, sysctl_name)` with a policy denying reads of
 `kern.osrelease`. The prediction is explicitly unavailable, while the real
-`sysctl` / `read` attempt must report `sysctl_failed`, a nonzero exit status,
-and EPERM or EACCES in both `errno` and `syscall_errno`.
+`sysctl` / `read` attempt must report `sysctl_failed`, a nonzero `rc`,
+and EPERM or EACCES in `errno`.
 
 ## Shared filter contract
 
 The three `runner_filter_*` suites call `tests/lib/unavailable_prediction.py`
-with their expected step ID, operation, filter value, attempt contract and
-`--minimum-schema-version 8` for live output, so stored-fixture leniency
-cannot apply to a live reply. The
-adapter uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
+with their expected step ID, operation, filter value and attempt contract. The
+adapter accepts only the current response and envelope versions. It uses `tests/lib/blackbox.py` to require a successful run envelope, SBPL
 policy format, exact step identity/count, and evidence fields with their documented types.
 An unavailable prediction has integer `rc=-1`, explicitly null `filter_type_id`
-and `errno`, and explicitly null step `drift`. Nullable evidence fields must
+and `errno`, and the comparison carries the planner's `query_plan:*`
+limitation with `order: unestablished`. Nullable evidence fields must
 remain present, including `sandbox_check.error` and the attempt path fields.
 
 The adapter checks the requested operation and the literal IOKit class or sysctl
 name in `filter_value`, and requires a populated integer
-`attempt.rc` agreeing with `exit_code`. Each caller selects its attempt check:
+`attempt.rc`. Each caller selects its attempt check:
 this suite requires the sysctl denial described above; the IOKit suites require
 a supported file-open result. Prediction and attempt errors accumulate, so a
 broken prediction cannot hide a broken attempt. These checks concern the public
@@ -35,16 +34,15 @@ The `checker_controls` case runs before the app prerequisite check and exercises
 all three callers using hand-authored envelopes and fixed CLI arguments. It
 imports neither the checker nor production code. Valid nullable evidence,
 supported file failures, and both permitted denial errnos must pass. Missing
-fields, wrong sentinel values/types, missing or non-null drift, wrong/duplicate/
+fields, wrong sentinel values/types, a removed `drift` key, wrong/duplicate/
 missing step IDs, operation/filter-value mismatches, incorrect policy format,
 malformed envelopes and broken attempts must fail with relevant diagnostics.
 Combined faults must report both channels.
 
-Current-version positive controls carry comparison and submitted-attempt evidence;
-removing those fields must fail. Older, absent, null or non-integer response
-versions cannot bypass the live version requirement. Stored legacy fixtures
-remain acceptable when that explicit requirement is omitted. Each of the three
-caller contracts exercises both paths through the checker CLI.
+Positive controls carry the comparison record and submitted-attempt evidence;
+removing those fields must fail. Another, absent, null or non-integer response
+or envelope version is reported as unsupported. Each of the three caller
+contracts runs through the checker CLI.
 
 These controls need only Python 3 and run in the default battery through this
 suite. They can also be run directly:

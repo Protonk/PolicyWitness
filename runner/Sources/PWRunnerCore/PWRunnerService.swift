@@ -14,11 +14,15 @@ import Security
 // their outputs). Anything that must observe the applied sandbox
 // belongs in those sandboxed children, not here.
 //
-// What does NOT belong in this file: calls to applySandboxPolicy,
-// libsandbox state that survives past the load check, runSandboxCheck
-// or runAttempt. The host must stay invariant under the policy under
-// test so the XPC reply path is never disrupted by a (deny default)
-// specimen.
+// Host invariance rule: the XPC host remains unsandboxed and does not link,
+// load or call libsandbox. The worker applies the specimen policy to itself
+// and the validator queries it; the host only reads what they publish, so
+// the XPC reply path survives a (deny default) specimen. The live
+// runner_apply_isolation_v3/deny_default_v3_worker_reply case covers the
+// host/worker split end to end; runner_c_worker_harness/bare_deny_default
+// covers the worker alone. The source_drift suite rejects native sandbox
+// API use under runner/Sources, and preflight rejects a shipped host
+// executable with an undefined _sandbox_* symbol.
 
 private func bundleString(_ key: String) -> String? {
     Bundle.main.object(forInfoDictionaryKey: key) as? String
@@ -125,7 +129,6 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
             original_error: result.error, evidence_retained: true)
         for index in failed.steps.indices {
             failed.steps[index].comparison = nil
-            failed.steps[index].drift = nil
         }
         do { return try encode(failed) }
         catch {
@@ -267,27 +270,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        let libsandboxPath = parsed._test_overrides?.libsandbox_path ?? SandboxLib.defaultLibraryPath
-        switch SandboxLib.load(path: libsandboxPath) {
-        case .success:
-            break
-        case .failure(let err):
-            let resp = PWRunnerRunResult(
-                specimen_id: parsed.specimen_id,
-                run_kind: parsed.run_kind,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.libsandboxUnavailable,
-                error: err.description,
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
-                steps: [],
-                test_overrides: parsed._test_overrides
-            )
-            replyAndExit(resp)
-            return
-        }
-
         let policyHash: String
         do {
             policyHash = try computePolicyHash(parsed.policy)
@@ -413,18 +395,10 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
             observer: "runner_host",
             phase: "after_orchestration"
         )
-        // The planner's own sentinel says whether it resolved this path: a
-        // planning exclusion is recorded as outcome prediction_unavailable, and
-        // only planning produces that outcome for a path filter. Read the
-        // sentinel, not a limitation label. This later host observation cannot
-        // reclassify the fixed comparison or establish the state at query time.
-        // Legacy absent comparisons stay absent.
-        if canonical.resolved == nil, var comparison = updated.comparison,
-           updated.sandbox_check.outcome != SandboxCheckOutcome.predictionUnavailable,
-           !comparison.limitations.contains("host_path_resolution_changed") {
-            comparison.limitations.append("host_path_resolution_changed")
-            updated.comparison = comparison
-        }
+        // This later host observation never touches the comparison record:
+        // a null realpath_resolved on a query the planner did not exclude is
+        // the reader's evidence that the host could not resolve the submitted
+        // path after the run.
         return updated
     }
 }

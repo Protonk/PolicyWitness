@@ -1,6 +1,15 @@
 # Five follies
 
-The drift-removal plan replaces one verdict with a set of records, and records
+Status (2026-10-01): the drift removal has landed. Of the five entries, none
+shipped: `conditions.prediction_unavailable_pairs`, `comparison_conditions`,
+`specimen.references` and `obligations.sandbox_attribution` were dropped from
+the design, and `policy.imports.closure_sha256` ships as described in the
+[guide's dossier section](docs/PolicyWitness.md#the-specimen-dossier). Of the
+second-sweep findings, S1–S3, S5, S6 and S9 were implemented; S4, S7, S8 and
+S10–S12 remain open ([DRIFT-REMOVAL-CANDIDATES.md](DRIFT-REMOVAL-CANDIDATES.md)
+holds the adoptable ones). The text below is the review as written.
+
+The drift-removal plan replaced one verdict with a set of records, and records
 are easy to add. This document reports what happened when the whole of that new
 surface was asked one question, after the question had already claimed a victim.
 
@@ -8,12 +17,12 @@ The victim was the proposed `target_mutation.steps`, the list of step IDs whose
 attempts removed a query's submitted path. The plan had a producer emitting it,
 an encoder checking it against the raw attempts, a consumer rederiving it from
 the same attempts and comparing, and tests checking that defective lists were
-rejected. No other use was specified. It is gone from
-[DRIFT-REMOVAL-PLAN.md](DRIFT-REMOVAL-PLAN.md) as of D6.42. The status stays: it
-incorporates the query-exclusion guard as well as the attempts. Whether that
-interpretation itself needs to ship is a separate question below.
+rejected. No other use was specified. It was dropped from the plan at D6.42,
+and the status was dropped later as well (S9 below): reading rule 6 of
+[the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
+states the interpretation and nothing ships.
 
-Then the same question was put to every other object the plan adds. The five
+Then the same question was put to every other object the plan added. The five
 entries below are the first search's result, in the order they were examined —
 including the last one, which came out clean. A list with nothing clean in it
 would be a verdict, not a search, and would say more about the reviewer than
@@ -103,7 +112,7 @@ rule.
 There is a current reader beyond validation: `recover_evidence` in
 [consumer.py](tests/lib/consumer.py) uses the existing
 `sandbox_attribution_unestablished` limitation to construct `failure_groups`.
-The plan removes that reader. No surviving operational use of the new status is
+That reader was removed. No surviving operational use of the new status is
 specified beyond field selection and checking; an explicit caution for a human
 reader remains a possible justification. That benefit needs the same scrutiny
 as the human uses that justify the reference map and closure hash.
@@ -116,9 +125,9 @@ It hashes the applied source and successfully hashed import records. The source
 bytes do not ship beside it: D2 explicitly omits them. A source hash cannot
 substitute for those bytes when recomputing the closure hash. It is also the
 only one of the five that exists today, as `policy_closure_sha256` in
-`sbpl-check` output. The plan reuses that algorithm for a separate controller
-scan and preserves the helper's output on fallback paths; it does not simply
-relocate one observation.
+`sbpl-check` output. The dossier reuses that algorithm for a separate
+controller scan and preserves the helper's output on fallback paths; it does
+not simply relocate one observation.
 
 It survives because something does something with it. Two runs' closures compare
 in one equality test, without diffing record lists — the cheapest possible answer
@@ -178,7 +187,7 @@ its destination, and no proposed destination automatically earns its inputs.
 
 ### S1. The unused Swift attempt executor
 
-**Strong candidate; outside the plan.**
+**Implemented: removed with the host invariance rule.**
 [`runAttempt`](runner/Sources/PWRunnerCore/ProbeRunner.swift) has no call site in
 the source tree. Its private `runFileAttempt` and `runMachLookupAttempt` branches
 implement file operations and Mach lookup, but production uses
@@ -206,7 +215,7 @@ outcome with the actual producer, not just removing unused source.
 
 ### S2. A Swift query implementation tested only against itself
 
-**Strong candidate; outside the plan.**
+**Implemented: removed with the host invariance rule.**
 [`runSandboxCheck`](runner/Sources/PWRunnerCore/ProbeRunner.swift) has four calls,
 all in [PredictionUnavailableTests.swift](runner/Tests/PWRunnerCoreTests/PredictionUnavailableTests.swift).
 All four exercise its exclusion branch. They verify a synthesized result from
@@ -222,12 +231,12 @@ The shim has its own target in [Package.swift](runner/Package.swift) and is
 compiled and linked by [build.sh](build.sh). Production prediction uses
 `sb_api_validator`; removing this cluster would remove the task of testing an
 unused query implementation and its build dependency. It would not replace or
-remove the shared exclusion set or the planner controls. The plan currently
-edits this helper's `scope` arguments rather than considering its continued use.
+remove the shared exclusion set or the planner controls. The helper, its shim
+target and its build dependency are gone; the planner controls remain.
 
 ### S3. The Swift sandbox-application implementation and its tests
 
-**Strong candidate; outside the plan.**
+**Implemented: removed with the host invariance rule.**
 [`applySandboxPolicy`](runner/Sources/PWRunnerCore/SandboxApply.swift) has six
 calls, all in [SandboxApplyTests.swift](runner/Tests/PWRunnerCoreTests/SandboxApplyTests.swift).
 The tests supply stubbed library functions and check this Swift helper's
@@ -248,13 +257,13 @@ Two nearby structures have current tasks and are outside this finding.
 policy refusal. `SandboxLib.load` resolves symbols and can stop execution with
 `libsandbox_unavailable`; the service discards its successful value but acts on
 failure. The loader is therefore not dead merely because these function
-pointers are otherwise invoked only by the unused apply helper. The plan also
-assigns host library identity to that load boundary. Reconsidering the load
-check is a different behavioral decision.
+pointers are otherwise invoked only by the unused apply helper. The loader
+is gone and the host never loads libsandbox; S14 in the candidates document
+records the distinction the check used to draw.
 
 ### S4. `attempt.lifecycle.boundary` and `.result`
 
-**Duplicate evidence candidate, with a concrete reading cost; outside the plan.**
+**Duplicate evidence candidate, with a concrete reading cost; open.**
 [`attemptLifecycle`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 copies `step_boundary_reached` and `step_result_published` from the corresponding
 `runner_subprocess.disposition.steps[].questions` entry. These are entire claim
@@ -280,7 +289,7 @@ lifecycle object as unused.
 
 ### S5. Relation fields repeated as limitation strings
 
-**Narrow duplicate candidate; the plan explicitly retains these strings.**
+**Implemented: the record's `limitations` vocabulary carries no relation strings.**
 [`comparisonEvidence`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 appends `operation:` plus `operation_relation` whenever that relation is not
 `matched`, and `target:` plus `target_relation` whenever it is not
@@ -299,7 +308,7 @@ remove the relation calculation that currently feeds `conclusion` and `drift`.
 
 ### S6. `attempt.native_rc`, always null
 
-**Constant-field candidate; retained by the plan.** The
+**Implemented: `attempt.native_rc` is gone.** At the time of the sweep the
 [step builder](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) explicitly
 sets every attempt's `native_rc` to nil because ABI 7 carries PW attempt status,
 not the syscall's native return. The API encodes that null when `result_source`
@@ -318,7 +327,7 @@ unneeded.
 
 ### S7. The observer's `deny_lines` list
 
-**Strong duplicate candidate; outside the plan.** In both show and stream modes,
+**Strong duplicate candidate; open.** In both show and stream modes,
 [`sandbox-log-observer`](controller/src/bin/sandbox-log-observer.rs) appends a
 line to `deny_lines` exactly when it appends the parsed event to `deny_events`.
 [`parse_sandbox_deny_line`](controller/src/log_show.rs) stores that same line in
@@ -337,7 +346,7 @@ without measurement.
 
 ### S8. Constant log disclaimers
 
-**Presentation candidates; outside the plan.**
+**Presentation candidates; open.**
 [`SandboxLogWindow`](controller/src/sandbox_log.rs) always emits four false
 booleans: `event_timestamps_available`, `exact_run_membership`, `step_ordering`
 and `pid_reuse_protection`. Rust and Python controls require those constants;
@@ -365,9 +374,10 @@ consumer independently reconstructs the removal condition and enforces the
 corresponding limitation and unavailable conclusion.
 
 This machinery therefore has a concrete current task beyond checking itself:
-it changes the verdict. The plan deliberately preserves the calculation as
-`target_mutation.status` after removing that verdict. Whether identifying this
-confound still warrants a producer-side run-wide join is the later question
+it changed the verdict. The calculation was removed with the verdict; reading
+rule 6 of the failure contract states the interpretation (S9 in the candidates
+document). Whether identifying this confound warrants a producer-side run-wide
+join was the later question
 the present search leaves open. The current verdict use cannot establish the
 answer for the replacement, and its impending removal cannot be used to call
 the calculation dead today. The query guard's interpretation matters, but its
@@ -376,7 +386,7 @@ not an otherwise unavailable observation.
 
 ### S10. `partial_steps` and the lifecycle summary
 
-**Weaker candidates than the copied claims in S4; outside the plan.**
+**Weaker candidates than the copied claims in S4; open.**
 `partial_steps` is `any(disposition.steps[].slot != completed)`, emitted by
 [`buildWorkerSubprocess`](runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
 and checked by Swift, Rust and Python. It supplies no independent fact. But
@@ -410,7 +420,7 @@ failures; deleting them loses information under the current shape. Whether that
 distinction deserves reporting is separate from calling it a redundant list
 length. The nearby `params_missing` has an even clearer use: it chooses
 `missing_params`, exit 1 and the named diagnostic after compilation. The helper
-surface is outside the drift plan's changes, which preserve its output.
+surface was preserved; its output is unchanged.
 
 ### S12. Validator `records[].raw_line`
 

@@ -99,7 +99,7 @@ func runOrderingTests(_ tk: TestKit) {
             let step = orderedSteps(out, validator)[0]
             try expectEqual(step.sandbox_check.outcome, "allow")
             try expectEqual(step.comparison?.order, "unestablished")
-            try expectNil(step.drift)
+            try expectEqual(step.comparison?.observation, "unavailable")
         }
         tk.run("hook_spawn_failure_before_release: attempts survive failed validator spawn") {
             var result: ValidatorClientResult?
@@ -110,7 +110,7 @@ func runOrderingTests(_ tk: TestKit) {
             guard case .failure(.spawnFailed, nil) = result else { throw TestFailure(message: "expected real spawn failure") }
             try expectTrue(out.proceedObserved && out.slots[0].completed)
             try expectEqual(buildOrdering(out, validatorOutput: nil, hasQueries: true).validator_disposition, "not_spawned")
-            try expectNil(orderedSteps(out, nil)[0].drift)
+            try expectEqual(orderedSteps(out, nil)[0].comparison?.order, "unestablished")
             try expectEqual(classify(workerResult: .success(out), validatorResult: result, expectedVerdictCount: 1).outcome,
                             NormalizedOutcome.validatorSpawnFailed)
         }
@@ -165,7 +165,6 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(reply.steps[0].sandbox_check.outcome, SandboxCheckOutcome.error)
                 try expectEqual(reply.steps[0].sandbox_check.missing_reason, "validator_not_invoked")
                 try expectEqual(reply.steps[0].comparison?.order, "unestablished")
-                try expectNil(reply.steps[0].drift)
                 // A later reply-invariant failure must retain the same native
                 // record, even though the summary becomes reporting_failed.
                 var invalid = result
@@ -175,12 +174,12 @@ func runOrderingTests(_ tk: TestKit) {
                 try expectEqual(degraded.reporting_failure?.evidence_retained, true)
                 try expectEqual(try pwRunnerEncodeJSON(degraded.validator_spawn_failure),
                                 try pwRunnerEncodeJSON(reply.validator_spawn_failure))
-                // An absent optional record in an older reply stays unknown.
-                var legacy = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-                legacy.removeValue(forKey: "validator_spawn_failure")
-                let older = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
-                    from: JSONSerialization.data(withJSONObject: legacy))
-                try expectNil(older.validator_spawn_failure)
+                // An absent optional record stays unknown.
+                var without = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
+                without.removeValue(forKey: "validator_spawn_failure")
+                let absent = try pwRunnerDecodeJSON(PWRunnerRunResult.self,
+                    from: JSONSerialization.data(withJSONObject: without))
+                try expectNil(absent.validator_spawn_failure)
             }
         }
         tk.run("signal_while_waiting: records before and after death never acquire policy lifetime") {
@@ -214,7 +213,6 @@ func runOrderingTests(_ tk: TestKit) {
             for record in records {
                 let step = orderedSteps(out, ValidatorOutput(validatorPid: 7, verdicts: [record], reaped: true))[0]
                 try expectEqual(step.comparison?.order, "unestablished")
-                try expectNil(step.drift)
             }
         }
         tk.run("hang_while_waiting: host deadline says release not observed") {
@@ -233,7 +231,7 @@ func runOrderingTests(_ tk: TestKit) {
             try expectFalse(out.slots[0].completed)
             let step = orderedSteps(out, ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true))[0]
             try expectEqual(step.comparison?.order, "query_first")
-            try expectNil(step.drift)
+            try expectEqual(step.comparison?.observation, "unavailable")
         }
         tk.run("later cleanup ownership fault preserves already acknowledged order") {
             let receipt = "/tmp/pw-order-" + UUID().uuidString
@@ -256,7 +254,7 @@ func runOrderingTests(_ tk: TestKit) {
             let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true)
             try expectEqual(orderedSteps(out, validator)[0].comparison?.order, "query_first")
         }
-        tk.run("legacy_worker_abi6: old worker refuses new header without application or hook") {
+        tk.run("abi6_worker: an ABI 6 worker refuses the ABI 7 header without application or hook") {
             var invoked = false
             let out = try orderingWorker("proceed_wait", suffix: ".abi6") { _ in invoked = true }
             try expectEqual(out.exitCode, 92)
@@ -364,30 +362,29 @@ func runOrderingTests(_ tk: TestKit) {
                 let records = defect == "missing" ? [] : defect == "duplicate" ? [v, v] : [v]
                 let step = orderedSteps(worker, ValidatorOutput(validatorPid: 7, verdicts: records, reaped: true))[0]
                 try expectEqual(step.comparison?.order, "unestablished")
-                try expectTrue(step.comparison!.limitations.contains("query_attempt_order_unestablished"))
+                try expectEqual(step.comparison?.limitations, [])
             }
         }
-        tk.run("encoder rejects public disagreement even after deleting every limitation") {
-            for limits in [[], ["state_stability_unestablished"]] {
+        tk.run("encoder rejects an order or limitation string outside the vocabulary") {
+            for change in ["order", "limitation", "removed_limitation"] {
                 var envelope = orderingEnvelope(worker, validator)
-                envelope.steps[0].comparison?.conclusion = "disagreement"
-                envelope.steps[0].comparison?.limitations = limits
-                envelope.steps[0].drift = true
-                do { _ = try JSONEncoder().encode(envelope); throw TestFailure(message: "unsupported disagreement encoded") }
+                switch change {
+                case "order": envelope.steps[0].comparison?.order = "future_order"
+                case "limitation": envelope.steps[0].comparison?.limitations = ["future_limit"]
+                default: envelope.steps[0].comparison?.limitations = ["query_attempt_order_unestablished"]
+                }
+                do { _ = try pwRunnerEncodeJSON(envelope); throw TestFailure(message: "\(change) encoded") }
                 catch is EncodingError { }
             }
-        }
-        tk.run("unknown order and limitation strings round-trip without inventing legacy ordering") {
-            var envelope = orderingEnvelope(worker, validator)
-            envelope.steps[0].comparison?.order = "future_order"
-            envelope.steps[0].comparison?.limitations += ["query_attempt_order_unestablished", "future_limit"]
-            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
-            try expectEqual(decoded.steps[0].comparison?.order, "future_order")
-            try expectTrue(decoded.steps[0].comparison!.limitations.contains("future_limit"))
-            envelope.schema_version = 7; envelope.steps[0].comparison?.order = nil; envelope.runner_subprocess?.ordering = nil
-            let old = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: pwRunnerEncodeJSON(envelope))
-            try expectNil(old.steps[0].comparison?.order)
-            try expectNil(old.runner_subprocess?.ordering)
+            // The decoder retains unfamiliar strings as transport; it is the
+            // encoder and the consumer that refuse them.
+            var raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(orderingEnvelope(worker, validator))) as! [String: Any]
+            var steps = raw["steps"] as! [[String: Any]]
+            var comparison = steps[0]["comparison"] as! [String: Any]
+            comparison["limitations"] = ["future_limit"]
+            steps[0]["comparison"] = comparison; raw["steps"] = steps
+            let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+            try expectEqual(decoded.steps[0].comparison?.limitations, ["future_limit"])
         }
     }
     tk.group("validator deadline override at the production boundary") {
@@ -410,7 +407,6 @@ func runOrderingTests(_ tk: TestKit) {
             try expectEqual(result.steps[0].sandbox_check.outcome, "allow")
             try expectEqual(result.steps[0].attempt.result_source, "synthetic")
             try expectEqual(result.steps[0].comparison?.order, "unestablished")
-            try expectNil(result.steps[0].drift)
             _ = try pwRunnerEncodeJSON(result)
         }
         tk.run("validator_io_timeout_ms returns partial prediction, mirrors request and releases worker") {

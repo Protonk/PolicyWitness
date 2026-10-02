@@ -22,9 +22,9 @@ It fixes:
 - EXAMPLES: hand-reviewed observation rows with their expected claims and
   projections. They anchor the independent oracle; the resolver must reproduce
   them, and the oracle's self-check must accept them and reject their mutations.
-- The response version that first carries the record and the envelope version
-  that first carries the changed controller semantics. The manifest in
-  docs/contract.json moves with the producing change (docs/CONTRACT.md).
+- Nothing about versions: tests read documents under the contract manifest's
+  exact versions (tests/lib/contract.py), and the independent oracle refuses
+  any other version before reading a record.
 
 Witness alternatives are candidate bases after validity and applicability
 checks. An applicable conflict disqualifies a supported answer to that question;
@@ -33,13 +33,6 @@ answers. Answer values, reason codes and the like are wire spellings; question
 names are both wire keys and model identifiers.
 """
 from collections import namedtuple
-
-# ---------------------------------------------------------------------------
-# Versions. Tests assert these minimums; the manifest moves with the producer.
-# ---------------------------------------------------------------------------
-
-RESPONSE_WITH_DISPOSITION = 10      # first response schema whose worker replies carry the record
-ENVELOPE_WITH_HOST_CAUSE = 3        # first controller envelope with the projected cause and stop reason
 
 # ---------------------------------------------------------------------------
 # Wire locations.
@@ -294,7 +287,7 @@ CAUSE_FOR_TRIGGER = {'deadline_expiry': HOST_SENTINEL_DEADLINE,
                      'policy_transfer_error': 'host_cleanup_after_transfer_error'}
 CAUSE_LABELS = tuple(CAUSE_FOR_TRIGGER.values())
 # runner_sandbox_diagnostics.disposition_integrity
-INTEGRITY_STATES = ('valid', 'invalid', 'not_reported')
+INTEGRITY_STATES = ('valid', 'invalid')
 # steps[].attempt.lifecycle.summary
 LIFECYCLE_SUMMARIES = ('completed', 'started_without_result', 'not_reached', 'unsupported',
                        'unresolved', 'conflicting')
@@ -314,44 +307,44 @@ Projection = namedtuple('Projection', ['name', 'owner', 'source_questions', 'dep
 PROJECTIONS = (
     Projection('runner_sandbox_diagnostics.process_disposition', 'controller',
                ('final_status',), ('reaped', 'exit_code', 'term_signal'),
-               'legacy reply without the record: raw-status compatibility projection; no worker: no_worker',
+               'withheld when the record is absent or invalid; no worker: no_worker',
                {'positive': 'A1 (signaled), A4 (clean_exit), E1', 'negative': 'B1 (conflicting), B4 (unconfirmed)',
-                'transport': 'F3 legacy raw projection, E1 invalid record withheld'}),
+                'transport': 'E1 invalid record withheld, missing record withheld'}),
     Projection('runner_sandbox_diagnostics.termination_cause', 'controller',
                ('final_status', 'cleanup_trigger', 'grace_end', 'kill_request_and_result'),
                ('reaped', 'term_signal', 'exit_code', 'cleanup_trigger', 'grace_end', 'termination_request'),
                'null for a confirmed clean exit; unknown when the record is absent, unresolved, conflicting or unrecognized',
                {'positive': 'A1 (host_sentinel_deadline), A4 (null)', 'negative': 'self-signal stays unknown, B1 unknown',
-                'transport': 'E1 unrecognized future label projects to unknown; F3 legacy unknown'}),
+                'transport': 'E1 unrecognized future label projects to unknown; missing record unknown'}),
     Projection('runner_sandbox_diagnostics.stop_reason', 'controller',
                ('stop_reason',), ('poll_stop_reason',),
                'null when the record is absent or the question is unresolved or inapplicable',
                {'positive': 'A4 (sentinel_deadline beside clean_exit), link 1 (done)', 'negative': 'E2 swapped stop reason',
-                'transport': 'F3 legacy null'}),
+                'transport': 'missing record null'}),
     Projection('runner_sandbox_diagnostics.disposition_integrity', 'controller',
                ('final_status',) + STEP_QUESTIONS, ('disposition', 'runner_subprocess'),
-               'not_reported for a legacy reply; invalid when the record fails validation, with disposition_issues',
-               {'positive': 'E1 valid record', 'negative': 'E1 contradicting basis, B1', 'transport': 'F3'}),
+               'invalid when the record is absent or fails validation, with disposition_issues; null without a worker',
+               {'positive': 'E1 valid record', 'negative': 'E1 contradicting basis, B1', 'transport': 'missing record'}),
     Projection('runner_subprocess.partial_steps', 'runner',
                ('step_result_published',), ('slot', 'attempt_support'),
-               'legacy meaning retained: any slot not completed, including an unsupported no-op',
+               'any slot not completed, including an unsupported no-op',
                {'positive': 'A3 (true), A4 (false)', 'negative': 'D-props adding a completed slot flips it',
                 'transport': 'F1 round trip'}),
     Projection('steps[].attempt.lifecycle', 'runner',
                STEP_QUESTIONS, ('progress', 'collection_basis', 'slot', 'attempt_support', 'plan'),
-               'absent in legacy replies; required on every step from the record version',
+               'required on every step',
                {'positive': 'A2 started_without_result and not_reached, A3 completed prefix', 'negative': 'E2 swapped answers, B2 unresolved',
                 'transport': 'F1 unfamiliar summary value transported'}),
     Projection('steps[].comparison.limitations (attempt:* lifecycle entries)', 'runner',
                STEP_QUESTIONS, ('attempt.lifecycle',),
-               'legacy: attempt:slot_incomplete only',
+               'exactly the one entry the summary projects; none for completed',
                {'positive': 'A2 limitations agree with lifecycle', 'negative': 'E2 limitation missing',
                 'transport': 'F1'}),
     Projection('steps[].attempt.outcome, missing_reason, result_source (compatibility)', 'runner',
                ('step_result_published', 'step_requested_operation_applicability'), ('slot', 'attempt_support'),
                'unchanged spellings; not_run_worker_died means no completed supported result',
                {'positive': 'A2 both steps keep the triple', 'negative': 'worker_sparse_failure pins slot_incomplete',
-                'transport': 'F3'}),
+                'transport': 'F1 round trip'}),
     Projection('error (lifecycle clauses)', 'runner',
                ('stop_reason', 'kill_request_and_result', 'final_status'),
                ('poll_stop_reason', 'termination_request', 'reaped', 'exit_code', 'term_signal'),
@@ -380,7 +373,7 @@ PROBLEM_CLAUSES = {
 # Hand-reviewed examples: observations -> expected claims and projections.
 # ---------------------------------------------------------------------------
 
-MISSING = '<missing>'   # a raw field the reply does not carry (legacy absence)
+MISSING = '<missing>'   # a raw field the reply does not carry (not recorded)
 
 
 def observations(**kw):
@@ -602,7 +595,7 @@ EXAMPLES = (
             [_step(REACHED, PUBLISHED)], [],
             {'process_disposition': 'signaled', 'termination_cause': 'host_exit_grace_exhausted', 'stop_reason': 'done',
              'partial_steps': False, 'summaries': ['completed']}),
-    Example('legacy_host_facts_missing',
+    Example('host_facts_not_recorded',
             observations(reaped=True, term_signal=9, progress=None, steps=(step('incomplete'),)),
             {'final_status': _supported('signal', 9), 'stop_reason': _unresolved(NOT_RECORDED),
              'cleanup_trigger': _unresolved(NOT_RECORDED), 'grace_end': _unresolved(NOT_RECORDED),
@@ -718,14 +711,12 @@ def self_check():
         assert cause is None or cause == CAUSE_UNKNOWN or cause in CAUSE_LABELS, example.name
         assert all(s in LIFECYCLE_SUMMARIES for s in example.projections['summaries']), example.name
         assert len(example.projections['summaries']) == len(example.steps), example.name
-    assert RESPONSE_WITH_DISPOSITION > 9 and ENVELOPE_WITH_HOST_CAUSE > 2
     return True
 
 
 def export():
     """Spellings and example rows as plain JSON for the Swift mirror comparison."""
     return {
-        'response_with_disposition': RESPONSE_WITH_DISPOSITION, 'envelope_with_host_cause': ENVELOPE_WITH_HOST_CAUSE,
         'claim_states': list(CLAIM_STATES), 'run_questions': list(RUN_QUESTIONS), 'step_questions': list(STEP_QUESTIONS),
         'cleanup_triggers': list(CLEANUP_TRIGGERS), 'grace_ends': list(GRACE_ENDS),
         'collection_bases': list(COLLECTION_BASES), 'trigger_for_stop': dict(TRIGGER_FOR_STOP),

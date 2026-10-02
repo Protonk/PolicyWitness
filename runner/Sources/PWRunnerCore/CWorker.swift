@@ -312,7 +312,7 @@ public struct CWorkerOutput {
     public var workerPid: pid_t
     public var readyByteReceived: Bool
     public var applied: Bool
-    /// Legacy storage, published by applied/done. -1 also represents parameter
+    /// The status word, published by applied/done. -1 also represents parameter
     /// setup and compilation failures; without publication it is not a result.
     public var applyRC: Int32
     /// Meaningful native errno only on a failed apply published by done.
@@ -327,7 +327,7 @@ public struct CWorkerOutput {
     public var slots: [CWorkerSlotResult]
     public var profileCapture: AppliedProfileCapture? = nil
     /// Host-only fields, forwarded to runner_subprocess without reinterpretation.
-    /// Defaults support constructed legacy test inputs, not live observations.
+    /// Defaults support constructed test inputs, not live observations.
     /// See PWRunnerSubprocess for JSON paths, types and absence semantics.
     public var pollStopReason: String? = nil
     public var exitRequested: Bool? = nil
@@ -344,7 +344,7 @@ public struct CWorkerOutput {
     /// Direct host observations for the disposition record: why exit was
     /// requested (recorded at the exit-request store), how the exit-grace wait
     /// ended, and whether the final reads followed a confirmed reap. Nil only
-    /// for constructed legacy inputs.
+    /// for constructed test inputs.
     public var cleanupTrigger: String? = nil
     public var graceEnd: String? = nil
     public var collectionBasis: String? = nil

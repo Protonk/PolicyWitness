@@ -21,9 +21,10 @@ func repositoryRoot() -> URL {
 
 // Reply shape golden: tests/fixtures/contract/response_shape.json records, per
 // object path, every key of the field-complete reply fixture and its JSON type.
-// Any change fails until the golden is replaced; a removed key or a changed
-// type also requires a response bump, because readers of the previous number
-// would misread the reply. Added keys need no bump: absent means unknown.
+// Any change fails until the golden is replaced. A number moves when the rules
+// for reading change: a removed key, a changed type or meaning, or a new
+// requirement on readers; an added field alone does not require a bump, and
+// an absent field means unknown, never false.
 private func jsonType(_ value: Any) -> String {
     if value is NSNull { return "null" }
     if let number = value as? NSNumber {

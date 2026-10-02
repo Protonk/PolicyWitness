@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from consumer import validate_current_build_evidence
+import consumer
 
 
 def main():
@@ -43,7 +43,6 @@ def main():
         envelope = run.load_json()
     assert envelope['result']['ok'] is True
     runner = envelope['data']['runner_result']
-    assert runner['schema_version'] >= 8, runner  # runner_subprocess.ordering: response 8
     assert runner['normalized_outcome'] == 'ok'
     assert runner.get('test_overrides') is None
     assert runner['runner_subprocess']['exit_code'] == 0
@@ -62,20 +61,21 @@ def main():
         assert (attempt['requested_kind'], attempt['requested_action'], attempt['requested_path']) == ('file', action, str(target))
         # The worker reads before it unlinks, so both attempts complete successfully.
         assert attempt['outcome'] == 'ok' and attempt['rc'] == 0, attempt
-        assert comparison['prediction'] == prediction['outcome']
-        assert comparison['observation'] == 'succeeded'
+        assert comparison['observation'] == 'succeeded' and comparison['observation_basis'] == 'completed_worker_status'
         assert comparison['operation_relation'] == 'matched' and comparison['target_relation'] == 'same_submitted', comparison
         assert comparison['order'] == 'query_first', comparison
-        assert comparison['conclusion'] == 'agreement' and step['drift'] is False, step
-        assert 'attempt_mutation_order_unestablished' not in comparison['limitations'], comparison
-        assert 'host_path_resolution_changed' in comparison['limitations'], comparison
+        # The host's later nonresolution of the removed path is a path form
+        # beside the record, never a record field.
+        assert comparison['limitations'] == [], comparison
         recorded[step['step_id']] = {'prediction': prediction['outcome'], 'native_rc': prediction['native_rc'],
-                                     'comparison': comparison, 'drift': step['drift']}
-    errors = validate_current_build_evidence(envelope)
+                                     'comparison': comparison,
+                                     'later_resolution': prediction.get('path_diagnostics')}
+    assert recorded['unlink']['later_resolution']['realpath_resolved'] is None, recorded['unlink']
+    errors = consumer.validate(envelope)
     assert not errors, errors
     (out / 'prediction-observation.json').write_text(json.dumps(recorded, indent=2) + '\n')
     print('removed target retains native ' + '/'.join(recorded[s]['prediction'] for s in ('read', 'unlink'))
-          + ' predictions, successful read and unlink, and query_first agreement on both rows')
+          + ' predictions, successful read and unlink, and query_first succeeded records on both rows')
 
 
 if __name__ == '__main__':

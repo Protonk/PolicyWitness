@@ -11,8 +11,11 @@ private func usage() -> String {
     """
     usage:
       pw-runner-client run [--timeout-ms <n>] [--mach-service] [--privileged] <xpc-service-name> <request.json>
+      pw-runner-client run [--timeout-ms <n>] [--mach-service] [--privileged] --request - <xpc-service-name>
 
     notes:
+      - the first form reads the request from the named file; the second reads it from stdin to EOF.
+      - the whole request is read before the connection is opened or any output is written.
       - prints the raw RunResult JSON returned by the runner (JSON-over-Data).
       - on open/call failure, prints a synthetic RunResult with normalized_outcome set.
       - use --mach-service for Mach services; add --privileged for system scope.
@@ -39,6 +42,7 @@ private func run(args: [String]) -> Never {
     var timeoutMs = PWRunnerWire.defaultClientTimeoutMs
     var useMachService = false
     var privileged = false
+    var requestFromStdin = false
 
     var idx = 0
     while idx < args.count {
@@ -64,6 +68,14 @@ private func run(args: [String]) -> Never {
         case "--privileged":
             privileged = true
             idx += 1
+        case "--request":
+            // Only `-` is accepted here: the positional request argument remains
+            // the literal file path form, and the two forms never mix.
+            guard idx + 1 < args.count else { die("missing value for --request", code: 2) }
+            guard args[idx + 1] == "-" else { die("invalid --request value (only - is accepted)\n\n\(usage())", code: 2) }
+            guard !requestFromStdin else { die("duplicate --request -", code: 2) }
+            requestFromStdin = true
+            idx += 2
         default:
             die("unknown argument: \(arg)\n\n\(usage())", code: 2)
         }
@@ -73,14 +85,21 @@ private func run(args: [String]) -> Never {
     let serviceName = args[idx]
     idx += 1
 
-    guard idx < args.count else { die("missing <request.json>\n\n\(usage())", code: 2) }
-    let requestPath = args[idx]
-
     let requestBytes: Data
-    do {
-        requestBytes = try Data(contentsOf: URL(fileURLWithPath: requestPath))
-    } catch {
-        die("failed to read request.json: \(error)", code: 2)
+    if requestFromStdin {
+        guard idx == args.count else { die("unexpected argument after <xpc-service-name> with --request -\n\n\(usage())", code: 2) }
+        // Read the whole request to EOF before connecting or writing anything.
+        requestBytes = FileHandle.standardInput.readDataToEndOfFile()
+    } else {
+        guard idx < args.count else { die("missing <request.json>\n\n\(usage())", code: 2) }
+        let requestPath = args[idx]
+        idx += 1
+        guard idx == args.count else { die("unexpected argument after <request.json>\n\n\(usage())", code: 2) }
+        do {
+            requestBytes = try Data(contentsOf: URL(fileURLWithPath: requestPath))
+        } catch {
+            die("failed to read request.json: \(error)", code: 2)
+        }
     }
 
     let conn: NSXPCConnection

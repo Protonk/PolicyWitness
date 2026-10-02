@@ -227,27 +227,35 @@ def expected_fixture_controls(out):
     """
     import copy
     sys.path.insert(0, str(ROOT / 'tests/lib'))
+    import contract
     import lifecycle_contract as C
     import lifecycle_oracle as O
     from lifecycle_adapter import read_lifecycle
-    from consumer import validate_evidence_shape
+    from consumer import validate
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
     expected = json.loads((fixtures / 'a1_expected.json').read_text())
     known = json.loads((fixtures / 'a1_known_loss.json').read_text())
     records = []
     assert not O.check_record(expected), O.check_record(expected)
-    assert not validate_evidence_shape(expected), validate_evidence_shape(expected)
+    assert not validate(expected), validate(expected)
     records.append({'control': 'expected_accepted', 'rejected': False})
-    # Known loss: legal as the legacy reply it is; a missing record at the new version.
-    assert not O.check_record(known) and read_lifecycle(known)['reporting'] == 'not_reported'
-    assert not validate_evidence_shape(known)
+    # Known loss: a captured reply under another version. It is refused as
+    # unsupported before any claim is read; brought to the current version
+    # unchanged, it lacks the record and is rejected for that.
+    assert read_lifecycle(known)['reporting'] == 'not_reported'
+    refused = O.check_record(known)
+    assert refused and refused[0]['kind'] == 'unsupported_version', refused
+    errors = validate(known)
+    assert len(errors) == 1 and 'unsupported' in errors[0], errors
+    records.append({'control': 'known_loss_unsupported_version', 'rejected': True, 'findings': refused, 'errors': errors})
     loss = copy.deepcopy(known)
-    loss['data']['runner_result']['schema_version'] = C.RESPONSE_WITH_DISPOSITION
+    loss['schema_version'] = contract.CONTROLLER_ENVELOPE
+    loss['data']['runner_result']['schema_version'] = contract.RESPONSE_SCHEMA
     findings = O.check_record(loss)
     assert any(f['kind'] == 'missing_record' for f in findings), findings
-    assert any('disposition' in e for e in validate_evidence_shape(loss))
-    records.append({'control': 'known_loss_rejected_at_record_version', 'rejected': True, 'findings': findings})
+    assert any('disposition' in e for e in validate(loss))
+    records.append({'control': 'known_loss_rejected_at_current_version', 'rejected': True, 'findings': findings})
 
     def steps(e):
         return e['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]['steps']

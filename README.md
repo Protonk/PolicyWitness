@@ -2,23 +2,32 @@
 
 >Read the [user guide](docs/PolicyWitness.md) for more detail.
 
-PolicyWitness is a macOS harness for observing differences between `sandbox_check`'s userland sandbox-prediction API and the kernel's actual enforcement. It does so by evaluating SBPL policy applied to a sandboxed worker plus a probe plan, exercising both the prediction and the kernel. Each run produces one JSON envelope describing both channels per probe step, with the policy bytes, the runner's entitlements, and unified-log deny evidence attached.
+PolicyWitness records `sandbox_check` queries and attempted operations under
+macOS sandbox policies. When prediction is available, the validator queries
+the worker's PID; the worker attempts its operation after applying the policy
+and receiving release from the host. Each step records available results, missing
+observations, submitted-scope relations and ordering. The controller adds
+request identity, source hashes, imports, runner and app provenance, host
+facts and hashes of selected binaries outside the app manifest. It does not
+embed the full specimen. Optional log capture adds kernel denial records
+with correlation limits. No record asserts agreement or disagreement between
+prediction and enforcement.
 
-Measuring `sandbox_check`'s prediction about a process against policy enforcement requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the prediction and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
+Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
 
 ## Flow
 
 >Specimens -> Runs -> Steps -> Evidence
 
-PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner`, a sandboxed C worker that applies the specimen policy to itself and runs the probe plan and `sb_api_validator --batch` which queries `sandbox_check` for each probe against the worker's sandboxed PID. The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON envelope, and replies.
+PolicyWitness operates on specimens: an SBPL policy plus a probe plan. The controller launches a fresh runner per specimen. The runner is an unsandboxed XPC host plus two short-lived children: `pw-probe-runner`, a sandboxed C worker that applies the specimen policy to itself and runs the probe plan and `sb_api_validator --batch` which queries `sandbox_check` for each probe against the worker's sandboxed PID. The host stays unsandboxed so the XPC reply path survives even under a strict `(deny default)` profile, joins both children's outputs into one JSON reply, and replies; the controller wraps that reply in the envelope it prints.
 
-After application, the worker waits for host release. The host closes validator collection before releasing the entire attempt batch. Eligible `query_first` records establish this ordering; they do not establish a shared state snapshot.
+After application, the worker waits for host release. The host closes validator collection before releasing the entire attempt batch. A step whose native allow/deny answer matched its planned query records that ordering as `comparison.order: query_first`; it does not establish a shared state snapshot.
 
 Each step records two evidence channels plus their comparison:
 
 - **Attempt** (`steps[].attempt`): in-band kernel response — `rc`, `errno`, mach `kr` — from actually performing the operation inside the sandboxed worker.
-- **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` verdict for the same operation + filter against the same PID, supplied by the validator.
-- **Drift** (`steps[].drift`): `false` for a supported allow/success agreement and `null` when the evidence leaves the comparison unavailable or merely directionally consistent. `true` is reserved for a difference from kernel enforcement with material alternative explanations excluded. The current runner establishes query order for eligible records but cannot establish state stability or runtime target identity, so it produces no `true` claims. Successful same-target unlink also makes agreement unavailable while its order against the query is unknown.
+- **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` answer for the submitted operation + filter against the same PID, supplied by the validator, or the reason no answer was available.
+- **Comparison** (`steps[].comparison`): what the attempt channel observed and the raw fields that observation rests on, whether the submitted query names the attempt's operation and target, whether the query is known to precede the attempt batch, and any planner or lifecycle limitation. It relates the channels; it does not say whether they agree. The guide's [reading rules](docs/PolicyWitness.md#reading-a-comparison-record) say how to use it.
 
 Unified-log evidence for kernel denies is attached out-of-band (best-effort).
 Collection has a shared ten-second allowance and a fixed one-second cleanup

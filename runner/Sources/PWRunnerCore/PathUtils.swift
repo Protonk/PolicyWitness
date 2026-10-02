@@ -1,9 +1,7 @@
 import Foundation
 import Darwin
 
-// Path normalization and observation helpers used by probe attempts.
-@_silgen_name("fcntl")
-private func fcntl_getpath(_ fd: Int32, _ cmd: Int32, _ value: UnsafeMutablePointer<CChar>?) -> Int32
+// Path normalization helpers for query planning and host path diagnostics.
 
 struct CanonicalPath {
     var input: String
@@ -51,21 +49,6 @@ func parentRealpathResolved(_ input: String) -> String? {
     return resolvedParent == "/" ? "/" + leaf : resolvedParent + "/" + leaf
 }
 
-// Resolve the kernel's view of an open file descriptor, when available.
-func observedPathForFd(_ fd: Int32) -> String? {
-    var buf = [CChar](repeating: 0, count: Int(PATH_MAX))
-    let rc: Int32 = buf.withUnsafeMutableBufferPointer { ptr in
-        guard let base = ptr.baseAddress else {
-            return -1
-        }
-        return fcntl_getpath(fd, F_GETPATH, base)
-    }
-    if rc == 0 {
-        return String(cString: buf)
-    }
-    return nil
-}
-
 // Firmlinks parser + helpers used to surface candidate kernel-side forms of a
 // sandbox_check path argument. Apple-internal sandbox_check matches subpath
 // rules against the kernel's post-firmlink view of a path; userland realpath
@@ -80,9 +63,7 @@ func observedPathForFd(_ fd: Int32) -> String? {
 // slash). Lazily loaded once per process.
 
 // Standard /usr/share/firmlinks mappings as shipped on Catalina+. Used as a
-// fallback when the file itself is unreadable — most often because the
-// runner's enclosing sandbox (e.g. `(deny default)`) blocks the read after
-// the sandbox is applied. The source paths are absolute; the targets are
+// fallback when the file itself is unreadable. The source paths are absolute; the targets are
 // the data-volume-relative subpaths (which get `/System/Volumes/Data/`
 // prepended at load time). Order does not matter — we re-sort by descending
 // prefix length for longest-match.
@@ -157,14 +138,6 @@ private struct FirmlinkMap {
         }
         return nil
     }
-}
-
-/// Force the lazy `FirmlinkMap.shared` initializer to run now. Call this from
-/// the runner's startup path BEFORE the SBPL profile is applied — once the
-/// sandbox is up, `(deny default)` profiles block the file read and the map
-/// would be initialized from the built-in fallback only.
-func warmFirmlinkMap() {
-    _ = FirmlinkMap.shared.mappings.count
 }
 
 /// Apply the firmlinks mapping to an absolute path. Returns nil when the path

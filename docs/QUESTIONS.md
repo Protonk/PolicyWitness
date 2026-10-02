@@ -6,7 +6,7 @@ The following questions are answered briefly with exhaustive detail remanded to 
 
 ## When should I use PolicyWitness?
 
-PolicyWitness compares `sandbox_check` predictions with the observed results of operations attempted under a sandbox policy. Use it when developing a policy or investigating disagreement for particular operations, filters and targets. You can also use it as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
+Use it to witness what a sandbox policy does to specific operations and targets. Each step records the `sandbox_check` answer for a query and the result of an attempted operation under that policy, as two separate channels, with the kernel's denial log attached when it is available. Use it when developing a policy, when investigating one operation, filter and target, or as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
 
 ## Who needs to use PolicyWitness?
 
@@ -16,25 +16,21 @@ Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandb
 
 Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
 
-## Beyond observing drift, what does PolicyWitness's attempt channel record?
+## What does PolicyWitness's attempt channel record?
 
-The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are not necessarily raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
+The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are PolicyWitness attempt status, not raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
 
 ## Can PolicyWitness probe operations it doesn't natively support?
 
-Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not automatically turn that evidence into a comparison for that operation and successful spawning can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
+Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
 
-## How does PolicyWitness handle uncertainty in its verdicts?
+## What does a comparison record contain, and what does it not claim?
 
-PolicyWitness keeps the prediction (`sandbox_check`) and attempt observations (`attempt`) separate from the comparison it derives. In the response schema, `comparison` records the conclusion, its operation and target scope, and known limitations. `drift` is a separate, compact summary: `false` for agreement, `true` for disagreement, and `null` for either directional consistency or an unavailable comparison.
+Each step's `comparison` has six fields: what the attempt channel observed (`observation`: `succeeded`, `permission_failure`, `other_failure` or `unavailable`) and the raw fields that observation rests on (`observation_basis`); whether the query named the same operation as the attempt (`operation_relation`) and the same submitted target (`target_relation`); whether an eligible query is known to precede the attempt batch (`order`); and a short list of `limitations` that name a planning exclusion or the attempt's lifecycle state. The query's own answer stays in `sandbox_check`. The record relates the two channels; it does not say whether they agree. See the guide's [reading rules](PolicyWitness.md#reading-a-comparison-record).
 
-The current runner closes query collection before releasing attempts. Eligible native records report `comparison.order: query_first`; this proves an interval before attempts, not a common state snapshot. A deny prediction beside a successful attempt still yields `null` because state stability and runtime target identity remain unestablished. A successful same-target unlink also prevents an allow/success agreement while its order against the query is unknown.
+## Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
-
-## Can PolicyWitness return a verdict of `drift: true`?
-
-No. `drift: true` would assert that `sandbox_check` and kernel enforcement disagreed with every other explanation excluded, and the envelope carries no evidence that the target's state was stable or that a path named the same object at query time and attempt time. Without that evidence the typed comparison has no disagreement case to construct, so the runner never emits one, its encoder rejects one, and the consumer checks reject one. A deny prediction beside a successful attempt is reported as `conclusion: unavailable` with `drift: null`, with the native prediction, the attempt result and the ordering evidence retained for the reader.
+No. The envelope carries no evidence that a target's state was stable between the query and the attempt, or that a path named the same object both times, and a permission-shaped failure does not identify the sandbox as its cause. A deny prediction beside a successful attempt is therefore reported as those two facts with their relations and order, and nothing more. Readers who want an opinion form it from the record and the raw channels, under limits the record states.
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
@@ -46,7 +42,7 @@ No. PolicyWitness has its own limits, documented in [the limits inventory](Polic
 
 ## How do I use imports with PolicyWitness?
 
-PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
+PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`). The controller also inventories the literal import closure of the submitted source before the run and reports it under `data.specimen.policy.imports`, with the bounds in [the limits inventory](PolicyWitness.md#limits); that inventory describes what the controller could read, not what the worker's compiler read.
 
 ## Can PolicyWitness test sandbox-extension behavior?
 
@@ -55,5 +51,9 @@ No. PolicyWitness does not issue, consume, release, or otherwise track sandbox e
 ## Which happens first, the prediction or the attempt?
 
 A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+
+## How do I read the denial log?
+
+As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator's own `sandbox_check` queries can generate denial records naming the worker PID before any attempt begins. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
 
 <!-- END SHARED QUESTIONS -->

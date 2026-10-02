@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/case.sh"
 
-test_begin runner_exec_dac execute_permission_is_not_sandbox_drift
+test_begin runner_exec_dac execute_permission_controls_spawn
 test_require_pw
 test_step run "compare direct execution and PW with execute permission absent, then restored"
 test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "exec permission attribution failed" \
@@ -14,4 +14,4 @@ test_step native_scope "observe native exec queries under independent exec, fork
 test_check_python "${PW_TEST_ARTIFACTS}/scope.log" "native exec scope control failed" \
   "${ROOT_DIR}/tests/suites/runner_exec_dac/check_query_scope.py" "${PW_BIN}" \
   "${PW_TEST_ARTIFACTS}/scope" "${PW_TEST_ARTIFACTS}/exec-helper"
-test_pass "execute permission controls spawning; ordinary EACCES yields drift=null"
+test_pass "execute permission controls spawning; ordinary EACCES is a permission failure by errno with no sandbox attribution"

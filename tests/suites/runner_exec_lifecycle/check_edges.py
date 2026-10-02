@@ -74,7 +74,6 @@ def main():
             (out / 'observations.json').write_text(json.dumps(dict(pids=pids, groups=groups,
                 exited=sorted(control.exited), elapsed=run.elapsed_seconds), indent=2))
             runner = run.load_json()['data']['runner_result']
-            assert runner['schema_version'] >= 11
             first, middle, last = runner['steps']
             assert first['attempt']['outcome'] == 'ok'
             attempt = middle['attempt']
@@ -86,8 +85,8 @@ def main():
                     for field in ('child_pid', 'child_exit_code', 'child_term_signal'):
                         assert step['attempt'].get(field) is None, step
                     assert step['comparison']['observation'] == 'unavailable', step
-                    assert step['comparison']['conclusion'] == 'unavailable', step
-                    assert step['drift'] is None and step.get('deny_signal') is None, step
+                    assert step['comparison']['observation_basis'] == 'no_completed_worker_result', step
+                    assert 'drift' not in step and 'deny_signal' not in step, step
                 assert runner['runner_subprocess']['partial_steps'] is True
             else:
                 assert rc == 0 and runner['normalized_outcome'] == 'ok'
@@ -98,7 +97,10 @@ def main():
                 assert attempt['outcome'] == ('ok' if mode == 'closed_streams_continue' else 'exec_failed')
                 if mode == 'leader_exit_descendant':
                     assert 'deadline' in attempt['error']
-                    assert 'sandbox_attribution_unestablished' in middle['comparison']['limitations']
+                    # The helper spawned: the record observes the spawn and nothing
+                    # about the sandbox for the deadline that followed.
+                    assert middle['comparison']['observation_basis'] == 'spawned_child', middle['comparison']
+                    assert middle['comparison']['limitations'] == [], middle['comparison']
             print(f'{mode}: independent pipe/exit/effect observations match retained evidence')
         finally:
             try: control.close()

@@ -26,10 +26,12 @@ paths, error evidence, and permission errno values attached to the right steps.
 
 The validator returns deny for the second step before allow for the first.
 Results must retain probe-plan order while associating these accepted verdicts
-by step ID. Allow/success has drift=false; deny/permission failure has
-directional consistency and drift=null. The unanswered third step must have the current
-missing-verdict representation: `sandbox_check.outcome="error"`, a missing-verdict
-diagnostic, and an explicitly present `drift:null`. All three queries must appear
+by step ID. The allow step records `observation: succeeded` and the deny step
+`permission_failure`, both `query_first`. The unanswered third step must have
+the missing-verdict representation: `sandbox_check.outcome="error"`,
+`result_source: synthetic`, `missing_reason: validator_no_verdict`, a
+missing-verdict diagnostic, and a comparison with `order: unestablished`
+beside its completed attempt. All three queries must appear
 in the fixture's received transcript, ruling out an upstream prediction skip.
 The run must be degraded (`result.ok=false`, nonzero CLI/runner rc), while worker
 and validator exit cleanly and the worker reports complete steps.

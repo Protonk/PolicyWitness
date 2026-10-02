@@ -1,7 +1,8 @@
 """Observe independent query/attempt routing through the real validator.
 
 The crossed queries deliberately describe different targets from the attempts.
-Their expected drift tests the harness; it is no claim about a compiler bug.
+Their expected target relations test the harness; they are no claim about a
+compiler bug.
 
 Keep this test as a contract guard even when the implementation prevents target
 substitution by construction. A future refactor must still route queries and
@@ -17,7 +18,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from blackbox import validate_run_shape, validate_step
-from consumer import recover_evidence
+import consumer
 from run_capture import RunCapture
 
 
@@ -47,19 +48,20 @@ def main():
 
         # Literal expectations belong to this test, never to PW's response or
         # classifier. Only the query values change between these specimens.
-        for name, query_indices, predictions, drifts in (
-            ('matching', (0, 1), ('allow', 'deny'), (False, None)),
-            ('swapped', (1, 0), ('deny', 'allow'), (None, None)),
+        for name, query_indices, predictions, relation in (
+            ('matching', (0, 1), ('allow', 'deny'), 'same_submitted'),
+            ('swapped', (1, 0), ('deny', 'allow'), 'different_submitted'),
         ):
             artifacts = out / name
             artifacts.mkdir()
             specimen = copy.deepcopy(base)
             for step, query_index in zip(specimen['probe_plan'], query_indices):
                 step['sandbox_check']['filter']['value'] = str(paths[query_index])
-            expected = [{'step_id': step_id, 'sandbox_outcome': prediction,
-                         'attempt_ok': i == 0, 'drift': drift}
-                        for i, (step_id, prediction, drift) in
-                        enumerate(zip(step_ids, predictions, drifts))]
+            expected = [{'step_id': step_id, 'sandbox_outcome': prediction, 'attempt_ok': i == 0,
+                         'comparison': {'observation': 'succeeded' if i == 0 else 'permission_failure',
+                                        'operation_relation': 'matched', 'target_relation': relation,
+                                        'order': 'query_first', 'limitations': []}}
+                        for i, (step_id, prediction) in enumerate(zip(step_ids, predictions))]
             expected[0]['errno'] = None
             (artifacts / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
             for i, (path, seed) in enumerate(zip(paths, seeds)):
@@ -100,21 +102,20 @@ def main():
             assert validator['exit_code'] == 0 and validator.get('term_signal') is None, validator
 
             planned = {step['step_id']: step for step in specimen['probe_plan']}
-            answers = recover_evidence(envelope)
-            (artifacts / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
-            conclusions = ('agreement', 'directional_consistency') if name == 'matching' else ('unavailable', 'unavailable')
-            for answer, conclusion in zip(answers['steps'], conclusions):
-                assert answer['comparison']['conclusion'] == conclusion, answer
-                assert answer['comparison']['target_relation'] == ('same_submitted' if name == 'matching' else 'different_submitted')
-                assert answer['comparison']['operation_relation'] == 'matched'
-                assert answer['attempt']['requested_path'] == planned[answer['step_id']]['attempt']['target']
-            assert answers['failure_groups']['unattributed_failure'] == [step_ids[1]]
+            assert not consumer.validate(envelope), consumer.validate(envelope)
+            rows = consumer.steps(envelope)
+            for row in rows:
+                assert row['comparison']['target_relation'] == relation, row
+                assert row['comparison']['operation_relation'] == 'matched', row
+                assert row['attempt']['requested_path'] == planned[row['step_id']]['attempt']['target'], row
+            denied = consumer.select(rows, observation='permission_failure', observation_basis='permission_errno')
+            assert [s['step_id'] for s in denied] == [step_ids[1]], denied
             for step, expectation in pairs:
                 failures.extend(validate_step(step, expectation))
                 request = planned[step['step_id']]
                 prediction, attempt = step['sandbox_check'], step['attempt']
                 for key, value in (
-                    ('pid', worker['pid']), ('scope', 'post_sandbox'),
+                    ('pid', worker['pid']),
                     ('operation', 'file-write-data'), ('filter_kind', 'path'),
                     ('rc', 0 if expectation['sandbox_outcome'] == 'allow' else 1),
                     ('errno', 0), ('filter_type_id', 1),
@@ -136,7 +137,7 @@ def main():
             (artifacts / 'diagnostics.json').write_text(json.dumps(failures, indent=2) + '\n')
             errors.extend(f'{name}: {failure}' for failure in failures)
             if not failures:
-                print(f'{name}: predictions, attempts, target attribution, and drift passed', flush=True)
+                print(f'{name}: predictions, attempts, target attribution and target relations passed', flush=True)
 
     if errors:
         raise SystemExit('\n'.join(errors))

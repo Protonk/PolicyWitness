@@ -13,7 +13,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from consumer import recover_evidence, validate_evidence_shape
+import consumer
 
 
 def main():
@@ -95,11 +95,8 @@ def main():
                 rc = run.wait(timeout=30)
                 envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert type(runner.get('schema_version')) is int and runner['schema_version'] >= 7, runner  # comparison: response 7
-            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
-            answers = recover_evidence(envelope)
-            consumer_evidence[name] = answers
-            (out / name / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            assert not consumer.validate(envelope), consumer.validate(envelope)
+            consumer_evidence[name] = consumer.steps(envelope)
             assert rc == 0 and envelope['result']['ok'] is True, (name, envelope)
             assert runner['normalized_outcome'] == 'ok'
             assert runner.get('test_overrides') is None
@@ -160,65 +157,49 @@ def main():
                     assert attempt['child_pid'] == 0 and attempt['child_exit_code'] == -1, (name, attempt)
                     assert attempt['outcome'] == 'exec_failed' and attempt['rc'] == -1
                     assert attempt['errno'] in (1, 13)
-                    assert attempt['syscall_errno'] == attempt['errno']
+                    assert 'syscall_errno' not in attempt
                     assert 'posix_spawn:' in attempt['error']
-            assert records['bare']['comparison']['prediction'] == 'unavailable'
-            assert records['bare']['drift'] is None
+            # The bare spelling is rejected by the validator: no verdict, no order,
+            # and a different operation from the attempt's.
+            bare = records['bare']['comparison']
+            assert consumer.query_column(records['bare']) == 'unavailable'
+            assert bare['order'] == 'unestablished' and bare['operation_relation'] == 'different', bare
             for key in ('interpreter', 'fork', 'read'):
                 assert records[key]['comparison']['operation_relation'] == 'different'
-                assert records[key]['comparison']['conclusion'] == 'unavailable'
-                assert records[key]['drift'] is None
             assert records['different_target']['comparison']['target_relation'] == 'different_submitted'
-            assert records['different_target']['drift'] is None
+            for step in records.values():
+                assert 'drift' not in step and 'conclusion' not in step['comparison'], step
 
-        # Scenario-authored expectations protect useful agreement, limited
-        # consistency and unavailable comparisons independently of errno rules.
+        # Scenario-authored expectations protect the observed success, the
+        # permission failure by errno and the matching scopes independently of
+        # errno rules in the producer.
         comparisons = [
-            ('allow', 'exec', 'allow', 'succeeded', 'agreement', False),
-            ('minimum', 'exec', 'allow', 'succeeded', 'agreement', False),
-            ('interpreter_all', 'exec', 'allow', 'succeeded', 'agreement', False),
-            ('allow', 'child_37', 'allow', 'succeeded', 'agreement', False),
-            ('allow', 'script', 'allow', 'succeeded', 'agreement', False),
-            ('deny_exec', 'exec', 'deny', 'permission_failure', 'directional_consistency', None),
-            ('bare_policy', 'exec', 'deny', 'permission_failure', 'directional_consistency', None),
-            ('deny_fork', 'exec', 'allow', 'permission_failure', 'unavailable', None),
-            ('without_read', 'exec', 'allow', 'permission_failure', 'unavailable', None),
-            ('interpreter_all', 'script', 'allow', 'permission_failure', 'unavailable', None),
-            ('deny_script_exec', 'script', 'deny', 'permission_failure', 'directional_consistency', None),
+            ('allow', 'exec', 'allow', 'succeeded', 'spawned_child'),
+            ('minimum', 'exec', 'allow', 'succeeded', 'spawned_child'),
+            ('interpreter_all', 'exec', 'allow', 'succeeded', 'spawned_child'),
+            ('allow', 'child_37', 'allow', 'succeeded', 'spawned_child'),
+            ('allow', 'script', 'allow', 'succeeded', 'spawned_child'),
+            ('deny_exec', 'exec', 'deny', 'permission_failure', 'permission_errno'),
+            ('bare_policy', 'exec', 'deny', 'permission_failure', 'permission_errno'),
+            ('deny_fork', 'exec', 'allow', 'permission_failure', 'permission_errno'),
+            ('without_read', 'exec', 'allow', 'permission_failure', 'permission_errno'),
+            ('interpreter_all', 'script', 'allow', 'permission_failure', 'permission_errno'),
+            ('deny_script_exec', 'script', 'deny', 'permission_failure', 'permission_errno'),
         ]
-        for name, step_id, prediction, observation, conclusion, drift in comparisons:
-            answers = consumer_evidence[name]
-            step = next(s for s in answers['steps'] if s['step_id'] == step_id)
-            assert step_id in answers['comparison_groups'][conclusion]
-            assert (step_id in answers['failure_groups']['unattributed_failure']) == (observation == 'permission_failure' or step_id == 'child_37')
-            comparison = step['comparison']
-            assert comparison['prediction'] == prediction
-            assert comparison['observation'] == observation
-            assert comparison['conclusion'] == conclusion, (name, step_id, comparison)
-            assert comparison['operation_relation'] == 'matched'
-            assert comparison['target_relation'] == 'same_submitted'
-            assert step['drift'] is drift
-            assert comparison['order'] == 'query_first', (name, step_id, comparison)
-            assert 'query_attempt_order_unestablished' not in comparison['limitations']
-            for limit in ('state_stability_unestablished',
-                          'runtime_target_identity_unestablished', 'exec_query_not_full_spawn_prediction'):
-                assert limit in comparison['limitations'], (name, step_id, comparison)
-            assert 'broad_query_operation' not in comparison['limitations']
-            if observation == 'permission_failure':
-                assert 'sandbox_attribution_unestablished' in comparison['limitations']
+        for name, step_id, prediction, observation, basis in comparisons:
+            rows = consumer_evidence[name]
+            chosen = consumer.select(rows, step_id=step_id, query=prediction, observation=observation,
+                                     observation_basis=basis, operation_relation='matched',
+                                     target_relation='same_submitted', order='query_first', limitations=[])
+            assert len(chosen) == 1, (name, step_id, [s['comparison'] for s in rows if s['step_id'] == step_id])
 
         child = evidence['allow']['child_37']
-        recovered_child = next(s for s in consumer_evidence['allow']['steps'] if s['step_id'] == 'child_37')
-        assert recovered_child['failed_after_spawn'] is True
-        assert recovered_child['attempt'] == child['attempt']
-        assert recovered_child['comparison']['observation_basis'] == 'spawned_child'
-        assert {'exec_result_failed_after_spawn', 'sandbox_attribution_unestablished'} <= set(recovered_child['comparison']['limitations'])
         assert child['attempt']['child_exit_code'] == 37 and child['attempt']['child_pid'] > 0
         assert child['attempt']['outcome'] == 'exec_failed' and child['attempt']['rc'] == 37
         assert child['attempt']['stdout'] == 'exec_fixture: hello from helper\n'
+        # A spawned child that later exits nonzero is a succeeded spawn by basis.
         assert child['comparison']['observation_basis'] == 'spawned_child'
-        assert 'exec_result_failed_after_spawn' in child['comparison']['limitations']
-        assert 'sandbox_attribution_unestablished' in child['comparison']['limitations']
+        assert child['comparison']['limitations'] == []
         assert evidence['allow']['script']['attempt']['stdout'] == 'native_exec_script\n'
         denied_script = evidence['interpreter_all']['script']
         assert denied_script['attempt']['child_pid'] == 0
@@ -228,15 +209,12 @@ def main():
         assert blocked_script['attempt']['child_pid'] == 0
         assert blocked_script['attempt']['errno'] in (1, 13)
         swapped = evidence['deny_exec']['denied_query_allowed_attempt']
-        recovered_swap = next(s for s in consumer_evidence['deny_exec']['steps'] if s['step_id'] == 'denied_query_allowed_attempt')
-        assert recovered_swap['comparison']['target_relation'] == 'different_submitted'
-        assert recovered_swap['comparison']['conclusion'] == 'unavailable'
         assert swapped['sandbox_check']['outcome'] == 'deny'
         assert swapped['attempt']['child_pid'] > 0 and swapped['attempt']['child_exit_code'] == 0
         assert swapped['attempt']['stdout'] == 'exec_fixture: hello from helper\n'
         assert swapped['comparison']['operation_relation'] == 'matched'
         assert swapped['comparison']['target_relation'] == 'different_submitted'
-        assert swapped['comparison']['conclusion'] == 'unavailable' and swapped['drift'] is None
+        assert swapped['comparison']['observation'] == 'succeeded'
         (out / 'checks.json').write_text(json.dumps({'policies': len(policies), 'native_steps': len(rows),
             'comparison_scenarios': len(comparisons), 'failures': []}, indent=2) + '\n')
     print('native exec admission, independent spawn prerequisites and child outcomes verified')

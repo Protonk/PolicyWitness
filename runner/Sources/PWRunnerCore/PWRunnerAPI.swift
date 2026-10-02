@@ -38,7 +38,6 @@ enum PWRunnerWire {
     static let sandboxFilterIokitRegistryEntryClass = "iokit_registry_entry_class"
     static let sandboxFilterIokitUserClientClass = "iokit_user_client_class"
     static let sandboxFilterSysctlName = "sysctl_name"
-    static let sandboxCheckScopePost = "post_sandbox"
 }
 
 // Canonical normalized_outcome values. Every emit site in the runner stack
@@ -53,19 +52,16 @@ enum PWRunnerWire {
 // section so callers can recognize it.
 public enum NormalizedOutcome {
     // Successful execution and a reserved precise apply-failure spelling.
-    // Legacy ABI status cannot identify a failed native operation; current
+    // The worker's status word cannot identify a failed native operation;
     // published preparation/application failures map to runner_failed.
     public static let ok = "ok"
     public static let sandboxApplyFailed = "sandbox_apply_failed"
-
-    // ----- emitted by the host short-circuit (pre-spawn libsandbox check)
-    public static let libsandboxUnavailable = "libsandbox_unavailable"
 
     // ----- emitted by the host short-circuit (PWRunnerService.swift).
     // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
     // missing sbpl_source / non-sbpl format), NOT a compile-error signal — SBPL
     // that fails to compile reaches the worker and surfaces as
-    // runner_failed with an ambiguous published legacy status.
+    // runner_failed with the published status word or failure record.
     public static let badPolicy = "bad_policy"
     public static let badRequest = "bad_request"
     public static let alreadyRan = "already_ran"
@@ -73,8 +69,8 @@ public enum NormalizedOutcome {
 
     // ----- emitted by the host classifier (CWorker.swift sentinel
     // observation + CWorkerOrchestrator classification)
-    // Recognized legacy string only; signals and PID-matched denials do not
-    // establish a sandbox cause, so current producers never emit this label.
+    // Recognized constant only; signals and PID-matched denials do not
+    // establish a sandbox cause, so no producer emits this label.
     public static let runnerSandboxDenied = "runner_sandbox_denied"
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
@@ -119,7 +115,6 @@ public enum AttemptOutcome {
     public static let lookupFailed = "lookup_failed"
     public static let sysctlFailed = "sysctl_failed"
     public static let execFailed = "exec_failed"
-    public static let bootstrapPortFailed = "bootstrap_port_failed"
     public static let unsupported = "unsupported"
     public static let notRunWorkerDied = "not_run_worker_died"
 }
@@ -128,13 +123,12 @@ public enum AttemptOutcome {
 // added here (with the matching wire string) before any emit site uses
 // them, by the same convention as NormalizedOutcome.
 //
-// `prediction_unavailable` is emitted when the runner deliberately
-// declines to call sandbox_check because the userland predicate is
-// known to drift from kernel enforcement for the (operation, filter)
-// pair (verified via
-// tests/suites/witness_contract/harness/verify_filter_id.sh). Channel
-// A (the attempt result) remains the reliable evidence for those
-// probes; the prediction is honestly absent rather than wrong.
+// `prediction_unavailable` is emitted when the planner excludes a step's
+// query: for the (operation, filter) pairs in the shared exclusion set no
+// filter ID produced a sandbox_check verdict matching kernel enforcement
+// (verified via tests/suites/witness_contract/harness/verify_filter_id.sh),
+// and for a path the host could not resolve at planning time. The attempt
+// channel still runs; the query channel records why it was not asked.
 //
 // When emitted, the result's `rc` field is the sentinel -1 (NOT 0) so
 // any consumer that keys on `rc == 0` for "allow" cannot misread the
@@ -154,8 +148,7 @@ public enum SandboxCheckOutcome {
     /// per-step skip rather than a runtime failure — parallel to how
     /// unsupported attempt kinds are handled. `error` is always
     /// populated with the rejected operation name + the wildcard-form
-    /// hint. `drift` is null for these steps because there's no
-    /// allow/deny verdict to compare against.
+    /// hint. The query channel's answer is unavailable for these steps.
     public static let unsupportedOperation = "unsupported_operation"
 }
 
@@ -163,12 +156,12 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 3
-    public static let responseSchema: Int = 12
+    public static let responseSchema: Int = 13
 }
 // END GENERATED CONTRACT VERSIONS
 
 public struct PWRunnerRunSpec: Codable {
-    // Version meanings: docs/CONTRACT.md, "Reading older replies".
+    // The request contract and its admission rules: docs/CONTRACT.md.
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -210,8 +203,6 @@ public struct PWRunnerRunSpec: Codable {
 //
 // | key                         | consumed at                                                   | drives outcome              |
 // | --------------------------- | ------------------------------------------------------------- | --------------------------- |
-// | `libsandbox_path`           | `SandboxLib.load(path:)` via PWRunnerService.swift (host-     | `libsandbox_unavailable`    |
-// |                             | side pre-spawn check)                                         |                             |
 // | `worker_executable_path`    | `posix_spawn` path in CWorker.spawn (pw-probe-runner)         | `worker_spawn_failed`       |
 // | `worker_timeout_ms`         | host-side deadline in CWorker.run (floored at 50ms)           | `runner_timeout`            |
 // | `validator_executable_path` | `posix_spawn` path in ValidatorClient.runValidator. Parallel  | `validator_spawn_failed`    |
@@ -230,7 +221,6 @@ public struct PWRunnerRunSpec: Codable {
 // `_test_overrides`" for the full contract, the four-assertion test
 // recipe, and the rules for adding a new key.
 public struct PWRunnerTestOverrides: Codable {
-    public var libsandbox_path: String?
     public var worker_executable_path: String?
     public var worker_timeout_ms: Int?
     public var validator_executable_path: String?
@@ -240,7 +230,6 @@ public struct PWRunnerTestOverrides: Codable {
     public var worker_pre_ready_hang_ms: Int?
 
     public init(
-        libsandbox_path: String? = nil,
         worker_executable_path: String? = nil,
         worker_timeout_ms: Int? = nil,
         validator_executable_path: String? = nil,
@@ -249,7 +238,6 @@ public struct PWRunnerTestOverrides: Codable {
         worker_post_apply_kill_signal: Int? = nil,
         worker_pre_ready_hang_ms: Int? = nil
     ) {
-        self.libsandbox_path = libsandbox_path
         self.worker_executable_path = worker_executable_path
         self.worker_timeout_ms = worker_timeout_ms
         self.validator_executable_path = validator_executable_path
@@ -379,16 +367,12 @@ public struct PWRunnerProbeStep: Codable {
 }
 
 // Path forms observed by the unsandboxed runner host after orchestration.
-// They are not historical validator/worker resolutions or comparison inputs.
-// Legacy decoding preserves absent provenance as unknown.
+// They are not validator/worker resolutions or comparison inputs.
 //
 // Wire form: `input` plus the two forms named in `formNames`. A form with the
 // same UTF-8 bytes as `input` is listed in `same_as_input` and its key omitted; a form
 // that differs is a string; a form the host could not derive is an explicit
-// null. Each form is therefore in exactly one of those three states. Replies
-// before response 9 carried every form as a string or null, never listed
-// equality, and also carried a `data_volume_form` heuristic that duplicated
-// `firmlink_resolved`; decoding reads either shape into the same values.
+// null. Each form is therefore in exactly one of those three states.
 public struct PWRunnerPathDiagnostics: Codable {
     public static let formNames = ["realpath_resolved", "firmlink_resolved"]
 
@@ -397,10 +381,6 @@ public struct PWRunnerPathDiagnostics: Codable {
     public var input: String
     public var realpath_resolved: String?
     public var firmlink_resolved: String?
-
-    // A legacy omission is unknown, not an observed resolution failure. Keep
-    // the old shape when re-encoding it instead of inventing explicit nulls.
-    fileprivate var legacyAbsentForms: Set<String>? = nil
 
     public init(
         input: String,
@@ -422,8 +402,7 @@ public struct PWRunnerPathDiagnostics: Codable {
         try container.encodeIfPresent(phase, forKey: .phase)
         try container.encode(input, forKey: .input)
         try encodePathForms(&container, input: input,
-            forms: [("realpath_resolved", realpath_resolved), ("firmlink_resolved", firmlink_resolved)],
-            legacyAbsent: legacyAbsentForms)
+            forms: [("realpath_resolved", realpath_resolved), ("firmlink_resolved", firmlink_resolved)])
     }
 
     public init(from decoder: Decoder) throws {
@@ -431,10 +410,9 @@ public struct PWRunnerPathDiagnostics: Codable {
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
         phase = try container.decodeIfPresent(String.self, forKey: .phase)
         input = try container.decode(String.self, forKey: .input)
-        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames, compactRequired: false)
-        realpath_resolved = decoded.values["realpath_resolved"] ?? nil
-        firmlink_resolved = decoded.values["firmlink_resolved"] ?? nil
-        legacyAbsentForms = decoded.legacyAbsent
+        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames)
+        realpath_resolved = decoded["realpath_resolved"] ?? nil
+        firmlink_resolved = decoded["firmlink_resolved"] ?? nil
     }
 }
 
@@ -453,20 +431,13 @@ struct PathFormKey: CodingKey {
 
 /// Encode `forms` beside `input`: a form with the same UTF-8 bytes as `input`
 /// is listed in `same_as_input` and omitted, a different form is a string, an
-/// underivable form is an explicit null. A legacy record (`legacyAbsent` set)
-/// keeps its string/null shape without the marker.
+/// underivable form is an explicit null.
 func encodePathForms(_ container: inout KeyedEncodingContainer<PathFormKey>, input: String,
-                     forms: [(String, String?)], legacyAbsent: Set<String>?) throws {
+                     forms: [(String, String?)]) throws {
     var sameAsInput: [String] = []
     for (name, value) in forms {
         let key = PathFormKey(stringValue: name)
-        if let absent = legacyAbsent {
-            if let value {
-                try container.encode(value, forKey: key)
-            } else if !absent.contains(name) {
-                try container.encodeNil(forKey: key)
-            }
-        } else if let value, value.utf8.elementsEqual(input.utf8) {
+        if let value, value.utf8.elementsEqual(input.utf8) {
             sameAsInput.append(name)
         } else if let value {
             try container.encode(value, forKey: key)
@@ -475,22 +446,18 @@ func encodePathForms(_ container: inout KeyedEncodingContainer<PathFormKey>, inp
             try container.encodeNil(forKey: key)
         }
     }
-    if legacyAbsent == nil {
-        try container.encode(sameAsInput, forKey: .sameAsInput)
-    }
+    try container.encode(sameAsInput, forKey: .sameAsInput)
 }
 
-/// Decode the forms in `formNames` under the same rule. Without the compact
-/// marker (allowed only when `compactRequired` is false) the omitted forms are
-/// returned as `legacyAbsent`, an unknown rather than an observed failure.
-func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: String, formNames: [String],
-                     compactRequired: Bool) throws -> (values: [String: String?], legacyAbsent: Set<String>?) {
-    let compact = container.contains(.sameAsInput)
-    if compactRequired && !compact {
+/// Decode the forms in `formNames` under the same rule. The compact marker is
+/// required: each form is listed, a string or an explicit null, exclusively.
+func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: String,
+                     formNames: [String]) throws -> [String: String?] {
+    guard container.contains(.sameAsInput) else {
         throw DecodingError.dataCorruptedError(forKey: .sameAsInput, in: container,
             debugDescription: "path diagnostics require same_as_input")
     }
-    let sameAsInput = compact ? try container.decode([String].self, forKey: .sameAsInput) : []
+    let sameAsInput = try container.decode([String].self, forKey: .sameAsInput)
     if Set(sameAsInput).count != sameAsInput.count || !Set(sameAsInput).isSubset(of: Set(formNames)) {
         throw DecodingError.dataCorruptedError(forKey: .sameAsInput, in: container,
             debugDescription: "same_as_input must contain unique supported form names")
@@ -499,7 +466,7 @@ func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: St
     for name in formNames {
         let key = PathFormKey(stringValue: name)
         let listed = sameAsInput.contains(name)
-        if compact && listed == container.contains(key) {
+        if listed == container.contains(key) {
             throw DecodingError.dataCorruptedError(forKey: key, in: container,
                 debugDescription: "form must be either listed in same_as_input or present, exclusively")
         }
@@ -508,23 +475,20 @@ func decodePathForms(_ container: KeyedDecodingContainer<PathFormKey>, input: St
             continue
         }
         let value = try container.decodeIfPresent(String.self, forKey: key)
-        if compact, let value, value.utf8.elementsEqual(input.utf8) {
+        if let value, value.utf8.elementsEqual(input.utf8) {
             throw DecodingError.dataCorruptedError(forKey: key, in: container,
                 debugDescription: "a form with identical UTF-8 bytes must be listed in same_as_input")
         }
         values[name] = .some(value)
     }
-    let legacyAbsent: Set<String>? = compact ? nil
-        : Set(formNames.filter { !container.contains(PathFormKey(stringValue: $0)) })
-    return (values, legacyAbsent)
+    return values
 }
 
 // The unsandboxed host's after-orchestration resolution of a file or exec
 // attempt target. `realpath_resolved` follows the leaf; `parent_realpath_resolved`
 // resolves the parent and keeps the leaf literal, the form the kernel names for
 // a created or unlinked path. Neither establishes what the worker's own syscall
-// resolved: they are candidate evidence for deny-log correlation only. The
-// block exists from response 12 and is always compact.
+// resolved: they are candidate evidence for deny-log correlation only.
 public struct PWRunnerAttemptPathDiagnostics: Codable {
     public static let formNames = ["realpath_resolved", "parent_realpath_resolved"]
 
@@ -554,8 +518,7 @@ public struct PWRunnerAttemptPathDiagnostics: Codable {
         try container.encodeIfPresent(phase, forKey: .phase)
         try container.encode(input, forKey: .input)
         try encodePathForms(&container, input: input,
-            forms: [("realpath_resolved", realpath_resolved), ("parent_realpath_resolved", parent_realpath_resolved)],
-            legacyAbsent: nil)
+            forms: [("realpath_resolved", realpath_resolved), ("parent_realpath_resolved", parent_realpath_resolved)])
     }
 
     public init(from decoder: Decoder) throws {
@@ -563,16 +526,16 @@ public struct PWRunnerAttemptPathDiagnostics: Codable {
         observer = try container.decodeIfPresent(String.self, forKey: .observer)
         phase = try container.decodeIfPresent(String.self, forKey: .phase)
         input = try container.decode(String.self, forKey: .input)
-        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames, compactRequired: true)
-        realpath_resolved = decoded.values["realpath_resolved"] ?? nil
-        parent_realpath_resolved = decoded.values["parent_realpath_resolved"] ?? nil
+        let decoded = try decodePathForms(container, input: input, formNames: Self.formNames)
+        realpath_resolved = decoded["realpath_resolved"] ?? nil
+        parent_realpath_resolved = decoded["parent_realpath_resolved"] ?? nil
     }
 }
 
 public struct PWRunnerSandboxCheckResult: Codable {
-    /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
-    /// for native returns versus PW status and missing reasons.
+    /// Result provenance. See the "Worker evidence contract" in
+    /// tests/FAILURE-PROPAGATION-CONTRACT.md for native returns versus PW
+    /// status and missing reasons.
     public var result_source: String? = nil
     public var native_rc: Int? = nil
     public var missing_reason: String? = nil
@@ -580,7 +543,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
     public var outcome: String
     public var pid: Int?
     public var operation: String
-    public var scope: String
     public var filter_kind: String
     public var filter_value: String?
     public var filter_type_id: Int?
@@ -593,7 +555,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         outcome: String,
         pid: Int?,
         operation: String,
-        scope: String,
         filter_kind: String,
         filter_value: String? = nil,
         filter_type_id: Int? = nil,
@@ -605,7 +566,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         self.outcome = outcome
         self.pid = pid
         self.operation = operation
-        self.scope = scope
         self.filter_kind = filter_kind
         self.filter_value = filter_value
         self.filter_type_id = filter_type_id
@@ -620,7 +580,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         case outcome
         case pid
         case operation
-        case scope
         case filter_kind
         case filter_value
         case filter_type_id
@@ -638,7 +597,6 @@ public struct PWRunnerSandboxCheckResult: Codable {
         try container.encode(outcome, forKey: .outcome)
         try container.encode(pid, forKey: .pid)
         try container.encode(operation, forKey: .operation)
-        try container.encode(scope, forKey: .scope)
         try container.encode(filter_kind, forKey: .filter_kind)
         if let filter_value {
             try container.encode(filter_value, forKey: .filter_value)
@@ -676,8 +634,7 @@ public struct PWRunnerSandboxCheckResult: Codable {
         rc = try container.decode(Int.self, forKey: .rc)
         outcome = try container.decode(String.self, forKey: .outcome)
         pid = try container.decodeIfPresent(Int.self, forKey: .pid)
-        operation = try container.decodeIfPresent(String.self, forKey: .operation) ?? ""
-        scope = try container.decode(String.self, forKey: .scope)
+        operation = try container.decode(String.self, forKey: .operation)
         filter_kind = try container.decode(String.self, forKey: .filter_kind)
         filter_value = try container.decodeIfPresent(String.self, forKey: .filter_value)
         filter_type_id = try container.decodeIfPresent(Int.self, forKey: .filter_type_id)
@@ -688,27 +645,23 @@ public struct PWRunnerSandboxCheckResult: Codable {
 }
 
 public struct PWRunnerAttemptResult: Codable {
-    /// Additive provenance; absence in stored replies means unknown. See the
-    /// "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
-    /// for native returns versus PW status and missing reasons.
-    /// Submitted intent, not proof that the named native operation ran.
+    /// Submitted intent, not proof that the named native operation ran. See
+    /// the "Worker evidence contract" in tests/FAILURE-PROPAGATION-CONTRACT.md
+    /// for PW status versus missing reasons.
     public var requested_kind: String? = nil
     public var requested_action: String? = nil
     public var result_source: String? = nil
-    public var native_rc: Int? = nil
     public var missing_reason: String? = nil
-    /// Projection of this step's disposition claims; absent in replies before
-    /// the record. `not_run_worker_died`/`slot_incomplete` stay as they are.
+    /// Projection of this step's disposition claims.
+    /// `not_run_worker_died`/`slot_incomplete` stay as they are.
     public var lifecycle: PWAttemptLifecycle? = nil
+    /// PW's attempt status, not a raw syscall return.
     public var rc: Int
-    public var exit_code: Int
     public var errno: Int?
-    public var syscall_errno: Int?
     public var outcome: String
     public var error: String?
     public var requested_path: String?
-    /// Host-resolved forms of the attempt target; absent for non-path attempts
-    /// and in replies before response 12.
+    /// Host-resolved forms of the attempt target; absent for non-path attempts.
     public var path_diagnostics: PWRunnerAttemptPathDiagnostics?
     public var observed_path: String?
 
@@ -723,10 +676,10 @@ public struct PWRunnerAttemptResult: Codable {
     /// `child_pid == 0` means
     /// spawn failed before producing a child (sandbox blocked spawn,
     /// target missing, etc.) — `errno` carries the spawn errno in
-    /// that case. The orchestrator's drift classifier reads
-    /// `child_pid` to distinguish spawn failure from a child non-zero
-    /// exit (non-policy failure). EPERM/EACCES without a child remain
-    /// ambiguous: execute permissions can also prevent spawning.
+    /// that case. comparisonEvidence reads `child_pid` to distinguish
+    /// spawn failure from a child non-zero exit. EPERM/EACCES without
+    /// a child remain ambiguous: execute permissions can also prevent
+    /// spawning.
     public var child_pid: Int?
     public var child_exit_code: Int?
     public var child_term_signal: Int?
@@ -748,9 +701,7 @@ public struct PWRunnerAttemptResult: Codable {
         stderr: String? = nil
     ) {
         self.rc = rc
-        self.exit_code = rc
         self.errno = errno
-        self.syscall_errno = errno
         self.outcome = outcome
         self.error = error
         self.requested_path = requested_path
@@ -765,11 +716,9 @@ public struct PWRunnerAttemptResult: Codable {
 
     enum CodingKeys: String, CodingKey {
         case requested_kind, requested_action
-        case result_source, native_rc, missing_reason, lifecycle
+        case result_source, missing_reason, lifecycle
         case rc
-        case exit_code
         case errno
-        case syscall_errno
         case outcome
         case error
         case requested_path
@@ -787,20 +736,13 @@ public struct PWRunnerAttemptResult: Codable {
         try container.encodeIfPresent(requested_kind, forKey: .requested_kind)
         try container.encodeIfPresent(requested_action, forKey: .requested_action)
         try container.encodeIfPresent(result_source, forKey: .result_source)
-        if result_source != nil { try container.encode(native_rc, forKey: .native_rc) }
         try container.encodeIfPresent(missing_reason, forKey: .missing_reason)
         try container.encodeIfPresent(lifecycle, forKey: .lifecycle)
         try container.encode(rc, forKey: .rc)
-        try container.encode(exit_code, forKey: .exit_code)
         if let errno {
             try container.encode(errno, forKey: .errno)
         } else {
             try container.encodeNil(forKey: .errno)
-        }
-        if let syscall_errno {
-            try container.encode(syscall_errno, forKey: .syscall_errno)
-        } else {
-            try container.encodeNil(forKey: .syscall_errno)
         }
         try container.encode(outcome, forKey: .outcome)
         try container.encodeIfPresent(error, forKey: .error)
@@ -834,13 +776,10 @@ public struct PWRunnerAttemptResult: Codable {
         requested_kind = try container.decodeIfPresent(String.self, forKey: .requested_kind)
         requested_action = try container.decodeIfPresent(String.self, forKey: .requested_action)
         result_source = try container.decodeIfPresent(String.self, forKey: .result_source)
-        native_rc = try container.decodeIfPresent(Int.self, forKey: .native_rc)
         missing_reason = try container.decodeIfPresent(String.self, forKey: .missing_reason)
         lifecycle = try container.decodeIfPresent(PWAttemptLifecycle.self, forKey: .lifecycle)
         rc = try container.decode(Int.self, forKey: .rc)
-        exit_code = try container.decodeIfPresent(Int.self, forKey: .exit_code) ?? rc
         errno = try container.decodeIfPresent(Int.self, forKey: .errno)
-        syscall_errno = try container.decodeIfPresent(Int.self, forKey: .syscall_errno)
         outcome = try container.decode(String.self, forKey: .outcome)
         error = try container.decodeIfPresent(String.self, forKey: .error)
         requested_path = try container.decodeIfPresent(String.self, forKey: .requested_path)
@@ -854,22 +793,7 @@ public struct PWRunnerAttemptResult: Codable {
     }
 }
 
-public struct PWRunnerSignalResult: Codable {
-    public var signal: String
-    public var count_before: Int
-    public var count_after: Int
-    public var delta: Int
-
-    public init(signal: String, count_before: Int, count_after: Int) {
-        self.signal = signal
-        self.count_before = count_before
-        self.count_after = count_after
-        self.delta = max(0, count_after - count_before)
-    }
-}
-
-/// A bounded comparison of recorded outcomes, with independently reported limits.
-/// Unknown future strings remain decodable; no field implies synchronized state.
+/// Eligibility of a native record for `order: query_first`.
 func eligibleOrderedPrediction(_ query: PWRunnerSandboxCheckResult) -> Bool {
     guard query.result_source == "validator", let rc = query.native_rc,
           let err = query.errno, query.rc == rc else { return false }
@@ -891,24 +815,33 @@ func eligibleOrderedStep(stepId: String, query: PWRunnerSandboxCheckResult,
         && record.rc == query.native_rc && record.errnoVal == query.errno
 }
 
+/// The per-step comparison record: the attempt channel's classified
+/// observation, the submitted-scope relations, the order PW established and
+/// the planner's exclusion or lifecycle limitations. It asserts nothing about
+/// agreement or disagreement between prediction and enforcement.
 public struct PWRunnerComparison: Codable {
-    public var scope: String
-    public var prediction: String
     public var observation: String
     public var observation_basis: String
     public var operation_relation: String
     public var target_relation: String
-    public var conclusion: String
+    public var order: String
     public var limitations: [String]
-    /// Absent in legacy replies; every response-8 producer supplies a value.
-    public var order: String? = nil
 
-    public var drift: Bool? {
-        switch conclusion {
-        case "agreement": return false
-        case "disagreement": return true
-        default: return nil
-        }
+    /// The `limitations` vocabulary: the planner's exclusion codes and the
+    /// lifecycle entries. The encoder rejects any other string.
+    public static let limitationVocabulary: Set<String> = Set([
+        "query_plan:path_unresolved_at_planning", "query_plan:prediction_unavailable_pair",
+        "query_plan:unrecognized_filter_kind",
+    ]).union(PWDisposition.limitationForSummary.values)
+
+    public init(observation: String, observation_basis: String, operation_relation: String,
+                target_relation: String, order: String, limitations: [String]) {
+        self.observation = observation
+        self.observation_basis = observation_basis
+        self.operation_relation = operation_relation
+        self.target_relation = target_relation
+        self.order = order
+        self.limitations = limitations
     }
 }
 
@@ -916,31 +849,19 @@ public struct PWRunnerStepResult: Codable {
     public var step_id: String
     public var sandbox_check: PWRunnerSandboxCheckResult
     public var attempt: PWRunnerAttemptResult
-    /// Unobserved by the C worker: new responses encode explicit null.
-    /// Legacy objects remain decodable; their counts are not new observations.
-    public var deny_signal: PWRunnerSignalResult?
-
-    /// Current evidence cannot establish state stability/runtime identity,
-    /// so no response-8 producer supplies disagreement. Agreement is limited to supported observations
-    /// within matched submitted scope, without an unordered target mutation.
-    /// Directional consistency and unavailable comparisons project to null.
-    /// Older decoded values retain their original version's meaning.
+    /// Present on every step of an ordinary reply; withheld by a
+    /// `runner_reporting_failed` reply.
     public var comparison: PWRunnerComparison?
-    public var drift: Bool?
 
     public init(
         step_id: String,
         sandbox_check: PWRunnerSandboxCheckResult,
         attempt: PWRunnerAttemptResult,
-        deny_signal: PWRunnerSignalResult? = nil,
-        drift: Bool? = nil,
         comparison: PWRunnerComparison? = nil
     ) {
         self.step_id = step_id
         self.sandbox_check = sandbox_check
         self.attempt = attempt
-        self.deny_signal = deny_signal
-        self.drift = drift
         self.comparison = comparison
     }
 
@@ -948,30 +869,15 @@ public struct PWRunnerStepResult: Codable {
         case step_id
         case sandbox_check
         case attempt
-        case deny_signal
-        case drift
         case comparison
     }
 
-    // Custom encode so `drift` is emitted as explicit JSON null when
-    // nil. Consumers at schema_version >= 4 can rely on the key being
-    // present (bool or null); v3 producers never write the key at all.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(comparison, forKey: .comparison)
         try container.encode(step_id, forKey: .step_id)
         try container.encode(sandbox_check, forKey: .sandbox_check)
         try container.encode(attempt, forKey: .attempt)
-        if let deny_signal {
-            try container.encode(deny_signal, forKey: .deny_signal)
-        } else {
-            try container.encodeNil(forKey: .deny_signal)
-        }
-        if let drift {
-            try container.encode(drift, forKey: .drift)
-        } else {
-            try container.encodeNil(forKey: .drift)
-        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -979,12 +885,6 @@ public struct PWRunnerStepResult: Codable {
         step_id = try container.decode(String.self, forKey: .step_id)
         sandbox_check = try container.decode(PWRunnerSandboxCheckResult.self, forKey: .sandbox_check)
         attempt = try container.decode(PWRunnerAttemptResult.self, forKey: .attempt)
-        deny_signal = try container.decodeIfPresent(PWRunnerSignalResult.self, forKey: .deny_signal)
-        // decodeIfPresent handles both "key absent" (v3 producer) and
-        // "key present but null" (v4 producer with no comparison) →
-        // both land as Bool? = nil on the reader side. That's the
-        // intended behaviour.
-        drift = try container.decodeIfPresent(Bool.self, forKey: .drift)
         comparison = try container.decodeIfPresent(PWRunnerComparison.self, forKey: .comparison)
     }
 }
@@ -993,8 +893,7 @@ public struct PWRunnerStepResult: Codable {
 /// JSON: runner_subprocess.termination_request.{signal,rc,errno}. All numbers
 /// are signed 32-bit syscall values encoded as JSON integers (no units).
 /// errno is captured immediately only when rc == -1; otherwise it is absent/null.
-/// An absent/null request means no request when the new host fields are present;
-/// old stored replies have no observation. Structurally valid values are decoded
+/// An absent/null request means no request. Structurally valid values are decoded
 /// without a signal/errno allowlist. The client/controller forward this object.
 public struct PWRunnerTerminationRequest: Codable {
     public let signal: Int32
@@ -1013,7 +912,7 @@ public struct PWRunnerTerminationRequest: Codable {
 /// (poll, exit_grace, after_termination); rc/errno are signed 32-bit integers.
 /// Only rc == -1 produces a record, with errno captured before another call.
 /// Unknown phase/errno values remain transportable. Empty array means no errors
-/// observed; absent/null array means unavailable (e.g. an older stored reply).
+/// observed; absent/null array means unavailable.
 public struct PWRunnerWaitError: Codable {
     public let phase: String
     public let rc: Int32
@@ -1073,8 +972,8 @@ public struct PWWorkerEvidence: Codable {
 /// Authoritative worker process metadata, produced by the unsandboxed host.
 /// Lifecycle observations are host-owned; worker_evidence uses worker ABI 7.
 /// All live CWorkerOutput paths populate the optional observation fields below;
-/// optionality preserves decoding of older stored replies as unknown, not false.
-/// Policy-write failures retain partial child observations.
+/// an absent observation is unknown, not false. Policy-write failures retain
+/// partial child observations.
 public struct PWRunnerOrdering: Codable {
     public var collection_closed_before_proceed: Bool
     public var proceed_set: Bool
@@ -1098,7 +997,7 @@ public struct PWRunnerSubprocess: Codable {
     public var term_signal: Int?
     public var exit_code: Int?
     public var partial_steps: Bool
-    /// Worker publication snapshot; absent in legacy replies and before spawn.
+    /// Worker publication snapshot; absent before spawn.
     public var worker_evidence: PWWorkerEvidence? = nil
     /// Host transfer observation independent of any child publication.
     public var policy_transfer_error: PWWorkerPolicyTransferError? = nil
@@ -1116,18 +1015,18 @@ public struct PWRunnerSubprocess: Codable {
     public var exit_requested: Bool?
     public var termination_request: PWRunnerTerminationRequest?
     /// True only when waitpid actually returned this PID. False is explicitly
-    /// unconfirmed disposition, distinct from absent/null legacy observation.
+    /// unconfirmed disposition, distinct from an absent/null observation.
     public var reaped: Bool?
     public var wait_errors: [PWRunnerWaitError]?
     /// Host facts recorded where the host acts (tests/FAILURE-PROPAGATION-CONTRACT.md,
     /// "Worker disposition record"): why exit was requested, how the exit-grace
-    /// wait ended, and whether the final reads followed a confirmed reap. Absent
-    /// in replies before the record; absence is unreported, not observed false.
+    /// wait ended, and whether the final reads followed a confirmed reap.
+    /// Absence is unreported, not observed false.
     public var cleanup_trigger: String? = nil
     public var grace_end: String? = nil
     public var collection_basis: String? = nil
     /// The canonical lifecycle account, resolved once by the host. Mandatory
-    /// whenever this object is present from the response that introduced it.
+    /// whenever this object is present.
     public var disposition: PWDispositionRecord? = nil
 
     public init(
@@ -1627,7 +1526,7 @@ public struct PWValidatorAssociationIssue: Codable {
     public var count: Int
 }
 
-/// Validator child observations. Legacy missing host fields remain unknown.
+/// Validator child observations. Missing host fields remain unknown.
 /// Only successful reaping supplies exit/signal. Records are accepted validator
 /// evidence, independently retained even when association/transport/cleanup fails.
 /// A null-ID record is never assigned an invented step identity.
@@ -1703,8 +1602,8 @@ public struct PWRunnerSpawnFailure: Codable {
 // field, update CodingKeys and encode(to:), and populate the field-coverage
 // round-trip fixture in ReplyFailureTests. Reflection stays in that test.
 public struct PWRunnerRunResult: Codable {
-    // Response wire version. What each older number lacked is tabulated in
-    // docs/CONTRACT.md, "Reading older replies".
+    // Response wire version. Semantic decoding and encoding accept exactly
+    // PWContract.responseSchema; docs/CONTRACT.md, "Supported versions".
     public var schema_version: Int
     public var specimen_id: String
     public var run_kind: String?
@@ -1717,7 +1616,6 @@ public struct PWRunnerRunResult: Codable {
     public var policy_sha256: String?
     public var applied_profile: AppliedProfileCapture?
     public var sandboxed_after_apply: Bool?
-    public var deny_signal_total: PWRunnerSignalResult?
     public var steps: [PWRunnerStepResult]
     public var runner_subprocess: PWRunnerSubprocess?
     public var admission_failure: PWRunnerAdmissionFailure?
@@ -1738,7 +1636,6 @@ public struct PWRunnerRunResult: Codable {
         policy_format: String,
         policy_sha256: String? = nil,
         sandboxed_after_apply: Bool? = nil,
-        deny_signal_total: PWRunnerSignalResult? = nil,
         steps: [PWRunnerStepResult],
         runner_subprocess: PWRunnerSubprocess? = nil,
         validator_subprocess: PWRunnerValidatorSubprocess? = nil,
@@ -1761,7 +1658,6 @@ public struct PWRunnerRunResult: Codable {
         self.applied_profile = applied_profile
         self.admission_failure = admission_failure
         self.sandboxed_after_apply = sandboxed_after_apply
-        self.deny_signal_total = deny_signal_total
         self.steps = steps
         self.runner_subprocess = runner_subprocess
         self.validator_subprocess = validator_subprocess
@@ -1770,11 +1666,17 @@ public struct PWRunnerRunResult: Codable {
         self.validator_spawn_failure = validator_spawn_failure
     }
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, deny_signal_total, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schema_version = try c.decode(Int.self, forKey: .schema_version)
+        // Exactly the current response is decoded semantically; another number
+        // is unsupported, never read under a previous version's rules.
+        guard schema_version == PWContract.responseSchema else {
+            throw DecodingError.dataCorruptedError(forKey: .schema_version, in: c,
+                debugDescription: "unsupported response schema \(schema_version) (this reader accepts \(PWContract.responseSchema))")
+        }
         specimen_id = try c.decode(String.self, forKey: .specimen_id)
         run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
         rc = try c.decode(Int.self, forKey: .rc)
@@ -1786,7 +1688,6 @@ public struct PWRunnerRunResult: Codable {
         policy_sha256 = try c.decodeIfPresent(String.self, forKey: .policy_sha256)
         applied_profile = try c.decodeIfPresent(AppliedProfileCapture.self, forKey: .applied_profile)
         sandboxed_after_apply = try c.decodeIfPresent(Bool.self, forKey: .sandboxed_after_apply)
-        deny_signal_total = try c.decodeIfPresent(PWRunnerSignalResult.self, forKey: .deny_signal_total)
         steps = try c.decode([PWRunnerStepResult].self, forKey: .steps)
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
         admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
@@ -1794,62 +1695,64 @@ public struct PWRunnerRunResult: Codable {
         validator_spawn_failure = try c.decodeIfPresent(PWRunnerSpawnFailure.self, forKey: .validator_spawn_failure)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
         reporting_failure = try c.decodeIfPresent(PWRunnerReportingFailure.self, forKey: .reporting_failure)
-        if schema_version >= 9 && steps.contains(where: { $0.sandbox_check.path_diagnostics?.legacyAbsentForms != nil }) {
-            throw DecodingError.dataCorruptedError(forKey: .steps, in: c,
-                debugDescription: "response 9 path diagnostics require same_as_input")
-        }
-        if schema_version >= 10, reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
+        if reporting_failure == nil, let sub = runner_subprocess, sub.disposition == nil {
             throw DecodingError.dataCorruptedError(forKey: .runner_subprocess, in: c,
-                debugDescription: "response 10 requires the worker disposition record")
+                debugDescription: "a worker subprocess requires the worker disposition record")
         }
     }
     public func encode(to encoder: Encoder) throws {
-        if schema_version >= 9 && steps.contains(where: { $0.sandbox_check.path_diagnostics?.legacyAbsentForms != nil }) {
+        // Only the current response is encoded; the invariants below are its rules.
+        guard schema_version == PWContract.responseSchema else {
             throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
-                debugDescription: "response 9 path diagnostics require same_as_input"))
+                debugDescription: "unsupported response schema \(schema_version) (this encoder emits \(PWContract.responseSchema))"))
         }
-        // Reporting-failure diagnostics and ordered comparisons are required from
-        // response 8 onward; a stored older reply re-encodes without them.
         if let failure = reporting_failure {
-            guard schema_version >= 8, normalized_outcome == NormalizedOutcome.runnerReportingFailed,
+            // The degraded reply retains observations and withholds every comparison.
+            guard normalized_outcome == NormalizedOutcome.runnerReportingFailed,
                   rc == 1, error?.isEmpty == false, failure.origin == "runner_host",
                   !failure.diagnostic.isEmpty, !failure.original_normalized_outcome.isEmpty,
-                  steps.allSatisfy({ $0.comparison == nil && $0.drift == nil }),
+                  steps.allSatisfy({ $0.comparison == nil }),
                   failure.evidence_retained || (steps.isEmpty && runner_subprocess == nil && validator_subprocess == nil && validator_spawn_failure == nil) else {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "reporting failure requires a failed summary and no comparison claims"))
             }
-        } else if schema_version >= 8 {
+        } else {
             if normalized_outcome == NormalizedOutcome.runnerReportingFailed {
                 throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                     debugDescription: "runner_reporting_failed requires reporting_failure diagnostics"))
             }
-            // The disposition record is mandatory beside a worker subprocess from
-            // response 10 and must agree with the raw facts it cites. The degraded
-            // reply above skips this so a reported conflict is never lost.
-            if schema_version >= 10, let sub = runner_subprocess {
+            // The disposition record is mandatory beside a worker subprocess and
+            // must agree with the raw facts it cites. The degraded reply above
+            // skips this so a reported conflict is never lost.
+            if let sub = runner_subprocess {
                 guard let record = sub.disposition else {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
-                        debugDescription: "response 10 requires the worker disposition record"))
+                        debugDescription: "a worker subprocess requires the worker disposition record"))
                 }
                 let problems = dispositionIntegrityProblems(record, subprocess: sub, stepCount: steps.count, steps: steps)
                 if let first = problems.first {
                     throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
                         debugDescription: "disposition record contradicts its basis: \(first)"))
                 }
-            }
-            if runner_subprocess != nil && runner_subprocess?.ordering == nil {
-                throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
-                    debugDescription: "response 8 requires runner ordering"))
+                guard sub.ordering != nil else {
+                    throw EncodingError.invalidValue(self, .init(codingPath: encoder.codingPath,
+                        debugDescription: "a worker subprocess requires runner ordering"))
+                }
             }
             for step in steps {
-                guard let comparison = step.comparison, let order = comparison.order,
-                      comparison.conclusion != "disagreement", step.drift != true,
-                      comparison.limitations.contains("query_attempt_order_unestablished") == (order != "query_first") else {
+                guard let comparison = step.comparison else {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
-                        debugDescription: "response 8 requires order and cannot establish disagreement"))
+                        debugDescription: "every step of an ordinary reply carries a comparison record"))
                 }
-                if order == "query_first" && !eligibleOrderedStep(stepId: step.step_id, query: step.sandbox_check,
+                guard ["query_first", "unestablished"].contains(comparison.order) else {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
+                        debugDescription: "comparison.order must be query_first or unestablished"))
+                }
+                if let outside = comparison.limitations.first(where: { !PWRunnerComparison.limitationVocabulary.contains($0) }) {
+                    throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
+                        debugDescription: "limitation outside the vocabulary: \(outside)"))
+                }
+                if comparison.order == "query_first" && !eligibleOrderedStep(stepId: step.step_id, query: step.sandbox_check,
                     records: validator_subprocess?.records ?? [], ordering: runner_subprocess?.ordering,
                     sandboxedAfterApply: sandboxed_after_apply, workerPid: runner_subprocess?.pid) {
                     throw EncodingError.invalidValue(step, .init(codingPath: encoder.codingPath,
@@ -1870,7 +1773,6 @@ public struct PWRunnerRunResult: Codable {
         try c.encodeIfPresent(policy_sha256, forKey: .policy_sha256)
         try c.encodeIfPresent(applied_profile, forKey: .applied_profile)
         try c.encodeIfPresent(sandboxed_after_apply, forKey: .sandboxed_after_apply)
-        try c.encodeIfPresent(deny_signal_total, forKey: .deny_signal_total)
         try c.encode(steps, forKey: .steps)
         try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)

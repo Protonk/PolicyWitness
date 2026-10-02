@@ -88,8 +88,8 @@ if sb.get("outcome") != "deny":
 at = step.get("attempt") or {}
 if at.get("rc") == 0:
     raise SystemExit(f"expected the open_read to be DENIED (rc!=0) under (deny file-read-data), got rc={at.get('rc')!r}")
-if at.get("syscall_errno") is None:
-    raise SystemExit(f"expected a syscall_errno on the denied read, got {at.get('syscall_errno')!r}")
+if at.get("errno") is None:
+    raise SystemExit(f"expected an errno on the denied read, got {at.get('errno')!r}")
 PY
 
 KIND_ERR="$(assert_runner_kind "${RUN_STDOUT}")" || test_fail "${KIND_ERR}" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"

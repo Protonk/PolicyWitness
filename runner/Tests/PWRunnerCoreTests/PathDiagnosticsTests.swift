@@ -98,32 +98,16 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
                 }
             }
         }
-        tk.run("response version prevents a missing compact marker from posing as legacy") {
+        tk.run("a query block without the compact marker is rejected at the reply") {
             var raw = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(try replyFixture())) as! [String: Any]
             var steps = raw["steps"] as! [[String: Any]]
             var query = steps[0]["sandbox_check"] as! [String: Any]
-            query["path_diagnostics"] = ["input": "/old"]
+            query["path_diagnostics"] = ["input": "/old", "realpath_resolved": "/private/old"]
             steps[0]["sandbox_check"] = query; raw["steps"] = steps
-            for version in [8, 9] {
-                raw["schema_version"] = version
-                let bytes = try JSONSerialization.data(withJSONObject: raw)
-                if version == 8 {
-                    let decoded = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
-                    let encoded = try pwRunnerEncodeJSON(decoded)
-                    let recovered = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: encoded)
-                    try expectNil(recovered.steps[0].sandbox_check.path_diagnostics?.realpath_resolved)
-                    var upgraded = decoded; upgraded.schema_version = 9
-                    do {
-                        _ = try pwRunnerEncodeJSON(upgraded)
-                        throw TestFailure(message: "legacy omission emitted as response 9")
-                    } catch is EncodingError { }
-                } else {
-                    do {
-                        _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: bytes)
-                        throw TestFailure(message: "missing response-9 marker accepted")
-                    } catch is DecodingError { }
-                }
-            }
+            do {
+                _ = try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: JSONSerialization.data(withJSONObject: raw))
+                throw TestFailure(message: "missing compact marker accepted")
+            } catch is DecodingError { }
         }
     }
 
@@ -178,7 +162,6 @@ func runPathDiagnosticsTests(_ tk: TestKit) {
                 attempt.requested_kind = kind
                 attempt.requested_action = action
                 let check = PWRunnerSandboxCheckResult(rc: 0, outcome: "allow", pid: 42, operation: "file-read-data",
-                    scope: PWRunnerWire.sandboxCheckScopePost,
                     filter_kind: query == nil ? "global-name" : PWRunnerWire.sandboxFilterPath,
                     filter_value: query ?? "com.example.svc", filter_type_id: nil, errno: nil, error: nil, path_diagnostics: nil)
                 return PWRunnerStepResult(step_id: target, sandbox_check: check, attempt: attempt)

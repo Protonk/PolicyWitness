@@ -151,7 +151,7 @@ Pin tests (`tests/suites/runner_use_c_worker/`):
 - `exec_attempt_with_baseline_succeeds` — pins that the
   spliced `(deny default) + exec_baseline` policy actually lets
   the fixture helper spawn and exit 0, plus
-  `sandbox_check.outcome=="allow"` + `drift==false`.
+  `sandbox_check.outcome=="allow"` beside `comparison.observation=="succeeded"`.
 - `exec_attempt_args_and_stderr_round_trip` — pins argv[1..]
   delivery + stderr capture.
 - `exec_attempt_stdout_truncation_marker` — pins the bounded

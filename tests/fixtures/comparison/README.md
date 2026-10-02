@@ -1,12 +1,14 @@
 # Comparison matrix fixture
 
 `matrix.json` is the single source of comparison-record expectations: one row
-per scenario in the drift removal plan's D1 matrix (S01–S25 with S04 unused,
-B1–B7, C1 and T), each with the inputs that produce it, the raw channel values
-a unit reader feeds to the producer, the raw fields a live reader asserts
-beside the record, and the expected response 13 `comparison` object.
-Expectations were reviewed against the D1 matrix and the independent
-controls named per row; they were not generated from the producer under test.
+per scenario of the [failure contract's comparison record](../../FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
+(S01–S25 with S04 unused, B1–B7, C1 and T), each with the inputs that produce
+it, the raw channel values a unit reader feeds to the producer, the raw fields
+a live reader asserts beside the record, and the expected `comparison` object
+at the current response schema. Expectations were reviewed against the record's
+rules and the independent controls named per row; they were not generated from
+the producer under test. Readers: `witness_contract/comparison_matrix` (live)
+and `runner_unit`'s `ComparisonEvidenceTests` (unit).
 
 Two readers share the file:
 
@@ -35,9 +37,10 @@ both readers before use:
 ## Files each specimen needs
 
 `files` in the fixture lists every path under `{{SCEN_ROOT}}` with its
-required state before a run: regular files with content and mode, copies of
-`/usr/bin/true` and `/usr/bin/false`, paths that must be absent, and the
-expected state after the run (`effect`). Specimen B is not idempotent: it
+required state before a run: regular files with content and mode, helper
+executables compiled to exit 0 or 1 (copies of platform binaries can be
+killed at launch, so none is copied from the system volume), paths that must
+be absent, and the expected state after the run (`effect`). Specimen B is not idempotent: it
 unlinks the paths it queries, and a run that fails after release still
 performs its attempts, so the live reader recreates every file before every
 run, including after a failed one.
@@ -82,17 +85,20 @@ is what makes partial records observable with every step result present.
 
 ## Row provenance
 
-`baseline_response12/` holds the response 12 verification of these rows
-against the shipped `ff2b192` producer: retained run output supplied
-twenty-five rows and two live specimens supplied the rest. The response 13
-rows keep the five comparison values and prune each `limitations` list to the
-D1 vocabulary. C1's raw shape (`runner_failed`, validator not invoked, worker
+`baseline_response12/` holds the verification of these rows against the
+response 12 producer that preceded the record (`ff2b192`): retained run
+output supplied twenty-five rows and two live specimens supplied the rest. The
+current rows keep those five comparison values and prune each `limitations`
+list to the record's vocabulary. C1's raw shape (`runner_failed`, validator not invoked, worker
 slot incomplete with lifecycle `not_reached`) and T's (`runner_timeout`,
 attempt 0 in flight at the sentinel deadline, lifecycle
 `started_without_result`) were taken from captured replies of the same
 producer; T's retained baseline is the
 `release-0.2.4-default` run of `worker_attempt_in_flight_at_deadline`.
-Response 13 acceptance receipts are linked here once captured.
+Acceptance at the current response schema is the `witness_contract/comparison_matrix`
+case itself, whose per-run artifacts (`matrix-summary.json`, the three raw
+envelopes and `direct-controls.json`) are the receipts; the retained battery
+runs registered in `tests/RETAINED.json` carry them.
 
 The `query` column in each row is a test column, not a record field: it is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome

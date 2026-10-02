@@ -1,13 +1,15 @@
 # Response 12 verification of the comparison matrix
 
 These are the receipts behind the scenario matrix in
-[DRIFT-REMOVAL-PLAN.md](../../../../DRIFT-REMOVAL-PLAN.md). Seven of the
-matrix's nine columns — `prediction`, `observation`, `observation_basis`,
-`operation_relation`, `target_relation`, `order` and `limitations` — are
-unchanged by that plan, so each row's values for them are checkable against the
-shipped response 12 producer before the matrix fixture becomes the single source
-of comparison expectations. The `obligations` object and
-`comparison_conditions` are not checkable here: no build emits them.
+[`../matrix.json`](../README.md), captured against the response 12 producer
+that preceded the current comparison record. The five columns the record kept
+(`observation`, `observation_basis`, `operation_relation`, `target_relation`
+and `order`) and the surviving `limitations` strings were checkable against
+that producer before the fixture became the single source of comparison
+expectations; the columns that producer carried and the record dropped
+(`prediction`, `conclusion`, `scope`, `drift` and the removed limitation
+strings) are not part of the fixture. The query column of the fixture is the
+answer that producer reported as `prediction`.
 
 Two sources cover the rows.
 
@@ -54,6 +56,7 @@ changed between that commit and the plan's inventory baseline `df333b4`, so
 these replies describe the current producer. Both runs used
 `--no-log-capture`; neither needed the unified log.
 
-Rerunning this verification against a response 13 integration candidate is the
-acceptance capture named in the plan's Verification section, and these two
-specimens are its inputs.
+The same rows are verified against the current producer by
+`witness_contract/comparison_matrix`, whose fixture specimens derive from these
+two; the [failure contract](../../../FAILURE-PROPAGATION-CONTRACT.md#comparison-record)
+names the owners of every row.

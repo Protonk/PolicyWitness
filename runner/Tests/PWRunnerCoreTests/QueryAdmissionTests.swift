@@ -200,7 +200,6 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 ("specimen_id", { $0.specimen_id = $1 }),
                 ("run_kind", { $0.run_kind = $1 }),
                 ("policy.format", { $0.policy.format = $1 }),
-                ("_test_overrides.libsandbox_path", { $0._test_overrides!.libsandbox_path = $1 }),
                 ("_test_overrides.worker_executable_path", { $0._test_overrides!.worker_executable_path = $1 }),
                 ("_test_overrides.validator_executable_path", { $0._test_overrides!.validator_executable_path = $1 }),
             ]
@@ -263,8 +262,6 @@ func runQueryAdmissionTests(_ tk: TestKit) {
                 ("specimen_id", specimenIdMaxBytes, { spec(specimenId: $0) }),
                 ("run_kind", requestLabelMaxBytes, { spec(runKind: $0) }),
                 ("policy.format", requestLabelMaxBytes, { spec(format: $0) }),
-                ("_test_overrides.libsandbox_path", testOverridePathMaxBytes,
-                 { spec(overrides: PWRunnerTestOverrides(libsandbox_path: $0)) }),
                 ("_test_overrides.worker_executable_path", testOverridePathMaxBytes,
                  { spec(overrides: PWRunnerTestOverrides(worker_executable_path: $0)) }),
                 ("_test_overrides.validator_executable_path", testOverridePathMaxBytes,

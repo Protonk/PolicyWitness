@@ -1,11 +1,10 @@
 {
-  "response_schema" : 12,
+  "response_schema" : 13,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
       "applied_profile" : "object",
       "bundle_id" : "string",
-      "deny_signal_total" : "object",
       "error" : "string",
       "normalized_outcome" : "string",
       "pid" : "number",
@@ -38,12 +37,6 @@
       "schema_version" : "number",
       "status" : "string",
       "worker_pid" : "number"
-    },
-    "reply.deny_signal_total" : {
-      "count_after" : "number",
-      "count_before" : "number",
-      "delta" : "number",
-      "signal" : "string"
     },
     "reply.runner_subprocess" : {
       "cleanup_trigger" : "string",
@@ -174,16 +167,12 @@
     "reply.steps[]" : {
       "attempt" : "object",
       "comparison" : "object",
-      "deny_signal" : "null",
-      "drift" : "boolean",
       "sandbox_check" : "object",
       "step_id" : "string"
     },
     "reply.steps[].attempt" : {
       "errno" : "null",
-      "exit_code" : "number",
       "lifecycle" : "object",
-      "native_rc" : "null",
       "observed_path" : "null",
       "outcome" : "string",
       "path_diagnostics" : "object",
@@ -191,8 +180,7 @@
       "requested_action" : "string",
       "requested_kind" : "string",
       "requested_path" : "string",
-      "result_source" : "string",
-      "syscall_errno" : "null"
+      "result_source" : "string"
     },
     "reply.steps[].attempt.lifecycle" : {
       "boundary" : "object",
@@ -217,14 +205,11 @@
       "same_as_input" : "array"
     },
     "reply.steps[].comparison" : {
-      "conclusion" : "string",
       "limitations" : "array",
       "observation" : "string",
       "observation_basis" : "string",
       "operation_relation" : "string",
       "order" : "string",
-      "prediction" : "string",
-      "scope" : "string",
       "target_relation" : "string"
     },
     "reply.steps[].sandbox_check" : {
@@ -239,8 +224,7 @@
       "path_diagnostics" : "object",
       "pid" : "number",
       "rc" : "number",
-      "result_source" : "string",
-      "scope" : "string"
+      "result_source" : "string"
     },
     "reply.steps[].sandbox_check.path_diagnostics" : {
       "firmlink_resolved" : "null",

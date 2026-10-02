@@ -230,21 +230,6 @@
         }
       ]
     },
-    "runner_outcome_libsandbox_unavailable": {
-      "command": [
-        "bash",
-        "tests/suites/runner_outcome_libsandbox_unavailable/run.sh"
-      ],
-      "requires": [
-        "app"
-      ],
-      "cases": [
-        {
-          "id": "dlopen_failure_propagates_to_outcome",
-          "description": "libsandbox unavailable propagated end-to-end with override reflected"
-        }
-      ]
-    },
     "runner_outcome_worker_spawn_failed": {
       "command": [
         "bash",
@@ -597,15 +582,7 @@
         },
         {
           "id": "bare_deny_default",
-          "description": "bug-report (deny default) shape: worker survives, deny prediction with unattributed permission failure, drift=null"
-        },
-        {
-          "id": "drift_null_for_dac_eacces",
-          "description": "drift=null for DAC EACCES (validator=allow, observation=ambiguous)"
-        },
-        {
-          "id": "drift_null_for_non_policy_failure",
-          "description": "drift=null for BOOTSTRAP_UNKNOWN_SERVICE (non-policy failure)"
+          "description": "bug-report (deny default) shape: worker survives, deny answer beside a permission_failure observation with no sandbox attribution"
         },
         {
           "id": "duplicate_step_id_rejected",
@@ -629,11 +606,11 @@
         },
         {
           "id": "happy_default_allow",
-          "description": "C-worker path produces complete response-8 envelope; drift=false for matching allow/ok"
+          "description": "C-worker path produces the complete current envelope; allow answer beside a succeeded observation, matched and same_submitted, query_first"
         },
         {
           "id": "prediction_unavailable_pair",
-          "description": "(op,filter) in prediction_unavailable set: verdict synthesized, drift=null"
+          "description": "(op,filter) in prediction_unavailable set: answer synthesized with query_plan:prediction_unavailable_pair"
         },
         {
           "id": "sandbox_check_path_unresolved_prediction_unavailable",
@@ -653,7 +630,7 @@
         },
         {
           "id": "worker_timeout_ms_honored",
-          "description": "worker timeout preserves the completed write, its file effect, and drift=false"
+          "description": "worker timeout preserves the completed write, its file effect and its succeeded record"
         }
       ]
     },
@@ -714,8 +691,8 @@
       ],
       "cases": [
         {
-          "id": "execute_permission_is_not_sandbox_drift",
-          "description": "native exec admission and spawn prerequisites; ordinary EACCES remains unattributed"
+          "id": "execute_permission_controls_spawn",
+          "description": "Direct execution and PW both reject a non-executable helper with EACCES and succeed after execute permission is restored; the failed attempt keeps its raw evidence and a permission-failure record with no sandbox attribution"
         }
       ]
     },
@@ -922,7 +899,7 @@
             "bash",
             "tests/suites/blackbox_e2e/checker_controls.sh"
           ],
-          "description": "Checker and consumer controls reject lost distinctions, limits and provenance while preserving legacy absence",
+          "description": "Checker and consumer controls reject lost distinctions, removed keys, unsupported versions and invalid records",
           "requires": []
         },
         {
@@ -1055,6 +1032,22 @@
           ]
         },
         {
+          "id": "comparison_matrix",
+          "description": "The S, B and C specimens of tests/fixtures/comparison/matrix.json produce the reviewed comparison record, raw fields and file effects on every row",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/comparison_matrix.sh"
+          ]
+        },
+        {
+          "id": "dossier_witness",
+          "description": "data.specimen reports the submitted policy, imports, host facts, runner, manifest and binaries as independently observed; controller refusals keep the uniform envelope and no run writes a temporary request",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/dossier_witness.sh"
+          ]
+        },
+        {
           "id": "create_existing_file_preserves_contents",
           "description": "create preserves existing bytes and identities while enforcing write permission",
           "command": [
@@ -1064,7 +1057,7 @@
         },
         {
           "id": "queries_precede_attempts",
-          "description": "Native queries precede read/unlink of one target, retaining allow/success agreement and independent host nonresolution",
+          "description": "Native queries precede read/unlink of one target, retaining allow answers beside succeeded observations and independent host nonresolution",
           "command": [
             "bash",
             "tests/suites/witness_contract/queries_precede_attempts.sh"
@@ -1154,14 +1147,6 @@
           ]
         },
         {
-          "id": "drift_determination_via_validator_seam",
-          "command": [
-            "bash",
-            "tests/suites/witness_contract/drift_determination_via_validator_seam.sh"
-          ],
-          "description": "Controlled verdicts and real attempts support JSON-only recovery of scoped comparisons, failures, provenance and simultaneous limits"
-        },
-        {
           "id": "prediction_target_is_independent_of_attempt_target",
           "description": "Swapping real validator query targets reverses predictions while independently observed write effects stay fixed",
           "command": [
@@ -1247,7 +1232,7 @@
         },
         {
           "id": "external_mutation_between_query_and_attempt",
-          "description": "Removal after a native allow receipt yields an ordered ENOENT read with unavailable comparison and null drift",
+          "description": "Removal after a native allow receipt yields an ordered ENOENT read recorded as other_failure beside the allow answer",
           "command": [
             "bash",
             "tests/suites/witness_contract/external_mutation_between_query_and_attempt.sh"
@@ -1305,6 +1290,19 @@
             "app",
             "clang",
             "swift",
+            "identity"
+          ]
+        },
+        {
+          "id": "dossier_witness_byoxpc",
+          "default": false,
+          "description": "The dossier of a run selected through an owned BYOXPC runner reports the installed bundle's binaries hashed against the shipped baselines",
+          "command": [
+            "bash",
+            "tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh"
+          ],
+          "requires": [
+            "app",
             "identity"
           ]
         }
@@ -1466,6 +1464,7 @@
         "runner_byoxpc/BBX-001",
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
+        "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery"
       ]
     },

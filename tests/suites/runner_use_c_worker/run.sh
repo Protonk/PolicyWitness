@@ -38,7 +38,7 @@ run_happy_default_allow() {
   local test_id="happy_default_allow"
   test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a full response-8 envelope"
+  test_step "run" "C-worker code path (pw-probe-runner + sb_api_validator --batch via CWorkerOrchestrator) assembles a complete current-schema envelope"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
@@ -79,8 +79,7 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
-# Envelope shape: v4 + both subprocess records + override mirrored back.
-assert r["schema_version"] >= 4, "schema {0}".format(r["schema_version"])
+# Envelope shape: both subprocess records + override mirrored back.
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["validator_subprocess"] is not None, "validator_subprocess missing"
@@ -94,14 +93,16 @@ assert r.get("test_overrides") is None, "expected null test_overrides for produc
 # top-level pid is the worker.
 assert r["pid"] == r["runner_subprocess"]["pid"], "top-level pid should equal runner_subprocess.pid"
 
-# Step: validator predicted allow, attempt observed ok, drift false.
+# Step: validator predicted allow, attempt observed ok, record says succeeded.
 assert len(r["steps"]) == 1
 s = r["steps"][0]
 assert s["sandbox_check"]["outcome"] == "allow"
 assert s["attempt"]["outcome"] == "ok"
 assert s["attempt"]["observed_path"] == "/private/etc/hosts"
-assert s["drift"] is False, "drift expected False got {0}".format(s["drift"])
-print("ok: response-8 envelope, validator+worker subprocesses present, drift=false")
+assert s["comparison"]["observation"] == "succeeded", s["comparison"]
+assert s["comparison"]["order"] == "query_first" and s["comparison"]["limitations"] == [], s["comparison"]
+assert "drift" not in s and "deny_signal" not in s, s
+print("ok: current-schema envelope, validator+worker subprocesses present, succeeded record")
 PY
   local arc=$?
   set -e
@@ -111,7 +112,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "C-worker path produces complete response-8 envelope; drift=false for matching allow/ok" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "C-worker path produces a complete current-schema envelope; allow/ok reports a succeeded record" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: bare_deny_default ------------------------------------------
@@ -162,8 +163,8 @@ env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
 # The run itself succeeded — both children completed cleanly.
-# The libsandbox-drift design property says the envelope should carry
-# the verdict AND the observation even when they disagree.
+# The envelope carries the verdict AND the observation as separate
+# channels; the record relates them without attributing the failure.
 assert r["normalized_outcome"] == "ok", "outcome {0}".format(r["normalized_outcome"])
 assert r["rc"] == 0
 assert r["runner_subprocess"]["exit_code"] == 0, "worker should clean-exit under (deny default)"
@@ -175,9 +176,10 @@ assert s["attempt"]["rc"] == 1, "attempt rc={0}".format(s["attempt"]["rc"])
 # EPERM=1 or EACCES=13.
 assert s["attempt"]["errno"] in (1, 13), "attempt errno={0}".format(s["attempt"]["errno"])
 assert s["attempt"]["outcome"] == "open_failed"
-assert s["drift"] is None, "ambiguous denial requires null, got {0}".format(s["drift"])
+assert (s["comparison"]["observation"], s["comparison"]["observation_basis"]) == ("permission_failure", "permission_errno"), s["comparison"]
+assert s["comparison"]["limitations"] == [], s["comparison"]
 
-print("ok: worker survived (deny default); deny and permission failure remain directionally consistent; drift=null")
+print("ok: worker survived (deny default); deny prediction beside a permission failure by errno")
 PY
   local arc=$?
   set -e
@@ -187,7 +189,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "bug-report (deny default) shape: worker survives, deny prediction with unattributed permission failure, drift=null" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "bug-report (deny default) shape: worker survives, deny prediction beside a permission failure by errno" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: prediction_unavailable_pair --------------------------------
@@ -243,13 +245,14 @@ assert s["sandbox_check"]["outcome"] == "prediction_unavailable", \
     "sb_outcome={0}".format(s["sandbox_check"]["outcome"])
 assert s["sandbox_check"]["rc"] == -1, \
     "rc sentinel expected -1, got {0}".format(s["sandbox_check"]["rc"])
-# drift undefined for prediction_unavailable cases.
-assert s["drift"] is None, \
-    "drift should be null for prediction_unavailable, got {0}".format(s["drift"])
+# The planning exclusion is said by the record: no order, the pair limitation.
+assert s["comparison"]["order"] == "unestablished", s["comparison"]
+assert s["comparison"]["limitations"] == ["query_plan:prediction_unavailable_pair"], s["comparison"]
 # The attempt still ran (and succeeded under allow default + the iokit
 # deny that doesn't cover /etc/hosts file reads).
 assert s["attempt"]["outcome"] == "ok"
-print("ok: prediction_unavailable verdict synthesized; validator not asked; drift=null")
+assert s["comparison"]["observation"] == "succeeded", s["comparison"]
+print("ok: prediction_unavailable verdict synthesized; validator not asked; record names the planning exclusion")
 PY
   local arc=$?
   set -e
@@ -259,7 +262,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "(op,filter) in prediction_unavailable set: verdict synthesized, drift=null" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "(op,filter) in prediction_unavailable set: verdict synthesized, record names the exclusion" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: duplicate_step_id_rejected (PR H #1 regression) ------------
@@ -372,11 +375,12 @@ good = steps[0]
 assert good["step_id"] == "good"
 assert good["sandbox_check"]["outcome"] == "allow", good["sandbox_check"]
 assert good["attempt"]["outcome"] == "ok", good["attempt"]
-assert good["drift"] is False, "drift={0!r}".format(good["drift"])
+assert good["comparison"]["observation"] == "succeeded", good["comparison"]
 
 # Step 1: unknown attempt kind. sandbox_check still ran (none-filter
 # probe under the iokit-open-user-client op isn't in the
-# prediction-unavailable set), attempt is unsupported, drift is null.
+# prediction-unavailable set), attempt is unsupported, and the record
+# says the attempt was unsupported.
 ua = steps[1]
 assert ua["step_id"] == "unknown_attempt"
 sb = ua["sandbox_check"]
@@ -385,7 +389,8 @@ at = ua["attempt"]
 assert at["outcome"] == "unsupported", "attempt.outcome={0!r}".format(at["outcome"])
 err = at.get("error") or ""
 assert "iokit" in err and "open" in err, "attempt.error should name kind+action, got {0!r}".format(err)
-assert ua["drift"] is None, "drift should be null when attempt didn't produce a verdict, got {0!r}".format(ua["drift"])
+assert ua["comparison"]["observation"] == "unavailable", ua["comparison"]
+assert ua["comparison"]["limitations"] == ["attempt:unsupported"], ua["comparison"]
 
 print("ok: unknown attempt downgrades to per-step skip; sibling step + sandbox_check verdict survive")
 PY
@@ -411,78 +416,7 @@ run_worker_timeout_ms_honored() {
   test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "successful-write worker timeout contract failed" \
     "${ROOT_DIR}/tests/suites/runner_outcome_runner_timeout/check.py" \
     write "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
-  test_pass "worker timeout preserves the completed write, its file effect, and drift=false"
-}
-
-# ---- test_id: drift_null_for_non_policy_failure (PR H #5 regression) ----
-#
-# The audit reproducer: (allow default) + mach_lookup of a missing
-# service. Validator says allow (per the policy). bootstrap_look_up
-# returns BOOTSTRAP_UNKNOWN_SERVICE (kr=1102) because the service
-# doesn't exist — not because the sandbox denied it. Pre-fix the
-# orchestrator treated every non-ok attempt as a deny observation,
-# so this case surfaced as drift=true. Post-fix the orchestrator
-# inspects the failure kind: only EPERM/EACCES on file and
-# BOOTSTRAP_NOT_PRIVILEGED (kr=1100) on mach count as denials.
-
-run_drift_null_for_non_policy_failure() {
-  local test_id="drift_null_for_non_policy_failure"
-  test_selected "${test_id}" || return 0
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "(allow default) + mach_lookup of a missing service → drift=null (BOOTSTRAP_UNKNOWN_SERVICE isn't a sandbox verdict; used to surface as drift=true)"
-
-  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
-
-  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  cat >"${specimen}" <<'EOF'
-{
-  "schema_version": 1,
-  "specimen_id": "use_c_worker_unknown_service_drift",
-  "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
-  "probe_plan": [{
-    "step_id": "s_unknown_service",
-    "sandbox_check": {"operation": "mach-lookup", "filter": {"kind": "global_name", "value": "com.pw.test.no-such-service"}},
-    "attempt": {"kind": "mach_lookup", "action": "bootstrap_look_up", "target": "com.pw.test.no-such-service"}
-  }]
-}
-EOF
-
-  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
-  set +e
-  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
-  set -e
-
-  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
-  set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
-import json, sys
-env = json.loads(open(sys.argv[1]).read())
-r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "ok", "outcome={0}".format(r["normalized_outcome"])
-s = r["steps"][0]
-# Validator predicts allow (the service name isn't in any deny rule).
-assert s["sandbox_check"]["outcome"] == "allow", \
-    "validator should allow unknown service under (allow default): {0}".format(s["sandbox_check"]["outcome"])
-# Attempt failed at the kernel: BOOTSTRAP_UNKNOWN_SERVICE.
-assert s["attempt"]["outcome"] == "lookup_failed", \
-    "attempt outcome: {0}".format(s["attempt"]["outcome"])
-err = s["attempt"].get("error") or ""
-assert "kr=1102" in err, "error should name BOOTSTRAP_UNKNOWN_SERVICE kr=1102: {0!r}".format(err)
-# Critical: drift must be null. Pre-fix it was true because every
-# non-ok attempt counted as a deny observation.
-assert s["drift"] is None, \
-    "drift should be null for non-policy failure (kr=1102), got {0}".format(s["drift"])
-print("ok: missing-service lookup yields drift=null (not libsandbox drift)")
-PY
-  local arc=$?
-  set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
-    return 0
-  fi
-  test_pass "drift=null for BOOTSTRAP_UNKNOWN_SERVICE (non-policy failure)" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "worker timeout preserves the completed write, its file effect, and its succeeded record"
 }
 
 # ---- test_id: sandbox_check_pid_matches_worker (PR H #7 regression) ------
@@ -540,85 +474,6 @@ PY
 run_happy_default_allow
 run_bare_deny_default
 run_prediction_unavailable_pair
-# ---- test_id: drift_null_for_dac_eacces (PR I #1 regression) -------------
-#
-# A real chmod 000 file owned by us returns EACCES from open(),
-# despite policy (allow default). The validator predicts allow, the
-# attempt observes EACCES — but the denial came from filesystem DAC,
-# not from the kernel sandbox. Reporting drift=true would be dishonest
-# attribution (validator was right about sandbox; the failure had
-# nothing to do with libsandbox). Post-fix the orchestrator
-# classifies file EPERM/EACCES as deniedAmbiguous and returns
-# drift=null for the (allow, ambiguous) case.
-
-run_drift_null_for_dac_eacces() {
-  local test_id="drift_null_for_dac_eacces"
-  test_selected "${test_id}" || return 0
-  test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "(allow default) + file with mode 000 → drift=null (EACCES is ambiguous between sandbox and DAC; used to surface as drift=true)"
-
-  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
-
-  local target="${PW_TEST_ARTIFACTS}/no-read.txt"
-  : >"${target}"
-  chmod 000 "${target}"
-  # Cleanup on exit so the artifacts dir can be removed cleanly.
-  trap 'chmod 600 "'"${target}"'" 2>/dev/null || true' RETURN
-
-  local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
-  /usr/bin/python3 - "${specimen}" "${target}" <<'PY'
-import json, sys
-from pathlib import Path
-spec = {
-    "schema_version": 1,
-    "specimen_id": "use_c_worker_dac_eacces_drift",
-    "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
-    "probe_plan": [{
-        "step_id": "s_dac",
-        "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": sys.argv[2]}},
-        "attempt": {"kind": "file", "action": "open_read", "target": sys.argv[2]},
-    }],
-}
-Path(sys.argv[1]).write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-PY
-
-  local run_stdout="${PW_TEST_ARTIFACTS}/run.json"
-  set +e
-  "${PW_BIN}" run "${specimen}" >"${run_stdout}" 2>/dev/null
-  set -e
-
-  local assert_log="${PW_TEST_ARTIFACTS}/assert.log"
-  set +e
-  /usr/bin/python3 - "${run_stdout}" >"${assert_log}" 2>&1 <<'PY'
-import json, sys
-env = json.loads(open(sys.argv[1]).read())
-r = env["data"]["runner_result"]
-assert r["normalized_outcome"] == "ok"
-s = r["steps"][0]
-# Validator predicts allow under (allow default).
-assert s["sandbox_check"]["outcome"] == "allow", \
-    "validator should allow under (allow default): {0}".format(s["sandbox_check"]["outcome"])
-assert s["attempt"]["outcome"] == "open_failed"
-# EACCES = 13. The kernel returned it; we don't know if sandbox or
-# DAC caused it.
-assert s["attempt"]["errno"] == 13, "expected EACCES (13), got {0}".format(s["attempt"]["errno"])
-# Critical: drift must be null. (allow, ambiguous-deny) → null per
-# the asymmetric drift rule.
-assert s["drift"] is None, \
-    "drift should be null for (allow, ambiguous-EACCES), got {0}".format(s["drift"])
-print("ok: DAC EACCES yields drift=null when validator predicts allow")
-PY
-  local arc=$?
-  set -e
-  if [[ "${arc}" -ne 0 ]]; then
-    local msg
-    msg="$(head -5 "${assert_log}" | tr '\n' ' ' | sed 's/"/\\"/g')"
-    test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
-    return 0
-  fi
-  test_pass "drift=null for DAC EACCES (validator=allow, observation=ambiguous)" "{\"stdout\":\"${run_stdout}\"}"
-}
-
 # ---- test_id: access_failure_classified (PR I #2 regression) -------------
 #
 # A file/access attempt that fails with EPERM/EACCES used to land as
@@ -750,9 +605,9 @@ s = r["steps"][0]
 assert s["sandbox_check"]["outcome"] == "deny", \
     "sandbox_check outcome={0!r} (validator should predict deny under deny-default)".format(
         s["sandbox_check"]["outcome"])
-# Permission failure does not establish sandbox attribution.
-assert s.get("drift") is None, \
-    "ambiguous permission failure requires null; got {0!r}".format(s.get("drift"))
+# Permission failure does not establish sandbox attribution: the record
+# observes the failure by errno and says nothing more.
+assert (s["comparison"]["observation"], s["comparison"]["observation_basis"]) == ("permission_failure", "permission_errno"), s["comparison"]
 
 a = s["attempt"]
 assert a["outcome"] == "exec_failed", \
@@ -805,7 +660,7 @@ PY
 #
 # Asserts:
 #   - normalized_outcome == "ok"
-#   - data.policy_augmentation present, applied == ["exec_baseline"],
+#   - data.specimen.policy.augmentation applied == ["exec_baseline"],
 #     original_sha256 != applied_sha256
 #   - runner_result.policy_sha256 == applied_sha256
 #     (proves the runner compiled the spliced source, not the
@@ -860,8 +715,8 @@ env = json.loads(open(sys.argv[1]).read())
 assert env["result"]["normalized_outcome"] == "ok", \
     "top-level outcome={0}".format(env["result"]["normalized_outcome"])
 
-aug = env["data"].get("policy_augmentation")
-assert aug is not None, "data.policy_augmentation missing on augmented run"
+aug = env["data"]["specimen"]["policy"]["augmentation"]
+assert aug["status"] == "applied", "augmentation status {0!r} on augmented run".format(aug["status"])
 assert aug["applied"] == ["exec_baseline"], \
     "applied={0!r}".format(aug["applied"])
 assert aug["original_sha256"] != aug["applied_sha256"], \
@@ -881,8 +736,8 @@ s = r["steps"][0]
 assert s["sandbox_check"]["outcome"] == "allow", \
     "sandbox_check should predict allow when augment grants process-exec*; got {0!r}".format(
         s["sandbox_check"]["outcome"])
-assert s.get("drift") is False, \
-    "allowed target admission and observed spawn should agree; got {0!r}".format(s.get("drift"))
+assert s["comparison"]["observation"] == "succeeded" and s["comparison"]["observation_basis"] == "spawned_child", \
+    "allowed target admission beside an observed spawn; got {0!r}".format(s["comparison"])
 
 a = s["attempt"]
 assert a["outcome"] == "ok", "attempt outcome={0}".format(a["outcome"])
@@ -971,7 +826,7 @@ for s, request in zip(runner["steps"], plan):
     args = request["attempt"]["args"]
     status = int(args[3])
     assert s["sandbox_check"]["outcome"] == "allow", s
-    assert s["drift"] is False, s  # target admission agrees with observed spawn
+    assert s["comparison"]["observation_basis"] == "spawned_child", s  # the spawn is the observation
     a = s["attempt"]
     assert a["outcome"] == ("exec_failed" if status else "ok"), a
     assert a["rc"] == status, a
@@ -1046,7 +901,7 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 s = env["data"]["runner_result"]["steps"][0]
 assert s["sandbox_check"]["outcome"] == "allow"
-assert s.get("drift") is False  # target admission agrees with observed spawn
+assert s["comparison"]["observation_basis"] == "spawned_child"  # the spawn is the observation
 a = s["attempt"]
 assert a["outcome"] == "ok", "outcome={0}".format(a["outcome"])
 out = a.get("stdout") or ""
@@ -1080,7 +935,7 @@ PY
 # error=null pre-fix — a silent diagnostic loss. After the fix the
 # step surfaces a distinct outcome ("unsupported_operation") with a
 # populated error string that names the rejected operation and
-# hints at the wildcard form. drift stays null but now the cause
+# hints at the wildcard form. The record claims no order, and the cause
 # is documented by the outcome rather than mysteriously absent.
 #
 # Two-step specimen: a bare process-exec step + a star process-exec*
@@ -1131,7 +986,7 @@ assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normal
 steps = {s["step_id"]: s for s in r["steps"]}
 assert set(steps) == {"bare", "wild"}, "unexpected step ids: {0}".format(set(steps))
 
-# Bare step: distinct outcome + populated error + drift=null.
+# Bare step: distinct outcome + populated error + no order claim.
 bare = steps["bare"]
 bc = bare["sandbox_check"]
 assert bc["outcome"] == "unsupported_operation", \
@@ -1147,11 +1002,13 @@ assert "wildcard" in bc["error"], \
 # rc is the validator's reported value: -1 for the EINVAL path.
 assert bc.get("rc") == -1, "bare sandbox_check rc expected -1; got {0!r}".format(bc.get("rc"))
 assert bc.get("errno") == 22, "bare sandbox_check errno expected 22 (EINVAL); got {0!r}".format(bc.get("errno"))
-# drift falls out as null because there's no allow/deny verdict to
-# compare against — but now the outcome explains why, vs the
-# mysteriously-absent drift the pre-fix shape produced.
-assert bare.get("drift") is None, \
-    "bare drift should be null when sandbox_check has no verdict to compare; got {0!r}".format(bare.get("drift"))
+# No allow/deny verdict exists, so the record claims no order; the
+# outcome explains why instead of a silently absent field. The bare spelling
+# is not the exec attempt's mapped operation (process-exec*), so the record
+# reports a different submitted operation rather than an unresolved one.
+assert bare["comparison"]["order"] == "unestablished", bare["comparison"]
+assert bare["comparison"]["operation_relation"] == "different", bare["comparison"]
+assert bare["comparison"]["limitations"] == [], bare["comparison"]
 # The attempt still ran cleanly (the issue was only on the prediction channel).
 assert bare["attempt"]["outcome"] == "ok", \
     "bare attempt should have run cleanly; got {0!r}".format(bare["attempt"]["outcome"])
@@ -1162,8 +1019,8 @@ assert wild["sandbox_check"]["outcome"] == "allow", \
     "wild process-exec* expected outcome=allow; got {0!r}".format(wild["sandbox_check"]["outcome"])
 assert wild["sandbox_check"].get("error") is None, \
     "wild sandbox_check.error should be null on allow; got {0!r}".format(wild["sandbox_check"].get("error"))
-assert wild.get("drift") is None, \
-    "broad query has unresolved operation scope; got {0!r}".format(wild.get("drift"))
+assert wild["comparison"]["operation_relation"] == "unresolved", \
+    "broad query has unresolved operation scope; got {0!r}".format(wild["comparison"])
 assert wild["attempt"]["outcome"] == "ok"
 
 print("ok: bare process-exec → unsupported_operation with diagnostic; wild process-exec* → allow")
@@ -1193,10 +1050,9 @@ PY
 # Reporter's repro shape: one resolvable + one unresolvable path
 # under the same allow rule. The resolvable step's verdict is
 # unchanged; the unresolvable step is now prediction_unavailable
-# with the gate's reason populated in `error`. drift=null falls
-# out for the unresolvable step (no allow/deny to compare) but
-# the cause is now self-documented by the outcome rather than
-# silently undefined.
+# with the gate's reason populated in `error`. The record names the
+# planning exclusion and claims no order; the cause is self-documented
+# by the outcome rather than silently undefined.
 
 run_sandbox_check_path_unresolved_prediction_unavailable() {
   local test_id="sandbox_check_path_unresolved_prediction_unavailable"
@@ -1244,18 +1100,18 @@ assert r["normalized_outcome"] == "ok", "top-level outcome={0}".format(r["normal
 steps = {s["step_id"]: s for s in r["steps"]}
 assert set(steps) == {"exists", "absent"}, "unexpected step ids: {0}".format(set(steps))
 
-# Resolvable step: validator runs, allow + drift=False, attempt ok.
+# Resolvable step: validator runs, allow, attempt ok, succeeded record.
 ex = steps["exists"]
 assert ex["sandbox_check"]["outcome"] == "allow", \
     "resolvable path expected sb_check=allow; got {0!r}".format(ex["sandbox_check"]["outcome"])
 assert ex["sandbox_check"].get("filter_type_id") is not None, \
     "resolvable path should carry a filter_type_id (proves validator ran); got {0!r}".format(
         ex["sandbox_check"].get("filter_type_id"))
-assert ex.get("drift") is False, "resolvable path drift expected False; got {0!r}".format(ex.get("drift"))
+assert ex["comparison"]["observation"] == "succeeded" and ex["comparison"]["order"] == "query_first", ex["comparison"]
 assert ex["attempt"]["outcome"] == "ok"
 
 # Unresolvable step: validator skipped, prediction_unavailable +
-# rc sentinel + populated error + filter_type_id null + drift null.
+# rc sentinel + populated error + filter_type_id null + planning limitation.
 ab = steps["absent"]
 sb = ab["sandbox_check"]
 assert sb["outcome"] == "prediction_unavailable", \
@@ -1268,8 +1124,8 @@ assert err, "prediction_unavailable.error must be populated for the path-unresol
 assert "/usr/lib/NONEXISTENT_pw_repro" in err, \
     "error must name the unresolved path; got {0!r}".format(err)
 assert "did not resolve" in err, "error should explain the gate reason; got {0!r}".format(err)
-assert ab.get("drift") is None, \
-    "drift should be null (no allow/deny to compare); got {0!r}".format(ab.get("drift"))
+assert ab["comparison"]["order"] == "unestablished", ab["comparison"]
+assert ab["comparison"]["limitations"] == ["query_plan:path_unresolved_at_planning"], ab["comparison"]
 # Attempt still runs and carries the real evidence — the kernel
 # ENOENT comes through as open_failed with errno=2.
 assert ab["attempt"]["outcome"] == "open_failed"
@@ -1301,9 +1157,7 @@ PY
 run_duplicate_step_id_rejected
 run_unsupported_attempt_per_step_skip
 run_worker_timeout_ms_honored
-run_drift_null_for_non_policy_failure
 run_sandbox_check_pid_matches_worker
-run_drift_null_for_dac_eacces
 run_access_failure_classified
 run_exec_attempt_without_baseline_fails_cleanly
 run_exec_attempt_with_baseline_succeeds

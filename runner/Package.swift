@@ -14,7 +14,8 @@
 // executable). Adding a Swift file to Sources/PWRunnerCore/ needs no
 // manifest edit here — but it still must be added to build.sh's swiftc
 // invocation, and the source_drift suite enforces that build.sh and the
-// on-disk source set agree.
+// on-disk source set agree. The source set links no sandbox library: the
+// XPC host stays unsandboxed and never calls libsandbox.
 //
 // The test target is an executableTarget (not a testTarget) because XCTest
 // is shipped with full Xcode, not Command Line Tools — and contributors
@@ -24,7 +25,7 @@
 // -enable-testing so the executable can use `@testable import` to reach
 // internal symbols, the same access level a testTarget would have.
 //
-// Each C shim lives in its own target because SwiftPM 5.10 does not allow
+// The C shim lives in its own target because SwiftPM 5.10 does not allow
 // mixed C+Swift sources in a single target. Its header sits under the
 // target's default publicHeadersPath (Sources/<Shim>/include/) and is a
 // placeholder that satisfies SwiftPM's public-headers requirement; Swift
@@ -42,11 +43,10 @@ let package = Package(
         .library(name: "PWRunnerCore", targets: ["PWRunnerCore"]),
     ],
     targets: [
-        .target(name: "PWSandboxCheckShim"),
         .target(name: "PWCWorkerShim"),
         .target(
             name: "PWRunnerCore",
-            dependencies: ["PWSandboxCheckShim", "PWCWorkerShim"],
+            dependencies: ["PWCWorkerShim"],
             swiftSettings: [
                 // Lets the test executable use `@testable import PWRunnerCore`
                 // and reach internal symbols. This build flag does not affect

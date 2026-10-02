@@ -1,4 +1,4 @@
-"""Match every matrix row in DRIFT-REMOVAL-PLAN.md against the comparison
+"""Match every matrix row in plan_matrix.md (the plan's matrix as verified) against the comparison
 tuples in retained run output. Run from the repository root."""
 import json, os, re, collections
 
@@ -8,7 +8,7 @@ REMOVED={"state_stability_unestablished","runtime_target_identity_unestablished"
 
 # ---- parse the matrix from the plan ----
 rows={}
-for line in open("DRIFT-REMOVAL-PLAN.md"):
+for line in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_matrix.md")):
     if not line.startswith("| S") and not line.startswith("| B") and not line.startswith("| C1") and not line.startswith("| T "):
         continue
     c=[x.strip() for x in line.strip().strip("|").split("|")]

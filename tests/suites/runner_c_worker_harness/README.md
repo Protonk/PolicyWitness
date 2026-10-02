@@ -118,7 +118,7 @@ See `exec_attempt_budget` in `docs/LIMITS.md`.
 The worker refuses or survives bad input before `sandbox_apply`. The
 shm-corruption branches are e2e-unreachable because the host always
 populates the shm header correctly. `compile_failure` exercises a real
-compilation failure and published legacy status, in isolation without the
+compilation failure and the published status word, in isolation without the
 host/XPC path. The host maps this ambiguous status to `runner_failed`; it cannot
 identify compilation versus parameter setup/application from that status alone. The harness — which pipes
 policy straight to the worker — is the vehicle for all of them. Each asserts the exact worker exit code with no `applied`/`done`

@@ -1,7 +1,9 @@
 //! Wrapper for invoking the Swift pw-runner-client helper.
 //!
 //! The Rust controller shells out to the Swift client to perform NSXPC wiring;
-//! the JSON output is captured and embedded in the controller envelope.
+//! the JSON output is captured and embedded in the controller envelope. A run
+//! delivers the held request string on the client's stdin (`--request -`);
+//! `runner verify` keeps the file-input form.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -12,7 +14,9 @@ use crate::app_layout::resolve_contents_macos_tool;
 use crate::runner_select::RunnerConnectionKind;
 #[cfg(test)]
 use crate::utils::RUNNER_CAPTURE_BYTES;
-use crate::utils::{JsonOutputCapture, capture_json_output, now_unix_ms};
+use crate::utils::{
+    JsonOutputCapture, RequestDelivery, capture_json_output, now_unix_ms, run_with_stdin,
+};
 
 #[derive(Serialize)]
 pub struct RunnerClientRun {
@@ -20,6 +24,8 @@ pub struct RunnerClientRun {
     pub started_at_unix_ms: u64,
     pub ended_at_unix_ms: u64,
     pub exit_code: i32,
+    /// The stdin delivery observation; null for a file-input invocation.
+    pub request_delivery: Option<RequestDelivery>,
     #[serde(flatten)]
     pub output: JsonOutputCapture,
 }
@@ -29,6 +35,7 @@ fn parse_runner_client_output(
     started: u64,
     ended: u64,
     out: &std::process::Output,
+    request_delivery: Option<RequestDelivery>,
 ) -> (RunnerClientRun, Option<Value>) {
     let (output, parsed) = capture_json_output(out, "runner", crate::utils::RUNNER_CAPTURE_BYTES);
 
@@ -40,18 +47,17 @@ fn parse_runner_client_output(
         started_at_unix_ms: started,
         ended_at_unix_ms: ended,
         exit_code: out.status.code().unwrap_or(1),
+        request_delivery,
         output,
     };
 
     (runner_client, parsed)
 }
 
-pub fn run_pw_runner_client(
-    service_name: &str,
-    request_path: &std::path::Path,
+fn client_argv(
     timeout_ms: u64,
     connection: &RunnerConnectionKind,
-) -> Result<(RunnerClientRun, Option<Value>), String> {
+) -> Result<Vec<OsString>, String> {
     let tool = resolve_contents_macos_tool("pw-runner-client")?;
     let mut argv = vec![
         tool.into_os_string(),
@@ -68,6 +74,33 @@ pub fn run_pw_runner_client(
             }
         }
     }
+    Ok(argv)
+}
+
+/// Deliver `request` on the client's stdin and capture its reply. A delivery
+/// error is returned inside the capture, never as an `Err`: the caller decides
+/// its precedence over the captured reply.
+pub fn run_pw_runner_client(
+    service_name: &str,
+    request: &str,
+    timeout_ms: u64,
+    connection: &RunnerConnectionKind,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    let mut argv = client_argv(timeout_ms, connection)?;
+    argv.push(OsString::from("--request"));
+    argv.push(OsString::from("-"));
+    argv.push(OsString::from(service_name));
+    run_client_stdin(&argv, request.as_bytes().to_vec())
+}
+
+/// The file-input form, used by `runner verify`; it has no delivery observation.
+pub fn run_pw_runner_client_file(
+    service_name: &str,
+    request_path: &std::path::Path,
+    timeout_ms: u64,
+    connection: &RunnerConnectionKind,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    let mut argv = client_argv(timeout_ms, connection)?;
     argv.push(OsString::from(service_name));
     argv.push(request_path.as_os_str().to_os_string());
     run_client_argv(&argv)
@@ -93,7 +126,34 @@ fn run_client_argv_with_clock(
         .output()
         .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
     let ended = clock();
-    Ok(parse_runner_client_output(argv, started, ended, &out))
+    Ok(parse_runner_client_output(argv, started, ended, &out, None))
+}
+
+fn run_client_stdin(
+    argv: &[OsString],
+    request: Vec<u8>,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    run_client_stdin_with_clock(argv, request, now_unix_ms)
+}
+
+fn run_client_stdin_with_clock(
+    argv: &[OsString],
+    request: Vec<u8>,
+    mut clock: impl FnMut() -> u64,
+) -> Result<(RunnerClientRun, Option<Value>), String> {
+    let started = clock();
+    let mut command = Command::new(&argv[0]);
+    command.args(&argv[1..]);
+    let (out, delivery) = run_with_stdin(command, request)
+        .map_err(|e| format!("failed to run pw-runner-client: {e}"))?;
+    let ended = clock();
+    Ok(parse_runner_client_output(
+        argv,
+        started,
+        ended,
+        &out,
+        Some(delivery),
+    ))
 }
 
 #[cfg(test)]
@@ -116,7 +176,7 @@ mod tests {
             .output()
             .unwrap();
         assert!(output.status.success());
-        let (capture, parsed) = parse_runner_client_output(&[], 0, 1, &output);
+        let (capture, parsed) = parse_runner_client_output(&[], 0, 1, &output, None);
         assert!(capture.output.stdout_capture_error.is_none());
         assert_eq!(parsed.as_ref(), Some(&original));
         // Forward valid and malformed representations unchanged. The independent
@@ -152,53 +212,141 @@ mod tests {
         ];
         let output = Command::new(&argv[0]).args(&argv[1..]).output().unwrap();
         assert!(output.status.success());
-        let (capture, parsed) = parse_runner_client_output(&argv, 0, 1, &output);
+        let (capture, parsed) = parse_runner_client_output(&argv, 0, 1, &output, None);
         (capture, parsed, output.stdout)
     }
 
     #[test]
-    fn consumer_distinctions_and_legacy_absences_survive_receiver_transport() {
-        for version in 4..=8 {
-            let mut original = serde_json::json!({"schema_version": version, "steps": [{
-                "step_id": "spawn", "drift": false,
-                "sandbox_check": {"outcome": "allow", "native_rc": 0},
-                "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123,
-                            "child_exit_code": 37, "stdout": "controlled marker"}
-            }]});
-            if version >= 7 {
-                original["steps"][0]["comparison"] = serde_json::json!({
-                    "scope": "submitted_operation_and_target", "prediction": "allow",
-                    "observation": "succeeded", "observation_basis": "spawned_child",
-                    "operation_relation": "matched", "target_relation": "same_submitted",
-                    "conclusion": "agreement", "limitations": [
-                        "query_attempt_order_unestablished", "state_stability_unestablished",
-                        "exec_result_failed_after_spawn", "sandbox_attribution_unestablished",
-                        "future_evidence_limit"]});
-                original["steps"][0]["attempt"]["requested_kind"] = serde_json::json!("exec");
-                original["steps"][0]["attempt"]["requested_action"] = serde_json::json!("spawn");
-                original["steps"][0]["sandbox_check"]["path_diagnostics"] = serde_json::json!({
-                    "input": "/submitted", "observer": "runner_host", "phase": "after_orchestration"});
-            }
-            if version == 8 {
-                original["steps"][0]["comparison"]["order"] = serde_json::json!("future_order");
-                original["runner_subprocess"] = serde_json::json!({"ordering": {
-                    "collection_closed_before_proceed": true, "proceed_set": true,
-                    "proceed_observed": true, "validator_disposition": "unconfirmed",
-                    "worker_lifetime_established": true, "protocol_violations": []}});
-                original["validator_spawn_failure"] = serde_json::json!({
-                    "origin": "runner_host", "operation": "posix_spawn",
-                    "executable_path": "/unknown/validator-\"é\"", "return_code": 2147483647,
-                    "diagnostic": "unfamiliar native launch diagnostic"});
-            }
+    fn transport_preserves_current_replies_with_unfamiliar_values_and_other_versions() {
+        use serde_json::json;
+        let current = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        // A current-version reply whose strings the controller does not
+        // recognize is received unchanged: the version gate and the readers
+        // decide later, never the transport.
+        let mut replies = vec![
+            json!({"schema_version": current, "normalized_outcome": "ok", "steps": [{
+            "step_id": "spawn",
+            "sandbox_check": {"outcome": "allow", "rc": 0, "native_rc": 0, "path_diagnostics": {
+                "input": "/submitted", "observer": "runner_host", "phase": "after_orchestration"}},
+            "attempt": {"outcome": "exec_failed", "rc": 37, "child_pid": 123, "child_exit_code": 37,
+                "stdout": "controlled marker", "requested_kind": "exec", "requested_action": "spawn"},
+            "comparison": {"observation": "succeeded", "observation_basis": "spawned_child",
+                "operation_relation": "matched", "target_relation": "same_submitted",
+                "order": "future_order", "limitations": ["future_evidence_limit"]}}],
+            "runner_subprocess": {"ordering": {
+                "collection_closed_before_proceed": true, "proceed_set": true,
+                "proceed_observed": true, "validator_disposition": "unconfirmed",
+                "worker_lifetime_established": true, "protocol_violations": ["future_fault"]}},
+            "validator_spawn_failure": {
+                "origin": "runner_host", "operation": "posix_spawn",
+                "executable_path": "/unknown/validator-\"\u{e9}\"", "return_code": 2147483647,
+                "diagnostic": "unfamiliar native launch diagnostic"}}),
+        ];
+        // Other and malformed versions are transported as received; nothing
+        // here coerces or rejects them.
+        for version in [current - 1, current + 1] {
+            replies.push(
+                json!({"schema_version": version, "steps": [{"step_id": "s", "drift": false}]}),
+            );
+        }
+        replies.push(json!({"schema_version": current.to_string(), "steps": []}));
+        replies.push(json!({"steps": []}));
+        for original in replies {
             let output = crate::utils::receiver_fixture(
                 &original.to_string(),
                 "valid",
                 crate::utils::RUNNER_CAPTURE_BYTES,
             );
-            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
+            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output, None);
             assert!(capture.output.stdout_capture_error.is_none());
             assert_eq!(received, Some(original));
         }
+    }
+
+    fn python(program: &str) -> Vec<OsString> {
+        vec![
+            OsString::from("/usr/bin/python3"),
+            OsString::from("-c"),
+            OsString::from(program),
+        ]
+    }
+
+    #[test]
+    fn delivery_completes_a_request_larger_than_the_pipe_buffer() {
+        // The child reads only after a delay, so the writer must block on a
+        // full pipe and still deliver every byte before closing stdin.
+        let request = vec![b'x'; 1 << 20];
+        let argv = python(
+            "import sys, time, json; time.sleep(0.2); data = sys.stdin.buffer.read(); \
+             print(json.dumps({'bytes': len(data), 'uniform': data == b'x' * len(data)}))",
+        );
+        let (run, reply) =
+            run_client_stdin_with_clock(&argv, request.clone(), now_unix_ms).unwrap();
+        assert_eq!(
+            run.request_delivery,
+            Some(RequestDelivery {
+                bytes_written: request.len(),
+                error: None
+            })
+        );
+        assert_eq!(
+            reply,
+            Some(serde_json::json!({"bytes": request.len(), "uniform": true}))
+        );
+        assert_eq!(run.exit_code, 0);
+        let wire = serde_json::to_value(&run).unwrap();
+        assert_eq!(wire["request_delivery"]["bytes_written"], request.len());
+        assert!(wire["request_delivery"]["error"].is_null());
+    }
+
+    #[test]
+    fn a_child_that_exits_without_reading_breaks_the_pipe_without_terminating_the_controller() {
+        let request = vec![b'x'; 1 << 20];
+        let argv = python("import sys; sys.exit(3)");
+        let (run, reply) =
+            run_client_stdin_with_clock(&argv, request.clone(), now_unix_ms).unwrap();
+        let delivery = run.request_delivery.clone().unwrap();
+        let error = delivery.error.expect("the broken pipe is recorded");
+        assert!(
+            error.contains("request delivery failed after") && error.contains("Broken pipe"),
+            "{error}"
+        );
+        assert!(delivery.bytes_written < request.len());
+        assert!(reply.is_none());
+        assert_eq!(run.exit_code, 3);
+        assert!(run.output.stdout_parse_error.is_some() || run.output.stdout_raw.is_none());
+    }
+
+    #[test]
+    fn a_delivery_error_is_recorded_beside_a_captured_failure_reply() {
+        let request = vec![b'x'; 1 << 20];
+        let argv = python(
+            "import sys, json; print(json.dumps({'schema_version': 0, 'normalized_outcome': \
+             'xpc_error', 'error': 'controlled failure reply'})); sys.exit(1)",
+        );
+        let (run, reply) = run_client_stdin_with_clock(&argv, request, now_unix_ms).unwrap();
+        let delivery = run.request_delivery.clone().unwrap();
+        assert!(
+            delivery
+                .error
+                .as_deref()
+                .unwrap_or("")
+                .contains("Broken pipe")
+        );
+        let reply = reply.expect("the failure reply is captured beside the delivery error");
+        assert_eq!(reply["normalized_outcome"], "xpc_error");
+        assert_eq!(reply["error"], "controlled failure reply");
+        assert_eq!(run.exit_code, 1);
+    }
+
+    #[test]
+    fn the_file_input_form_carries_no_delivery_observation() {
+        let argv = vec![OsString::from("/usr/bin/true")];
+        let (run, reply) = run_client_argv(&argv).unwrap();
+        assert!(run.request_delivery.is_none());
+        assert!(reply.is_none());
+        let wire = serde_json::to_value(&run).unwrap();
+        assert!(wire["request_delivery"].is_null());
     }
 
     #[test]
@@ -212,7 +360,7 @@ mod tests {
                 mode,
                 crate::utils::RUNNER_CAPTURE_BYTES,
             );
-            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output);
+            let (capture, received) = parse_runner_client_output(&[], 0, 1, &output, None);
             if mode == "valid" {
                 assert_eq!(received, Some(original.clone()));
                 assert!(capture.output.stdout_capture_error.is_none());

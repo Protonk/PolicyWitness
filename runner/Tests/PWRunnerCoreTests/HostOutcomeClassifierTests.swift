@@ -59,7 +59,7 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
                     expected: NormalizedOutcome.runnerFailed),
 
         // Worker publication, deadline, cleanup and disposition rows.
-        ClassifyRow(label: "published legacy failure",
+        ClassifyRow(label: "published status-word failure",
                     worker: .success(workerOut(applied: false, applyRC: -1)),
                     validator: nil, expectedVerdictCount: 0,
                     expected: NormalizedOutcome.runnerFailed),
@@ -221,13 +221,13 @@ func runHostOutcomeClassifierTests(_ tk: TestKit) {
     }
 
     tk.group("classify: publication validity and independent diagnostics") {
-        tk.run("legacy failure retains status and meaningful legacy errno without native attribution") {
-            for legacyErrno: Int32 in [0, 1, 4567] {
-                let got = classify(workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: legacyErrno)),
+        tk.run("status-word failure retains status and meaningful apply errno without native attribution") {
+            for applyErrno: Int32 in [0, 1, 4567] {
+                let got = classify(workerResult: .success(workerOut(applied: false, applyRC: -1, applyErrno: applyErrno)),
                                    validatorResult: nil, expectedVerdictCount: 0)
                 try expectEqual(got.outcome, NormalizedOutcome.runnerFailed)
                 try expectContains(got.error ?? "", "status=-1")
-                if legacyErrno != 0 { try expectContains(got.error ?? "", "legacy errno=\(legacyErrno)") }
+                if applyErrno != 0 { try expectContains(got.error ?? "", "apply_errno=\(applyErrno)") }
                 else { try expectFalse((got.error ?? "").contains("errno")) }
                 try expectFalse((got.error ?? "").contains("sandbox_apply"))
                 try expectFalse((got.error ?? "").contains("returned"))

@@ -30,7 +30,7 @@ def exercise(out, name):
         shutil.copyfile(ROOT / 'tests/fixtures/dispatcher' / source, path)
         path.chmod(0o755)
     app = repo / 'dist/PolicyWitness.app'
-    bundle(app)
+    bundle(app, host='imports_sandbox' if name == 'host_imports_sandbox' else 'clean')
     helper = app / 'Contents/MacOS/pw-runner-client'
     manifest_path = app / 'Contents/Resources/Evidence/manifest.json'
     manifest = json.loads(manifest_path.read_text())
@@ -65,6 +65,9 @@ def exercise(out, name):
         helper.symlink_to(external)
         seal(app)
         expected_issue = 'required_component'
+    elif name == 'host_imports_sandbox':
+        # The bundle is intact and sealed; only the host's undefined symbols differ.
+        expected_issue = 'host_invariance'
     before = fingerprint(app)
     receipts = work / 'receipts.jsonl'
     modes = {'probe/app': name} if name.startswith('mutate_') else {}
@@ -90,8 +93,13 @@ def exercise(out, name):
         assert integrity['unchanged'] is True
         if name == 'resigned_stale_manifest':
             assert all(s['returncode'] == 0 for s in issues['signatures'])
+        if name == 'host_imports_sandbox':
+            assert all(s['returncode'] == 0 for s in issues['signatures'])
+            assert issues['host_invariance']['sandbox_symbols'] == ['_sandbox_check'], issues['host_invariance']
     else:
         assert executed == ['probe/app', 'probe/worker', 'probe/offline']
+        assert issues['host_invariance']['returncode'] == 0, issues['host_invariance']
+        assert issues['host_invariance']['sandbox_symbols'] == [], issues['host_invariance']
         delta = json.loads((evidence / 'changes.json').read_text())
         if name.startswith('mutate_'):
             assert integrity['unchanged'] is False
@@ -111,6 +119,7 @@ if __name__ == '__main__':
     out.mkdir(parents=True, exist_ok=True)
     cases = [exercise(out, name) for name in ('valid', 'missing_helper', 'damaged_signature',
         'resigned_stale_manifest', 'missing_manifest_entry', 'duplicate_manifest_entry',
-        'invalid_manifest', 'external_helper', 'mutate_pass', 'mutate_fail', 'mutate_crash')]
+        'invalid_manifest', 'external_helper', 'host_imports_sandbox', 'mutate_pass', 'mutate_fail',
+        'mutate_crash')]
     (out / 'controls.json').write_text(json.dumps(cases, indent=2) + '\n')
     print(f'{len(cases)} artifact controls passed')

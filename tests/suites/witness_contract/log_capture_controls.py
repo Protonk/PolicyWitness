@@ -5,8 +5,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
+import contract
 from log_capture_contract import check_live_capture, check_observer_report
-from consumer import recover_evidence
+from consumer import denials
 from check_deny_capture_window import checked_reads
 
 NOW = 12_000_000_000
@@ -52,14 +53,14 @@ def complete(which=('early', 'late')):
         stdout_capture_error=None, stdout_parse_error=None, stderr_bytes_received=0, stderr_bytes_retained=0,
         stderr_truncated=False, stderr='', observer=observer, deny_events=events, observed_deny=bool(events),
         step_denies=associations, blocked_reason=None, supervision=outer, processing_cutoff=None)
-    diag = dict(worker_pid=42, process_disposition='clean_exit', termination_cause=None,
-        capture_status='captured', correlation_status='pid_match' if events else 'no_match',
-        first_deny=dict(event_index=0) if events else None,
+    diag = dict(process_disposition='clean_exit', termination_cause=None, stop_reason='done',
+        disposition_integrity='valid', disposition_issues=[],
+        correlation_status='pid_match' if events else 'no_match',
         permission_failures_without_record=[name for name in ('early','late') if name not in which])
-    return dict(schema_version=4, result=dict(ok=True, exit_code=0, normalized_outcome='ok'), data=dict(
-        runner_client=dict(started_at_unix_ms=1000, ended_at_unix_ms=2500),
-        runner_result=dict(schema_version=7, normalized_outcome='ok', runner_subprocess=dict(pid=42, exit_code=0),
-            steps=[dict(step_id=name, attempt=dict(native_rc=-1, errno=1),
+    return dict(schema_version=contract.CONTROLLER_ENVELOPE, result=dict(ok=True, exit_code=0, normalized_outcome='ok'), data=dict(
+        runner_client=dict(started_at_unix_ms=1000, ended_at_unix_ms=2500, request_delivery=dict(bytes_written=2, error=None)),
+        runner_result=dict(schema_version=contract.RESPONSE_SCHEMA, normalized_outcome='ok', runner_subprocess=dict(pid=42, exit_code=0),
+            steps=[dict(step_id=name, attempt=dict(rc=-1, errno=1),
                         comparison=dict(observation='permission_failure')) for name in ('early','late')]),
         sandbox_log_capture=capture, runner_sandbox_diagnostics=diag))
 
@@ -67,7 +68,7 @@ def complete(which=('early', 'late')):
 def unavailable(e, status):
     c=e['data']['sandbox_log_capture']; d=e['data']['runner_sandbox_diagnostics']
     c.update(capture_status=status, step_denies=None)
-    d.update(capture_status=status, correlation_status='unavailable', first_deny=None, permission_failures_without_record=None)
+    d.update(correlation_status='unavailable', permission_failures_without_record=None)
 
 
 def limit_case(boundary, reason='output_overflow', stream='stdout'):
@@ -102,7 +103,7 @@ def limit_case(boundary, reason='output_overflow', stream='stdout'):
 
 def projection(e):
     e=copy.deepcopy(e); e['data'].pop('sandbox_log_capture')
-    for key in ('capture_status','correlation_status','first_deny','permission_failures_without_record'):
+    for key in ('correlation_status','permission_failures_without_record'):
         e['data']['runner_sandbox_diagnostics'].pop(key)
     return e
 
@@ -127,7 +128,7 @@ def main():
             records.append(dict(name=name, rejected=True, reason=str(error)))
         else:
             assert rejection is None, name+': invalid evidence was accepted'
-            a=recover_evidence(e)['denials']
+            a=denials(e)
             assert a['capture']==e['data']['sandbox_log_capture']
             records.append(dict(name=name, rejected=False, result=result))
     for name, selected in [('full',('early','late')), ('early_only',('early',)), ('late_only',('late',)), ('empty',())]:
@@ -183,7 +184,8 @@ def main():
         ('missing_report',lambda e:e['data']['sandbox_log_capture'].update(observer=None,deny_events=None,observed_deny=None),'complete observer reply missing'),
         ('bad_bounds',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(end='1970-01-01 00:00:06+0000'),'wrong observer query bounds'),
         ('wrong_reserve',lambda e:e['data']['sandbox_log_capture']['observer']['data']['collection'].update(reserve_ms=0),'wrong report reserve'),
-        ('old_envelope',lambda e:e.update(schema_version=3),'collection facts require controller envelope 4'),
+        ('old_envelope',lambda e:e.update(schema_version=contract.CONTROLLER_ENVELOPE-1),'read under controller envelope'),
+        ('removed_diagnostic_copy',lambda e:e['data']['runner_sandbox_diagnostics'].update(capture_status='captured'),'removed diagnostic copy'),
         ('blocked_data',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(blocked_reason='Cannot run while sandboxed'),'required unified-log access blocked'),
         ('bad_shape',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(observer_schema_version=None),'malformed observer reply'),
         ('wrong_worker',lambda e:e['data']['sandbox_log_capture']['observer']['data'].update(pid=99),'wrong observer identity'),

@@ -5,13 +5,41 @@ does not launch processes, interpret policies, choose expectations, or skip
 tests. Errors accumulate so a broken channel cannot conceal another failure.
 """
 
-from consumer import validate_evidence_shape
+import contract
+from consumer import validate
 
 
-def submitted_filter_value(sb):
-    """The value the runner passed to the check. Replies before response 9 also
-    echoed it as `effective_filter_value`; stored ones may carry only that key."""
-    return sb.get("filter_value") if "filter_value" in sb else sb.get("effective_filter_value")
+def envelope_skeleton(runner, *, ok=True, timeout_ms=240000):
+    """A current-contract `kind: run` envelope around a constructed reply.
+
+    Control files use this to put a hand-authored reply inside the uniform
+    data skeleton (D2) so the full document validator can read it. The dossier
+    it carries says nothing was selected; it is not a live observation.
+    """
+    reason = 'constructed control: no runner was selected'
+    binary = {'path': None, 'actual_sha256': None, 'baseline_sha256': None,
+              'verification': 'unavailable', 'reason': reason}
+    return {
+        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'run',
+        'result': {'ok': ok, 'rc': None, 'exit_code': 0 if ok else 1,
+                   'normalized_outcome': (runner or {}).get('normalized_outcome'), 'errno': None,
+                   'error': None, 'stderr': None, 'stdout': None},
+        'data': {
+            'specimen': {
+                'request_path': '/constructed/request.json',
+                'policy': {'augmentation': {'status': 'not_applicable', 'applied': [], 'original_sha256': None,
+                                            'applied_sha256': None, 'error': None},
+                           'imports': {'status': 'not_applicable', 'closure_sha256': None, 'records': [],
+                                       'cycle': None, 'exceeded': None, 'failure': None}},
+                'host': {'macos_version': '14.0', 'macos_build': '23A000', 'kernel_release': '23.0.0', 'arch': 'arm64'},
+                'runner_provenance': None, 'app_provenance': None,
+                'binaries': {'service': dict(binary), 'worker': dict(binary), 'validator': dict(binary)}},
+            'policy_check': None, 'timeout_ms': timeout_ms,
+            'runner_client': {'argv': ['constructed-client'], 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500,
+                              'exit_code': 0, 'request_delivery': {'bytes_written': 2, 'error': None}},
+            'runner_result': runner, 'sandbox_log_capture': None, 'runner_sandbox_diagnostics': None,
+        },
+    }
 
 
 def validate_run_shape(run, expected_steps, *, policy_format=None,
@@ -20,6 +48,8 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
 
     Match by ID even after an order error, so subsequent diagnostics name the
     right expectation. Never collapse duplicate returned IDs into a dictionary.
+    The whole document is validated under the current contract; another
+    version yields its one version error beside the step diagnostics.
     """
     errors = []
     if not isinstance(run, dict):
@@ -67,18 +97,18 @@ def validate_run_shape(run, expected_steps, *, policy_format=None,
             errors.append(f"runner.steps[{index}]: unexpected step_id={step_id!r}")
             continue
         matched.append((step, by_id[step_id]))
-    errors.extend(validate_evidence_shape(run))
+    errors.extend(validate(run))
     return errors, matched
 
 
 def validate_step(step, expected):
-    """Check both channels, plus explicitly supplied outcome/attempt/errno/drift.
+    """Check both channels plus explicitly supplied outcome/attempt/errno/comparison.
 
     Nullable fields must still be present. JSON booleans are not integers, and
     an unavailable prediction has a defined sentinel shape, not skip semantics.
-    Attempt aliases rc/exit_code and errno/syscall_errno must be present and
-    agree in type and value. An explicit expected errno=None requires null.
-    Suite-specific policy and observation assertions stay with their callers.
+    An explicit expected errno=None requires null. `expected.comparison` names
+    D1 record fields that must equal the given values. Suite-specific policy
+    and observation assertions stay with their callers.
     """
     errors = []
     fail = errors.append
@@ -92,11 +122,9 @@ def validate_step(step, expected):
         fail(f"missing sandbox_check for {step_id}")
         sb = {}
     else:
-        for key in ("scope", "pid", "operation", "filter_type_id", "errno", "error"):
+        for key in ("pid", "operation", "filter_value", "filter_type_id", "errno", "error"):
             if key not in sb:
                 fail(f"{step_id}: missing sandbox_check.{key}")
-        if "filter_value" not in sb and "effective_filter_value" not in sb:
-            fail(f"{step_id}: missing sandbox_check.filter_value")
         if type(sb.get("pid")) is not int:
             fail(f"{step_id}: invalid sandbox_check.pid={sb.get('pid')!r}")
         if not isinstance(sb.get("operation"), str) or not sb.get("operation"):
@@ -107,8 +135,6 @@ def validate_step(step, expected):
             for key in ("filter_type_id", "errno"):
                 if sb.get(key) is not None:
                     fail(f"{step_id}: expected unavailable sandbox_check.{key}=null (got {sb[key]!r})")
-            if "drift" not in step or step["drift"] is not None:
-                fail(f"{step_id}: expected unavailable prediction to have explicit drift=null")
         else:
             filter_type = sb.get("filter_type_id")
             nullable = sb.get("outcome") in ("error", "unsupported_operation")
@@ -125,37 +151,17 @@ def validate_step(step, expected):
     if not isinstance(attempt, dict):
         fail(f"missing attempt for {step_id}")
     else:
-        for key in ("rc", "exit_code", "errno", "syscall_errno", "requested_path", "observed_path"):
+        for key in ("rc", "errno", "requested_path", "observed_path"):
             if key not in attempt:
                 fail(f"{step_id}: missing attempt.{key}")
-        exit_code = attempt.get("exit_code")
-        if type(exit_code) is not int:
-            fail(f"{step_id}: invalid attempt.exit_code={exit_code!r}")
-        elif "attempt_ok" in expected and (exit_code == 0) != expected["attempt_ok"]:
-            fail(f"{step_id}: expected attempt_ok={expected['attempt_ok']!r} (got {exit_code == 0!r})")
-        if "rc" in attempt:
-            if type(attempt["rc"]) is not int:
-                fail(f"{step_id}: invalid attempt.rc={attempt['rc']!r}")
-            elif type(attempt["rc"]) is not type(exit_code) or attempt["rc"] != exit_code:
-                fail(f"{step_id}: attempt.rc mismatch (rc={attempt['rc']!r} exit_code={exit_code!r})")
+        rc = attempt.get("rc")
+        if type(rc) is not int:
+            fail(f"{step_id}: invalid attempt.rc={rc!r}")
+        elif "attempt_ok" in expected and (rc == 0) != expected["attempt_ok"]:
+            fail(f"{step_id}: expected attempt_ok={expected['attempt_ok']!r} (got {rc == 0!r})")
         if attempt.get("errno") is not None and type(attempt["errno"]) is not int:
             fail(f"{step_id}: invalid attempt.errno={attempt['errno']!r}")
-        if attempt.get("syscall_errno") is not None and type(attempt["syscall_errno"]) is not int:
-            fail(f"{step_id}: invalid attempt.syscall_errno={attempt['syscall_errno']!r}")
-        if "errno" in attempt and "syscall_errno" in attempt:
-            if (type(attempt["errno"]) is not type(attempt["syscall_errno"])
-                    or attempt["errno"] != attempt["syscall_errno"]):
-                fail(f"{step_id}: attempt.errno mismatch "
-                     f"(errno={attempt['errno']!r} syscall_errno={attempt['syscall_errno']!r})")
-        if "errno" in expected and (type(attempt.get("syscall_errno")) is not type(expected["errno"])
-                                     or attempt.get("syscall_errno") != expected["errno"]):
-            fail(f"{step_id}: expected errno={expected['errno']!r} (got {attempt.get('syscall_errno')!r})")
-
-    if "drift" in step and step["drift"] is not None and type(step["drift"]) is not bool:
-        fail(f"{step_id}: invalid drift={step['drift']!r}")
-    if "drift" in expected:
-        if "drift" not in step:
-            fail(f"{step_id}: missing drift (expected {expected['drift']!r})")
-        elif step["drift"] != expected["drift"]:
-            fail(f"{step_id}: expected drift={expected['drift']!r} (got {step['drift']!r})")
+        if "errno" in expected and (type(attempt.get("errno")) is not type(expected["errno"])
+                                     or attempt.get("errno") != expected["errno"]):
+            fail(f"{step_id}: expected errno={expected['errno']!r} (got {attempt.get('errno')!r})")
     return errors

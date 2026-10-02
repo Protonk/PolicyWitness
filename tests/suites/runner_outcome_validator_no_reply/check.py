@@ -9,7 +9,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from consumer import validate_current_build_evidence
+import consumer
+import contract
 from run_capture import RunCapture
 
 
@@ -44,7 +45,7 @@ def main():
         elapsed_ms = round((time.monotonic() - started) * 1000)
     runner = envelope['data']['runner_result']
     assert rc == 1 and envelope['result']['ok'] is False, envelope['result']
-    assert runner['schema_version'] >= 6 and runner['normalized_outcome'] == 'validator_no_reply', runner  # worker_evidence: response 6
+    assert runner['schema_version'] == contract.RESPONSE_SCHEMA and runner['normalized_outcome'] == 'validator_no_reply', runner
     assert '500 ms I/O deadline' in runner['error'], runner['error']
     assert runner['test_overrides'] == spec['_test_overrides'], runner
     worker, v = runner['runner_subprocess'], runner['validator_subprocess']
@@ -58,11 +59,11 @@ def main():
                                            'proceed_observed', 'worker_lifetime_established')), ordering
     assert ordering['validator_disposition'] == 'reaped' and not ordering['protocol_violations'], ordering
     first, second = runner['steps']
-    assert first['comparison']['order'] == 'query_first' and first['drift'] is False, first
-    assert second['comparison']['order'] == 'unestablished' and second['drift'] is None, second
+    assert first['comparison']['order'] == 'query_first' and first['comparison']['observation'] == 'succeeded', first
+    assert second['comparison']['order'] == 'unestablished' and second['comparison']['observation'] == 'succeeded', second
     assert second['sandbox_check']['missing_reason'] == 'validator_no_verdict', second
     assert all(s['attempt']['outcome'] == 'ok' for s in runner['steps']), runner['steps']
-    errors = validate_current_build_evidence(envelope)
+    errors = consumer.validate(envelope)
     assert not errors, errors
     (out / 'timing.json').write_text(json.dumps(dict(cli_elapsed_ms=elapsed_ms, validator_io_timeout_ms=500,
         worker_proceed_observed=True, worker_proceed_failure=False), indent=2) + '\n')

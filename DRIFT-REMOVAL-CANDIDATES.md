@@ -1,16 +1,20 @@
-# Potential additions to the drift removal plan
+# Findings beyond the drift removal
 
-Status: proposals for review. S6 and S9 are included in the plan's removal
-inventory; S4, S7, S8 and S14 are not adopted.
+Status: S6 and S9 were implemented with the comparison record
+(`attempt.native_rc` is gone; the whole-run target-removal calculation is
+reading rule 6 of [the failure contract](tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record)).
+S4, S7, S8 and S14 are open findings.
 
 The identifiers S4 and S6–S9 come from the
-[second sweep](FIVE-FOLLIES.md#second-sweep). S1–S3 are incorporated directly
-in [DRIFT-REMOVAL-PLAN.md](DRIFT-REMOVAL-PLAN.md). S14 is not a sweep finding:
-it records a capability the plan gives up when it retires the host
-sandbox-library loader, so that the reasoning
-survives the deletion. Its number continues the sweep's sequence without
-claiming one of its entries. S5 and the original five entries are outside this document's
-selected scope. These IDs are unrelated to the plan's scenario-matrix row IDs.
+[second sweep](FIVE-FOLLIES.md#second-sweep). S1–S3 were implemented: the
+Swift attempt executor, query implementation and sandbox-application helper
+are gone, and `runner/Sources/PWRunnerCore` keeps only the hashing and
+planning roles ([runner/README.md](runner/README.md#key-files)). S14 is not a
+sweep finding: it records a capability given up when the host
+sandbox-library loader was retired, so that the reasoning survives the
+deletion. Its number continues the sweep's sequence without claiming one of
+its entries. S5 and the original five entries are outside this document's
+selected scope. These IDs are unrelated to the comparison matrix's row IDs.
 
 Each entry records current producers, readers and reading costs, then the
 decisions needed before adoption. A task that presently feeds `drift` is a
@@ -19,18 +23,18 @@ decision. Validation counts as a reader when its failure affects another
 result. Human use of stored output also counts, and source searches cannot
 rule out external readers.
 
-Adoption requires coordinated changes to the plan's design, removal inventory,
-test owners and acceptance criteria. The existing plan remains controlling
-until that happens. Stored evidence and release
-artifacts keep their bytes.
+Adoption of an open finding requires coordinated changes to the contract
+([tests/FAILURE-PROPAGATION-CONTRACT.md](tests/FAILURE-PROPAGATION-CONTRACT.md)),
+the wire versions ([docs/contract.json](docs/CONTRACT.md)), test owners and
+documentation. Stored evidence and release artifacts keep their bytes.
 
 | Finding | Potential addition | Principal unresolved decision |
 | --- | --- | --- |
 | S4 | Remove the copied `attempt.lifecycle.boundary` and `.result` claims | Whether an attempt should carry the full local claims or readers should join to disposition evidence |
-| S6 | Remove the always-null `attempt.native_rc` | Included in the plan's wire removal inventory; the guide states that `attempt.rc` is PW status |
+| S6 | Remove the always-null `attempt.native_rc` | Implemented: the field is gone and the guide states that `attempt.rc` is PW status |
 | S7 | Remove the observer's duplicate `deny_lines` list | Whether raw-denial extraction convenience warrants a second list, and which observer contract changes |
 | S8 | Remove some or all constant log disclaimers | Which limitations must remain explicit in each stored record |
-| S9 | Remove or narrow the whole-run target-removal calculation | Included in the plan: the calculation is D4's sixth reading rule, and no status ships |
+| S9 | Remove or narrow the whole-run target-removal calculation | Implemented: the calculation is reading rule 6 of the comparison record, and no status ships |
 | S14 | Restore a named distinction between an unusable sandbox library and a failed worker launch | Whether that distinction is wanted, and whether the worker's dyld diagnostic can carry it |
 
 ## S4. Copied attempt lifecycle claims
@@ -146,13 +150,13 @@ for text duplicated across these representations.
 - Set the observer's version and reader policy for the chosen change. It has
   its own `observer_schema_version` (currently 1), and
   [`sandbox_log.rs`](controller/src/sandbox_log.rs) explicitly checks that
-  version when admitting diagnostic evidence. The plan's response 13/envelope
-  5 choices do not settle this nested tool contract.
+  version when admitting diagnostic evidence. The current response and
+  envelope numbers do not settle this nested tool contract.
 - Decide whether to keep the existing output budget or revise it after
   measuring the chosen representation. A smaller record alone does not
   establish a new safe limit.
 
-**If adopted.** Extend the plan's contract inventory with the observer
+**If adopted.** Extend [docs/contract.json](docs/CONTRACT.md) with the observer
 boundary, then update `ShowCapture`, the observer report type and all
 constructors, transport/admission readers, replay fixtures and tool/guide
 documentation. Verify both show and stream production paths, empty/error
@@ -213,9 +217,9 @@ uses `sameTargetUnordered` to prevent an allow/success pair from becoming
 corresponding limitation and conclusion. This is a present verdict-producing
 use, not merely a self-validation loop.
 
-The drift plan removes the verdict and the producer's target-removal
-calculation. D4's sixth reading rule specifies the interpretation of the raw
-unlink records; no derived status or matching-step list ships.
+The comparison record removed the verdict and the producer's target-removal
+calculation. Reading rule 6 specifies the interpretation of the raw unlink
+records; no derived status or matching-step list ships.
 
 **Reading cost.** Without the derived status, a reader seeking this confound
 would compare submitted query paths against the run's reported unlinks and
@@ -223,16 +227,17 @@ apply any chosen query-eligibility and ordering rules. Those inputs are
 exposed in the reply. The current verdict's need for the calculation does not
 settle whether the replacement has a task that warrants it.
 
-**Adopted scope.** The plan's R2/R4 and I2–I4 remove the producer calculation
-and consumer checks, update shape/size fixtures, and retain mutation and
-ordering scenarios against file effects, validator records and release
-observations. The query-before-attempt barrier and eligibility behavior remain
-unchanged, with the `order_barrier_mutations` acceptance control.
+**Implemented.** The producer calculation and consumer checks are gone,
+shape/size fixtures were updated, and mutation and ordering scenarios are
+retained against file effects, validator records and release observations
+(`tests/fixtures/comparison/matrix.json` rows S19, S25, B3, B5 and B6). The
+query-before-attempt barrier and eligibility behavior are unchanged, with the
+`order_barrier_mutations` control.
 
 ## S14. The distinction the retired loader used to draw
 
-**Recorded so the reasoning is not lost; the loader itself is removed by the
-plan's R2 producer inventory.**
+**Recorded so the reasoning is not lost; the loader itself was removed with
+the host invariance rule ([runner/README.md](runner/README.md#key-files)).**
 
 **What the loader did.** `SandboxLib.load` dlopened `/usr/lib/libsandbox.dylib`
 and resolved seven symbols — `sandbox_create_params`, `sandbox_free_params`,
@@ -268,8 +273,8 @@ distinction itself may still be wanted.
   have to be captured and attached to the existing launch-failure record. Decide
   whether the launch-failure outcome gains a distinct spelling or keeps one with
   the diagnostic attached.
-- Do not reinstate the host-side check removed by the plan's R2 producer
-  inventory.
+- Do not reinstate the removed host-side check; the host never loads
+  libsandbox.
 
 **If adopted.** This is a worker-launch diagnostic change, not a reinstatement:
 the capture path for a failed worker exec, the outcome or diagnostic shape, a

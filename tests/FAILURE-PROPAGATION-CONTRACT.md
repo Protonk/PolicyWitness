@@ -13,7 +13,7 @@ worker slots, validator verdicts, process observations, and captured log events
 survive regardless of which observation determines the summary.
 
 In the table, A means an acquire observation of `applied`, D an acquire
-observation of `done`, and R the legacy `apply_rc` storage. A publishes successful
+observation of `done`, and R the `apply_rc` status word. A publishes successful
 application; D publishes a terminal worker payload, including pre-apply failure.
 R is not a native apply result merely because of its name. Parameter allocation,
 parameter setting, the defensive parameter NUL check, and compilation can all
@@ -23,10 +23,11 @@ No library result may be inferred from unpublished storage. The parameter NUL
 check follows forced termination of the strings and is not credited as a
 reliably reachable specimen failure.
 
-For a published legacy failure, retain R and any nonzero legacy errno in the
-runner's `error` diagnostic as published status values, without calling R an
-observed apply/compile return. Worker failure records identify the failed operation and
-its native result independently of this legacy storage. The controller retains this diagnostic unchanged; subprocess fields below
+For a published status-word failure (no failure record), retain R and any
+nonzero `apply_errno` in the runner's `error` diagnostic as published status
+values, without calling R an observed apply/compile return. Worker failure
+records identify the failed operation and its native result independently of
+this storage. The controller retains this diagnostic unchanged; subprocess fields below
 separately preserve cleanup observations. For an unpublished payload, neither
 the diagnostic nor a structured object may expose its storage as a call result.
 
@@ -43,7 +44,7 @@ which the child stopped.
 | Incomplete or malformed worker failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
 | No worker spawned | Retain the host admission/setup/spawn error; no worker report or subprocess object | Existing applicable host outcome |
 | A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never `sandbox_apply_failed` |
-| A=false, D=true, R nonzero | Worker published a legacy preparation/application failure; precise failed operation and native return unavailable | `runner_failed`; describe a published legacy failure, without saying an apply or compile call returned R |
+| A=false, D=true, R nonzero | Worker published a preparation/application failure through the status word only; precise failed operation and native return unavailable | `runner_failed`; describe a published status-word failure, without saying an apply or compile call returned R |
 | A=false, D=true, R=0 | Inconsistent terminal publication; not evidence of successful application or a library failure | `runner_failed` |
 | A=true, published R nonzero | Inconsistent successful-application marker and status; preserve flags, do not choose a library cause | `runner_failed` |
 | No terminal report; pre-apply child reaped with exit 0 | Incomplete reporting and observed clean exit; cause unknown | `runner_failed`, not a timeout |
@@ -53,7 +54,7 @@ which the child stopped.
 | A=true, D=false; child exits or signals before a deadline is observed | Successful application, any completed slots/verdicts, incomplete report, actual disposition | `runner_failed`; signal is not a sandbox verdict |
 | Polling exhausts its sentinel budget, then child voluntarily exits during grace | Observed deadline survives independently of exit 0 and absence of a kill request | `runner_timeout` |
 | Polling exhausts its sentinel budget, then host requests termination | Deadline, request, call result, and any reaped status remain distinct | `runner_timeout`, including when kill/reap fails |
-| Published legacy failure followed by observed deadline, cleanup kill, or failed kill/reap | Keep the reported failure and every subsequent host observation | `runner_failed`; cleanup does not replace the earlier report |
+| Published status-word failure followed by observed deadline, cleanup kill, or failed kill/reap | Keep the reported failure and every subsequent host observation | `runner_failed`; cleanup does not replace the earlier report |
 | A=true, D=true, R=0; exit grace expires and host requests termination | Completed report/slots survive; record cleanup request and result without inventing a sentinel deadline | `runner_failed`, even if the child subsequently exits 0 |
 | A=true, D=true, R=0; independently reaped nonzero exit or signal | Completed report/slots survive alongside abnormal disposition | `runner_failed` |
 | A=true, D=true, R=0; disposition unconfirmed or unrecovered wait error | Completed report/slots survive; exit/signal absent unless reaped | `runner_failed` |
@@ -61,7 +62,7 @@ which the child stopped.
 
 Summary precedence is: host rejection before spawn; published worker failure;
 host transfer failure; incomplete/malformed failure publication; inconsistent published
-worker state; published legacy worker failure; observed sentinel expiry; other
+worker state; published status-word worker failure; observed sentinel expiry; other
 worker incompletion/abnormal disposition/unresolved host error; validator
 failure; `ok`. A recovered EINTR alone is not a failed run. A cleanup request
 without an observed sentinel expiry is not a timeout. This ordering selects
@@ -70,7 +71,7 @@ lifecycle and record-association requirements below also apply before `ok`.
 
 ## Reply construction failure
 
-Response 8 distinguishes a host reporting failure from the execution summary.
+The reply boundary distinguishes a host reporting failure from the execution summary.
 If the assembled result cannot be encoded, the reply uses
 `normalized_outcome: "runner_reporting_failed"`, `rc: 1` and an explanatory
 `error`. The controller consequently reports `ok: false`. This supplies no new
@@ -82,15 +83,14 @@ The `reporting_failure` object has `origin: "runner_host"`, a `diagnostic`,
 all step IDs, queries, attempts, path diagnostics, application observations,
 subprocess objects (including raw validator records and ordering observations),
 policy capture and test overrides survive unchanged. Every step's `comparison`
-is omitted and `drift` is explicit null. The original summary is diagnostic,
+is omitted. The original summary is diagnostic,
 not a second authoritative outcome. Retained ordering fields are diagnostic
 observations; no per-step order is certified by this reply.
 
 This is the sole exception to mandatory comparisons and complete
 ordering objects. Consumers require the failure outcome, nonempty diagnostic,
-original summary and the absence of **all** comparisons and drift claims before
-accepting that exception. A failure marker cannot excuse a surviving agreement,
-disagreement or `query_first` claim. The ordinary reply invariants still reject
+original summary and the absence of **all** comparisons before accepting that
+exception. A failure marker cannot excuse a surviving `query_first` claim. The ordinary reply invariants still reject
 an invalid assembled result when encoded directly; the service reply boundary
 alone constructs the degraded response.
 
@@ -126,8 +126,8 @@ record. Internal `CWorkerOutput` carries the same facts to the assembler.
 
 `sandboxed_after_apply` remains the public application observation; do not add a
 second authoritative applied boolean. `sentSigkill` internally must not stand in
-for deadline expiry or successful termination/reaping. New fields decoded from
-old stored replies must be optional/unknown rather than synthesized observations.
+for deadline expiry or successful termination/reaping. Absent optional fields
+are unknown rather than synthesized observations.
 Optional subprocess objects preserve the existing omitted-or-null convention.
 
 The readiness, sentinel and exit-grace budgets are unchanged. The driver allows
@@ -137,7 +137,7 @@ There are at most five failed-call records (two recovered interruptions plus one
 terminal error per phase), with no error truncation. `wait_errors[].phase` is
 `poll`, `exit_grace`, or `after_termination`; rc/errno and termination numbers
 are signed 32-bit syscall values, encoded as JSON integers. Empty errors means
-observed none; missing/null means unavailable in an older reply.
+observed none; missing/null means unavailable.
 
 A failed kill permits only a nonblocking final reap; if no status arrives, the
 result explicitly records `reaped=false` and omits exit/signal. A successful kill
@@ -165,12 +165,11 @@ tables and spellings, `tests/lib/lifecycle_adapter.py` reads the record without
 deriving answers, and `tests/lib/lifecycle_oracle.py` checks a reply against
 the claim tables independently of the production resolver.
 
-A worker reply at or after the response version that introduces the record
-carries it whenever it carries `runner_subprocess`; omission at that version is
-a contract violation, not a legacy fallback. No worker means no record. Replies
-before that version have no record, and a consumer reports the account as
-`not_reported` rather than deriving one. The record's own version is the
-response schema; it carries no separate number.
+A worker reply carries the record whenever it carries `runner_subprocess`;
+omission is a contract violation (`disposition_integrity: invalid` with a
+`missing_record` issue, claims withheld). No worker means no record. The
+record's own version is the response schema; it carries no separate number,
+and readers accept exactly the current response schema.
 
 ### Raw host facts the record needs
 
@@ -184,7 +183,7 @@ acts, not conclusions reconstructed from a final status.
 | `grace_end` | Host string recorded when the exit-grace wait ends: `not_entered` (the poll loop already reaped the child), `reaped_during_grace`, `exhausted` (the host then requests termination) or `wait_error`. Never inferred from `done` plus a kill. |
 | `collection_basis` | Host string recorded at the final shared-memory reads: `after_confirmed_reap` (every relevant read followed a successful reap), `execution_may_continue` (the worker was not confirmed reaped when the reads happened, including after a failed kill) or `unavailable` (no usable mapping). A reap observed after the reads does not upgrade the basis. |
 
-Absence of any of the three in an older reply is unreported, not observed
+Absence of any of the three is a malformed record, not an observation of
 false. The record's per-step entries additionally carry two host facts about
 each submitted step: `slot` (`completed`, `incomplete` or `absent`) and
 `attempt_support` (`supported` or `unsupported`, from the host's attempt
@@ -333,8 +332,8 @@ attribution and never a sandbox cause.
 
 Otherwise the cause is null for a supported exit code 0, and `unknown` for a
 supported nonzero exit or signal without the full chain, an unresolved or
-conflicting final status, an unrecognized final-status answer, a record that
-failed integrity validation, and every legacy reply. `unknown` is a specific
+conflicting final status, an unrecognized final-status answer, and a record
+that failed integrity validation. `unknown` is a specific
 statement that the account does not attribute the termination; the record's
 own reasons say why.
 
@@ -346,14 +345,14 @@ answer from raw fields or prose.
 
 | Projection | Rule |
 | --- | --- |
-| `runner_sandbox_diagnostics.process_disposition` | `final_status` supported: `signal` gives `signaled`; `exit_code` 0 gives `clean_exit`; nonzero gives `nonzero_exit`. Unresolved gives `unconfirmed`. Conflicting gives `conflicting`. A record that fails validation gives `withheld`; an unrecognized answer spelling gives `unrecognized`. No worker gives `no_worker`. A legacy reply keeps the raw-status compatibility projection. |
+| `runner_sandbox_diagnostics.process_disposition` | `final_status` supported: `signal` gives `signaled`; `exit_code` 0 gives `clean_exit`; nonzero gives `nonzero_exit`. Unresolved gives `unconfirmed`. Conflicting gives `conflicting`. A record that fails validation, or a worker subprocess without one, gives `withheld`; an unrecognized answer spelling gives `unrecognized`. No worker gives `no_worker`. |
 | `runner_sandbox_diagnostics.termination_cause` | The cause table above. |
-| `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. Null for a legacy reply; the raw `poll_stop_reason` remains readable there. |
-| `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid`, `invalid` or `not_reported` (legacy). Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record` or `malformed_record`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
-| `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. Its legacy meaning is unchanged: it does not say an attempt never began. |
+| `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. The raw `poll_stop_reason` remains readable. |
+| `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid` or `invalid`. Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record` or `malformed_record`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
+| `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. It does not say an attempt never began. |
 | `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
-| `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. `attempt:slot_incomplete` stays as today. Lifecycle entries never change agreement, order, drift or sandbox attribution. |
-| `steps[].attempt.outcome`, `missing_reason`, `result_source` | Unchanged compatibility spellings. `not_run_worker_died` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |
+| `steps[].comparison.limitations` | Beside the existing entries, exactly one lifecycle entry for a summary other than `completed`: `attempt:started_without_result`, `attempt:not_reached`, `attempt:unsupported`, `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`. Lifecycle entries never change the relations, order or sandbox attribution. |
+| `steps[].attempt.outcome`, `missing_reason`, `result_source` | `not_run_worker_died` and `slot_incomplete` mean no completed supported result, which may have started; the lifecycle object carries the distinction. |
 | `error` lifecycle clauses | Rendered from the account, text unchanged: a `sentinel_deadline` stop renders `pw-probe-runner sentinel deadline expired` followed by `host requested SIGKILL during cleanup` when a request was made or `no termination requested` otherwise. The `runner_failed` problem list keeps `process disposition unconfirmed`, `reaped with signal N`, `reaped with exit code N`, `reaped without usable exit status` and `host requested termination during cleanup`, each from the corresponding claim. Worker failure, validator and setup diagnostics keep their owners and precedence and are composed with, not generated from, these clauses. |
 
 `normalized_outcome` keeps its values and precedence. A deadline followed by a
@@ -378,48 +377,48 @@ the runner encoder, the XPC client and the controller. Only interpretations
 that need recognition become unresolved for the reader: an unrecognized
 final-status answer projects `process_disposition: unrecognized` and cause
 `unknown`; an unrecognized stop reason projects null; an unrecognized lifecycle
-summary keeps its raw value. Consumers never reinterpret a stored reply under
-a later version's rules.
+summary keeps its raw value. Consumers never reinterpret a reply of another
+version; they report it as unsupported.
 
 ### Versions
 
-The record is mandatory for worker replies from the response schema that ships
-it, and the controller's `termination_cause`, `stop_reason`,
-`disposition_integrity` and the two new `process_disposition` values ship with
-the next controller envelope. `tests/lib/lifecycle_contract.py` names both
-numbers as the minimums tests assert. Per [docs/CONTRACT.md](../docs/CONTRACT.md)
+The record is mandatory for every worker reply at the current response
+schema, and the controller's `termination_cause`, `stop_reason`,
+`disposition_integrity` and `process_disposition` projections belong to the
+current controller envelope. `tests/lib/contract.py` carries both numbers and
+every reader gates on them exactly. Per [docs/CONTRACT.md](../docs/CONTRACT.md)
 the manifest moves with the change that produces them; a rebuilt app must never
-report the new response number without carrying the record.
+report a response number without carrying the shape that number names.
 
 ## Public compatibility and correlation
 
 The response, request, controller envelope and worker ABI are separate
-contracts, owned by [docs/contract.json](../docs/CONTRACT.md). Every new step explicitly encodes `deny_signal: null`;
-old signal objects remain decodable as stored legacy evidence. This is a wire
-change for typed readers requiring a signal object. Explicit errno/drift nulls
-remain required. No signal collection is added.
+contracts, owned by [docs/contract.json](../docs/CONTRACT.md). Semantic readers
+accept exactly the current numbers (see [Supported versions](#supported-versions)).
+Steps carry no signal channel; a null per-step `errno` requires key presence.
 
 Current producers do not emit `runner_sandbox_denied`: existing evidence cannot justify
-its causal meaning. It remains a recognized legacy string for stored replies,
-not an alias to which new unknown terminations are assigned.
-`sandbox_apply_failed` is reserved for precise operation/result evidence; the
-ambiguous legacy status does not justify it. Both constants and coverage rows
-remain as legacy/reserved entries. `runner_failed` covers execution/reporting failure with cause possibly
+its causal meaning. It remains a recognized constant, not a spelling to which
+new unknown terminations are assigned. `sandbox_apply_failed` is reserved for
+precise operation/result evidence; an imprecise published status does not
+justify it. Both constants keep coverage rows as recognized, unemitted
+entries. `runner_failed` covers execution/reporting failure with cause possibly
 unknown; it does not mean a proven host defect. `bad_policy` keeps its existing
 structural-policy admission meaning. Published worker failures also use `runner_failed`; the operation/code record
 provides the precise account without adding outcome strings.
 
 The pre-apply CLI witness asserts excluded claims, not one exact summary;
-the table's classifier controls pin the mapping. The compatibility
-attempt spelling `not_run_worker_died` means no completed attempt result, not
+the table's classifier controls pin the mapping. The attempt
+spelling `not_run_worker_died` means no completed attempt result, not
 proof that an operation never started. Synthetic missing predictions retain
 `rc=0` with an explicit result source, missing reason, and null native return.
 
 Worker identity comes only from a positive `runner_subprocess.pid`, never a
 host/client top-level PID. Capture remains available on successful runs.
-`runner_sandbox_diagnostics` describes process disposition and capture status
-independently of outcome: disabled, no worker, and observer availability stay
-distinct. Correlation status is `not_attempted`, `unavailable`, `no_match`, or
+`runner_sandbox_diagnostics` describes process disposition and denial
+correlation independently of outcome; `sandbox_log_capture.capture_status`
+keeps disabled (null capture), no worker, and observer availability distinct.
+Correlation status is `not_attempted`, `unavailable`, `no_match`, or
 `pid_match`; `permission_failures_without_record` names the steps whose attempt
 the runner classified as a permission-shaped failure and that no captured event
 names as a candidate, so `no_match` never reads as "nothing was denied" (null
@@ -428,9 +427,9 @@ Abnormal or unconfirmed disposition has `termination_cause` `unknown` unless the
 [worker disposition record](#worker-disposition-record) witnesses host cleanup end to end.
 Application remains separately recorded in `sandboxed_after_apply`.
 
-`first_deny` is an `{event_index}` reference to the first matching worker PID in
-the capture array, not a cause or temporal first event. `step_denies` records
-`{event_index, candidate_step_ids, association}`. One candidate has association
+`step_denies` records `{event_index, candidate_step_ids, association,
+matching_evidence}`; array position is not time order and a match is not a
+cause. One candidate has association
 `candidate`; multiple matching attempts have `ambiguous`. Events are not copied
 per step; the original observer reply and parsed `deny_events` array survive,
 including unmatched events. This does not identify a unique occurrence.
@@ -448,14 +447,13 @@ can precede interrupted publication.
 `capture.window` records the scanned interval, the runner client's own span
 rounded outward to whole seconds and padded by two seconds at each end:
 `floor(client start) - 2 s` through `ceil(client end) + 2 s`. The raw client
-milliseconds are unchanged; `pad_seconds: 2` describes the pad (absence in older
-envelopes means 0). Supported records in either padding region remain eligible
+milliseconds are unchanged; `pad_seconds: 2` describes the pad. Supported records in either padding region remain eligible
 for correlation. This allowance for client/archive clock differences promises no
 delivery or exact run membership. The window explicitly reports no structured event
 timestamps, exact run membership, step ordering, or PID-reuse protection. The
 observer mirrors the interval it scanned; any other interval is
 `window_mismatch`, which retains raw observer evidence but never yields
-`step_denies` or `first_deny`; correlation is `unavailable`. Reversed client clock
+`step_denies`; correlation is `unavailable`. Reversed client clock
 readings produce `invalid_window`, retaining the raw milliseconds with null
 `start`/`end` and no observer invocation. Ordered endpoints do not establish clock
 continuity. Validator queries can generate worker-PID denial records before
@@ -469,7 +467,7 @@ matching alone never establishes a termination cause or exact run membership.
 Collection uses one finite monotonic allowance across the observer and its log
 child, with fixed cleanup grace and streaming byte limits at both boundaries.
 Failed or incomplete captures retain bounded diagnostics, but all candidate
-associations, `first_deny` and missing-record diagnostics are null. Execution
+associations and missing-record diagnostics are null. Execution
 result, CLI exit status, native observations, comparisons and disposition remain
 independent. The [controller collection contract](../controller/README.md#log-collection-budgets-and-cleanup)
 defines cutoff reasons, retained prefixes, ownership and separate child-wait
@@ -482,26 +480,25 @@ selection and supplied-text preservation controls have strict positive oracles.
 The entries below distinguish constructed host interpretation, actual C-worker
 publication, and the CLI boundary. The host-driver, encoding and classifier
 controls establish separate parts of the table. The
-[consumer enforcement map](#permanent-consumer-enforcement) identifies the lasting
+[comparison record](#comparison-record) ownership table identifies the lasting
 reporting obligations and registered test owners.
 
 | Test entry | Production reach and current assertions | Acceptance owner / remaining obligation |
 | --- | --- | --- |
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
-| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; current ordering/eligibility and explicit signal null, stored response-4/7 objects, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
+| Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed Codable results; current ordering/eligibility, absence of the removed wire keys, exact-version rejection, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
 | Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply serializer with constructed invariant faults and internal encoder failure; every stored field has encoding coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
 | Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
 | `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 7 layout and exact-version rejection |
-| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle, signal and consumer-recovery groups enforce at least response 8; missing channels remain distinct from observed failures |
-| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published legacy failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
+| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
+| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
 | `witness_contract/worker_termination_and_log_correlation`; Rust `run_flow::tests`, `sandbox_log::tests`, observer parser tests | CLI ordinary denied writes, repeated attempts, independent read queries, self-signal, capture disabled/enabled and successful-run capture. Constructed captures pin PID, operation, target, ambiguity, window and availability semantics. Parser preserves missing identity and full paths without structured timestamps. | Implemented; optional real logs do not replace deterministic populated-event controls or establish a policy cause |
-| `runner_validator_failure/validator_unavailable_reports_degraded`, `runner_validator_failure/validator_decode_failure_reports_degraded` (also witness suite members) | Real worker attempts plus fixture validator, reversed partial IDs, missing verdict and null drift; malformed JSON is distinct from EOF | Missing prediction reasons and completed failures are independently recoverable; validator lifecycle/UTF-8/structure/association controls are described below |
-| `runner_unit`: `SandboxApplyTests` | Calls the unused Swift apply helper, not the C producer | No production failure-reporting credit; helper/type/test cleanup is outside this effort; preserve live `computePolicyHash` |
+| `runner_validator_failure/validator_unavailable_reports_degraded`, `runner_validator_failure/validator_decode_failure_reports_degraded` (also witness suite members) | Real worker attempts plus fixture validator, reversed partial IDs and a missing verdict with its missing reason; malformed JSON is distinct from EOF | Missing prediction reasons and completed failures are independently recoverable; validator lifecycle/UTF-8/structure/association controls are described below |
 
 Real-worker `CWorkerTests` cases guarded by `workerExists()` require
 `<PW_APP_DIR>/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner`.
@@ -521,9 +518,9 @@ missing. Constructed classifier/encoding cases have separate credit.
 ## Worker evidence contract
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
-following the capture bytes. Host and worker require exactly the same ABI number, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header is 64 bytes. The reply carries the ordering evidence described below; replies before schema 8 have none.
+following the capture bytes. Host and worker require exactly the same ABI number, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header is 64 bytes. The reply carries the ordering evidence described below.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
-Legacy stored replies may omit it. Its `abi_version` is the host-selected UInt32
+Its `abi_version` is the host-selected UInt32
 layout encoded as a JSON integer, not proof the child reached ABI validation.
 An entirely absent publication remains explicit even after a mapping failure.
 Host process observations remain independent.
@@ -614,10 +611,10 @@ or success. A malformed/incomplete failure publication cannot yield `ok`.
 
 ### Missing step evidence
 
-Both step channels add optional `result_source`, `native_rc`, `missing_reason`.
-Legacy decoding preserves absence. Live assembly emits native_rc as explicit
-null when unavailable. Existing required rc/outcome fields stay compatible.
-Prediction rc=0 with outcome=error remains a synthetic compatibility sentinel:
+Both step channels carry `result_source` and optional `missing_reason`; the
+query channel also carries `native_rc`, emitted as explicit null when
+unavailable. The attempt channel has no native-return field.
+Prediction rc=0 with outcome=error is a synthetic sentinel:
 result_source=synthetic and missing_reason=validator_not_invoked (no validator
 process), or validator_no_verdict (process ran without this verdict). Excluded
 queries use query_not_requested. Received verdicts use result_source=validator;
@@ -625,14 +622,14 @@ native_rc is present only for actual allow/deny/error native call results, not
 parse/unsupported/filter rejections. Run-level validator subprocess metadata
 remains authoritative; per-step fields do not duplicate PID/disposition.
 
-Attempts retain the compatibility spelling `not_run_worker_died` as the final
-missing-result spelling; it means no completed result, never proof of non-start.
-They use result_source=synthetic, native_rc=null, and missing_reason=slot_absent
-or slot_incomplete. Completed supported slots use result_source=worker. Their rc is PW
-attempt status (often 0/1, or aggregated exec disposition), not a native syscall
-return such as an open FD. The worker ABI does not carry that raw return: native_rc is
-null for attempts, including completed ones. Unsupported/skipped attempts use synthetic and
-attempt_not_supported. Step errno/drift/signal absence retains its existing form.
+Attempts use the spelling `not_run_worker_died` for a missing result; it means
+no completed result, never proof of non-start. They use result_source=synthetic
+and missing_reason=slot_absent or slot_incomplete. Completed supported slots use
+result_source=worker. Their rc is PW attempt status (often 0/1, or aggregated
+exec disposition), not a native syscall return such as an open FD; the worker
+ABI does not carry that raw return, so no attempt field presents one.
+Unsupported/skipped attempts use synthetic and attempt_not_supported. A null
+step `errno` requires key presence.
 
 ### Acceptance observations fixed before implementation
 
@@ -711,11 +708,11 @@ numeric `return_code`, and native `strerror` text as `diagnostic`. The return co
 is captured directly, independently of ambient errno, with no recognized-code
 allowlist or diagnostic-string classification. Unknown codes remain failures.
 No validator PID or subprocess is invented. Collection closes and releases the
-worker normally; missing predictions remain unestablished with null drift.
+worker normally; missing predictions remain unestablished.
 The record survives worker-summary precedence and evidence-preserving reply
 degradation. The explicit `evidence_retained: false` backstop may omit it along
-with the other observations. This optional field is additive;
-absence in older replies is unknown. The controller forwards it unchanged.
+with the other observations. This optional field is additive; absence is
+unknown. The controller forwards it unchanged.
 The live ENOENT witness checks the native code, path and call context without
 requiring English wording. Internal native-call controls exercise unfamiliar
 returns through orchestration and reply serialization; they are not policy
@@ -743,7 +740,7 @@ count host writes and serialized bytes, not consumption. `io_error` and
 Both child drivers use `ChildProcessState`/`ChildProcessCalls` in `CWorker.swift`.
 Validator `reaped`, `termination_request`, `wait_errors`, `exit_code` and
 `term_signal` obey the same successful-reap and finite EINTR contract as the
-worker. Legacy absent host fields are unknown. The validator's `.success` driver
+worker. Absent optional host fields are unknown. The validator's `.success` driver
 variant only means no transport/decoding error; it cannot establish clean
 process disposition. `validator_unavailable` includes incomplete ID coverage,
 association faults, cleanup requests, non-EINTR wait faults and abnormal or
@@ -795,14 +792,12 @@ incomplete post-apply attempt proves a policy cause or instrumentation defect.
 
 `steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
 worker exists. It never substitutes the host PID. Typed readers must accept
-null; replies before schema 6 carry an integer PID and remain decodable. The
-top-level legacy PID convention is unchanged. Request schema and worker ABI are
-separate contracts.
+null. Request schema and worker ABI are separate contracts.
 
-Per-step `native_rc` is authoritative for native returns. A received diagnostic
-without a native return retains `result_source="validator"`, `native_rc=null`
-and compatibility `rc=-1`; this is not a synthetic validator record or a claimed
-native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+The query channel's `native_rc` is authoritative for native returns. A received
+diagnostic without a native return retains `result_source="validator"`,
+`native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
+claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
 missing reason. `outcome="error"` alone does not identify a native call failure.
 
 Query planning records each submitted probe or exclusion reason before attempts
@@ -810,7 +805,8 @@ run. A later create/unlink cannot change that decision, including when all
 queries are excluded and no validator runs. Only unique records matching the
 submitted `(operation, filter_type, filter_value)` supply a step prediction.
 Mismatch records remain under `validator_subprocess.records`, with
-`association_issues.kind="query_mismatch"`, null step drift and a non-ok run.
+`association_issues.kind="query_mismatch"`, a missing step prediction and a
+non-ok run.
 Diagnostics may omit query metadata; any metadata they supply must agree.
 Queries and attempted operations remain independent.
 
@@ -837,10 +833,10 @@ outer reply keeps only its bounded raw prefix. Receiver completeness does not
 imply that the OS delivered every denial, and a stream limit is not a bound on
 the process's total memory.
 
-Deny plus ambiguous EPERM/EACCES has `drift=null`. A matching submitted scope
-can retain directional consistency in `comparison`; a separate query target
-prevents that comparison. The direct DAC control remains test-owned evidence,
-not a runtime observation used to assign the cause.
+Deny plus EPERM/EACCES is a `permission_failure` observation beside a deny
+answer; the record relates the submitted scopes and never assigns the cause. A
+separate query target is `different_submitted`. The direct DAC control remains
+test-owned evidence, not a runtime observation used to assign the cause.
 
 
 ## Unfamiliar diagnostic preservation controls
@@ -879,139 +875,58 @@ See [fixture documentation](fixtures/diagnostic_transport/README.md) for fixture
 code-filtering and detail-dropping mutations are test experiments only; source
 and the signed app must be restored before acceptance.
 
-## Derived comparisons and evidence joins
+## Comparison record
 
 ### Claim/evidence review
 
-| Join / observation owners | Association and phase guarantee | Counterexample / limit | Supported public conclusion |
+| Join / observation owners | Association and phase guarantee | Counterexample / limit | What the record states |
 | --- | --- | --- | --- |
 | Submitted query → validator record; host and validator | Unique step ID plus exact submitted operation/filter tuple; host invokes validator after observing worker application | A correctly associated query for A need not concern attempted B; a late validator can query changed state | The record answers the submitted query, not necessarily the attempt |
-| Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from an outcome comparison |
+| Query → attempt; host request and completed worker slot | Host retains both independently supplied inputs and pairs by unique step ID | Different operations/targets; compound create; broad or unscoped query; same path spelling with different runtime resolution | An explicit relation between submitted operations/targets, separately from any outcome judgment |
 | Query time → attempt time; host and two children | Application → closed query collection → host release → worker acknowledgement → attempts; eligible uniquely associated native records acquire query_first | External state can change during the interval; earlier attempts can affect later attempts | Established order for eligible records, without stable state or runtime identity claims |
 | Path enrichment → query/attempt; runner host | Host resolves submitted query path after the orchestrator returns | Worker unlinks the path before host resolution; host and sandboxed worker can resolve differently | Later host diagnostic, never an earlier validator/worker observation |
 | Denial event → attempt; observer and controller | Exact worker PID, mapped submitted operation and matching path evidence yield candidates | Repeated attempts, PID reuse, whole-second capture bounds and absent timestamps prevent unique occurrence or causal ordering | Candidate association with inspectable matching basis; no termination cause and no negative proof from no match |
 | Test control → runtime interpretation; test harness and PW | Controls can establish expected meanings independently of the classifier | Direct unsandboxed execution or a fixture oracle is not an observation available in a normal PW envelope | Credit controlled interpretation separately from native observation; no test knowledge silently becomes runtime attribution |
 
-### Consumer-question baseline and design dispositions
+### The record
 
-These IDs and their scope precede representation selection. Wording changes must
-preserve the original obligation; narrowing, merging or changing a disposition
-requires a recorded design reason. Current output omissions do not prove runtime
-ignorance. Submitted kind/action describes intent; it does not prove execution.
+`steps[].comparison` contains `observation`, `observation_basis`,
+`operation_relation`, `target_relation`, `order` and `limitations`, and nothing
+else. It relates the two channels; it does not say whether they agree, and no
+field in a reply does.
 
-| ID | Original consumer question | Required disposition under the chosen contract |
+```json
+"comparison": {
+  "observation": "succeeded",
+  "observation_basis": "completed_worker_status",
+  "operation_relation": "matched",
+  "target_relation": "same_submitted",
+  "order": "query_first",
+  "limitations": []
+}
+```
+
+| Path | Type | Rule |
 | --- | --- | --- |
-| C1 | Which steps report established agreement, and what comparison does that claim cover? | Recover supported allow/success agreement for matching submitted scope, separately from directional consistency and unavailable comparison. Disagreement requires evidence excluding material alternative explanations; order alone cannot supply state or runtime identity evidence. Agreement does not certify synchronized state. |
-| C2 | Which steps observed a failure whose cause PW could not attribute to the sandbox? | Recover observed permission/other failures with unestablished sandbox attribution separately from missing worker results. Native numbers and errors survive. |
-| C3 | What relationship between each query and attempt was established, known to differ, or left unresolved? | Report submitted operation and target relations, with submitted kind/action retained. Runtime object identity, complete check coverage and temporal equivalence remain limited where unobserved. |
-| C4 | Which steps produced no comparison, and what known reasons limit it? | Recover all known missing/unusable, scope and attribution limits, allowing simultaneous reasons; retain underlying missing_reason and native observations. |
-| C5 | Which path resolutions were later host observations? | Mark path diagnostics with observer and phase; absence in older replies does not invent provenance. |
-| C6 | Which denial events are candidates for a step, and what association or capture limits remain? | Keep event references and capture limitations; add per-candidate matched operation/path evidence with provenance from the submitted request or worker reply. Unique occurrence and causal attribution remain unestablished. |
+| `observation` | string | the attempt channel classified: `succeeded`, `permission_failure`, `other_failure` or `unavailable` |
+| `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
+| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access` → `file-read-data`, `open_write` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for a compound `file`/`create` attempt or an unsupported attempt |
+| `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
+| `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release after successful application, worker ownership was retained through acknowledgement, and a unique native allow/deny record matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. It names an interval before the entire attempt batch, not a state snapshot or per-step interleaving. |
+| `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |
 
-All six require delivered reporting changes; none is closed by a current omission.
-The limits above reflect absent synchronization/identity/causal observations.
-They do not permit discarding known request relations, native failures or capture
-status.
-
-### Accepted consumer answers and their evidence
-
-The six questions retain their original scope. The following judgments separate
-what the observations justify from whether the envelope makes that judgment
-recoverable. A readable label alone does not justify its claim. Controlled
-policies, submitted inputs, direct permission checks, file contents and executable
-markers supply the test expectations; none becomes additional runtime evidence
-available to a JSON consumer.
-
-| Controlled scenario | Accepted answer / questions | Evidence and assumption | Stronger conclusion excluded |
-| --- | --- | --- | --- |
-| Same submitted file scope, supplied allow or deny verdict, successful read | Agreement or unavailable respectively; even established query order cannot discharge the state/identity obligations, and scope and state/identity limits survive (C1/C3/C4) | Fixture verdict plus real worker read and independently retained file contents; interpretation control, not native prediction validation | Synchronized enforcement agreement, causal contradiction, or a libsandbox bug |
-| Planned path query and worker-reported successful unlink of that submitted target, in any step of the run, with unestablished query order | Retain mutation uncertainty; successful corresponding attempts yield unavailable/null under either prediction (C1/C3/C4) | Completed worker unlink status and submitted target equality, independently of later host resolution | Removal is proved to precede the query, or recreation restores runtime identity |
-| Allow or deny verdict, same locked file, failed read | Unavailable or directional consistency respectively; permission failure with unestablished cause (C1/C2/C4) | Direct unsandboxed EACCES control and real worker failure; the test knows DAC prevented access | Runtime proof that DAC or the sandbox caused this particular failure; directional consistency is not agreement |
-| Different submitted target or operation, including denied query A and successful spawn B | Preserve the known difference and successful observation; comparison unavailable (C1/C3/C4) | Independently supplied query/attempt inputs and actual worker effects | Host canonicalization repairs the relation, or two different strings prove different runtime objects |
-| Compound create or unsupported attempt | Preserve unresolved operation/scope; distinguish completed create from absent supported attempt result (C2/C3/C4) | Submitted action and worker publication/missing reason | A single query covers the compound operation; missing result proves no operation started |
-| Absent query path with failed attempt, or with successful attempt at another path | Retain planning exclusion, missing prediction, failure attribution or differing target simultaneously (C2/C3/C4) | Owned absent path, direct file control and independently submitted attempt target | One reason explains away another; later host resolution supplies a missing validator observation |
-| Native exec query and same-target successful spawn, including child exit 37 | Agreement about target execution admission; a failed exec result after spawning remains separately recoverable with unestablished cause (C1/C2/C3/C4) | Native `process-exec*` query, positive worker child PID, helper marker and direct exit-code control | Complete spawn prediction, successful child completion, or a known cause for the failed exec result |
-| Native exec allowed but fork or interpreter denied | Preserve allow query and failed spawn; comparison unavailable and full-spawn coverage limited (C1/C2/C3/C4) | Independently varied policies, native query, real spawn attempt | Allow target admission promises spawn success; test-controlled policy intervention proves runtime attribution |
-| Native target exec denied and permission-shaped spawn failure | Directional consistency with unestablished cause (C1/C2/C4) | Native query and worker failure; no successful spawn observation | Proven target-admission denial from the failure alone |
-| Interpreter query against binary spawn; unsupported bare exec query | Different operation and, for the bare query, unusable prediction remain explicit (C3/C4) | Native interpreter counterexample and native bare-query error | Accepted query spelling alone establishes operation correspondence |
-| Validator missing while worker completes, or worker has no completed result | Preserve the independent channel, missing reason and every other known limit (C2/C4) | Controlled EOF/deadline and real worker publication/file evidence | Missing worker result is an observed permission failure; missing prediction erases a completed attempt |
-| Query planning intentionally excludes sysctl prediction | Report planning exclusion and missing query alongside the observed attempt (C3/C4) | Submitted sysctl query and native attempt; documented unsupported prediction pair | A synthetic status is a native verdict |
-| Host path diagnostics after orchestration | Report their host owner and phase, whether resolution succeeds or fails (C5) | Host instrumentation and the controlled unlink/late-resolution scenario | Validator/worker observation, stable runtime identity, or proof both children had been reaped |
-| Repeated denied attempts and a captured matching event | Return the event reference, every candidate and its operation/path provenance; preserve capture window limits (C6) | Native CLI/log control plus deterministic correlation controls | Unique occurrence, step ordering, or cause of an unrelated worker signal |
-| One candidate, no matching event, unavailable/disabled capture, or no worker | Keep these distinct, including raw unmatched events and capture diagnostics (C6) | Deterministic receiver controls and live disabled/captured observations | One candidate is a unique occurrence; no match or no capture proves no denial |
-| Older reply without comparison or provenance | Return not reported for absent distinctions, preserving old drift and raw observations (C1–C5); recover any independently present controller correlation (C6) | Stored legacy replies and version-aware decoding controls | Reclassifying legacy drift under response-7 semantics, inventing provenance, or suppressing controller evidence because the runner is old |
-
-C2 includes failed exec results after successful spawning. The consumer must not
-select only `permission_failure` and `other_failure`: `exec_result_failed_after_spawn`
-also identifies a failed result while `observation=succeeded` still describes the
-spawn. Preserve the native attempt fields in either case. Missing completed
-results belong in a separate answer, not in the observed-failure set. This makes
-the original failure question explicit; it does not narrow it to one summary field.
-
-C4 distinguishes an unavailable comparison from directional consistency, which
-is a useful but limited reported conclusion. Both may project to null drift.
-Recover the complete limitations array, the prediction/attempt missing reasons,
-and their raw observations without choosing a principal cause. No admitted steps
-and no runner reply are run-level absences, not evidence of agreement or an
-invented missing step.
-
-C5 and C6 preserve an explicit not-reported state separately from a reported
-negative, empty candidate set or disabled capture. Path provenance and denial
-correlation are independent channels: even an old runner reply may carry new
-controller matching evidence. Candidate event indices resolve within the same
-envelope, including unmatched events; they require no external log access.
-
-Intentionally unsettled by these answers are synchronized query/attempt state,
-runtime object identity, complete spawn preconditions, the cause of an individual
-failed result, and unique or causal log occurrence. The product does not observe
-enough to answer those portions. The contract nevertheless requires reporting
-every known submitted relation, observation, failure, missing reason and capture
-limit; blanket unknown would discard supported information. JSON recovery tests
-enforce that reporting obligation, not a general proof of causal correctness.
-
-### Public representation and meaning
-
-`comparison.order` is `query_first` only when the host closed collection before
-storing release, the worker acknowledged release after successful application,
-worker ownership was retained through acknowledgement, and a unique native
-allow/deny record matches the exact planned query tuple with coherent rc/errno.
-All other records retain `unestablished`. Death before acknowledgement cannot
-certify policy lifetime; death or cleanup failure afterwards does not erase
-established order. Queries are never launched against a reaped worker.
-
-`runner_subprocess.ordering` is present exactly when the worker subprocess object
-is present. It records `collection_closed_before_proceed`, `proceed_set`,
-`proceed_observed`, `worker_lifetime_established`, `validator_disposition` and
-`protocol_violations`. The first two observations belong to the host; acknowledgement
-is a worker publication acquired by the host. False means not established,
-not proof of nonoccurrence. Contradictory observations remain visible, carry
-protocol violations, and establish no order.
-
-Validator disposition is `not_invoked`, `not_needed` (empty query plan),
-`not_spawned` (setup/spawn failure), `reaped`, or `unconfirmed`. Collection closes
-when the synchronous driver returns, even after partial output, decode failure,
-I/O expiry or failed cleanup. The host then releases attempts. No later record
-can enter predictions; `unconfirmed` does not mean the validator has exited.
-Eligible partial records can therefore retain `query_first`. Every emitted step
-has order even when predictions are excluded or missing; those steps still obey
-the release barrier. Legacy decodes gain neither field.
-
-Queries form an interval before the first attempt, not per-step interleaving or
-a shared snapshot. External activity may change targets during that interval;
-earlier attempts may affect later attempts. State stability and path identity
-remain unestablished. No current producer path can yield `disagreement` or
-`drift: true`: the typed evidence model has no established state/identity cases,
-and the encoder and consumers reject that unsupported claim even with empty
-limitations.
-
-The ordering promise covers PolicyWitness's own actions only. It does not
-promise that a target's state is unchanged between a query and its attempt,
-that a path spelling names the same runtime object at both times, that a query
-was requested for every step (planning exclusions keep their `missing_reason`),
-a comparison for attempts whose prediction was excluded or never returned, or
-any per-step interleaving. Collection closure, not confirmed validator
-termination, is the release condition: a validator that survives cleanup may
-keep querying, but none of its later records is collected or used.
+The query's answer stays in `sandbox_check`: it is `outcome` when
+`result_source` is `validator` and the outcome is `allow` or `deny`; otherwise
+no prediction was available and `missing_reason` says why.
+`runner_subprocess.ordering` carries the host's collection, release,
+acknowledgement and lifetime observations that `order` is derived from
+(`collection_closed_before_proceed`, `proceed_set`, `proceed_observed`,
+`worker_lifetime_established`, `validator_disposition`, `protocol_violations`);
+contradictory observations stay visible, carry a protocol violation and
+establish no order. Validator disposition is `not_invoked`, `not_needed`
+(empty query plan), `not_spawned`, `reaped` or `unconfirmed`; collection
+closes when the synchronous driver returns, even after partial output or
+failed cleanup, and no later record enters predictions.
 
 #### Ordering evidence states
 
@@ -1029,13 +944,6 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 | Proceed expired or worker died before acknowledgement; hook later returned | true/true/false | actual terminal disposition | `unestablished`; received records survive |
 | Worker died or hung after acknowledgement | true/true/true | actual terminal disposition | eligible records retain `query_first`; missing attempts remain unavailable |
 
-Consumers reject `query_first` without every prerequisite, with the order
-limitation still present, or on a synthetic or diagnostic record, and reject
-`unestablished` for an eligible record whose full chain is established. Release
-without collection closure, acknowledgement without release, and release before
-successful application are protocol violations: the raw sentinels stay visible,
-`protocol_violations` names the contradiction, and no order is derived.
-
 #### Ordering protocol names
 
 | Thing | Name | Where |
@@ -1047,205 +955,169 @@ successful application are protocol violations: the raw sentinels stay visible,
 | Worker budget | `PW_PROCEED_WAIT_MS_DEFAULT`, limit id `worker_proceed_wait` | `pw_probe_runner.c`, `docs/limits.json` |
 | Worker argv seam | `--proceed-wait-ms` | C harness only; no request override |
 | Request override | `validator_io_timeout_ms` | `PWRunnerTestOverrides` |
-| Run-level evidence | `runner_subprocess.ordering` | reply; absent before schema 8 |
-| Per-step evidence | `comparison.order` | reply; absent before schema 8 |
-| Host reply failure | `runner_reporting_failed`, `reporting_failure` | reply, absent before schema 8; comparisons absent, drift null |
+| Run-level evidence | `runner_subprocess.ordering` | reply |
+| Per-step evidence | `comparison.order` | reply |
+| Host reply failure | `runner_reporting_failed`, `reporting_failure` | reply; comparisons absent |
 | Failed validator launch | `validator_spawn_failure` | reply; optional and additive |
-| Unordered limitations | `attempt_mutation_order_unestablished`, `host_path_resolution_changed` | reply; absent before schema 7 |
 | Native gated validator | `tests/fixtures/validator/bridge.m`, suite `validator_bridge` | test equipment |
 
+### Invariants
 
-Each new step contains `comparison` with `scope="submitted_operation_and_target"`,
-`prediction` (allow/deny/unavailable), `observation`
-(succeeded/permission_failure/other_failure/unavailable), `observation_basis`,
-`operation_relation` (matched/different/unresolved), `target_relation`
-(same_submitted/different_submitted/unresolved), `conclusion`
-(agreement/disagreement/directional_consistency/unavailable), and `limitations`.
-The host supplies `attempt.requested_kind` and `requested_action`; existing
-`requested_path` is the submitted target. These are input provenance, not native
-call observations. `result_source`, native fields, child status and missing reasons
-retain their independent meanings.
+- Producer: `PWRunnerStepResult` has no `drift` or `deny_signal` property;
+  `PWRunnerComparison` has no `prediction`, `conclusion`, `scope`, `drift` or
+  `obligations`; `PWRunnerAttemptResult` has no `exit_code`, `syscall_errno`
+  or `native_rc`; `PWRunnerSandboxCheckResult` has no `scope`;
+  `PWRunnerRunResult` has no `deny_signal_total` or `comparison_conditions`;
+  there is no signal result type. The reply-shape golden
+  (`tests/fixtures/contract/response_shape.json`) records the current shape.
+- Encoder: rejects `limitations` strings outside the vocabulary above and
+  retains the `query_first`, disposition and reply-degradation checks. Swift
+  ignores unknown keys after the version gate; no strict unknown-key decoder
+  exists.
+- Reply degradation: `runner_reporting_failed` omits every `comparison`, even
+  when `steps: []`. `evidence_retained: false` still withholds step and
+  subprocess evidence.
+- Consumer (`tests/lib/consumer.py`): applies the exact envelope and response
+  gates and reports another version as `unsupported`; rejects the removed keys
+  at their former wire paths (`steps[].drift`, `steps[].deny_signal`,
+  `comparison.prediction`, `comparison.conclusion`, `comparison.scope`,
+  `comparison.obligations`, `attempt.exit_code`, `attempt.syscall_errno`,
+  `attempt.native_rc`, `sandbox_check.scope`, reply-level
+  `comparison_conditions` and `deny_signal_total`, envelope-level
+  `policy_augmentation`, `runner_startup_diagnostics`, `app_provenance`,
+  `runner_provenance`, `request_path` and the diagnostics copies `worker_pid`,
+  `capture_status`, `first_deny`) and any `limitations` string outside the
+  vocabulary; validates `observation`, the two relations and `order` against
+  the raw channel fields and `ordering`.
+- Controller: `permission_failures_without_record` reads
+  `comparison.observation`; `validate_disposition` also checks the lifecycle
+  entries in `comparison.limitations`, and failed validation withholds the
+  projected disposition and termination cause. Every semantic projection runs
+  behind the response-version gate.
+- Host invariance: the XPC host never links, loads or calls libsandbox.
+  `source_drift` rejects bindings, calls and dynamic lookups of the sandbox
+  SPI under `runner/Sources/`; the artifact inspection fails a shipped
+  `PWRunner` whose `nm -u` output names any `_sandbox_*` symbol.
 
-Only a supported operation mapping, compatible filter and identical submitted target
-permit the limited comparison. The reviewed mappings are file open_read/access →
-file-read-data, open_write → file-write-data, unlink → file-write-unlink;
-exec spawn → process-exec* (target execution admission); mach lookup → mach-lookup;
-sysctl read → sysctl-read.
-File/exec require path filters; mach lookup requires global_name (local namespace
-equivalence is not established); sysctl requires sysctl_name. Other broad query names,
-NONE filters and compound create attempts retain unresolved scope, not inferred
-equivalence. Different strings establish different submitted targets, not distinct
-runtime objects. Later host canonicalization never certifies comparability.
+### Reading rules
 
-For exec, `process-exec*` is the native query spelling corresponding to target
-execution admission; bare `process-exec` is rejected by the native prediction
-channel on the tested system. This specific mapping does not generalize from
-the presence of a star or from acceptance of an operation name. In particular,
-`process-exec-interpreter` can predict deny while a binary spawns successfully.
-The exec mapping carries `exec_query_not_full_spawn_prediction`: fork permission,
-interpreter admission, executable format and other spawn requirements are outside
-the query's promised scope. An allow prediction does not promise spawn success.
-A successful spawn supplies the target-execution observation needed for a
-comparison; a failed spawn does not establish that this particular gate denied it.
+The guide's [Reading a comparison record](../docs/PolicyWitness.md#reading-a-comparison-record)
+carries the same twelve rules for readers of an envelope; tests assert the
+evidence each scenario establishes, by field, and never a label.
 
-The native `runner_exec_dac` control exercises this distinction through ordinary
-CLI runs with real policies, validator calls and worker attempts. Independently
-changing exec, fork and interpreter permissions separates their verdicts and
-effects. A same-target allow/spawn-success comparison reports agreement, including
-a helper that prints its marker then exits 37. A denied query for a different
-target retains the successful attempt without reporting disagreement. None of
-these test-controlled interventions becomes causal evidence in a user's envelope.
-The source-level worker observation remains the successful `posix_spawn` return
-that publishes `child_pid`; it is not inferred from the helper's exit code.
+1. The query channel's answer is `sandbox_check.outcome` when `result_source`
+   is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
+   was available and `sandbox_check.missing_reason` says why.
+2. `attempt.missing_reason` explains an unavailable attempt channel.
+3. A `permission_failure` or `other_failure` observation, or an exec attempt
+   whose spawned child exited nonzero, does not attribute the failure to the
+   sandbox; attribution needs a captured denial record, and
+   `permission_failures_without_record` lists the steps that have none.
+4. A `path` query, or an attempt whose mapped filter is `path`, never
+   establishes that both channels resolved the same object at runtime.
+5. No record establishes that the state the query saw is the state the
+   attempt met; nothing in a reply discharges this.
+6. When a query has `filter_kind: path`, a nonnull `filter_value` and no
+   `query_plan:*` limitation, and any step's attempt is a worker `unlink` of
+   that same submitted path with `outcome: ok` and `rc: 0`, the target was
+   removed during the run; `order` says whether the removal followed the
+   query, and the unlink attempt's step is the step that removed it.
+7. A `process-exec*` query predicts target admission only, not every spawn
+   prerequisite; the child's result is in `attempt.rc` and
+   `attempt.child_exit_code`.
+8. A `file`/`create` attempt has no single query operation, so
+   `operation_relation` is `unresolved`.
+9. A query operation containing `*`, other than `process-exec*`, resolves to
+   no single attempt operation.
+10. `target_relation: unresolved` means the attempt's mapped filter kind
+    differs from the query's `filter_kind`, or `filter_value` or
+    `requested_path` is absent; those fields show which.
+11. `sandbox_check.path_diagnostics.realpath_resolved` null on a query the
+    planner did not exclude means the host could not resolve the submitted
+    path after the run.
+12. An attempt the worker does not support has `attempt.outcome` and
+    `missing_reason` saying so, and both relations `unresolved`.
 
-`drift=false` projects `comparison.conclusion=agreement`: an allow prediction and
-completed successful attempt within that submitted scope, without a supported
-unordered target mutation. This agreement does not certify runtime identity or
-equal state. `drift=true` projects `disagreement` and is reserved for differing
-kernel enforcement with no supported or materially unresolved alternative
-explanation. It requires usable native prediction and attempt evidence, query
-order and worker policy context, corresponding operation and runtime target,
-and sufficient evidence about state, query coverage and other enforcement
-mechanisms. Identical submitted paths and absent captured denies are insufficient.
-Established query order alone cannot exclude state changes or runtime target ambiguity, so every deny/success difference yields `unavailable`/null. No current producer path yields `drift=true`.
-An exec child that ran
-and then failed supplies spawn success independently of its later exit outcome.
-It also retains `exec_result_failed_after_spawn` and `sandbox_attribution_unestablished`: a
-useful spawn comparison cannot erase a failed exec result. That result may
-reflect child exit, timeout or collection failure; it does not alone establish
-a native child failure or its cause.
-`drift=null` covers all other conclusions. Deny plus permission failure can retain
-`directional_consistency` when scope matches, but cannot establish agreement.
-Permission numbers (including Mach permission failure) do not alone establish a
-sandbox cause. Unrecognized sysctl errors never become strong denial evidence.
-No current failed-attempt path establishes attributable sandbox denial.
+### Scenario matrix
 
-Every comparison reports `state_stability_unestablished`; `query_attempt_order_unestablished` appears exactly when `comparison.order` is not `query_first`. Path comparisons also report
-`runtime_target_identity_unestablished`. Additional limits report unresolved or
-different operations/targets, unavailable predictions/attempts, unusable verdicts
-broad query operations, unsupported filter scope, absent submitted targets
-and unestablished failure attribution independently, without suppressing another
-known reason. A `query_plan:` limitation retains the host's known exclusion:
-`prediction_unavailable_pair`, `unrecognized_filter_kind` or
-`path_unresolved_at_planning`. This planning observation remains separate from
-`prediction:query_not_requested`, native errors and later host path enrichment.
-The documented derivation permits recovery without reimplementing
-the classifier. A synthetic record cannot acquire a native observation by its label.
+`tests/fixtures/comparison/matrix.json` is the single source of these rows:
+each carries the specimen inputs, the raw channel values the Swift reader
+feeds to the producer, the raw fields the live reader asserts beside the
+record, an independent control and the expected record. The query column is
+`sandbox_check.outcome` when `result_source` is `validator` and the outcome is
+`allow` or `deny`, otherwise `unavailable`. Specimen S runs the real
+validator; B steers it with `stub_validator.py` through
+`_test_overrides.validator_executable_path` (its records are stub output, so
+its expectations come from submitted scopes and independent file and
+permission controls, never from native verdicts); C fails to compile; T is the
+FIFO deadline case. Lifecycle limitations in the table come from the step's
+summary.
 
-`attempt_mutation_order_unestablished` requires a planned path query and a
-worker-reported successful (`rc=0`, `outcome=ok`) file/unlink of that submitted
-target in any step of the run whose query order is unestablished. Established query order removes this confound and restores allow/success agreement; it does not establish drift. Step position does not bound it: with order
-unestablished the worker can finish every attempt before the first query, so a
-later step's unlink can precede an earlier step's query. Unknown order makes
-this a material confound for both allow/success agreement and deny/success
-disagreement. Other
-targets, failed/synthetic unlink results, content writes and create-if-absent
-do not supply that observation. Later recreation does not erase it.
-`host_path_resolution_changed` separately records planned host resolution
-followed by failed host resolution after orchestration. Enrichment appends it
-only to an existing comparison with no planning exclusion; it never changes
-conclusion or drift and never supplies query-time state.
+| Row | Specimen | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S01 | S | allow, read succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | readable bytes unchanged after the run |
+| S02 | S | deny, read EPERM | `deny` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | policy denies file-read-data on this literal path; denied bytes unchanged; the failure is read under reading rule 3 (no attribution without a captured denial record) |
+| S03 | S | allow, mode-000 file EACCES | `allow` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | direct open of locked outside PW fails with EACCES before the run; mode 0000 is a DAC condition, not policy |
+| S05 | S | query denied path, attempt other path | `deny` | `succeeded` | `completed_worker_status` | `matched` | `different_submitted` | `query_first` | — | readable and denied bytes unchanged |
+| S06 | S | query write, attempt read | `allow` | `succeeded` | `completed_worker_status` | `different` | `same_submitted` | `query_first` | — | readable bytes unchanged |
+| S07 | S | absent path, both channels | `unavailable` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | absent does not exist before or after the run |
+| S08 | S | compound create | `unavailable` | `succeeded` | `completed_worker_status` | `unresolved` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | created is absent before the run and present after it |
+| S09 | S | unsupported attempt kind | `allow` | `unavailable` | `no_completed_worker_result` | `unresolved` | `unresolved` | `query_first` | `attempt:unsupported` | readable bytes unchanged; admission accepts the kind and the worker no-ops it |
+| S10 | S | sysctl planning exclusion | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:prediction_unavailable_pair` | the planner's prediction_unavailable set lists (sysctl-read, sysctl_name); a direct sysctlbyname of kern.osrelease succeeds |
+| S11 | S | bare process-exec query, spawn ok | `unavailable` | `succeeded` | `spawned_child` | `different` | `same_submitted` | `unestablished` | — | direct spawn of helper_true exits 0; the native API rejects the bare spelling |
+| S12 | S | file-read* query | `allow` | `succeeded` | `completed_worker_status` | `unresolved` | `same_submitted` | `query_first` | — | readable bytes unchanged |
+| S13 | S | mach deny, kr=1100 | `deny` | `permission_failure` | `bootstrap_permission_result` | `matched` | `same_submitted` | `query_first` | — | policy denies mach-lookup of this global name; kr=1100 is BOOTSTRAP_NOT_PRIVILEGED, read under reading rule 3 |
+| S14 | S | mach unknown service, kr=1102 | `allow` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | no service registers this name; kr=1102 is BOOTSTRAP_UNKNOWN_SERVICE, not a permission result |
+| S15 | S | process-exec*, spawn ok, exit 0 | `allow` | `succeeded` | `spawned_child` | `matched` | `same_submitted` | `query_first` | — | direct spawn of helper_true (compiled to exit 0) exits 0; helper bytes unchanged |
+| S16 | S | spawn ok, child exits 1 | `allow` | `succeeded` | `spawned_child` | `matched` | `same_submitted` | `query_first` | — | direct spawn of helper_false (compiled to exit 1) exits 1; the child's exit is in attempt.rc and child_exit_code (reading rule 7) |
+| S17 | S | spawn of mode-000 target, EACCES | `allow` | `permission_failure` | `permission_errno` | `matched` | `same_submitted` | `query_first` | — | direct posix_spawn of helper_locked outside PW fails with EACCES before the run |
+| S18 | S | spawn of absent target | `unavailable` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | absent_target does not exist before or after the run |
+| S19 | S | ordered unlink of queried path | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | unlink_s19 exists before the run and is absent after it (reading rule 6: this step removed it, after its query) |
+| S20 | S | process-exec-interpreter query, binary spawn | `allow` | `succeeded` | `spawned_child` | `different` | `same_submitted` | `query_first` | — | direct spawn exits 0; an accepted interpreter query cannot substitute for the exec query |
+| S21 | S | local_name query, kr=1100 | `allow` | `permission_failure` | `bootstrap_permission_result` | `matched` | `unresolved` | `query_first` | — | the global-name deny does not match a local-name query; the attempt maps to the global_name filter, so the target relation is unresolved (reading rule 10) |
+| S22 | S | none filter on a file query | `allow` | `succeeded` | `completed_worker_status` | `matched` | `unresolved` | `query_first` | — | readable bytes unchanged; no filter value was submitted, so the target relation is unresolved (reading rule 10) |
+| S23 | S | allow, access succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | readable bytes unchanged |
+| S24 | S | allow, open_write succeeds | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | writable exists before the run with its 20-byte content and holds exactly the worker's one written byte after it |
+| S25 | S | read of the path S19 unlinked, ENOENT | `allow` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | the query ran before release while unlink_s19 existed; S19's unlink preceded this read |
+| B1 | B | steered deny, read succeeds, ordered | `deny` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub transcript supplies deny; b_readable bytes unchanged; the real read succeeds under (allow default) |
+| B2 | B | verdict omitted, read succeeds | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b2; b_readable bytes unchanged |
+| B3 | B | verdict omitted, unlink of queried path | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b3; unlink_b3 exists before the run and is absent after it |
+| B4 | B | validator error record | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub emits a diagnostic record (outcome error, string error, matching step and query metadata); the record is associated, not missing |
+| B5 | B | verdict omitted, read of a path B6 unlinks | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | — | stub omits b5; unlink_b6 exists at attempt time because b6 runs after b5 in plan order |
+| B6 | B | allow, ordered unlink | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub supplies allow; unlink_b6 is absent after the run |
+| B7 | B | allow, read succeeds (control) | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub supplies allow; b_readable bytes unchanged |
+| C1 | C | policy fails to compile, nothing runs | `unavailable` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `unestablished` | `attempt:not_reached` | the worker publishes a compile failure record (operation 5) and exits before applying; no validator is spawned; readable bytes unchanged |
+| T | T | allow policy, FIFO read starts after release, then worker deadline | `allow` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `query_first` | `attempt:started_without_result` | a FIFO with no writer blocks the worker's open inside attempt 0 until the host's sentinel deadline; raw progress, the validator record and the release chain are asserted by the owning case before this row is compared |
 
-| Observation basis | Supporting fields and limited meaning |
-| --- | --- |
-| `completed_worker_status` | Completed worker result: `attempt.outcome` and PW status `rc`; this is not a raw syscall return or a causal explanation |
-| `permission_errno` | Worker-reported EPERM/EACCES on a file/access/unlink/sysctl/failed-spawn result; the permission-shaped failure does not identify the enforcing mechanism |
-| `bootstrap_permission_result` | The worker's exact `bootstrap_look_up: kr=1100` report; different calls or numbers do not acquire this interpretation, and sandbox attribution remains unestablished |
-| `spawned_child` | Positive `attempt.child_pid` in a completed worker result establishes spawning independently of the child's later outcome |
-| `no_completed_worker_result` | Missing/synthetic/incomplete result; neither a native return nor proof the attempt never started |
+### Ownership
 
-
-Path diagnostics retain their fields and add `observer="runner_host"` and
-`phase="after_orchestration"`. These provenance fields remain absent when decoding
-older records. Denial candidates add matching evidence without changing their
-candidate-only meaning; optional logs cannot change PW status or `drift`.
-Matching evidence identifies submitted operation provenance and every matched
-`submitted_attempt.target`, `attempt.requested_path`, `attempt.observed_path`,
-or host-resolved `attempt.path_diagnostics` form named with its observer and
-phase (`runner_host.after_orchestration.realpath_resolved` or
-`parent_realpath_resolved`). A legacy `normalized_path`, which no reply ever
-populated and response 12 drops, never admits a candidate. This controller
-correlation rule also applies when consuming older runner replies without
-rewriting their version.
-
-### Permanent consumer enforcement
-
-The original C1–C6 obligations all retain their scope. Their design justification
-and deliberately unanswerable portions are recorded in the accepted-answer table
-above; passing a recovery test does not independently prove a causal judgment.
-`tests/lib/consumer.py` reads only a single JSON envelope. It groups reported
-conclusions and failures, retains raw channel observations and all limitations,
-and resolves denial references within that envelope. It reads no specimen,
-external log, native errno rules or private classifier. Scenario expectations
-remain in the tests that own the controlled inputs and independent observations.
-
-| Question | Permanent registered owners and enforced distinctions | Accepted limit |
+| Rows or invariant | Owner | Independent control |
 | --- | --- | --- |
-| C1 | `witness_contract/drift_determination_via_validator_seam`: all four conclusion groups from supplied verdicts and real file controls; `runner_exec_dac/execute_permission_is_not_sandbox_drift`: native admission/spawn comparisons; `blackbox_e2e/checker_controls`: reject blanket unknown that erases supported agreement | Recorded submitted-scope comparison, without synchronized-state or causal proof |
-| C2 | Comparison witness: permission/other failures versus absent result; native exec case: failed child result remains beside successful spawn; pre-apply and both validator-failure CLI cases: missing channel never erases the other; `runner_unit/pwrunner_core_unit_executable`: `EnvelopeInvariantTests` retains native fields through Codable | Cause of a failed result remains unestablished, even where the test controls a known cause |
-| C3 | Comparison witness and `witness_contract/prediction_target_is_independent_of_attempt_target`: independent target/operation relations and submitted intent; native exec counterexamples; shared checker requires intent fields from response 7 onward | Submitted relation does not establish runtime object identity or full operation coverage |
-| C4 | Comparison witness, `witness_contract/pre_apply_failure_reports_no_policy_verdict`, both `runner_validator_failure` CLI cases and `runner_filter_sysctl_name/prediction_unavailable_attempt_observed`: simultaneous limits and distinct missing reasons survive alongside raw observations; Swift encoding retains the whole limitations array including unfamiliar values | Several limits can coexist; no principal cause is inferred |
-| C5 | Comparison witness and `runner_unit`'s `DriftClassifierTests`/`EnvelopeInvariantTests`: later host enrichment and old-record absence survive encoding; shared blackbox checker rejects validator ownership or wrong phase on new host diagnostics | No earlier validator/worker observation or reaping guarantee follows from later host resolution |
-| C6 | `witness_contract/worker_termination_and_log_correlation`: live repeated candidates and matching provenance; `unit/rust.unit`'s `run_flow`/`sandbox_log` tests: serialized event indices, candidate multiplicity, capture limits and old-runner/new-controller independence; blackbox controls recover populated, unmatched, unavailable and disabled captures | Candidates are not unique occurrences or causes; absent/no-match capture supplies no negative proof |
+| S01–S25 with S04 unused (specimen S, real validator) | `witness_contract/comparison_matrix` (live); `runner_unit` `ComparisonEvidenceTests` (constructed inputs through `comparisonEvidence(...)`) | Direct file reads, mode-000 opens, helper spawns and absence checks recorded in `direct-controls.json`; file bytes compared before decoding |
+| B1–B7 (specimen B, steered validator) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Stub transcript plus file effects; the run ends in `validator_no_reply` while B1, B6 and B7 retain `query_first` |
+| C1 (compile failure, nothing runs) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Files unchanged; `runner_failed` with the validator not invoked |
+| T (FIFO in flight at the deadline) | `witness_contract/worker_attempt_in_flight_at_deadline` (live, with the `a1` specimen of `tests/fixtures/disposition/`); `runner_unit` `ComparisonEvidenceTests` | OS-observed deadline, SIGKILL request and reaped signal; the lifecycle oracle |
+| Producer invariants and the shape golden | `runner_unit`: `ContractVersionTests`, `EnvelopeInvariantTests`, `OrderingTests`, `ComparisonEvidenceTests`, `ReplyFailureTests`, `DispositionResolverTests` | Constructed results; mutations must be rejected by the encoder |
+| Consumer invariants | `blackbox_e2e/checker_controls` (consumer controls, client-output control, mutation-order controls); every live blackbox, menagerie, filter and witness case through `tests/lib/consumer.py` | Mutated envelopes retained beside their rejection |
+| Controller invariants (version gate, outcomes, delivery precedence, projections) | `unit/rust.unit` (`run_flow`, `runner_client`, `dossier` tests); `integration/cli.integration` | Constructed replies of other and malformed versions; live refusals |
+| Dossier (`data.specimen`) | `witness_contract/dossier_witness`; opt-in `dossier_witness_byoxpc`; `unit/rust.unit` `dossier` tests | Independently read request bytes, hashes, imports, host sysctls and manifest entries |
+| Host invariance | `source_drift` (source rule with controls); `preflight` and `dispatcher/artifact_controls` (binary `nm -u` with a sandbox-importing control host) | Compiled control binaries |
 
-`unit/rust.unit` also exercises `runner_client` transport with response versions
-4–8, preserving complete received JSON, native child failure and unfamiliar limits.
-Swift legacy controls preserve original drift and do not invent comparison, intent
-or path provenance. `blackbox_e2e/checker_controls` exercises JSON recovery for
-versions 4–6, independent newer controller evidence, no admitted steps and no reply.
-The shared blackbox checker enforces the comparison shape introduced in response 7 and blanket temporal
-limits on legacy replies. From response 8 it checks conditional ordering evidence,
-native-record eligibility and the prohibition on disagreement. A validated
-`reporting_failure` reply instead requires absent comparisons and explicit null
-drift, and retains unvalidated ordering observations for diagnosis. Both versions
-require attribution limits, explicit drift projection and host-path ownership;
-the checker does not reconstruct the full prediction/attempt decision procedure. Indirect blackbox and
-filter consumers, including BYOXPC cases, exercise the same guarantees.
+### Supported versions
 
-`validate_current_build_evidence` is an explicit producer-conformance check:
-it rejects current disagreement claims, unsupported or missing mutation and
-resolution-change limitations, and agreement in the presence of a reported
-unordered target mutation anywhere in the run. The new unlink witness and supplied-verdict controls use it; offline
-checker controls retain accepted and rejected envelopes. It is separate from
-`validate_evidence_shape` and `recover_evidence`, which preserve historical
-response-7 disagreements without silently applying current-build rules.
-
-Live comparison, native-exec, pre-apply, validator-failure and log-correlation
-witnesses require at least response 8 before relying on version-gated checks.
-The three live filter callers pass `--minimum-schema-version 8` to their
-adapter. Its offline controls accept legacy fixtures without that requirement,
-reject older/missing/invalid versions when it is supplied, and reject missing
-comparison/intent evidence on current replies. Compatibility with stored replies
-cannot substitute for checking the current producer's contract.
-
-The blackbox checker controls reject losses through the actual checker CLI or
-the same single-envelope recovery helper used by live cases: missing intent,
-temporal/attribution evidence, a single missing concurrent scope limit, failed
-exec evidence after spawning, matching provenance, invented exact run membership,
-host data presented as validator data and blanket unknown. Each negative control
-retains its mutated envelope and rejection evidence; positive controls run beside
-it. These are reporting-regression controls, not new native causal experiments.
-No permanent test reads an execution plan, audit document or acceptance output.
-
-### Compatibility and acceptance gate
-
-The current wire numbers are stated in [docs/CONTRACT.md](../docs/CONTRACT.md).
-Responses from schema 8 require per-step order and worker ordering observations,
-and from schema 10 the worker disposition record. The ABI adds
-release and acknowledgement in the two reserved header words; capacities and
-other offsets are unchanged. The worker release wait is inventoried in
-[Limits](../docs/LIMITS.md).
-
-Stored versions 4–7 preserve their original drift values and absence of new
-fields. Historical response-7 disagreement means deny/success despite unresolved
-order, state and identity. That legacy projection remains decodable; from response 8 the encoder
-rejects disagreement outright because no vocabulary for established state or
-runtime identity exists. Dropping limitation strings cannot manufacture evidence.
-The Rust controller preserves response versions and unfamiliar order strings.
-
+Semantic readers of runner responses and controller envelopes accept exactly
+the versions in [docs/contract.json](../docs/CONTRACT.md): the Swift decoder
+and encoder, the Rust controller (`unsupported_runner_response`,
+`malformed_runner_response`, with the reply retained and no runner-derived
+diagnostics or log capture; a delivery failure takes precedence as
+`tool_error`), and `tests/lib/consumer.py` (`unsupported`). Raw transport
+(`pw-runner-client` and the Rust capture) retains received bytes without
+interpreting them. Stored evidence under `records/`, retained test output and
+release acceptance artifacts keeps its bytes. Request admission and the worker
+ABI follow their own contracts; the ABI's equality tripwire is independent.
 Acceptance selects every registered canonical case in [the catalog](catalog.json),
-including opt-ins and both runner contexts. Required skips/unrun cases prevent
-completion.
+including opt-ins and both runner contexts; required skips or unrun cases
+prevent completion.
 
 Exec attempt observation distinguishes stream EOF, leader exit, termination
 requests and confirmed reaping. A deadline remains an attempt failure even when

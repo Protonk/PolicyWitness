@@ -8,12 +8,43 @@ import hashlib
 import json
 from pathlib import Path
 import plistlib
+import subprocess
 import sys
+import tempfile
 
 FILES = ['Contents/MacOS/' + name for name in
          ('policy-witness', 'pw-runner-client', 'sbpl-check', 'sandbox-log-observer', 'sb_api_validator')]
 XPC = 'Contents/XPCServices/PWRunner.xpc'
 FILES += [XPC + '/Contents/MacOS/' + name for name in ('PWRunner', 'pw-probe-runner', 'sb_api_validator')]
+HOST = XPC + '/Contents/MacOS/PWRunner'
+
+# The inspector runs `nm -u` on the XPC host, so the fixture host must be a real
+# Mach-O. The clean stub imports nothing from libsandbox; the control stub
+# links libsandbox and calls sandbox_check, the import the host invariance
+# rule forbids. Neither stub ever runs.
+HOST_SOURCES = {
+    'clean': 'int main(void) { return 0; }\n',
+    'imports_sandbox': ('#include <stdint.h>\n'
+                        'extern int sandbox_check(int, const char *, int, ...);\n'
+                        'int main(void) { return sandbox_check(0, "file-read-data", 0); }\n'),
+}
+_host_binaries = {}
+
+
+def host_binary(kind='clean'):
+    """Compile (once per process) and return the path of a fixture host executable."""
+    if kind not in _host_binaries:
+        build = Path(tempfile.mkdtemp(prefix='pw-fixture-host-'))
+        source = build / f'{kind}.c'
+        source.write_text(HOST_SOURCES[kind])
+        output = build / kind
+        argv = ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-Wall', '-Wextra', '-Werror',
+                '-O2', str(source), '-o', str(output)]
+        if kind == 'imports_sandbox':
+            argv.append('-lsandbox')
+        subprocess.run(argv, check=True, capture_output=True, timeout=120)
+        _host_binaries[kind] = output
+    return _host_binaries[kind]
 
 
 def fingerprint(path):
@@ -29,11 +60,14 @@ def seal(app):
     app.with_suffix('.fixture-seals.json').write_text(json.dumps(seals))
 
 
-def bundle(app):
+def bundle(app, host='clean'):
     for name in FILES:
         path = app / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text('#!/bin/sh\nexit 0\n')
+        if name == HOST:
+            path.write_bytes(host_binary(host).read_bytes())
+        else:
+            path.write_text('#!/bin/sh\nexit 0\n')
         path.chmod(0o755)
     for directory, executable in ((app, 'policy-witness'), (app / XPC, 'PWRunner')):
         (directory / 'Contents/Info.plist').write_bytes(plistlib.dumps({

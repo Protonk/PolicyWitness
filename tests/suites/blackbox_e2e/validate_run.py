@@ -24,24 +24,8 @@ def validate_run(run, expected):
         sb = step.get("sandbox_check")
         sb_outcome = sb.get("outcome") if isinstance(sb, dict) else None
         attempt = step.get("attempt")
-        exit_code = attempt.get("exit_code") if isinstance(attempt, dict) else None
-        attempt_ok = exit_code == 0 if type(exit_code) is int else None
-        runner = (run.get("data") or {}).get("runner_result") or {}
-        if exp.get("deny_signal_unavailable") is True or runner.get("schema_version", 0) >= 5:
-            if "deny_signal" not in step or step["deny_signal"] is not None:
-                fail(f"{step_id}: expected explicit deny_signal=null")
-        # Legacy expectations remain usable when validating stored old replies.
-        elif "deny_signal_delta" in exp:
-            signal = step.get("deny_signal")
-            delta = signal.get("delta") if isinstance(signal, dict) else None
-            expected_delta = exp["deny_signal_delta"]
-            if type(delta) is not int:
-                fail(f"{step_id}: invalid deny_signal.delta={delta!r}")
-            elif expected_delta == "nonzero" and delta <= 0:
-                fail(f"{step_id}: expected deny_signal delta>0 (got {delta})")
-            elif type(expected_delta) is int and delta != expected_delta:
-                fail(f"{step_id}: expected deny_signal delta={expected_delta} (got {delta})")
-
+        rc = attempt.get("rc") if isinstance(attempt, dict) else None
+        attempt_ok = rc == 0 if type(rc) is int else None
         if "expect_denial" in exp and sb_outcome is not None and attempt_ok is not None:
             is_denial = sb_outcome == "deny" and not attempt_ok
             if is_denial != exp["expect_denial"]:

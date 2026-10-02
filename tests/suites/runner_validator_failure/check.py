@@ -11,7 +11,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from consumer import recover_evidence, validate_evidence_shape
+import consumer
 
 FIXTURE = Path(__file__).resolve().parents[2] / 'fixtures' / 'validator'
 
@@ -103,21 +103,20 @@ def check_cli(case, out, pw):
             assert after[1:] == seeds[1:], 'denied write/access changed the protected files'
             envelope = run.load_json()
             runner = envelope['data']['runner_result']
-            assert type(runner.get('schema_version')) is int and runner['schema_version'] >= 7, runner  # comparison: response 7
-            assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
-            answers = recover_evidence(envelope)
-            (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+            assert not consumer.validate(envelope), consumer.validate(envelope)
+            rows = consumer.steps(envelope)
             ids = [s['step_id'] for s in plan]
-            assert answers['comparison_groups']['agreement'] == ids[:1]
-            assert answers['comparison_groups']['directional_consistency'] == ids[1:2]
-            assert answers['comparison_groups']['unavailable'] == ids[2:]
-            assert answers['failure_groups']['unattributed_failure'] == ids[1:]
-            assert answers['failure_groups']['missing_result'] == []
-            absent = answers['steps'][2]
-            assert absent['prediction_missing_reason'] == 'validator_no_verdict'
-            assert absent['attempt_missing_reason'] is None
-            assert {'prediction:validator_no_verdict', 'sandbox_attribution_unestablished'} <= set(absent['comparison']['limitations'])
-            assert absent['query']['native_rc'] is None
+            # The two answered queries keep their order; the unanswered one is a
+            # synthetic gap beside a completed permission failure.
+            assert [s['step_id'] for s in consumer.select(rows, observation='succeeded', order='query_first')] == ids[:1]
+            assert [s['step_id'] for s in consumer.select(rows, observation='permission_failure', order='query_first')] == ids[1:2]
+            assert [s['step_id'] for s in consumer.select(rows, observation='permission_failure', order='unestablished')] == ids[2:]
+            absent = rows[2]
+            assert absent['sandbox_check']['result_source'] == 'synthetic'
+            assert absent['sandbox_check']['missing_reason'] == 'validator_no_verdict'
+            assert absent['attempt'].get('missing_reason') is None and absent['attempt']['result_source'] == 'worker'
+            assert absent['comparison']['limitations'] == []
+            assert absent['sandbox_check']['native_rc'] is None
             assert absent['attempt']['outcome'] == 'access_failed'
             assert absent['attempt']['errno'] in (errno.EPERM, errno.EACCES)
             assert rc == 1 and envelope['result']['ok'] is False, envelope
@@ -165,12 +164,11 @@ def check_cli(case, out, pw):
             for step, expected in zip(steps[:2], (('allow', 0, 0), ('deny', 1, 0))):
                 prediction = step['sandbox_check']
                 assert (prediction['outcome'], prediction['rc'], prediction['errno']) == expected, step
-                assert step['drift'] is (False if expected[0] == 'allow' else None), step
-                assert step['comparison']['conclusion'] == ('agreement' if expected[0] == 'allow' else 'directional_consistency'), step
+                assert step['comparison']['observation'] == ('succeeded' if expected[0] == 'allow' else 'permission_failure'), step
             gap = steps[2]
             assert gap['sandbox_check']['outcome'] == 'error', gap
             assert 'no validator verdict' in gap['sandbox_check']['error'], gap
-            assert gap['drift'] is None, 'missing prediction must have explicit drift:null'
+            assert 'drift' not in gap, 'removed key present on the gap'
             print(f'{case}: partial verdicts joined by ID, all three attempt outcomes/effects preserved, gap explicit')
 
 

@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 from run_capture import RunCapture
-from consumer import recover_evidence, validate_evidence_shape
+import consumer
 from log_capture_contract import check_live_capture, check_observer_report
 
 STAMP = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\+0000$')
@@ -112,11 +112,9 @@ def main():
             envelope = run.load_json()
 
     assert rc == 0, rc
-    assert envelope['schema_version'] >= 2, envelope['schema_version']
     data = envelope['data']
     assert 'log_last' not in data, data.keys()
     runner = data['runner_result']
-    assert runner['schema_version'] >= 7, runner
     assert runner['normalized_outcome'] == 'ok', runner
     worker = runner['runner_subprocess']
     assert worker['exit_code'] == 0 and worker.get('term_signal') is None, worker
@@ -168,10 +166,10 @@ def main():
             assert 'runner_host.after_orchestration.realpath_resolved' in read['path_sources'], read
             assert 'submitted_attempt.target' not in read['path_sources'], read
     diagnostics = data['runner_sandbox_diagnostics']
-    assert not validate_evidence_shape(envelope), validate_evidence_shape(envelope)
-    answers = recover_evidence(envelope)
-    assert answers['denials']['window'] == window
-    (out / 'consumer-answers.json').write_text(json.dumps(answers, indent=2) + '\n')
+    assert not consumer.validate(envelope), consumer.validate(envelope)
+    recovered = consumer.denials(envelope)
+    assert recovered['window'] == window
+    (out / 'consumer-denials.json').write_text(json.dumps(recovered, indent=2) + '\n')
 
     # Control: the retired trailing interval, replayed against the same log store.
     retired_end_s = (client['ended_at_unix_ms'] + 999) // 1000

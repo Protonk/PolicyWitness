@@ -46,7 +46,7 @@ env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert env.get("kind") == "run"
 assert env.get("result", {}).get("ok") is True
 
-runner_kind = (env.get("data") or {}).get("runner_provenance", {}).get("runner_kind")
+runner_kind = (((env.get("data") or {}).get("specimen") or {}).get("runner_provenance") or {}).get("runner_kind")
 if runner_kind != "standard":
     raise SystemExit(f"expected runner_kind='standard' (got {runner_kind!r})")
 PY

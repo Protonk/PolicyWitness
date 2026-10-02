@@ -128,8 +128,12 @@ fn log_timeout_flag_and_disabled_capture_keep_execution_available() {
         if disabled {
             assert!(capture.is_null());
             assert_eq!(
-                envelope["data"]["runner_sandbox_diagnostics"]["capture_status"],
-                "disabled"
+                envelope["data"]["runner_sandbox_diagnostics"]["correlation_status"],
+                "not_attempted"
+            );
+            assert!(
+                envelope["data"]["runner_sandbox_diagnostics"]["permission_failures_without_record"]
+                    .is_null()
             );
         } else {
             assert_eq!(capture["supervision"]["budget"]["timeout_ms"], 1);
@@ -164,7 +168,9 @@ fn log_timeout_flag_and_disabled_capture_keep_execution_available() {
                 .contains("invalid value for --log-timeout-ms")
         );
         assert_eq!(envelope["result"]["exit_code"], 2);
-        assert!(envelope["data"].get("runner_result").is_none());
+        assert!(envelope["data"]["runner_result"].is_null());
+        assert!(envelope["data"]["runner_client"].is_null());
+        assert!(envelope["data"]["specimen"].is_object());
     }
 }
 
@@ -654,7 +660,7 @@ fn sandbox_check_path_diagnostics_host_produces_realpath_under_strict_sandbox() 
 }
 
 #[test]
-fn augment_applied_emits_policy_augmentation_block() {
+fn augment_applied_records_the_applied_augmentation() {
     if !integration_enabled() {
         return;
     }
@@ -662,7 +668,7 @@ fn augment_applied_emits_policy_augmentation_block() {
 
     // exec_baseline ships as three (allow ...) rules in checkpoint 4.
     // Splicing it into a permissive policy must succeed end-to-end and
-    // populate data.policy_augmentation with distinct original/applied
+    // record distinct original/applied
     // hashes; the hash difference proves the controller actually
     // appended bytes regardless of what those bytes grant.
     let tmp = std::env::temp_dir().join(format!("pw-augment-applied-{}.json", std::process::id()));
@@ -683,10 +689,10 @@ fn augment_applied_emits_policy_augmentation_block() {
 
     // The augmented run must succeed end-to-end. Asserting on exit
     // status + normalized_outcome catches regressions that preserve
-    // the policy_augmentation block but break the sbpl-check compile or the
+    // the augmentation record but break the sbpl-check compile or the
     // runner — e.g. a future bug that forwards the augments key past
     // controller resolution would cause the runner to reject the
-    // spec, and we'd still see policy_augmentation in the envelope.
+    // spec, and we'd still see the augmentation record in the envelope.
     assert!(
         out.status.success(),
         "augmented run failed: rc={:?}\nstderr:\n{}\nstdout:\n{}",
@@ -705,9 +711,11 @@ fn augment_applied_emits_policy_augmentation_block() {
     );
 
     let aug = envelope
-        .pointer("/data/policy_augmentation")
+        .pointer("/data/specimen/policy/augmentation")
         .cloned()
-        .expect("data.policy_augmentation missing on augmented run");
+        .expect("data.specimen.policy.augmentation missing on augmented run");
+    assert_eq!(aug["status"], "applied");
+    assert!(aug["error"].is_null());
     let applied: Vec<String> = aug
         .get("applied")
         .and_then(|v| v.as_array())
@@ -736,7 +744,7 @@ fn augment_applied_emits_policy_augmentation_block() {
 
     // The runner must have run against the spliced source. Hard
     // assertion catches a regression that forwards the original
-    // request to the runner while still emitting policy_augmentation.
+    // request to the runner while still recording the augmentation.
     // This is the load-bearing splice invariant now that the sbpl-check compile no
     // longer runs on the happy path (the worker is the sole compiler):
     // `policy_check` is null on a successful run, so the runner's
@@ -809,8 +817,8 @@ fn unknown_augment_short_circuits_to_bad_request() {
         "result.error should name the bad augment (got {error:?})"
     );
 
-    // Runner must NOT have been invoked. data.runner_result is null
-    // and runner_client.argv carries the synthetic marker.
+    // Runner must NOT have been invoked. data.runner_result and
+    // data.runner_client are null; the dossier records the refusal.
     assert!(
         envelope
             .pointer("/data/runner_result")
@@ -818,30 +826,34 @@ fn unknown_augment_short_circuits_to_bad_request() {
             .unwrap_or(true),
         "data.runner_result must be absent/null when augment resolution fails"
     );
-    let argv: Vec<String> = envelope
-        .pointer("/data/runner_client/argv")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-    assert_eq!(
-        argv,
-        vec!["(runner not invoked)".to_string()],
-        "runner_client.argv should mark the runner as not invoked"
-    );
-
-    // data.policy_augmentation must be absent/null — we never produced
-    // an applied list because resolution failed.
     assert!(
         envelope
-            .pointer("/data/policy_augmentation")
-            .map(|v| v.is_null())
-            .unwrap_or(true),
-        "data.policy_augmentation should be absent/null when augment resolution fails"
+            .pointer("/data/runner_client")
+            .map_or(true, |v| v.is_null()),
+        "data.runner_client must be null when the runner is not invoked"
     );
+
+    // The augmentation record reports the refusal: no applied names, no
+    // applied hash, the original hash and the diagnostic; the import scan
+    // did not run.
+    let aug = envelope
+        .pointer("/data/specimen/policy/augmentation")
+        .cloned()
+        .expect("data.specimen.policy.augmentation missing on a refused run");
+    assert_eq!(aug["status"], "failed");
+    assert_eq!(aug["applied"], serde_json::json!([]));
+    assert_eq!(aug["original_sha256"].as_str().map(str::len), Some(64));
+    assert!(aug["applied_sha256"].is_null());
+    assert!(
+        aug["error"]
+            .as_str()
+            .is_some_and(|e| e.contains("this_augment_definitely_does_not_exist_42")),
+        "augmentation.error should name the bad augment (got {aug})"
+    );
+    let imports = &envelope["data"]["specimen"]["policy"]["imports"];
+    assert_eq!(imports["status"], "not_applicable");
+    assert_eq!(imports["failure"], "augmentation_failed");
+    assert_eq!(imports["records"], serde_json::json!([]));
 }
 
 #[test]
@@ -881,7 +893,7 @@ fn invalid_augment_name_rejected_as_bad_request() {
 }
 
 #[test]
-fn absent_augments_omits_policy_augmentation_block() {
+fn absent_augments_record_not_requested() {
     if !integration_enabled() {
         return;
     }
@@ -895,11 +907,22 @@ fn absent_augments_omits_policy_augmentation_block() {
     let out = run_pw(&bin, &["run", specimen.to_str().expect("specimen utf8")]);
     let envelope: serde_json::Value =
         serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("parse run envelope");
-    let aug = envelope.pointer("/data/policy_augmentation");
-    assert!(
-        aug.map(|v| v.is_null()).unwrap_or(true),
-        "data.policy_augmentation should be absent/null for a request without augments \
-         (got {aug:?})"
+    let aug = envelope
+        .pointer("/data/specimen/policy/augmentation")
+        .cloned()
+        .expect("data.specimen.policy.augmentation missing");
+    assert_eq!(
+        aug["status"], "not_requested",
+        "a request without augments records not_requested (got {aug})"
+    );
+    assert_eq!(aug["applied"], serde_json::json!([]));
+    assert!(aug["error"].is_null());
+    assert_eq!(aug["original_sha256"].as_str().map(str::len), Some(64));
+    assert_eq!(aug["original_sha256"], aug["applied_sha256"]);
+    assert_eq!(
+        envelope.pointer("/data/runner_result/policy_sha256"),
+        Some(&aug["applied_sha256"]),
+        "the reply's policy hash is the applied hash on a completed run"
     );
 }
 

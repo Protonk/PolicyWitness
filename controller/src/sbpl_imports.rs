@@ -80,18 +80,21 @@ pub fn resolve_import_path(name: &str) -> Option<PathBuf> {
     None
 }
 
-fn build_import_record(name: String, resolved: PathBuf) -> ImportRecord {
-    let bytes = match std::fs::read(&resolved) {
+fn build_import_record(name: String, resolved: PathBuf) -> (ImportRecord, Option<Vec<u8>>) {
+    let bytes = match read_regular_file(&resolved) {
         Ok(b) => b,
         Err(err) => {
-            return ImportRecord {
-                name,
-                resolved_path: Some(resolved.display().to_string()),
-                sha256: None,
-                size_bytes: None,
-                mtime_unix: None,
-                error: Some(format!("read failed: {err}")),
-            };
+            return (
+                ImportRecord {
+                    name,
+                    resolved_path: Some(resolved.display().to_string()),
+                    sha256: None,
+                    size_bytes: None,
+                    mtime_unix: None,
+                    error: Some(err),
+                },
+                None,
+            );
         }
     };
     let digest = Sha256::digest(&bytes);
@@ -106,19 +109,32 @@ fn build_import_record(name: String, resolved: PathBuf) -> ImportRecord {
         .and_then(|m| m.modified().ok())
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_secs() as i64);
-    ImportRecord {
-        name,
-        resolved_path: Some(resolved.display().to_string()),
-        sha256: Some(sha),
-        size_bytes,
-        mtime_unix,
-        error: None,
-    }
+    (
+        ImportRecord {
+            name,
+            resolved_path: Some(resolved.display().to_string()),
+            sha256: Some(sha),
+            size_bytes,
+            mtime_unix,
+            error: None,
+        },
+        Some(bytes),
+    )
 }
 
+/// Two binaries include this module by path and each reads a subset of these
+/// fields: sbpl-check reports `truncated`; the controller dossier reports
+/// `exceeded` and `nonliteral_imports`.
+#[allow(dead_code)]
 pub struct ResolvedImports {
     pub records: Vec<ImportRecord>,
+    /// True when a bound stopped the traversal; `exceeded` names which one.
     pub truncated: bool,
+    /// The first bound hit, `depth` or `count`, or None.
+    pub exceeded: Option<String>,
+    /// True when some `(import ...)` form in the scanned sources carried a
+    /// nonliteral argument the scanner could not follow.
+    pub nonliteral_imports: bool,
     /// First cycle detected during the walk, expressed as the chain of import
     /// names from the closest enclosing visit down to the back-edge that
     /// closed the cycle. None when no cycle was hit.
@@ -138,14 +154,38 @@ struct ResolverState {
     /// in the caller's namespace rather than the resolver's filesystem form.
     in_progress_names: Vec<String>,
     truncated: bool,
+    exceeded: Option<String>,
+    nonliteral_imports: bool,
     cycle: Option<Vec<String>>,
     /// Unresolved names already recorded — second sighting is silent dedup.
     unresolved_seen: BTreeSet<String>,
 }
 
+fn exceed(state: &mut ResolverState, bound: &str) {
+    state.truncated = true;
+    if state.exceeded.is_none() {
+        state.exceeded = Some(bound.to_string());
+    }
+}
+
+/// Open one resolved import once: `fstat` the descriptor to require a regular
+/// file, then read the bytes that are both hashed and lexed.
+fn read_regular_file(path: &Path) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path).map_err(|e| format!("read failed: {e}"))?;
+    let metadata = file.metadata().map_err(|e| format!("fstat failed: {e}"))?;
+    if !metadata.is_file() {
+        return Err("not a regular file".to_string());
+    }
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.read_to_end(&mut bytes)
+        .map_err(|e| format!("read failed: {e}"))?;
+    Ok(bytes)
+}
+
 fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
     if state.records.len() >= IMPORT_MAX_COUNT {
-        state.truncated = true;
+        exceed(state, "count");
         return;
     }
 
@@ -173,7 +213,7 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
             }
 
             if depth >= IMPORT_MAX_DEPTH {
-                state.truncated = true;
+                exceed(state, "depth");
                 state.records.push(ImportRecord {
                     name,
                     resolved_path: Some(canonical.display().to_string()),
@@ -185,24 +225,35 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
                 return;
             }
 
-            let record = build_import_record(name.clone(), canonical.clone());
-            let resolved_ok = record.error.is_none();
+            let (record, bytes) = build_import_record(name.clone(), canonical.clone());
             state.records.push(record);
-            if !resolved_ok {
-                return;
-            }
+            let Some(bytes) = bytes else { return };
+            // The same bytes that were hashed are lexed. A file that is not
+            // UTF-8 cannot be scanned for imports and is an incomplete inventory.
+            let content = match String::from_utf8(bytes) {
+                Ok(text) => text,
+                Err(_) => {
+                    if let Some(last) = state.records.last_mut() {
+                        last.error =
+                            Some("not valid UTF-8; its imports were not scanned".to_string());
+                    }
+                    return;
+                }
+            };
 
             state.in_progress.push(canonical.clone());
             state.in_progress_names.push(name);
 
-            if let Ok(content) = std::fs::read_to_string(&canonical) {
-                for child in sbpl_lex::import_refs(&content) {
-                    if state.records.len() >= IMPORT_MAX_COUNT {
-                        state.truncated = true;
-                        break;
-                    }
-                    dfs_visit_import(child, depth + 1, state);
+            let scan = sbpl_lex::import_scan(&content);
+            if !scan.scan_complete {
+                state.nonliteral_imports = true;
+            }
+            for child in scan.refs {
+                if state.records.len() >= IMPORT_MAX_COUNT {
+                    exceed(state, "count");
+                    break;
                 }
+                dfs_visit_import(child, depth + 1, state);
             }
 
             state.in_progress.pop();
@@ -234,11 +285,15 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
         in_progress: Vec::new(),
         in_progress_names: Vec::new(),
         truncated: false,
+        exceeded: None,
+        nonliteral_imports: false,
         cycle: None,
         unresolved_seen: BTreeSet::new(),
     };
 
-    for name in sbpl_lex::import_refs(source) {
+    let scan = sbpl_lex::import_scan(source);
+    state.nonliteral_imports = !scan.scan_complete;
+    for name in scan.refs {
         dfs_visit_import(name, 0, &mut state);
     }
 
@@ -254,6 +309,8 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
     ResolvedImports {
         records: state.records,
         truncated: state.truncated,
+        exceeded: state.exceeded,
+        nonliteral_imports: state.nonliteral_imports,
         cycle: state.cycle,
     }
 }

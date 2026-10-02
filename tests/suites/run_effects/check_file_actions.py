@@ -85,8 +85,8 @@ def check_step(step, target, prediction_expectation, expected_outcome):
         assert prediction['outcome'] == prediction_expectation, prediction
     assert step['comparison']['order'] == ('unestablished' if prediction_expectation == 'unavailable' else 'query_first'), step
     if attempt['requested_action'] == 'unlink' and prediction_expectation == 'allow':
-        assert step['drift'] is False and step['comparison']['conclusion'] == 'agreement', step
-        assert 'attempt_mutation_order_unestablished' not in step['comparison']['limitations'], step
+        assert step['comparison']['observation'] == 'succeeded', step
+        assert step['comparison']['limitations'] == [], step
     assert attempt['requested_path'] == str(target), attempt
     assert attempt['outcome'] == expected_outcome, attempt
     if expected_outcome == 'ok':
@@ -132,7 +132,6 @@ def main():
                         'denied_operation': denied_operation, 'effect': expectation,
                         'prediction_expectation': prediction_expectation,
                         'prediction': step['sandbox_check']['outcome'],
-                        'drift': step.get('drift'),
                         'comparison_limitations': (step.get('comparison') or {}).get('limitations'),
                         'attempt_outcome': attempt_summary(step)})
         print(f'{name}: external effect "{expectation}" observed; attempt reported {expected_outcome}; '

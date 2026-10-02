@@ -8,8 +8,8 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::{PW_RUNNER_STANDARD_SERVICE_DIR, resolve_pw_runner_bundle_info};
-use crate::evidence;
+use crate::app_layout::SHIPPED_SERVICE;
+use crate::evidence::{self, EvidenceManifest};
 use crate::runner_manager::{
     self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope,
     RunnerSignature,
@@ -33,7 +33,6 @@ pub struct RunnerTarget {
     pub kind: RunnerKind,
     pub connection: RunnerConnectionKind,
     pub service_name: String,
-    pub process_name: String,
     pub bundle_id: Option<String>,
     pub bundle_path: Option<PathBuf>,
     pub executable_path: Option<PathBuf>,
@@ -42,7 +41,7 @@ pub struct RunnerTarget {
     pub entitlements: Option<RunnerEntitlements>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct RunnerProvenance {
     runner_kind: String,
     runner_registry_id: Option<String>,
@@ -139,40 +138,54 @@ fn entitlements_from_manifest_value(
     entitlements
 }
 
-fn builtin_runner_target(app_root: &Path, kind: RunnerKind) -> Result<RunnerTarget, String> {
-    let service_dir = match kind {
-        RunnerKind::Standard => PW_RUNNER_STANDARD_SERVICE_DIR,
-        RunnerKind::Byoxpc => {
-            return Err("builtin runner target requires a built-in kind".to_string());
+/// The built-in runner, selected from the app evidence manifest: the one
+/// `xpc-service` entry at the fixed shipped path, whose `bundle_id` names the
+/// XPC connection. No Info.plist is read; no `id`, `bundle_id` or service-name
+/// lookup substitutes for the path.
+fn builtin_runner_target(
+    app_root: &Path,
+    manifest: Result<&EvidenceManifest, &String>,
+    kind: RunnerKind,
+) -> Result<RunnerTarget, String> {
+    if matches!(kind, RunnerKind::Byoxpc) {
+        return Err("builtin runner target requires a built-in kind".to_string());
+    }
+    let manifest = manifest.map_err(|e| format!("built-in runner unavailable: {e}"))?;
+    let entry =
+        evidence::unique_typed_entry(manifest, SHIPPED_SERVICE.rel_path, SHIPPED_SERVICE.kind)
+            .map_err(|e| format!("built-in runner unavailable: {e}"))?;
+    let bundle_id = match entry.bundle_id.as_deref() {
+        Some(id) if !id.is_empty() && !id.contains('\0') => id.to_string(),
+        Some(_) => {
+            return Err(format!(
+                "built-in runner unavailable: evidence manifest entry at {} has an empty or NUL-containing bundle_id",
+                SHIPPED_SERVICE.rel_path
+            ));
+        }
+        None => {
+            return Err(format!(
+                "built-in runner unavailable: evidence manifest entry at {} has no bundle_id",
+                SHIPPED_SERVICE.rel_path
+            ));
         }
     };
-    let runner_info = resolve_pw_runner_bundle_info(app_root, service_dir)?;
-    let bundle_path = app_root
-        .join("Contents")
-        .join("XPCServices")
-        .join(format!("{service_dir}.xpc"));
-    let executable_path = bundle_path
-        .join("Contents")
-        .join("MacOS")
-        .join(&runner_info.executable);
-
-    let manifest_path = evidence::manifest_path_from_app_root(app_root);
-    let manifest = evidence::load_manifest(&manifest_path)
-        .map_err(|e| format!("failed to read evidence manifest: {e}"))?;
-    let rel_path = evidence::rel_path_from_absolute(app_root, &executable_path).unwrap_or_default();
-    let entry = evidence::find_entry_by_rel_path(&manifest, &rel_path)
-        .or_else(|| evidence::find_entry_by_id(&manifest, &runner_info.bundle_id));
-    let entitlements = entry.map(|e| {
-        entitlements_from_manifest_value(e.entitlements.as_ref(), e.entitlements_error.as_ref())
-    });
+    let executable_path = app_root.join(SHIPPED_SERVICE.rel_path);
+    let bundle_path = executable_path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf());
+    let entitlements = Some(entitlements_from_manifest_value(
+        entry.entitlements.as_ref(),
+        entry.entitlements_error.as_ref(),
+    ));
 
     Ok(RunnerTarget {
         kind,
         connection: RunnerConnectionKind::XpcService,
-        service_name: runner_info.bundle_id.clone(),
-        process_name: runner_info.executable.clone(),
-        bundle_id: Some(runner_info.bundle_id),
-        bundle_path: Some(bundle_path),
+        service_name: bundle_id.clone(),
+        bundle_id: Some(bundle_id),
+        bundle_path,
         executable_path: Some(executable_path),
         registry_id: None,
         signature: None,
@@ -207,9 +220,10 @@ fn enforce_required_entitlements(
 
 pub fn resolve_runner_target(
     app_root: &Path,
+    manifest: Result<&EvidenceManifest, &String>,
     selector: &RunnerSelector,
 ) -> Result<RunnerTarget, String> {
-    resolve_runner_target_with_registry(app_root, selector, None)
+    resolve_runner_target_with_registry(app_root, manifest, selector, None)
 }
 
 /// `resolve_runner_target` with the external-registry location injectable.
@@ -218,9 +232,11 @@ pub fn resolve_runner_target(
 /// the whole external chain — `load_registry → find_external_record →
 /// resolve_external_target → enforce_required_entitlements` — is exercisable
 /// at the public boundary without mutating the process-global env. The
-/// override is consulted lazily: the built-in branch never touches it.
+/// override is consulted lazily: the built-in branch never touches it, and
+/// the external branch never touches the app manifest.
 pub fn resolve_runner_target_with_registry(
     app_root: &Path,
+    manifest: Result<&EvidenceManifest, &String>,
     selector: &RunnerSelector,
     registry_path_override: Option<&Path>,
 ) -> Result<RunnerTarget, String> {
@@ -242,7 +258,7 @@ pub fn resolve_runner_target_with_registry(
                 "runner.mode requires runner.id or runner.service for external runners".to_string(),
             );
         }
-        let target = builtin_runner_target(app_root, kind)?;
+        let target = builtin_runner_target(app_root, manifest, kind)?;
         enforce_required_entitlements(
             &selector.required_entitlements,
             target.entitlements.as_ref(),
@@ -322,11 +338,6 @@ fn resolve_external_target(
         kind: record_kind,
         connection,
         service_name: record.service_name.clone(),
-        process_name: Path::new(&record.executable_path)
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("PWRunner")
-            .to_string(),
         bundle_id: record.bundle_id.clone(),
         bundle_path: Some(PathBuf::from(&record.bundle_path)),
         executable_path: Some(PathBuf::from(&record.executable_path)),
@@ -527,7 +538,11 @@ mod tests {
             mode: Some(RunnerKind::Standard),
             ..Default::default()
         };
-        let err = err_of(resolve_runner_target(Path::new("/nonexistent"), &selector));
+        let err = err_of(resolve_runner_target(
+            Path::new("/nonexistent"),
+            Err(&"no manifest".to_string()),
+            &selector,
+        ));
         assert!(
             err.contains("cannot be combined with an external runner"),
             "got: {err}"
@@ -540,7 +555,11 @@ mod tests {
             mode: Some(RunnerKind::Byoxpc),
             ..Default::default()
         };
-        let err = err_of(resolve_runner_target(Path::new("/nonexistent"), &selector));
+        let err = err_of(resolve_runner_target(
+            Path::new("/nonexistent"),
+            Err(&"no manifest".to_string()),
+            &selector,
+        ));
         assert!(
             err.contains("requires runner.id or runner.service"),
             "got: {err}"
@@ -749,6 +768,7 @@ mod tests {
         let selector = selector_with(Some(RunnerKind::Byoxpc), &["A", "B"], true);
         let err = err_of(resolve_runner_target_with_registry(
             Path::new("/unused"),
+            Err(&"no manifest".to_string()),
             &selector,
             Some(&path),
         ));
@@ -772,9 +792,13 @@ mod tests {
         )]);
         let path = registry_fixture(&reg);
         let selector = selector_with(Some(RunnerKind::Byoxpc), &["A"], true);
-        let target =
-            resolve_runner_target_with_registry(Path::new("/unused"), &selector, Some(&path))
-                .expect("resolve");
+        let target = resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Err(&"no manifest".to_string()),
+            &selector,
+            Some(&path),
+        )
+        .expect("resolve");
         assert_eq!(target.kind, RunnerKind::Byoxpc);
         assert_eq!(target.registry_id.as_deref(), Some("runner-ext"));
         match target.connection {

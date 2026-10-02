@@ -26,21 +26,23 @@ def main():
             "policy_format": "sbpl", "require_sandboxed_after_apply": True,
             "steps": [
                 {"step_id": "fs_read_missing", "sandbox_outcome": "prediction_unavailable",
-                 "attempt_ok": False, "errno": 2, "drift": None},
+                 "attempt_ok": False, "errno": 2},
                 {"step_id": "mach_lookup_invalid", "sandbox_outcome": "allow",
-                 "attempt_ok": False, "drift": None},
+                 "attempt_ok": False},
                 {"step_id": "fs_read_allowed", "sandbox_outcome": "allow",
-                 "attempt_ok": True, "errno": None, "drift": False},
+                 "attempt_ok": True, "errno": None},
             ],
         },
         "blackbox_menagerie": {"steps": [
             {"step_id": "fs_read_missing",
-             "expect": {"predict": "prediction_unavailable", "attempt_ok": False,
-                        "errno": 2, "drift": None}},
+             "expect": {"predict": "prediction_unavailable", "attempt_ok": False, "errno": 2,
+                        "comparison": {"observation": "other_failure", "order": "unestablished"}}},
             {"step_id": "mach_lookup_invalid",
-             "expect": {"predict": "allow", "attempt_ok": False, "drift": None}},
+             "expect": {"predict": "allow", "attempt_ok": False}},
             {"step_id": "fs_read_allowed",
-             "expect": {"predict": "allow", "attempt_ok": True, "errno": None, "drift": False}},
+             "expect": {"predict": "allow", "attempt_ok": True, "errno": None,
+                        "comparison": {"observation": "succeeded", "operation_relation": "matched",
+                                       "target_relation": "same_submitted"}}},
         ]},
     }
     failures = []
@@ -93,7 +95,6 @@ def main():
         ("sandbox_check", "filter_type_id", "missing sandbox_check.filter_type_id"),
         ("attempt", "rc", "missing attempt.rc"),
         ("attempt", "errno", "missing attempt.errno"),
-        ("attempt", "exit_code", "missing attempt.exit_code"),
         ("attempt", "observed_path", "missing attempt.observed_path"),
     ):
         broken, steps = mutate()
@@ -101,48 +102,47 @@ def main():
         check(f"missing_{channel}_{key}", broken, (diagnostic,), status=1)
 
     broken, steps = mutate()
-    del steps[1]["drift"]  # A real allow verdict, not the unavailable sentinel.
-    check("missing_expected_null_drift", broken, ("mach_lookup_invalid: missing drift",), status=1)
-
-    broken, steps = mutate()
     steps[0]["sandbox_check"]["rc"] = 0
     check("unavailable_wrong_sentinel", broken, ("expected unavailable sandbox_check.rc=-1",), status=1)
-    broken, steps = mutate()
-    del steps[0]["drift"]
-    check("unavailable_missing_drift", broken,
-          ("expected unavailable prediction to have explicit drift=null",), status=1)
 
     for channel, key in (("sandbox_check", "pid"), ("sandbox_check", "filter_type_id"),
-                         ("sandbox_check", "errno"), ("attempt", "exit_code"),
-                         ("attempt", "errno"), ("attempt", "syscall_errno"), ("attempt", "rc")):
+                         ("sandbox_check", "errno"), ("attempt", "errno"), ("attempt", "rc")):
         broken, steps = mutate()
         steps[2][channel][key] = False
         check(f"boolean_{channel}_{key}", broken, (f"invalid {channel}.{key}",), status=1)
 
-    for key, diagnostic in (("rc", "invalid attempt.rc"), ("exit_code", "invalid attempt.exit_code"),
-                            ("errno", "attempt.errno mismatch")):
-        broken, steps = mutate()
-        steps[0]["attempt"][key] = None
-        check(f"null_attempt_{key}", broken, (diagnostic,), status=1)
-    for key, value in (("rc", 3), ("errno", 13)):
-        broken, steps = mutate()
-        steps[0]["attempt"][key] = value
-        check(f"disagreeing_attempt_{key}", broken, (f"attempt.{key} mismatch",), status=1)
+    broken, steps = mutate()
+    steps[0]["attempt"]["rc"] = None
+    check("null_attempt_rc", broken, ("invalid attempt.rc",), status=1)
     broken, steps = mutate()
     steps[0]["attempt"]["errno"] = 2.0
-    check("float_alias_equals_integer", broken,
-          ("invalid attempt.errno", "attempt.errno mismatch"), status=1)
+    check("float_errno_is_not_an_integer", broken, ("invalid attempt.errno",), status=1)
     broken, steps = mutate()
-    steps[2]["attempt"].update(errno=1, syscall_errno=1)
+    steps[2]["attempt"].update(errno=1)
     check("expected_null_errno", broken, ("fs_read_allowed: expected errno=None",), status=1)
     for value in (None, "optional diagnostic text"):
         changed, steps = mutate()
         steps[0]["attempt"]["error"] = value
         check(f"optional_attempt_error_{value is None}", changed)
 
+    # Removed keys are rejected by the shared document validator, for both checkers.
+    for label, mutate_step, diagnostic in (
+        ("drift", lambda s: s.update(drift=None), "removed key steps[].drift"),
+        ("deny_signal", lambda s: s.update(deny_signal=None), "removed key steps[].deny_signal"),
+        ("conclusion", lambda s: s["comparison"].update(conclusion="agreement"), "removed key comparison.conclusion"),
+        ("attempt_exit_code", lambda s: s["attempt"].update(exit_code=0), "removed key attempt.exit_code"),
+        ("attempt_syscall_errno", lambda s: s["attempt"].update(syscall_errno=None), "removed key attempt.syscall_errno"),
+        ("query_scope", lambda s: s["sandbox_check"].update(scope="post_sandbox"), "removed key sandbox_check.scope"),
+    ):
+        broken, steps = mutate()
+        mutate_step(steps[2])
+        check(f"removed_key_{label}", broken, (diagnostic,), status=1)
     broken, steps = mutate()
-    steps[2]["drift"] = 0
-    check("integer_drift", broken, ("invalid drift",), status=1)
+    steps[2]["comparison"]["limitations"].append("state_stability_unestablished")
+    check("limitation_outside_vocabulary", broken, ("limitation outside the vocabulary",), status=1)
+    broken, steps = mutate()
+    steps[2]["comparison"]["observation"] = "permission_failure"
+    check("observation_disagrees_with_attempt", broken, ("disagrees with the attempt fields",), status=1)
 
     for name in ("duplicate", "missing", "unknown", "non_object"):
         broken, steps = mutate()
@@ -164,7 +164,7 @@ def main():
     check("reordered_step", changed, ("expected step IDs in order",), status=1,
           same_diagnostics_as=valid_diagnostics)
     broken, steps = mutate()
-    steps[2]["attempt"].update(rc=1, exit_code=1, errno=13, syscall_errno=13)
+    steps[2]["attempt"].update(rc=1, errno=13)
     attempt_errors = ("fs_read_allowed: expected attempt_ok=True", "fs_read_allowed: expected errno=None")
     ordered_diagnostics = check("attribution_bad_attempt", broken, attempt_errors, status=1)
     steps.reverse()  # The faulty step moves, while its expectation stays put.
@@ -173,14 +173,14 @@ def main():
 
     broken, steps = mutate()
     steps[0]["sandbox_check"]["outcome"] = "deny"
-    steps[2]["attempt"].update(rc=1, exit_code=1)
+    steps[2]["attempt"].update(rc=1)
     check("prediction_and_later_attempt", broken,
           ("fs_read_missing: expected sandbox_check prediction_unavailable",
            "fs_read_allowed: expected attempt_ok=True"), status=1)
 
     broken, steps = mutate()
     steps[0]["sandbox_check"] = None
-    steps[0]["attempt"].update(rc=0, exit_code=0)
+    steps[0]["attempt"].update(rc=0)
     del steps[2]["attempt"]
     check("independent_malformed_channels", broken,
           ("missing sandbox_check for fs_read_missing", "fs_read_missing: expected attempt_ok=False",
@@ -193,11 +193,18 @@ def main():
 
     # The shared checks accept the documented nullable filter type on explicit
     # error/sentinel results. Neither suite may silently skip their attempts.
-    for outcome, errno in (("deny", None), ("error", 5), ("unsupported_operation", 22)):
+    for outcome, errno in (("deny", 0), ("error", 5), ("unsupported_operation", 22)):
         changed, steps = mutate()
         steps[1]["sandbox_check"].update(outcome=outcome, rc=1 if outcome == "deny" else -1,
+                                         native_rc=1 if outcome == "deny" else -1,
                                          filter_type_id=2 if outcome == "deny" else None, errno=errno,
                                          error=None if outcome == "deny" else "validator control failure")
+        for record in changed["data"]["runner_result"]["validator_subprocess"]["records"]:
+            if record["step_id"] == steps[1]["step_id"]:
+                record.update(outcome=outcome, rc=1 if outcome == "deny" else -1, errno=errno)
+        if outcome != "deny":
+            # An error verdict has no eligible native record, so the row claims no order.
+            steps[1]["comparison"]["order"] = "unestablished"
         expected = copy.deepcopy(expectations)
         expected["blackbox_e2e"]["steps"][1]["sandbox_outcome"] = outcome
         expected["blackbox_menagerie"]["steps"][1]["expect"]["predict"] = outcome
@@ -219,7 +226,7 @@ def main():
     check("unobserved_mismatch", baseline, ("expected mismatch (control_boundary) not observed",),
           expected=expected, suites=("blackbox_menagerie",), status=3)
     broken, steps = mutate()
-    steps[2]["attempt"].update(rc=1, exit_code=1)
+    steps[2]["attempt"].update(rc=1)
     check("pending_skip_and_later_failure", broken, ("fs_read_allowed: expected attempt_ok=True",),
           expected=expected, suites=("blackbox_menagerie",), status=1)
     first["policy"] = "allow"
@@ -243,21 +250,17 @@ def main():
           expected=expected, suites=("blackbox_menagerie",), status=1)
 
     expected = copy.deepcopy(expectations)
-    expected["blackbox_e2e"]["steps"][1].update(deny_signal_unavailable=True, expect_denial=False)
-    check("signal_and_denial", baseline, expected=expected, suites=("blackbox_e2e",))
+    expected["blackbox_e2e"]["steps"][1].update(expect_denial=False)
+    check("denial_classification", baseline, expected=expected, suites=("blackbox_e2e",))
     broken, steps = mutate()
-    steps[1]["deny_signal"] = {"signal": "SIGUSR1", "count_before": 0, "count_after": 0, "delta": 0}
-    check("fabricated_zero_signal", broken, ("expected explicit deny_signal=null",),
-          expected=expected, suites=("blackbox_e2e",), status=1)
-    broken, steps = mutate()
-    del steps[1]["deny_signal"]
-    check("missing_signal_key", broken, ("expected explicit deny_signal=null",),
-          expected=expected, suites=("blackbox_e2e",), status=1)
-    broken, steps = mutate()
-    steps[1]["sandbox_check"].update(outcome="deny", rc=1)
+    steps[1]["sandbox_check"].update(outcome="deny", rc=1, native_rc=1)
     expected["blackbox_e2e"]["steps"][1]["sandbox_outcome"] = "deny"
     check("wrong_denial_classification", broken, ("expected denial=False",),
           expected=expected, suites=("blackbox_e2e",), status=1)
+    # The document version is read exactly: another reply version is one error.
+    broken, _ = mutate()
+    broken["data"]["runner_result"]["schema_version"] += 1
+    check("unsupported_reply_version", broken, ("unsupported runner response",), status=1)
 
     if failures:
         raise SystemExit("\n".join(failures))

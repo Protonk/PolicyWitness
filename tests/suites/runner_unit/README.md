@@ -11,11 +11,12 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
   Command Line Tools without full Xcode.
 - `PWRunnerCore` is built with `-enable-testing` so tests can
   `@testable import` it; production builds via `build.sh` are unaffected.
-- `SandboxApplyTests` exercises the unused Swift `applySandboxPolicy` helper
-  with stubbed library calls. It provides no coverage of production C-worker
-  failures or their forwarding. `HostOutcomeClassifierTests` covers the host's
-  interpretation of constructed worker results; `runner_c_worker_harness` owns
-  the real-worker `compile_failure` case.
+- `HostOutcomeClassifierTests` covers the host's interpretation of
+  constructed worker results; `runner_c_worker_harness` owns the real-worker
+  `compile_failure` case. `ComparisonEvidenceTests` reads every row of
+  `tests/fixtures/comparison/matrix.json` through `comparisonEvidence(...)`
+  and pins the limitations vocabulary and host path provenance at the
+  producer. The host never touches libsandbox, so no Swift test stubs it.
 - The fast CWorker per-exec deadline diagnostic remains here; process-group
   cleanup, output retention, and plan continuation are covered through the
   public CLI by `runner_exec_lifecycle`.
@@ -29,8 +30,7 @@ classifier branches, live worker/validator drivers, and host lifecycle observati
   compares the Swift spellings and the resolver's answers with
   `tests/lib/lifecycle_contract.py` (every hand-reviewed example row).
 - `PathDiagnosticsTests` pins all nine combinations of compact path states,
-  UTF-8 identity, rejection of conflicting/missing representations, and legacy
-  omission preservation. `tests/fixtures/contract/path_diagnostics.json` supplies
+  UTF-8 identity, and rejection of conflicting/missing representations. `tests/fixtures/contract/path_diagnostics.json` supplies
   shared cases to Swift decoding/encoding, Rust receiver forwarding and Python
   consumer checks. CLI integration separately checks native Unicode realpath
   spelling through the signed app.

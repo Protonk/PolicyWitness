@@ -78,7 +78,7 @@ def harness_control(harness, worker, out, expected):
 
 def build_host(package, work, out):
     objects = []
-    for name in ('PWSandboxCheckShim', 'PWCWorkerShim'):
+    for name in ('PWCWorkerShim',):
         obj = work / (name + '.o'); objects.append(obj)
         command(out / ('compile-' + name), ['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-c',
             package / 'Sources' / name / (name + '.c'), '-o', obj])

@@ -29,17 +29,14 @@ INFO_PLIST_TEMPLATE="${ROOT_DIR}/Info.plist"
 # Runner source layout.
 XPC_ROOT="${ROOT_DIR}/runner"
 XPC_RUNNER_API_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerAPI.swift"
-XPC_RUNNER_SANDBOX_LIB_FILE="${XPC_ROOT}/Sources/PWRunnerCore/SandboxLib.swift"
 XPC_RUNNER_SANDBOX_APPLY_FILE="${XPC_ROOT}/Sources/PWRunnerCore/SandboxApply.swift"
 XPC_RUNNER_PROBE_RUNNER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ProbeRunner.swift"
 XPC_RUNNER_PATH_UTILS_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PathUtils.swift"
-XPC_RUNNER_SIGNALS_FILE="${XPC_ROOT}/Sources/PWRunnerCore/Signals.swift"
 XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorker.swift"
 XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ValidatorClient.swift"
 XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
 XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerService.swift"
 XPC_RUNNER_LISTENER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerListener.swift"
-XPC_RUNNER_SANDBOX_SHIM="${XPC_ROOT}/Sources/PWSandboxCheckShim/PWSandboxCheckShim.c"
 XPC_RUNNER_CWORKER_SHIM="${XPC_ROOT}/Sources/PWCWorkerShim/PWCWorkerShim.c"
 XPC_RUNNER_CLIENT_MAIN="${XPC_ROOT}/Clients/PWRunnerClient/main.swift"
 XPC_SERVICES_DIR="${XPC_ROOT}/Services"
@@ -318,10 +315,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_API_FILE}" 1>&2
     exit 2
   fi
-  if [[ ! -f "${XPC_RUNNER_SANDBOX_LIB_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_SANDBOX_LIB_FILE}" 1>&2
-    exit 2
-  fi
   if [[ ! -f "${XPC_RUNNER_SANDBOX_APPLY_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SANDBOX_APPLY_FILE}" 1>&2
     exit 2
@@ -332,10 +325,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   fi
   if [[ ! -f "${XPC_RUNNER_PATH_UTILS_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_PATH_UTILS_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_SIGNALS_FILE}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_SIGNALS_FILE}" 1>&2
     exit 2
   fi
   if [[ ! -f "${XPC_RUNNER_CWORKER_FILE}" ]]; then
@@ -352,10 +341,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   fi
   if [[ ! -f "${XPC_RUNNER_SERVICE_FILE}" ]]; then
     echo "ERROR: missing ${XPC_RUNNER_SERVICE_FILE}" 1>&2
-    exit 2
-  fi
-  if [[ ! -f "${XPC_RUNNER_SANDBOX_SHIM}" ]]; then
-    echo "ERROR: missing ${XPC_RUNNER_SANDBOX_SHIM}" 1>&2
     exit 2
   fi
   if [[ ! -f "${XPC_RUNNER_CWORKER_SHIM}" ]]; then
@@ -377,8 +362,6 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
   chmod +x "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 
   echo "==> Building embedded PWRunner XPC services"
-  shim_obj="${SWIFT_MODULE_CACHE}/PWSandboxCheckShim.o"
-  /usr/bin/xcrun --sdk macosx clang -c "${XPC_RUNNER_SANDBOX_SHIM}" -o "${shim_obj}"
   cworker_shim_obj="${SWIFT_MODULE_CACHE}/PWCWorkerShim.o"
   /usr/bin/xcrun --sdk macosx clang -c "${XPC_RUNNER_CWORKER_SHIM}" -o "${cworker_shim_obj}"
   for svc_name in "${XPC_SERVICE_NAMES[@]}"; do
@@ -403,17 +386,15 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${SWIFT_FLAGS[@]}" \
       -o "${svc_bundle}/Contents/MacOS/${svc_name}" \
       "${XPC_RUNNER_API_FILE}" \
-      "${XPC_RUNNER_SANDBOX_LIB_FILE}" \
       "${XPC_RUNNER_SANDBOX_APPLY_FILE}" \
       "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
       "${XPC_RUNNER_PATH_UTILS_FILE}" \
-      "${XPC_RUNNER_SIGNALS_FILE}" \
       "${XPC_RUNNER_CWORKER_FILE}" \
       "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
       "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
       "${XPC_RUNNER_SERVICE_FILE}" \
       "${XPC_RUNNER_LISTENER_FILE}" \
-      "${svc_main}" "${shim_obj}" "${cworker_shim_obj}"
+      "${svc_main}" "${cworker_shim_obj}"
     chmod +x "${svc_bundle}/Contents/MacOS/${svc_name}"
 
     # Embed pw-probe-runner inside the XPC service bundle so the host

@@ -84,7 +84,7 @@ class Tools:
         for case, leaf in zip(cases, ('policy_witness.run.stdout.json', 'run.json')):
             path = output / 'suites' / case / 'artifacts' / leaf
             path.parent.mkdir(parents=True)
-            path.write_text(json.dumps({'data': {'runner_provenance': {
-                'runner_kind': 'byoxpc' if self.mode == 'wrong_runner' else 'standard'}}}))
+            path.write_text(json.dumps({'data': {'specimen': {'runner_provenance': {
+                'runner_kind': 'byoxpc' if self.mode == 'wrong_runner' else 'standard'}}}}))
         if self.mode == 'mutated_app':
             (app / 'Contents/Info.plist').write_bytes(b'modified during testing')

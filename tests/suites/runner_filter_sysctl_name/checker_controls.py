@@ -4,6 +4,8 @@
 Keep inputs, expected statuses and diagnostics independent of the checker and
 production code. Each caller's arguments are repeated deliberately so a generic
 contract passing in another suite cannot substitute for checking these adapters.
+Every control is a current-contract document: the record names the planning
+exclusion, the attempt keeps its own observation, and the version is read exactly.
 """
 import copy
 import json
@@ -13,12 +15,66 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'tests/lib'))
+import contract
+from blackbox import envelope_skeleton
+
 CHECKER = ROOT / "tests/lib/unavailable_prediction.py"
 CALLERS = (
     ("iokit_registry_entry_class", "iosurface_open", "iokit-open-service", "IOSurfaceRoot", "file_open"),
     ("iokit_user_client_class", "iosurfaceroot_uc", "iokit-open-user-client", "IOSurfaceRootUserClient", "file_open"),
     ("sysctl_name", "kern_osrelease", "sysctl-read", "kern.osrelease", "sysctl_denied"),
 )
+
+
+def current_reply(step_id, operation, value, sysctl):
+    """A reply with one planning-excluded query beside a completed attempt."""
+    step = {
+        "step_id": step_id,
+        "sandbox_check": {
+            "pid": 1234, "operation": operation, "filter_kind": "sysctl_name" if sysctl else operation.split("-")[-1],
+            "filter_value": value, "filter_type_id": None,
+            "outcome": "prediction_unavailable", "rc": -1, "native_rc": None, "errno": None, "error": None,
+            "result_source": "synthetic", "missing_reason": "query_not_requested",
+        },
+        "attempt": {
+            "requested_kind": "sysctl" if sysctl else "file",
+            "requested_action": "read" if sysctl else "open_read",
+            "outcome": "sysctl_failed" if sysctl else "ok",
+            "rc": 1 if sysctl else 0, "errno": 1 if sysctl else None, "error": None,
+            "requested_path": "kern.osrelease" if sysctl else "/etc/hosts",
+            "observed_path": None if sysctl else "/private/etc/hosts",
+            "result_source": "worker",
+            "lifecycle": {"boundary": {"state": "supported", "answer": "reached", "basis": ["slot", "attempt_support"]},
+                          "result": {"state": "supported", "answer": "published", "basis": ["slot", "attempt_support"]},
+                          "summary": "completed"},
+        },
+        # The relations come from the submitted scopes even though the query was
+        # never asked: the sysctl pair names the same operation and target, the
+        # IOKit placeholders name a different operation and a non-path target.
+        "comparison": {
+            "observation": "permission_failure" if sysctl else "succeeded",
+            "observation_basis": "permission_errno" if sysctl else "completed_worker_status",
+            "operation_relation": "matched" if sysctl else "different",
+            "target_relation": "same_submitted" if sysctl else "unresolved",
+            "order": "unestablished", "limitations": ["query_plan:prediction_unavailable_pair"],
+        },
+    }
+    if not sysctl:
+        step["attempt"]["path_diagnostics"] = {"input": "/etc/hosts", "observer": "runner_host",
+                                              "phase": "after_orchestration", "same_as_input": [],
+                                              "realpath_resolved": "/private/etc/hosts",
+                                              "parent_realpath_resolved": "/private/etc/hosts"}
+    return {
+        "schema_version": contract.RESPONSE_SCHEMA, "normalized_outcome": "ok", "rc": 0, "error": None,
+        "policy_format": "sbpl", "sandboxed_after_apply": True, "pid": 1234, "specimen_id": "control",
+        "runner_subprocess": {"pid": 1234, "reaped": True, "exit_code": 0, "term_signal": None, "partial_steps": False,
+                              "disposition": {"questions": {}, "steps": [], "issues": []},
+                              "ordering": {"collection_closed_before_proceed": True, "proceed_set": True,
+                                           "proceed_observed": True, "worker_lifetime_established": True,
+                                           "protocol_violations": [], "validator_disposition": "not_needed"}},
+        "steps": [step],
+    }
 
 
 def main():
@@ -28,29 +84,9 @@ def main():
     count = 0
     for name, step_id, operation, value, attempt_contract in CALLERS:
         sysctl = name == "sysctl_name"
-        baseline = {
-            "kind": "run", "result": {"ok": True},
-            "data": {"runner_result": {
-                "normalized_outcome": "ok", "policy_format": "sbpl",
-                "steps": [{
-                    "step_id": step_id, "drift": None,
-                    "sandbox_check": {
-                        "scope": "post_sandbox", "pid": 1234, "operation": operation,
-                        "filter_value": value, "filter_type_id": None,
-                        "outcome": "prediction_unavailable", "rc": -1, "errno": None, "error": None,
-                    },
-                    "attempt": {
-                        "outcome": "sysctl_failed" if sysctl else "ok",
-                        "rc": 1 if sysctl else 0, "exit_code": 1 if sysctl else 0,
-                        "errno": 1 if sysctl else None, "syscall_errno": 1 if sysctl else None,
-                        "requested_path": "kern.osrelease" if sysctl else "/etc/hosts",
-                        "observed_path": None if sysctl else "/private/etc/hosts",
-                    },
-                }],
-            }},
-        }
+        baseline = envelope_skeleton(current_reply(step_id, operation, value, sysctl))
 
-        def check(label, envelope, diagnostics=(), status=1, raw=None, minimum_schema_version=None):
+        def check(label, envelope, diagnostics=(), status=1, raw=None):
             nonlocal count
             count += 1
             stem = artifacts / f"{name}.{label}"
@@ -58,8 +94,6 @@ def main():
             run_path.write_text(raw if raw is not None else json.dumps(envelope, indent=2) + "\n")
             argv = [sys.executable, str(CHECKER), str(run_path), "--step-id", step_id,
                     "--operation", operation, "--filter-value", value, "--attempt", attempt_contract]
-            if minimum_schema_version is not None:
-                argv.extend(["--minimum-schema-version", str(minimum_schema_version)])
             result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
             output = result.stdout + result.stderr
             Path(f"{stem}.log").write_text(f"argv={argv!r}\nrc={result.returncode}\n{output}")
@@ -74,78 +108,63 @@ def main():
             return envelope, envelope["data"]["runner_result"]["steps"][0]
 
         check("valid_nullable_evidence", baseline, status=0)
-        # Current live output must not take the compatibility path used by stored
-        # fixtures. These reports are authored here, independent of PW output.
-        current, step = mutate()
-        current["data"]["runner_result"].update(schema_version=8, sandboxed_after_apply=True,
-            runner_subprocess=dict(pid=1234, ordering=dict(
-                collection_closed_before_proceed=True, proceed_set=True, proceed_observed=True,
-                worker_lifetime_established=True, protocol_violations=[], validator_disposition="not_needed")))
-        step["attempt"].update(requested_kind="sysctl" if sysctl else "file",
-                               requested_action="read" if sysctl else "open_read",
-                               missing_reason=None)
-        step["sandbox_check"]["missing_reason"] = "query_not_requested"
-        step["comparison"] = {
-            "scope": "submitted_operation_and_target", "prediction": "unavailable",
-            "observation": "permission_failure" if sysctl else "succeeded",
-            "observation_basis": "permission_errno" if sysctl else "completed_worker_status",
-            "operation_relation": "unresolved", "target_relation": "unresolved",
-            "conclusion": "unavailable", "order": "unestablished", "limitations": [
-                "query_attempt_order_unestablished", "state_stability_unestablished",
-                "prediction:query_not_requested", "query_plan:prediction_unavailable_pair",
-            ] + (["sandbox_attribution_unestablished"] if sysctl else []),
-        }
-        check("current_live_evidence", current, status=0, minimum_schema_version=8)
-        for label, version in (("v4", 4), ("v5", 5), ("v6", 6), ("v7", 7), ("absent", None)):
-            legacy = copy.deepcopy(current if version == 7 else baseline)
-            if version == 7:
-                del legacy["data"]["runner_result"]["steps"][0]["comparison"]["order"]
-                del legacy["data"]["runner_result"]["runner_subprocess"]["ordering"]
-            if version is not None:
-                legacy["data"]["runner_result"]["schema_version"] = version
-            check("legacy_fixture_" + label, legacy, status=0)
-            check("legacy_cannot_replace_live_" + label, legacy,
-                  ("schema_version below minimum 8",), minimum_schema_version=8)
-        for label, version in (("old", 7), ("null", None), ("string", "8"),
-                               ("float", 8.0), ("boolean", True)):
-            changed = copy.deepcopy(current)
+        # The version is read exactly: other and malformed versions are one error.
+        for label, version in (("previous", contract.RESPONSE_SCHEMA - 1), ("next", contract.RESPONSE_SCHEMA + 1),
+                               ("null", None), ("string", str(contract.RESPONSE_SCHEMA)),
+                               ("float", float(contract.RESPONSE_SCHEMA)), ("boolean", True)):
+            changed, _ = mutate()
             changed["data"]["runner_result"]["schema_version"] = version
-            check("wrong_live_version_" + label, changed,
-                  ("schema_version below minimum 8",), minimum_schema_version=8)
-        # The gate rejects stored-fixture leniency, not later versions: a reply
-        # that keeps the response-8 shape under a higher number meets the minimum.
-        changed = copy.deepcopy(current)
-        changed["data"]["runner_result"]["schema_version"] = 9
-        check("later_version_meets_minimum", changed, status=0, minimum_schema_version=8)
-        changed = copy.deepcopy(current)
-        del changed["data"]["runner_result"]["steps"][0]["comparison"]["order"]
-        check("missing_current_order", changed, ("missing comparison.order",), minimum_schema_version=8)
-        changed = copy.deepcopy(current)
+            expected = "unsupported runner response" if type(version) is int and not isinstance(version, bool) else "malformed runner response"
+            check("version_" + label, changed, (expected,))
+        changed, _ = mutate()
+        changed["schema_version"] = contract.CONTROLLER_ENVELOPE + 1
+        check("version_envelope_next", changed, ("unsupported controller envelope",))
+        changed, step = mutate()
+        del step["comparison"]["order"]
+        check("missing_order", changed, ("invalid comparison.order",))
+        changed, step = mutate()
+        step["comparison"]["limitations"] = []
+        check("missing_plan_limitation", changed, ("exactly one query_plan limitation",))
+        changed, step = mutate()
+        step["comparison"]["order"] = "query_first"
+        check("order_claimed_without_record", changed, ("lacks eligible record",))
+        changed, _ = mutate()
         del changed["data"]["runner_result"]["runner_subprocess"]["ordering"]
-        check("missing_current_ordering", changed, ("requires runner_subprocess.ordering",), minimum_schema_version=8)
-        changed = copy.deepcopy(current)
-        current_step = changed["data"]["runner_result"]["steps"][0]
-        del current_step["comparison"]
-        del current_step["attempt"]["requested_kind"]
-        del current_step["attempt"]["requested_action"]
+        check("missing_ordering", changed, ("ordering is required",))
+        changed, step = mutate()
+        del step["comparison"]
+        del step["attempt"]["requested_kind"]
+        del step["attempt"]["requested_action"]
         check("missing_current_evidence", changed,
-              ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"),
-              minimum_schema_version=8)
+              ("missing comparison", "missing attempt.requested_kind", "missing attempt.requested_action"))
+        for label, mutate_step, diagnostic in (
+            ("drift", lambda s: s.update(drift=None), "removed key steps[].drift"),
+            ("deny_signal", lambda s: s.update(deny_signal=None), "removed key steps[].deny_signal"),
+            ("query_scope", lambda s: s["sandbox_check"].update(scope="post_sandbox"), "removed key sandbox_check.scope"),
+            ("attempt_exit_code", lambda s: s["attempt"].update(exit_code=0), "removed key attempt.exit_code"),
+            ("attempt_syscall_errno", lambda s: s["attempt"].update(syscall_errno=None), "removed key attempt.syscall_errno"),
+            ("comparison_prediction", lambda s: s["comparison"].update(prediction="unavailable"), "removed key comparison.prediction"),
+        ):
+            changed, step = mutate()
+            mutate_step(step)
+            check("removed_key_" + label, changed, (diagnostic,))
+        changed, step = mutate()
+        step["comparison"]["limitations"].append("sandbox_attribution_unestablished")
+        check("foreign_limitation", changed, ("outside the vocabulary",))
         changed, step = mutate()
         if sysctl:
-            step["attempt"].update(errno=13, syscall_errno=13)
+            step["attempt"].update(errno=13)
             check("eacces_denial", changed, status=0)
         else:
             # Supported file work can report an OS failure. These placeholders
             # check attempt reporting, not IOKit enforcement.
-            step["attempt"].update(outcome="open_failed", rc=1, exit_code=1,
-                                   errno=2, syscall_errno=2, observed_path=None)
+            step["attempt"].update(outcome="open_failed", rc=1, errno=2, observed_path=None)
+            step["comparison"].update(observation="other_failure", observation_basis="completed_worker_status")
             check("supported_file_failure", changed, status=0)
 
         for channel, keys in (
-            ("sandbox_check", ("scope", "pid", "operation", "filter_value",
-                               "filter_type_id", "errno", "error")),
-            ("attempt", ("exit_code", "errno", "syscall_errno", "requested_path", "observed_path", "rc")),
+            ("sandbox_check", ("pid", "operation", "filter_value", "filter_type_id", "errno", "error")),
+            ("attempt", ("errno", "requested_path", "observed_path", "rc")),
         ):
             for key in keys:
                 broken, step = mutate()
@@ -160,13 +179,9 @@ def main():
             broken, step = mutate()
             step["sandbox_check"][key] = 0
             check(f"unavailable_nonnull_{key}", broken, (f"expected unavailable sandbox_check.{key}=null",))
-        for drift in ("missing", False, True):
-            broken, step = mutate()
-            if drift == "missing":
-                del step["drift"]
-            else:
-                step["drift"] = drift
-            check(f"unavailable_drift_{drift}", broken, ("explicit drift=null",))
+        broken, step = mutate()
+        step["sandbox_check"].update(result_source="validator", missing_reason=None)
+        check("unavailable_without_synthetic_record", broken, ("synthetic query_not_requested record",))
 
         for label in ("wrong", "duplicate", "missing"):
             broken, step = mutate()
@@ -191,9 +206,6 @@ def main():
         broken, step = mutate()
         step["attempt"]["rc"] = False
         check("boolean_attempt_rc", broken, ("invalid attempt.rc",))
-        broken, step = mutate()
-        step["attempt"]["rc"] = 5
-        check("rc_disagreement", broken, ("attempt.rc mismatch",))
 
         attempt_diagnostic = "expected attempt.outcome=sysctl_failed" if sysctl else "expected supported file-open attempt"
         broken, step = mutate()
@@ -226,14 +238,16 @@ def main():
         if sysctl:
             for errno in (None, 2, True):
                 broken, step = mutate()
-                step["attempt"].update(errno=errno, syscall_errno=errno)
+                step["attempt"].update(errno=errno)
                 check(f"not_a_denial_{errno}", broken, ("expected attempt.errno=EPERM/EACCES",))
             broken, step = mutate()
-            step["attempt"]["syscall_errno"] = 13
-            check("denial_errno_disagreement", broken, ("attempt.errno mismatch",))
-            broken, step = mutate()
-            step["attempt"].update(rc=0, exit_code=0)
+            step["attempt"].update(rc=0)
             check("denial_with_success_status", broken, ("expected attempt_ok=False",))
+            broken, step = mutate()
+            step["sandbox_check"]["path_diagnostics"] = {"input": "kern.osrelease", "observer": "runner_host",
+                                                        "phase": "after_orchestration",
+                                                        "same_as_input": ["realpath_resolved", "firmlink_resolved"]}
+            check("non_path_query_with_path_provenance", broken, ("non-path query acquired path provenance",))
 
     if failures:
         raise SystemExit("\n".join(failures))

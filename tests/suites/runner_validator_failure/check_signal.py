@@ -34,7 +34,7 @@ assert_transcript(validator.with_suffix('.emitted.ndjson').read_text(), received
 assert [s['comparison']['order'] for s in runner['steps']] == ['query_first', 'unestablished', 'unestablished']
 for i, row in enumerate(runner['steps']):
     assert row['attempt']['outcome'] == 'ok', row
-    assert row['drift'] is (False if i == 0 else None), row
+    assert row['comparison']['observation'] == 'succeeded', row
     if i == 0:
         assert row['sandbox_check']['outcome'] == 'allow' and row['sandbox_check']['native_rc'] == 0, row
     else:

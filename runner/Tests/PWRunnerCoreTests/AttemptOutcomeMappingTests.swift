@@ -173,9 +173,9 @@ func runAttemptOutcomeMappingTests(_ tk: TestKit) {
             }
         }
 
-        // ---- exec child_pid passthrough: the drift classifier downstream
+        // ---- exec child_pid passthrough: comparisonEvidence downstream
         //      keys on it, so buildAttemptResult must carry it through. ----
-        tk.run("exec rc!=0 preserves child_pid for downstream drift attribution") {
+        tk.run("exec rc!=0 preserves child_pid for the downstream spawn observation") {
             let at = buildAttemptResult(
                 step: step(kind: W.attemptKindExec, action: W.attemptActionSpawn, target: "/usr/bin/true"),
                 slot: slot(rc: 1, errnoVal: Int32(EPERM), childPid: 0)

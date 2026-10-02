@@ -450,7 +450,7 @@ from pathlib import Path
 
 run_path, expected = sys.argv[1:3]
 env = json.loads(Path(run_path).read_text(encoding="utf-8"))
-kind = (env.get("data", {}) or {}).get("runner_provenance", {}).get("runner_kind")
+kind = (((env.get("data") or {}).get("specimen") or {}).get("runner_provenance") or {}).get("runner_kind")
 if kind != expected:
     print(f"expected runner_kind={expected!r} (got {kind!r})")
     raise SystemExit(1)

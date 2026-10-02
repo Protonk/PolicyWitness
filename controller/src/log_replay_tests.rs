@@ -8,21 +8,20 @@ mod log_replay {
     use std::process::{Command, Stdio};
 
     fn native(plan: &[Value]) -> Value {
-        let mut runner = worker("ok", None);
-        runner["schema_version"] = json!(7);
-        runner["steps"] = json!(plan.iter().map(|step| json!({
-            "step_id": step["step_id"], "drift": null,
-            "sandbox_check": {"outcome":"allow", "native_rc":0, "result_source":"validator"},
-            "attempt": {"requested_kind":"file", "requested_action":step["attempt"]["action"],
-                "requested_path":step["attempt"]["target"], "outcome":"open_failed", "errno":1,
-                "native_rc":-1, "result_source":"worker"},
-            "comparison": {"scope":"submitted_operation_and_target", "prediction":"allow",
-                "observation":"permission_failure", "observation_basis":"permission_errno",
-                "operation_relation":"matched", "target_relation":"same_submitted",
-                "conclusion":"unavailable", "limitations":["state_stability_unestablished",
-                    "query_attempt_order_unestablished", "sandbox_attribution_unestablished"]}
-        })).collect::<Vec<_>>());
-        runner
+        reply_with(
+            "ok",
+            None,
+            plan.iter()
+                .map(|s| {
+                    step(
+                        s["step_id"].as_str().unwrap(),
+                        s["attempt"]["action"].as_str().unwrap(),
+                        s["attempt"]["target"].as_str().unwrap(),
+                        "permission_failure",
+                    )
+                })
+                .collect(),
+        )
     }
 
     fn replay(plan: &[Value], lines: &[String], fault: &str, timeout: LogTimeout) -> Value {
@@ -141,39 +140,19 @@ if fault == 'nonzero': sys.exit(7)
         wire
     }
 
-    fn execution_only(wire: &Value) -> Value {
-        let mut value = wire.clone();
-        value
-            .as_object_mut()
-            .unwrap()
-            .remove("generated_at_unix_ms");
-        value["data"]
-            .as_object_mut()
-            .unwrap()
-            .remove("sandbox_log_capture");
-        for key in [
-            "capture_status",
-            "correlation_status",
-            "first_deny",
-            "permission_failures_without_record",
-        ] {
-            value["data"]["runner_sandbox_diagnostics"]
-                .as_object_mut()
-                .unwrap()
-                .remove(key);
-        }
-        value
+    fn execution_only(wire: &Value) -> Vec<u8> {
+        super::execution_bytes(wire)
     }
 
     fn consumers(envelopes: &[Value]) {
         let mut child = Command::new("/usr/bin/python3")
             .args(["-B", "-c", r#"import json,sys
 sys.path.insert(0,sys.argv[1])
-from consumer import recover_evidence,validate_evidence_shape
+from consumer import validate,denials
 from log_capture_contract import check_live_capture
 for e in json.load(sys.stdin):
-    assert not validate_evidence_shape(e), validate_evidence_shape(e)
-    d=e['data']; c=d['sandbox_log_capture']; a=recover_evidence(e)['denials']
+    errors=validate(e); assert not errors, errors
+    d=e['data']; c=d['sandbox_log_capture']; a=denials(e)
     assert a['capture']==c and a['diagnostics']==d['runner_sandbox_diagnostics']
     if c is None: assert a['candidates'] is None; continue
     assert a['window']==c['window'] and a['events']==c['deny_events']
@@ -288,12 +267,12 @@ for e in json.load(sys.stdin):
             assert_eq!(execution_only(&wire), *baseline.as_ref().unwrap());
             let c = &wire["data"]["sandbox_log_capture"];
             let d = &wire["data"]["runner_sandbox_diagnostics"];
-            assert_eq!(d["capture_status"], status, "{fault}");
-            assert!(
-                c["step_denies"].is_null()
-                    && d["first_deny"].is_null()
-                    && d["permission_failures_without_record"].is_null()
-            );
+            if fault == "disabled" {
+                assert!(c.is_null(), "disabled capture writes no log channel");
+            } else {
+                assert_eq!(c["capture_status"], status, "{fault}");
+            }
+            assert!(c["step_denies"].is_null() && d["permission_failures_without_record"].is_null());
             assert_eq!(
                 d["correlation_status"],
                 if fault == "disabled" {

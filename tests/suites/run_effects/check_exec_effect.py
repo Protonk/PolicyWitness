@@ -76,7 +76,8 @@ def summarize_run(name, allow_write, run, rc, summary):
         runner = envelope['data']['runner_result']
         assert runner['normalized_outcome'] == 'ok', (name, runner['normalized_outcome'])
         assert runner.get('test_overrides') is None, name
-        assert envelope['data']['policy_augmentation']['applied'] == ['exec_baseline'], name
+        augmentation = envelope['data']['specimen']['policy']['augmentation']
+        assert augmentation['status'] == 'applied' and augmentation['applied'] == ['exec_baseline'], name
         assert len(runner['steps']) == 1, name
         attempt = runner['steps'][0]['attempt']
         # The helper ran in both cases; only the allowed one could write.

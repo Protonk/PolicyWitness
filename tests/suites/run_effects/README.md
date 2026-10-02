@@ -21,7 +21,7 @@ PolicyWitness, before the envelope is decoded.
   validator for targets that exist throughout, and `prediction_unavailable`
   with `query_not_requested` for a target that does not exist when the query
   is planned. For an allowed `unlink`, the native allow query precedes the
-  attempt: `query_first`, agreement and `drift:false` are required. The separate
+  attempt: `query_first` and `observation: succeeded` are required. The separate
   `witness_contract/queries_precede_attempts` case also checks an
   earlier read of the same target and independent absence after removal.
 - A helper spawned under `(deny default)` plus `exec_baseline` with one

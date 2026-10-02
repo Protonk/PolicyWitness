@@ -49,8 +49,8 @@ Run:
 ./tests/run.sh --suite smoke
 ```
 
-The caller-auth checker also requires response schema 5 or later, where signal
-null became explicit, from both successful XPC replies and real client-generated
-XPC errors. Every returned step must contain
-explicit signal null; rejected calls retain empty steps and absent subprocess
-metadata alongside the existing authorization and file-effect controls.
+The caller-auth checker also requires the current response schema from both
+successful XPC replies and real client-generated XPC errors. No returned step
+carries a signal or drift key; rejected calls retain empty steps and absent
+subprocess metadata alongside the existing authorization and file-effect
+controls.

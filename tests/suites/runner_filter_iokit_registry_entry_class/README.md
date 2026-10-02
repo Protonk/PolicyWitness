@@ -10,9 +10,10 @@ step and report `prediction_unavailable` for that operation.
 
 The suite uses the [shared filter contract](../runner_filter_sysctl_name/README.md#shared-filter-contract):
 a successful run envelope, explicit nullable evidence, integer prediction
-`rc=-1`, null `filter_type_id`, null prediction `errno`, and null `drift`.
+`rc=-1`, null `filter_type_id`, null prediction `errno`, and the
+`query_plan:prediction_unavailable_pair` limitation.
 The paired file `open_read` of `/etc/hosts` must report a supported outcome
-(`ok` or `open_failed`) and an integer `attempt.rc` agreeing with `exit_code`.
+(`ok` or `open_failed`) and an integer `attempt.rc`.
 The checker continues attempt validation even when prediction evidence is broken.
 
 The file attempt is a placeholder. It exercises supported attempt reporting and

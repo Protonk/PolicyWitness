@@ -18,7 +18,7 @@ def validate_run(expected_steps, run_data):
     for step, exp in matched:
         step_id = exp["step_id"]
         exp_meta = exp.get("expect") or {}
-        common = {key: exp_meta[key] for key in ("attempt_ok", "errno", "drift") if key in exp_meta}
+        common = {key: exp_meta[key] for key in ("attempt_ok", "errno", "comparison") if key in exp_meta}
         if "predict" in exp_meta:
             common["sandbox_outcome"] = exp_meta["predict"]
         errors.extend(validate_step(step, common))
@@ -28,18 +28,18 @@ def validate_run(expected_steps, run_data):
         attempt = step.get("attempt")
         if not isinstance(attempt, dict):
             continue
-        exit_code = attempt.get("exit_code")
-        attempt_ok = exit_code == 0 if type(exit_code) is int else None
+        rc = attempt.get("rc")
+        attempt_ok = rc == 0 if type(rc) is int else None
         exp_attempt = exp.get("attempt") or {}
         if exp_attempt.get("kind") == "file":
             expected_target = exp_attempt.get("target")
             if expected_target and attempt.get("requested_path") != expected_target:
                 errors.append(f"{step_id}: expected requested_path={expected_target!r} "
                               f"(got {attempt.get('requested_path')!r})")
-            if attempt_ok is False and attempt.get("syscall_errno") is None:
-                errors.append(f"{step_id}: expected syscall_errno on failed file attempt")
-            if attempt_ok is True and attempt.get("syscall_errno") is not None:
-                errors.append(f"{step_id}: unexpected syscall_errno on successful file attempt")
+            if attempt_ok is False and attempt.get("errno") is None:
+                errors.append(f"{step_id}: expected errno on failed file attempt")
+            if attempt_ok is True and attempt.get("errno") is not None:
+                errors.append(f"{step_id}: unexpected errno on successful file attempt")
             if attempt_ok is True and exp_attempt.get("action") in ("open_read", "open_write", "create"):
                 if attempt.get("observed_path") is None:
                     errors.append(f"{step_id}: expected observed_path for successful open/create")

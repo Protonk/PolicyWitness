@@ -1,6 +1,17 @@
 # PolicyWitness User Guide
 
-PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan; each run produces one envelope describing what the kernel actually did under that policy, alongside the validator's userland prediction for the same operations. For shorter answers to common questions see [Questions](#questions).
+PolicyWitness records `sandbox_check` queries and attempted operations under
+macOS sandbox policies. When prediction is available, the validator queries
+the worker's PID; the worker attempts its operation after applying the policy
+and receiving release from the host. Each step records available results, missing
+observations, submitted-scope relations and ordering. The controller adds
+request identity, source hashes, imports, runner and app provenance, host
+facts and hashes of selected binaries outside the app manifest. It does not
+embed the full specimen. Optional log capture adds kernel denial records
+with correlation limits. No record asserts agreement or disagreement between
+prediction and enforcement.
+
+PolicyWitness runs sandbox specimens and prints a single JSON envelope to stdout. Each specimen is an SBPL policy plus a probe plan. For shorter answers to common questions see [Questions](#questions).
 
 Reading paths: try it via [Quick start](#quick-start), write a specimen via [Specimen format](#specimen-format), or interpret output via [Output envelope](#output-envelope).
 
@@ -62,7 +73,7 @@ $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 
 ### When should I use PolicyWitness?
 
-PolicyWitness compares `sandbox_check` predictions with the observed results of operations attempted under a sandbox policy. Use it when developing a policy or investigating disagreement for particular operations, filters and targets. You can also use it as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
+Use it to witness what a sandbox policy does to specific operations and targets. Each step records the `sandbox_check` answer for a query and the result of an attempted operation under that policy, as two separate channels, with the kernel's denial log attached when it is available. Use it when developing a policy, when investigating one operation, filter and target, or as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
 
 ### Who needs to use PolicyWitness?
 
@@ -72,25 +83,21 @@ Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandb
 
 Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
 
-### Beyond observing drift, what does PolicyWitness's attempt channel record?
+### What does PolicyWitness's attempt channel record?
 
-The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are not necessarily raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
+The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are PolicyWitness attempt status, not raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
 
 ### Can PolicyWitness probe operations it doesn't natively support?
 
-Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not automatically turn that evidence into a comparison for that operation and successful spawning can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
+Yes — via the `exec` attempt kind plus the named-augment interface. Callers ship their own helper binary and, where needed, opt into `exec_baseline`, a shipped SBPL fragment supplying baseline allows for spawning under `(deny default)`. PolicyWitness records spawn observations, child disposition and bounded stdout/stderr in the same envelope shape as the built-in attempt kinds. The helper must supply evidence about its internal operation; PW does not turn that evidence into a record for that operation, and a successful spawn can coexist with a failed exec result. The per-operation authoring burden lives with the caller — PolicyWitness intentionally doesn't carry an atlas of every sandboxable operation, and the augment system is the documented extension point for callers who need to test surfaces (network, iokit, ipc, signals, user_preference, etc.) PolicyWitness has no built-in attempt kind for.
 
-### How does PolicyWitness handle uncertainty in its verdicts?
+### What does a comparison record contain, and what does it not claim?
 
-PolicyWitness keeps the prediction (`sandbox_check`) and attempt observations (`attempt`) separate from the comparison it derives. In the response schema, `comparison` records the conclusion, its operation and target scope, and known limitations. `drift` is a separate, compact summary: `false` for agreement, `true` for disagreement, and `null` for either directional consistency or an unavailable comparison.
+Each step's `comparison` has six fields: what the attempt channel observed (`observation`: `succeeded`, `permission_failure`, `other_failure` or `unavailable`) and the raw fields that observation rests on (`observation_basis`); whether the query named the same operation as the attempt (`operation_relation`) and the same submitted target (`target_relation`); whether an eligible query is known to precede the attempt batch (`order`); and a short list of `limitations` that name a planning exclusion or the attempt's lifecycle state. The query's own answer stays in `sandbox_check`. The record relates the two channels; it does not say whether they agree. See the guide's [reading rules](#reading-a-comparison-record).
 
-The current runner closes query collection before releasing attempts. Eligible native records report `comparison.order: query_first`; this proves an interval before attempts, not a common state snapshot. A deny prediction beside a successful attempt still yields `null` because state stability and runtime target identity remain unestablished. A successful same-target unlink also prevents an allow/success agreement while its order against the query is unknown.
+### Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?
 
-For example, a deny prediction paired with a matching file-open attempt that fails with EPERM yields directional consistency and `drift: null`. The failure is consistent with the prediction, but does not establish that the sandbox caused it. Reading `comparison` lets a consumer distinguish that limited conclusion from a missing prediction or attempt result, while retaining the observations behind it.
-
-### Can PolicyWitness return a verdict of `drift: true`?
-
-No. `drift: true` would assert that `sandbox_check` and kernel enforcement disagreed with every other explanation excluded, and the envelope carries no evidence that the target's state was stable or that a path named the same object at query time and attempt time. Without that evidence the typed comparison has no disagreement case to construct, so the runner never emits one, its encoder rejects one, and the consumer checks reject one. A deny prediction beside a successful attempt is reported as `conclusion: unavailable` with `drift: null`, with the native prediction, the attempt result and the ordering evidence retained for the reader.
+No. The envelope carries no evidence that a target's state was stable between the query and the attempt, or that a path named the same object both times, and a permission-shaped failure does not identify the sandbox as its cause. A deny prediction beside a successful attempt is therefore reported as those two facts with their relations and order, and nothing more. Readers who want an opinion form it from the record and the raw channels, under limits the record states.
 
 ### Can PolicyWitness run every profile that `libsandbox` accepts?
 
@@ -102,7 +109,7 @@ No. PolicyWitness has its own limits, documented in [the limits inventory](#limi
 
 ### How do I use imports with PolicyWitness?
 
-PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`).
+PolicyWitness supports imports the same way `sandbox-exec` does — `(import "name.sb")` statements are resolved by libsandbox against the system search path (`/System/Library/Sandbox/Profiles/` first, then `/usr/share/sandbox/`). The controller also inventories the literal import closure of the submitted source before the run and reports it under `data.specimen.policy.imports`, with the bounds in [the limits inventory](#limits); that inventory describes what the controller could read, not what the worker's compiler read.
 
 ### Can PolicyWitness test sandbox-extension behavior?
 
@@ -111,6 +118,10 @@ No. PolicyWitness does not issue, consume, release, or otherwise track sandbox e
 ### Which happens first, the prediction or the attempt?
 
 A `query_first` comparison identifies an eligible native prediction collected before the worker acknowledged host release, which precedes every attempt. Missing or unusable predictions and death before acknowledgement remain `unestablished`. Query collection closes even when validator cleanup is unconfirmed; a surviving validator cannot add later records. The interval is not a common state snapshot, and earlier attempts can change what later attempts encounter.
+
+### How do I read the denial log?
+
+As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator's own `sandbox_check` queries can generate denial records naming the worker PID before any attempt begins. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
 
 <!-- END COPIED QUESTIONS -->
 
@@ -265,7 +276,7 @@ The sbpl-check envelope also records the imports closure:
   This hash is reproducible iff every resolved file is content-identical
   on the verifying host. Unresolved imports are excluded — check
   `imports[].error` to see which ones failed.
-- `macos_build_version`: `sw_vers -buildVersion` for the host that ran `sbpl-check`. Import contents change between OS builds; this lets a
+- `macos_build_version`: the `kern.osversion` sysctl of the host that ran `sbpl-check`. Import contents change between OS builds; this lets a
   downstream auditor decide whether a closure hash is verifiable on their
   machine.
 
@@ -315,21 +326,27 @@ Splicing semantics:
 
 Envelope reporting:
 
-- `data.policy_augmentation` is present only when augments were
-  applied. Shape:
+- `data.specimen.policy.augmentation` is present on every run envelope.
+  Shape after a successful splice:
 
   ```json
-  "policy_augmentation": {
+  "augmentation": {
+    "status": "applied",
     "applied": ["exec_baseline"],
     "original_sha256": "<sha256 of policy.sbpl_source as submitted>",
-    "applied_sha256":  "<sha256 of source after augments appended>"
+    "applied_sha256":  "<sha256 of source after augments appended>",
+    "error": null
   }
   ```
 
-  When augments were applied, `data.runner_result.policy_sha256`
+  `status` is `not_requested` (no augments; both hashes name the same
+  submitted source), `applied`, `failed` (resolution refused; `applied` is
+  empty, `applied_sha256` is null and `error` carries the diagnostic) or
+  `not_applicable` (no string source to hash). `data.runner_result.policy_sha256`
   (the hash the runner computed over the bytes it actually compiled)
-  equals `applied_sha256`. A consumer that wants "what the caller
-  submitted" reads `original_sha256` instead.
+  equals `applied_sha256` on a completed run. A consumer that wants "what the
+  caller submitted" reads `original_sha256` instead. See
+  [The specimen dossier](#the-specimen-dossier).
 
 Shipped augments:
 
@@ -481,7 +498,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Request labels (`request_label`) | 63 UTF-8 bytes | Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | Each of _test_overrides.libsandbox_path, worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | Each of _test_overrides.worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 
 ### Execution budgets
 
@@ -507,7 +524,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
-| Synthesized maximal reply (`runner_reply_maximum`) | 24,869,018 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
+| Synthesized maximal reply (`runner_reply_maximum`) | 24,810,311 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
 | Runner client output (`controller_output`) | 75,497,472 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
@@ -560,8 +577,22 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
+
+Two documents carry these numbers. The runner reply is the JSON that
+`pw-runner-client` prints: its `schema_version` is the response schema, and it
+holds `normalized_outcome`, `steps`, `runner_subprocess`, `validator_subprocess`
+and the policy identity (`specimen_id`, `policy_format`, `policy_sha256`). It is
+readable on its own. The controller envelope is what `policy-witness run`
+prints: its `schema_version` is the controller envelope, `result` summarizes
+the run, and `data` carries the reply unchanged as `runner_result` beside the
+specimen dossier (`specimen`), the client transport (`runner_client`), the
+fallback compilation (`policy_check`), the controller's projections
+(`runner_sandbox_diagnostics`), the optional log capture
+(`sandbox_log_capture`) and `timeout_ms`. Readers that interpret either
+document accept exactly the current numbers; another version is reported as
+unsupported, with the bytes retained (see [CONTRACT.md](CONTRACT.md)).
 
 The XPC host stays unsandboxed and spawns a sandboxed attempt worker plus a
 batch validator. Worker identity for
@@ -613,30 +644,28 @@ whether the carried record agreed with the raw facts it cites (`valid`, or
 A host reply-construction failure reports `runner_reporting_failed`, `rc: 1`
 and `reporting_failure` with the diagnostic and original execution summary.
 When `reporting_failure.evidence_retained` is true, queries, attempts and child
-observations survive, but every `comparison` is omitted and every `drift` is
-null. Retained ordering observations are diagnostic; this reply certifies no
-per-step order. If serialization also fails for that degraded reply,
+observations survive, but every `comparison` is omitted. Retained ordering
+observations are diagnostic; this reply certifies no per-step order. If serialization also fails for that degraded reply,
 `evidence_retained` is false and steps and subprocess evidence are absent.
 
-Every step contains `deny_signal: null`: the C worker does not measure this
-channel. This is distinct from a measured count of zero. Optional subprocess objects
-may be omitted or null. Signal, errno and drift nulls on steps require key
-presence. Outcome mappings below use execution evidence without assigning a
-sandbox termination cause from a signal or log match.
+Optional subprocess objects may be omitted or null. A null `errno` on a step
+requires key presence. Outcome mappings below use execution evidence without
+assigning a sandbox termination cause from a signal or log match.
 
 The `exec` attempt kind adds five optional per-step fields under
 `steps[].attempt` — `child_pid`, `child_exit_code`,
 `child_term_signal`, `stdout`, `stderr` — populated only for
 `("exec", "spawn")` attempts. These are optional fields;
-consumers that branch on `attempt.outcome == "exec_failed"` see all
-five fields exactly when an exec attempt's slot was filled. A
-non-exec attempt's envelope omits the keys entirely so a sysctl /
+consumers that branch on `attempt.outcome == "exec_failed"` see the
+three child fields exactly when an exec attempt's slot was filled, and
+`stdout`/`stderr` only when that stream produced bytes. A non-exec
+attempt's envelope omits the keys entirely so a sysctl /
 file / mach result envelope does not grow five null fields it has
 no use for.
 
 ### Top-level fields
 
-Top-level fields beyond `pid` / `runner_subprocess`:
+Reply fields beyond `pid` / `runner_subprocess`:
 
 - `validator_subprocess: { pid, exit_code, term_signal } | null` —
   populated whenever the validator child ran. Exactly one of
@@ -658,38 +687,38 @@ Top-level fields beyond `pid` / `runner_subprocess`:
   and evidence-preserving reply degradation.
 - `steps[].comparison.order` — `query_first` for eligible native records with the full release/acknowledgement chain; `unestablished` otherwise. Query order establishes an interval before the entire attempt batch, not state stability or runtime identity.
 - `runner_subprocess.ordering` — host collection/release observations, worker acknowledgement, worker lifetime evidence, validator disposition and protocol violations. Collection closure releases attempts even after validator failure or unconfirmed cleanup; no later record enters predictions. Missing predictions remain unestablished. Death before acknowledgement prevents a query-first claim; later death preserves it. `validator_disposition` is `not_invoked`, `not_needed` (empty query plan), `not_spawned`, `reaped` or `unconfirmed`.
-- `steps[].drift: bool | null` — `false` means a supported allow/success
-  agreement within matching submitted operation/target scope. It does not prove
-  equal state or runtime identity. `true` requires evidence of differing kernel
-  enforcement with material alternative explanations excluded. The current
-  runner cannot establish state stability or runtime target identity, so deny/success yields `unavailable` and
-  `drift:null`; no current producer path yields `true`. Permission failures
-  also retain `drift:null` because their sandbox attribution is unestablished.
-- `steps[].comparison` — records `scope`, `prediction`, `observation`,
-  `observation_basis`, `operation_relation`, `target_relation`, `conclusion` and
-  `limitations`. Agreement, disagreement, directional consistency and unavailable
-  comparison remain distinct. Deny plus a permission failure may establish only
-  directional consistency within matching scope. Different submitted operations
-  or targets prevent a comparison; equal path spelling does not establish runtime
-  object identity. Timing and state stability remain explicit limits even when a
-  useful outcome comparison is available. Several limitations can coexist.
-  A worker-reported successful unlink of a planned query's submitted target,
-  in any step of the run, adds `attempt_mutation_order_unestablished` when query order is unestablished. Step
-  position does not bound uncertainty when the chain is incomplete. With `query_first`, all eligible queries precede the attempt batch, so the mutation limitation is absent and allow/success agreement is restored.
-  While query order is unestablished, a successful corresponding attempt yields
-  `unavailable`/null under either prediction; later recreation does not erase
-  that mutation evidence.
-  `host_path_resolution_changed` separately records that a planned path no
-  longer resolves in the host after orchestration. This later observation
-  appends a limitation without changing the conclusion or drift.
+- `steps[].comparison` — six fields that relate the two channels without
+  judging them. `observation` classifies the attempt channel (`succeeded`,
+  `permission_failure`, `other_failure` or `unavailable`) and
+  `observation_basis` names the fields it rests on (`completed_worker_status`,
+  `permission_errno`, `bootstrap_permission_result`, `spawned_child` or
+  `no_completed_worker_result`). `operation_relation` (`matched`, `different`
+  or `unresolved`) says whether the submitted query operation is the attempt's
+  mapped operation: file `open_read`/`access` map to `file-read-data`,
+  `open_write` to `file-write-data`, `unlink` to `file-write-unlink`, exec
+  `spawn` to `process-exec*`, mach lookup to `mach-lookup` and sysctl read to
+  `sysctl-read`. `target_relation` (`same_submitted`, `different_submitted` or
+  `unresolved`) compares the submitted filter value with the submitted attempt
+  target under the attempt's mapped filter kind: `path` for file and exec,
+  `global_name` for mach lookup, `sysctl_name` for sysctl. `order` is described
+  above. `limitations` lists the planner's exclusion
+  (`query_plan:path_unresolved_at_planning`,
+  `query_plan:prediction_unavailable_pair`,
+  `query_plan:unrecognized_filter_kind`) or the attempt's lifecycle state
+  (`attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`,
+  `attempt:unsupported`, `attempt:not_reached`,
+  `attempt:started_without_result`), and is empty otherwise. The prediction
+  itself stays in `sandbox_check`; the record never says whether the channels
+  agree. [Reading a comparison record](#reading-a-comparison-record) gives the
+  rules for using it.
 - `steps[].attempt.requested_kind` / `requested_action` — submitted intent,
-  alongside the existing `requested_path` target; these do not prove execution.
-  Compound create attempts, unscoped filters and broad queries without a supported
-  mapping retain unresolved scope. For exec/spawn, the supported `process-exec*`
-  query compares admission of the submitted executable target with observed spawn.
-  `exec_query_not_full_spawn_prediction` records that fork, interpreter and other
-  spawn prerequisites remain separate: allow does not promise a successful spawn.
-  Native failure and missing-result evidence survive.
+  alongside the `requested_path` target; these do not prove execution.
+  A `file`/`create` attempt and an unsupported attempt have no single mapped
+  operation, so their `operation_relation` is `unresolved`. For exec/spawn, a
+  `process-exec*` query predicts admission of the submitted executable target
+  only; fork, interpreter and other spawn prerequisites are outside it, so an
+  allow answer does not promise a successful spawn. Native failure and
+  missing-result evidence survive.
 
 The authoritative child object also includes `worker_evidence` when a child was
 spawned. Its ABI version identifies the host-selected layout, not proof that
@@ -711,18 +740,21 @@ finishes during grace. On a failed policy write, `policy_transfer_error` records
 the host's errno and written/expected UTF-8 byte counts, while worker evidence
 and process status remain available. Written bytes do not prove child receipt.
 
-Step channels expose `result_source`, `native_rc` and optional `missing_reason`.
-A missing prediction retains `rc=0` but has source `synthetic`,
-`native_rc:null`, and distinguishes `validator_not_invoked` from
-`validator_no_verdict`. An incomplete attempt retains `not_run_worker_died`,
-meaning no completed result; `attempt.lifecycle` says which: its `summary` is
-`completed`, `started_without_result`, `not_reached`, `unsupported`, `unresolved` or
-`conflicting`, and its `boundary` and `result` claims carry the supporting
-observations or the reason the question is unresolved, projected from
-[the worker disposition record](#shape-and-schema_version). Completed attempts use source
-`worker`, but their rc is PW attempt status, not a raw syscall return, so their
-`native_rc` is also null. Received predictions use source `validator`; native rc
-is retained only for native-call result records.
+Both step channels carry `result_source` and, when no result exists,
+`missing_reason`; the query channel also carries `native_rc`. A missing
+prediction retains `rc=0` with source `synthetic`, `native_rc:null` and a
+`missing_reason` of `validator_not_invoked` (no validator process),
+`validator_no_verdict` (the process ran without this verdict) or
+`query_not_requested` (the planner excluded the query). An incomplete attempt
+retains `not_run_worker_died`, meaning no completed result; `attempt.lifecycle`
+says which: its `summary` is `completed`, `started_without_result`,
+`not_reached`, `unsupported`, `unresolved` or `conflicting`, and its `boundary`
+and `result` claims carry the supporting observations or the reason the
+question is unresolved, projected from
+[the worker disposition record](#shape-and-schema_version). Completed attempts
+use source `worker`; their rc is PW attempt status, not a raw syscall return,
+and the attempt channel carries no native return. Received predictions use
+source `validator`; `native_rc` is retained only for native-call result records.
 
 ### Receiver evidence
 
@@ -734,33 +766,113 @@ prediction. Decode context is not an accepted verdict. Unfamiliar structurally
 valid diagnostic outcomes remain visible even when their per-step summary is
 `error`.
 
-`data.runner_client` reports exact received/retained stdout and stderr byte counts
-and `capture_limit_bytes`. `stdout_capture_error` means the
-controller truncated its own retained reply; `stdout_parse_error` means the
-untruncated bytes could not be decoded as JSON. Records inside
-a lost envelope are unavailable. The independent fallback helper's admission
-refusal remains `policy_too_large`; successful helper compilation cannot explain
-a missing worker reply.
+`data.runner_client` reports the client's `argv`, start and end milliseconds,
+`exit_code`, exact received/retained stdout and stderr byte counts and
+`capture_limit_bytes`. `stdout_capture_error` means the controller truncated
+its own retained reply; `stdout_parse_error` means the untruncated bytes could
+not be decoded as JSON. Records inside a lost envelope are unavailable. The
+independent fallback helper's admission refusal remains `policy_too_large`;
+successful helper compilation cannot explain a missing worker reply.
+
+The controller delivers the request to the client on stdin (`--request -`)
+and records that delivery in `runner_client.request_delivery`:
+`bytes_written` and `error`. This is a controller observation: an accepted
+pipe write and a closed writer do not prove that the client read the bytes or
+that XPC delivered them. A delivery error makes the run a controller
+`tool_error` (exit 2) that takes precedence over any captured reply; the reply
+stays unchanged in `data.runner_result`. `runner_client` is null when the
+client was not invoked.
 
 `steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
 worker exists. It never substitutes the host PID.
 
-Per-step `native_rc` is authoritative for native returns. A received diagnostic
-without a native return retains `result_source="validator"`, `native_rc=null`
-and `rc=-1`; this is not a synthetic validator record or a claimed
-native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
-missing reason. `outcome="error"` alone does not identify a native call failure.
+The query channel's `native_rc` is authoritative for native returns. A
+received diagnostic without a native return retains `result_source="validator"`,
+`native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
+claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"`
+with a missing reason. `outcome="error"` alone does not identify a native call
+failure.
+
+### The specimen dossier
+
+`data.specimen` is present on every `kind: "run"` envelope, including
+refusals and pre-execution tool errors. It records what the controller knew
+about the request before invoking the runner. Nothing in it embeds policy
+source or parameter values.
+
+- `request_path`: the path given to `run`, or null when no path was given.
+- `policy.augmentation`: always present; see [Augments](#augments). `status`
+  is `not_requested`, `applied`, `failed` or `not_applicable`; `applied` lists
+  the spliced augment names; `original_sha256` hashes the submitted string
+  source and `applied_sha256` the string selected for invocation (the same
+  hash when nothing was applied); `error` carries the refusal diagnostic. The
+  hashes name string bytes that existed; they do not cover parameters or prove
+  worker compilation.
+- `policy.imports`: the literal `(import "...")` closure of the selected
+  source, scanned before invocation under the search paths and bounds shared
+  with `sbpl-check` (`/System/Library/Sandbox/Profiles/`, then
+  `/usr/share/sandbox/`, and absolute paths; the `helper_import_depth`,
+  `helper_import_count` and `helper_source` rows under [Limits](#limits)).
+  `status` is `complete` (the closure was exhausted with no unresolved name,
+  cycle, nonliteral import form, decoding error or exceeded bound),
+  `incomplete` (collected records are kept; `exceeded` names the first bound
+  hit, `depth` or `count`, or `cycle` names the cycle), `failed` (the collector
+  could not start; `failure` says why) or `not_applicable` (no post-resolution
+  source; `failure` is `augmentation_failed` after a refused augment and null
+  otherwise). `closure_sha256` hashes the source plus every successfully
+  hashed import whenever the scan ran. Each record carries `name`,
+  `resolved_path`, `sha256`, `size_bytes`, `mtime_unix` and `error`. Each
+  unique resolved import is opened once and checked to be a regular file
+  before the same bytes are hashed and lexed. The scan describes files the
+  controller could read; macro evaluation and the files the worker's compiler
+  actually read are outside it. `data.policy_check`, when the fallback
+  compilation ran, carries `sbpl-check`'s own inventory verbatim; the two are
+  not reconciled.
+- `host`: `macos_version`, `macos_build`, `kernel_release` and `arch`, read
+  from `kern.osproductversion`, `kern.osversion`, `kern.osrelease` and
+  `hw.machine`; null when a read fails. These are environment context. They do
+  not identify the sandbox libraries the worker or the validator loaded.
+- `runner_provenance`: the selected runner's `runner_kind`, bundle identity
+  and path, service name, executable path, entitlements and signature
+  metadata, and `runner_registry_id` for an installed BYOXPC runner.
+- `app_provenance`: `evidence_manifest_path`, the app evidence manifest the
+  built-in runner and the binary baselines were selected from, and
+  `evidence_verify`, the verification report when `PW_VERIFY_EVIDENCE`
+  requested one (null otherwise). The object is null when the manifest could
+  not be parsed.
+- `binaries.service`, `binaries.worker` and `binaries.validator`: null when
+  the selected binary is the manifest's entry for that role, so the manifest's
+  hash already describes it. Otherwise (a `_test_overrides` executable path or
+  a BYOXPC copy) an object with `path`, `actual_sha256`, `baseline_sha256`
+  (the manifest entry's hash), `verification` (`match`, `mismatch` or
+  `unavailable`) and `reason` (null only for `match`). The hash is taken
+  before invocation and does not prove which bytes were launched. Neither
+  `mismatch` nor `unavailable` changes the run outcome.
+
+Collection failures are recorded in these statuses and do not change whether
+the request is admitted or the runner is invoked. For a controller refusal, the
+dossier holds what was collected before the refusal: unavailable scalars are
+null, lists are empty, and the imports status says why no scan ran.
+
+To check that a result came from the bytes you think it did:
+
+```sh
+jq '.data.specimen | {request_path, policy: {augmentation: .policy.augmentation.status,
+  applied_sha256: .policy.augmentation.applied_sha256, imports: .policy.imports.status,
+  closure_sha256: .policy.imports.closure_sha256}, host, runner: .runner_provenance.runner_kind,
+  binaries}' run.json
+jq '[.data.specimen.policy.augmentation.applied_sha256, .data.runner_result.policy_sha256]' run.json
+```
 
 ### Per-step shape
 
 The runner echoes step results with additional context:
 
-- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, scope, filter_kind, filter_value, filter_type_id, errno, error, path_diagnostics? }`
-- `steps[].attempt`: `{ rc, exit_code, errno, syscall_errno, outcome, error, requested_kind, requested_action, requested_path, observed_path, path_diagnostics? }`
-- `steps[].drift`: `bool | null` — see the field description above.
+- `steps[].sandbox_check`: `{ rc, outcome, pid, operation, filter_kind, filter_value, filter_type_id, errno, error, result_source, native_rc, missing_reason?, path_diagnostics? }`
+- `steps[].attempt`: `{ rc, errno, outcome, error, result_source, missing_reason?, requested_kind, requested_action, requested_path, observed_path, lifecycle, path_diagnostics?, child_pid?, child_exit_code?, child_term_signal?, stdout?, stderr? }`
+- `steps[].comparison`: `{ observation, observation_basis, operation_relation, target_relation, order, limitations }` — see [Top-level fields](#top-level-fields) and [Reading a comparison record](#reading-a-comparison-record).
 
 Notes:
-- `scope` is `post_sandbox` for runner-hosted checks.
 - `requested_path` echoes the attempt target for every attempt kind
   (path, Mach service name, sysctl name, etc.). `observed_path` is the
   worker's own `F_GETPATH` observation of a successful open, explicit `null`
@@ -793,26 +905,30 @@ Notes:
       operations must be passed to `sandbox_check` in their
       wildcard form — e.g. `process-exec*`, not the bare
       `process-exec`. `error` is always populated with a message
-      naming the rejected operation and the wildcard hint. Treat
-      this as a per-step skip (parallel to the attempt-side
-      `unsupported` outcome): the step still runs the attempt
-      channel for the observation, but the prediction channel
-      yields no allow/deny verdict so `drift` is `null`.
+      naming the rejected operation and the wildcard hint. The step
+      still runs the attempt channel for the observation. The
+      prediction channel yields no answer, so `comparison.order` is
+      `unestablished`, and `operation_relation` compares the
+      submitted spelling with the attempt's mapped operation
+      (`different` for bare `process-exec` beside a spawn).
     - `prediction_unavailable`: emitted when the runner deliberately
       skips `sandbox_check` for a step where the userland predicate
-      is structurally suspect. Two triggers:
-        - **op+filter pair** known to drift from kernel enforcement
-          (iokit / sysctl families — see
-          [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)).
+      is structurally suspect. Three triggers, each named by a
+      `query_plan:*` entry in `comparison.limitations`:
+        - **op+filter pair** in the set under
+          [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)
+          (`query_plan:prediction_unavailable_pair`).
+        - **unrecognized filter kind** (`query_plan:unrecognized_filter_kind`).
         - **per-step host condition**: a `path` filter whose
-          `filter_value` doesn't resolve via `realpath` on the host.
-          For absent paths the kernel ENOENTs file-* access vectors
-          before reaching the sandbox layer, so a libsandbox verdict
-          for that path is a userland canonicalization artifact, not
-          a kernel prediction. `error` is populated naming the
-          unresolved path; `path_diagnostics.realpath_resolved` is
-          `null` as a second tell.
-      Channel A (the `attempt` result) remains the reliable evidence
+          `filter_value` doesn't resolve via `realpath` on the host
+          (`query_plan:path_unresolved_at_planning`). For absent
+          paths the kernel ENOENTs file-* access vectors before
+          reaching the sandbox layer, so a libsandbox answer for that
+          path is a userland canonicalization artifact, not a kernel
+          prediction. `error` is populated naming the unresolved
+          path; `path_diagnostics.realpath_resolved` is `null` as a
+          second tell.
+      The `attempt` result remains the reliable evidence
       for these probes; the prediction is honestly absent rather
       than wrong.
   When `outcome == "prediction_unavailable"`, `rc` is the sentinel
@@ -826,7 +942,7 @@ Notes:
 - `open_failed` — file `open()` (for `open_read` / `open_write` /
   `create`) returned non-zero; errno in `attempt.errno`. EPERM /
   EACCES are ambiguous between sandbox and DAC (see
-  [Top-level fields](#top-level-fields) → `drift`).
+  [Reading a comparison record](#reading-a-comparison-record)).
 - `unlink_failed` — file `unlink()` returned non-zero; errno in
   `attempt.errno`.
 - `access_failed` — file `access(R_OK)` returned non-zero; errno in
@@ -834,9 +950,11 @@ Notes:
 - `lookup_failed` — `bootstrap_look_up` returned a non-success
   Mach kernel return code; the `kr` is preserved in
   `attempt.error` as `"bootstrap_look_up: kr=<N>"`. `kr=1100`
-  (`BOOTSTRAP_NOT_PRIVILEGED`) is the sandbox-deny signal;
-  `kr=1102` (`BOOTSTRAP_UNKNOWN_SERVICE`) means the service simply
-  isn't registered.
+  (`BOOTSTRAP_NOT_PRIVILEGED`) is the permission-shaped result the
+  comparison classifies as `permission_failure` with basis
+  `bootstrap_permission_result`; it does not identify the sandbox as
+  the cause. `kr=1102` (`BOOTSTRAP_UNKNOWN_SERVICE`) means the
+  service simply isn't registered and is not a permission result.
 - `sysctl_failed` — `sysctlbyname()` returned non-zero; errno in
   `attempt.errno`. EPERM / EACCES are ambiguous; ENOENT / ENOMEM
   are non-policy failures.
@@ -848,19 +966,86 @@ Notes:
   when descendants retain pipes beyond the deadline. See
   [Attempt kinds the runner implements](#attempt-kinds-the-runner-implements)
   → `("exec", "spawn")` for the `child_pid` sentinel rules that
-  distinguish a sandbox-denied spawn from a helper that simply
-  exited non-zero.
-- `bootstrap_port_failed` — couldn't obtain the worker's bootstrap
-  port via `task_get_special_port(TASK_BOOTSTRAP_PORT)` — a
-  precondition failure for `mach_lookup` rather than a verdict on
-  the lookup itself. Rare.
+  distinguish a spawn that produced no child from a helper that
+  simply exited non-zero.
 - `unsupported` — the `(attempt.kind, attempt.action)` combination
   isn't in PolicyWitness's implemented set. Per-step skip: the
-  worker no-ops this slot; the `sandbox_check` verdict still runs;
-  `drift` is `null` for the step.
+  worker no-ops this slot; the `sandbox_check` query still runs;
+  the comparison carries `attempt:unsupported` with both relations
+  `unresolved`.
 - `not_run_worker_died` — no completed attempt result. Missing or incomplete
   publication does not prove the operation never started; `attempt.lifecycle`
-  says which. Errno and drift are null when no result supports them.
+  says which, and the comparison's limitation repeats its summary
+  (`attempt:started_without_result`, `attempt:not_reached`,
+  `attempt:lifecycle_unresolved` or `attempt:lifecycle_conflicting`) beside
+  `observation: unavailable`. Errno is null when no result supports it.
+
+### Reading a comparison record
+
+The record relates the two channels; it does not say whether they agree.
+Read it with these rules, in order:
+
+1. The query channel's answer is `sandbox_check.outcome` when `result_source`
+   is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
+   was available and `sandbox_check.missing_reason` says why.
+2. `attempt.missing_reason` explains an unavailable attempt channel.
+3. A `permission_failure` or `other_failure` observation, or an exec attempt
+   whose spawned child exited nonzero, does not attribute the failure to the
+   sandbox; attribution needs a captured denial record, and
+   `runner_sandbox_diagnostics.permission_failures_without_record` lists the
+   steps that have none.
+4. A `path` query, or an attempt whose mapped filter is `path`, never
+   establishes that both channels resolved the same object at runtime.
+5. No record establishes that the state the query saw is the state the
+   attempt met; nothing in a reply discharges this.
+6. When a query has `filter_kind: path`, a nonnull `filter_value` and no
+   `query_plan:*` limitation, and any step's attempt is a worker `unlink` of
+   that same submitted path with `outcome: ok` and `rc: 0`, the target was
+   removed during the run; `order` says whether the removal followed the
+   query, and the unlink attempt's step is the step that removed it.
+7. A `process-exec*` query predicts target admission only, not every spawn
+   prerequisite; the child's result is in `attempt.rc` and
+   `attempt.child_exit_code`.
+8. A `file`/`create` attempt has no single query operation, so
+   `operation_relation` is `unresolved`.
+9. A query operation containing `*`, other than `process-exec*`, resolves to
+   no single attempt operation.
+10. `target_relation: unresolved` means the attempt's mapped filter kind
+    differs from the query's `filter_kind`, or `filter_value` or
+    `requested_path` is absent; those fields show which.
+11. `sandbox_check.path_diagnostics.realpath_resolved` null on a query the
+    planner did not exclude means the host could not resolve the submitted
+    path after the run.
+12. An attempt the worker does not support has `attempt.outcome` and
+    `missing_reason` saying so, and both relations `unresolved`.
+
+Select steps by explicit field combinations. A deny
+answer beside a successful attempt, with the relations and order that qualify
+it:
+
+```sh
+jq '.data.runner_result.steps[]
+    | select(.sandbox_check.outcome == "deny" and .comparison.observation == "succeeded")
+    | {step_id, operation_relation: .comparison.operation_relation,
+       target_relation: .comparison.target_relation, order: .comparison.order,
+       limitations: .comparison.limitations}' run.json
+```
+
+Steps with no usable prediction, and why:
+
+```sh
+jq '.data.runner_result.steps[]
+    | select(.sandbox_check.result_source != "validator"
+             or (.sandbox_check.outcome | IN("allow", "deny") | not))
+    | {step_id, outcome: .sandbox_check.outcome, missing_reason: .sandbox_check.missing_reason,
+       limitations: .comparison.limitations}' run.json
+```
+
+Permission-shaped failures that no captured denial record names:
+
+```sh
+jq '.data.runner_sandbox_diagnostics.permission_failures_without_record' run.json
+```
 
 ### path_diagnostics
 
@@ -920,11 +1105,11 @@ with the literal leaf appended: the path the kernel names for a created or
 unlinked entry, or for a symlink acted on itself. Either is null when the host
 cannot derive it (a missing leaf has no leaf-followed form; a relative path has
 no parent form). Neither establishes what the worker's own syscall resolved,
-and neither changes the attempt, its comparison or `drift`. Deny-log
+and neither changes the attempt or its comparison. Deny-log
 correlation admits these forms as candidate evidence under their provenance;
 see [Denial-log correlation](#denial-log-correlation).
 
-Capture the sandbox_check argument quickly (no interpose needed):
+Capture the sandbox_check argument quickly:
 
 ```sh
 jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, outcome, path_diagnostics}' run.json
@@ -985,8 +1170,6 @@ are documented under SBPL check above):
   is checked independently, including when several fields are invalid.
   Unknown filter kinds and unsupported attempt combinations within the
   admission limits are per-step outcomes, not refusals.
-- `libsandbox_unavailable` — libsandbox could not be opened on this
-  host (the host pre-spawn check failed `dlopen`).
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -995,6 +1178,10 @@ are documented under SBPL check above):
 peer itself can't be reached. Rare in practice — the unsandboxed
 host always replies unless launchd or codesign reject the bundle
 outright.
+
+The controller's own outcomes (`tool_error`, `unsupported_runner_response`
+and `malformed_runner_response`) appear in `result.normalized_outcome` and are
+documented in the [controller README](../controller/README.md#output-contract).
 
 ## What PolicyWitness understands
 
@@ -1014,21 +1201,24 @@ unpredicted step still produces evidence.
 ### Filter kinds where prediction is unavailable
 
 Even within the predicted set, some `(operation, filter_kind)` pairs
-have a documented mismatch between `sandbox_check`'s userland
-verdict and the kernel's actual enforcement. For these, the runner
-accepts the filter in specimens (so policies can be authored),
-accepts and enforces the policy correctly at compile/apply time,
-but skips `sandbox_check` entirely and emits the same
-`prediction_unavailable` shape as for unknown filter kinds. The
-attempt still runs and provides the real evidence.
+have no usable userland prediction: on the system where they were
+checked, no `sandbox_check` filter ID in 1..200 produced an answer
+that matched what the kernel enforced for the policy under test.
+For these, the runner accepts the filter in specimens (so policies
+can be authored), compiles and applies the policy normally, but
+skips `sandbox_check` entirely and emits the same
+`prediction_unavailable` shape as for unknown filter kinds, with
+`query_plan:prediction_unavailable_pair` in the step's
+`comparison.limitations`. The attempt still runs and provides the
+real evidence.
 
 The contract is keyed on the `(operation, filter_kind)` pair, not on
-the filter kind alone — a filter kind that drifts for one operation
-may behave correctly with another, and the verification is
+the filter kind alone — a filter kind with no usable prediction for
+one operation may have one for another, and the check is
 op+filter-specific. A specimen pairing one of these filter kinds with
-a DIFFERENT operation gets a normal `sandbox_check` call; the
-prediction may still be wrong, but the runner doesn't override a
-prediction it hasn't verified to be wrong.
+a DIFFERENT operation gets a normal `sandbox_check` call; that
+answer is reported as received, because the runner excludes only the
+pairs it has checked.
 
 Currently in this category:
 
@@ -1046,7 +1236,7 @@ Currently in this category:
   the IOService class itself.
 - `(sysctl-read, sysctl_name)` — verified 2026-05-29 unreliable
   across all candidate filter IDs in 1..200 against `kern.osrelease`.
-  Confirms the drift pattern is not iokit-specific.
+  The same result outside the iokit family.
 
 ### Attempt kinds the runner implements
 
@@ -1068,7 +1258,7 @@ combinations:
 
   | field | populated when | sentinel when not | semantics |
   | --- | --- | --- | --- |
-  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are ambiguous permission failures: prediction allow yields `drift=null`, prediction deny can yield directional consistency with `drift=null` when submitted scope matches. A helper non-zero exit with `child_pid>0` still establishes successful spawning; the comparison separately accounts for query scope. |
+  | `child_pid` | spawn produced a child (helper ran, success or non-zero exit) | `0` — spawn blocked / target missing / setup failed | No child establishes spawn failure, not its cause. With `child_pid==0`, EPERM/EACCES are permission-shaped failures (`observation: permission_failure`) whose cause the record does not assign. A helper non-zero exit with `child_pid>0` still establishes successful spawning (`observation: succeeded`, basis `spawned_child`); the child's own result is in `rc` and `child_exit_code`. |
   | `child_exit_code` | child clean-exited | `-1` — signaled, no child ran, or final status unconfirmed | |
   | `child_term_signal` | child killed by a signal | `0` — clean-exited, no child ran, or final status unconfirmed | |
   | `stdout` / `stderr` | stream produced bytes | key omitted (no stream output) | |
@@ -1095,9 +1285,9 @@ combinations:
 Specimens are free to author probes with other attempt combinations
 (`("iokit", "open")`, future kinds, etc.) — those steps surface
 `step.attempt.outcome = "unsupported"` per-step. The `sandbox_check`
-verdict for the same step still runs normally; only the attempt
-slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
-(no attempt verdict to compare against).
+query for the same step still runs normally; only the attempt
+slot is no-op'd. The step's comparison carries `attempt:unsupported`
+with `observation: unavailable` and both relations `unresolved`.
 
 ## Operating
 
@@ -1111,8 +1301,8 @@ slot is no-op'd. `steps[].drift` is `null` for unsupported attempts
   unchanged, and no record is promised.
 - `--no-log-capture`: skip the unified-log (`log show`) deny scan. Archive access
   has been observed to cost seconds even for short spans. Pass this when you
-  don't consume `data.sandbox_log_capture` (or the `first_deny` diagnostic it
-  backs); `data.sandbox_log_capture` is then `null`.
+  don't consume `data.sandbox_log_capture`; it is then `null` and
+  `correlation_status` is `not_attempted`.
 - `--runner-mode <standard|byoxpc>`: inject `runner.mode` into the request
 - `--version`: print a `kind="version"` envelope with the build stamp and the
   wire contract versions this build speaks
@@ -1136,7 +1326,7 @@ and `clock_error`, `pipe_setup_error`, `read_error`, `decode_error`,
 `group_absent` requires an observed absent group after cleanup; a timeout or
 overflow status alone does not establish that cleanup succeeded.
 
-Any incomplete capture withholds correlation: `step_denies`, `first_deny` and
+Any incomplete capture withholds correlation: `step_denies` and
 `permission_failures_without_record` are null and `correlation_status` is
 `unavailable`, while bounded diagnostics and any intact observer reply survive.
 A successful complete empty query remains distinct. Neither case changes native
@@ -1158,8 +1348,8 @@ earlier failure or show what an earlier query could have returned.
 `end`): `floor(client start) - 2 s` through `ceil(client end) + 2 s`, with
 `pad_seconds` recording the pad. The observer mirrors the interval it scanned;
 a reply for any other interval is `window_mismatch` rather than `captured`: its
-parsed events remain inspectable, but `step_denies` and `first_deny` are null
-and correlation is `unavailable`. If the client's wall-clock end precedes its
+parsed events remain inspectable, but `step_denies` is null and correlation is
+`unavailable`. If the client's wall-clock end precedes its
 start, capture is `invalid_window`: raw milliseconds survive, `start`/`end` are
 null and the observer is not invoked. The pad allows for client/archive clock
 differences, and supported records in either padding region remain eligible
@@ -1169,9 +1359,10 @@ unavailable; array position is not proof of execution order. Ordered endpoints
 do not prove clock continuity during execution.
 
 The controller invokes the observer only with a confirmed `runner_subprocess.pid`.
-It never substitutes a host/client PID. `runner_sandbox_diagnostics` reports
-`capture_status` and `correlation_status` (`not_attempted`, `unavailable`,
-`no_match`, `pid_match`) beside the process disposition fields described under
+It never substitutes a host/client PID. `sandbox_log_capture.capture_status`
+says how the capture ended; `runner_sandbox_diagnostics` reports
+`correlation_status` (`not_attempted`, `unavailable`, `no_match`, `pid_match`)
+beside the process disposition fields described under
 [Shape and schema_version](#shape-and-schema_version).
 `permission_failures_without_record` lists the step IDs whose attempt the
 runner classified as a permission-shaped failure and that no captured event
@@ -1182,11 +1373,10 @@ does not mean nothing was denied, it makes no claim about what the OS log store
 contains (a record can exist under another path form, such as a resolved
 symlink), and it does not say why.
 
-`first_deny` references, by `event_index`, the first worker-PID match in
-`deny_events` array order; it is not the first event in time or a cause of
-death. Step associations under
+Step associations under
 `sandbox_log_capture.step_denies` contain `{event_index, candidate_step_ids,
-association}`. Events remain in `deny_events`, including unmatched events;
+association, matching_evidence}`. Array order is not time order, and a match
+is not a cause of death. Events remain in `deny_events`, including unmatched events;
 associations do not copy them. A single candidate uses `association="candidate"`;
 multiple candidates use `"ambiguous"`. Neither establishes a unique occurrence.
 

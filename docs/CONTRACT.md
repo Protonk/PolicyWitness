@@ -7,16 +7,16 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 12, worker ABI 7, controller envelope 4. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
 | request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
-| response schema (`response_schema`) | 12 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
+| response schema (`response_schema`) | 13 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 4 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 5 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies
@@ -24,8 +24,10 @@ Current wire contracts: request schema 3, response schema 12, worker ABI 7, cont
 - **Request schema**: the specimen JSON the controller hands the runner
   (`PWRunnerRunSpec`). The runner reports it back unchanged.
 - **Response schema**: the runner reply (`PWRunnerRunResult`). It tells a
-  reader of a stored reply which rules apply; `tests/lib/consumer.py` branches
-  on it. Older replies stay decodable and keep their original meaning.
+  reader which rules apply; `tests/lib/consumer.py` and the controller accept
+  exactly this number. `steps[].comparison` records the attempt channel's
+  classified observation, the submitted-scope relations, the order PW
+  established and the planner's exclusion or lifecycle limitations.
 - **Worker ABI**: the shared-memory layout between the XPC host and
   `pw-probe-runner`. Host and worker ship together inside each XPC bundle, so
   this is a tripwire, not a live compatibility boundary: the worker refuses a
@@ -33,96 +35,45 @@ Current wire contracts: request schema 3, response schema 12, worker ABI 7, cont
   `runner_subprocess.worker_evidence.abi_version`.
 - **Controller envelope**: the top-level JSON that `policy-witness` prints.
   The controller forwards the runner reply inside it without version coercion.
+  `data.specimen` is the dossier: request path, policy augmentation and
+  imports, host facts, runner and app provenance, and hashes of any selected
+  binary the app manifest does not describe; the raw runner reply, transport,
+  diagnostics and log capture stay beside it.
 
-## Tests assert minimums, not the current number
+## Supported versions
 
-A test states the lowest version that carries the fields it inspects, for
-example `schema_version >= 7` for a check that reads `comparison`. A bump then
-touches the manifest plus the tests for the change that caused it, and nothing
-else. Exactly one check, in the default `smoke` suite, compares a built app
-against the exact manifest values; it is the check that a build carries the
-numbers this repository believes it does.
+Semantic readers of runner responses and controller envelopes accept exactly
+the versions in [contract.json](contract.json); another version is
+unsupported. Raw transport retains the received bytes without interpreting
+unsupported records. Stored evidence keeps its bytes; current semantic readers
+reject unsupported versions. Request admission and the worker ABI follow their
+own contracts.
+
+A reader checks a version before interpreting its record. Missing or
+noninteger version fields are malformed; other integer versions are
+unsupported. For an envelope, the envelope version is checked first, then any
+nonnull runner reply. An unsupported document yields one version error, with
+no downstream shape errors and no recovered claims. The controller reports an
+unsupported or malformed reply as `unsupported_runner_response` or
+`malformed_runner_response` with the reply retained; `tests/lib/consumer.py`
+reports `unsupported`. Both read the numbers through generated copies of
+this manifest, so a bump touches the manifest, the generated copies and the
+fixtures that carry the number. Exactly one check, in the default `smoke`
+suite, compares a built app against the manifest values; it is the check that
+a build carries the numbers this repository believes it does.
 
 ## When a number moves
 
-Bump a number only when the rules for reading change. Adding a field never
-bumps: an absent field means unknown, never false, so a reader written for the
-previous number stays correct. A bump is required when a field is removed, its
-type or meaning changes, or readers must now enforce a new requirement, as they
-did when ordering became mandatory at response 8. Because host and worker ship
-together, the worker ABI bumps on any change to the shared-memory layout or the
-handshake over it; that keeps the mismatch tripwire meaningful.
+Bump a number when the rules for reading change: a field removed, its type or
+meaning changed, or a new requirement placed on readers. An added field alone
+does not require a bump. An absent field means unknown, never false. An
+additive contract change may also carry a bump, recorded in
+[contract.json](contract.json). Bump the worker ABI on any change to the
+shared-memory layout or handshake; because host and worker ship together,
+that keeps the mismatch tripwire meaningful.
 
-## Naming numbers in prose
-
-Describe current behavior without a number. Name a number only in a clause about
-the past, such as "replies before schema 8 carry no `comparison.order`". Those
-sentences stay true after every later bump. The generated sentence above is the
-one place that states the current numbers. The table below is the one place that
-says what each older number lacked.
-
-## Reading older replies
-
-A stored reply keeps the meaning it had when written. The response number says
-which of these rules apply; every later number keeps the earlier rows.
-
-Log evidence is additive within the controller envelope. Missing `supervision`,
-`observer.data.collection` or `processing_cutoff` in a stored envelope does not
-prove a budget, a completed wait or successful cleanup. Readers preserve the
-reported window: an envelope-1 trailing scan remains trailing, and an unpadded
-client-span window remains unpadded. Missing `window.pad_seconds` means zero
-padding; it does not acquire the current two-second allowance. Present `start`
-and `end` are the actual requested bounds. Unknown capture statuses are
-unavailable evidence, never execution failure or proof of allowance.
-Current-build collection assertions belong to conformance tests; generic
-consumer recovery does not retroactively require these observations from older
-envelopes. The [collection contract](../controller/README.md#log-collection-budgets-and-cleanup)
-defines current observations and partial-result handling. Request, runner
-response and worker ABI reading rules are independent of this optional channel.
-
-| Response | Introduced |
-| --- | --- |
-| 1 | Initial shape. |
-| 2 | Optional `steps[].sandbox_check.path_diagnostics` on path-filter checks. |
-| 3 | Host/worker split: top-level `pid` is the sandboxed worker when `runner_subprocess` is present, and `runner_subprocess` carries the worker exit status observed by the unsandboxed host. |
-| 4 | `validator_subprocess` for the `sb_api_validator --batch` child, and nullable `steps[].drift`. |
-| 5 | Explicit `steps[].deny_signal: null` (channel unobserved) and evidence-based execution classification without sandbox-cause inference. Older signal objects stay decodable. |
-| 6 | Nullable `steps[].sandbox_check.pid` when no worker was spawned, and `runner_subprocess.worker_evidence`. |
-| 7 | Per-step `comparison` with scope and limitations, submitted attempt intent (`requested_kind`, `requested_action`) and host path provenance. Older replies keep their original `drift` and lack these derivations. |
-| 8 | Ordered comparisons (`comparison.order`, `runner_subprocess.ordering`), the `runner_reporting_failed` reply with `reporting_failure`, and optional `validator_spawn_failure`. Absence of the spawn record in older replies is unknown, not a successful spawn. |
-| 9 | `sandbox_check.effective_filter_value` is gone; it always equaled `filter_value`. `path_diagnostics` names the forms equal to `input` in `same_as_input` and omits their keys, carries `realpath_resolved` and `firmlink_resolved` only when they differ (a string) or could not be derived (null), and no longer carries the `data_volume_form` heuristic. Each form is in exactly one of those states; equality means identical UTF-8 bytes. Conflicting or missing states are malformed; legacy omissions remain unreported. |
-| 10 | `runner_subprocess.disposition`, the worker disposition record, is mandatory beside a worker subprocess, with the host facts `cleanup_trigger`, `grace_end` and `collection_basis`, and `steps[].attempt.lifecycle` with its `attempt:*` lifecycle limitations. Readers validate the record against the raw facts it cites and project from it; a subprocess without the record at this version is invalid, not a legacy omission. Omission in older replies is unreported. See tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker disposition record". |
-| 11 | Exec attempt status is independent of the leader's exit status: a deadline or observation/cleanup failure can produce `exec_failed` and `rc=-1` while `child_exit_code=0` preserves the observed natural exit. For a spawned child whose final status is unconfirmed, `child_exit_code=-1` and `child_term_signal=0` establish neither an exit nor a signal; the attempt diagnostic retains the observation/cleanup failure. Replies before this number could report success at a deadline when the leader had already exited. |
-| 12 | `steps[].attempt.path_diagnostics` carries the unsandboxed host's after-orchestration resolution of a file or exec attempt target: `realpath_resolved` (leaf followed) and `parent_realpath_resolved` (parent resolved, leaf literal), under the same three-state `same_as_input` rule as the query block, always compact, with `observer` and `phase`. `steps[].attempt.normalized_path`, never populated, is gone. Neither form establishes what the worker's own syscall resolved; they are candidate evidence for deny-log correlation only. |
-
-Response 10 replies produced from request 3 onward may carry `unit: "nul_bytes"`
-in `admission_failure`, with `maximum` 0 and `actual` the count of embedded NULs
-in a native C-string field. This widens a documented two-valued field without a
-bump: a reader that switches on `unit` should treat an unfamiliar unit as a
-refusal it cannot quantify, never as an accepted request.
-
-| Worker ABI | Introduced |
-| --- | --- |
-| 1 | Initial shared-memory header, step slots and policy text. |
-| 2 | SBPL parameter slots. |
-| 3 | Parameter capacity raised from 16 to 1,024. |
-| 4 | Augments and the exec attempt runtime. |
-| 5 | Compiled-profile capture region. |
-| 6 | Progress/failure evidence header and diagnostic text region. |
-| 7 | Host release and worker acknowledgement words in the header (the ordering barrier). |
-
-| Controller envelope | Introduced |
-| --- | --- |
-| 1 | Initial shape. `data.sandbox_log_capture.window` recorded a trailing `last` lookback (`kind: "trailing"`), and `data.log_last` echoed the flag that set it. |
-| 2 | Deny-log capture requests the runner client's own span: `window` carries `kind: "runner_client_span"`, the client's start and end milliseconds and the whole-second UTC `start`/`end` strings handed to `log show`; `last` and `data.log_last` are gone. Reversed clock readings retain the milliseconds with null bounds and `capture_status: "invalid_window"`, without invoking the observer. `runner_sandbox_diagnostics.permission_failures_without_record` names the steps whose attempt reported a permission-shaped failure that no captured event records. A reply for different or missing bounds or a trailing lookback is `window_mismatch`; raw observer evidence survives without candidate or diagnostic correlation. |
-| 3 | `runner_sandbox_diagnostics` projects the worker disposition record: `termination_cause` names witnessed host cleanup (`host_sentinel_deadline`, `host_exit_grace_exhausted`, `host_cleanup_after_wait_error`, `host_cleanup_after_transfer_error`) instead of a blanket `unknown`, `stop_reason` carries the projected poll stop reason, `disposition_integrity` and `disposition_issues` report validation, and `process_disposition` adds `conflicting`, `withheld` and `unrecognized`. Legacy replies without the record keep the raw-status projection with `unknown` and `not_reported`. |
-| 4 | `data.sandbox_log_capture` adds `supervision` (the controller's observer capture: shared budget, `reserve_ms`, elapsed time, per-stream limits and counts, process wait and owned-group cleanup facts), `processing_cutoff`, `window.pad_seconds` (2; absence in older envelopes means 0) and the `capture_status` values `timeout` and `overflow`; `observer.data.collection` carries the observer's log-child capture, which stops 1,000 ms before the shared deadline. Any incomplete collection withholds every correlation. Candidate `matching_evidence.path_sources` may name a host-resolved attempt path form beside the submitted, requested and observed sources. |
-
-| Request | Introduced |
-| --- | --- |
-| 1 | Initial shape. |
-| 2 | `probe_plan[].sandbox_check.operation`, `sandbox_check.filter.value`, `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action` are admission-bounded like the attempt target (see `query_operation`, `query_filter_value` and `probe_plan_label` in [LIMITS.md](LIMITS.md)). An oversize string is refused before any process work as `bad_request` with `admission_failure` naming that field and no steps, like every other `bad_request`. Before this number, an admitted plan with long query strings could run to completion and lose its whole reply at the controller's output cap, or lose one prediction at the validator line cap. The runner applies the bound to every request it receives; a specimen inside the bounds behaves as before whichever number it carries. |
-| 3 | Top-level specimen/run/format strings and test-override paths are bounded. Service and direct orchestration share admission and independently sanitize every echoed metadata field in a refusal, including simultaneous violations. Native C-string fields reject embedded NUL before process work; `admission_failure.unit="nul_bytes"` counts these forbidden bytes against maximum zero. Per-step refusals carry `step_index`; refused step IDs and parameter keys are omitted from identity fields. The bounds apply regardless of the submitted request version. |
+The generated sentence above is the one place that states the current numbers;
+describe current behavior without repeating them in prose.
 
 ## Shape goldens
 

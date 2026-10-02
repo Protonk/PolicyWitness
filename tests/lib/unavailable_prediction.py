@@ -11,11 +11,11 @@ import json
 import sys
 from pathlib import Path
 
-from blackbox import submitted_filter_value, validate_run_shape, validate_step
-from consumer import recover_evidence
+import consumer
+from blackbox import validate_run_shape, validate_step
 
 
-def validate_run(run, step_id, operation, filter_value, attempt_contract, *, minimum_schema_version=None):
+def validate_run(run, step_id, operation, filter_value, attempt_contract):
     expected = {"step_id": step_id, "sandbox_outcome": "prediction_unavailable"}
     if attempt_contract == "sysctl_denied":
         expected["attempt_ok"] = False
@@ -26,9 +26,9 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract, *, min
         if isinstance(sb, dict) and sb.get("operation") != operation:
             errors.append(f"{step_id}: expected sandbox_check.operation={operation!r} "
                           f"(got {sb.get('operation')!r})")
-        if isinstance(sb, dict) and submitted_filter_value(sb) != filter_value:
+        if isinstance(sb, dict) and sb.get("filter_value") != filter_value:
             errors.append(f"{step_id}: expected sandbox_check.filter_value={filter_value!r} "
-                          f"(got {submitted_filter_value(sb)!r})")
+                          f"(got {sb.get('filter_value')!r})")
         attempt = step.get("attempt")
         if not isinstance(attempt, dict):
             continue  # validate_step has reported the missing channel.
@@ -46,21 +46,22 @@ def validate_run(run, step_id, operation, filter_value, attempt_contract, *, min
                 errors.append(f"{step_id}: expected attempt.errno=EPERM/EACCES (got {errno!r})")
     if errors:
         return errors
-    version = ((run.get('data') or {}).get('runner_result') or {}).get('schema_version')
-    if minimum_schema_version is not None and (type(version) is not int or version < minimum_schema_version):
-        return [f'runner schema_version below minimum {minimum_schema_version} (got {version!r})']
-    if type(version) is int and version >= 7 and attempt_contract == 'sysctl_denied':
-        answers = recover_evidence(run)
-        answer = answers['steps'][0]
-        if answers['comparison_groups']['unavailable'] != [step_id] or answers['failure_groups']['unattributed_failure'] != [step_id]:
-            errors.append(f'{step_id}: cannot recover independent unavailable prediction and unattributed failure')
-        required = {'prediction:query_not_requested', 'query_plan:prediction_unavailable_pair', 'sandbox_attribution_unestablished'}
-        if not required <= set(answer['comparison']['limitations']):
-            errors.append(f'{step_id}: cannot recover simultaneous planning, prediction and attribution limits')
-        if answer['prediction_missing_reason'] != 'query_not_requested' or answer['attempt_missing_reason'] is not None:
-            errors.append(f'{step_id}: unavailable prediction erased channel missing reasons')
-        if answer['path_reporting'] != 'not_reported':
-            errors.append(f'{step_id}: non-path query acquired path provenance')
+    # The planning exclusion and the attempt are independent channels: the
+    # record names the exclusion and claims no order, and the attempt keeps
+    # its own observation beside it.
+    step = consumer.select(consumer.steps(run), step_id=step_id)[0]
+    comparison = step["comparison"]
+    if comparison["order"] != "unestablished" or "query_plan:prediction_unavailable_pair" not in comparison["limitations"]:
+        errors.append(f"{step_id}: planning exclusion must carry order=unestablished and the pair limitation")
+    if step["sandbox_check"].get("result_source") != "synthetic" or step["sandbox_check"].get("missing_reason") != "query_not_requested":
+        errors.append(f"{step_id}: unavailable prediction erased the synthetic query_not_requested record")
+    if attempt_contract == "sysctl_denied":
+        if (comparison["observation"], comparison["observation_basis"]) != ("permission_failure", "permission_errno"):
+            errors.append(f"{step_id}: denied sysctl must be observed as a permission failure by errno")
+        if "path_diagnostics" in step["sandbox_check"]:
+            errors.append(f"{step_id}: non-path query acquired path provenance")
+    elif comparison["observation"] not in ("succeeded", "other_failure"):
+        errors.append(f"{step_id}: file-open placeholder observation {comparison['observation']!r} is not a supported-file result")
     return errors
 
 
@@ -71,17 +72,13 @@ def main():
     parser.add_argument("--operation", required=True)
     parser.add_argument("--filter-value", required=True)
     parser.add_argument("--attempt", choices=("file_open", "sysctl_denied"), required=True)
-    parser.add_argument("--minimum-schema-version", type=int,
-                        help="require at least this response version, so live output cannot take a "
-                             "stored-fixture compatibility path; omit for legacy fixtures")
     args = parser.parse_args()
     try:
         run = json.loads(args.run.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         print(f"cannot read run JSON: {exc}", file=sys.stderr)
         return 1
-    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt,
-                          minimum_schema_version=args.minimum_schema_version)
+    errors = validate_run(run, args.step_id, args.operation, args.filter_value, args.attempt)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

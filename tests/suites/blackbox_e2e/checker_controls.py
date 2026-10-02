@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
-"""Exercise the checker CLI with independently specified evidence and faults."""
+"""Exercise the checker CLI with independently specified evidence and faults.
+
+Every control here is authored against the current contract: the consumer's
+version gate, the uniform data skeleton, the D1 comparison record, the
+ordering chain and the reporting-failure rules. Baselines are retained live
+envelopes (`tests/fixtures/blackbox_e2e/checker`); nothing is derived from
+the checker or the production code under test.
+"""
 import copy
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -11,300 +19,329 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / "tests/fixtures/blackbox_e2e"
 CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-from consumer import recover_evidence, validate_evidence_shape, validate_current_build_evidence
+import contract
+from blackbox import envelope_skeleton
+from consumer import denials, lifecycle, select, steps, validate
 from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
 
 
-def consumer_controls(artifacts, baseline, current):
-    """Constructed JSON interpretation and bounded loss controls, not native proof."""
+def consumer_controls(artifacts, current):
+    """Constructed JSON interpretation controls against a retained live envelope."""
     records = []
 
-    def run(name, envelope, expected, reject=False):
+    def run(name, envelope, expected=None, rejected_by=None):
         path = artifacts / ('consumer_' + name + '.json')
         path.write_text(json.dumps(envelope, indent=2) + '\n')
-        answers = recover_evidence(envelope)
-        (artifacts / ('consumer_' + name + '.answers.json')).write_text(json.dumps(answers, indent=2) + '\n')
-        try:
-            expected(answers)
-        except AssertionError as exc:
-            assert reject, (name, str(exc))
-            records.append({'control': name, 'rejected': True, 'reason': str(exc)})
-        else:
-            assert not reject, name + ': loss escaped its consumer expectation'
+        errors = validate(envelope)
+        (artifacts / ('consumer_' + name + '.errors.json')).write_text(json.dumps(errors, indent=2) + '\n')
+        if rejected_by is None:
+            assert not errors, (name, errors)
+            if expected is not None:
+                expected(envelope)
             records.append({'control': name, 'rejected': False})
+        else:
+            assert any(rejected_by in error for error in errors), (name, rejected_by, errors)
+            records.append({'control': name, 'rejected': True, 'errors': errors})
+
+    def runner(envelope):
+        return envelope['data']['runner_result']
+
+    def first(envelope):
+        return runner(envelope)['steps'][0]
 
     def require(condition, reason):
         assert condition, reason
 
-    def agreement(a):
-        require(a['comparison_groups']['agreement'] == ['fs_write_allowed'], 'supported agreement must remain recoverable')
+    # The retained live run validates and its first row is read by field.
+    def allowed_write(e):
+        chosen = select(steps(e), step_id='fs_write_allowed', observation='succeeded', order='query_first')
+        require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
+    run('retained_live_run', current, allowed_write)
 
-    run('supported_agreement', current, agreement)
-    # Attempt forms have their own compact contract even beside a legacy query.
+    # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)
-    attempt = resolved['data']['runner_result']['steps'][0]['attempt']
+    attempt = first(resolved)['attempt']
     attempt['requested_path'] = '/link/file'
     attempt['path_diagnostics'] = dict(input='/link/file', observer='runner_host',
         phase='after_orchestration', same_as_input=[], realpath_resolved='/real/file',
         parent_realpath_resolved=None)
-    assert not validate_evidence_shape(resolved)
-    run('attempt_path_forms', resolved,
-        lambda a: require(a['steps'][0]['attempt_path_diagnostics'] == attempt['path_diagnostics'],
-                          'attempt path forms or provenance lost'))
+    # The query names the same target so the record's target relation holds.
+    first(resolved)['sandbox_check']['filter_value'] = '/link/file'
+    first(resolved)['sandbox_check']['path_diagnostics']['input'] = '/link/file'
+    for record in runner(resolved)['validator_subprocess']['records']:
+        if record['step_id'] == 'fs_write_allowed':
+            record['filter_value'] = '/link/file'
+    run('attempt_path_forms', resolved)
     for name, change, diagnostic in [
         ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
-        ('missing_target', lambda a: a.pop('requested_path'), 'input differs from requested_path'),
         ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/phase provenance'),
         ('wrong_phase', lambda a: a['path_diagnostics'].update(phase='before_attempt'), 'host/phase provenance'),
         ('missing_compact', lambda a: a['path_diagnostics'].pop('same_as_input'), 'require same_as_input'),
         ('duplicate_form', lambda a: a['path_diagnostics'].update(same_as_input=['realpath_resolved']*2), 'unique supported form names'),
         ('missing_form', lambda a: a['path_diagnostics'].pop('parent_realpath_resolved'), 'exclusively'),
+        ('missing_forms', lambda a: a.pop('path_diagnostics'), 'without path diagnostics'),
     ]:
         malformed = copy.deepcopy(resolved)
-        change(malformed['data']['runner_result']['steps'][0]['attempt'])
-        errors = validate_evidence_shape(malformed)
-        (artifacts / ('attempt_path_' + name + '.json')).write_text(json.dumps(dict(envelope=malformed, errors=errors), indent=2)+'\n')
-        assert any(diagnostic in error for error in errors), (name, errors)
-        records.append(dict(control='attempt_path_' + name, rejected=True, errors=errors))
-    assert recover_evidence(current)['steps'][0]['attempt_path_diagnostics'] is None
-    unknown = copy.deepcopy(current)
-    unknown['data']['runner_result']['steps'][0]['comparison']['conclusion'] = 'unavailable'
-    unknown['data']['runner_result']['steps'][0]['drift'] = None
-    # Even a shape-valid null projection must not erase independently expected agreement.
-    assert not validate_evidence_shape(unknown)
-    run('blanket_unknown', unknown, agreement, reject=True)
+        change(first(malformed)['attempt'])
+        run('attempt_path_' + name, malformed, rejected_by=diagnostic)
 
-    # Conformance is explicitly requested for current builds. A stored schema-7
-    # reply has the same wire version and must retain its historical meaning.
-    legacy_difference = copy.deepcopy(current)
-    s = legacy_difference['data']['runner_result']['steps'][0]
-    s['sandbox_check'].update(outcome='deny', rc=1, native_rc=1, result_source='validator')
-    s['attempt'].update(result_source='worker')
-    s['comparison'].update(prediction='deny', conclusion='disagreement')
-    s['drift'] = True
-    assert not validate_evidence_shape(legacy_difference)
-    run('legacy7_difference', legacy_difference,
-        lambda a: require(a['steps'][0]['drift'] is True and
-                          a['comparison_groups']['disagreement'] == ['fs_write_allowed'],
-                          'historical schema-7 disagreement was reclassified'))
-
-    def conformance(name, envelope, diagnostic=None):
-        errors = validate_current_build_evidence(envelope)
-        (artifacts / ('conformance_' + name + '.json')).write_text(json.dumps({
-            'envelope': envelope, 'errors': errors}, indent=2) + '\n')
-        assert (not errors if diagnostic is None else any(diagnostic in e for e in errors)), (name, errors)
-        records.append({'control': name, 'rejected': bool(errors), 'errors': errors})
-
-    conformance('unordered_difference', legacy_difference, 'current build cannot establish disagreement')
-    limited = copy.deepcopy(legacy_difference)
-    limited['data']['runner_result']['steps'][0]['comparison']['conclusion'] = 'unavailable'
-    limited['data']['runner_result']['steps'][0]['drift'] = None
-    conformance('unordered_difference_unavailable', limited)
-
-    for prediction in ('allow', 'deny'):
-        removed = copy.deepcopy(limited)
-        s = removed['data']['runner_result']['steps'][0]
-        s['sandbox_check'].update(operation='file-write-unlink', filter_kind='path', filter_value='/owned/A',
-            outcome=prediction, rc=0 if prediction == 'allow' else 1, native_rc=0 if prediction == 'allow' else 1,
-            path_diagnostics={'input':'/owned/A', 'same_as_input':[], 'realpath_resolved':None, 'firmlink_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
-        s['attempt'].update(requested_action='unlink', requested_path='/owned/A', outcome='ok', rc=0)
-        s['comparison'].update(prediction=prediction)
-        s['comparison']['limitations'] += ['attempt_mutation_order_unestablished', 'host_path_resolution_changed']
-        conformance('removed_' + prediction, removed)
-        bad = copy.deepcopy(removed)
-        b = bad['data']['runner_result']['steps'][0]
-        b['comparison']['conclusion'] = 'agreement' if prediction == 'allow' else 'disagreement'
-        b['drift'] = prediction == 'deny'
-        conformance('removed_' + prediction + '_false_claim', bad, 'mutation uncertainty requires unavailable')
-        for name, change, diagnostic in [
-            ('different_target', lambda s: s['attempt'].update(requested_path='/owned/B'), 'unsupported attempt_mutation_order_unestablished'),
-            ('failed_unlink', lambda s: s['attempt'].update(outcome='unlink_failed', rc=1), 'unsupported attempt_mutation_order_unestablished'),
-            ('synthetic_attempt', lambda s: s['attempt'].update(result_source='synthetic'), 'unsupported attempt_mutation_order_unestablished'),
-            ('later_resolves', lambda s: (s['sandbox_check']['path_diagnostics'].update(same_as_input=['realpath_resolved']), s['sandbox_check']['path_diagnostics'].pop('realpath_resolved')), 'unsupported host_path_resolution_changed'),
-            ('later_resolves_elsewhere', lambda s: s['sandbox_check']['path_diagnostics'].update(realpath_resolved='/private/owned/A'), 'unsupported host_path_resolution_changed'),
-            ('excluded', lambda s: s['sandbox_check'].update(outcome='prediction_unavailable'), 'unsupported host_path_resolution_changed'),
-            ('dropped_resolution_change', lambda s: s['comparison']['limitations'].remove('host_path_resolution_changed'), 'missing host_path_resolution_changed'),
-        ]:
-            bad = copy.deepcopy(removed)
-            change(bad['data']['runner_result']['steps'][0])
-            conformance('removed_' + prediction + '_' + name, bad, diagnostic)
-        # Recreation changes only the later-resolution observation; it cannot
-        # erase the worker's mutation or certify runtime target identity.
-        s['sandbox_check']['path_diagnostics']['same_as_input'] = ['realpath_resolved']
-        del s['sandbox_check']['path_diagnostics']['realpath_resolved']
-        s['comparison']['limitations'].remove('host_path_resolution_changed')
-        conformance('recreated_' + prediction, removed)
-
-    # Step position does not bound the confound while order is unestablished:
-    # the worker can finish every attempt before the validator's first query,
-    # so a later step's unlink confounds an earlier row naming the same target.
-    def path_step(step_id, action, operation, prediction, conclusion, drift, limits):
-        s = copy.deepcopy(limited['data']['runner_result']['steps'][0])
-        s.update(step_id=step_id, drift=drift)
-        s['sandbox_check'].update(operation=operation, filter_kind='path', filter_value='/owned/A',
-            outcome=prediction, rc=0 if prediction == 'allow' else 1, native_rc=0 if prediction == 'allow' else 1,
-            path_diagnostics={'input':'/owned/A', 'same_as_input':[], 'realpath_resolved':None, 'firmlink_resolved':None, 'observer':'runner_host', 'phase':'after_orchestration'})
-        s['attempt'].update(requested_kind='file', requested_action=action, requested_path='/owned/A', outcome='ok', rc=0)
-        s['comparison'].update(prediction=prediction, observation='succeeded', conclusion=conclusion,
-            limitations=['query_attempt_order_unestablished', 'state_stability_unestablished',
-                         'runtime_target_identity_unestablished'] + limits)
-        return s
-
-    uncertain = ['attempt_mutation_order_unestablished', 'host_path_resolution_changed']
-    later = copy.deepcopy(limited)
-    later['data']['runner_result']['steps'] = [
-        path_step('read', 'open_read', 'file-read-data', 'allow', 'unavailable', None, uncertain),
-        path_step('unlink', 'unlink', 'file-write-unlink', 'deny', 'unavailable', None, uncertain),
+    # Removed keys are rejected at their exact path; none is reconstructed.
+    removed = [
+        ('step_drift', lambda e: first(e).update(drift=False), 'removed key steps[].drift'),
+        ('step_deny_signal', lambda e: first(e).update(deny_signal=None), 'removed key steps[].deny_signal'),
+        ('comparison_prediction', lambda e: first(e)['comparison'].update(prediction='allow'), 'removed key comparison.prediction'),
+        ('comparison_conclusion', lambda e: first(e)['comparison'].update(conclusion='agreement'), 'removed key comparison.conclusion'),
+        ('comparison_scope', lambda e: first(e)['comparison'].update(scope='submitted_operation_and_target'), 'removed key comparison.scope'),
+        ('comparison_obligations', lambda e: first(e)['comparison'].update(obligations=[]), 'removed key comparison.obligations'),
+        ('comparison_references', lambda e: first(e)['comparison'].update(references=[]), 'removed key comparison.references'),
+        ('attempt_exit_code', lambda e: first(e)['attempt'].update(exit_code=0), 'removed key attempt.exit_code'),
+        ('attempt_syscall_errno', lambda e: first(e)['attempt'].update(syscall_errno=None), 'removed key attempt.syscall_errno'),
+        ('attempt_native_rc', lambda e: first(e)['attempt'].update(native_rc=0), 'removed key attempt.native_rc'),
+        ('query_scope', lambda e: first(e)['sandbox_check'].update(scope='post_sandbox'), 'removed key sandbox_check.scope'),
+        ('query_effective_filter_value', lambda e: first(e)['sandbox_check'].update(effective_filter_value='/x'), 'removed key sandbox_check.effective_filter_value'),
+        ('reply_deny_signal_total', lambda e: runner(e).update(deny_signal_total=None), 'removed key deny_signal_total'),
+        ('reply_comparison_conditions', lambda e: runner(e).update(comparison_conditions={}), 'removed key comparison_conditions'),
+        ('data_runner_startup_diagnostics', lambda e: e['data'].update(runner_startup_diagnostics=None), 'removed key data.runner_startup_diagnostics'),
+        ('data_policy_augmentation', lambda e: e['data'].update(policy_augmentation=None), 'removed key data.policy_augmentation'),
+        ('data_request_path', lambda e: e['data'].update(request_path='/x'), 'removed key data.request_path'),
+        ('data_error', lambda e: e['data'].update(error='x'), 'removed key data.error'),
+        ('diagnostics_worker_pid', lambda e: e['data']['runner_sandbox_diagnostics'].update(worker_pid=1), 'removed key data.runner_sandbox_diagnostics.worker_pid'),
+        ('diagnostics_capture_status', lambda e: e['data']['runner_sandbox_diagnostics'].update(capture_status='disabled'), 'removed key data.runner_sandbox_diagnostics.capture_status'),
+        ('diagnostics_first_deny', lambda e: e['data']['runner_sandbox_diagnostics'].update(first_deny=None), 'removed key data.runner_sandbox_diagnostics.first_deny'),
     ]
-    conformance('later_unlink_confounds_earlier_row', later)
-    claimed = copy.deepcopy(later)
-    claimed['data']['runner_result']['steps'][0] = path_step(
-        'read', 'open_read', 'file-read-data', 'allow', 'agreement', False, ['host_path_resolution_changed'])
-    conformance('later_unlink_earlier_row_claims_agreement', claimed, 'missing attempt_mutation_order_unestablished')
-    conformance('later_unlink_earlier_row_claims_agreement', claimed, 'mutation uncertainty requires unavailable')
-    unrelated = copy.deepcopy(later)
-    unrelated['data']['runner_result']['steps'][1]['attempt']['requested_path'] = '/owned/B'
-    unrelated['data']['runner_result']['steps'][1]['sandbox_check'].update(filter_value='/owned/B')
-    unrelated['data']['runner_result']['steps'][1]['sandbox_check']['path_diagnostics']['input'] = '/owned/B'
-    conformance('later_unlink_of_other_target', unrelated, 'unsupported attempt_mutation_order_unestablished')
+    for name, change, diagnostic in removed:
+        broken = copy.deepcopy(current)
+        change(broken)
+        run('removed_' + name, broken, rejected_by=diagnostic)
 
+    # Vocabulary and classification against the raw channel fields.
+    for name, change, diagnostic in [
+        ('foreign_limitation', lambda e: first(e)['comparison']['limitations'].append('sandbox_attribution_unestablished'), 'outside the vocabulary'),
+        ('repeated_limitation', lambda e: first(e)['comparison'].update(limitations=['attempt:not_reached'] * 2), 'repeated limitation'),
+        ('lifecycle_limitation_on_completed', lambda e: first(e)['comparison'].update(limitations=['attempt:not_reached']), 'lifecycle limitations'),
+        ('plan_limitation_without_exclusion', lambda e: first(e)['comparison'].update(limitations=['query_plan:unrecognized_filter_kind']), 'without a planning exclusion'),
+        ('observation_disagrees', lambda e: first(e)['comparison'].update(observation='permission_failure', observation_basis='permission_errno'), 'disagrees with the attempt fields'),
+        ('basis_disagrees', lambda e: first(e)['comparison'].update(observation_basis='spawned_child'), 'disagrees with the attempt fields'),
+        ('operation_relation_disagrees', lambda e: first(e)['comparison'].update(operation_relation='different'), 'disagrees with the submitted operations'),
+        ('target_relation_disagrees', lambda e: first(e)['comparison'].update(target_relation='different_submitted'), 'disagrees with the submitted targets'),
+        ('unknown_observation', lambda e: first(e)['comparison'].update(observation='agreement'), 'invalid comparison.observation'),
+        ('unknown_order', lambda e: first(e)['comparison'].update(order='future_order'), 'invalid comparison.order'),
+        ('missing_comparison', lambda e: first(e).pop('comparison'), 'missing comparison'),
+        ('missing_query', lambda e: first(e).pop('sandbox_check'), 'missing sandbox_check'),
+        ('missing_attempt', lambda e: first(e).pop('attempt'), 'missing attempt'),
+    ]:
+        broken = copy.deepcopy(current)
+        change(broken)
+        run('classification_' + name, broken, rejected_by=diagnostic)
 
-    missing = copy.deepcopy(current)
-    step = missing['data']['runner_result']['steps'][0]
-    step['drift'] = None
-    step['comparison'].update(prediction='unavailable', observation='unavailable',
-        observation_basis='no_completed_worker_result', conclusion='unavailable',
-        target_relation='different_submitted', limitations=[
-            'query_attempt_order_unestablished', 'state_stability_unestablished',
-            'prediction:validator_no_verdict', 'attempt:slot_incomplete', 'target:different_submitted'])
-    step['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None, missing_reason='validator_no_verdict')
-    step['attempt'].update(outcome='not_run_worker_died', result_source='synthetic', native_rc=None, missing_reason='slot_incomplete')
+    # The ordering chain: query_first needs the complete chain and an eligible
+    # native record; an eligible record with the chain must say query_first.
+    def ordering(e):
+        return runner(e)['runner_subprocess']['ordering']
+    for name, change, diagnostic in [
+        ('collection_not_closed', lambda e: ordering(e).update(collection_closed_before_proceed=False), 'lacks eligible record or ordering chain'),
+        ('proceed_not_set', lambda e: ordering(e).update(proceed_set=False), 'lacks eligible record or ordering chain'),
+        ('proceed_not_observed', lambda e: ordering(e).update(proceed_observed=False), 'lacks eligible record or ordering chain'),
+        ('lifetime_unestablished', lambda e: ordering(e).update(worker_lifetime_established=False), 'lacks eligible record or ordering chain'),
+        ('failed_apply', lambda e: runner(e).update(sandboxed_after_apply=False), 'lacks eligible record or ordering chain'),
+        ('missing_ordering', lambda e: runner(e)['runner_subprocess'].pop('ordering'), 'ordering is required'),
+        ('synthetic_query', lambda e: first(e)['sandbox_check'].update(result_source='synthetic'), 'lacks eligible record or ordering chain'),
+        ('incoherent_native', lambda e: first(e)['sandbox_check'].update(native_rc=1), 'lacks eligible record or ordering chain'),
+        ('wrong_pid', lambda e: first(e)['sandbox_check'].update(pid=runner(e)['runner_subprocess']['pid'] + 1), 'lacks eligible record or ordering chain'),
+        ('wrong_tuple', lambda e: runner(e)['validator_subprocess']['records'][0].update(filter_value='/other'), 'lacks eligible record or ordering chain'),
+        ('duplicate_record', lambda e: runner(e)['validator_subprocess']['records'].append(copy.deepcopy(runner(e)['validator_subprocess']['records'][0])), 'lacks eligible record or ordering chain'),
+        ('unestablished_despite_chain', lambda e: first(e)['comparison'].update(order='unestablished'), 'requires query_first'),
+    ]:
+        broken = copy.deepcopy(current)
+        change(broken)
+        run('order_' + name, broken, rejected_by=diagnostic)
+    # A recorded violation beside a falsified chain flag is not a contradiction
+    # the validator invents: the fault must be listed.
+    broken = copy.deepcopy(current)
+    ordering(broken).update(proceed_set=False)
+    for step in runner(broken)['steps']:
+        step['comparison']['order'] = 'unestablished'
+    run('order_unmarked_violation', broken, rejected_by='unmarked ordering protocol violation')
+    # The marked fault is retained beside the raw chain; no row claims an order.
+    ordering(broken)['protocol_violations'] = ['acknowledgement_without_release']
+    run('order_marked_violation_retained', broken)
 
-    def simultaneous(a):
-        s = a['steps'][0]
-        require({'prediction:validator_no_verdict', 'attempt:slot_incomplete', 'target:different_submitted'} <= set(s['comparison']['limitations']), 'all simultaneous limits are required')
-        require(s['prediction_missing_reason'] == 'validator_no_verdict' and s['attempt_missing_reason'] == 'slot_incomplete', 'distinct missing reasons must survive')
-        require(a['failure_groups']['missing_result'] == ['fs_write_allowed'], 'missing result is not an observed failure')
+    # Reporting failures retain diagnostic observations but certify no comparison.
+    def degraded(e, retained=True):
+        r = runner(e)
+        r.update(rc=1, normalized_outcome='runner_reporting_failed', error='host invariant rejected',
+                 reporting_failure=dict(origin='runner_host', diagnostic='missing ordering', original_rc=0,
+                                        original_normalized_outcome='ok', original_error=None, evidence_retained=retained))
+        e['result'].update(ok=False, exit_code=1, normalized_outcome='runner_reporting_failed')
+        for step in r['steps']:
+            step['comparison'] = None
+        if not retained:
+            r['steps'] = []
+            r.pop('runner_subprocess', None)
+            r.pop('validator_subprocess', None)
+    def preserved(e):
+        view = lifecycle(e)
+        require(view['reporting'] == 'reported', 'retained lifecycle evidence must remain readable')
+        require(all(s['comparison'] is None for s in steps(e)), 'every comparison withheld')
+    failed = copy.deepcopy(current)
+    degraded(failed)
+    run('reporting_failure_preserved', failed, preserved)
+    minimal = copy.deepcopy(current)
+    degraded(minimal, retained=False)
+    run('reporting_failure_minimal', minimal, lambda e: require(steps(e) == [], 'no steps without retention'))
+    for name, change, diagnostic in [
+        ('comparison_kept', lambda e: first(e).update(comparison=copy.deepcopy(first(current)['comparison'])), 'must withhold every comparison'),
+        ('ok_summary', lambda e: runner(e).update(normalized_outcome='ok'), 'reporting failure requires a failed summary'),
+        ('rc_zero', lambda e: runner(e).update(rc=0), 'reporting failure requires a failed summary'),
+        ('missing_marker', lambda e: runner(e).pop('reporting_failure'), 'invalid reporting_failure diagnostics'),
+        ('bad_marker', lambda e: runner(e).update(reporting_failure='invalid'), 'invalid reporting_failure diagnostics'),
+        ('false_retention', lambda e: runner(e)['reporting_failure'].update(evidence_retained=False), 'without evidence retention must omit'),
+    ]:
+        broken = copy.deepcopy(failed)
+        change(broken)
+        run('reporting_failure_' + name, broken, rejected_by=diagnostic)
+    for key in ['origin', 'diagnostic', 'original_rc', 'original_normalized_outcome', 'evidence_retained']:
+        broken = copy.deepcopy(failed)
+        runner(broken)['reporting_failure'].pop(key)
+        run('reporting_failure_missing_' + key, broken, rejected_by='invalid reporting_failure diagnostics')
 
-    run('simultaneous_limits', missing, simultaneous)
-    lost = copy.deepcopy(missing)
-    lost['data']['runner_result']['steps'][0]['comparison']['limitations'].remove('target:different_submitted')
-    assert not validate_evidence_shape(lost)
-    run('lost_one_limit', lost, simultaneous, reject=True)
-
+    # The host's raw launch evidence is preserved without an errno allowlist.
+    spawn = dict(origin='runner_host', operation='posix_spawn',
+                 executable_path='/unknown/validator-"é"', return_code=2147483647,
+                 diagnostic='unfamiliar native launch diagnostic')
     spawned = copy.deepcopy(current)
-    s = spawned['data']['runner_result']['steps'][0]
-    s['comparison'].update(observation_basis='spawned_child', limitations=[
-        'query_attempt_order_unestablished', 'state_stability_unestablished',
-        'exec_query_not_full_spawn_prediction', 'exec_result_failed_after_spawn', 'sandbox_attribution_unestablished'])
-    s['attempt'].update(requested_kind='exec', requested_action='spawn', outcome='exec_failed',
-        rc=37, child_pid=123, child_exit_code=37, stdout='controlled child marker')
+    r = runner(spawned)
+    r.update(rc=1, normalized_outcome='validator_spawn_failed', error='native launch failure', validator_spawn_failure=copy.deepcopy(spawn))
+    spawned['result'].update(ok=False, exit_code=1, normalized_outcome='validator_spawn_failed')
+    r.pop('validator_subprocess')
+    r['runner_subprocess']['ordering']['validator_disposition'] = 'not_spawned'
+    for step in r['steps']:
+        step['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None, errno=None,
+                                     missing_reason='validator_not_invoked')
+        step['comparison'].update(order='unestablished')
+    run('unfamiliar_spawn_failure', spawned, lambda e: require(runner(e)['validator_spawn_failure'] == spawn, 'raw launch record changed'))
+    for name, change, diagnostic in [
+        ('zero_code', lambda e: runner(e)['validator_spawn_failure'].update(return_code=0), 'invalid validator_spawn_failure'),
+        ('string_code', lambda e: runner(e)['validator_spawn_failure'].update(return_code='2'), 'invalid validator_spawn_failure'),
+        ('missing_path', lambda e: runner(e)['validator_spawn_failure'].pop('executable_path'), 'invalid validator_spawn_failure'),
+        ('foreign_origin', lambda e: runner(e)['validator_spawn_failure'].update(origin='validator'), 'invalid validator_spawn_failure'),
+        ('with_subprocess', lambda e: runner(e).update(validator_subprocess=dict(reaped=True, records=[])), 'cannot coexist'),
+    ]:
+        broken = copy.deepcopy(spawned)
+        change(broken)
+        run('malformed_spawn_' + name, broken, rejected_by=diagnostic)
 
-    def child_failure(a):
-        s = a['steps'][0]
-        require(s['failed_after_spawn'] and s['failure'] == 'unattributed_failure', 'failed exec result must survive successful spawn')
-        require(s['comparison']['conclusion'] == 'agreement' and s['attempt']['child_exit_code'] == 37, 'spawn comparison and child result are independent')
+    # The lifecycle record is required beside a worker subprocess.
+    unrecorded = copy.deepcopy(current)
+    runner(unrecorded)['runner_subprocess'].pop('disposition')
+    run('record_required', unrecorded, rejected_by='without runner_subprocess.disposition')
 
-    run('failed_after_spawn', spawned, child_failure)
-    lost = copy.deepcopy(spawned)
-    lost['data']['runner_result']['steps'][0]['comparison']['limitations'].remove('exec_result_failed_after_spawn')
-    run('lost_failed_exec', lost, child_failure, reject=True)
+    # D5: versions are read exactly, before anything else.
+    for name, change, diagnostic in [
+        ('envelope_previous', lambda e: e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1), 'unsupported controller envelope'),
+        ('envelope_next', lambda e: e.update(schema_version=contract.CONTROLLER_ENVELOPE + 1), 'unsupported controller envelope'),
+        ('envelope_string', lambda e: e.update(schema_version=str(contract.CONTROLLER_ENVELOPE)), 'malformed controller envelope'),
+        ('envelope_missing', lambda e: e.pop('schema_version'), 'malformed controller envelope'),
+        ('reply_previous', lambda e: runner(e).update(schema_version=contract.RESPONSE_SCHEMA - 1), 'unsupported runner response'),
+        ('reply_next', lambda e: runner(e).update(schema_version=contract.RESPONSE_SCHEMA + 1), 'unsupported runner response'),
+        ('reply_float', lambda e: runner(e).update(schema_version=float(contract.RESPONSE_SCHEMA)), 'malformed runner response'),
+        ('reply_missing', lambda e: runner(e).pop('schema_version'), 'malformed runner response'),
+    ]:
+        broken = copy.deepcopy(current)
+        change(broken)
+        errors = validate(broken)
+        assert len(errors) == 1 and diagnostic in errors[0], (name, errors)
+        for reader in (steps, lifecycle, denials):
+            try:
+                reader(broken)
+            except ValueError as exc:
+                assert diagnostic in str(exc), (name, reader.__name__, exc)
+            else:
+                raise AssertionError(f'{name}: {reader.__name__} read an unsupported document')
+        records.append({'control': 'version_' + name, 'rejected': True, 'errors': errors})
+    # An envelope without a reply is read under its own version only.
+    no_reply = copy.deepcopy(current)
+    no_reply['data'].update(runner_result=None, runner_client=None, runner_sandbox_diagnostics=None, sandbox_log_capture=None)
+    no_reply['result'].update(ok=False, exit_code=2, normalized_outcome='tool_error', error='controlled')
+    run('no_reply_envelope', no_reply, lambda e: require(steps(e) == [] and denials(e)['capture_status'] == 'not_reported', 'absence must not invent evidence'))
+    bare = copy.deepcopy(runner(current))
+    assert not validate(bare), validate(bare)
+    bare['schema_version'] = contract.RESPONSE_SCHEMA + 1
+    errors = validate(bare)
+    assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
+    records.append({'control': 'bare_reply_versions', 'rejected': True})
 
-    for version in (4, 5, 6):
-        old = copy.deepcopy(baseline)
-        old['data']['runner_result']['schema_version'] = version
-        # Deliberately populate the old boolean to test absence of a new meaning.
-        old['data']['runner_result']['steps'][0]['drift'] = False
-        old['data']['runner_result']['steps'][0]['sandbox_check']['path_diagnostics'] = {'input':'/old','realpath_resolved':'/old'}
-        def legacy(a):
-            require(a['comparison_groups']['agreement'] == [], 'old false does not imply response-7 agreement')
-            require(len(a['failure_groups']['not_reported']) == 3, 'legacy derivation must stay unreported')
-            require(a['steps'][0]['drift'] is False and a['steps'][0]['path_reporting'] == 'provenance_not_reported', 'legacy value/provenance changed')
-        run('legacy_' + str(version), old, legacy)
-
-    # New controller evidence can accompany an old runner reply.
-    logged = copy.deepcopy(old)
-    event = {'pid':42, 'operation':'file-write-data', 'path':'/attempt', 'raw_line':'controlled denial'}
-    match = {'step_id':'fs_write_allowed', 'operation':'file-write-data', 'operation_source':'submitted_attempt',
-             'requested_kind':'file', 'requested_action':'open_write', 'path':'/attempt', 'path_sources':['submitted_attempt.target']}
-    window = {'kind':'runner_client_span', 'started_at_unix_ms':1000, 'ended_at_unix_ms':2500,
-              'start':'1970-01-01 00:00:01+0000', 'end':'1970-01-01 00:00:03+0000',
-              'event_timestamps_available':False, 'exact_run_membership':False, 'step_ordering':False, 'pid_reuse_protection':False}
-    logged['data']['sandbox_log_capture'] = {'capture_status':'captured', 'window':window,
-        'deny_events':[event, dict(event, pid=99)], 'step_denies':[{'event_index':0,
-        'candidate_step_ids':['fs_write_allowed'], 'association':'candidate', 'matching_evidence':[match]}]}
-    logged['data']['runner_sandbox_diagnostics'] = {'capture_status':'captured', 'correlation_status':'pid_match', 'termination_cause':'unknown'}
-
-    def candidate(a, expected_window=window):
-        d = a['denials']; c = d['candidates'][0]
-        require(d['events'] == [event, dict(event,pid=99)], 'unmatched raw events must survive')
+    # The log channel is read in place with candidate references resolved.
+    event = {'pid': runner(current)['runner_subprocess']['pid'], 'operation': 'file-write-data',
+             'path': first(current)['attempt']['requested_path'], 'raw_line': 'controlled denial'}
+    match = {'step_id': 'fs_write_allowed', 'operation': 'file-write-data', 'operation_source': 'submitted_attempt',
+             'requested_kind': 'file', 'requested_action': 'open_write', 'path': event['path'],
+             'path_sources': ['submitted_attempt.target']}
+    window = {'kind': 'runner_client_span', 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500, 'pad_seconds': 2,
+              'start': '1969-12-31 23:59:59+0000', 'end': '1970-01-01 00:00:05+0000',
+              'event_timestamps_available': False, 'exact_run_membership': False, 'step_ordering': False,
+              'pid_reuse_protection': False}
+    logged = copy.deepcopy(current)
+    logged['data']['sandbox_log_capture'] = {'capture_status': 'captured', 'window': window,
+        'deny_events': [event, dict(event, pid=99)], 'step_denies': [{'event_index': 0,
+        'candidate_step_ids': ['fs_write_allowed'], 'association': 'candidate', 'matching_evidence': [match]}]}
+    logged['data']['runner_sandbox_diagnostics'].update(correlation_status='pid_match', permission_failures_without_record=[])
+    def candidate(e):
+        d = denials(e)
+        c = d['candidates'][0]
+        require(d['events'] == [event, dict(event, pid=99)], 'unmatched raw events must survive')
         require(c['event_index'] == 0 and c['event'] == event and c['association'] == 'candidate', 'candidate reference is not unique occurrence')
         require(c['matching_evidence'] == [match], 'matching provenance must survive')
-        require(d['window'] == expected_window and d['diagnostics']['termination_cause'] == 'unknown', 'capture limits and unknown cause must survive')
-
-    # Retain historical controller windows as well as old runner replies inside
-    # current envelopes. Decoding must not reinterpret a stored trailing scan.
-    old_window = dict(kind='trailing', last='10s', event_timestamps_available=False,
-                      exact_run_membership=False, step_ordering=False, pid_reuse_protection=False)
-    for envelope_version, recorded_window in [(1, old_window), (2, window)]:
-        historical = copy.deepcopy(logged)
-        historical['schema_version'] = envelope_version
-        historical['data']['sandbox_log_capture']['window'] = recorded_window
-        if envelope_version == 1:
-            historical['data']['log_last'] = '10s'
-        else:
-            historical['data'].pop('log_last', None)
-        run('envelope_%d_with_legacy_runner_candidates' % envelope_version, historical,
-            lambda a: candidate(a, recorded_window))
-    padded = copy.deepcopy(logged)
-    padded_window = dict(window, pad_seconds=2, start='1969-12-31 23:59:59+0000',
-                         end='1970-01-01 00:00:05+0000')
-    padded['data']['sandbox_log_capture']['window'] = padded_window
-    assert not validate_evidence_shape(padded)
-    run('padded_window_with_legacy_runner', padded, lambda a: candidate(a, padded_window))
-    # Absence in historical envelopes means zero; recovery must not invent a pad.
-    assert recover_evidence(logged)['denials']['window'].get('pad_seconds', 0) == 0
-    logged['schema_version'] = 2
-    logged['data'].pop('log_last', None)
-    lost = copy.deepcopy(logged)
-    del lost['data']['sandbox_log_capture']['step_denies'][0]['matching_evidence'][0]['operation_source']
-    run('lost_matching_owner', lost, candidate, reject=True)
-    lost = copy.deepcopy(logged)
-    lost['data']['sandbox_log_capture']['window']['exact_run_membership'] = True
-    run('invented_exact_run', lost, candidate, reject=True)
-    for status, correlation in [('captured','no_match'), ('blocked','unavailable'),
-                                ('requested_unavailable','unavailable'), ('disabled','not_attempted'), ('no_worker','not_attempted')]:
+        require(d['window'] == window and d['correlation_status'] == 'pid_match', 'capture limits must survive')
+    run('candidate_resolution', logged, candidate)
+    for status, correlation in [('captured', 'no_match'), ('blocked', 'unavailable'),
+                                ('requested_unavailable', 'unavailable'), ('disabled', 'not_attempted')]:
         absent = copy.deepcopy(logged)
-        absent['data']['runner_sandbox_diagnostics'].update(capture_status=status, correlation_status=correlation)
+        absent['data']['runner_sandbox_diagnostics'].update(correlation_status=correlation, permission_failures_without_record=None)
         absent['data']['sandbox_log_capture'] = (dict(capture_status=status, window=window,
-            deny_events=[dict(event,pid=99)] if status=='captured' else None,
-            step_denies=[] if status=='captured' else None, blocked_reason='controlled blockage' if status=='blocked' else None)
-            if status not in ('disabled','no_worker') else None)
-        def availability(a):
-            d=a['denials']
-            require((d['capture_status'],d['correlation_status']) == (status,correlation), 'capture states must remain distinct')
-            require(d['candidates'] == ([] if status=='captured' else None), 'no match and no report differ')
-            if status=='blocked': require(d['capture']['blocked_reason']=='controlled blockage', 'capture detail lost')
-        run('capture_'+status, absent, availability)
-    # F3: a legacy reply reports the lifecycle account as not_reported rather than
-    # inventing one; a worker reply at the record version must carry the record.
-    run('no_worker_lifecycle', old,
-        lambda a: require(a['lifecycle']['reporting'] == 'no_worker' and a['lifecycle']['record'] is None,
-                          'a reply without a worker subprocess carries no lifecycle account'))
-    legacy_worker = copy.deepcopy(old)
-    legacy_worker['data']['runner_result']['runner_subprocess'] = {'pid': 42, 'reaped': True, 'term_signal': 9, 'partial_steps': True}
-    run('legacy_lifecycle_not_reported', legacy_worker,
-        lambda a: require(a['lifecycle']['reporting'] == 'not_reported' and a['lifecycle']['record'] is None,
-                          'legacy lifecycle account must be not_reported, not derived'))
-    unrecorded = copy.deepcopy(current)
-    unrecorded['data']['runner_result']['schema_version'] = 10
-    unrecorded['data']['runner_result']['runner_subprocess'] = {'pid': 42, 'reaped': True, 'exit_code': 0, 'partial_steps': False}
-    assert any('disposition' in e for e in validate_evidence_shape(unrecorded)), 'record version without the record must be rejected'
-    records.append({'control': 'record_required_at_new_version', 'rejected': True})
-    for name, runner, state in [('no_reply',None,'no_runner_reply'), ('no_steps',{'schema_version':7,'steps':[]},'no_admitted_steps')]:
-        run(name, {'data':{'runner_result':runner}}, lambda a: require(a['step_reporting']==state and a['steps']==[], 'run absence must not invent step comparisons'))
+            deny_events=[dict(event, pid=99)] if status == 'captured' else None,
+            step_denies=[] if status == 'captured' else None,
+            blocked_reason='controlled blockage' if status == 'blocked' else None)
+            if status != 'disabled' else None)
+        def availability(e, status=status, correlation=correlation):
+            d = denials(e)
+            require((d['capture_status'], d['correlation_status']) == (status if status != 'disabled' else 'not_reported', correlation),
+                    'capture states must remain distinct')
+            require(d['candidates'] == ([] if status == 'captured' else None), 'no match and no report differ')
+            if status == 'blocked':
+                require(d['capture']['blocked_reason'] == 'controlled blockage', 'capture detail lost')
+        run('capture_' + status, absent, availability)
     (artifacts / 'consumer-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+
+
+def client_output_control(artifacts):
+    """The shipped client's own failure reply validates under the current contract.
+
+    A connection to a service that does not exist yields a client-synthesized
+    reply; it must carry the current response version with no steps.
+    """
+    app = Path(os.environ.get('PW_APP_DIR') or (ROOT / 'dist/PolicyWitness.app'))
+    client = app / 'Contents/MacOS/pw-runner-client'
+    assert client.is_file(), f'shipped client missing: {client}'
+    request = artifacts / 'client-request.json'
+    request.write_text(json.dumps({'schema_version': 1, 'specimen_id': 'client-control',
+                                   'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
+                                   'probe_plan': []}) + '\n')
+    result = subprocess.run([str(client), 'run', '--timeout-ms', '2000', '--request', '-',
+                             'com.example.pw.no-such-service.' + os.urandom(4).hex()],
+                            input=request.read_bytes(), capture_output=True, timeout=30)
+    (artifacts / 'client.stdout').write_bytes(result.stdout)
+    (artifacts / 'client.stderr').write_bytes(result.stderr)
+    assert result.returncode == 1, result
+    reply = json.loads(result.stdout)
+    assert reply['schema_version'] == contract.RESPONSE_SCHEMA, reply.get('schema_version')
+    assert reply['normalized_outcome'] in ('xpc_error', 'xpc_timeout', 'xpc_no_reply'), reply
+    assert reply['steps'] == [] and reply.get('runner_subprocess') is None, reply
+    errors = validate(reply)
+    assert not errors, errors
+    assert not validate(envelope_skeleton(reply, ok=False)), validate(envelope_skeleton(reply, ok=False))
+    print('client failure reply validates under the current contract: ' + reply['normalized_outcome'], flush=True)
 
 
 def cleanup_witness_controls(artifacts):
@@ -342,147 +379,42 @@ def cleanup_witness_controls(artifacts):
     print('cleanup witness controls: ok', flush=True)
 
 
-def ordering_controls(artifacts):
-    """Handwritten response-8 chain with one independently specified native record."""
-    query = dict(operation='file-read-data', filter_kind='path', filter_value='/owned',
-                 outcome='allow', result_source='validator', native_rc=0, rc=0, errno=0, pid=42)
-    record = dict(step_id='s', operation='file-read-data', filter_type='PATH', filter_value='/owned',
-                  outcome='allow', rc=0, errno=0)
-    ordering = dict(collection_closed_before_proceed=True, proceed_set=True, proceed_observed=True,
-                    validator_disposition='reaped', worker_lifetime_established=True, protocol_violations=[])
-    step = dict(step_id='s', sandbox_check=query, attempt=dict(requested_kind='file', requested_action='open_read'),
-        drift=False, comparison=dict(scope='submitted_operation_and_target', prediction='allow', observation='succeeded',
-        observation_basis='completed_worker_status', operation_relation='matched', target_relation='same_submitted',
-        conclusion='agreement', order='query_first', limitations=['state_stability_unestablished', 'runtime_target_identity_unestablished']))
-    base = dict(schema_version=8, sandboxed_after_apply=True, steps=[step], runner_subprocess=dict(pid=42, ordering=ordering),
-                validator_subprocess=dict(reaped=True, records=[record]))
-    def check(name, change=lambda r: None, reject=False):
-        runner = copy.deepcopy(base); change(runner)
-        envelope = dict(data=dict(runner_result=runner))
-        errors = validate_evidence_shape(envelope)
-        (artifacts / ('order8_' + name + '.json')).write_text(json.dumps(dict(envelope=envelope, errors=errors), indent=2) + '\n')
-        assert bool(errors) == reject, (name, errors)
-    check('eligible')
-    for field in ['collection_closed_before_proceed', 'proceed_set', 'proceed_observed', 'worker_lifetime_established']:
-        check('missing_' + field, lambda r, f=field: r['runner_subprocess']['ordering'].update({f:False}), True)
-    check('failed_apply', lambda r: r.update(sandboxed_after_apply=False), True)
-    check('missing_ordering', lambda r: r['runner_subprocess'].pop('ordering'), True)
-    check('missing_order', lambda r: r['steps'][0]['comparison'].pop('order'), True)
-    check('synthetic', lambda r: r['steps'][0]['sandbox_check'].update(result_source='synthetic'), True)
-    check('native_error', lambda r: r['steps'][0]['sandbox_check'].update(outcome='error', native_rc=-1, rc=-1), True)
-    check('unknown_outcome', lambda r: r['steps'][0]['sandbox_check'].update(outcome='future'), True)
-    check('incoherent_native', lambda r: r['steps'][0]['sandbox_check'].update(native_rc=1), True)
-    check('missing_native_errno', lambda r: r['steps'][0]['sandbox_check'].pop('errno'), True)
-    check('duplicate', lambda r: r['validator_subprocess']['records'].append(copy.deepcopy(record)), True)
-    check('wrong_tuple', lambda r: r['validator_subprocess']['records'][0].update(filter_value='/other'), True)
-    check('wrong_pid', lambda r: r['steps'][0]['sandbox_check'].update(pid=43), True)
-    check('order_limit', lambda r: r['steps'][0]['comparison']['limitations'].append('query_attempt_order_unestablished'), True)
-    def unordered(r):
-        r['steps'][0]['comparison'].update(order='unestablished')
-        r['steps'][0]['comparison']['limitations'].append('query_attempt_order_unestablished')
-    check('unsupported_unestablished', unordered, True)
-    def no_worker(r):
-        unordered(r); r.pop('runner_subprocess'); r.pop('validator_subprocess')
-        r['steps'][0]['sandbox_check'].update(result_source='synthetic', native_rc=None, pid=None)
-    check('no_worker', no_worker)
-    def fault(r):
-        unordered(r)
-        r['runner_subprocess']['ordering'].update(proceed_set=False, protocol_violations=['acknowledgement_without_release'])
-    check('raw_contradiction_retained', fault)
-    def diagnostic(r):
-        unordered(r); r['steps'][0]['sandbox_check'].update(outcome='error', native_rc=-1, rc=-1)
-        r['validator_subprocess']['records'][0].update(outcome='error', rc=-1)
-    check('diagnostic_unestablished', diagnostic)
-    def difference(r):
-        r['steps'][0]['comparison'].update(conclusion='disagreement', limitations=[])
-        r['steps'][0]['drift'] = True
-    check('disagreement_without_labels', difference, True)
-    def uncertain_cleanup(r):
-        r['runner_subprocess']['ordering'].update(validator_disposition='unconfirmed')
-        r['validator_subprocess'].update(reaped=False)
-    check('unconfirmed_cleanup_still_ordered', uncertain_cleanup)
+def mutation_order_controls(artifacts, current):
+    """Unordered and ordered unlink rows: the attempt record and `order` are what the row says."""
+    records = []
+    base = copy.deepcopy(current)
+    r = base['data']['runner_result']
+    step = r['steps'][0]
+    target = step['attempt']['requested_path']
+    step['sandbox_check'].update(operation='file-write-unlink')
+    step['attempt'].update(requested_action='unlink', outcome='ok', rc=0, errno=None)
+    for record in r['validator_subprocess']['records']:
+        if record['step_id'] == step['step_id']:
+            record['operation'] = 'file-write-unlink'
+    assert not validate(base), validate(base)
+    chosen = select(steps(base), step_id=step['step_id'], order='query_first', observation='succeeded', operation_relation='matched')
+    assert len(chosen) == 1 and chosen[0]['attempt']['requested_action'] == 'unlink', chosen
+    records.append({'control': 'ordered_unlink', 'rejected': False})
+    # No validator ran (its spawn failed): collection closed with nothing to
+    # collect, the worker was released, and no row can claim an order.
+    unordered = copy.deepcopy(base)
+    unordered['data']['runner_result']['runner_subprocess']['ordering'].update(validator_disposition='not_spawned')
+    unordered['data']['runner_result'].pop('validator_subprocess')
+    for s in unordered['data']['runner_result']['steps']:
+        s['sandbox_check'].update(result_source='synthetic', native_rc=None, errno=None, outcome='error', missing_reason='validator_not_invoked')
+        s['comparison']['order'] = 'unestablished'
+    assert not validate(unordered), validate(unordered)
+    chosen = select(steps(unordered), step_id=step['step_id'], order='unestablished', observation='succeeded')
+    assert len(chosen) == 1, chosen
+    records.append({'control': 'unordered_unlink', 'rejected': False})
+    claimed = copy.deepcopy(unordered)
+    claimed['data']['runner_result']['steps'][0]['comparison']['order'] = 'query_first'
+    errors = validate(claimed)
+    assert any('lacks eligible record' in e for e in errors), errors
+    records.append({'control': 'unordered_unlink_claims_order', 'rejected': True, 'errors': errors})
+    (artifacts / 'mutation-order-controls.json').write_text(json.dumps(records, indent=2) + '\n')
+    print(f'{target}: ordered and unordered unlink rows keep their records', flush=True)
 
-    # Reporting failures retain diagnostic observations but certify no comparisons.
-    failed = copy.deepcopy(base)
-    failed.update(rc=1, normalized_outcome='runner_reporting_failed', error='host invariant rejected',
-        reporting_failure=dict(origin='runner_host', diagnostic='missing ordering', original_rc=0,
-            original_normalized_outcome='ok', original_error=None, evidence_retained=True))
-    failed['runner_subprocess'].pop('ordering')
-    failed['steps'][0].pop('comparison'); failed['steps'][0]['drift'] = None
-    def report_check(name, change=lambda r: None, reject=False):
-        runner = copy.deepcopy(failed); change(runner)
-        envelope = dict(data=dict(runner_result=runner))
-        errors = validate_evidence_shape(envelope)
-        (artifacts / ('reply_failure_' + name + '.json')).write_text(json.dumps(dict(envelope=envelope, errors=errors), indent=2) + '\n')
-        assert bool(errors) == reject, (name, errors)
-        return recover_evidence(envelope)
-    recovered = report_check('preserved')
-    assert recovered['step_reporting'] == 'reporting_failed'
-    assert recovered['comparison_groups']['not_reported'] == ['s']
-    assert recovered['steps'][0]['query'] == query
-    assert recovered['steps'][0]['attempt'] == step['attempt']
-    report_check('false_drift', lambda r: r['steps'][0].update(drift=False), True)
-    report_check('true_drift', lambda r: r['steps'][0].update(drift=True), True)
-    report_check('missing_drift', lambda r: r['steps'][0].pop('drift'), True)
-    report_check('comparison', lambda r: r['steps'][0].update(comparison=copy.deepcopy(step['comparison'])), True)
-    report_check('ok', lambda r: r.update(normalized_outcome='ok'), True)
-    report_check('rc', lambda r: r.update(rc=0), True)
-    report_check('missing_marker', lambda r: r.pop('reporting_failure'), True)
-    report_check('bad_marker', lambda r: r.update(reporting_failure='invalid'), True)
-    for key in ['origin', 'diagnostic', 'original_rc', 'original_normalized_outcome', 'evidence_retained']:
-        report_check('missing_' + key, lambda r, k=key: r['reporting_failure'].pop(k), True)
-    report_check('false_retention', lambda r: r['reporting_failure'].update(evidence_retained=False), True)
-    def minimal(r):
-        r['reporting_failure']['evidence_retained'] = False
-        r['steps'] = []; r.pop('runner_subprocess'); r.pop('validator_subprocess')
-    report_check('minimal', minimal)
-
-    # Preserve the host's raw launch evidence without an errno-name allowlist or
-    # interpreting its diagnostic. Older envelopes remain explicitly unreported.
-    spawn = dict(origin='runner_host', operation='posix_spawn',
-        executable_path='/unknown/validator-"é"', return_code=2147483647,
-        diagnostic='unfamiliar native launch diagnostic')
-    def spawn_failed(r):
-        unordered(r)
-        r.update(rc=1, normalized_outcome='validator_spawn_failed', error='native launch failure',
-                 validator_spawn_failure=copy.deepcopy(spawn))
-        r.pop('validator_subprocess')
-        r['runner_subprocess']['ordering']['validator_disposition'] = 'not_spawned'
-        r['steps'][0]['sandbox_check'].update(outcome='error', result_source='synthetic',
-            native_rc=None, errno=None, missing_reason='validator_not_invoked')
-        r['steps'][0]['comparison'].update(prediction='unavailable', conclusion='unavailable')
-        r['steps'][0]['drift'] = None
-    check('unfamiliar_spawn_failure', spawn_failed)
-    runner = copy.deepcopy(base); spawn_failed(runner)
-    envelope = dict(data=dict(runner_result=runner))
-    recovered = recover_evidence(envelope)
-    assert recovered['validator_spawn_failure'] == spawn
-    runner['validator_spawn_failure']['return_code'] = 2
-    assert recovered['validator_spawn_failure'] == spawn, 'recovery aliases its input'
-    runner.pop('validator_spawn_failure')
-    assert not validate_evidence_shape(envelope), 'older response-8 replies may omit spawn evidence'
-    assert recover_evidence(envelope)['validator_spawn_failure'] is None
-    def retained_spawn(r):
-        r.pop('validator_subprocess')
-        r['steps'][0]['sandbox_check'].update(outcome='error', result_source='synthetic', native_rc=None)
-        r['reporting_failure'].update(original_rc=1, original_normalized_outcome='validator_spawn_failed',
-                                     original_error='native launch failure')
-        r['validator_spawn_failure'] = copy.deepcopy(spawn)
-    assert report_check('retained_spawn', retained_spawn)['validator_spawn_failure'] == spawn
-    def false_spawn_retention(r):
-        minimal(r); r['validator_spawn_failure'] = copy.deepcopy(spawn)
-    report_check('minimal_with_spawn_evidence', false_spawn_retention, True)
-    # The record's shape is checked, not its meaning: any nonzero code is a failure.
-    for name, change in [
-        ('zero_code', lambda r: r['validator_spawn_failure'].update(return_code=0)),
-        ('string_code', lambda r: r['validator_spawn_failure'].update(return_code='2')),
-        ('missing_path', lambda r: r['validator_spawn_failure'].pop('executable_path')),
-        ('foreign_origin', lambda r: r['validator_spawn_failure'].update(origin='validator')),
-        ('with_subprocess', lambda r: r.update(validator_subprocess=dict(reaped=True, records=[]))),
-    ]:
-        def malformed(r, change=change):
-            spawn_failed(r); change(r)
-        check('malformed_spawn_' + name, malformed, True)
 
 def main():
     artifacts = Path(sys.argv[1])
@@ -511,56 +443,26 @@ def main():
             print(f"{name}: ok", flush=True)
 
     check("valid", baseline)
-
-    current = copy.deepcopy(baseline)
-    current["data"]["runner_result"]["schema_version"] = 7
-    for i, step in enumerate(current["data"]["runner_result"]["steps"]):
-        step["attempt"].update(requested_kind="mach_lookup" if i == 2 else "file",
-                               requested_action="bootstrap_look_up" if i == 2 else "open_write")
-        step["drift"] = False if i == 0 else None
-        step["comparison"] = dict(scope="submitted_operation_and_target",
-            prediction="allow" if i == 0 else "deny",
-            observation="succeeded" if i == 0 else "permission_failure",
-            observation_basis="completed_worker_status" if i == 0 else "permission_errno",
-            operation_relation="matched", target_relation="same_submitted",
-            conclusion="agreement" if i == 0 else "directional_consistency",
-            limitations=["query_attempt_order_unestablished", "state_stability_unestablished"])
-        if i != 0:
-            step['comparison']['limitations'].append('sandbox_attribution_unestablished')
-        paths = step["sandbox_check"].get("path_diagnostics")
-        if paths is not None:
-            paths.update(observer="runner_host", phase="after_orchestration")
-    check("response7", current)
-    consumer_controls(artifacts, baseline, current)
-    ordering_controls(artifacts)
+    consumer_controls(artifacts, baseline)
+    mutation_order_controls(artifacts, baseline)
+    client_output_control(artifacts)
     cleanup_witness_controls(artifacts)
     from disposition_controls import run_controls
     run_controls(artifacts)
     for label, change, diagnostic in [
         ('missing_intent', lambda s: s['attempt'].pop('requested_action'), 'missing attempt.requested_action'),
-        ('missing_temporal_limit', lambda s: s['comparison']['limitations'].remove('state_stability_unestablished'), 'missing comparison limitation state_stability_unestablished'),
-        ('host_as_validator', lambda s: s['sandbox_check'].update(path_diagnostics={'input':'/owned','observer':'validator','phase':'after_orchestration'}), 'path diagnostics lack host/phase provenance'),
+        ('host_as_validator', lambda s: s['sandbox_check'].update(path_diagnostics={'input': s['sandbox_check']['filter_value'], 'observer': 'validator', 'phase': 'after_orchestration'}), 'path diagnostics lack host/phase provenance'),
     ]:
-        lost = copy.deepcopy(current)
+        lost = copy.deepcopy(baseline)
         change(lost['data']['runner_result']['steps'][0])
-        check('response7_' + label, lost, (diagnostic,))
-    lost = copy.deepcopy(current)
-    lost['data']['runner_result']['steps'][1]['comparison']['limitations'].remove('sandbox_attribution_unestablished')
-    check('response7_missing_attribution_limit', lost,
-          ('missing comparison limitation sandbox_attribution_unestablished',))
-    missing = copy.deepcopy(current)
+        check('current_' + label, lost, (diagnostic,))
+    missing = copy.deepcopy(baseline)
     del missing["data"]["runner_result"]["steps"][0]["comparison"]
-    check("response7_missing_comparison", missing, ("fs_write_allowed: missing comparison",))
-    broken_current = copy.deepcopy(current)
-    first, _, last = broken_current["data"]["runner_result"]["steps"]
-    first["sandbox_check"] = None
-    last["attempt"] = None
-    check("response7_malformed_independent_channels", broken_current,
-          ("missing sandbox_check for fs_write_allowed", "missing attempt for mach_lookup_denied"))
+    check("current_missing_comparison", missing, ("fs_write_allowed: missing comparison",))
 
     broken = copy.deepcopy(baseline)
     attempt = broken["data"]["runner_result"]["steps"][2]["attempt"]
-    attempt.update(outcome="ok", rc=0, exit_code=0)
+    attempt.update(outcome="ok", rc=0)
     check("wrong_later_attempt", broken, (later_attempt_error,))
 
     broken["data"]["runner_result"]["steps"][0]["sandbox_check"]["outcome"] = "deny"
@@ -571,7 +473,7 @@ def main():
     check("wrong_prediction", mismatch, (prediction_error,))
 
     broken = copy.deepcopy(mismatch)
-    broken["data"]["runner_result"]["steps"][0]["attempt"].update(rc=-1, exit_code=-1)
+    broken["data"]["runner_result"]["steps"][0]["attempt"].update(rc=-1)
     check("prediction_and_same_attempt", broken,
           (prediction_error, "fs_write_allowed: expected attempt_ok=True"))
 
@@ -580,7 +482,7 @@ def main():
     broken = copy.deepcopy(baseline)
     first, _, last = broken["data"]["runner_result"]["steps"]
     first["sandbox_check"] = None
-    first["attempt"].update(rc=-1, exit_code=-1)
+    first["attempt"].update(rc=-1)
     del last["attempt"]
     check("malformed_channels", broken,
           ("missing sandbox_check for fs_write_allowed",
@@ -598,14 +500,9 @@ def main():
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)
-    broken["data"]["runner_result"]["steps"][2]["attempt"].update(rc=1, exit_code=1)
+    broken["data"]["runner_result"]["steps"][2]["attempt"].update(rc=1)
     check("unavailable_and_later_attempt", broken,
           ("fs_read_allowed: expected attempt_ok=True",), case="BBX-002")
-
-    broken = copy.deepcopy(missing)
-    del broken["data"]["runner_result"]["steps"][0]["drift"]
-    check("unavailable_missing_drift", broken,
-          ("fs_read_missing: expected unavailable prediction to have explicit drift=null",), case="BBX-002")
 
     broken = copy.deepcopy(missing)
     broken["data"]["runner_result"]["steps"][0]["sandbox_check"]["rc"] = 0

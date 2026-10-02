@@ -80,7 +80,7 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         for relative in ('smoke/specimen_file_read_deny/artifacts/policy_witness.run.stdout.json',
                          'witness_contract/happy_path_baseline/artifacts/run.json'):
             envelope = json.loads((run_out / 'suites' / relative).read_bytes())
-            if envelope.get('data', {}).get('runner_provenance', {}).get('runner_kind') != 'standard':
+            if ((envelope.get('data') or {}).get('specimen') or {}).get('runner_provenance', {}).get('runner_kind') != 'standard':
                 raise ValueError(f'release specimen did not use the standard runner: {relative}')
         completed = True
     except (OSError, ValueError, KeyError, TypeError, RuntimeError, zipfile.BadZipFile, KeyboardInterrupt) as exc:

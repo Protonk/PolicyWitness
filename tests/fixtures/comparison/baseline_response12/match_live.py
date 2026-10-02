@@ -1,12 +1,12 @@
 """Check the live verification replies against the matrix rows they cover.
 Run from the repository root; defaults to the replies beside this script."""
-import json, re, sys
+import json, os, re, sys
 REMOVED={"state_stability_unestablished","runtime_target_identity_unestablished",
          "sandbox_attribution_unestablished","attempt_mutation_order_unestablished",
          "query_attempt_order_unestablished"}
 TMAP={"same":"same_submitted","different":"different_submitted","unresolved":"unresolved"}
 rows={}
-for line in open("DRIFT-REMOVAL-PLAN.md"):
+for line in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plan_matrix.md")):
     c=[x.strip() for x in line.strip().strip("|").split("|")]
     if len(c)<11: continue
     rid=c[0]

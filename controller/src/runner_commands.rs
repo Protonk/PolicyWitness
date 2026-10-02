@@ -4,14 +4,14 @@
 //! registry. They also generate launchd plists to register Mach services.
 
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
-use crate::runner_client::run_pw_runner_client;
+use crate::runner_client::run_pw_runner_client_file;
 use crate::runner_manager::{
     self, RunnerKind, RunnerOwnership, RunnerRecord, RunnerRegistry, RunnerScope, RunnerState,
 };
@@ -503,6 +503,59 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
 /// `--timeout-ms` explicitly.
 const RUNNER_VERIFY_DEFAULT_TIMEOUT_MS: u64 = 5_000;
 
+/// The fixed verification specimen: an allow-all policy with no probe steps.
+fn verify_request() -> Value {
+    json!({
+        "schema_version": 1,
+        "specimen_id": "runner_verify",
+        "run_kind": "runner_verify",
+        "policy": {
+            "format": "sbpl",
+            "sbpl_source": "(version 1)\n(allow default)\n"
+        },
+        "probe_plan": []
+    })
+}
+
+/// Write the verification request under `temp_dir`. Verification keeps the
+/// client's file-input form; it has no stdin delivery observation.
+fn write_verify_request(temp_dir: &Path) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(temp_dir).map_err(|e| format!("failed to create temp dir: {e}"))?;
+    let request_path = temp_dir.join(format!("verify-{}.json", now_unix_ms()));
+    std::fs::write(
+        &request_path,
+        serde_json::to_string_pretty(&verify_request()).unwrap(),
+    )
+    .map_err(|e| format!("failed to write verify request: {e}"))?;
+    Ok(request_path)
+}
+
+/// The verification projection of a received reply: its PID and outcome are
+/// read only under the current response schema. Another or a malformed version
+/// is reported as the corresponding controller outcome with a null PID, never
+/// read under other rules.
+fn project_verify_reply(runner_result: Option<&Value>) -> (Option<i64>, String) {
+    match runner_result.map(crate::run_flow::reply_version) {
+        None => (None, "runner_output_not_json".to_string()),
+        Some(crate::run_flow::ReplyVersion::Supported) => (
+            runner_result
+                .and_then(|v| v.get("pid"))
+                .and_then(|v| v.as_i64()),
+            runner_result
+                .and_then(|v| v.get("normalized_outcome"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("runner_output_not_json")
+                .to_string(),
+        ),
+        Some(crate::run_flow::ReplyVersion::Unsupported(_)) => {
+            (None, "unsupported_runner_response".to_string())
+        }
+        Some(crate::run_flow::ReplyVersion::Malformed(_)) => {
+            (None, "malformed_runner_response".to_string())
+        }
+    }
+}
+
 fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     let mut runner_id: Option<String> = None;
     let mut service_name: Option<String> = None;
@@ -558,22 +611,7 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         }
     };
 
-    let temp_dir = std::env::temp_dir().join("pw-runner-verify");
-    std::fs::create_dir_all(&temp_dir).map_err(|e| format!("failed to create temp dir: {e}"))?;
-    let request_path = temp_dir.join(format!("verify-{}.json", now_unix_ms()));
-
-    let spec = json!({
-        "schema_version": 1,
-        "specimen_id": "runner_verify",
-        "run_kind": "runner_verify",
-        "policy": {
-            "format": "sbpl",
-            "sbpl_source": "(version 1)\n(allow default)\n"
-        },
-        "probe_plan": []
-    });
-    std::fs::write(&request_path, serde_json::to_string_pretty(&spec).unwrap())
-        .map_err(|e| format!("failed to write verify request: {e}"))?;
+    let request_path = write_verify_request(&std::env::temp_dir().join("pw-runner-verify"))?;
 
     let record_kind = infer_record_kind(record);
     let connection = match record_kind {
@@ -585,17 +623,8 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         }
     };
     let (_, runner_result) =
-        run_pw_runner_client(&record.service_name, &request_path, timeout_ms, &connection)?;
-    let runner_pid = runner_result
-        .as_ref()
-        .and_then(|v| v.get("pid"))
-        .and_then(|v| v.as_i64());
-    let outcome = runner_result
-        .as_ref()
-        .and_then(|v| v.get("normalized_outcome"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("runner_output_not_json")
-        .to_string();
+        run_pw_runner_client_file(&record.service_name, &request_path, timeout_ms, &connection)?;
+    let (runner_pid, outcome) = project_verify_reply(runner_result.as_ref());
 
     let ok = outcome == "ok";
     let data = RunnerVerifyData {
@@ -885,5 +914,92 @@ pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
             "unknown runner command: {sub}\n\n{}",
             runner_usage()
         )),
+    }
+}
+
+#[cfg(test)]
+mod verify_tests {
+    use super::*;
+
+    #[test]
+    fn verification_default_wait_is_five_seconds() {
+        assert_eq!(RUNNER_VERIFY_DEFAULT_TIMEOUT_MS, 5_000);
+    }
+
+    #[test]
+    fn verification_request_is_written_as_a_file_for_the_file_input_form() {
+        let dir = std::env::temp_dir().join(format!(
+            "pw-verify-test-{}-{}",
+            std::process::id(),
+            now_unix_ms()
+        ));
+        let path = write_verify_request(&dir).unwrap();
+        assert!(path.starts_with(&dir));
+        let written: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(written, verify_request());
+        assert_eq!(written["probe_plan"], json!([]));
+        assert_eq!(written["run_kind"], "runner_verify");
+        // A temporary-directory failure is an error, never a projected reply.
+        let blocker = dir.join("not-a-directory");
+        std::fs::write(&blocker, b"x").unwrap();
+        let error = write_verify_request(&blocker).unwrap_err();
+        assert!(error.contains("failed to create temp dir"), "{error}");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn verification_file_input_launch_failure_is_an_error() {
+        // A unit-test binary has no embedded client beside it: launch fails
+        // before any reply exists and the error carries the tool's name.
+        let request =
+            std::env::temp_dir().join(format!("pw-verify-launch-{}.json", std::process::id()));
+        std::fs::write(&request, b"{}").unwrap();
+        let error = match run_pw_runner_client_file(
+            "controlled.service",
+            &request,
+            1,
+            &RunnerConnectionKind::XpcService,
+        ) {
+            Ok(_) => panic!("a missing client cannot be invoked"),
+            Err(error) => error,
+        };
+        assert!(error.contains("pw-runner-client"), "{error}");
+        std::fs::remove_file(&request).unwrap();
+    }
+
+    #[test]
+    fn verification_projects_only_current_replies() {
+        let current = i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION);
+        assert_eq!(
+            project_verify_reply(None),
+            (None, "runner_output_not_json".to_string())
+        );
+        assert_eq!(
+            project_verify_reply(Some(
+                &json!({"schema_version": current, "pid": 77, "normalized_outcome": "ok"})
+            )),
+            (Some(77), "ok".to_string())
+        );
+        assert_eq!(
+            project_verify_reply(Some(&json!({"schema_version": current, "pid": 77}))),
+            (Some(77), "runner_output_not_json".to_string())
+        );
+        for other in [current - 1, current + 1] {
+            assert_eq!(
+                project_verify_reply(Some(
+                    &json!({"schema_version": other, "pid": 77, "normalized_outcome": "ok"})
+                )),
+                (None, "unsupported_runner_response".to_string())
+            );
+        }
+        for malformed in [
+            json!({"pid": 77, "normalized_outcome": "ok"}),
+            json!({"schema_version": current.to_string(), "pid": 77, "normalized_outcome": "ok"}),
+        ] {
+            assert_eq!(
+                project_verify_reply(Some(&malformed)),
+                (None, "malformed_runner_response".to_string())
+            );
+        }
     }
 }

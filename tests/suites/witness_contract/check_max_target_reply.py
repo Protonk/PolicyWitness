@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
-from consumer import validate_current_build_evidence
+import consumer
 from run_capture import RunCapture
 from log_capture_contract import check_live_capture
 
@@ -68,10 +68,9 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
 
 def check_reply(runner, request, *, denied=False, exec_args=None, large_filter=False, exec_output=None):
     assert runner['normalized_outcome'] == 'ok', runner['normalized_outcome']
-    assert runner['schema_version'] >= 9
     assert runner.get('admission_failure') is None, runner.get('admission_failure')
     assert [step['step_id'] for step in runner['steps']] == [step['step_id'] for step in request['probe_plan']]
-    errors = validate_current_build_evidence(dict(data=dict(runner_result=runner)))
+    errors = consumer.validate(runner)
     assert not errors, errors
     for step, planned in zip(runner['steps'], request['probe_plan']):
         check, attempt = step['sandbox_check'], step['attempt']
@@ -108,7 +107,7 @@ def check_refused(runner, *, field='sandbox_check.filter.value', maximum=QUERY_F
     assert failure['step_id'] == IDS[step_index], failure
     assert runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
     assert runner['steps'] == [], runner
-    errors = validate_current_build_evidence(dict(data=dict(runner_result=runner)))
+    errors = consumer.validate(runner)
     assert not errors, errors
 
 

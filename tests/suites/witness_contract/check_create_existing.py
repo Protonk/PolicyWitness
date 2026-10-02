@@ -60,14 +60,15 @@ def check_envelope(envelope, rc, specimen, expected):
         prediction, attempt = step['sandbox_check'], step['attempt']
         target = planned[step['step_id']]['attempt']['target']
         assert prediction['pid'] == worker['pid'], prediction
-        assert prediction['scope'] == 'post_sandbox', prediction
         assert prediction['operation'] == 'file-write-data', prediction
         assert prediction['filter_kind'] == 'path' and prediction['filter_type_id'] == 1, prediction
         assert prediction['filter_value'] == target and 'effective_filter_value' not in prediction, prediction
         assert type(prediction['rc']) is int, prediction
         assert prediction['rc'] == (0 if expectation['attempt_ok'] else 1), prediction
         assert prediction['errno'] == 0 and prediction['error'] is None, prediction
-        assert step['drift'] is None, step
+        # A create has no single query operation; the record says so instead
+        # of claiming or denying agreement.
+        assert step['comparison']['operation_relation'] == 'unresolved', step['comparison']
         assert attempt['requested_path'] == target, attempt
         if expectation['attempt_ok']:
             assert attempt['outcome'] == 'ok' and attempt['observed_path'] == target, attempt
@@ -108,10 +109,10 @@ def main():
             } for step_id, path in zip(step_ids, paths)],
         }
         expected = [
-            {'step_id': step_ids[0], 'sandbox_outcome': 'allow',
-             'attempt_ok': True, 'errno': None, 'drift': None},
-            {'step_id': step_ids[1], 'sandbox_outcome': 'deny',
-             'attempt_ok': False, 'drift': None},
+            {'step_id': step_ids[0], 'sandbox_outcome': 'allow', 'attempt_ok': True, 'errno': None,
+             'comparison': {'observation': 'succeeded'}},
+            {'step_id': step_ids[1], 'sandbox_outcome': 'deny', 'attempt_ok': False,
+             'comparison': {'observation': 'permission_failure'}},
         ]
         (out / 'expectations.json').write_text(json.dumps(expected, indent=2) + '\n')
         with RunCapture(pw, out, specimen,
