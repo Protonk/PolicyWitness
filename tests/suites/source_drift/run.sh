@@ -36,12 +36,12 @@ fi
 PW_TEST_ID="limits_documentation"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-  test_step limits "check inventory, copied questions and guide, staging controls and documentation links"
+  test_step limits "check inventory, the matrix table, copied questions, rules and guide, staging controls and documentation links"
   RUN_LOG="${PW_TEST_ARTIFACTS}/limits.log"
   if ! /usr/bin/python3 "${ROOT_DIR}/tests/suites/source_drift/limits.py" >"${RUN_LOG}" 2>&1; then
     test_fail "limits documentation controls failed" "{\"log\":\"${RUN_LOG}\"}"
   fi
-  test_pass "limits and questions copies agree; standalone guide, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
+  test_pass "limits, matrix table, questions and reading-rule copies agree; standalone guide, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
 PW_TEST_ID="contract_versions"

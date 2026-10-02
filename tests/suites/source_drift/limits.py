@@ -1,4 +1,4 @@
-"""Guard generated documentation, inventory validation, and local docs links."""
+"""Guard generated documentation (limits, matrix table, shared rules), inventory validation, and local docs links."""
 import copy
 import importlib.util
 import json
@@ -38,13 +38,15 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
         self.guide = (ROOT / 'docs/PolicyWitness.md').read_text()
         self.questions = (ROOT / 'docs/QUESTIONS.md').read_text()
+        self.contract = (ROOT / generator.CONTRACT_NAME).read_text()
 
     def checkout(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         paths = {'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md',
-                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh'}
+                 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'build.sh',
+                 generator.CONTRACT_NAME, generator.MATRIX_NAME}
         for row in self.manifest['limits']:
             paths.update(ref['path'] for key in ['sources', 'checks'] for ref in row[key])
         for name in paths:
@@ -68,7 +70,81 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertEqual(self.document, generator.update_document(self.document, limits))
         self.assertEqual(self.guide, generator.update_guide(self.guide, self.document))
         self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
+        self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
         subprocess.run([sys.executable, '-B', str(ROOT / 'docs/generate_limits.py'), '--check'], check=True)
+
+    def test_matrix_table_equals_the_generator_output_for_every_fixture_row(self):
+        rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
+        self.assertEqual(self.contract, generator.update_contract(self.contract, rows))
+        table = self.contract.split(generator.MATRIX_START)[1].split(generator.MATRIX_END)[0]
+        body = [line for line in table.strip().splitlines() if line.startswith('| ') and not line.startswith('| Row') and not line.startswith('| ---')]
+        self.assertEqual([line.split(' | ')[0][2:] for line in body], [row['id'] for row in rows])
+        for row, line in zip(rows, body):
+            cells = line.strip('| ').split(' | ')
+            self.assertEqual(cells[1:3], [row['specimen'], row['scenario']], row['id'])
+            self.assertEqual(cells[3], f"`{row['query']}`", row['id'])
+            self.assertEqual(cells[-1], row['control'], row['id'])
+            limitations = ', '.join(f'`{x}`' for x in row['comparison']['limitations']) or '—'
+            self.assertEqual(cells[9], limitations, row['id'])
+
+    def test_reading_rules_are_one_text_copied_from_the_contract(self):
+        shared = self.contract.split(generator.RULES_START)[1].split(generator.RULES_END)[0].strip()
+        copied = self.guide.split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0].strip()
+        self.assertEqual(copied, shared)
+        self.assertEqual(len(re.findall(r'^\d+\. ', shared, re.MULTILINE)), 12)
+        self.assertNotIn('](', shared)
+
+    def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):
+        for filename, mutate, expect in [
+            (generator.CONTRACT_NAME, lambda t: t.replace('| S01 | S | allow, read succeeds |', '| S01 | S | allow, read fails |', 1), 'allow, read succeeds'),
+            (generator.CONTRACT_NAME, lambda t: t.replace('1. The query channel', '1. The prediction channel', 1), 'The prediction channel'),
+            ('docs/PolicyWitness.md', lambda t: t.replace('1. The query channel', '1. The prediction channel', 1), 'The query channel'),
+            (generator.CONTRACT_NAME, lambda t: t.replace(generator.MATRIX_END, ''), None),
+            (generator.CONTRACT_NAME, lambda t: t.replace(generator.RULES_END, ''), None),
+            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_RULES_END, ''), None),
+        ]:
+            with self.subTest(filename=filename, mutation=mutate):
+                root = self.checkout()
+                path = root / filename
+                path.write_text(mutate(path.read_text()))
+                guide = root / 'docs/PolicyWitness.md'
+                contract = root / generator.CONTRACT_NAME
+                before = guide.read_bytes(), contract.read_bytes()
+                result = self.command(root, '--check')
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertTrue('stale' in result.stderr or 'ordered block' in result.stderr, result.stderr)
+                self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
+                result = self.command(root)
+                if expect is None:
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
+                    continue
+                self.assertEqual(result.returncode, 0, result.stderr)
+                # The generator restores the table from the fixture and copies the
+                # contract's rules into the guide; a rule edited in the contract
+                # reaches the guide, a rule edited only in the guide is overwritten.
+                rules = guide.read_text().split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0]
+                table = contract.read_text().split(generator.MATRIX_START)[1]
+                self.assertIn(expect, rules + table)
+                self.assertEqual(self.command(root, '--check').returncode, 0)
+
+    def test_matrix_fixture_rejects_rows_the_table_cannot_render(self):
+        rows = json.loads((ROOT / generator.MATRIX_NAME).read_text())
+        mutations = [
+            lambda d: d['rows'].append(copy.deepcopy(d['rows'][0])),
+            lambda d: d['rows'][0].pop('control'),
+            lambda d: d['rows'][0]['comparison'].pop('order'),
+            lambda d: d['rows'][0]['comparison'].update(limitations='none'),
+            lambda d: d.update(rows=[]),
+        ]
+        for mutate in mutations:
+            data = copy.deepcopy(rows)
+            mutate(data)
+            with tempfile.TemporaryDirectory(prefix='pw-matrix-') as directory:
+                path = Path(directory) / 'matrix.json'
+                path.write_text(json.dumps(data))
+                with self.assertRaises(ValueError):
+                    generator.load_matrix(path)
 
     def test_shared_prose_and_all_rows_are_copied_without_repository_metadata(self):
         # Compare the actual document regions independently of update_guide.

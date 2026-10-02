@@ -986,6 +986,8 @@ Notes:
 The record relates the two channels; it does not say whether they agree.
 Read it with these rules, in order:
 
+<!-- BEGIN COPIED READING RULES -->
+
 1. The query channel's answer is `sandbox_check.outcome` when `result_source`
    is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
    was available and `sandbox_check.missing_reason` says why.
@@ -993,8 +995,7 @@ Read it with these rules, in order:
 3. A `permission_failure` or `other_failure` observation, or an exec attempt
    whose spawned child exited nonzero, does not attribute the failure to the
    sandbox; attribution needs a captured denial record, and
-   `runner_sandbox_diagnostics.permission_failures_without_record` lists the
-   steps that have none.
+   `permission_failures_without_record` lists the steps that have none.
 4. A `path` query, or an attempt whose mapped filter is `path`, never
    establishes that both channels resolved the same object at runtime.
 5. No record establishes that the state the query saw is the state the
@@ -1019,6 +1020,8 @@ Read it with these rules, in order:
     path after the run.
 12. An attempt the worker does not support has `attempt.outcome` and
     `missing_reason` saying so, and both relations `unresolved`.
+
+<!-- END COPIED READING RULES -->
 
 Select steps by explicit field combinations. A deny
 answer beside a successful attempt, with the relations and order that qualify

@@ -1001,9 +1001,14 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 
 ### Reading rules
 
-The guide's [Reading a comparison record](../docs/PolicyWitness.md#reading-a-comparison-record)
-carries the same twelve rules for readers of an envelope; tests assert the
-evidence each scenario establishes, by field, and never a label.
+This list is the one text of the reading rules. `docs/generate_limits.py`
+copies it into the guide's
+[Reading a comparison record](../docs/PolicyWitness.md#reading-a-comparison-record)
+for readers of an envelope, and `source_drift` fails when the copy differs.
+Tests assert the evidence each scenario establishes, by field, and never a
+label.
+
+<!-- BEGIN SHARED READING RULES -->
 
 1. The query channel's answer is `sandbox_check.outcome` when `result_source`
    is `validator` and the outcome is `allow` or `deny`; otherwise no prediction
@@ -1038,12 +1043,16 @@ evidence each scenario establishes, by field, and never a label.
 12. An attempt the worker does not support has `attempt.outcome` and
     `missing_reason` saying so, and both relations `unresolved`.
 
+<!-- END SHARED READING RULES -->
+
 ### Scenario matrix
 
 `tests/fixtures/comparison/matrix.json` is the single source of these rows:
 each carries the specimen inputs, the raw channel values the Swift reader
 feeds to the producer, the raw fields the live reader asserts beside the
-record, an independent control and the expected record. The query column is
+record, an independent control and the expected record.
+`docs/generate_limits.py` renders the table below from it, and `source_drift`
+fails when the committed table differs from the generator's output. The query column is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome is
 `allow` or `deny`, otherwise `unavailable`. Specimen S runs the real
 validator; B steers it with `stub_validator.py` through
@@ -1052,6 +1061,8 @@ its expectations come from submitted scopes and independent file and
 permission controls, never from native verdicts); C fails to compile; T is the
 FIFO deadline case. Lifecycle limitations in the table come from the step's
 summary.
+
+<!-- BEGIN GENERATED SCENARIO MATRIX -->
 
 | Row | Specimen | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1088,6 +1099,8 @@ summary.
 | B7 | B | allow, read succeeds (control) | `allow` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `query_first` | — | stub supplies allow; b_readable bytes unchanged |
 | C1 | C | policy fails to compile, nothing runs | `unavailable` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `unestablished` | `attempt:not_reached` | the worker publishes a compile failure record (operation 5) and exits before applying; no validator is spawned; readable bytes unchanged |
 | T | T | allow policy, FIFO read starts after release, then worker deadline | `allow` | `unavailable` | `no_completed_worker_result` | `matched` | `same_submitted` | `query_first` | `attempt:started_without_result` | a FIFO with no writer blocks the worker's open inside attempt 0 until the host's sentinel deadline; raw progress, the validator record and the release chain are asserted by the owning case before this row is compared |
+
+<!-- END GENERATED SCENARIO MATRIX -->
 
 ### Ownership
 

@@ -92,8 +92,10 @@ default to `tests/out/runs/direct`.
 ```
 
 No build required. The `limits_documentation` case checks
-[`docs/limits.json`](../../../docs/limits.json), generated tables, the user guide's
-copied limits, and local documentation links. Controls exercise the real
+[`docs/limits.json`](../../../docs/limits.json), generated tables (the limits
+tables and the failure contract's scenario matrix rendered from
+`tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
+questions and comparison reading rules, and local documentation links. Controls exercise the real
 generator command with stale, missing and altered content; preserve both source
 files and an existing staged guide on rejection; and validate a staged guide
 after removing its source checkout. Internal-anchor and companion-file checks

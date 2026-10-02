@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Render the limits inventory and copy its shared section into the user guide.
+"""Render the generated documentation blocks and copy the shared ones into the guide.
 
-The same run copies the shared questions from QUESTIONS.md into the guide's
-Questions section. References identify owners, not proof of values. Compiled C, Swift and Rust
-tests compare implementation values with this manifest independently.
---check verifies both documents without writing. --stage-guide copies the
+One run renders the limits inventory into LIMITS.md, renders the comparison
+scenario matrix (tests/fixtures/comparison/matrix.json) into the failure
+contract's table, and copies the shared sections into the user guide: the
+limits tables from LIMITS.md, the questions from QUESTIONS.md and the
+comparison reading rules from the failure contract. References identify
+owners, not proof of values. Compiled C, Swift and Rust tests compare
+implementation values with the limits manifest independently.
+--check verifies every document without writing. --stage-guide copies the
 checked guide for distribution without regenerating stale documentation.
 """
 from __future__ import annotations
@@ -28,7 +32,16 @@ QUESTIONS_START = "<!-- BEGIN SHARED QUESTIONS -->"
 QUESTIONS_END = "<!-- END SHARED QUESTIONS -->"
 GUIDE_QUESTIONS_START = "<!-- BEGIN COPIED QUESTIONS -->"
 GUIDE_QUESTIONS_END = "<!-- END COPIED QUESTIONS -->"
+MATRIX_START = "<!-- BEGIN GENERATED SCENARIO MATRIX -->"
+MATRIX_END = "<!-- END GENERATED SCENARIO MATRIX -->"
+RULES_START = "<!-- BEGIN SHARED READING RULES -->"
+RULES_END = "<!-- END SHARED READING RULES -->"
+GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
+GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
 GUIDE_NAME = "PolicyWitness.md"
+CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
+MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
+COMPARISON_KEYS = ("observation", "observation_basis", "operation_relation", "target_relation", "order", "limitations")
 SECTIONS = {
     "admission": "Specimen admission",
     "execution": "Execution budgets",
@@ -95,6 +108,61 @@ def load_limits(path: Path, root: Path = ROOT):
 
 def cell(text):
     return text.replace("|", "\\|").replace("\n", " ")
+
+
+def load_matrix(path: Path):
+    """The comparison matrix rows this table renders; every field the table shows must be present."""
+    data = json.loads(path.read_text(), object_pairs_hook=unique_object)
+    rows = data.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("matrix rows must be a nonempty list")
+    seen = set()
+    for row in rows:
+        for key in ("id", "specimen", "scenario", "query", "control"):
+            if not isinstance(row.get(key), str) or not row[key]:
+                raise ValueError(f"matrix row {row.get('id')}: missing {key}")
+        if row["id"] in seen:
+            raise ValueError(f"duplicate matrix row id: {row['id']}")
+        seen.add(row["id"])
+        comparison = row.get("comparison")
+        if not isinstance(comparison, dict) or set(comparison) != set(COMPARISON_KEYS):
+            raise ValueError(f"matrix row {row['id']}: comparison must carry exactly {COMPARISON_KEYS}")
+        if not isinstance(comparison["limitations"], list) or any(not isinstance(x, str) for x in comparison["limitations"]):
+            raise ValueError(f"matrix row {row['id']}: limitations must be a list of strings")
+    return rows
+
+
+def render_matrix(rows):
+    lines = [MATRIX_START, "",
+             "| Row | Specimen | Scenario | Query | Observation | Basis | Operation | Target | Order | Limitations | Independent control |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    for row in rows:
+        comparison = row["comparison"]
+        limitations = ", ".join(f"`{x}`" for x in comparison["limitations"]) or "—"
+        lines.append("| " + " | ".join(map(cell, [
+            row["id"], row["specimen"], row["scenario"], f"`{row['query']}`",
+            f"`{comparison['observation']}`", f"`{comparison['observation_basis']}`",
+            f"`{comparison['operation_relation']}`", f"`{comparison['target_relation']}`",
+            f"`{comparison['order']}`", limitations, row["control"]])) + " |")
+    return "\n".join(lines) + "\n\n" + MATRIX_END
+
+
+def update_contract(text, rows):
+    return replace_block(text, MATRIX_START, MATRIX_END, render_matrix(rows))
+
+
+def shared_rules(contract_document):
+    """The reading rules the failure contract owns, verbatim, for the guide's copy."""
+    begin, finish = block_bounds(contract_document, RULES_START, RULES_END)
+    shared = contract_document[begin + len(RULES_START):finish - len(RULES_END)].strip()
+    if not re.search(r"^1\. ", shared, re.MULTILINE) or re.search(r"^#", shared, re.MULTILINE):
+        raise ValueError("shared reading rules must be one numbered list without headings")
+    return shared
+
+
+def update_guide_rules(text, contract_document):
+    return replace_block(text, GUIDE_RULES_START, GUIDE_RULES_END,
+                         GUIDE_RULES_START + "\n\n" + shared_rules(contract_document) + "\n\n" + GUIDE_RULES_END)
 
 
 def reference(ref):
@@ -213,6 +281,11 @@ def validate_guide(text, limits):
     if not re.search(r"^### ", questions, re.MULTILINE):
         raise ValueError("guide must contain at least one copied question")
     require_standalone(questions, "copied questions")
+    begin, finish = block_bounds(text, GUIDE_RULES_START, GUIDE_RULES_END)
+    rules = "\n".join(prose_lines(text[begin + len(GUIDE_RULES_START):finish - len(GUIDE_RULES_END)]))
+    if not re.search(r"^1\. ", rules, re.MULTILINE):
+        raise ValueError("guide must contain the copied reading rules")
+    require_standalone(rules, "copied reading rules")
 
     # Headings in this guide use ATX syntax. Match the punctuation-stripped
     # anchors used by its Markdown links, including duplicate-heading suffixes.
@@ -243,22 +316,28 @@ def main():
     path = ROOT / "docs/LIMITS.md"
     guide_path = ROOT / "docs/PolicyWitness.md"
     questions_path = ROOT / "docs/QUESTIONS.md"
+    contract_path = ROOT / CONTRACT_NAME
     try:
         limits = load_limits(ROOT / "docs/limits.json")
+        rows = load_matrix(ROOT / MATRIX_NAME)
         before = path.read_text()
         after = update_document(before, limits)
-        # Derive the copies from the freshly rendered source and the FAQ, even
+        contract_before = contract_path.read_text()
+        contract_after = update_contract(contract_before, rows)
+        # Derive the copies from the freshly rendered sources and the FAQ, even
         # when the on-disk tables were stale. Validate every input before any
         # writes. QUESTIONS.md is an input only; it is never rewritten.
         questions = questions_path.read_text()
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
-        guide_after = update_guide_questions(update_guide(guide_before, after), questions)
+        guide_after = update_guide_rules(
+            update_guide_questions(update_guide(guide_before, after), questions), contract_after)
         validate_guide(guide_after, limits)
         question_count = len(re.findall(r"^### ", shared_questions(questions), re.MULTILINE))
         if args.check or args.stage_guide is not None:
             stale = [name for name, old, new in [
-                ("LIMITS.md", before, after), ("PolicyWitness.md", guide_before, guide_after)]
+                ("LIMITS.md", before, after), (CONTRACT_NAME, contract_before, contract_after),
+                ("PolicyWitness.md", guide_before, guide_after)]
                 if old != new]
             if stale:
                 raise ValueError(f"stale {', '.join(stale)}; run python3 docs/generate_limits.py")
@@ -267,11 +346,13 @@ def main():
         else:
             if before != after:
                 path.write_text(after)
+            if contract_before != contract_after:
+                contract_path.write_text(contract_after)
             if guide_before != guide_after:
                 guide_path.write_text(guide_after)
-        print(f"ok: {len(limits)} limits, {question_count} questions; " +
+        print(f"ok: {len(limits)} limits, {question_count} questions, {len(rows)} matrix rows; " +
               (f"guide staged at {args.stage_guide}" if args.stage_guide is not None else
-               "documents current" if args.check else "LIMITS.md generated and guide copies updated"))
+               "documents current" if args.check else "LIMITS.md and the matrix table generated; guide copies updated"))
         return 0
     except (ValueError, OSError, TypeError, KeyError) as error:
         print(f"limits: {error}", file=sys.stderr)
