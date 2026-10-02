@@ -127,6 +127,10 @@ As optional, possibly incomplete evidence. The kernel's sandbox log intermittent
 
 One runner client span plus, by default, one unified-log scan, plus the controller's own startup and output. Your reply records the first two: the runner's work is `data.runner_client.ended_at_unix_ms` minus `started_at_unix_ms`, and the scan is `data.sandbox_log_capture.supervision.elapsed_ms`.
 
+### Can I evaluate specimens in parallel?
+
+Yes and no. Each run is its own controller, XPC host, worker and validator, and nothing PolicyWitness owns is shared between runs, but the host owns the boundary being witnessed. The kernel applies each profile and allocates memory for it on its own time. Runs that depend on the denial log face one rate-limited channel, with concurrent denials raising the odds of each missing a record. Runs through one installed [external runner](#external-runners-byoxpc) queue behind launchd's respawn throttle.
+
 <!-- END COPIED QUESTIONS -->
 
 ## Specimen format
@@ -1425,6 +1429,23 @@ record came from its paired attempt, and a PID match can reflect an ordinary
 denied probe followed by an unrelated self-signal or crash. Some denied attempts
 have no available log record; requesting the full interval does not guarantee
 complete delivery.
+
+### Running specimens in parallel
+
+Each run is its own controller, XPC host, worker and validator. Four processes
+per run, plus any exec children, count against the per-user process table, and
+a failed spawn is reported as `worker_spawn_failed` or `validator_spawn_failed`
+with the native return code (see the
+[outcome catalog](#normalized_outcome-catalog)). A run starved of CPU hits the
+fixed deadlines in the [limits inventory](#limits) and reports `runner_timeout`
+or a lifecycle limitation, never a different verdict. Denial records are
+matched to the worker by PID inside the padded window, and
+`window.pid_reuse_protection` is false: heavy process churn makes a reused PID
+inside that window more plausible, so read candidate associations under
+[Denial-log correlation](#denial-log-correlation) with that in mind. The
+denial log's shared channel is described in the
+[Questions](#can-i-evaluate-specimens-in-parallel), and the pacing of one
+installed external runner under [External runners](#external-runners-byoxpc).
 
 ### Troubleshooting
 
