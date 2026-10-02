@@ -77,20 +77,36 @@ describe current behavior without repeating them in prose.
 
 ## Shape goldens
 
-Two goldens under `tests/fixtures/contract/` notice a change that nobody
-acknowledged. `response_shape.json` records, per object path, every key of the
-field-complete reply fixture in `ReplyFailureTests` and its JSON type;
-`runner_unit` compares the fixture's encoded shape with it. `abi_layout.txt` is
-the compiled harvest of every size, offset and constant in the worker ABI
-header; `runner_abi_layout` compares the current harvest with it. Any
-difference fails the case and writes a candidate into the case's artifacts. The
-failure says which of three things happened: the reply gained fields, which
-needs no bump; a reply key was removed or changed type, or the ABI layout moved
-under an unchanged number, which needs a bump first; or the manifest already
-moved and only the golden is behind. Replacing the golden with the reviewed
-candidate is the acknowledgement, and that diff is what reviewers watch.
-The reply golden covers what the fixture populates; a new nested field must be
-added to that fixture, as its comment already requires.
+Three goldens under `tests/fixtures/contract/` notice a change that nobody
+acknowledged, and two of them are the readers' allowlists.
+`response_shape.json` records, per object path, every key the runner reply
+can carry and its JSON type, collected from the encoded documents of
+`replyShapeDocuments()` in `ContractVersionTests` (the field-complete reply
+fixture, its degraded reply, and production-shaped worker accounts resolved by
+the real builders); `runner_unit` compares the current collection with it.
+`envelope_shape.json` records the same for the controller envelope, from the
+field-complete `kind: "run"` envelope a Rust unit test renders with every
+optional object populated; the reply inside it is opaque to that golden because
+the reply golden owns it, and the nested helper envelopes it carries
+(`data.policy_check.envelope`, `data.sandbox_log_capture.observer`) are
+compared with the helpers' own emitted shapes by their unit tests.
+`abi_layout.txt` is the compiled harvest of every size, offset and constant in
+the worker ABI header; `runner_abi_layout` compares the current harvest with
+it. Any difference fails the case and writes a candidate into the case's
+artifacts. The failure says which of three things happened: the shape gained
+fields, which needs no bump; a key was removed or changed type, or the ABI
+layout moved under an unchanged number, which needs a bump first; or the
+manifest already moved and only the golden is behind. Replacing the golden with
+the reviewed candidate is the acknowledgement, and that diff is what reviewers
+watch.
+
+The two shape goldens are the allowlists `tests/lib/consumer.py` reads
+documents against: an unknown key at a recorded path is an error naming the
+path, a present key must carry the golden's type (a recorded `null` constrains
+nothing), and absence is allowed. A key appears in a golden because a producer
+emitted it, so a new field reaches the readers only through the fixture that
+records it. The Swift decoder keeps ignoring unknown keys; strictness lives in
+the Python readers and the golden comparisons.
 
 ## Build stamp
 

@@ -88,34 +88,23 @@ def consumer_controls(artifacts, current):
         change(first(malformed)['attempt'])
         run('attempt_path_' + name, malformed, rejected_by=diagnostic)
 
-    # Removed keys are rejected at their exact path; none is reconstructed.
-    removed = [
-        ('step_drift', lambda e: first(e).update(drift=False), 'removed key steps[].drift'),
-        ('step_deny_signal', lambda e: first(e).update(deny_signal=None), 'removed key steps[].deny_signal'),
-        ('comparison_prediction', lambda e: first(e)['comparison'].update(prediction='allow'), 'removed key comparison.prediction'),
-        ('comparison_conclusion', lambda e: first(e)['comparison'].update(conclusion='agreement'), 'removed key comparison.conclusion'),
-        ('comparison_scope', lambda e: first(e)['comparison'].update(scope='submitted_operation_and_target'), 'removed key comparison.scope'),
-        ('comparison_obligations', lambda e: first(e)['comparison'].update(obligations=[]), 'removed key comparison.obligations'),
-        ('comparison_references', lambda e: first(e)['comparison'].update(references=[]), 'removed key comparison.references'),
-        ('attempt_exit_code', lambda e: first(e)['attempt'].update(exit_code=0), 'removed key attempt.exit_code'),
-        ('attempt_syscall_errno', lambda e: first(e)['attempt'].update(syscall_errno=None), 'removed key attempt.syscall_errno'),
-        ('attempt_native_rc', lambda e: first(e)['attempt'].update(native_rc=0), 'removed key attempt.native_rc'),
-        ('query_scope', lambda e: first(e)['sandbox_check'].update(scope='post_sandbox'), 'removed key sandbox_check.scope'),
-        ('query_effective_filter_value', lambda e: first(e)['sandbox_check'].update(effective_filter_value='/x'), 'removed key sandbox_check.effective_filter_value'),
-        ('reply_deny_signal_total', lambda e: runner(e).update(deny_signal_total=None), 'removed key deny_signal_total'),
-        ('reply_comparison_conditions', lambda e: runner(e).update(comparison_conditions={}), 'removed key comparison_conditions'),
-        ('data_runner_startup_diagnostics', lambda e: e['data'].update(runner_startup_diagnostics=None), 'removed key data.runner_startup_diagnostics'),
-        ('data_policy_augmentation', lambda e: e['data'].update(policy_augmentation=None), 'removed key data.policy_augmentation'),
-        ('data_request_path', lambda e: e['data'].update(request_path='/x'), 'removed key data.request_path'),
-        ('data_error', lambda e: e['data'].update(error='x'), 'removed key data.error'),
-        ('diagnostics_worker_pid', lambda e: e['data']['runner_sandbox_diagnostics'].update(worker_pid=1), 'removed key data.runner_sandbox_diagnostics.worker_pid'),
-        ('diagnostics_capture_status', lambda e: e['data']['runner_sandbox_diagnostics'].update(capture_status='disabled'), 'removed key data.runner_sandbox_diagnostics.capture_status'),
-        ('diagnostics_first_deny', lambda e: e['data']['runner_sandbox_diagnostics'].update(first_deny=None), 'removed key data.runner_sandbox_diagnostics.first_deny'),
-    ]
-    for name, change, diagnostic in removed:
+    # The shape goldens are the readers' allowlists: an unknown key at a recorded
+    # path and a present key of another type are rejected, under the envelope
+    # golden for the controller's own objects and under the reply golden for the
+    # runner reply. One control of each kind per golden; the suites whose CLIs
+    # route envelopes through the consumer keep one mutation each.
+    for name, change, diagnostic in [
+        ('envelope_unknown_key', lambda e: e['data']['specimen'].update(request_bytes=1),
+         'unknown key envelope.data.specimen.request_bytes'),
+        ('envelope_wrong_type', lambda e: e['data'].update(timeout_ms='240000'),
+         'envelope.data.timeout_ms is string, not number'),
+        ('reply_unknown_key', lambda e: first(e).update(drift=False), 'unknown key reply.steps[].drift'),
+        ('reply_wrong_type', lambda e: first(e)['attempt'].update(requested_path=7),
+         'reply.steps[].attempt.requested_path is number, not string'),
+    ]:
         broken = copy.deepcopy(current)
         change(broken)
-        run('removed_' + name, broken, rejected_by=diagnostic)
+        run('shape_' + name, broken, rejected_by=diagnostic)
 
     # Vocabulary and classification against the raw channel fields.
     for name, change, diagnostic in [

@@ -969,7 +969,9 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   or `native_rc`; `PWRunnerSandboxCheckResult` has no `scope`;
   `PWRunnerRunResult` has no `deny_signal_total` or `comparison_conditions`;
   there is no signal result type. The reply-shape golden
-  (`tests/fixtures/contract/response_shape.json`) records the current shape.
+  (`tests/fixtures/contract/response_shape.json`) records every key the
+  encoder emits, from the field-complete fixture and the production-shaped
+  documents beside it.
 - Encoder: rejects `limitations` strings outside the vocabulary above and
   retains the `query_first`, disposition and reply-degradation checks. Swift
   ignores unknown keys after the version gate; no strict unknown-key decoder
@@ -978,17 +980,15 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   when `steps: []`. `evidence_retained: false` still withholds step and
   subprocess evidence.
 - Consumer (`tests/lib/consumer.py`): applies the exact envelope and response
-  gates and reports another version as `unsupported`; rejects the removed keys
-  at their former wire paths (`steps[].drift`, `steps[].deny_signal`,
-  `comparison.prediction`, `comparison.conclusion`, `comparison.scope`,
-  `comparison.obligations`, `attempt.exit_code`, `attempt.syscall_errno`,
-  `attempt.native_rc`, `sandbox_check.scope`, reply-level
-  `comparison_conditions` and `deny_signal_total`, envelope-level
-  `policy_augmentation`, `runner_startup_diagnostics`, `app_provenance`,
-  `runner_provenance`, `request_path` and the diagnostics copies `worker_pid`,
-  `capture_status`, `first_deny`) and any `limitations` string outside the
-  vocabulary; validates `observation`, the two relations and `order` against
-  the raw channel fields and `ordering`.
+  gates and reports another version as `unsupported`; validates every object
+  it reads against the shape golden for its path
+  (`tests/fixtures/contract/envelope_shape.json` for the envelope's own
+  objects, `response_shape.json` for the reply), so a key no current producer
+  emits is rejected at the path where it appears and a present key must carry
+  the golden's type; rejects any `limitations` string outside the vocabulary;
+  validates `observation`, the two relations and `order` against the raw
+  channel fields and `ordering`. The goldens are allowlists, not required
+  sets: absence is allowed.
 - Controller: `permission_failures_without_record` reads
   `comparison.observation`; `validate_disposition` also checks the lifecycle
   entries in `comparison.limitations`, and failed validation withholds the

@@ -2,26 +2,38 @@ import Foundation
 @testable import PWRunnerCore
 
 // Field-complete constructed encoding input, not a claim that an admitted run
-// also has an admission failure. Keep every top-level optional populated here.
+// also has an admission failure. Keep every optional the encoder accepts beside
+// a completed, ordered step populated here; the keys an ordinary reply cannot
+// carry at once (a degraded reply's `reporting_failure`, a synthetic attempt's
+// `missing_reason`, a signalled worker's `term_signal`, a slot conflict's
+// `issues`) come from the production-shaped documents `replyShapeDocuments()`
+// adds beside this one for the reply shape golden.
 func replyFixture() throws -> PWRunnerRunResult {
     let json = #"""
     {
       "schema_version":SCHEMA,"specimen_id":"reply-\"é\"","run_kind":"unit",
       "rc":1,"normalized_outcome":"runner_failed","error":"original cleanup fault",
       "pid":42,"bundle_id":"test.bundle","policy_format":"sbpl","policy_sha256":"hash",
-      "applied_profile":{"schema_version":1,"status":"unavailable","reason":"constructed","worker_pid":42},
+      "applied_profile":{"schema_version":1,"status":"captured","reason":"constructed","worker_pid":42,
+        "request_nonce":"ffffffffffffffffffffffffffffffff","profile_type":0,"bytecode_length":3,
+        "bytecode_sha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","bytecode_b64":"AAAA",
+        "source_sha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","source_length":11,
+        "params_sha256":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","parameter_count":1},
       "sandboxed_after_apply":true,
       "steps":[{
         "step_id":"s",
         "sandbox_check":{"rc":0,"native_rc":0,"errno":0,"outcome":"allow","pid":42,
           "operation":"file-read-data","filter_kind":"path",
-          "filter_value":"/owned","result_source":"validator",
-          "path_diagnostics":{"input":"/owned","same_as_input":["realpath_resolved"],"firmlink_resolved":null,
-            "observer":"runner_host","phase":"after_orchestration"}},
-        "attempt":{"rc":0,"outcome":"ok","requested_kind":"file","requested_action":"open_read",
-          "requested_path":"/owned","result_source":"worker",
-          "path_diagnostics":{"input":"/owned","same_as_input":["realpath_resolved"],"parent_realpath_resolved":null,
-            "observer":"runner_host","phase":"after_orchestration"},
+          "filter_value":"/owned","filter_type_id":1,"result_source":"validator",
+          "missing_reason":"constructed","error":"constructed query diagnostic",
+          "path_diagnostics":{"input":"/owned","same_as_input":[],"realpath_resolved":"/private/owned",
+            "firmlink_resolved":"/System/Volumes/Data/private/owned","observer":"runner_host","phase":"after_orchestration"}},
+        "attempt":{"rc":0,"errno":0,"outcome":"ok","error":"constructed attempt diagnostic",
+          "requested_kind":"file","requested_action":"open_read",
+          "requested_path":"/owned","observed_path":"/private/owned","result_source":"worker",
+          "child_pid":4242,"child_exit_code":0,"child_term_signal":0,"stdout":"constructed out","stderr":"constructed err",
+          "path_diagnostics":{"input":"/owned","same_as_input":[],"realpath_resolved":"/private/owned",
+            "parent_realpath_resolved":"/private/owned-parent","observer":"runner_host","phase":"after_orchestration"},
           "lifecycle":{"summary":"completed",
             "boundary":{"state":"supported","answer":"reached","basis":["slot","attempt_support"]},
             "result":{"state":"supported","answer":"published","basis":["slot","attempt_support"]}}},
@@ -53,14 +65,25 @@ func replyFixture() throws -> PWRunnerRunResult {
         "ordering":{"collection_closed_before_proceed":true,"proceed_set":true,"proceed_observed":true,
           "validator_disposition":"reaped","worker_lifetime_established":true,"protocol_violations":[]},
         "worker_evidence":{"abi_version":7,"failure_publication":0,"failure_state":"absent",
-          "diagnostic":{"state":0,"status":"absent"}}},
+          "readiness":{"rc":1,"errno":0},
+          "diagnostic":{"state":2,"status":"truncated","length":4,"text":"text"}}},
       "admission_failure":{"origin":"runner_host","field":"constructed","actual":2,"maximum":1,"unit":"items","step_id":"s","step_index":0,"parameter_key":"K","index":0},
       "validator_spawn_failure":{"origin":"runner_host","operation":"posix_spawn",
         "executable_path":"/constructed/validator","return_code":123456,"diagnostic":"unfamiliar native failure"},
       "validator_subprocess":{"pid":43,"exit_code":0,"reaped":true,"stdout_collection_stop":"eof",
+        "termination_request":{"signal":9,"rc":0,"errno":1},
+        "wait_errors":[{"phase":"exit_grace","rc":-1,"errno":10}],
+        "read_error":"constructed read error","io_error":"constructed io error",
+        "stdout_bytes_received":64,"probe_bytes_written":32,"probe_bytes_expected":32,
+        "decode_fault":{"origin":"runner_host","kind":"structure","message":"constructed","byte_offset":1,
+          "frame_bytes":2,"retained_bytes":2,"context_b64":"AA==","context_truncated":false},
+        "expected_step_ids":["s"],
+        "association_issues":[{"origin":"runner_host","kind":"query_mismatch","step_id":"s","count":1}],
         "records":[{"step_id":"s","operation":"file-read-data","filter_type":"PATH","filter_value":"/owned",
-          "rc":0,"errno":0,"outcome":"allow","raw_line":"native record bytes"}]},
-      "test_overrides":{"validator_io_timeout_ms":50}
+          "filter_type_id":1,"rc":0,"errno":0,"outcome":"allow","error":"constructed","raw_line":"native record bytes"}]},
+      "test_overrides":{"worker_executable_path":"/constructed/worker","worker_timeout_ms":1000,
+        "validator_executable_path":"/constructed/validator","validator_io_timeout_ms":50,
+        "worker_post_apply_hang_ms":0,"worker_post_apply_kill_signal":9,"worker_pre_ready_hang_ms":0}
     }
     """#.replacingOccurrences(of: "SCHEMA", with: String(PWContract.responseSchema))
     return try pwRunnerDecodeJSON(PWRunnerRunResult.self, from: Data(json.utf8))

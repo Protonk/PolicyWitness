@@ -4301,4 +4301,386 @@ mod tests {
             fs::remove_dir_all(&root).unwrap();
         }
     }
+
+    // ---- Envelope shape golden ------------------------------------------------
+    // A field-complete `kind: "run"` envelope: every optional object populated
+    // and every key typed. `tests/fixtures/contract/envelope_shape.json`
+    // records its shape per object path; the runner reply inside it is opaque
+    // here because `response_shape.json` records that shape. The nested
+    // helper envelopes are hand-built here and checked against the same golden
+    // by the helpers' own tests (`sandbox-log-observer.rs`, `sbpl-check.rs`).
+    mod envelope_shape {
+        use super::*;
+        use crate::dossier::{AppProvenance, Augmentation, BinaryRecord, Imports, PolicyDossier};
+        use crate::evidence::{VerifyMismatch, VerifyReport};
+        use crate::log_capture::{
+            Boundary, CleanupObservation, CollectionBudget, Cutoff, ProcessObservation,
+            StreamObservation, Supervision, SyscallObservation, TimeoutSource,
+        };
+        use crate::policy_check::PolicyCheckCapture;
+        use crate::runner_manager::{RunnerEntitlements, RunnerSignature};
+        use crate::runner_select::RunnerTarget;
+        use crate::sandbox_log::{SandboxLogMatchEvidence, SandboxLogStepDeny, SandboxLogWindow};
+        use crate::sbpl_imports::ImportRecord;
+        use crate::utils::JsonOutputCapture;
+
+        fn full_result() -> json_contract::JsonResult {
+            json_contract::JsonResult {
+                ok: true,
+                rc: Some(0),
+                exit_code: Some(0),
+                normalized_outcome: Some("ok".into()),
+                errno: Some(0),
+                error: Some("constructed".into()),
+                stderr: Some("".into()),
+                stdout: Some("".into()),
+            }
+        }
+
+        fn capture(limit: usize) -> JsonOutputCapture {
+            JsonOutputCapture {
+                stdout_parse_error: Some("constructed".into()),
+                stdout_truncated: false,
+                stdout_capture_error: Some("constructed".into()),
+                stdout_bytes_received: Some(2),
+                stdout_bytes_retained: Some(2),
+                stderr_bytes_received: Some(0),
+                stderr_bytes_retained: Some(0),
+                capture_limit_bytes: limit,
+                stdout_raw: Some("{}".into()),
+                stderr: String::new(),
+                stderr_truncated: false,
+            }
+        }
+
+        fn stream() -> StreamObservation {
+            StreamObservation {
+                limit_bytes: 1024,
+                bytes_read: 2,
+                bytes_retained: 2,
+                eof: true,
+                truncated: false,
+                read_error: Some("constructed".into()),
+            }
+        }
+
+        fn cutoff() -> Cutoff {
+            Cutoff {
+                reason: "deadline".into(),
+                stream: Some("stdout".into()),
+                limit: Some(1024),
+                observed: Some(1025),
+                detail: Some("constructed".into()),
+            }
+        }
+
+        fn supervision(boundary: Boundary) -> Supervision {
+            Supervision {
+                boundary,
+                budget: CollectionBudget {
+                    timeout_ms: 10_000,
+                    timeout_source: TimeoutSource::Default,
+                    started_monotonic_ns: 1,
+                    deadline_monotonic_ns: 2,
+                },
+                reserve_ms: 1_000,
+                elapsed_ms: 150,
+                cutoff: Some(cutoff()),
+                stdout: stream(),
+                stderr: stream(),
+                process: ProcessObservation {
+                    pid: Some(42),
+                    exit_observed: true,
+                    reaped: true,
+                    exit_code: Some(0),
+                    term_signal: Some(9),
+                    wait_error: Some("constructed".into()),
+                },
+                cleanup: CleanupObservation {
+                    scope: "process_group".into(),
+                    target: Some(42),
+                    grace_ms: 1_000,
+                    ownership: "owned".into(),
+                    signal: Some(9),
+                    signal_result: Some(SyscallObservation {
+                        rc: -1,
+                        errno: Some(1),
+                    }),
+                    signal_before_reap: true,
+                    ownership_released: true,
+                    group_probe: Some(SyscallObservation {
+                        rc: -1,
+                        errno: Some(3),
+                    }),
+                    outcome: "group_absent".into(),
+                    detail: Some("constructed".into()),
+                },
+            }
+        }
+
+        fn deny_event() -> SandboxDenyEvent {
+            SandboxDenyEvent {
+                pid: Some(42),
+                process: Some("pw-probe-runner".into()),
+                operation: Some("file-read-data".into()),
+                path: Some("/private/etc/hosts".into()),
+                raw_line: Some("constructed deny line".into()),
+            }
+        }
+
+        fn import_record() -> ImportRecord {
+            ImportRecord {
+                name: "system.sb".into(),
+                resolved_path: Some("/System/Library/Sandbox/Profiles/system.sb".into()),
+                sha256: Some("f".repeat(64)),
+                size_bytes: Some(1),
+                mtime_unix: Some(1),
+                error: Some("constructed".into()),
+            }
+        }
+
+        fn nested_envelope(kind: &str, data: Value) -> Value {
+            let text = json_contract::render_envelope(kind, full_result(), &data).unwrap();
+            serde_json::from_str(&text).unwrap()
+        }
+
+        /// The observer's report with every field present, in the frame the
+        /// observer prints; `sandbox-log-observer.rs` compares its own emitted
+        /// shape with the golden subtree this fixture records.
+        fn observer_report() -> Value {
+            nested_envelope(
+                "sandbox_log_observer_report",
+                json!({
+                    "observer_schema_version": 1, "mode": "show", "duration_ms": 1,
+                    "stop_on_pid_exit": false, "plan_id": "p", "row_id": "r", "correlation_id": "c",
+                    "pid": 42, "process_name": "pw-probe-runner", "predicate": "constructed",
+                    "start": "2026-01-01 00:00:00+0000", "end": "2026-01-01 00:00:05+0000", "last": "1m",
+                    "log_rc": 0, "log_stdout": "", "log_stderr": "", "log_error": "constructed",
+                    "blocked_reason": "constructed", "log_truncated": false, "observed_lines": 1,
+                    "observed_deny": true, "deny_lines": ["constructed deny line"],
+                    "deny_events": [serde_json::to_value(deny_event()).unwrap()],
+                    "layer_attribution": {"seatbelt": "observer_only"},
+                    "collection": serde_json::to_value(supervision(Boundary::LogShow)).unwrap(),
+                }),
+            )
+        }
+
+        /// The fallback compilation's envelope with every field present;
+        /// `sbpl-check.rs` compares its own emitted shape with this subtree.
+        fn sbpl_check_envelope() -> Value {
+            nested_envelope(
+                "sbpl_check",
+                json!({
+                    "policy_format": "sbpl", "policy_sha256": "f".repeat(64),
+                    "policy_closure_sha256": "f".repeat(64), "macos_build_version": "23J220",
+                    "params_present": true, "params_count": 1, "params_referenced": ["K"],
+                    "params_supplied": ["K"], "params_missing": ["M"], "params_unused": ["U"],
+                    "params_scan_complete": true,
+                    "imports": [serde_json::to_value(import_record()).unwrap()],
+                    "imports_truncated": false, "imports_cycle": ["a", "b"],
+                    "compiled": true, "compile_error": "constructed",
+                }),
+            )
+        }
+
+        fn binary() -> BinaryRecord {
+            BinaryRecord {
+                path: Some("/constructed/binary".into()),
+                actual_sha256: Some("a".repeat(64)),
+                baseline_sha256: Some("b".repeat(64)),
+                verification: "mismatch".into(),
+                reason: Some("constructed".into()),
+            }
+        }
+
+        fn field_complete_run_envelope() -> (json_contract::JsonResult, RunData) {
+            let target = RunnerTarget {
+                kind: RunnerKind::Byoxpc,
+                connection: RunnerConnectionKind::MachService { privileged: false },
+                service_name: "com.constructed.runner".into(),
+                bundle_id: Some("com.constructed.runner".into()),
+                bundle_path: Some(PathBuf::from("/constructed/Runner.xpc")),
+                executable_path: Some(PathBuf::from(
+                    "/constructed/Runner.xpc/Contents/MacOS/PWRunner",
+                )),
+                registry_id: Some("runner-ext".into()),
+                signature: Some(RunnerSignature {
+                    team_id: Some("TEAM123456".into()),
+                    identity: Some("constructed".into()),
+                    cdhash: Some("ab".repeat(20)),
+                    valid: true,
+                    adhoc: false,
+                }),
+                entitlements: Some(RunnerEntitlements {
+                    raw_plist: Some("<plist/>".into()),
+                    keys: vec!["com.apple.security.app-sandbox".into()],
+                    error: Some("constructed".into()),
+                }),
+            };
+            let specimen = Specimen {
+                request_path: Some("/constructed/request.json".into()),
+                policy: PolicyDossier {
+                    augmentation: Augmentation {
+                        status: "applied".into(),
+                        applied: vec!["augment".into()],
+                        original_sha256: Some("c".repeat(64)),
+                        applied_sha256: Some("d".repeat(64)),
+                        error: Some("constructed".into()),
+                    },
+                    imports: Imports {
+                        status: "incomplete".into(),
+                        closure_sha256: Some("e".repeat(64)),
+                        records: vec![import_record()],
+                        cycle: Some(vec!["a".into(), "b".into()]),
+                        exceeded: Some("depth".into()),
+                        failure: Some("constructed".into()),
+                    },
+                },
+                host: host(),
+                runner_provenance: Some(runner_provenance_from_target(&target)),
+                app_provenance: Some(AppProvenance {
+                    evidence_manifest_path: "/constructed/manifest.json".into(),
+                    evidence_verify: Some(VerifyReport {
+                        ok: false,
+                        checked: 1,
+                        mismatches: vec![VerifyMismatch {
+                            id: "tool".into(),
+                            rel_path: "Contents/MacOS/tool".into(),
+                            expected_sha256: Some("a".repeat(64)),
+                            actual_sha256: Some("b".repeat(64)),
+                            error: Some("constructed".into()),
+                        }],
+                        manifest_path: "/constructed/manifest.json".into(),
+                        schema_version: 1,
+                        notes: Some(vec!["constructed".into()]),
+                    }),
+                }),
+                binaries: Binaries {
+                    service: Some(binary()),
+                    worker: Some(binary()),
+                    validator: Some(binary()),
+                },
+            };
+            let reply = json!({
+                "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "normalized_outcome": "ok", "rc": 0, "pid": 42, "steps": [],
+            });
+            let data = RunData {
+                execution: ExecutionData {
+                    specimen,
+                    policy_check: Some(PolicyCheckCapture {
+                        status: "captured".into(),
+                        tool_exit_code: 0,
+                        output: capture(crate::utils::HELPER_CAPTURE_BYTES),
+                        envelope: Some(sbpl_check_envelope()),
+                        policy_format: Some("sbpl".into()),
+                        policy_sha256: Some("f".repeat(64)),
+                        compiled: Some(true),
+                        compile_error: Some("constructed".into()),
+                        normalized_outcome: Some("ok".into()),
+                    }),
+                    timeout_ms: Some(DEFAULT_TIMEOUT_MS),
+                    runner_client: Some(RunnerClientRun {
+                        argv: vec!["constructed-client".into()],
+                        started_at_unix_ms: 1_000,
+                        ended_at_unix_ms: 2_500,
+                        exit_code: 0,
+                        request_delivery: Some(RequestDelivery {
+                            bytes_written: 2,
+                            error: Some("constructed".into()),
+                        }),
+                        output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
+                    }),
+                    runner_result: Some(reply),
+                },
+                sandbox_log_capture: Some(SandboxLogCapture {
+                    window: SandboxLogWindow {
+                        kind: "runner_client_span",
+                        started_at_unix_ms: 1_000,
+                        ended_at_unix_ms: 2_500,
+                        pad_seconds: 2,
+                        start: Some("1969-12-31 23:59:59+0000".into()),
+                        end: Some("1970-01-01 00:00:05+0000".into()),
+                        event_timestamps_available: false,
+                        exact_run_membership: false,
+                        step_ordering: false,
+                        pid_reuse_protection: false,
+                    },
+                    capture_status: "captured".into(),
+                    tool_exit_code: 0,
+                    blocked_reason: Some("constructed".into()),
+                    output: capture(crate::utils::OBSERVER_CAPTURE_BYTES),
+                    observer: Some(observer_report()),
+                    observed_deny: Some(true),
+                    deny_events: Some(vec![deny_event()]),
+                    step_denies: Some(vec![SandboxLogStepDeny {
+                        event_index: 0,
+                        candidate_step_ids: vec!["s".into()],
+                        association: "candidate".into(),
+                        matching_evidence: vec![SandboxLogMatchEvidence {
+                            step_id: "s".into(),
+                            operation: "file-read-data".into(),
+                            operation_source: "submitted_attempt",
+                            requested_kind: "file".into(),
+                            requested_action: "open_read".into(),
+                            path: "/private/etc/hosts".into(),
+                            path_sources: vec!["submitted_attempt.target".into()],
+                        }],
+                    }]),
+                    supervision: Some(supervision(Boundary::Observer)),
+                    processing_cutoff: Some(cutoff()),
+                }),
+                runner_sandbox_diagnostics: Some(RunnerSandboxDiagnostics {
+                    execution: RunnerExecutionDiagnostics {
+                        process_disposition: "clean_exit",
+                        termination_cause: Some("host_sentinel_deadline"),
+                        stop_reason: Some("done".into()),
+                        disposition_integrity: Some("valid"),
+                        disposition_issues: vec![integrity_issue(
+                            "missing_record",
+                            "constructed".into(),
+                        )],
+                    },
+                    logs: RunnerLogDiagnostics {
+                        correlation_status: "pid_match",
+                        permission_failures_without_record: Some(vec!["s".into()]),
+                    },
+                }),
+            };
+            (full_result(), data)
+        }
+
+        #[test]
+        fn envelope_shape_golden_agrees_with_the_manifest() {
+            let (result, data) = field_complete_run_envelope();
+            let text = json_contract::render_envelope("run", result, &data).unwrap();
+            let wire: Value = serde_json::from_str(&text).unwrap();
+            let mut current = crate::shape::Shape::new();
+            crate::shape::collect(
+                &wire,
+                "envelope",
+                &["envelope.data.runner_result"],
+                &mut current,
+            )
+            .unwrap();
+            // The fixture types every key it carries; the reply golden owns the reply.
+            for (path, keys) in &current {
+                for (key, kind) in keys {
+                    assert_ne!(kind, "null", "{path}.{key} is untyped in the fixture");
+                }
+            }
+            assert_eq!(current["envelope.data"]["runner_result"], "object");
+            assert!(!current.contains_key("envelope.data.runner_result"));
+            let golden = Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../tests/fixtures/contract/envelope_shape.json");
+            crate::shape::check_golden(
+                &golden,
+                "controller_envelope",
+                u64::from(json_contract::SCHEMA_VERSION),
+                &current,
+                "envelope_shape.candidate.json",
+            )
+            .unwrap();
+        }
+    }
 }

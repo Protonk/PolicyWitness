@@ -1,10 +1,14 @@
 """Read one JSON document: a controller envelope or a bare runner reply.
 
 The document's versions are checked before anything else is interpreted. A
-supported document is validated against the current contract; evidence is then
-selected by field. No policy, specimen, errno rule, file or production
-implementation is an input, and nothing here asserts agreement or disagreement
-between the prediction and the attempt. Scenario expectations belong to callers.
+supported document is validated against the current contract: first its shape
+against the goldens under tests/fixtures/contract/ (the readers' allowlists:
+an unknown key at a recorded path is an error naming the path, a present key
+must carry the golden's type, absence is allowed), then the record rules below.
+Evidence is then selected by field. No policy, specimen, errno rule, file or
+production implementation is an input, and nothing here asserts agreement or
+disagreement between the prediction and the attempt. Scenario expectations
+belong to callers.
 
 Public functions:
 
@@ -15,6 +19,8 @@ Public functions:
     denials(document)   -> dict           the optional log channel, resolved in place
 """
 from copy import deepcopy
+import json
+from pathlib import Path
 
 import contract
 import lifecycle_contract
@@ -35,17 +41,15 @@ LIFECYCLE_LIMITATIONS = ('attempt:lifecycle_unresolved', 'attempt:lifecycle_conf
 LIMITATIONS = frozenset(['query_plan:' + code for code in QUERY_PLAN_CODES] + list(LIFECYCLE_LIMITATIONS))
 COMPARISON_KEYS = ('observation', 'observation_basis', 'operation_relation', 'target_relation', 'order', 'limitations')
 
-# Keys no current document carries. A reader that finds one is reading a
-# document from another contract; it is rejected at that exact path.
-REMOVED_STEP_KEYS = ('drift', 'deny_signal')
-REMOVED_COMPARISON_KEYS = ('scope', 'prediction', 'conclusion', 'obligations', 'references')
-REMOVED_ATTEMPT_KEYS = ('exit_code', 'syscall_errno', 'native_rc', 'normalized_path')
-REMOVED_QUERY_KEYS = ('scope', 'effective_filter_value')
-REMOVED_REPLY_KEYS = ('deny_signal_total', 'comparison_conditions')
-REMOVED_DATA_KEYS = ('runner_startup_diagnostics', 'policy_augmentation', 'app_provenance', 'runner_provenance',
-                     'request_path', 'runner_service_bundle_id', 'runner_service_name', 'runner_registry_id',
-                     'runner_service_executable', 'error', 'log_last')
-REMOVED_DIAGNOSTIC_KEYS = ('worker_pid', 'capture_status', 'first_deny')
+# The shape goldens: per object path, every key the producers emit and its JSON
+# type. `envelope_shape.json` is rooted at `envelope` and treats the runner
+# reply as opaque; `response_shape.json` is rooted at `reply`. A key absent
+# from the golden at its path belongs to no current document.
+_CONTRACT_DIR = Path(__file__).resolve().parents[1] / 'fixtures' / 'contract'
+ENVELOPE_SHAPE = json.loads((_CONTRACT_DIR / 'envelope_shape.json').read_text())['shape']
+REPLY_SHAPE = json.loads((_CONTRACT_DIR / 'response_shape.json').read_text())['shape']
+# Paths whose contents another golden records, with that golden and its root.
+_REROOTED = {'envelope.data.runner_result': (REPLY_SHAPE, 'reply')}
 SPECIMEN_KEYS = ('request_path', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries')
 AUGMENTATION_STATUSES = ('not_requested', 'applied', 'failed', 'not_applicable')
 IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
@@ -189,15 +193,60 @@ def eligible_order(runner, step):
 
 
 # ---------------------------------------------------------------------------
+# Shape: the goldens are allowlists
+# ---------------------------------------------------------------------------
+
+def _json_type(value):
+    if value is None:
+        return 'null'
+    if isinstance(value, bool):
+        return 'boolean'
+    if isinstance(value, (int, float)):
+        return 'number'
+    if isinstance(value, str):
+        return 'string'
+    if isinstance(value, list):
+        return 'array'
+    return 'object'
+
+
+def validate_shape(value, path, shape, errors):
+    """Check one object and everything under it against the golden for its path.
+
+    An unknown key is an error naming the path. A present, non-null key must
+    carry the golden's type; a golden type of `null` constrains nothing. Absent
+    keys are allowed: the goldens are allowlists, not required sets. Objects at
+    a path another golden records (`_REROOTED`) continue under that golden.
+    """
+    allowed = shape.get(path)
+    if allowed is None or not isinstance(value, dict):
+        return
+    for key, child in value.items():
+        if key not in allowed:
+            errors.append(f'unknown key {path}.{key}')
+            continue
+        child_path = f'{path}.{key}'
+        actual = _json_type(child)
+        if child is not None and allowed[key] != 'null' and actual != allowed[key]:
+            errors.append(f'{child_path} is {actual}, not {allowed[key]}')
+            continue
+        rerooted = _REROOTED.get(child_path)
+        if rerooted is not None:
+            validate_shape(child, rerooted[1], rerooted[0], errors)
+        elif isinstance(child, dict):
+            validate_shape(child, child_path, shape, errors)
+        elif isinstance(child, list):
+            for item in child:
+                validate_shape(item, child_path + '[]', shape, errors)
+
+
+# ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
 
 def _validate_step(runner, step, failed_reporting):
     errors = []
     sid = step.get('step_id')
-    for key in REMOVED_STEP_KEYS:
-        if key in step:
-            errors.append(f'{sid}: removed key steps[].{key}')
     query = step.get('sandbox_check')
     attempt = step.get('attempt')
     if not isinstance(query, dict):
@@ -206,12 +255,6 @@ def _validate_step(runner, step, failed_reporting):
     if not isinstance(attempt, dict):
         errors.append(f'{sid}: missing attempt')
         attempt = {}
-    for key in REMOVED_QUERY_KEYS:
-        if key in query:
-            errors.append(f'{sid}: removed key sandbox_check.{key}')
-    for key in REMOVED_ATTEMPT_KEYS:
-        if key in attempt:
-            errors.append(f'{sid}: removed key attempt.{key}')
     for key in ('requested_kind', 'requested_action'):
         if not isinstance(attempt.get(key), str):
             errors.append(f'{sid}: missing attempt.{key}')
@@ -247,11 +290,6 @@ def _validate_step(runner, step, failed_reporting):
     if not isinstance(comparison, dict):
         errors.append(f'{sid}: missing comparison')
         return errors
-    for key in REMOVED_COMPARISON_KEYS:
-        if key in comparison:
-            errors.append(f'{sid}: removed key comparison.{key}')
-    if set(comparison) - set(COMPARISON_KEYS) - set(REMOVED_COMPARISON_KEYS):
-        errors.append(f'{sid}: unknown comparison keys {sorted(set(comparison) - set(COMPARISON_KEYS))}')
     for key, allowed in (('observation', OBSERVATIONS), ('observation_basis', OBSERVATION_BASES),
                          ('operation_relation', OPERATION_RELATIONS), ('target_relation', TARGET_RELATIONS),
                          ('order', ORDERS)):
@@ -299,9 +337,6 @@ def _validate_step(runner, step, failed_reporting):
 
 def _validate_reply(runner):
     errors = []
-    for key in REMOVED_REPLY_KEYS:
-        if key in runner:
-            errors.append(f'removed key {key}')
     failure = runner.get('reporting_failure')
     failed_reporting = failure is not None
     if failed_reporting or runner.get('normalized_outcome') == 'runner_reporting_failed':
@@ -395,9 +430,6 @@ def _validate_envelope(document):
     data = document.get('data')
     if not isinstance(data, dict):
         return ['data is not an object']
-    for key in REMOVED_DATA_KEYS:
-        if key in data:
-            errors.append(f'removed key data.{key}')
     specimen = data.get('specimen')
     if not isinstance(specimen, dict):
         errors.append('missing data.specimen')
@@ -445,28 +477,26 @@ def _validate_envelope(document):
                                          or (delivery.get('error') is not None and not isinstance(delivery['error'], str))):
                 errors.append('invalid data.runner_client.request_delivery')
     diagnostics = data.get('runner_sandbox_diagnostics')
-    if diagnostics is not None:
-        if not isinstance(diagnostics, dict):
-            errors.append('data.runner_sandbox_diagnostics is not an object')
-        else:
-            for key in REMOVED_DIAGNOSTIC_KEYS:
-                if key in diagnostics:
-                    errors.append(f'removed key data.runner_sandbox_diagnostics.{key}')
+    if diagnostics is not None and not isinstance(diagnostics, dict):
+        errors.append('data.runner_sandbox_diagnostics is not an object')
     return errors
 
 
 def validate(document):
-    """The single version error, or every shape error of a supported document."""
+    """The single version error, or every shape and record error of a supported document."""
     errors = version_errors(document)
     if errors:
         return errors
     if is_envelope(document):
+        validate_shape(document, 'envelope', ENVELOPE_SHAPE, errors)
         errors.extend(_validate_envelope(document))
         runner = _reply(document)
         if runner is not None:
             errors.extend(_validate_reply(runner))
         return errors
-    return _validate_reply(document)
+    validate_shape(document, 'reply', REPLY_SHAPE, errors)
+    errors.extend(_validate_reply(document))
+    return errors
 
 
 # ---------------------------------------------------------------------------

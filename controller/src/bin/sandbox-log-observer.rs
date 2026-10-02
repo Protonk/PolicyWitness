@@ -10,6 +10,9 @@ mod json_contract;
 #[path = "../log_capture.rs"]
 #[allow(dead_code)]
 mod log_capture;
+#[cfg(test)]
+#[path = "../shape.rs"]
+mod shape;
 
 #[path = "../log_show.rs"]
 mod log_show;
@@ -880,6 +883,122 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The report with every field present, through the frame `main` prints.
+    /// The controller's envelope golden records this subtree from a fixture in
+    /// `run_flow.rs`; the two must agree.
+    #[test]
+    fn report_shape_agrees_with_the_envelope_golden() {
+        let stream = || log_capture::StreamObservation {
+            limit_bytes: 1024,
+            bytes_read: 2,
+            bytes_retained: 2,
+            eof: true,
+            truncated: false,
+            read_error: Some("constructed".into()),
+        };
+        let data = LogObserverData {
+            observer_schema_version: OBSERVER_SCHEMA_VERSION,
+            mode: "show".into(),
+            duration_ms: Some(1),
+            stop_on_pid_exit: false,
+            plan_id: Some("p".into()),
+            row_id: Some("r".into()),
+            correlation_id: Some("c".into()),
+            pid: 42,
+            process_name: Some("pw-probe-runner".into()),
+            predicate: "constructed".into(),
+            start: Some("2026-01-01 00:00:00+0000".into()),
+            end: Some("2026-01-01 00:00:05+0000".into()),
+            last: Some("1m".into()),
+            log_rc: Some(0),
+            log_stdout: String::new(),
+            log_stderr: String::new(),
+            log_error: Some("constructed".into()),
+            blocked_reason: Some("constructed".into()),
+            log_truncated: false,
+            observed_lines: 1,
+            observed_deny: true,
+            deny_lines: vec!["constructed deny line".into()],
+            deny_events: vec![SandboxDenyEvent {
+                pid: Some(42),
+                process: Some("pw-probe-runner".into()),
+                operation: Some("file-read-data".into()),
+                path: Some("/private/etc/hosts".into()),
+                raw_line: "constructed deny line".into(),
+            }],
+            layer_attribution: ObserverLayerAttribution {
+                seatbelt: "observer_only".into(),
+            },
+            collection: Some(log_capture::Supervision {
+                boundary: log_capture::Boundary::LogShow,
+                budget: log_capture::CollectionBudget {
+                    timeout_ms: 10_000,
+                    timeout_source: log_capture::TimeoutSource::Default,
+                    started_monotonic_ns: 1,
+                    deadline_monotonic_ns: 2,
+                },
+                reserve_ms: 1_000,
+                elapsed_ms: 150,
+                cutoff: Some(log_capture::Cutoff {
+                    reason: "deadline".into(),
+                    stream: Some("stdout".into()),
+                    limit: Some(1024),
+                    observed: Some(1025),
+                    detail: Some("constructed".into()),
+                }),
+                stdout: stream(),
+                stderr: stream(),
+                process: log_capture::ProcessObservation {
+                    pid: Some(42),
+                    exit_observed: true,
+                    reaped: true,
+                    exit_code: Some(0),
+                    term_signal: Some(9),
+                    wait_error: Some("constructed".into()),
+                },
+                cleanup: log_capture::CleanupObservation {
+                    scope: "direct_child".into(),
+                    target: Some(42),
+                    grace_ms: 1_000,
+                    ownership: "owned".into(),
+                    signal: Some(9),
+                    signal_result: Some(log_capture::SyscallObservation {
+                        rc: -1,
+                        errno: Some(1),
+                    }),
+                    signal_before_reap: true,
+                    ownership_released: true,
+                    group_probe: Some(log_capture::SyscallObservation {
+                        rc: -1,
+                        errno: Some(3),
+                    }),
+                    outcome: "child_reaped".into(),
+                    detail: Some("constructed".into()),
+                },
+            }),
+        };
+        let text =
+            json_contract::render_envelope("sandbox_log_observer_report", json_result(true), &data)
+                .unwrap();
+        let wire: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let mut emitted = shape::Shape::new();
+        shape::collect(&wire, "observer", &[], &mut emitted).unwrap();
+        let golden: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/contract/envelope_shape.json"
+        ))
+        .unwrap();
+        let recorded = shape::golden_subtree(
+            &golden,
+            "envelope.data.sandbox_log_capture.observer",
+            "observer",
+        );
+        assert!(
+            !recorded.is_empty(),
+            "the envelope golden records no observer report"
+        );
+        shape::same_shape(&recorded, &emitted).unwrap();
+    }
 
     #[test]
     fn documented_observer_limits() {

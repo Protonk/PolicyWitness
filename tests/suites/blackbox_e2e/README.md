@@ -96,7 +96,7 @@ and requires the record beside every worker subprocess.
 
 The menagerie's `validation_controls` also drives this checker CLI. It covers
 shared nullable fields, integer/boolean distinctions, malformed envelopes,
-step correlation, removed-key rejection, and combined failures, alongside
+step correlation, one shape-allowlist mutation, and combined failures, alongside
 each suite's own rules. Optional diagnostic text and expected null errno
 values have positive controls.
 Paired responses with reordered steps must retain exactly the same step
@@ -123,7 +123,9 @@ The shared checker requires the six-field comparison record, submitted attempt
 kind/action and host path provenance on every step at the current response
 schema. `checker_controls` exercises the consumer directly: a synthetic
 current-version envelope passes; another or malformed version is reported as
-`unsupported` with no downstream errors; each removed key at its former path,
+`unsupported` with no downstream errors; an unknown key at a recorded path and
+a present key of another type are rejected under each shape golden
+(`tests/fixtures/contract/envelope_shape.json`, `response_shape.json`);
 each limitation outside the vocabulary, a record that contradicts its raw
 fields and a `query_first` claim without its chain are rejected; the client's
 own failure replies validate; and the ordering of a successful unlink against

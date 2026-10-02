@@ -26,6 +26,8 @@ mod runner_select;
 mod sandbox_log;
 mod sbpl_imports;
 mod sbpl_lex;
+#[cfg(test)]
+mod shape;
 mod utils;
 
 use std::ffi::OsString;

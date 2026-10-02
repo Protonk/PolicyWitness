@@ -20,7 +20,8 @@ func repositoryRoot() -> URL {
 }
 
 // Reply shape golden: tests/fixtures/contract/response_shape.json records, per
-// object path, every key of the field-complete reply fixture and its JSON type.
+// object path, every key the producer emits across the documents of
+// replyShapeDocuments() and its JSON type.
 // Any change fails until the golden is replaced. A number moves when the rules
 // for reading change: a removed key, a changed type or meaning, or a new
 // requirement on readers; an added field alone does not require a bump, and
@@ -36,18 +37,153 @@ private func jsonType(_ value: Any) -> String {
     return "unknown"
 }
 
-private func collectShape(_ object: [String: Any], path: String, into shape: inout [String: [String: String]]) {
-    var keys: [String: String] = [:]
+/// Record `object`'s keys under `path`; every object element of an array
+/// contributes to the `path[]` entry. A key seen as null in one place and
+/// typed in another records the type; two different types are a conflict.
+private func collectShape(_ object: [String: Any], path: String, into shape: inout [String: [String: String]]) throws {
+    var keys = shape[path] ?? [:]
     for (key, value) in object {
-        keys[key] = jsonType(value)
+        let type = jsonType(value)
+        if let current = keys[key], current != "null", current != type, type != "null" {
+            throw TestFailure(message: "shape conflict at \(path).\(key): \(current) and \(type)")
+        }
+        if keys[key] == nil || keys[key] == "null" { keys[key] = type }
         let child = path + "." + key
         if let nested = value as? [String: Any] {
-            collectShape(nested, path: child, into: &shape)
-        } else if let array = value as? [Any], let first = array.first as? [String: Any] {
-            collectShape(first, path: child + "[]", into: &shape)
+            try collectShape(nested, path: child, into: &shape)
+        } else if let array = value as? [Any] {
+            for element in array.compactMap({ $0 as? [String: Any] }) {
+                try collectShape(element, path: child + "[]", into: &shape)
+            }
         }
     }
     shape[path] = keys
+}
+
+private func shapeObject(_ data: Data) throws -> [String: Any] {
+    try JSONSerialization.jsonObject(with: data) as! [String: Any]
+}
+
+private func shapeSlot(_ id: String, completed: Bool) -> CWorkerSlotResult {
+    CWorkerSlotResult(stepId: id, rc: 0, errnoVal: 0, observedPath: completed ? "/private/owned" : nil,
+                      error: nil, completed: completed)
+}
+
+private func shapeProgress(_ op: UInt32, _ phase: UInt32, index: UInt32? = nil) -> PWWorkerProgress {
+    let item: UInt32 = index.map { $0 + 1 } ?? 0
+    return PWWorkerProgress(raw: (op << 24) | (phase << 20) | item, operation: op, phase: phase, index: index)
+}
+
+private func shapeProbe(_ id: String, kind: String = "file", action: String = "open_read") -> PWRunnerProbeStep {
+    PWRunnerProbeStep(step_id: id,
+        sandbox_check: PWRunnerSandboxCheck(operation: "file-read-data",
+                                            filter: PWRunnerSandboxFilter(kind: "path", value: "/etc/hosts")),
+        attempt: PWRunnerAttempt(kind: kind, action: action, target: "/etc/hosts"))
+}
+
+private func shapeDiagnostic() -> PWWorkerDiagnostic {
+    PWWorkerDiagnostic(state: 2, status: "truncated", length: 4, text: "text")
+}
+
+/// Worker accounts the field-complete fixture cannot carry at once, resolved
+/// and assembled by the production builders so the encoder accepts them:
+/// a confirmed exit whose progress word says the second attempt returned while
+/// its slot stayed incomplete (the D5 conflict, with its issue and the
+/// synthetic attempt's missing reason); a signalled worker with a termination
+/// request, a published failure and a policy transfer error; a confirmed exit
+/// whose progress word is unusable (unresolved step claims with reasons); a
+/// plan whose attempt kind the worker does not support (inapplicable claims);
+/// and a worker reaped before any exit was requested (inapplicable cleanup
+/// claims with reasons). Each returns the output and the plan it answers.
+private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
+    var conflict = CWorkerOutput(
+        workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0, applyErrno: 0, done: true,
+        exitCode: 0, termSignal: nil, slots: [shapeSlot("first", completed: true), shapeSlot("second", completed: false)],
+        pollStopReason: "done", exitRequested: true, terminationRequest: nil, reaped: true, waitErrors: [],
+        workerEvidence: PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: shapeProgress(9, 2, index: 1),
+            failure_publication: 0, failure_state: "absent", failure: nil,
+            readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))
+    conflict.cleanupTrigger = "completion"
+    conflict.graceEnd = "reaped_during_grace"
+    conflict.collectionBasis = "after_confirmed_reap"
+    var signalled = CWorkerOutput(
+        workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0, applyErrno: 0, done: false,
+        exitCode: nil, termSignal: 9, slots: [shapeSlot("first", completed: true)],
+        pollStopReason: "sentinel_deadline", exitRequested: true,
+        terminationRequest: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil), reaped: true,
+        waitErrors: [PWRunnerWaitError(phase: "exit_grace", rc: -1, errno: 10)],
+        workerEvidence: PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: shapeProgress(10, 2),
+            failure_publication: 1, failure_state: "published",
+            failure: PWWorkerFailure(operation: 10, code: 1, native_kind: 1, native_result: -1, errno: 22, index: 0, detail: 0),
+            readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))
+    signalled.policyTransferError = PWWorkerPolicyTransferError(errno: 32, bytes_written: 10, bytes_expected: 100)
+    signalled.cleanupTrigger = "deadline_expiry"
+    signalled.graceEnd = "exhausted"
+    signalled.collectionBasis = "after_confirmed_reap"
+    var unusable = conflict
+    unusable.slots = [shapeSlot("first", completed: false)]
+    var word = shapeProgress(9, 1, index: 0)
+    word.raw = shapeProgress(9, 1, index: 1).raw
+    unusable.workerEvidence?.progress = word
+    var unsupported = conflict
+    unsupported.slots = [shapeSlot("first", completed: true)]
+    unsupported.workerEvidence?.progress = nil
+    var crashed = conflict
+    crashed.done = false
+    crashed.exitCode = nil
+    crashed.termSignal = 11
+    crashed.slots = [shapeSlot("first", completed: false)]
+    crashed.pollStopReason = "child_reaped"
+    crashed.exitRequested = false
+    crashed.cleanupTrigger = "child_reaped"
+    crashed.graceEnd = "not_entered"
+    crashed.workerEvidence?.progress = shapeProgress(9, 1, index: 0)
+    return [
+        (conflict, [shapeProbe("first"), shapeProbe("second")]),
+        (signalled, [shapeProbe("first")]),
+        (unusable, [shapeProbe("first")]),
+        (unsupported, [shapeProbe("first", kind: "future", action: "future")]),
+        (crashed, [shapeProbe("first")]),
+    ]
+}
+
+/// Every encoded document whose keys the reply golden records: the
+/// field-complete fixture, its degraded reply (`reporting_failure` beside the
+/// retained evidence), the fixture with a signalled validator, and the
+/// production-shaped worker accounts above. Only the encoder's output counts:
+/// a key appears in the golden because the producer emitted it.
+func replyShapeDocuments() throws -> [[String: Any]] {
+    var documents: [[String: Any]] = []
+    let base = try replyFixture()
+    documents.append(try shapeObject(pwRunnerEncodeJSON(base)))
+    var defective = base
+    defective.steps[0].comparison?.order = "future_order"
+    documents.append(try shapeObject(pwRunnerReplyData(defective)))
+    var signalledValidator = base
+    signalledValidator.validator_subprocess?.term_signal = 9
+    signalledValidator.validator_subprocess?.exit_code = nil
+    documents.append(try shapeObject(pwRunnerEncodeJSON(signalledValidator)))
+    for (out, plan) in shapeWorkerOutputs() {
+        let record = resolveDisposition(out, plan: plan)
+        var sub = buildWorkerSubprocess(out, disposition: record)
+        sub.ordering = buildOrdering(out, validatorOutput: nil, hasQueries: true)
+        let reply = PWRunnerRunResult(specimen_id: "shape", rc: 0, normalized_outcome: NormalizedOutcome.ok,
+            pid: Int(out.workerPid), policy_format: "sbpl", sandboxed_after_apply: true,
+            steps: buildStepResults(probePlan: plan, queryPlan: planValidatorQueries(plan), workerOutput: out,
+                                    validatorOutput: nil, ordering: sub.ordering, disposition: record),
+            runner_subprocess: sub)
+        documents.append(try shapeObject(pwRunnerEncodeJSON(reply)))
+    }
+    return documents
+}
+
+/// The merged shape of every document, collected the same way for each.
+func replyShape() throws -> [String: [String: String]] {
+    var merged: [String: [String: String]] = [:]
+    for document in try replyShapeDocuments() {
+        try collectShape(document, path: "reply", into: &merged)
+    }
+    return merged
 }
 
 struct ShapeVerdict: Equatable {
@@ -117,12 +253,27 @@ func runContractVersionTests(_ tk: TestKit) {
             try expectEqual(refined.status, "update"); try expectContains(refined.detail, "nullable")
             try expectEqual(classifyShapeChange(golden: golden(base, 7), current: base, manifestVersion: 8).status, "update")
         }
+        tk.run("shape documents cover the keys an ordinary fixture cannot carry at once") {
+            let shape = try replyShape()
+            for (path, key) in [("reply", "reporting_failure"), ("reply.steps[].attempt", "missing_reason"),
+                                ("reply.validator_subprocess", "term_signal"), ("reply.runner_subprocess", "exit_code"),
+                                ("reply.runner_subprocess", "term_signal"), ("reply.runner_subprocess", "policy_transfer_error"),
+                                ("reply.runner_subprocess.worker_evidence", "failure"),
+                                ("reply.runner_subprocess.disposition.issues[]", "rule"),
+                                ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "issue"),
+                                ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "reason"),
+                                ("reply.runner_subprocess.disposition.steps[].questions.step_boundary_reached", "reason"),
+                                ("reply.steps[].attempt.lifecycle.boundary", "reason"),
+                                ("reply.steps[].attempt.lifecycle.result", "reason"),
+                                ("reply.runner_subprocess.disposition.questions.cleanup_trigger", "reason"),
+                                ("reply.runner_subprocess.disposition.questions.grace_end", "reason"),
+                                ("reply.runner_subprocess.disposition.questions.kill_request_and_result", "reason")] {
+                try expectTrue(shape[path]?[key] != nil && shape[path]?[key] != "null", "\(path).\(key) is not typed")
+            }
+        }
         tk.run("reply shape golden agrees with the manifest") {
             let goldenURL = root.appendingPathComponent("tests/fixtures/contract/response_shape.json")
-            let encoded = try pwRunnerEncodeJSON(try replyFixture())
-            let object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
-            var current: [String: [String: String]] = [:]
-            collectShape(object, path: "reply", into: &current)
+            let current = try replyShape()
             let golden = (try? JSONSerialization.jsonObject(with: Data(contentsOf: goldenURL))) as? [String: Any]
             let verdict = classifyShapeChange(golden: golden, current: current, manifestVersion: PWContract.responseSchema)
             if verdict.status == "ok" { return }

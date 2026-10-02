@@ -5,12 +5,17 @@ deterministic, and checked into the repo so tests are hermetic.
 
 ## Categories
 
-- `contract/`: goldens for the wire contracts: the field-complete reply shape
-  (`response_shape.json`, checked by `runner_unit`) and the compiled worker ABI
-  layout harvest (`abi_layout.txt`, checked by `runner_abi_layout`). A failing
-  comparison writes a candidate into the case artifacts; replace the golden
-  after review, and bump the number in `docs/contract.json` first when the
-  failure says so. See `docs/CONTRACT.md`.
+- `contract/`: goldens for the wire contracts: the reply shape
+  (`response_shape.json`, every key the encoder emits across the field-complete
+  fixture and its production-shaped companions, checked by `runner_unit`), the
+  controller envelope shape (`envelope_shape.json`, from the field-complete
+  `kind: "run"` envelope a Rust unit test renders, with the helper envelopes it
+  nests checked by the helpers' own tests) and the compiled worker ABI layout
+  harvest (`abi_layout.txt`, checked by `runner_abi_layout`). The two shape
+  goldens are the allowlists `tests/lib/consumer.py` validates documents
+  against. A failing comparison writes a candidate into the case artifacts;
+  replace the golden after review, and bump the number in `docs/contract.json`
+  first when the failure says so. See `docs/CONTRACT.md`.
   `path_diagnostics.json` contains independent compact path states,
   Unicode byte distinctions and malformed representations shared by Swift
   encoding/decoding, Rust forwarding and Python consumer checks.

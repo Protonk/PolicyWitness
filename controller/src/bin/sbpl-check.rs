@@ -13,6 +13,9 @@
 #[path = "../json_contract.rs"]
 #[allow(dead_code)]
 mod json_contract;
+#[cfg(test)]
+#[path = "../shape.rs"]
+mod shape;
 
 #[path = "../host_facts.rs"]
 mod host_facts;
@@ -443,6 +446,63 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The check envelope with every field present, through the frame `main`
+    /// prints. The controller's envelope golden records this subtree from a
+    /// fixture in `run_flow.rs` (`data.policy_check.envelope`); the two must agree.
+    #[test]
+    fn check_shape_agrees_with_the_envelope_golden() {
+        let data = CheckData {
+            policy_format: "sbpl".into(),
+            policy_sha256: Some("f".repeat(64)),
+            policy_closure_sha256: Some("f".repeat(64)),
+            macos_build_version: Some("23J220".into()),
+            params_present: true,
+            params_count: 1,
+            params_referenced: vec!["K".into()],
+            params_supplied: vec!["K".into()],
+            params_missing: vec!["M".into()],
+            params_unused: vec!["U".into()],
+            params_scan_complete: true,
+            imports: vec![sbpl_imports::ImportRecord {
+                name: "system.sb".into(),
+                resolved_path: Some("/System/Library/Sandbox/Profiles/system.sb".into()),
+                sha256: Some("f".repeat(64)),
+                size_bytes: Some(1),
+                mtime_unix: Some(1),
+                error: Some("constructed".into()),
+            }],
+            imports_truncated: false,
+            imports_cycle: Some(vec!["a".into(), "b".into()]),
+            compiled: true,
+            compile_error: Some("constructed".into()),
+        };
+        let result = json_contract::JsonResult {
+            ok: true,
+            rc: Some(0),
+            exit_code: Some(0),
+            normalized_outcome: Some("ok".into()),
+            errno: Some(0),
+            error: Some("constructed".into()),
+            stderr: Some(String::new()),
+            stdout: Some(String::new()),
+        };
+        let text = json_contract::render_envelope("sbpl_check", result, &data).unwrap();
+        let wire: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let mut emitted = shape::Shape::new();
+        shape::collect(&wire, "sbpl_check", &[], &mut emitted).unwrap();
+        let golden: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/contract/envelope_shape.json"
+        ))
+        .unwrap();
+        let recorded =
+            shape::golden_subtree(&golden, "envelope.data.policy_check.envelope", "sbpl_check");
+        assert!(
+            !recorded.is_empty(),
+            "the envelope golden records no sbpl-check envelope"
+        );
+        shape::same_shape(&recorded, &emitted).unwrap();
+    }
 
     #[test]
     fn documented_helper_limits() {

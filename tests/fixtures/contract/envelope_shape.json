@@ -1,0 +1,515 @@
+{
+  "controller_envelope": 5,
+  "shape": {
+    "envelope": {
+      "build": "object",
+      "data": "object",
+      "generated_at_unix_ms": "number",
+      "kind": "string",
+      "result": "object",
+      "schema_version": "number"
+    },
+    "envelope.build": {
+      "commit": "string",
+      "describe": "string",
+      "number": "string",
+      "version": "string"
+    },
+    "envelope.data": {
+      "policy_check": "object",
+      "runner_client": "object",
+      "runner_result": "object",
+      "runner_sandbox_diagnostics": "object",
+      "sandbox_log_capture": "object",
+      "specimen": "object",
+      "timeout_ms": "number"
+    },
+    "envelope.data.policy_check": {
+      "capture_limit_bytes": "number",
+      "compile_error": "string",
+      "compiled": "boolean",
+      "envelope": "object",
+      "normalized_outcome": "string",
+      "policy_format": "string",
+      "policy_sha256": "string",
+      "status": "string",
+      "stderr": "string",
+      "stderr_bytes_received": "number",
+      "stderr_bytes_retained": "number",
+      "stderr_truncated": "boolean",
+      "stdout_bytes_received": "number",
+      "stdout_bytes_retained": "number",
+      "stdout_capture_error": "string",
+      "stdout_parse_error": "string",
+      "stdout_raw": "string",
+      "stdout_truncated": "boolean",
+      "tool_exit_code": "number"
+    },
+    "envelope.data.policy_check.envelope": {
+      "build": "object",
+      "data": "object",
+      "generated_at_unix_ms": "number",
+      "kind": "string",
+      "result": "object",
+      "schema_version": "number"
+    },
+    "envelope.data.policy_check.envelope.build": {
+      "commit": "string",
+      "describe": "string",
+      "number": "string",
+      "version": "string"
+    },
+    "envelope.data.policy_check.envelope.data": {
+      "compile_error": "string",
+      "compiled": "boolean",
+      "imports": "array",
+      "imports_cycle": "array",
+      "imports_truncated": "boolean",
+      "macos_build_version": "string",
+      "params_count": "number",
+      "params_missing": "array",
+      "params_present": "boolean",
+      "params_referenced": "array",
+      "params_scan_complete": "boolean",
+      "params_supplied": "array",
+      "params_unused": "array",
+      "policy_closure_sha256": "string",
+      "policy_format": "string",
+      "policy_sha256": "string"
+    },
+    "envelope.data.policy_check.envelope.data.imports[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
+    },
+    "envelope.data.policy_check.envelope.result": {
+      "errno": "number",
+      "error": "string",
+      "exit_code": "number",
+      "normalized_outcome": "string",
+      "ok": "boolean",
+      "rc": "number",
+      "stderr": "string",
+      "stdout": "string"
+    },
+    "envelope.data.runner_client": {
+      "argv": "array",
+      "capture_limit_bytes": "number",
+      "ended_at_unix_ms": "number",
+      "exit_code": "number",
+      "request_delivery": "object",
+      "started_at_unix_ms": "number",
+      "stderr": "string",
+      "stderr_bytes_received": "number",
+      "stderr_bytes_retained": "number",
+      "stderr_truncated": "boolean",
+      "stdout_bytes_received": "number",
+      "stdout_bytes_retained": "number",
+      "stdout_capture_error": "string",
+      "stdout_parse_error": "string",
+      "stdout_raw": "string",
+      "stdout_truncated": "boolean"
+    },
+    "envelope.data.runner_client.request_delivery": {
+      "bytes_written": "number",
+      "error": "string"
+    },
+    "envelope.data.runner_sandbox_diagnostics": {
+      "correlation_status": "string",
+      "disposition_integrity": "string",
+      "disposition_issues": "array",
+      "permission_failures_without_record": "array",
+      "process_disposition": "string",
+      "stop_reason": "string",
+      "termination_cause": "string"
+    },
+    "envelope.data.runner_sandbox_diagnostics.disposition_issues[]": {
+      "detail": "string",
+      "kind": "string"
+    },
+    "envelope.data.sandbox_log_capture": {
+      "blocked_reason": "string",
+      "capture_limit_bytes": "number",
+      "capture_status": "string",
+      "deny_events": "array",
+      "observed_deny": "boolean",
+      "observer": "object",
+      "processing_cutoff": "object",
+      "stderr": "string",
+      "stderr_bytes_received": "number",
+      "stderr_bytes_retained": "number",
+      "stderr_truncated": "boolean",
+      "stdout_bytes_received": "number",
+      "stdout_bytes_retained": "number",
+      "stdout_capture_error": "string",
+      "stdout_parse_error": "string",
+      "stdout_raw": "string",
+      "stdout_truncated": "boolean",
+      "step_denies": "array",
+      "supervision": "object",
+      "tool_exit_code": "number",
+      "window": "object"
+    },
+    "envelope.data.sandbox_log_capture.deny_events[]": {
+      "operation": "string",
+      "path": "string",
+      "pid": "number",
+      "process": "string",
+      "raw_line": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer": {
+      "build": "object",
+      "data": "object",
+      "generated_at_unix_ms": "number",
+      "kind": "string",
+      "result": "object",
+      "schema_version": "number"
+    },
+    "envelope.data.sandbox_log_capture.observer.build": {
+      "commit": "string",
+      "describe": "string",
+      "number": "string",
+      "version": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.data": {
+      "blocked_reason": "string",
+      "collection": "object",
+      "correlation_id": "string",
+      "deny_events": "array",
+      "deny_lines": "array",
+      "duration_ms": "number",
+      "end": "string",
+      "last": "string",
+      "layer_attribution": "object",
+      "log_error": "string",
+      "log_rc": "number",
+      "log_stderr": "string",
+      "log_stdout": "string",
+      "log_truncated": "boolean",
+      "mode": "string",
+      "observed_deny": "boolean",
+      "observed_lines": "number",
+      "observer_schema_version": "number",
+      "pid": "number",
+      "plan_id": "string",
+      "predicate": "string",
+      "process_name": "string",
+      "row_id": "string",
+      "start": "string",
+      "stop_on_pid_exit": "boolean"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection": {
+      "boundary": "string",
+      "budget": "object",
+      "cleanup": "object",
+      "cutoff": "object",
+      "elapsed_ms": "number",
+      "process": "object",
+      "reserve_ms": "number",
+      "stderr": "object",
+      "stdout": "object"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.budget": {
+      "deadline_monotonic_ns": "number",
+      "started_monotonic_ns": "number",
+      "timeout_ms": "number",
+      "timeout_source": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.cleanup": {
+      "detail": "string",
+      "grace_ms": "number",
+      "group_probe": "object",
+      "outcome": "string",
+      "ownership": "string",
+      "ownership_released": "boolean",
+      "scope": "string",
+      "signal": "number",
+      "signal_before_reap": "boolean",
+      "signal_result": "object",
+      "target": "number"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.cleanup.group_probe": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.cleanup.signal_result": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.cutoff": {
+      "detail": "string",
+      "limit": "number",
+      "observed": "number",
+      "reason": "string",
+      "stream": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.process": {
+      "exit_code": "number",
+      "exit_observed": "boolean",
+      "pid": "number",
+      "reaped": "boolean",
+      "term_signal": "number",
+      "wait_error": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.stderr": {
+      "bytes_read": "number",
+      "bytes_retained": "number",
+      "eof": "boolean",
+      "limit_bytes": "number",
+      "read_error": "string",
+      "truncated": "boolean"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.collection.stdout": {
+      "bytes_read": "number",
+      "bytes_retained": "number",
+      "eof": "boolean",
+      "limit_bytes": "number",
+      "read_error": "string",
+      "truncated": "boolean"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.deny_events[]": {
+      "operation": "string",
+      "path": "string",
+      "pid": "number",
+      "process": "string",
+      "raw_line": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.data.layer_attribution": {
+      "seatbelt": "string"
+    },
+    "envelope.data.sandbox_log_capture.observer.result": {
+      "errno": "number",
+      "error": "string",
+      "exit_code": "number",
+      "normalized_outcome": "string",
+      "ok": "boolean",
+      "rc": "number",
+      "stderr": "string",
+      "stdout": "string"
+    },
+    "envelope.data.sandbox_log_capture.processing_cutoff": {
+      "detail": "string",
+      "limit": "number",
+      "observed": "number",
+      "reason": "string",
+      "stream": "string"
+    },
+    "envelope.data.sandbox_log_capture.step_denies[]": {
+      "association": "string",
+      "candidate_step_ids": "array",
+      "event_index": "number",
+      "matching_evidence": "array"
+    },
+    "envelope.data.sandbox_log_capture.step_denies[].matching_evidence[]": {
+      "operation": "string",
+      "operation_source": "string",
+      "path": "string",
+      "path_sources": "array",
+      "requested_action": "string",
+      "requested_kind": "string",
+      "step_id": "string"
+    },
+    "envelope.data.sandbox_log_capture.supervision": {
+      "boundary": "string",
+      "budget": "object",
+      "cleanup": "object",
+      "cutoff": "object",
+      "elapsed_ms": "number",
+      "process": "object",
+      "reserve_ms": "number",
+      "stderr": "object",
+      "stdout": "object"
+    },
+    "envelope.data.sandbox_log_capture.supervision.budget": {
+      "deadline_monotonic_ns": "number",
+      "started_monotonic_ns": "number",
+      "timeout_ms": "number",
+      "timeout_source": "string"
+    },
+    "envelope.data.sandbox_log_capture.supervision.cleanup": {
+      "detail": "string",
+      "grace_ms": "number",
+      "group_probe": "object",
+      "outcome": "string",
+      "ownership": "string",
+      "ownership_released": "boolean",
+      "scope": "string",
+      "signal": "number",
+      "signal_before_reap": "boolean",
+      "signal_result": "object",
+      "target": "number"
+    },
+    "envelope.data.sandbox_log_capture.supervision.cleanup.group_probe": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "envelope.data.sandbox_log_capture.supervision.cleanup.signal_result": {
+      "errno": "number",
+      "rc": "number"
+    },
+    "envelope.data.sandbox_log_capture.supervision.cutoff": {
+      "detail": "string",
+      "limit": "number",
+      "observed": "number",
+      "reason": "string",
+      "stream": "string"
+    },
+    "envelope.data.sandbox_log_capture.supervision.process": {
+      "exit_code": "number",
+      "exit_observed": "boolean",
+      "pid": "number",
+      "reaped": "boolean",
+      "term_signal": "number",
+      "wait_error": "string"
+    },
+    "envelope.data.sandbox_log_capture.supervision.stderr": {
+      "bytes_read": "number",
+      "bytes_retained": "number",
+      "eof": "boolean",
+      "limit_bytes": "number",
+      "read_error": "string",
+      "truncated": "boolean"
+    },
+    "envelope.data.sandbox_log_capture.supervision.stdout": {
+      "bytes_read": "number",
+      "bytes_retained": "number",
+      "eof": "boolean",
+      "limit_bytes": "number",
+      "read_error": "string",
+      "truncated": "boolean"
+    },
+    "envelope.data.sandbox_log_capture.window": {
+      "end": "string",
+      "ended_at_unix_ms": "number",
+      "event_timestamps_available": "boolean",
+      "exact_run_membership": "boolean",
+      "kind": "string",
+      "pad_seconds": "number",
+      "pid_reuse_protection": "boolean",
+      "start": "string",
+      "started_at_unix_ms": "number",
+      "step_ordering": "boolean"
+    },
+    "envelope.data.specimen": {
+      "app_provenance": "object",
+      "binaries": "object",
+      "host": "object",
+      "policy": "object",
+      "request_path": "string",
+      "runner_provenance": "object"
+    },
+    "envelope.data.specimen.app_provenance": {
+      "evidence_manifest_path": "string",
+      "evidence_verify": "object"
+    },
+    "envelope.data.specimen.app_provenance.evidence_verify": {
+      "checked": "number",
+      "manifest_path": "string",
+      "mismatches": "array",
+      "notes": "array",
+      "ok": "boolean",
+      "schema_version": "number"
+    },
+    "envelope.data.specimen.app_provenance.evidence_verify.mismatches[]": {
+      "actual_sha256": "string",
+      "error": "string",
+      "expected_sha256": "string",
+      "id": "string",
+      "rel_path": "string"
+    },
+    "envelope.data.specimen.binaries": {
+      "service": "object",
+      "validator": "object",
+      "worker": "object"
+    },
+    "envelope.data.specimen.binaries.service": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.binaries.validator": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.binaries.worker": {
+      "actual_sha256": "string",
+      "baseline_sha256": "string",
+      "path": "string",
+      "reason": "string",
+      "verification": "string"
+    },
+    "envelope.data.specimen.host": {
+      "arch": "string",
+      "kernel_release": "string",
+      "macos_build": "string",
+      "macos_version": "string"
+    },
+    "envelope.data.specimen.policy": {
+      "augmentation": "object",
+      "imports": "object"
+    },
+    "envelope.data.specimen.policy.augmentation": {
+      "applied": "array",
+      "applied_sha256": "string",
+      "error": "string",
+      "original_sha256": "string",
+      "status": "string"
+    },
+    "envelope.data.specimen.policy.imports": {
+      "closure_sha256": "string",
+      "cycle": "array",
+      "exceeded": "string",
+      "failure": "string",
+      "records": "array",
+      "status": "string"
+    },
+    "envelope.data.specimen.policy.imports.records[]": {
+      "error": "string",
+      "mtime_unix": "number",
+      "name": "string",
+      "resolved_path": "string",
+      "sha256": "string",
+      "size_bytes": "number"
+    },
+    "envelope.data.specimen.runner_provenance": {
+      "runner_bundle_id": "string",
+      "runner_bundle_path": "string",
+      "runner_entitlements": "object",
+      "runner_executable_path": "string",
+      "runner_kind": "string",
+      "runner_registry_id": "string",
+      "runner_service_name": "string",
+      "runner_signature": "object"
+    },
+    "envelope.data.specimen.runner_provenance.runner_entitlements": {
+      "error": "string",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.result": {
+      "errno": "number",
+      "error": "string",
+      "exit_code": "number",
+      "normalized_outcome": "string",
+      "ok": "boolean",
+      "rc": "number",
+      "stderr": "string",
+      "stdout": "string"
+    }
+  }
+}
