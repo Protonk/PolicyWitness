@@ -379,7 +379,7 @@ that the OS emitted or delivered every denial. See the
 Optional:
 
 - `PW_VERIFY_EVIDENCE=1` runs a manifest hash verification pass and includes a
-  `data.app_provenance.evidence_verify` report in the output.
+  `data.specimen.app_provenance.evidence_verify` report in the output.
 
 ### Execution and log-evidence ownership
 
@@ -556,7 +556,8 @@ diagnostic without a native return retains `result_source="validator"`,
 `native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
 claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"`
 with a missing reason. `outcome="error"` alone does not identify a native call
-failure. The attempt channel carries no native return.
+failure. The attempt channel carries PolicyWitness attempt status in `rc` and
+operation-specific error observations in `errno` and `error`.
 
 See [the query and receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
 for immutable query planning, query association, independent pipe collection,

@@ -11,8 +11,8 @@ the BYOXPC runner suite.
 - Every probe step has sandbox_check and attempt results; step IDs are unique
   and retain their expected order.
 - Probe actions are idempotent and scoped under a per-run test root.
-- Denial classification uses the answer plus attempt evidence; steps carry no
-  signal channel, and the checker rejects a `deny_signal` or `drift` key.
+- Query answers and attempt observations are checked separately; the checker
+  rejects a `deny_signal` or `drift` key.
 
 ## How to run
 
@@ -24,7 +24,7 @@ the BYOXPC runner suite.
 
 A test passes only when the controller output matches the expected evidence
 bundle for every step. Failures include mismatched sandbox_check outcomes,
-attempt results, or denial classification.
+attempt results, or comparison fields.
 
 The checker collects errors across both evidence channels and all returned
 steps. An unexpected answer is a failure and cannot suppress validation
@@ -34,8 +34,8 @@ exit as a failure.
 `validate_run.py` uses `tests/lib/blackbox.py` for envelope, step identity/order,
 required evidence fields, scalar types, and explicit prediction/attempt/errno
 expectations; `tests/lib/consumer.py` validates the envelope and every
-comparison record first. The case files choose the expectations; denial
-checks stay in this suite. The helper performs no setup and makes no skip
+comparison record first. The case files choose the query and attempt
+expectations. The helper performs no setup and makes no skip
 decisions. The menagerie uses the same checks with its own policy requirements.
 Nullable evidence keys remain present; optional attempt `error` text can be
 omitted or null.
@@ -86,8 +86,8 @@ controls; they establish interpretation, not live reachability.
 The expected-fixture controls accept `tests/fixtures/disposition/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), refuse the
 captured `a1_known_loss.json` as the unsupported version it is before any
-claim is read and reject it for the missing record once its versions are
-raised, and reject named mutations of the accepted baseline (request
+claim is read, and reject named mutations of the accepted baseline (missing
+disposition record, request
 removed while the cause is kept, exit code beside signal without a conflict,
 supported cause replaced by unknown, identical unresolved or swapped step
 answers, with or without differing debug indices), each with its expected rule.

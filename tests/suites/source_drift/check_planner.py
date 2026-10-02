@@ -1,4 +1,4 @@
-"""Run the real source checker against disposable planner mutations."""
+"""Run the real source checker against disposable planner and host API mutations."""
 import json
 from pathlib import Path
 import shutil
@@ -62,12 +62,29 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
         ('string-table', original + '\nlet example = """\n' + mirror + '\n"""\n', 0, None),
         ('restored', original, 0, None),
     ]
+    scenarios = [(name, HOST, source, expected, diagnostic)
+                 for name, source, expected, diagnostic in scenarios]
+    shim = Path('runner/Sources/PWCWorkerShim/PWCWorkerShim.c')
+    shim_original = (repo / shim).read_text()
+    for name, path, source, snippet, expected in [
+        ('host-binding', HOST, original, '@_silgen_name("sandbox_check") func native() -> Int32', 1),
+        ('host-unrelated-api', HOST, original,
+         'let callback: @convention(c) (Int32) -> Int32 = ptr\nlet h = dlopen("/usr/lib/libSystem.B.dylib", RTLD_NOW)', 0),
+        ('shim-sandbox-call', shim, shim_original, 'void forbidden(void) { sandbox_free_error(0); }', 1),
+        ('shim-symbol-constant', shim, shim_original,
+         'const char *symbol = "sandbox_check"; void *f = dlsym(handle, symbol);', 1),
+        ('shim-explanatory-string', shim, shim_original, 'const char *example = "sandbox_check(pid)";', 0),
+    ]:
+        scenarios.append((name, path, source + '\n' + snippet + '\n', expected,
+                          'the XPC host never links, loads or calls libsandbox' if expected else None))
     receipts = []
-    for name, source, expected, diagnostic in scenarios:
+    for name, path, source, expected, diagnostic in scenarios:
         evidence = out / name
         evidence.mkdir()
-        (repo / HOST).write_text(source)
-        (evidence / 'CWorkerOrchestrator.swift').write_text(source)
+        (repo / HOST).write_text(original)
+        (repo / shim).write_text(shim_original)
+        (repo / path).write_text(source)
+        (evidence / path.name).write_text(source)
         argv = [sys.executable, '-B', str(repo / 'tests/suites/source_drift/check.py')]
         result = subprocess.run(argv, cwd=repo, capture_output=True, text=True, timeout=30)
         (evidence / 'stdout').write_text(result.stdout)
@@ -81,7 +98,7 @@ private let hostExclusions: Set<PredictionUnavailablePair> = [
     if (ROOT / HOST).read_text() != original:
         raise AssertionError('source controls changed the working planner')
     (out / 'controls.json').write_text(json.dumps({'ok': True, 'scenarios': receipts}, indent=2) + '\n')
-    print(f'{len(receipts)} planner source controls passed')
+    print(f'{len(receipts)} planner and host source controls passed')
 
 
 if __name__ == '__main__':

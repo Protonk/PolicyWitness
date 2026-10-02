@@ -505,8 +505,8 @@ file), and executable overrides (a byte-identical worker copy records
 `match`; different bytes record `mismatch`; a nonexistent, relative, NUL or
 overlong path records `unavailable` with its reason; both helper roles are
 independent). `request_delivery` must report the held byte count on every
-invoked run. The opt-in `dossier_witness_byoxpc` repeats the ordinary and
-override examples through an installed BYOXPC copy, where all three
+invoked run. The opt-in `dossier_witness_byoxpc` repeats the ordinary example
+through an installed BYOXPC copy, where all three
 `binaries` records are objects.
 
 The pre-apply case also attempts a real spawn of a nonexistent worker and

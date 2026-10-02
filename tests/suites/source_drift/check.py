@@ -37,11 +37,11 @@ The check has two halves:
         heading is identical in AGENTS.md, runner/README.md and
         tests/README.md. The note is carried in three places on purpose;
         each copy adds its own local paragraph after the shared one.
-     j. Host invariance: no file under runner/Sources/PWRunnerCore names a
+     j. Host invariance: no file under runner/Sources binds or calls a
         libsandbox entry point or loads the library. The XPC host never
         links, loads or calls libsandbox; the worker and the validator do.
-        The check masks comments and strings and has positive/negative
-        controls run in-process on constructed text.
+        The check distinguishes comments and explanatory strings from native
+        uses, with positive/negative controls on constructed Swift/C text.
 
 Exit codes:
   0 — everything agrees
@@ -631,55 +631,184 @@ def check_prediction_unavailable_agreement() -> list[str]:
 #
 # The host must not link, load or call libsandbox. Every native sandbox
 # operation belongs to the worker (pw-probe-runner) or the validator
-# (sb_api_validator). A host that could call sandbox_check or sandbox_init
-# would have a reason to acquire resources before the worker applies its
-# policy, which the host/worker split forbids. The companion binary check is
+# (sb_api_validator). The host joins their observations without executing
+# either child's sandbox API work. The companion binary check is
 # tests/lib/artifact.py (`nm -u` on the shipped PWRunner).
 # ---------------------------------------------------------------------------
 
-# `sandbox_check` is also a wire key, so only call syntax counts: an
-# identifier immediately applied to an argument list.
-HOST_FORBIDDEN = re.compile(
-    r'\b(?:sandbox_(?:check|init|init_with_parameters|apply|compile_string|compile_file|compile_named'
-    r'|create_params|set_param|free_params|free_profile|extension_(?:issue|consume|release)|container_path_for_pid'
-    r'|note|suspend|unsuspend))\s*\('
-    r'|\bdlopen\s*\(|\bdlsym\s*\(|libsandbox(?:\.dylib|\.1\.dylib)|@convention\s*\(\s*c\s*\)')
+# Native uses in the host, including the C shim. This is a source convention,
+# not complete Swift/C analysis: computed symbol/library names are outside it.
+HOST_SANDBOX_SYMBOLS = frozenset({
+    'sandbox_check', 'sandbox_apply', 'sandbox_compile_string',
+    'sandbox_create_params', 'sandbox_set_param', 'sandbox_free_params',
+    'sandbox_free_profile', 'sandbox_free_error',
+})
+
+
+def host_tokens(text):
+    """Tokens and original offsets; comments disappear, literals retain context."""
+    tokens = []
+    literal_pattern = re.compile(r'(\#*)("""|"|\')')
+    token_pattern = re.compile(r'[A-Za-z_][A-Za-z_0-9]*|[^\s]')
+    offset = 0
+    while offset < len(text):
+        if text.startswith('//', offset):
+            end = text.find('\n', offset)
+            offset = len(text) if end < 0 else end
+            continue
+        if text.startswith('/*', offset):
+            depth = 1
+            offset += 2
+            while offset < len(text) and depth:
+                if text.startswith('/*', offset):
+                    depth += 1
+                    offset += 2
+                elif text.startswith('*/', offset):
+                    depth -= 1
+                    offset += 2
+                else:
+                    offset += 1
+            if depth:
+                raise ValueError('unterminated block comment')
+            continue
+        literal = literal_pattern.match(text, offset)
+        if literal:
+            start = offset
+            hashes, quote = literal.groups()
+            offset += len(literal.group())
+            body = offset
+            closing = quote + hashes
+            escape = '\\' + hashes
+            while offset < len(text) and not text.startswith(closing, offset):
+                offset += len(escape) + 1 if text.startswith(escape, offset) else 1
+            if offset >= len(text):
+                raise ValueError('unterminated string literal')
+            tokens.append((text[body:offset], start, True))
+            offset += len(closing)
+            continue
+        match = token_pattern.match(text, offset)
+        if match:
+            tokens.append((match.group(), offset, False))
+            offset += len(match.group())
+        else:
+            offset += 1
+    return tokens
 
 
 def host_invariance_problems(label: str, text: str) -> list[str]:
-    """Problems in one masked Swift source: forbidden native sandbox entry points."""
+    """Find native calls/bindings and literal sandbox lookups, allowing prose."""
     try:
-        code = swift_code(text)
+        tokens = host_tokens(text)
     except ValueError as exc:
-        return [f"  host invariance: {label}: {exc}"]
+        return [f'  host invariance: {label}: {exc}']
+    # Simple Swift/C constants, including typed Swift lets and C #defines.
+    constants = {}
+    for i, (value, _, literal) in enumerate(tokens):
+        if literal or value not in ('let', 'var', 'const', 'define'):
+            continue
+        end = i + 1
+        while end < len(tokens) and tokens[end][0] not in ('=', ';', '{', '}'):
+            if tokens[end][2]:
+                break
+            end += 1
+        if end < len(tokens) and tokens[end][0] == '=':
+            name = tokens[i + 1][0] if value in ('let', 'var') else tokens[end - 1][0]
+            end += 1
+        elif value == 'define' and i + 2 < len(tokens):
+            name, end = tokens[i + 1][0], i + 2
+        else:
+            continue
+        if end < len(tokens) and tokens[end][2]:
+            constants[name] = tokens[end][0]
+
+    def argument_value(argument):
+        if len(argument) != 1:
+            return None
+        value, _, literal = argument[0]
+        return value if literal else constants.get(value)
+
     problems = []
-    for match in HOST_FORBIDDEN.finditer(code):
-        line = code.count("\n", 0, match.start()) + 1
-        problems.append(f"  host invariance: {label}:{line} names {match.group(0).strip()!r}; "
-                        f"the XPC host never links, loads or calls libsandbox")
+    for i, (name, offset, literal) in enumerate(tokens[:-1]):
+        if literal or tokens[i + 1][0] != '(' or tokens[i + 1][2]:
+            continue
+        prohibited = name if name in HOST_SANDBOX_SYMBOLS else None
+        if name in ('_silgen_name', '_cdecl', 'asm', '__asm', '__asm__', 'dlsym', 'dlopen'):
+            arguments, current, depth = [], [], 0
+            for token in tokens[i + 2:]:
+                value, _, quoted = token
+                if not quoted and value == ')' and depth == 0:
+                    arguments.append(current)
+                    break
+                if not quoted and value == ',' and depth == 0:
+                    arguments.append(current)
+                    current = []
+                    continue
+                if not quoted and value in ('(', '[', '{'):
+                    depth += 1
+                elif not quoted and value in (')', ']', '}'):
+                    depth -= 1
+                current.append(token)
+            index = 1 if name == 'dlsym' else 0
+            value = argument_value(arguments[index]) if len(arguments) > index else None
+            if name == 'dlopen':
+                if value and re.fullmatch(r'libsandbox(?:\.[0-9]+)*\.dylib', Path(value).name):
+                    prohibited = f'{name}({value})'
+            elif value in HOST_SANDBOX_SYMBOLS:
+                prohibited = f'{name}({value})'
+        if prohibited:
+            line = text.count('\n', 0, offset) + 1
+            problems.append(f'  host invariance: {label}:{line} uses {prohibited}; '
+                            'the XPC host never links, loads or calls libsandbox')
     return problems
 
 
 def check_host_invariance() -> list[str]:
     problems: list[str] = []
-    for path in sorted(CORE_DIR.rglob("*.swift")):
-        problems.extend(host_invariance_problems(str(path.relative_to(REPO_ROOT)), path.read_text(encoding="utf-8")))
+    for path in sorted((RUNNER_DIR / 'Sources').rglob('*')):
+        if path.suffix in ('.swift', '.c', '.h', '.m', '.mm'):
+            problems.extend(host_invariance_problems(str(path.relative_to(REPO_ROOT)), path.read_text(encoding='utf-8')))
     return problems
 
 
 def host_invariance_controls() -> list[str]:
-    """Positive and negative controls for the source check, on constructed text."""
-    problems: list[str] = []
-    clean = 'let name = "sandbox_check is only a word in a string" // sandbox_init in a comment\n' \
-            '/* dlopen("x") in a block comment */\nfunc spawnWorker() { posix_spawn() }\n'
-    if host_invariance_problems("control-clean", clean):
-        problems.append("  host invariance control: masked comments/strings were reported")
-    for snippet in ('let rc = sandbox_check(pid, "file-read-data", 0)\n',
-                    'let handle = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)\n',
-                    'let f: @convention(c) (Int32) -> Int32 = ptr\n',
-                    'sandbox_init(profile, 0, &err)\n'):
-        if not host_invariance_problems("control-forbidden", snippet):
-            problems.append(f"  host invariance control: {snippet.strip()!r} was not reported")
+    """Controls distinguish native use from schema, prose and unrelated APIs."""
+    problems = []
+    accepted = [
+        'let name = "sandbox_check(pid) and dlopen(x) are examples"',
+        '// sandbox_apply(p)\n/* outer /* sandbox_free_error(e) */ dlsym(h, "sandbox_check") */',
+        'var sandbox_check: PWRunnerSandboxCheckResult\nenum CodingKeys { case sandbox_check }',
+        'let label = "sandbox_check"\nlet policy = """\n(allow default)\n"""',
+        'let f: @convention(c) (Int32) -> Int32 = ptr',
+        'let h = dlopen("/usr/lib/libSystem.B.dylib", RTLD_NOW)',
+        'let f = dlsym(h, "malloc")',
+        'let library = "/usr/lib/libSystem.B.dylib"\nlet h = dlopen(library, RTLD_NOW)',
+        'let name: String = "malloc"\nlet f = dlsym(h, name)',
+        '@_silgen_name("posix_spawn") func spawn() -> Int32',
+        'let example = #"dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)"#',
+    ]
+    rejected = []
+    for name in sorted(HOST_SANDBOX_SYMBOLS):
+        rejected += [
+            f'{name}(value)',
+            f'int {name}(void *value);',
+            f'@_silgen_name("{name}") func native() -> Int32',
+            f'let f = dlsym(handle, "{name}")',
+            f'let symbol: String = "{name}"\nlet f = dlsym(handle, symbol)',
+            f'const char *symbol = "{name}"; void *f = dlsym(handle, symbol);',
+            f'#define SYMBOL "{name}"\nvoid *f = dlsym(handle, SYMBOL);',
+        ]
+    rejected += [
+        'let h = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW)',
+        'let library = "/usr/lib/libsandbox.1.dylib"\nlet h = dlopen(library, RTLD_NOW)',
+        'const char *library = "/usr/lib/libsandbox.dylib"; void *h = dlopen(library, RTLD_NOW);',
+        '@_silgen_name(#"sandbox_check"#) func native() -> Int32',
+        'extern int native(void) __asm__("sandbox_check");',
+    ]
+    for expected, snippets in ((False, accepted), (True, rejected)):
+        for snippet in snippets:
+            found = host_invariance_problems('control', snippet)
+            if bool(found) != expected:
+                problems.append(f'  host invariance control: expected rejection={expected}: {snippet!r}: {found}')
     return problems
 
 

@@ -22,6 +22,8 @@ sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 from blackbox import envelope_skeleton
 from consumer import denials, lifecycle, select, steps, validate
+from lifecycle_adapter import read_lifecycle
+from lifecycle_oracle import check_record
 from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
 
@@ -247,18 +249,29 @@ def consumer_controls(artifacts, current):
         ('reply_next', lambda e: runner(e).update(schema_version=contract.RESPONSE_SCHEMA + 1), 'unsupported runner response'),
         ('reply_float', lambda e: runner(e).update(schema_version=float(contract.RESPONSE_SCHEMA)), 'malformed runner response'),
         ('reply_missing', lambda e: runner(e).pop('schema_version'), 'malformed runner response'),
+        ('old_envelope_no_reply', lambda e: (e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1),
+                                            e['data'].update(runner_result=None)), 'unsupported controller envelope'),
+        ('envelope_first', lambda e: (e.update(schema_version=contract.CONTROLLER_ENVELOPE - 1),
+                                      runner(e).update(schema_version=contract.RESPONSE_SCHEMA + 1)), 'unsupported controller envelope'),
     ]:
         broken = copy.deepcopy(current)
         change(broken)
+        if runner(broken) is not None:
+            # An unguarded lifecycle projection would try to read these as objects.
+            runner(broken)['steps'] = [{'attempt': 7, 'comparison': False}]
         errors = validate(broken)
         assert len(errors) == 1 and diagnostic in errors[0], (name, errors)
-        for reader in (steps, lifecycle, denials):
+        for reader in (steps, lifecycle, denials, read_lifecycle):
             try:
                 reader(broken)
             except ValueError as exc:
                 assert diagnostic in str(exc), (name, reader.__name__, exc)
             else:
                 raise AssertionError(f'{name}: {reader.__name__} read an unsupported document')
+        findings = check_record(broken)
+        assert len(findings) == 1 and diagnostic in findings[0]['detail'], (name, findings)
+        expected_kind = 'unsupported_version' if diagnostic.startswith('unsupported') else 'malformed_version'
+        assert findings[0]['kind'] == expected_kind, (name, findings)
         records.append({'control': 'version_' + name, 'rejected': True, 'errors': errors})
     # An envelope without a reply is read under its own version only.
     no_reply = copy.deepcopy(current)
@@ -267,6 +280,7 @@ def consumer_controls(artifacts, current):
     run('no_reply_envelope', no_reply, lambda e: require(steps(e) == [] and denials(e)['capture_status'] == 'not_reported', 'absence must not invent evidence'))
     bare = copy.deepcopy(runner(current))
     assert not validate(bare), validate(bare)
+    assert lifecycle(bare)['reporting'] == 'reported'
     bare['schema_version'] = contract.RESPONSE_SCHEMA + 1
     errors = validate(bare)
     assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors

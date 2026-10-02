@@ -19,6 +19,7 @@ from copy import deepcopy
 import contract
 import lifecycle_contract
 from lifecycle_adapter import read_lifecycle, summaries
+from document_versions import is_envelope, version_errors, require_supported as _gate
 
 
 # The comparison record vocabulary (docs/PolicyWitness.md, "Reading a comparison record").
@@ -68,51 +69,12 @@ ATTEMPT_PATH_FORMS = ('realpath_resolved', 'parent_realpath_resolved')
 # Version gate
 # ---------------------------------------------------------------------------
 
-def _version_error(label, value, expected):
-    if type(value) is not int:
-        return f'malformed {label}: schema_version {value!r} is not an integer'
-    if value != expected:
-        return f'unsupported {label}: schema_version {value} (this reader accepts {expected})'
-    return None
-
-
-def is_envelope(document):
-    """A controller envelope carries `kind` and `data`; a bare reply carries `steps`."""
-    return isinstance(document, dict) and 'data' in document and 'steps' not in document
-
-
-def version_errors(document):
-    """One error for the first unsupported or malformed version, else []."""
-    if not isinstance(document, dict):
-        return ['document is not an object']
-    if is_envelope(document):
-        error = _version_error('controller envelope', document.get('schema_version'), contract.CONTROLLER_ENVELOPE)
-        if error:
-            return [error]
-        data = document.get('data')
-        runner = data.get('runner_result') if isinstance(data, dict) else None
-        if runner is None:
-            return []
-        if not isinstance(runner, dict):
-            return ['malformed runner reply: data.runner_result is not an object']
-        error = _version_error('runner response', runner.get('schema_version'), contract.RESPONSE_SCHEMA)
-        return [error] if error else []
-    error = _version_error('runner response', document.get('schema_version'), contract.RESPONSE_SCHEMA)
-    return [error] if error else []
-
-
 def _reply(document):
     """The runner reply of a supported document, or None when the envelope has no reply."""
     if is_envelope(document):
         data = document.get('data') or {}
         return data.get('runner_result')
     return document
-
-
-def _gate(document):
-    errors = version_errors(document)
-    if errors:
-        raise ValueError(errors[0])
 
 
 # ---------------------------------------------------------------------------
@@ -573,7 +535,8 @@ select.ABSENT = ABSENT
 def lifecycle(document):
     """The registered lifecycle account of a supported document."""
     _gate(document)
-    envelope = document if is_envelope(document) else {'data': {'runner_result': document}}
+    envelope = document if is_envelope(document) else {
+        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'run', 'data': {'runner_result': document}}
     view = read_lifecycle(envelope)
     return {'reporting': view['reporting'], 'summaries': summaries(view), 'record': view['record'],
             'malformed': view['malformed'],

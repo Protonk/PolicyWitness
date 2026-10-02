@@ -819,7 +819,8 @@ source or parameter values.
   hit, `depth` or `count`, or `cycle` names the cycle), `failed` (the collector
   could not start; `failure` says why) or `not_applicable` (no post-resolution
   source; `failure` is `augmentation_failed` after a refused augment and null
-  otherwise). `closure_sha256` hashes the source plus every successfully
+  otherwise). For an incomplete scan, `failure` identifies the first problem
+  encountered; a complete scan has `failure: null`. `closure_sha256` hashes the source plus every successfully
   hashed import whenever the scan ran. Each record carries `name`,
   `resolved_path`, `sha256`, `size_bytes`, `mtime_unix` and `error`. Each
   unique resolved import is opened once and checked to be a regular file

@@ -10,8 +10,8 @@ independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
   that predates the record (response 9, envelope 2). It witnesses the deadline,
   the SIGKILL request, the reaped signal and the attempt 0 started progress
   while that controller reported `termination_cause: unknown`. Readers refuse
-  it as an unsupported version before any claim is read; with its versions
-  raised to the current ones unchanged it is rejected for the missing record.
+  it as an unsupported version before any claim is read. Missing-record
+  controls remove the record from the current-shaped `a1_expected.json`.
   It is never a baseline for unrelated rejection controls.
 - `a1_expected.json`: a live envelope of the same `a1` specimen captured from
   the current build under the current contract (controller envelope 5,

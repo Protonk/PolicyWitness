@@ -24,6 +24,7 @@ import itertools
 import contract
 import lifecycle_contract as C
 from lifecycle_adapter import read_lifecycle
+from document_versions import version_errors
 
 MISSING = C.MISSING
 ORDER = {op: position for position, op in enumerate(C.PROTOCOL_ORDER)}
@@ -451,21 +452,15 @@ def _compare_claim(name, expected, actual, findings, step_index, obs, entry):
 
 def check_record(envelope):
     """Findings for one envelope; empty means the record and projections satisfy the contract."""
+    errors = version_errors(envelope)
+    if errors:
+        error = errors[0]
+        kind = 'unsupported_version' if error.startswith('unsupported') else 'malformed_version'
+        return [_finding('D8', kind, error)]
     view = read_lifecycle(envelope)
     findings = []
     proj = view['projections']
     if view['reporting'] == 'no_runner_reply':
-        return findings
-    # D5: the record is read under the contract manifest's response version only.
-    schema = view['schema_version']
-    envelope_version = envelope.get('schema_version') if isinstance(envelope, dict) else None
-    if schema != contract.RESPONSE_SCHEMA:
-        findings.append(_finding('D8', 'unsupported_version',
-                                 f'runner response schema_version {schema!r} is not {contract.RESPONSE_SCHEMA}'))
-        return findings
-    if envelope_version is not None and envelope_version != contract.CONTROLLER_ENVELOPE:
-        findings.append(_finding('D8', 'unsupported_version',
-                                 f'controller envelope schema_version {envelope_version!r} is not {contract.CONTROLLER_ENVELOPE}'))
         return findings
     if view['reporting'] == 'no_worker':
         if proj.get('process_disposition') not in (None, 'no_worker'):

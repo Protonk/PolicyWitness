@@ -24,14 +24,27 @@ signal.
   source-set check.
 
 The shared prediction-unavailable operation/filter set in `ProbeRunner.swift`
-must agree with the user guide. Both Swift callers use that single set;
-independent runner unit tests pin their exclusion behavior.
+must agree with the user guide. `planValidatorQueries` uses that set;
+independent runner unit tests pin its exclusion behavior.
 The checker also requires `planValidatorQueries` to branch on the shared set's
 `contains` call and rejects host-local pair collections, literal operation/filter
 entries and shadowing of the shared symbol. Comments, string examples and uses
 outside the planner cannot satisfy the membership check. This is a mechanical
 source convention, not a Swift semantic analysis; a deliberate refactor of the
 condition requires reviewing the guard alongside the runtime unit tests.
+
+The host-source check covers Swift and C sources and headers under
+`runner/Sources/`. It rejects direct calls/declarations and string-named
+bindings to `sandbox_check`, `sandbox_apply`, `sandbox_compile_string`,
+`sandbox_create_params`, `sandbox_set_param`, `sandbox_free_params`,
+`sandbox_free_profile` and `sandbox_free_error`. It also rejects `dlsym` of
+those symbols and `dlopen` of literal libsandbox paths, including simple named
+constants. Schema properties, comments, explanatory strings, unrelated dynamic
+loads and C calling conventions are accepted. Controls exercise both groups.
+Computed library/symbol names and complete Swift/C analysis are outside this
+check. The companion [artifact check](../preflight/README.md) inspects the
+shipped host's undefined symbols; the production C worker and validator retain
+their sandbox API calls outside this source scope.
 
 The registry checks also compare catalog suite names with suite directories and
 the coverage table, and require Baseline suites to have default catalog cases.
@@ -57,7 +70,9 @@ Public-command controls separately verify selection and actual execution.
   three-pair mirror, an extra fourth pair, inferred literal entries, shadowing,
   and missing/comment-only/string-only membership checks. Formatting and
   commented/string examples remain accepted. Inputs and command receipts are
-  retained, and the restored fixture must pass.
+  retained, and the restored fixture must pass. Additional mutations check
+  native Swift bindings and C-shim calls/lookups, accepting explanatory text
+  and unrelated native APIs.
 
 ## Artifacts
 

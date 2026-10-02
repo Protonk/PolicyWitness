@@ -25,7 +25,7 @@ After application, the worker waits for host release. The host closes validator 
 
 Each step records two evidence channels plus their comparison:
 
-- **Attempt** (`steps[].attempt`): in-band kernel response — `rc`, `errno`, mach `kr` — from actually performing the operation inside the sandboxed worker.
+- **Attempt** (`steps[].attempt`): the worker's operation status (`rc`), error observations (`errno` and Mach `kr` in `error`), and available child results. `rc` is PolicyWitness attempt status; it is not a raw syscall return.
 - **Prediction** (`steps[].sandbox_check`): the userland `sandbox_check` answer for the submitted operation + filter against the same PID, supplied by the validator, or the reason no answer was available.
 - **Comparison** (`steps[].comparison`): what the attempt channel observed and the raw fields that observation rests on, whether the submitted query names the attempt's operation and target, whether the query is known to precede the attempt batch, and any planner or lifecycle limitation. It relates the channels; it does not say whether they agree. The guide's [reading rules](docs/PolicyWitness.md#reading-a-comparison-record) say how to use it.
 

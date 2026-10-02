@@ -81,7 +81,7 @@ pub fn resolve_import_path(name: &str) -> Option<PathBuf> {
 }
 
 fn build_import_record(name: String, resolved: PathBuf) -> (ImportRecord, Option<Vec<u8>>) {
-    let bytes = match read_regular_file(&resolved) {
+    let (bytes, metadata) = match read_regular_file(&resolved) {
         Ok(b) => b,
         Err(err) => {
             return (
@@ -102,11 +102,10 @@ fn build_import_record(name: String, resolved: PathBuf) -> (ImportRecord, Option
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect::<String>();
-    let metadata = std::fs::metadata(&resolved).ok();
-    let size_bytes = metadata.as_ref().map(|m| m.len());
+    let size_bytes = Some(metadata.len());
     let mtime_unix = metadata
-        .as_ref()
-        .and_then(|m| m.modified().ok())
+        .modified()
+        .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_secs() as i64);
     (
@@ -139,6 +138,8 @@ pub struct ResolvedImports {
     /// names from the closest enclosing visit down to the back-edge that
     /// closed the cycle. None when no cycle was hit.
     pub cycle: Option<Vec<String>>,
+    /// The first problem encountered during collection, before records sort.
+    pub failure: Option<String>,
 }
 
 struct ResolverState {
@@ -157,6 +158,7 @@ struct ResolverState {
     exceeded: Option<String>,
     nonliteral_imports: bool,
     cycle: Option<Vec<String>>,
+    failure: Option<String>,
     /// Unresolved names already recorded — second sighting is silent dedup.
     unresolved_seen: BTreeSet<String>,
 }
@@ -166,13 +168,23 @@ fn exceed(state: &mut ResolverState, bound: &str) {
     if state.exceeded.is_none() {
         state.exceeded = Some(bound.to_string());
     }
+    state
+        .failure
+        .get_or_insert_with(|| format!("import {bound} limit exceeded"));
 }
 
 /// Open one resolved import once: `fstat` the descriptor to require a regular
 /// file, then read the bytes that are both hashed and lexed.
-fn read_regular_file(path: &Path) -> Result<Vec<u8>, String> {
+fn read_regular_file(path: &Path) -> Result<(Vec<u8>, std::fs::Metadata), String> {
     use std::io::Read;
-    let mut file = std::fs::File::open(path).map_err(|e| format!("read failed: {e}"))?;
+    use std::os::unix::fs::OpenOptionsExt;
+    // A FIFO must reach fstat without waiting for a writer. O_NONBLOCK has no
+    // effect on regular-file reads, and the descriptor check precedes reading.
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK)
+        .open(path)
+        .map_err(|e| format!("read failed: {e}"))?;
     let metadata = file.metadata().map_err(|e| format!("fstat failed: {e}"))?;
     if !metadata.is_file() {
         return Err("not a regular file".to_string());
@@ -180,15 +192,10 @@ fn read_regular_file(path: &Path) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
     file.read_to_end(&mut bytes)
         .map_err(|e| format!("read failed: {e}"))?;
-    Ok(bytes)
+    Ok((bytes, metadata))
 }
 
 fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
-    if state.records.len() >= IMPORT_MAX_COUNT {
-        exceed(state, "count");
-        return;
-    }
-
     match resolve_import_path(&name) {
         Some(path) => {
             let canonical = std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
@@ -201,6 +208,9 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
                 if state.cycle.is_none() {
                     let mut chain = state.in_progress_names.clone();
                     chain.push(name);
+                    state
+                        .failure
+                        .get_or_insert_with(|| format!("import cycle: {}", chain.join(" -> ")));
                     state.cycle = Some(chain);
                 }
                 return;
@@ -208,9 +218,14 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
 
             // Diamond: already fully resolved on a different path. Silent
             // skip — the existing record is authoritative.
-            if !state.visited.insert(canonical.clone()) {
+            if state.visited.contains(&canonical) {
                 return;
             }
+            if state.records.len() >= IMPORT_MAX_COUNT {
+                exceed(state, "count");
+                return;
+            }
+            state.visited.insert(canonical.clone());
 
             if depth >= IMPORT_MAX_DEPTH {
                 exceed(state, "depth");
@@ -226,6 +241,11 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
             }
 
             let (record, bytes) = build_import_record(name.clone(), canonical.clone());
+            if let Some(error) = &record.error {
+                state
+                    .failure
+                    .get_or_insert_with(|| format!("import {name:?}: {error}"));
+            }
             state.records.push(record);
             let Some(bytes) = bytes else { return };
             // The same bytes that were hashed are lexed. A file that is not
@@ -233,26 +253,28 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
             let content = match String::from_utf8(bytes) {
                 Ok(text) => text,
                 Err(_) => {
+                    let error = "not valid UTF-8; its imports were not scanned";
+                    state
+                        .failure
+                        .get_or_insert_with(|| format!("import {name:?}: {error}"));
                     if let Some(last) = state.records.last_mut() {
-                        last.error =
-                            Some("not valid UTF-8; its imports were not scanned".to_string());
+                        last.error = Some(error.to_string());
                     }
                     return;
                 }
             };
 
             state.in_progress.push(canonical.clone());
-            state.in_progress_names.push(name);
+            state.in_progress_names.push(name.clone());
 
             let scan = sbpl_lex::import_scan(&content);
             if !scan.scan_complete {
                 state.nonliteral_imports = true;
+                state.failure.get_or_insert_with(|| {
+                    format!("import {name:?}: a nonliteral (import ...) form could not be followed")
+                });
             }
             for child in scan.refs {
-                if state.records.len() >= IMPORT_MAX_COUNT {
-                    exceed(state, "count");
-                    break;
-                }
                 dfs_visit_import(child, depth + 1, state);
             }
 
@@ -263,6 +285,13 @@ fn dfs_visit_import(name: String, depth: usize, state: &mut ResolverState) {
             if !state.unresolved_seen.insert(name.clone()) {
                 return;
             }
+            if state.records.len() >= IMPORT_MAX_COUNT {
+                exceed(state, "count");
+                return;
+            }
+            state
+                .failure
+                .get_or_insert_with(|| format!("import {name:?}: not found in search path"));
             state.records.push(ImportRecord {
                 name,
                 resolved_path: None,
@@ -288,11 +317,15 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
         exceeded: None,
         nonliteral_imports: false,
         cycle: None,
+        failure: None,
         unresolved_seen: BTreeSet::new(),
     };
 
     let scan = sbpl_lex::import_scan(source);
     state.nonliteral_imports = !scan.scan_complete;
+    if state.nonliteral_imports {
+        state.failure = Some("a nonliteral (import ...) form could not be followed".into());
+    }
     for name in scan.refs {
         dfs_visit_import(name, 0, &mut state);
     }
@@ -312,6 +345,7 @@ pub fn resolve_imports(source: &str) -> ResolvedImports {
         exceeded: state.exceeded,
         nonliteral_imports: state.nonliteral_imports,
         cycle: state.cycle,
+        failure: state.failure,
     }
 }
 
@@ -550,30 +584,117 @@ mod tests {
 
     #[test]
     fn resolve_imports_truncates_on_count_cap() {
-        // Generate a chain of imports longer than IMPORT_MAX_COUNT to verify
-        // the count-cap path sets truncated.
+        // Siblings reach the count limit without hitting the depth limit first.
         let dir = tmp_dir("count-cap");
-        let n = IMPORT_MAX_COUNT + 5;
-        for i in 0..n {
-            let p = dir.join(format!("f{i}.sb"));
-            let body = if i + 1 < n {
-                let next = dir.join(format!("f{}.sb", i + 1));
-                format!("(import \"{}\")\n", next.display())
-            } else {
-                "(allow default)\n".to_string()
-            };
-            std::fs::write(&p, body).unwrap();
+        let mut source = String::new();
+        for i in 0..=IMPORT_MAX_COUNT {
+            let path = dir.join(format!("f{i:03}.sb"));
+            std::fs::write(&path, "(allow default)\n").unwrap();
+            source.push_str(&format!("(import \"{}\")\n", path.display()));
+            if i + 1 >= IMPORT_MAX_COUNT - 1 {
+                let resolved = resolve_imports(&source);
+                assert_eq!(resolved.records.len(), (i + 1).min(IMPORT_MAX_COUNT));
+                assert_eq!(resolved.truncated, i + 1 > IMPORT_MAX_COUNT);
+                assert_eq!(
+                    resolved.exceeded.as_deref(),
+                    (i + 1 > IMPORT_MAX_COUNT).then_some("count")
+                );
+                assert!(resolved.records.iter().all(|r| r.error.is_none()));
+            }
         }
-        let src = format!("(import \"{}\")\n", dir.join("f0.sb").display());
-        let resolved = resolve_imports(&src);
-        assert!(resolved.truncated, "count cap should set truncated=true");
-        assert!(
-            resolved.records.len() <= IMPORT_MAX_COUNT + 1,
-            "should not exceed cap meaningfully, got {} records",
-            resolved.records.len()
-        );
+        // A diamond at exactly the cap adds no record and must stay complete.
+        source = source
+            .lines()
+            .take(IMPORT_MAX_COUNT)
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(
+            dir.join(format!("f{:03}.sb", IMPORT_MAX_COUNT - 1)),
+            format!("(import \"{}\")\n", dir.join("f000.sb").display()),
+        )
+        .unwrap();
+        let resolved = resolve_imports(&source);
+        assert_eq!(resolved.records.len(), IMPORT_MAX_COUNT);
+        assert!(!resolved.truncated);
+        assert!(resolved.exceeded.is_none() && resolved.failure.is_none());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
-        std::fs::remove_dir_all(&dir).ok();
+    #[test]
+    fn import_errors_keep_the_first_failure_and_successfully_read_hashes() {
+        let dir = tmp_dir("errors");
+        let unreadable_text = dir.join("a-invalid.sb");
+        let directory = dir.join("b-directory");
+        std::fs::write(&unreadable_text, [0xff]).unwrap();
+        std::fs::create_dir(&directory).unwrap();
+        let source = format!(
+            "(import \"{}\")\n(import \"{}\")\n",
+            unreadable_text.display(),
+            directory.display()
+        );
+        let resolved = resolve_imports(&source);
+        assert_eq!(resolved.records.len(), 2);
+        assert!(
+            resolved
+                .failure
+                .as_deref()
+                .unwrap()
+                .contains("not valid UTF-8")
+        );
+        assert!(resolved.records[0].sha256.is_some());
+        assert_eq!(resolved.records[0].size_bytes, Some(1));
+        assert_eq!(
+            resolved.records[1].error.as_deref(),
+            Some("not a regular file")
+        );
+        assert!(resolved.records[1].sha256.is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn fifo_import_is_rejected_without_waiting_for_a_writer() {
+        const CONTROL_PATH: &str = "PW_IMPORT_FIFO_CONTROL_PATH";
+        if let Some(path) = std::env::var_os(CONTROL_PATH) {
+            let source = format!("(import \"{}\")", PathBuf::from(path).display());
+            let resolved = resolve_imports(&source);
+            assert_eq!(resolved.records.len(), 1);
+            assert_eq!(
+                resolved.records[0].error.as_deref(),
+                Some("not a regular file")
+            );
+            assert!(resolved.failure.unwrap().contains("not a regular file"));
+            return;
+        }
+        let dir = tmp_dir("fifo");
+        let fifo = dir.join("profile.sb");
+        let c_path = std::ffi::CString::new(fifo.to_str().unwrap()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o600) }, 0);
+        // Isolate the scan so a blocking-open regression fails and is reaped.
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "sbpl_imports::tests::fifo_import_is_rejected_without_waiting_for_a_writer",
+            ])
+            .env(CONTROL_PATH, &fifo)
+            .spawn()
+            .unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let status = loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                break Some(status);
+            }
+            if std::time::Instant::now() >= deadline {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                break None;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        };
+        std::fs::remove_dir_all(dir).unwrap();
+        assert!(
+            status.is_some_and(|s| s.success()),
+            "FIFO scan blocked or failed: {status:?}"
+        );
     }
 
     #[test]
@@ -599,6 +720,9 @@ mod tests {
             "depth cap should set truncated=true (records: {})",
             resolved.records.len()
         );
+        assert_eq!(resolved.exceeded.as_deref(), Some("depth"));
+        assert_eq!(resolved.records.len(), IMPORT_MAX_DEPTH + 1);
+        assert!(resolved.failure.as_deref().unwrap().contains("depth"));
         let depth_errors: Vec<_> = resolved
             .records
             .iter()

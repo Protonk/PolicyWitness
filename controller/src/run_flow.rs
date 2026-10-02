@@ -110,7 +110,7 @@ struct RunnerLogDiagnostics {
 /// The version gate for a received runner reply.
 pub enum ReplyVersion {
     Supported,
-    Unsupported(i64),
+    Unsupported(serde_json::Number),
     Malformed(String),
 }
 
@@ -120,12 +120,11 @@ pub enum ReplyVersion {
 pub fn reply_version(reply: &Value) -> ReplyVersion {
     match reply.get("schema_version") {
         None => ReplyVersion::Malformed("runner reply carries no schema_version".to_string()),
-        Some(Value::Number(n)) if n.is_i64() => {
-            let version = n.as_i64().unwrap();
-            if version == i64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION) {
+        Some(Value::Number(n)) if n.is_i64() || n.is_u64() => {
+            if n.as_u64() == Some(u64::from(crate::json_contract::RESPONSE_SCHEMA_VERSION)) {
                 ReplyVersion::Supported
             } else {
-                ReplyVersion::Unsupported(version)
+                ReplyVersion::Unsupported(n.clone())
             }
         }
         Some(other) => ReplyVersion::Malformed(format!(
@@ -371,10 +370,7 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
                     .get(idx + 1)
                     .and_then(|s| s.to_string_lossy().parse::<u64>().ok())
                 else {
-                    return Arguments::Error(
-                        parsed.request_path,
-                        "invalid value for --timeout-ms".to_string(),
-                    );
+                    return Arguments::Error(None, "invalid value for --timeout-ms".to_string());
                 };
                 parsed.timeout_ms = value.max(1);
                 idx += 2;
@@ -388,7 +384,7 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
                 };
                 match LogTimeout::parse(value) {
                     Ok(timeout) => parsed.log_timeout = timeout,
-                    Err(e) => return Arguments::Error(parsed.request_path, e),
+                    Err(e) => return Arguments::Error(None, e),
                 }
                 idx += 2;
             }
@@ -399,6 +395,19 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
                         "missing value for --runner-mode".to_string(),
                     );
                 };
+                if value == "machme" {
+                    return Arguments::Error(
+                        None,
+                        "--runner-mode machme is not supported; use --runner-mode byoxpc"
+                            .to_string(),
+                    );
+                }
+                if RunnerKind::parse(value).is_none() {
+                    return Arguments::Error(
+                        None,
+                        format!("invalid value for --runner-mode: {value}"),
+                    );
+                }
                 parsed.runner_mode_arg = Some(value.to_string());
                 idx += 2;
             }
@@ -2461,6 +2470,19 @@ mod tests {
             Arguments::Error(None, error) => assert!(error.contains("missing value")),
             _ => panic!("missing value accepted"),
         }
+        for (flag, value) in [
+            ("--timeout-ms", "invalid"),
+            ("--log-timeout-ms", "0"),
+            ("--runner-mode", "invalid"),
+        ] {
+            assert!(
+                matches!(
+                    parse_arguments(&["/r.json".into(), flag.into(), value.into()]),
+                    Arguments::Error(None, _)
+                ),
+                "{flag}: invalid flag values carry no request path"
+            );
+        }
         // The path seen so far is retained for the dossier of the refusal.
         match parse_arguments(&["/r.json".into(), "--bogus".into()]) {
             Arguments::Error(Some(path), error) => {
@@ -3259,9 +3281,13 @@ mod tests {
         ));
         for other in [current - 1, current + 1, 1, 0, -1] {
             match reply_version(&json!({"schema_version": other})) {
-                ReplyVersion::Unsupported(version) => assert_eq!(version, other),
+                ReplyVersion::Unsupported(version) => assert_eq!(version.as_i64(), Some(other)),
                 _ => panic!("{other} was not refused as unsupported"),
             }
+        }
+        match reply_version(&json!({"schema_version": u64::MAX})) {
+            ReplyVersion::Unsupported(version) => assert_eq!(version.as_u64(), Some(u64::MAX)),
+            _ => panic!("a large integer version is unsupported, not malformed"),
         }
         for malformed in [
             json!({}),
@@ -3269,7 +3295,6 @@ mod tests {
             json!({"schema_version": "13"}),
             json!({"schema_version": 13.0}),
             json!({"schema_version": [13]}),
-            json!({"schema_version": 18446744073709551615u64}),
         ] {
             match reply_version(&malformed) {
                 ReplyVersion::Malformed(error) => {

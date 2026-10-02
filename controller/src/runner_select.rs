@@ -151,22 +151,29 @@ fn builtin_runner_target(
         return Err("builtin runner target requires a built-in kind".to_string());
     }
     let manifest = manifest.map_err(|e| format!("built-in runner unavailable: {e}"))?;
+    let manifest_path = evidence::manifest_path_from_app_root(app_root);
+    let unavailable = |error| {
+        format!(
+            "built-in runner unavailable: {}: {error}",
+            manifest_path.display()
+        )
+    };
     let entry =
         evidence::unique_typed_entry(manifest, SHIPPED_SERVICE.rel_path, SHIPPED_SERVICE.kind)
-            .map_err(|e| format!("built-in runner unavailable: {e}"))?;
+            .map_err(&unavailable)?;
     let bundle_id = match entry.bundle_id.as_deref() {
         Some(id) if !id.is_empty() && !id.contains('\0') => id.to_string(),
         Some(_) => {
-            return Err(format!(
-                "built-in runner unavailable: evidence manifest entry at {} has an empty or NUL-containing bundle_id",
+            return Err(unavailable(format!(
+                "evidence manifest entry at {} has an empty or NUL-containing bundle_id",
                 SHIPPED_SERVICE.rel_path
-            ));
+            )));
         }
         None => {
-            return Err(format!(
-                "built-in runner unavailable: evidence manifest entry at {} has no bundle_id",
+            return Err(unavailable(format!(
+                "evidence manifest entry at {} has no bundle_id",
                 SHIPPED_SERVICE.rel_path
-            ));
+            )));
         }
     };
     let executable_path = app_root.join(SHIPPED_SERVICE.rel_path);

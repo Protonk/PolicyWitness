@@ -14,10 +14,8 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 
-/// Reported in the envelope under `data.policy_augmentation` when one or
-/// more augments were applied. Absent when no augments were resolved so
-/// consumers can branch on `policy_augmentation != null` rather than
-/// comparing arrays.
+/// Successful augment resolution, used to construct the always-present
+/// `data.specimen.policy.augmentation` record in the controller envelope.
 #[derive(Serialize, Clone)]
 pub struct PolicyAugmentation {
     pub applied: Vec<String>,
@@ -33,9 +31,8 @@ pub enum AugmentResolution {
     /// The `augments` field was present but resolved to no-op (null or
     /// empty array). `request_value` was mutated to remove the field
     /// so the runner sees the documented "no augment-aware shape"
-    /// contract; the caller must persist this mutation to the temp
-    /// request file even though no `policy_augmentation` block will
-    /// be emitted.
+    /// contract; the caller serializes this mutation into the held request
+    /// delivered on stdin and reports augmentation as `not_requested`.
     StrippedNoOp,
     /// Augments resolved and spliced into the request. `request_value`
     /// has been mutated: `policy.sbpl_source` carries the spliced text
@@ -76,7 +73,7 @@ fn sha256_hex_of(s: &str) -> String {
 ///
 /// On `Applied`, the request value is mutated in place: `policy.sbpl_source`
 /// becomes the spliced source and `policy.augments` is removed. The caller
-/// must persist this mutation (typically by writing a temp request) so
+/// must serialize this mutation into the held request delivered on stdin so
 /// the runner (and `sbpl-check`, on the xpc_error path) see the spliced policy.
 pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentResolution {
     let policy = match request_value

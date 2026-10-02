@@ -5,7 +5,7 @@ import Foundation
  * AttemptOutcomeMappingTests — the (kind, action, slot) → AttemptOutcome
  * table.
  *
- * buildAttemptResult is the third host classifier (with computeDrift and
+ * buildAttemptResult is the third host classifier (with comparisonEvidence and
  * classify). It folds a probe step plus the worker's per-slot result
  * into an attempt outcome, and it's built from TWO stacked tables that
  * must agree:

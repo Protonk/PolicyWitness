@@ -53,7 +53,7 @@ bundle scaffolding under `runner/Services/PWRunner/`.
     the `source_drift` suite checks the set against the pairs listed in the
     user guide. The host never calls `sandbox_check`; the validator does.
 - `Sources/PWRunnerCore/PathUtils.swift`
-  - Path normalization and fd-based observation helpers.
+  - Path normalization for query planning and host path diagnostics.
 - `Sources/PWCWorkerShim/`
   - The one C shim: shared-memory, atomics and spawn helpers the host driver
     calls to drive `pw-probe-runner` (`PWCWorkerShim.h`).

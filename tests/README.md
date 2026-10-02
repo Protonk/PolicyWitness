@@ -4,7 +4,7 @@ This directory contains the repository test harness. The test suite is organized
 
 1. Does the built `dist/PolicyWitness.app` basically work end-to-end?
 2. Did we break a contract (CLI shape, evidence artifacts, JSON output schema)?
-3. Do `sandbox_check` verdicts stay consistent with kernel-observed attempt outcomes?
+3. Do queries, attempts and their comparison records retain the observations each scenario establishes?
 
 The harness is machine-readable: every test writes structured JSONL events and a per-run summary under `tests/out/`.
 
@@ -21,7 +21,8 @@ Related docs:
 Consumer evidence tests follow the
 [comparison record ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
 `tests/lib/consumer.py` validates one envelope and selects steps by field
-without consulting policies, native errno rules or the runner classifier.
+using explicit classification tables over the raw channel fields, without
+consulting specimen policies or calling the runner classifier.
 Recovered spawn-failure records retain their numeric codes, paths and
 diagnostic text. Explicit evidence-loss replies omit that record along with
 steps and subprocesses. Controlled

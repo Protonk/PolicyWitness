@@ -1,7 +1,7 @@
 """Wire contract versions for tests. Edit docs/contract.json and regenerate.
 
-Tests assert the lowest version that carries the fields they inspect. Only the
-default smoke check compares a built app against these exact values.
+Semantic response and envelope readers accept exactly these versions. Request
+admission and the worker ABI have separate contracts.
 """
 # BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 REQUEST_SCHEMA = 3

@@ -23,6 +23,35 @@ pub struct RequestDelivery {
     pub error: Option<String>,
 }
 
+fn write_request(writer: &mut impl std::io::Write, input: &[u8]) -> RequestDelivery {
+    let mut written = 0;
+    while written < input.len() {
+        let remaining = &input[written..input.len().min(written + 64 * 1024)];
+        let error = match writer.write(remaining) {
+            Ok(0) => std::io::Error::from(std::io::ErrorKind::WriteZero),
+            Ok(count) => {
+                written += count;
+                continue;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => error,
+        };
+        return RequestDelivery {
+            bytes_written: written,
+            error: Some(format!(
+                "request delivery failed after {written} bytes: {error}"
+            )),
+        };
+    }
+    RequestDelivery {
+        bytes_written: written,
+        error: writer
+            .flush()
+            .err()
+            .map(|error| format!("request delivery flush failed after {written} bytes: {error}")),
+    }
+}
+
 /// Run `command` with `input` delivered on its stdin by a writer thread while
 /// stdout and stderr are collected concurrently. The writer closes stdin after
 /// the last byte. A write failure (for example EPIPE from a child that exited
@@ -32,7 +61,6 @@ pub fn run_with_stdin(
     mut command: std::process::Command,
     input: Vec<u8>,
 ) -> Result<(std::process::Output, RequestDelivery), String> {
-    use std::io::Write;
     use std::process::Stdio;
     let mut child = command
         .stdin(Stdio::piped())
@@ -45,31 +73,9 @@ pub fn run_with_stdin(
         .take()
         .ok_or_else(|| "child stdin was not piped".to_string())?;
     let writer = std::thread::spawn(move || {
-        let mut written = 0usize;
-        let mut error = None;
-        for chunk in input.chunks(64 * 1024) {
-            match stdin.write_all(chunk) {
-                Ok(()) => written += chunk.len(),
-                Err(e) => {
-                    error = Some(format!(
-                        "request delivery failed after {written} bytes: {e}"
-                    ));
-                    break;
-                }
-            }
-        }
-        if error.is_none() {
-            if let Err(e) = stdin.flush() {
-                error = Some(format!(
-                    "request delivery flush failed after {written} bytes: {e}"
-                ));
-            }
-        }
+        let delivery = write_request(&mut stdin, &input);
         drop(stdin);
-        RequestDelivery {
-            bytes_written: written,
-            error,
-        }
+        delivery
     });
     let output = child
         .wait_with_output()
@@ -213,6 +219,40 @@ pub fn transport_diagnostics() -> serde_json::Value {
 mod tests {
     use super::*;
     use std::os::unix::process::ExitStatusExt;
+
+    #[test]
+    fn delivery_counts_short_writes_before_a_failure() {
+        use std::io::{self, Write};
+        struct PartialWriter {
+            calls: usize,
+            accepted: Vec<u8>,
+        }
+        impl Write for PartialWriter {
+            fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+                self.calls += 1;
+                match self.calls {
+                    1 | 3 => {
+                        self.accepted.extend_from_slice(&bytes[..7]);
+                        Ok(7)
+                    }
+                    2 => Err(io::ErrorKind::Interrupted.into()),
+                    _ => Err(io::ErrorKind::BrokenPipe.into()),
+                }
+            }
+            fn flush(&mut self) -> io::Result<()> {
+                panic!("a failed delivery must not flush")
+            }
+        }
+        let input = b"abcdefghijklmnopqrstuvwxyz";
+        let mut writer = PartialWriter {
+            calls: 0,
+            accepted: Vec::new(),
+        };
+        let delivery = write_request(&mut writer, input);
+        assert_eq!(writer.accepted, input[..14]);
+        assert_eq!(delivery.bytes_written, writer.accepted.len());
+        assert!(delivery.error.unwrap().contains("after 14 bytes"));
+    }
 
     #[test]
     fn arbitrary_budgets_preserve_counts_at_every_unicode_cut() {

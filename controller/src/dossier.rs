@@ -149,11 +149,7 @@ impl Imports {
             records: resolved.records,
             cycle: resolved.cycle,
             exceeded: resolved.exceeded,
-            failure: if resolved.nonliteral_imports {
-                Some("a nonliteral (import ...) form could not be followed".into())
-            } else {
-                None
-            },
+            failure: resolved.failure,
         }
     }
 }
@@ -753,6 +749,13 @@ mod tests {
             .retain(|e| e.rel_path != SHIPPED_SERVICE.rel_path);
         let error = selection_error(&root, Ok(&decoys));
         assert!(
+            error.contains(
+                evidence::manifest_path_from_app_root(&root)
+                    .to_str()
+                    .unwrap()
+            )
+        );
+        assert!(
             error.contains("no entry at") && error.contains(SHIPPED_SERVICE.rel_path),
             "{error}"
         );
@@ -787,6 +790,13 @@ mod tests {
                 .for_each(|e| e.bundle_id = bundle_id.map(str::to_string));
             let error = selection_error(&root, Ok(&manifest));
             assert!(error.contains("bundle_id"), "{label}: {error}");
+            assert!(
+                error.contains(
+                    evidence::manifest_path_from_app_root(&root)
+                        .to_str()
+                        .unwrap()
+                )
+            );
         }
         fs::remove_dir_all(&root).unwrap();
     }
@@ -1352,6 +1362,13 @@ mod tests {
         assert_eq!(unresolved.records.len(), 1);
         assert!(unresolved.records[0].error.is_some());
         assert!(unresolved.closure_sha256.is_some());
+        assert!(
+            unresolved
+                .failure
+                .as_deref()
+                .unwrap()
+                .contains("not found in search path")
+        );
         let oversized = Imports::scan(&"x".repeat(MAX_SBPL_SOURCE_BYTES + 1));
         assert_eq!(oversized.status, "failed");
         assert!(oversized.closure_sha256.is_none() && oversized.records.is_empty());

@@ -8,6 +8,10 @@ Offline release controls also exercise the release procedure's decision points.
 - Requires expected executables/resources, valid strict signatures for the app,
   service, and helpers, and matching hashes for every manifest entry. Required
   helper entries cannot silently disappear from the manifest.
+- Runs `nm -u` on the shipped `PWRunner` executable and rejects any undefined
+  `_sandbox_*` symbol. This sees linked imports; it does not detect dynamic
+  symbol lookup. The [host-source check](../source_drift/README.md) covers
+  literal lookup/load forms. Worker and validator native imports are expected.
 - Never executes `policy-witness` or the runner.
 - The shared `tests/lib/artifact.py` inspector also gates app-dependent selections
   in the public dispatcher. It never repairs a failed artifact.

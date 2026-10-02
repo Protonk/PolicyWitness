@@ -241,21 +241,25 @@ def expected_fixture_controls(out):
     assert not validate(expected), validate(expected)
     records.append({'control': 'expected_accepted', 'rejected': False})
     # Known loss: a captured reply under another version. It is refused as
-    # unsupported before any claim is read; brought to the current version
-    # unchanged, it lacks the record and is rejected for that.
-    assert read_lifecycle(known)['reporting'] == 'not_reported'
+    # unsupported before any claim is read. A separate current-shaped control
+    # removes the disposition record without changing any version.
+    try:
+        read_lifecycle(known)
+    except ValueError as error:
+        assert 'unsupported controller envelope' in str(error), error
+    else:
+        raise AssertionError('lifecycle adapter interpreted an unsupported capture')
     refused = O.check_record(known)
     assert refused and refused[0]['kind'] == 'unsupported_version', refused
     errors = validate(known)
     assert len(errors) == 1 and 'unsupported' in errors[0], errors
     records.append({'control': 'known_loss_unsupported_version', 'rejected': True, 'findings': refused, 'errors': errors})
-    loss = copy.deepcopy(known)
-    loss['schema_version'] = contract.CONTROLLER_ENVELOPE
-    loss['data']['runner_result']['schema_version'] = contract.RESPONSE_SCHEMA
+    loss = copy.deepcopy(expected)
+    del loss['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]
     findings = O.check_record(loss)
     assert any(f['kind'] == 'missing_record' for f in findings), findings
     assert any('disposition' in e for e in validate(loss))
-    records.append({'control': 'known_loss_rejected_at_current_version', 'rejected': True, 'findings': findings})
+    records.append({'control': 'current_reply_missing_record', 'rejected': True, 'findings': findings})
 
     def steps(e):
         return e['data']['runner_result']['runner_subprocess'][C.RECORD_KEY]['steps']

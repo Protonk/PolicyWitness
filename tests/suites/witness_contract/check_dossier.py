@@ -251,11 +251,12 @@ class Witness:
         for name, raw in (('not_json', b'{not json'), ('not_object', b'[1, 2]')):
             rc, envelope, path = self.run(name, None, raw=raw)
             cases.append((name, rc, envelope, path))
-        # Invalid flag value: the path seen so far is retained.
+        # Invalid flag values fail before request selection; D2 requires a null path.
         path = self.out / 'flag-request.json'
         path.write_text(json.dumps(self.specimen('flag')))
-        result = subprocess.run([str(self.pw), 'run', str(path), '--timeout-ms', 'soon'], capture_output=True, timeout=30)
-        cases.append(('invalid_flag', result.returncode, json.loads(result.stdout), str(path)))
+        for flag, value in (('--timeout-ms', 'soon'), ('--log-timeout-ms', '0'), ('--runner-mode', 'invalid')):
+            result = subprocess.run([str(self.pw), 'run', str(path), flag, value], capture_output=True, timeout=30)
+            cases.append(('invalid_flag_' + flag[2:], result.returncode, json.loads(result.stdout), None))
         # Built-in selection cannot find an unregistered external runner.
         request = self.specimen('unknown-runner')
         request['runner'] = {'mode': 'byoxpc', 'service': 'com.example.pw.unregistered.' + os.urandom(4).hex()}

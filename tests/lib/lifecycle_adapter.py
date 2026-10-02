@@ -18,13 +18,14 @@ calls no production code; tests/lib/lifecycle_oracle.py does the checking.
      'malformed': [reasons]}
 
 `recognized` is False when a state, answer or reason spelling is not one this
-contract knows; the raw value is retained. `not_reported` means the reply
-predates the record or omits it; only the oracle decides whether that omission
-is legal for the reply's version.
+contract knows; the raw value is retained. `not_reported` means a supported
+reply omits the record; the oracle checks that omission. Unsupported or malformed
+document versions raise ValueError before any lifecycle facts are read.
 """
 from copy import deepcopy
 
 import lifecycle_contract as C
+from document_versions import require_supported
 
 
 def _claim(name, raw, malformed, where):
@@ -67,6 +68,7 @@ def _claim(name, raw, malformed, where):
 
 
 def read_lifecycle(envelope):
+    require_supported(envelope)
     view = {'reporting': None, 'schema_version': None, 'record': None, 'questions': {}, 'steps': [],
             'issues': [], 'projections': {}, 'malformed': []}
     data = envelope.get('data') if isinstance(envelope, dict) else None
