@@ -38,7 +38,14 @@ Current wire contracts: request schema 3, response schema 13, worker ABI 7, cont
   `data.specimen` is the dossier: request path, policy augmentation and
   imports, host facts, runner and app provenance, and hashes of any selected
   binary the app manifest does not describe; the raw runner reply, transport,
-  diagnostics and log capture stay beside it.
+  diagnostics and log capture stay beside it. The same number is the frame
+  every controller-family binary prints (`kind`, `schema_version`,
+  `generated_at_unix_ms`, `build`, `result`, `data`), so it also appears on
+  the helper envelopes the controller nests unchanged:
+  `data.policy_check.envelope` from `sbpl-check` and
+  `data.sandbox_log_capture.observer` from `sandbox-log-observer`. Inside the
+  observer's frame, `data.observer_schema_version` identifies the observer's
+  own report; the two numbers name different things and move independently.
 
 ## Supported versions
 

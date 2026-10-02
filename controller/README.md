@@ -250,6 +250,11 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   resolved symlink) and never says why.
 - `data.sandbox_log_capture`: optional observer evidence, also captured for
   successful runs; null when disabled or no authoritative worker PID exists.
+  `observer` is the observer's own envelope, retained unchanged: its
+  `schema_version` is the controller envelope number, the frame every
+  controller-family binary prints, and its `data.observer_schema_version`
+  identifies the observer's report inside that frame (see
+  [docs/CONTRACT.md](../docs/CONTRACT.md)).
   `window` records the scanned interval: the runner client's start and end
   (`started_at_unix_ms`, `ended_at_unix_ms`) and the whole-second UTC `start`
   and `end` strings handed to `log show`, which the observer mirrors back; a
