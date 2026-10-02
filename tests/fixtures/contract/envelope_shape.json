@@ -1,5 +1,5 @@
 {
-  "controller_envelope": 5,
+  "controller_envelope": 6,
   "shape": {
     "envelope": {
       "build": "object",
@@ -179,11 +179,9 @@
       "collection": "object",
       "correlation_id": "string",
       "deny_events": "array",
-      "deny_lines": "array",
       "duration_ms": "number",
       "end": "string",
       "last": "string",
-      "layer_attribution": "object",
       "log_error": "string",
       "log_rc": "number",
       "log_stderr": "string",
@@ -276,9 +274,6 @@
       "pid": "number",
       "process": "string",
       "raw_line": "string"
-    },
-    "envelope.data.sandbox_log_capture.observer.data.layer_attribution": {
-      "seatbelt": "string"
     },
     "envelope.data.sandbox_log_capture.observer.result": {
       "errno": "number",
@@ -384,14 +379,10 @@
     "envelope.data.sandbox_log_capture.window": {
       "end": "string",
       "ended_at_unix_ms": "number",
-      "event_timestamps_available": "boolean",
-      "exact_run_membership": "boolean",
       "kind": "string",
       "pad_seconds": "number",
-      "pid_reuse_protection": "boolean",
       "start": "string",
-      "started_at_unix_ms": "number",
-      "step_ordering": "boolean"
+      "started_at_unix_ms": "number"
     },
     "envelope.data.specimen": {
       "app_provenance": "object",

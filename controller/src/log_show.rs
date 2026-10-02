@@ -75,7 +75,6 @@ pub(crate) struct ShowCapture {
     pub(crate) stdout: String,
     pub(crate) stderr: String,
     pub(crate) observed_lines: usize,
-    pub(crate) deny_lines: Vec<String>,
     pub(crate) deny_events: Vec<SandboxDenyEvent>,
     pub(crate) report: Supervision,
 }
@@ -101,7 +100,6 @@ pub(crate) fn capture_show(
     let stdout = String::from_utf8_lossy(&captured.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&captured.stderr).into_owned();
     let mut observed_lines = 0;
-    let mut deny_lines = Vec::new();
     let mut deny_events = Vec::new();
     for line in stdout.lines() {
         if line.trim().is_empty() || is_log_prelude_line(line) {
@@ -120,7 +118,6 @@ pub(crate) fn capture_show(
                 });
                 break;
             }
-            deny_lines.push(line.to_string());
             deny_events.push(event);
         }
     }
@@ -134,7 +131,6 @@ pub(crate) fn capture_show(
         stdout,
         stderr,
         observed_lines,
-        deny_lines,
         deny_events,
         report,
     }

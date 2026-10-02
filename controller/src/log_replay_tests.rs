@@ -65,13 +65,13 @@ if fault == 'nonzero': sys.exit(7)
                 let inner = capture_show(&mut query, inner_budget, log_capture::LOG_REPORT_RESERVE_MS);
                 let complete = inner.report.complete();
                 let truncated = inner.report.stdout.truncated || inner.report.stderr.truncated;
-                let mut payload = json!({"observer_schema_version":1, "mode":"show", "pid":pid,
+                let mut payload = json!({"observer_schema_version":2, "mode":"show", "pid":pid,
                     "process_name":name, "start":window.start, "end":window.end, "last":null,
                     "log_rc":inner.report.process.exit_code,
                     "log_error":if complete {None} else {inner.report.cutoff.as_ref().map(|c| &c.reason)},
                     "blocked_reason":null, "log_truncated":truncated,
                     "log_stdout":inner.stdout, "log_stderr":inner.stderr,
-                    "observed_lines":inner.observed_lines, "deny_lines":inner.deny_lines,
+                    "observed_lines":inner.observed_lines,
                     "observed_deny":!inner.deny_events.is_empty(), "deny_events":inner.deny_events,
                     "collection":inner.report});
                 if fault == "wrong_window" {

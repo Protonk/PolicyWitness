@@ -33,7 +33,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const OBSERVER_SCHEMA_VERSION: u32 = 1;
+const OBSERVER_SCHEMA_VERSION: u32 = 2;
 const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
 const ESRCH: i32 = 3;
 
@@ -199,11 +199,6 @@ fn read_to_string(mut reader: impl Read) -> String {
 }
 
 #[derive(Serialize)]
-struct ObserverLayerAttribution {
-    seatbelt: String,
-}
-
-#[derive(Serialize)]
 struct LogObserverData {
     observer_schema_version: u32,
     mode: String,
@@ -226,9 +221,7 @@ struct LogObserverData {
     log_truncated: bool,
     observed_lines: usize,
     observed_deny: bool,
-    deny_lines: Vec<String>,
     deny_events: Vec<SandboxDenyEvent>,
-    layer_attribution: ObserverLayerAttribution,
     collection: Option<Supervision>,
 }
 
@@ -547,7 +540,6 @@ fn main() {
     };
 
     let mut observed_lines = 0usize;
-    let mut deny_lines: Vec<String> = Vec::new();
     let mut deny_events: Vec<SandboxDenyEvent> = Vec::new();
     let mut log_stdout = String::new();
     let mut log_stdout_bytes = 0usize;
@@ -599,11 +591,7 @@ fn main() {
                     log_truncated: false,
                     observed_lines: 0,
                     observed_deny: false,
-                    deny_lines: Vec::new(),
                     deny_events: Vec::new(),
-                    layer_attribution: ObserverLayerAttribution {
-                        seatbelt: "observer_only".to_string(),
-                    },
                     collection: None,
                 };
                 let result = json_result(false);
@@ -689,7 +677,6 @@ fn main() {
             let deny_event = parse_sandbox_deny_line(trimmed);
             let is_deny = deny_event.is_some();
             if let Some(event) = deny_event {
-                deny_lines.push(trimmed.to_string());
                 deny_events.push(event);
             }
             if !log_truncated {
@@ -781,7 +768,6 @@ fn main() {
         log_stdout = captured.stdout;
         log_stderr = captured.stderr;
         observed_lines = captured.observed_lines;
-        deny_lines = captured.deny_lines;
         deny_events = captured.deny_events;
         collection = Some(captured.report);
     }
@@ -817,11 +803,7 @@ fn main() {
         log_truncated,
         observed_lines,
         observed_deny,
-        deny_lines,
         deny_events,
-        layer_attribution: ObserverLayerAttribution {
-            seatbelt: "observer_only".to_string(),
-        },
         collection,
     };
 
@@ -919,7 +901,6 @@ mod tests {
             log_truncated: false,
             observed_lines: 1,
             observed_deny: true,
-            deny_lines: vec!["constructed deny line".into()],
             deny_events: vec![SandboxDenyEvent {
                 pid: Some(42),
                 process: Some("pw-probe-runner".into()),
@@ -927,9 +908,6 @@ mod tests {
                 path: Some("/private/etc/hosts".into()),
                 raw_line: "constructed deny line".into(),
             }],
-            layer_attribution: ObserverLayerAttribution {
-                seatbelt: "observer_only".into(),
-            },
             collection: Some(log_capture::Supervision {
                 boundary: log_capture::Boundary::LogShow,
                 budget: log_capture::CollectionBudget {
@@ -1099,11 +1077,7 @@ mod tests {
             log_truncated: capture.report.stdout.truncated || capture.report.stderr.truncated,
             observed_lines: capture.observed_lines,
             observed_deny: !capture.deny_events.is_empty(),
-            deny_lines: capture.deny_lines,
             deny_events: capture.deny_events,
-            layer_attribution: ObserverLayerAttribution {
-                seatbelt: "observer_only".into(),
-            },
             collection: Some(capture.report),
         }
     }
@@ -1121,7 +1095,6 @@ for n in range(256):
         );
         assert!(capture.report.complete(), "{:?}", capture.report);
         assert_eq!(capture.deny_events.len(), 256);
-        assert_eq!(capture.deny_lines.len(), 256);
         for (n, event) in capture.deny_events.iter().enumerate() {
             assert_eq!(event.pid, Some(42));
             assert_eq!(

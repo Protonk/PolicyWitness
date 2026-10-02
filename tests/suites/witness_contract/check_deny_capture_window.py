@@ -26,7 +26,6 @@ from log_capture_contract import check_live_capture, check_observer_report
 
 STAMP = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\+0000$')
 RETIRED_LOOKBACK_SECONDS = 10
-WINDOW_FLAGS = ('event_timestamps_available', 'exact_run_membership', 'step_ordering', 'pid_reuse_protection')
 
 
 def stamp(seconds):
@@ -154,8 +153,6 @@ def main():
     query_end_s = (client['ended_at_unix_ms'] + 999) // 1000 + 2
     assert (window['start'], window['end']) == (stamp(query_start_s), stamp(query_end_s)), window
     assert STAMP.match(window['start']) and STAMP.match(window['end']), window
-    for key in WINDOW_FLAGS:
-        assert window[key] is False, window
     live_result = check_live_capture(envelope)
     complete = live_result['outcome'] == 'captured'
 

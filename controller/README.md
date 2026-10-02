@@ -174,7 +174,7 @@ Keep this list current when a run-path helper gains a read or a launch.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The controller forwards the runner reply without version coercion and
@@ -254,7 +254,9 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   `schema_version` is the controller envelope number, the frame every
   controller-family binary prints, and its `data.observer_schema_version`
   identifies the observer's report inside that frame (see
-  [docs/CONTRACT.md](../docs/CONTRACT.md)).
+  [docs/CONTRACT.md](../docs/CONTRACT.md)). The report attributes nothing: it
+  carries the denial records the log showed, each with its parsed fields and
+  `raw_line`, beside the raw `log_stdout`.
   `window` records the scanned interval: the runner client's start and end
   (`started_at_unix_ms`, `ended_at_unix_ms`) and the whole-second UTC `start`
   and `end` strings handed to `log show`, which the observer mirrors back; a
@@ -267,8 +269,9 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   differences between client and archive clocks; supported records in either
   padding region remain eligible candidates. It guarantees neither delivery
   nor exact run membership. Ordered endpoints alone cannot establish clock continuity during the run.
-  The window explicitly disclaims structured event timestamps, exact run membership, step
-  ordering and PID-reuse protection.
+  Structured event timestamps, exact run membership, step ordering and PID-reuse
+  protection are not available from this capture; the window carries its bounds
+  and nothing that claims them.
   `step_denies` contains event references with candidate step IDs: one candidate
   is `candidate`, repeated matching attempts are `ambiguous`. Matching requires
   worker PID, exact attempt-relevant operation and exact target/path evidence.

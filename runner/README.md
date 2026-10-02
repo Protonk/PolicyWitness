@@ -218,7 +218,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Readers accept exactly the current response schema; the Swift decoder and

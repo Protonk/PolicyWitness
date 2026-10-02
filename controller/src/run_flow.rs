@@ -4451,15 +4451,14 @@ mod tests {
             nested_envelope(
                 "sandbox_log_observer_report",
                 json!({
-                    "observer_schema_version": 1, "mode": "show", "duration_ms": 1,
+                    "observer_schema_version": 2, "mode": "show", "duration_ms": 1,
                     "stop_on_pid_exit": false, "plan_id": "p", "row_id": "r", "correlation_id": "c",
                     "pid": 42, "process_name": "pw-probe-runner", "predicate": "constructed",
                     "start": "2026-01-01 00:00:00+0000", "end": "2026-01-01 00:00:05+0000", "last": "1m",
                     "log_rc": 0, "log_stdout": "", "log_stderr": "", "log_error": "constructed",
                     "blocked_reason": "constructed", "log_truncated": false, "observed_lines": 1,
-                    "observed_deny": true, "deny_lines": ["constructed deny line"],
+                    "observed_deny": true,
                     "deny_events": [serde_json::to_value(deny_event()).unwrap()],
-                    "layer_attribution": {"seatbelt": "observer_only"},
                     "collection": serde_json::to_value(supervision(Boundary::LogShow)).unwrap(),
                 }),
             )
@@ -4601,10 +4600,6 @@ mod tests {
                         pad_seconds: 2,
                         start: Some("1969-12-31 23:59:59+0000".into()),
                         end: Some("1970-01-01 00:00:05+0000".into()),
-                        event_timestamps_available: false,
-                        exact_run_membership: false,
-                        step_ordering: false,
-                        pid_reuse_protection: false,
                     },
                     capture_status: "captured".into(),
                     tool_exit_code: 0,

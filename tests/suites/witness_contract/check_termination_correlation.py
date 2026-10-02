@@ -126,8 +126,6 @@ def main():
                 assert window['started_at_unix_ms'] == client['started_at_unix_ms'], (window, client)
                 assert window['ended_at_unix_ms'] == client['ended_at_unix_ms'], (window, client)
                 assert window['start'] < window['end'], window
-                for key in ('event_timestamps_available', 'exact_run_membership', 'step_ordering', 'pid_reuse_protection'):
-                    assert window[key] is False, window
                 observer = capture.get('observer')
                 if observer is not None:
                     assert observer['data']['pid'] == worker['pid'], observer

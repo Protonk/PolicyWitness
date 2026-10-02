@@ -4,6 +4,6 @@
     "request_schema": 3,
     "response_schema": 13,
     "worker_abi": 7,
-    "controller_envelope": 5
+    "controller_envelope": 6
   }
 }

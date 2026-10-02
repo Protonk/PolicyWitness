@@ -7,7 +7,7 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
@@ -16,7 +16,7 @@ Current wire contracts: request schema 3, response schema 13, worker ABI 7, cont
 | request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 13 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | worker ABI (`worker_abi`) | 7 | [`PW_PROBE_RUNNER_ABI_VERSION`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h); [`PWShmLayout.abiVersion`](../runner/Sources/PWRunnerCore/CWorker.swift); [`WORKER_ABI`](../tests/lib/contract.py) |
-| controller envelope (`controller_envelope`) | 5 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
+| controller envelope (`controller_envelope`) | 6 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
 
 ## What each number identifies

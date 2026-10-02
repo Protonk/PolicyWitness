@@ -17,8 +17,8 @@ pub const CLEANUP_GRACE_MS: u64 = 1_000;
 pub const LOG_REPORT_RESERVE_MS: u64 = 1_000;
 pub const LOG_STDOUT_BYTES: usize = 1024 * 1024;
 pub const LOG_STDERR_BYTES: usize = 128 * 1024;
-// Raw text is repeated as log_stdout, deny_lines and event.raw_line, with
-// parsed fields beside it. Allow JSON's six-byte escaping and event metadata.
+// Raw text is repeated as log_stdout and event.raw_line, with parsed fields
+// beside it. Allow JSON's six-byte escaping and event metadata.
 pub const OBSERVER_STDOUT_BYTES: usize = 32 * 1024 * 1024;
 pub const OBSERVER_STDERR_BYTES: usize = 128 * 1024;
 pub const MAX_DENY_EVENTS: usize = 8192;

@@ -590,7 +590,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 5. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
+Current wire contracts: request schema 3, response schema 13, worker ABI 7, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns all four, and generated copies carry them into code and documents.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1444,9 +1444,9 @@ with the native return code (see the
 [outcome catalog](#normalized_outcome-catalog)). A run starved of CPU hits the
 fixed deadlines in the [limits inventory](#limits) and reports `runner_timeout`
 or a lifecycle limitation, never a different verdict. Denial records are
-matched to the worker by PID inside the padded window, and
-`window.pid_reuse_protection` is false: heavy process churn makes a reused PID
-inside that window more plausible, so read candidate associations under
+matched to the worker by PID inside the padded window with no protection
+against PID reuse: heavy process churn makes a reused PID inside that window
+more plausible, so read candidate associations under
 [Denial-log correlation](#denial-log-correlation) with that in mind. The
 denial log's shared channel is described in the
 [Questions](#can-i-evaluate-specimens-in-parallel), and the pacing of one

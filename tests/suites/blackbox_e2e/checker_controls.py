@@ -282,9 +282,7 @@ def consumer_controls(artifacts, current):
              'requested_kind': 'file', 'requested_action': 'open_write', 'path': event['path'],
              'path_sources': ['submitted_attempt.target']}
     window = {'kind': 'runner_client_span', 'started_at_unix_ms': 1000, 'ended_at_unix_ms': 2500, 'pad_seconds': 2,
-              'start': '1969-12-31 23:59:59+0000', 'end': '1970-01-01 00:00:05+0000',
-              'event_timestamps_available': False, 'exact_run_membership': False, 'step_ordering': False,
-              'pid_reuse_protection': False}
+              'start': '1969-12-31 23:59:59+0000', 'end': '1970-01-01 00:00:05+0000'}
     logged = copy.deepcopy(current)
     logged['data']['sandbox_log_capture'] = {'capture_status': 'captured', 'window': window,
         'deny_events': [event, dict(event, pid=99)], 'step_denies': [{'event_index': 0,

@@ -64,10 +64,6 @@ pub struct SandboxLogWindow {
     pub pad_seconds: u64,
     pub start: Option<String>,
     pub end: Option<String>,
-    pub event_timestamps_available: bool,
-    pub exact_run_membership: bool,
-    pub step_ordering: bool,
-    pub pid_reuse_protection: bool,
 }
 
 impl SandboxLogWindow {
@@ -85,10 +81,6 @@ impl SandboxLogWindow {
             pad_seconds: LOG_WINDOW_PAD_SECONDS,
             start: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(start_s)),
             end: (ended_at_unix_ms >= started_at_unix_ms).then(|| log_show_timestamp(end_s)),
-            event_timestamps_available: false,
-            exact_run_membership: false,
-            step_ordering: false,
-            pid_reuse_protection: false,
         }
     }
 }
@@ -542,7 +534,7 @@ pub(crate) fn parse_supervised_observer(
         .and_then(|d| d.get("collection"))
         .and_then(|v| serde_json::from_value::<Supervision>(v.clone()).ok());
     let shape_valid = data.is_some_and(|d| {
-        d["observer_schema_version"] == 1
+        d["observer_schema_version"] == 2
             && d["mode"] == "show"
             && d["pid"].as_i64() == Some(pid)
             && d["process_name"].as_str() == Some(process_name)
@@ -806,7 +798,7 @@ mod tests {
             );
             let window = SandboxLogWindow::runner_client_span(1000, 2500);
             let mut body = json!({"kind":"sandbox_log_observer_report", "data": {
-                "observer_schema_version":1, "mode":"show", "pid":42, "process_name":"pw-probe-runner",
+                "observer_schema_version":2, "mode":"show", "pid":42, "process_name":"pw-probe-runner",
                 "start":window.start, "end":window.end, "last":null,
                 "log_rc":inner.supervision.process.exit_code, "log_error":inner.supervision.cutoff.as_ref().map(|c| &c.reason),
                 "log_truncated":inner.supervision.stdout.truncated, "log_stdout":String::from_utf8_lossy(&inner.stdout), "log_stderr":"",
@@ -1491,14 +1483,13 @@ mod tests {
         assert_eq!(v["start"], "1969-12-31 23:59:59+0000");
         assert_eq!(v["end"], "1970-01-01 00:00:05+0000");
         assert!(v.get("last").is_none());
-        for field in [
-            "event_timestamps_available",
-            "exact_run_membership",
-            "step_ordering",
-            "pid_reuse_protection",
-        ] {
-            assert_eq!(v[field], false);
-        }
+        // The window states its bounds and nothing stronger; the limits of the
+        // correlation are documented, not carried as constant fields.
+        assert_eq!(
+            v.as_object().unwrap().len(),
+            6,
+            "window carries only kind, raw milliseconds, pad and bounds"
+        );
     }
 
     #[test]

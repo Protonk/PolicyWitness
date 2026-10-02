@@ -34,12 +34,11 @@ def complete(which=('early', 'late')):
     events = [dict(pid=42, process='pw-probe-runner', operation='file-read-data', path='/'+name,
                    raw_line='Sandbox: pw-probe-runner(42) deny(1) file-read-data /'+name) for name in which]
     window = dict(kind='runner_client_span', started_at_unix_ms=1000, ended_at_unix_ms=2500,
-        pad_seconds=2, start='1969-12-31 23:59:59+0000', end='1970-01-01 00:00:05+0000',
-        event_timestamps_available=False, exact_run_membership=False, step_ordering=False, pid_reuse_protection=False)
+        pad_seconds=2, start='1969-12-31 23:59:59+0000', end='1970-01-01 00:00:05+0000')
     inner = supervision('log_show')
     raw = '\n'.join(e['raw_line'] for e in events)
     inner['stdout'].update(bytes_read=len(raw), bytes_retained=len(raw))
-    observer = dict(kind='sandbox_log_observer_report', data=dict(observer_schema_version=1, mode='show', pid=42,
+    observer = dict(kind='sandbox_log_observer_report', data=dict(observer_schema_version=2, mode='show', pid=42,
         process_name='pw-probe-runner', start=window['start'], end=window['end'], last=None,
         log_rc=0, log_stdout=raw, log_stderr='', log_error=None, blocked_reason=None,
         log_truncated=False, observed_deny=bool(events), deny_events=events, collection=inner))

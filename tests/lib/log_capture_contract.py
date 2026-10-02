@@ -13,7 +13,6 @@ import contract
 
 LIMITS = {row['id']: row['value'] for row in json.loads(
     (Path(__file__).resolve().parents[2] / 'docs/limits.json').read_text())['limits']}
-FLAGS = ('event_timestamps_available', 'exact_run_membership', 'step_ordering', 'pid_reuse_protection')
 
 
 def require(ok, reason):
@@ -36,7 +35,6 @@ def check_window(window, client):
     require((window.get('started_at_unix_ms'), window.get('ended_at_unix_ms')) == (start, end), 'raw client span changed')
     require(window.get('pad_seconds') == 2, 'missing scan padding')
     require((window.get('start'), window.get('end')) == (stamp(start // 1000 - 2), stamp((end + 999) // 1000 + 2)), 'wrong padded bounds')
-    require(all(window.get(key) is False for key in FLAGS), 'unsupported temporal claim')
 
 
 def check_budget(budget, timeout_ms, timeout_source):
@@ -141,7 +139,7 @@ def check_observer_report(observer, pid, start, end, *, timeout_ms=10000, timeou
     now_ns = time.clock_gettime_ns(time.CLOCK_MONOTONIC) if now_ns is None else now_ns
     require(isinstance(observer, dict) and observer.get('kind') == 'sandbox_log_observer_report', 'missing observer report')
     data = observer.get('data')
-    require(isinstance(data, dict) and data.get('observer_schema_version') == 1 and data.get('mode') == 'show', 'malformed observer reply')
+    require(isinstance(data, dict) and data.get('observer_schema_version') == 2 and data.get('mode') == 'show', 'malformed observer reply')
     require(data.get('pid') == pid and data.get('process_name') == 'pw-probe-runner', 'wrong observer identity')
     require((data.get('start'), data.get('end'), data.get('last')) == (start, end, None), 'wrong observer query bounds')
     require(data.get('blocked_reason') is None, 'required unified-log access blocked; see tests/README.md sandboxed-harness procedure')
