@@ -7,23 +7,6 @@ changes, and step 15 checks acceptance using the surviving sources and receipts.
 Schedule PW execution and validation after the concurrent libsandbox work has
 finished. Step 11 includes a conversation whose outcome determines its text edits.
 
-The recovered requirements are in `.tmp/drift-audit/DRIFT-REMOVAL-PLAN.md`,
-also recoverable with `git show ed0bd3da84f3b4020e243061b21ff7a460c04e4d^:DRIFT-REMOVAL-PLAN.md`.
-The existing audit fixes are in `0c82ae2`; steps below apply to that corrected
-tree, so inspect current text before replacing a passage quoted from the landing.
-
-The historical closeout's accounting is supported by the retained
-`tests/out/runs/drift-i5-all-02/run.json` (run ID
-`20261002T015030Z_a37db665`): 183/183 completed and passed, no skipped or unrun
-cases or harness errors, and an app recorded as valid and unchanged.
-Its `artifact-integrity/inspection.json` records no host sandbox symbols;
-`supplemental/drift-i5/five-specimen-diff/summary.json` records ten passing
-comparisons with no unexpected differences or failed named checks. The run is
-registered in `tests/RETAINED.json` against `ed0bd3d`; the I1 baseline is retained
-as `runs/drift-i1-baseline-01`. These establish historical results, not the three
-missing receipts or acceptance of the follow-up tree. Step 15 states the final
-checks directly; it does not depend on the decision log's completion claims.
-
 1. **Count manifest loads through production orchestration.** Add a narrow
    controlled loader boundary to the ordinary `cmd_run` flow. Count attempts
    while delegating to the real manifest loader; cover successful loads and
@@ -251,14 +234,14 @@ checks directly; it does not depend on the decision log's completion claims.
     - The cost receipt identifies the source and app containing the final
       runtime changes, the user's agreed text is present, and all generated
       copies agree.
-    - Credited verification identifies the tested source and app and supports
-      the final tree, including the signed app's integrity and host-invariance
-      inspection. Preserve the historical baseline, ten specimen comparisons
-      and symbol receipts identified above. Assess their applicability to
-      changed paths explicitly; any replacement comparison records full field
-      paths and distinguishes intended changes from unexpected differences.
-      Register credited runs in `tests/RETAINED.json`. Historical `--all`
-      success does not establish `--all` success on the follow-up tree.
+    - Credited verification records the canonical case IDs, command/configuration,
+      tested source and app/equipment identity, and supports the final tree,
+      including the signed app's integrity and host-invariance inspection.
+      Assess applicability to changed paths explicitly; output comparisons
+      record full field paths and distinguish intended changes from unexpected
+      differences. Register credited runs in `tests/RETAINED.json`. Claim
+      `--all` success only from a completed, passing `--all` run applicable to
+      the final tree.
     - Scouting findings (or the explicit none-found result) have been presented
       and remain available. Only reviewed migrations have been applied; pending
       user decisions are reported as pending. All three review documents, the

@@ -2,39 +2,11 @@
   "schema_version": 1,
   "runs": [
     {
-      "path": "runs/best-effort-log-final-review-default",
-      "run_id": "20260929T181548Z_31e432e6",
-      "reason": "Final best-effort log review: all 165 default cases passed with no skips, unrun cases or harness errors; signed app unchanged. Regression failures, source patch, build log and review findings are preserved under review-audit/.",
-      "source": null,
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
       "path": "release-acceptance/run-5ccb76cacc514faa8ef93fb826748439",
       "run_id": "20260929T190818Z_2f492440",
       "reason": "PolicyWitness 0.2.4 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; published as GitHub release v0.2.4.",
       "source": "ff2b192728268b5dc33024b2ce01ec4e830f0c32",
       "app_inventory": "before.json"
-    },
-    {
-      "path": "runs/release-0.2.4-default",
-      "run_id": "20260929T190928Z_49023f07",
-      "reason": "PolicyWitness 0.2.4 release validation: all 165 default cases passed against the final stapled app, with no skips, unrun cases or harness errors and an unchanged app.",
-      "source": "ff2b192728268b5dc33024b2ce01ec4e830f0c32",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/drift-i1-baseline-01",
-      "run_id": "20261001T232648Z_b2156eef",
-      "reason": "Drift removal plan, increment I1: response 12 baseline. All 166 default cases passed against the I1 build (shared Rust import/host-fact modules, matrix fixture, two added specimens) with no skips, unrun cases or harness errors and an unchanged app. supplemental/drift-i1/ holds the five-specimen response 12 captures (two modes each) validated by the response 12 consumer, the pre-I1 captures against the shipped ff2b192 app, the sbpl-check byte-identity corpus, the pre-removal nm -u receipts, the matrix cross-check and the build/console logs.",
-      "source": "e01050923a37942b394e370f3f0710face7b4730",
-      "app_inventory": "artifact-integrity/before.json"
-    },
-    {
-      "path": "runs/drift-i5-all-02",
-      "run_id": "20261002T015030Z_a37db665",
-      "reason": "Drift removal acceptance record: every registered case including opt-ins (183) passed on the candidate with no skips, unrun cases or harness errors and an unchanged app. supplemental/drift-i5 holds the accepted five-specimen diff against the response 12 baseline, the candidate nm -u receipt, the build log and console logs.",
-      "source": "ed0bd3da84f3b4020e243061b21ff7a460c04e4d",
-      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
