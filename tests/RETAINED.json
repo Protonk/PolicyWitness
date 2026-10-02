@@ -35,6 +35,13 @@
       "reason": "Final gate of DRIFT-REMOVAL-FOLLOWUP-PLAN.md on the final tree (v0.2.4-57-g339ea8e): all 183 registered cases including opt-ins passed, no skips, unrun cases or harness errors; the signed app was valid and unchanged. supplemental/followup/receipts.md indexes every step's receipt and the step 15 checks; supplemental/followup/scouting-report.md holds the step 13 findings awaiting review.",
       "source": "339ea8edb260f97742c85aad124947151b460050",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/followup-final-gate-03",
+      "run_id": "20261002T212608Z_d7f71711",
+      "reason": "Gate for the two commits resolving the follow-up plan's scouting candidates (controller envelope 6, observer report 2, documentation): all 183 registered cases including opt-ins passed on the app built from fcc068c (v0.2.4-60-gfcc068c), no skips, unrun cases or harness errors, signed app unchanged. supplemental/followup/ holds the receipt index, the step 1-15 index copied from followup-final-gate-02, and the preserved unit flake log.",
+      "source": "fcc068c035ce42f3ccae8798796766ede6375d5b",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
