@@ -17,6 +17,7 @@ import errno
 import json
 import re
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -44,14 +45,15 @@ def expand(value, root):
     return value
 
 
-def compile_helper(path, exit_code):
-    """A helper that exits with a fixed status. Compiled here rather than copied
-    from the system volume: copies of some platform binaries are killed at launch."""
-    source = path.with_suffix('.c')
-    source.write_text(f'int main(void) {{ return {int(exit_code)}; }}\n')
-    subprocess.run(['/usr/bin/xcrun', '--sdk', 'macosx', 'clang', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O2',
-                    str(source), '-o', str(path)], check=True, capture_output=True, timeout=120)
-    source.unlink()
+def compiled_helper(exit_code):
+    """The exit-status helper the case wrapper built (tests/fixtures/comparison/build.sh):
+    the named fixture exits 0, its `.exit1` sibling exits 1. Missing equipment is an error."""
+    helper = Path(os.environ['PW_COMPARISON_HELPER_FIXTURE'])
+    if int(exit_code) == 1:
+        helper = helper.with_name(helper.name + '.exit1')
+    if not helper.is_file():
+        raise FileNotFoundError(f'compiled helper fixture missing: {helper}')
+    return helper
 
 
 def prepare_files(root):
@@ -67,7 +69,7 @@ def prepare_files(root):
         if spec['state'] == 'regular':
             path.write_bytes(spec['content'].encode())
         elif spec['state'] == 'compiled':
-            compile_helper(path, spec['exit_code'])
+            shutil.copyfile(compiled_helper(spec['exit_code']), path)
         path.chmod(int(spec['mode'], 8))
         if spec['mode'] != '0000':
             before[name] = path.read_bytes()

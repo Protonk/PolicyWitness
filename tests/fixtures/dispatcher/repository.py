@@ -14,7 +14,7 @@ def install_runner(source, destination, suites, *, signed_fixtures=False):
     (destination / 'tests/catalog.json').write_text(json.dumps({'schema_version': 1, 'suites': suites}) + '\n')
     if signed_fixtures:
         tool = destination / 'fixture-codesign'
-        tool.write_text('#!/usr/bin/python3\n' + (source / 'tests/fixtures/dispatcher/artifacts.py').read_text())
+        tool.write_text('#!/usr/bin/python3\n' + (source / 'tests/fixtures/dispatcher/seal_tool.py').read_text())
         tool.chmod(0o755)
         inspector = destination / 'tests/lib/artifact.py'
         text = inspector.read_text()

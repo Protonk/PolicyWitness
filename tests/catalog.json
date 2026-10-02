@@ -7,7 +7,8 @@
         "tests/suites/preflight/run.sh"
       ],
       "requires": [
-        "app"
+        "app",
+        "clang"
       ],
       "cases": [
         {
@@ -103,7 +104,9 @@
         "bash",
         "tests/suites/dispatcher/run.sh"
       ],
-      "requires": [],
+      "requires": [
+        "clang"
+      ],
       "cases": [
         {
           "id": "controls",
@@ -992,7 +995,8 @@
     },
     "witness_contract": {
       "requires": [
-        "app"
+        "app",
+        "clang"
       ],
       "cases": [
         {

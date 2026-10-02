@@ -12,7 +12,7 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner
-from artifacts import bundle
+from fixture_bundle import bundle
 sys.path.insert(0, str(ROOT / 'tests/fixtures/exec'))
 from control import TreeControl, ExitObserver
 
@@ -27,7 +27,7 @@ def exercise(out, interrupt, app_guard=False):
         {'id': case, 'command': ['bash', 'tests/fixtures/dispatcher/cancellation.sh', case]}
         for case in ('completed', 'active', 'queued')]}}, signed_fixtures=app_guard)
     if app_guard:
-        bundle(repo / 'dist/PolicyWitness.app')
+        bundle(repo / 'dist/PolicyWitness.app', Path(os.environ['PW_DISPATCHER_HOST_FIXTURE']))
     for leaf in ('cancellation.sh', 'cancellation.py'):
         relative = Path('tests/fixtures/dispatcher') / leaf
         target = repo / relative

@@ -13,7 +13,11 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner
-from artifacts import bundle, seal, fingerprint
+from fixture_bundle import bundle, seal, fingerprint
+
+# The compiled fixture hosts: the suite wrapper builds them once per run.
+HOST = Path(os.environ['PW_DISPATCHER_HOST_FIXTURE'])
+HOST_IMPORTS_SANDBOX = HOST.with_name(HOST.name + '.imports-sandbox')
 
 
 def exercise(out, name):
@@ -30,7 +34,7 @@ def exercise(out, name):
         shutil.copyfile(ROOT / 'tests/fixtures/dispatcher' / source, path)
         path.chmod(0o755)
     app = repo / 'dist/PolicyWitness.app'
-    bundle(app, host='imports_sandbox' if name == 'host_imports_sandbox' else 'clean')
+    bundle(app, HOST_IMPORTS_SANDBOX if name == 'host_imports_sandbox' else HOST)
     helper = app / 'Contents/MacOS/pw-runner-client'
     manifest_path = app / 'Contents/Resources/Evidence/manifest.json'
     manifest = json.loads(manifest_path.read_text())

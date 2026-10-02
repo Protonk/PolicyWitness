@@ -38,9 +38,11 @@ both readers before use:
 
 `files` in the fixture lists every path under `{{SCEN_ROOT}}` with its
 required state before a run: regular files with content and mode, helper
-executables compiled to exit 0 or 1 (copies of platform binaries can be
-killed at launch, so none is copied from the system volume), paths that must
-be absent, and the expected state after the run (`effect`). Specimen B is not idempotent: it
+executables that exit 0 or 1 (copies of the stubs `build.sh` compiles from
+`helper_status.c`, which the case wrapper builds once per run and names in
+`PW_COMPARISON_HELPER_FIXTURE`; copies of platform binaries can be killed at
+launch, so none is copied from the system volume), paths that must be absent,
+and the expected state after the run (`effect`). Specimen B is not idempotent: it
 unlinks the paths it queries, and a run that fails after release still
 performs its attempts, so the live reader recreates every file before every
 run, including after a failed one.

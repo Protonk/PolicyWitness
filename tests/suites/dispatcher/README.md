@@ -105,11 +105,18 @@ final diffs covering bytes, modes, additions, deletions, and symlinks.
 
 `tests/fixtures/dispatcher/repository.py` copies equipment and writes the
 caller-supplied catalog; it contains no expected selections or result oracle.
-For app controls only, it points the copied inspector's codesign executable at
-`artifacts.py` inside the disposable repository. That independent file-seal model
-imports no test library; manifest parsing, hashing, and inventories still use the
-real inspector. Production has no bypass setting. Apple's signature semantics
-are checked separately by `preflight/signed_artifact_controls`.
+For app controls only, it copies `seal_tool.py` into the disposable repository
+as the inspector's codesign executable. That independent file-seal model
+imports nothing but the standard library and knows no bundle layout; manifest
+parsing, hashing, and inventories still use the real inspector. Production has
+no bypass setting. Apple's signature semantics are checked separately by
+`preflight/signed_artifact_controls`. `fixture_bundle.py` lays out the fake
+bundles, pure Python, around a compiled XPC host stub: the suite wrapper builds
+the clean stub and the `sandbox_check`-importing control stub once per run with
+`tests/fixtures/dispatcher/build.sh` into the case artifacts and names them in
+`PW_DISPATCHER_HOST_FIXTURE` (`<name>` and `<name>.imports-sandbox`); only
+`check_artifacts.py` uses the control stub. A missing stub is an equipment
+error, so the suite requires clang.
 Fixtures, receipts, raw stdout/stderr, exit status, plans, journals, summaries,
 and `controls.json` remain in artifacts for inspection.
 

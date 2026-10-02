@@ -14,6 +14,10 @@ fi
 
 if test_selected release_controls; then
 test_begin preflight release_controls
+test_step fixture "build the fixture XPC host stubs"
+export PW_DISPATCHER_HOST_FIXTURE="${PW_TEST_ARTIFACTS}/host-fixture"
+test_build_fixture "${ROOT_DIR}/tests/fixtures/dispatcher/build.sh" \
+  "${PW_DISPATCHER_HOST_FIXTURE}" "${PW_TEST_ARTIFACTS}/host-fixture-build.log"
 test_step release "exercise uncertain Apple replies and final-archive acceptance using independent tools"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release controls failed" \
   "${ROOT_DIR}/tests/suites/preflight/check_release.py" "${PW_TEST_ARTIFACTS}"

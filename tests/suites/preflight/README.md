@@ -31,6 +31,10 @@ Offline release controls also exercise the release procedure's decision points.
   call receipts require exactly one submission and at most one bounded wait.
   Archive controls use real ZIPs and real layout/manifest/inventory checks, with
   simulated signature success and independent extraction/staple/execution tools.
+  Their fake bundles carry a compiled XPC host stub because the inspector's
+  `nm -u` check needs a real Mach-O, so these release controls need clang: the
+  wrapper builds the stubs with `tests/fixtures/dispatcher/build.sh` into the
+  case artifacts and names them in `PW_DISPATCHER_HOST_FIXTURE`.
   They cover missing helpers, stale evidence, missing staples, failed XPC runs,
   skipped cases, wrong runner provenance, mutation, and corrupt ZIPs, while a
   usable local source app remains untouched. Real signature semantics are covered
@@ -46,9 +50,10 @@ Offline release controls also exercise the release procedure's decision points.
   wrapper's SIGINT while its child remains stuck: the wrapper must still fail
   for timeout and stop the child. Independent invocation receipts require one
   launch, raw bytes must survive unchanged, and the shared exec observer requires
-  kernel exit events for both peers before test cleanup. These controls make no
-  Apple requests and need no built app, signing identity, or compiler. macOS
-  socket/process observation may require escalation in an automation sandbox.
+  kernel exit events for both peers before test cleanup. These deadline
+  controls make no Apple requests and need no built app or signing identity;
+  only the suite's compiler prerequisite applies. macOS socket/process
+  observation may require escalation in an automation sandbox.
 
 - `release_publish_controls` exercises the three release tools against a real
   temporary repository with a bare `origin`, fixture ZIPs, attempts and run
@@ -69,6 +74,8 @@ Offline release controls also exercise the release procedure's decision points.
 - `tests/fixtures/caller_auth/bundle.py`: copying, signing, and command receipts.
 - `dispatcher/artifact_controls`: offline real-file mutations with independent
   simulated codesign; verifies gating, case receipts, and final inventories.
+- `tests/fixtures/dispatcher/fixture_bundle.py` and `build.sh`: fake bundles
+  around a compiled XPC host stub, shared with the release controls here.
 - `tests/fixtures/release/tools.py`: controlled external-tool boundary and receipts.
 - `tests/fixtures/release/publish_tools.py`: GitHub stand-in for publication controls.
 - `tests/fixtures/release/hanging_command.py`: real command processes; reuses

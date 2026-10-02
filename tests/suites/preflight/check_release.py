@@ -16,7 +16,7 @@ import artifact
 import release_evidence
 from release_accept import accept
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
-from artifacts import bundle, fingerprint
+from fixture_bundle import bundle, fingerprint
 sys.path.insert(0, str(ROOT / 'tests/fixtures/release'))
 from tools import Tools, ID
 spec = importlib.util.spec_from_file_location('notarization', ROOT / 'notarize.py')
@@ -132,7 +132,7 @@ def check(out):
         work = out / ('archive_' + mode)
         work.mkdir()
         source = work / 'PolicyWitness.app'
-        bundle(source)
+        bundle(source, Path(os.environ['PW_DISPATCHER_HOST_FIXTURE']))
         if mode == 'missing_helper':
             (source / 'Contents/MacOS/pw-runner-client').unlink()
         if mode == 'stale_manifest':

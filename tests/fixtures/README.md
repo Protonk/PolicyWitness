@@ -67,7 +67,9 @@ deterministic, and checked into the repo so tests are hermetic.
   every S, B, C and T row with its specimen inputs, the raw channel inputs the
   Swift unit reader feeds to `comparisonEvidence(...)`, the raw fields the
   live case asserts beside the record, and the expected response 13
-  `comparison` object; `stub_validator.py` is specimen B's steered validator.
+  `comparison` object; `stub_validator.py` is specimen B's steered validator,
+  and `build.sh` compiles the exit-status helpers (`helper_status.c`) the spawn
+  rows copy into the scenario root, named in `PW_COMPARISON_HELPER_FIXTURE`.
   Its [README](comparison/README.md) records the placeholder convention, the
   files each specimen needs and the row provenance. `baseline_response12/`
   holds the specimens, raw replies and match reports that verified the rows
@@ -93,9 +95,12 @@ startup controls; it contains no expected selections or result-checking logic.
 `cancellation.sh`/`cancellation.py` supply standard cases and a helper that ignores
 SIGINT. They use the exec fixture's existing readiness/ping/release protocol;
 the cancellation checker reuses its kernel process-exit observer.
-`artifacts.py` supplies fake signed bundles and an independent file-seal command
-only inside fixture repositories. The real inspector still parses and checks
-their manifests and inventories. Real signing controls use disposable copies
+`fixture_bundle.py` lays out fake signed bundles around a compiled XPC host stub
+(`host_clean.c`, `host_imports_sandbox.c`, built by `build.sh` once per suite
+run and named in `PW_DISPATCHER_HOST_FIXTURE`), and `seal_tool.py` is the
+independent file-seal command installed only inside fixture repositories; it
+imports nothing but the standard library. The real inspector still parses and
+checks their manifests and inventories. Real signing controls use disposable copies
 through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 

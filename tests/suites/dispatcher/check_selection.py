@@ -9,7 +9,9 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
 from repository import install_runner, completed_output
-from artifacts import bundle, seal
+from fixture_bundle import bundle, seal
+
+HOST = Path(os.environ['PW_DISPATCHER_HOST_FIXTURE'])
 
 LITERAL = "literal spaces 'quoted' $(touch CANARY)"
 
@@ -60,7 +62,7 @@ def main():
         app_dir = repo / 'An app.app'
         binary = app_dir / 'Contents/MacOS/policy-witness'
         if app:
-            bundle(app_dir)
+            bundle(app_dir, HOST)
         receipt = work / 'receipts.jsonl'
         controller_receipt = work / 'controller-receipts.jsonl'
         env = {k: v for k, v in os.environ.items() if not k.startswith('PW_')}
@@ -131,7 +133,7 @@ def main():
 
     def usable_bundles(repo):
         for app_path, marker in [('dist/PolicyWitness.app', 'default'), ('An app.app', 'alternate')]:
-            bundle(repo / app_path)
+            bundle(repo / app_path, HOST)
             binary = repo / app_path / 'Contents/MacOS/policy-witness'
             shutil.copyfile(ROOT / 'tests/fixtures/dispatcher/controller.py', binary)
             binary.chmod(0o755)
