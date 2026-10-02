@@ -25,7 +25,7 @@ Core controller modules:
 Support modules:
 
 - `controller/src/app_layout.rs` — app bundle layout + embedded tool resolution
-- `controller/src/plist.rs` — PlistBuddy-backed Info.plist reads for BYOXPC install and verify
+- `controller/src/plist.rs` — PlistBuddy-backed Info.plist reads for BYOXPC install only; no run reads a plist
 - `controller/src/bundle.rs` — bundle metadata reader for external runners
 - `controller/src/request_patch.rs` — request file reading
 - `controller/src/policy_check.rs` — host-side `sbpl-check` wiring
@@ -138,6 +138,38 @@ Exit codes:
   manifest failure, or a request-delivery failure. The same `kind: "run"`
   envelope is printed with `result.error`, null execution records and the
   dossier collected so far.
+
+### What a run reads and launches
+
+The ordinary built-in `run` path, `run_flow::cmd_run` → `run`, reaches these
+helpers and nothing else that touches the system:
+
+- Reads: the request file (`request_patch::read_json_file`), the app evidence
+  manifest once (`evidence::load_manifest`, under `PW_VERIFY_EVIDENCE=1` also
+  the hashes `evidence::verify_manifest` compares), augment files under
+  `Contents/Resources/Augments/` only when the request names augments, the
+  literal import closure of the SBPL source (`sbpl_imports`), the selected
+  binaries' bytes for the dossier's hashes (`dossier::Binaries::observe`), and
+  the four host `sysctl` strings. Runner selection reads the manifest entry at
+  the fixed shipped path (`runner_select::builtin_runner_target`); an external
+  selection reads the registry JSON. No `Info.plist` is read on either path:
+  the service name is the manifest entry's `bundle_id` or the registry record's.
+- Launches: `pw-runner-client` once per selected run (`runner_client`),
+  `sbpl-check` only for an admitted `xpc_error` reply (`policy_check`), and
+  `sandbox-log-observer` unless `--no-log-capture` (`sandbox_log`). Nothing
+  else on the run path spawns a process; `plist::plist_key_string` (the one
+  PlistBuddy caller), `codesign`, `plutil`, `id` and `launchctl` are reached
+  only from `runner_commands` through the `runner` subcommands, which `cli.rs`
+  dispatches separately from `run`. `bundle::read_bundle_info` has one caller,
+  `runner install`.
+
+The dependencies a run acquires from its environment are named in
+`run_flow::RunDependencies` (app root, manifest loader, registry location,
+client invocation); the `orchestration` tests in `run_flow.rs` drive the real
+`run` with them controlled and count manifest loads and client calls, and
+`dossier::tests::builtin_selection_reads_the_manifest_entry_and_no_info_plist`
+selects the built-in runner from a synthetic app root that has no `Info.plist`.
+Keep this list current when a run-path helper gains a read or a launch.
 
 ### Output contract
 

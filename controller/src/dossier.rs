@@ -489,7 +489,7 @@ mod tests {
     use crate::evidence::{EVIDENCE_SCHEMA_VERSION, EvidenceEntry};
     use crate::runner_manager::RunnerKind;
     use crate::runner_select::{
-        RunnerConnectionKind, parse_runner_selector_value, resolve_runner_target,
+        RunnerConnectionKind, parse_runner_selector_value, resolve_runner_target_with_registry,
         runner_provenance_from_target,
     };
     use serde_json::json;
@@ -603,7 +603,7 @@ mod tests {
 
     fn builtin(root: &Path, manifest: &EvidenceManifest) -> RunnerTarget {
         let selector = parse_runner_selector_value(&json!({})).unwrap();
-        match resolve_runner_target(root, Ok(manifest), &selector) {
+        match resolve_runner_target_with_registry(root, Ok(manifest), &selector, None) {
             Ok(target) => target,
             Err(error) => panic!("built-in selection failed: {error}"),
         }
@@ -611,7 +611,7 @@ mod tests {
 
     fn selection_error(root: &Path, manifest: Result<&EvidenceManifest, &String>) -> String {
         let selector = parse_runner_selector_value(&json!({})).unwrap();
-        match resolve_runner_target(root, manifest, &selector) {
+        match resolve_runner_target_with_registry(root, manifest, &selector, None) {
             Ok(_) => panic!("selection succeeded"),
             Err(error) => error,
         }

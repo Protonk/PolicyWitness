@@ -225,22 +225,15 @@ fn enforce_required_entitlements(
     Ok(())
 }
 
-pub fn resolve_runner_target(
-    app_root: &Path,
-    manifest: Result<&EvidenceManifest, &String>,
-    selector: &RunnerSelector,
-) -> Result<RunnerTarget, String> {
-    resolve_runner_target_with_registry(app_root, manifest, selector, None)
-}
-
-/// `resolve_runner_target` with the external-registry location injectable.
-/// Production passes `None` (resolve from `PW_RUNNER_REGISTRY` / `$HOME` via
-/// `runner_registry_path`); tests pass `Some(path)` to a fixture registry so
-/// the whole external chain — `load_registry → find_external_record →
-/// resolve_external_target → enforce_required_entitlements` — is exercisable
-/// at the public boundary without mutating the process-global env. The
-/// override is consulted lazily: the built-in branch never touches it, and
-/// the external branch never touches the app manifest.
+/// Resolve a selector into the runner target, with the external-registry
+/// location injectable. Production passes `None` (resolve from
+/// `PW_RUNNER_REGISTRY` / `$HOME` via `runner_registry_path`); tests pass
+/// `Some(path)` to a fixture registry so the whole external chain —
+/// `load_registry → find_external_record → resolve_external_target →
+/// enforce_required_entitlements` — is exercisable at the public boundary
+/// without mutating the process-global env. The override is consulted lazily:
+/// the built-in branch never touches it, and the external branch never touches
+/// the app manifest.
 pub fn resolve_runner_target_with_registry(
     app_root: &Path,
     manifest: Result<&EvidenceManifest, &String>,
@@ -307,7 +300,7 @@ fn find_external_record<'a>(
 }
 
 /// Resolve a registry record + selector into a concrete external target.
-/// Split out of `resolve_runner_target` so its guard ladder (mode-vs-kind
+/// Split out of `resolve_runner_target_with_registry` so its guard ladder (mode-vs-kind
 /// agreement, the entitlement gate, and the built-in-kind rejection) is
 /// unit-testable from a hand-built `RunnerRecord` — the registry lookup
 /// that precedes it needs `$HOME`, this doesn't.
@@ -545,10 +538,11 @@ mod tests {
             mode: Some(RunnerKind::Standard),
             ..Default::default()
         };
-        let err = err_of(resolve_runner_target(
+        let err = err_of(resolve_runner_target_with_registry(
             Path::new("/nonexistent"),
             Err(&"no manifest".to_string()),
             &selector,
+            None,
         ));
         assert!(
             err.contains("cannot be combined with an external runner"),
@@ -562,10 +556,11 @@ mod tests {
             mode: Some(RunnerKind::Byoxpc),
             ..Default::default()
         };
-        let err = err_of(resolve_runner_target(
+        let err = err_of(resolve_runner_target_with_registry(
             Path::new("/nonexistent"),
             Err(&"no manifest".to_string()),
             &selector,
+            None,
         ));
         assert!(
             err.contains("requires runner.id or runner.service"),

@@ -30,7 +30,8 @@ use crate::request_patch::read_json_file;
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
-    RunnerTarget, parse_runner_selector_value, resolve_runner_target, runner_provenance_from_target,
+    RunnerConnectionKind, RunnerTarget, parse_runner_selector_value,
+    resolve_runner_target_with_registry, runner_provenance_from_target,
 };
 use crate::sandbox_log::{
     SandboxLogCapture, SandboxLogWindow, bounded_step_denies, capture_sandbox_logs_with_timeout,
@@ -186,14 +187,32 @@ fn tool_error_envelope(
     )
 }
 
-fn print_tool_error(
+/// What a run produces: the usage text request, or one rendered `kind: "run"`
+/// envelope with the process exit code it carries. `cmd_run` prints it; the
+/// controlled orchestration tests read it.
+pub enum RunOutput {
+    Help,
+    Envelope { text: String, exit_code: i32 },
+}
+
+fn envelope<T: Serialize>(
+    result: json_contract::JsonResult,
+    data: &T,
+    exit_code: i32,
+) -> Result<RunOutput, String> {
+    Ok(RunOutput::Envelope {
+        text: json_contract::render_envelope("run", result, data)?,
+        exit_code,
+    })
+}
+
+fn tool_error(
     specimen: Specimen,
     timeout_ms: Option<u64>,
     error: String,
-) -> Result<i32, String> {
+) -> Result<RunOutput, String> {
     let (result, data) = tool_error_envelope(specimen, timeout_ms, error);
-    json_contract::print_envelope("run", result, &data)?;
-    Ok(2)
+    envelope(result, &data, 2)
 }
 
 /// The envelope for an error that escaped `cmd_run` (the `cli.rs` catch-all).
@@ -203,7 +222,37 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
         HostFacts::collect(),
         "the run failed before runner selection",
     );
-    print_tool_error(specimen, None, error).map(|_| ())
+    let (result, data) = tool_error_envelope(specimen, None, error);
+    json_contract::print_envelope("run", result, &data)
+}
+
+/// The dependencies a run acquires from its environment, named at the
+/// boundaries the controlled orchestration tests observe: where the app root
+/// is, how the evidence manifest is read, where the external registry lives
+/// and how the client is invoked. Production binds the real ones; a test binds
+/// counting or capturing closures around them and reads the rendered envelope.
+pub struct RunDependencies<'a> {
+    pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
+    pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
+    /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
+    pub registry_path: Option<&'a Path>,
+    pub client: &'a dyn Fn(
+        &str,
+        &str,
+        u64,
+        &RunnerConnectionKind,
+    ) -> Result<(RunnerClientRun, Option<Value>), String>,
+}
+
+impl RunDependencies<'static> {
+    pub fn production() -> Self {
+        RunDependencies {
+            app_root: &app_root_from_current_exe,
+            load_manifest: &evidence::load_manifest,
+            registry_path: None,
+            client: &run_pw_runner_client,
+        }
+    }
 }
 
 fn load_app_provenance(
@@ -451,19 +500,32 @@ fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), Strin
 }
 
 pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
+    match run(args, &RunDependencies::production())? {
+        RunOutput::Help => {
+            cli::print_usage();
+            Ok(0)
+        }
+        RunOutput::Envelope { text, exit_code } => {
+            println!("{text}");
+            Ok(exit_code)
+        }
+    }
+}
+
+/// One run through production orchestration: argument admission, one manifest
+/// load, runner selection, the dossier, the held request's delivery and the
+/// reply's admission. Every exit renders the uniform `kind: "run"` envelope.
+pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
     let parsed = match parse_arguments(args) {
-        Arguments::Help => {
-            cli::print_usage();
-            return Ok(0);
-        }
+        Arguments::Help => return Ok(RunOutput::Help),
         Arguments::Error(path, error) => {
             let specimen = Specimen::unavailable(
                 path.map(|p| p.to_string_lossy().to_string()),
                 host,
                 "no runner was selected: invalid arguments",
             );
-            return print_tool_error(specimen, None, error);
+            return tool_error(specimen, None, error);
         }
         Arguments::Run(parsed) => parsed,
     };
@@ -473,22 +535,22 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
         .as_ref()
         .map(|p| p.to_string_lossy().to_string());
 
-    let app_root = app_root_from_current_exe()?;
-    // One manifest parse per run; selection, provenance and the binary records
+    let app_root = (deps.app_root)()?;
+    // One manifest load per run; selection, provenance and the binary records
     // all read this value.
     let manifest_path = evidence::manifest_path_from_app_root(&app_root);
-    let manifest: Result<EvidenceManifest, String> = evidence::load_manifest(&manifest_path);
+    let manifest: Result<EvidenceManifest, String> = (deps.load_manifest)(&manifest_path);
     let app_provenance = load_app_provenance(manifest.as_ref(), &manifest_path, &app_root);
 
     // A refusal before selection: the request value is absent.
-    let refused = |error: String| -> Result<i32, String> {
+    let refused = |error: String| -> Result<RunOutput, String> {
         let mut specimen = Specimen::unavailable(
             request_path_text.clone(),
             host.clone(),
             "no runner was selected",
         );
         specimen.app_provenance = app_provenance.clone();
-        print_tool_error(specimen, timeout_ms, error)
+        tool_error(specimen, timeout_ms, error)
     };
 
     let Some(request_path) = parsed.request_path.clone() else {
@@ -514,7 +576,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     }
 
     let selection: Result<RunnerTarget, String> = parse_runner_selector_value(&request_value)
-        .and_then(|selector| resolve_runner_target(&app_root, manifest.as_ref(), &selector));
+        .and_then(|selector| {
+            resolve_runner_target_with_registry(
+                &app_root,
+                manifest.as_ref(),
+                &selector,
+                deps.registry_path,
+            )
+        });
 
     // Resolve named augments before the runner (and the fallback compilation)
     // so every reader sees the same bytes. The original string's hash is
@@ -545,14 +614,13 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     };
 
     if let Some(error) = selection_error {
-        return print_tool_error(specimen, timeout_ms, error);
+        return tool_error(specimen, timeout_ms, error);
     }
     let runner_target = runner_target.expect("selection succeeded");
 
     if let Some(error) = augmentation_error {
         let data = execution_only(specimen, timeout_ms, None, None);
-        json_contract::print_envelope("run", result(false, 1, "bad_request", Some(error)), &data)?;
-        return Ok(1);
+        return envelope(result(false, 1, "bad_request", Some(error)), &data, 1);
     }
 
     // The held request string: serialized once, delivered to every reader.
@@ -560,14 +628,14 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
     let held = serde_json::to_string_pretty(&request_value)
         .map_err(|e| format!("failed to encode request JSON: {e}"))?;
 
-    let (runner_client, runner_result) = match run_pw_runner_client(
+    let (runner_client, runner_result) = match (deps.client)(
         &runner_target.service_name,
         &held,
         parsed.timeout_ms,
         &runner_target.connection,
     ) {
         Ok(pair) => pair,
-        Err(error) => return print_tool_error(specimen, timeout_ms, error),
+        Err(error) => return tool_error(specimen, timeout_ms, error),
     };
 
     // The reply is retained unchanged on every refusal; nothing reads it
@@ -593,13 +661,15 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
                     capture_sandbox_logs_with_timeout(pid, process, window, parsed.log_timeout)
                 },
             );
-            json_contract::print_envelope("run", result, &data)?;
-            return Ok(exit_code);
+            return envelope(result, &data, exit_code);
         }
     };
     let data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
-    json_contract::print_envelope("run", result(false, exit_code, outcome, Some(error)), &data)?;
-    Ok(exit_code)
+    envelope(
+        result(false, exit_code, outcome, Some(error)),
+        &data,
+        exit_code,
+    )
 }
 
 fn complete_execution(data: ExecutionData) -> CompletedExecution {
@@ -3601,5 +3671,634 @@ mod tests {
                 .unwrap_err()
                 .contains("runner must be a JSON object")
         );
+    }
+
+    // ---- Controlled orchestration --------------------------------------------
+    // `run` with its production dependencies replaced at the four boundaries:
+    // a counting loader around the real manifest reader, a synthetic app root,
+    // an on-disk registry fixture and a capturing client that answers with a
+    // current-schema reply. Every assertion reads the rendered envelope or a
+    // capture; nothing here reconstructs orchestration or counts source calls.
+    mod orchestration {
+        use super::*;
+        use crate::app_layout::{
+            SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary,
+        };
+        use crate::runner_manager::{
+            RUNNER_PROTOCOL_VERSION, RUNNER_REGISTRY_SCHEMA_VERSION, RunnerEntitlements,
+            RunnerRecord, RunnerRegistry, RunnerScope, RunnerSignature, RunnerState,
+        };
+        use std::cell::RefCell;
+        use std::fs;
+
+        const ROLES: [&ShippedBinary; 3] = [&SHIPPED_SERVICE, &SHIPPED_WORKER, &SHIPPED_VALIDATOR];
+        const ROLE_NAMES: [&str; 3] = ["service", "worker", "validator"];
+        const SERVICE_ID: &str = "com.controlled.pw.PWRunner";
+        const EXTERNAL_SERVICE: &str = "com.controlled.runner";
+
+        struct ClientCall {
+            service_name: String,
+            request: String,
+            timeout_ms: u64,
+            connection: RunnerConnectionKind,
+        }
+
+        struct Observed {
+            loads: Vec<PathBuf>,
+            calls: Vec<ClientCall>,
+            output: RunOutput,
+        }
+
+        fn scratch(tag: &str) -> PathBuf {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!(
+                "pw-orchestration-{tag}-{}-{stamp}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&root).unwrap();
+            root
+        }
+
+        fn write(path: &Path, bytes: &[u8]) {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, bytes).unwrap();
+        }
+
+        /// A synthetic app root: the three shipped binaries as distinct small
+        /// files at their fixed paths, and no Info.plist anywhere.
+        fn synthetic_app(root: &Path) -> PathBuf {
+            let app = root.join("PolicyWitness.app");
+            for role in ROLES {
+                write(
+                    &app.join(role.rel_path),
+                    format!("binary at {}", role.rel_path).as_bytes(),
+                );
+            }
+            app
+        }
+
+        fn manifest_json(app: &Path) -> Value {
+            let entry = |id: &str, bundle_id: Option<&str>, role: &ShippedBinary| {
+                json!({
+                    "id": id, "kind": role.kind, "bundle_id": bundle_id, "rel_path": role.rel_path,
+                    "sha256": evidence::sha256_hex(&app.join(role.rel_path)).unwrap(),
+                    "lc_uuid": null, "entitlements": {"com.apple.security.app-sandbox": true},
+                    "entitlements_error": null,
+                })
+            };
+            json!({
+                "schema_version": evidence::EVIDENCE_SCHEMA_VERSION,
+                "entries": [
+                    entry(SERVICE_ID, Some(SERVICE_ID), &SHIPPED_SERVICE),
+                    entry("pw-probe-runner", None, &SHIPPED_WORKER),
+                    entry("sb_api_validator", None, &SHIPPED_VALIDATOR),
+                ],
+                "notes": ["controlled"],
+            })
+        }
+
+        #[derive(Clone, Copy)]
+        enum ManifestState {
+            Valid,
+            Missing,
+            Invalid,
+        }
+
+        fn install_manifest(app: &Path, state: ManifestState) -> PathBuf {
+            let path = evidence::manifest_path_from_app_root(app);
+            match state {
+                ManifestState::Valid => write(&path, manifest_json(app).to_string().as_bytes()),
+                ManifestState::Missing => {}
+                ManifestState::Invalid => {
+                    write(&path, br#"{"schema_version": 1, "entries": "not a list"}"#)
+                }
+            }
+            path
+        }
+
+        fn manifest_hash(app: &Path, role: &ShippedBinary) -> String {
+            evidence::sha256_hex(&app.join(role.rel_path)).unwrap()
+        }
+
+        /// An external bundle laid out like a BYOXPC copy of the shipped
+        /// service: service and validator bytes equal the shipped ones, the
+        /// worker differs.
+        fn byoxpc_bundle(root: &Path, app: &Path) -> PathBuf {
+            let bundle = root.join("Runner.xpc");
+            let macos = bundle.join("Contents").join("MacOS");
+            write(
+                &macos.join("PWRunner"),
+                &fs::read(app.join(SHIPPED_SERVICE.rel_path)).unwrap(),
+            );
+            write(&macos.join("pw-probe-runner"), b"a different worker");
+            write(
+                &macos.join("sb_api_validator"),
+                &fs::read(app.join(SHIPPED_VALIDATOR.rel_path)).unwrap(),
+            );
+            bundle
+        }
+
+        fn signature() -> RunnerSignature {
+            RunnerSignature {
+                team_id: Some("TEAM123456".into()),
+                identity: Some("Developer ID Application: Controlled (TEAM123456)".into()),
+                cdhash: Some("ab".repeat(20)),
+                valid: true,
+                adhoc: false,
+            }
+        }
+
+        fn entitlements(keys: &[&str]) -> RunnerEntitlements {
+            RunnerEntitlements {
+                raw_plist: Some("<plist version=\"1.0\"><dict/></plist>".into()),
+                keys: keys.iter().map(|k| k.to_string()).collect(),
+                error: None,
+            }
+        }
+
+        fn record(bundle: &Path, keys: &[&str]) -> RunnerRecord {
+            RunnerRecord {
+                state: RunnerState::Installed,
+                ownership: None,
+                id: "runner-ext".into(),
+                service_name: EXTERNAL_SERVICE.into(),
+                bundle_path: bundle.display().to_string(),
+                executable_path: bundle.join("Contents/MacOS/PWRunner").display().to_string(),
+                bundle_id: Some(EXTERNAL_SERVICE.into()),
+                scope: RunnerScope::User,
+                protocol_version: RUNNER_PROTOCOL_VERSION,
+                signature: signature(),
+                entitlements: entitlements(keys),
+                installed_at_unix_ms: 1,
+                kind: Some(RunnerKind::Byoxpc),
+            }
+        }
+
+        fn registry_fixture(root: &Path, runners: Vec<RunnerRecord>) -> PathBuf {
+            let registry = RunnerRegistry {
+                schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
+                runners,
+                pending_cleanup: Vec::new(),
+            };
+            let path = root.join("runners.json");
+            write(&path, serde_json::to_string(&registry).unwrap().as_bytes());
+            path
+        }
+
+        fn request_file(root: &Path, runner: Option<Value>) -> PathBuf {
+            let mut request = json!({
+                "schema_version": 1, "specimen_id": "controlled",
+                "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
+                "probe_plan": [],
+            });
+            if let Some(runner) = runner {
+                request["runner"] = runner;
+            }
+            let path = root.join("request.json");
+            write(
+                &path,
+                serde_json::to_string_pretty(&request).unwrap().as_bytes(),
+            );
+            path
+        }
+
+        fn byoxpc_request(root: &Path, required: &[&str]) -> PathBuf {
+            request_file(
+                root,
+                Some(
+                    json!({"id": "runner-ext", "mode": "byoxpc", "required_entitlements": required}),
+                ),
+            )
+        }
+
+        fn controlled_reply() -> Value {
+            json!({
+                "schema_version": json_contract::RESPONSE_SCHEMA_VERSION,
+                "normalized_outcome": "ok", "rc": 0, "pid": 77,
+                "specimen_id": "controlled", "steps": [],
+            })
+        }
+
+        /// Production orchestration with the four dependencies controlled.
+        fn observe(app: &Path, registry: Option<&Path>, args: &[&str]) -> Observed {
+            let loads = RefCell::new(Vec::new());
+            let calls = RefCell::new(Vec::new());
+            let load_manifest = |path: &Path| {
+                loads.borrow_mut().push(path.to_path_buf());
+                evidence::load_manifest(path)
+            };
+            let client = |service_name: &str,
+                          request: &str,
+                          timeout_ms: u64,
+                          connection: &RunnerConnectionKind| {
+                calls.borrow_mut().push(ClientCall {
+                    service_name: service_name.to_string(),
+                    request: request.to_string(),
+                    timeout_ms,
+                    connection: *connection,
+                });
+                let reply = controlled_reply();
+                Ok((client_run(Some(&reply)), Some(reply)))
+            };
+            let app_root = app.to_path_buf();
+            let deps = RunDependencies {
+                app_root: &|| Ok(app_root.clone()),
+                load_manifest: &load_manifest,
+                registry_path: registry,
+                client: &client,
+            };
+            let args: Vec<OsString> = args.iter().map(OsString::from).collect();
+            let output = run(&args, &deps).expect("run completes");
+            Observed {
+                loads: loads.into_inner(),
+                calls: calls.into_inner(),
+                output,
+            }
+        }
+
+        fn envelope_of(output: &RunOutput) -> (Value, i32) {
+            match output {
+                RunOutput::Envelope { text, exit_code } => {
+                    (serde_json::from_str(text).unwrap(), *exit_code)
+                }
+                RunOutput::Help => panic!("usage requested"),
+            }
+        }
+
+        fn request_value(path: &Path) -> Value {
+            serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+        }
+
+        #[test]
+        fn builtin_run_loads_the_manifest_once_and_every_reader_consumes_it() {
+            let root = scratch("builtin");
+            let app = synthetic_app(&root);
+            let manifest_path = install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let observed = observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+            assert_eq!(observed.loads, vec![manifest_path.clone()]);
+            assert_eq!(observed.calls.len(), 1);
+            let call = &observed.calls[0];
+            // Selection consumed the loaded manifest: the service name is its
+            // entry's bundle_id, which no file under the app root carries.
+            assert_eq!(call.service_name, SERVICE_ID);
+            assert!(matches!(call.connection, RunnerConnectionKind::XpcService));
+            assert_eq!(call.timeout_ms, DEFAULT_TIMEOUT_MS);
+            let delivered: Value = serde_json::from_str(&call.request).unwrap();
+            assert_eq!(delivered, request_value(&request));
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 0);
+            assert_eq!(wire["result"]["ok"], true);
+            assert_eq!(wire["result"]["normalized_outcome"], "ok");
+            let specimen = &wire["data"]["specimen"];
+            // App provenance consumed the same load: it names the loaded path.
+            assert_eq!(
+                specimen["app_provenance"]["evidence_manifest_path"],
+                manifest_path.display().to_string()
+            );
+            assert_eq!(specimen["runner_provenance"]["runner_kind"], "standard");
+            assert_eq!(
+                specimen["runner_provenance"]["runner_service_name"],
+                SERVICE_ID
+            );
+            assert_eq!(
+                specimen["runner_provenance"]["runner_executable_path"],
+                app.join(SHIPPED_SERVICE.rel_path).display().to_string()
+            );
+            assert_eq!(
+                specimen["runner_provenance"]["runner_entitlements"]["keys"],
+                json!(["com.apple.security.app-sandbox"])
+            );
+            // The binary dossier consumed it too: every role sits at the
+            // manifest's uniquely typed path, so no comparison record is needed.
+            for role in ROLE_NAMES {
+                assert!(specimen["binaries"][role].is_null(), "{role}");
+            }
+            assert_eq!(wire["data"]["runner_result"], controlled_reply());
+            assert_eq!(
+                wire["data"]["runner_client"]["request_delivery"]["bytes_written"],
+                2
+            );
+            assert!(wire["data"]["sandbox_log_capture"].is_null());
+            assert_eq!(
+                wire["data"]["runner_sandbox_diagnostics"]["correlation_status"],
+                "not_attempted"
+            );
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn builtin_manifest_failures_refuse_before_the_client_with_one_load() {
+            for (label, state, detail) in [
+                ("missing", ManifestState::Missing, "failed to read manifest"),
+                (
+                    "invalid",
+                    ManifestState::Invalid,
+                    "failed to parse manifest",
+                ),
+            ] {
+                let root = scratch(label);
+                let app = synthetic_app(&root);
+                let manifest_path = install_manifest(&app, state);
+                let request = request_file(&root, None);
+                let observed =
+                    observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+                assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
+                assert!(observed.calls.is_empty(), "{label}: zero client calls");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 2, "{label}");
+                assert_eq!(wire["result"]["ok"], false);
+                assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+                let error = wire["result"]["error"].as_str().unwrap().to_string();
+                assert!(
+                    error.contains("built-in runner unavailable")
+                        && error.contains(manifest_path.to_str().unwrap())
+                        && error.contains(detail),
+                    "{label}: {error}"
+                );
+                let specimen = &wire["data"]["specimen"];
+                assert!(specimen["app_provenance"].is_null(), "{label}");
+                assert!(specimen["runner_provenance"].is_null(), "{label}");
+                for role in ROLE_NAMES {
+                    assert_eq!(specimen["binaries"][role]["verification"], "unavailable");
+                    assert_eq!(
+                        specimen["binaries"][role]["reason"], error,
+                        "{label}: {role}"
+                    );
+                    assert!(specimen["binaries"][role]["path"].is_null());
+                }
+                assert!(wire["data"]["runner_client"].is_null());
+                assert!(wire["data"]["runner_result"].is_null());
+                fs::remove_dir_all(&root).unwrap();
+            }
+        }
+
+        #[test]
+        fn byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines() {
+            let root = scratch("byoxpc");
+            let app = synthetic_app(&root);
+            let manifest_path = install_manifest(&app, ManifestState::Valid);
+            let bundle = byoxpc_bundle(&root, &app);
+            let record = record(&bundle, &["com.apple.security.cs.allow-jit"]);
+            let registry = registry_fixture(&root, vec![record.clone()]);
+            let request = byoxpc_request(&root, &["com.apple.security.cs.allow-jit"]);
+            let observed = observe(
+                &app,
+                Some(&registry),
+                &[
+                    request.to_str().unwrap(),
+                    "--no-log-capture",
+                    "--timeout-ms",
+                    "7000",
+                ],
+            );
+            assert_eq!(observed.loads, vec![manifest_path.clone()]);
+            assert_eq!(observed.calls.len(), 1);
+            let call = &observed.calls[0];
+            assert_eq!(call.service_name, EXTERNAL_SERVICE);
+            assert!(matches!(
+                call.connection,
+                RunnerConnectionKind::MachService { privileged: false }
+            ));
+            assert_eq!(call.timeout_ms, 7000);
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 0);
+            let specimen = &wire["data"]["specimen"];
+            assert_eq!(
+                specimen["app_provenance"]["evidence_manifest_path"],
+                manifest_path.display().to_string()
+            );
+            let provenance = &specimen["runner_provenance"];
+            assert_eq!(provenance["runner_kind"], "byoxpc");
+            assert_eq!(provenance["runner_registry_id"], "runner-ext");
+            assert_eq!(
+                provenance["runner_bundle_path"],
+                bundle.display().to_string()
+            );
+            assert_eq!(
+                provenance["runner_signature"],
+                serde_json::to_value(&record.signature).unwrap()
+            );
+            assert_eq!(
+                provenance["runner_entitlements"],
+                serde_json::to_value(&record.entitlements).unwrap()
+            );
+            // The binary records compare the bundle copies with the baselines
+            // the one loaded manifest carries.
+            let binaries = &specimen["binaries"];
+            assert_eq!(binaries["service"]["verification"], "match");
+            assert_eq!(
+                binaries["service"]["baseline_sha256"],
+                manifest_hash(&app, &SHIPPED_SERVICE)
+            );
+            assert_eq!(binaries["worker"]["verification"], "mismatch");
+            assert_eq!(
+                binaries["worker"]["baseline_sha256"],
+                manifest_hash(&app, &SHIPPED_WORKER)
+            );
+            assert_ne!(
+                binaries["worker"]["actual_sha256"],
+                binaries["worker"]["baseline_sha256"]
+            );
+            assert_eq!(binaries["validator"]["verification"], "match");
+            assert_eq!(
+                binaries["validator"]["baseline_sha256"],
+                manifest_hash(&app, &SHIPPED_VALIDATOR)
+            );
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn byoxpc_run_without_a_manifest_still_receives_the_held_request() {
+            for (label, state, detail) in [
+                ("missing", ManifestState::Missing, "failed to read manifest"),
+                (
+                    "invalid",
+                    ManifestState::Invalid,
+                    "failed to parse manifest",
+                ),
+            ] {
+                let root = scratch(label);
+                let app = synthetic_app(&root);
+                let manifest_path = install_manifest(&app, state);
+                let bundle = byoxpc_bundle(&root, &app);
+                let record = record(&bundle, &["com.apple.security.cs.allow-jit"]);
+                let registry = registry_fixture(&root, vec![record.clone()]);
+                let request = byoxpc_request(&root, &["com.apple.security.cs.allow-jit"]);
+                let observed = observe(
+                    &app,
+                    Some(&registry),
+                    &[request.to_str().unwrap(), "--no-log-capture"],
+                );
+                assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
+                // The valid external runner receives the held request despite
+                // the manifest failure.
+                assert_eq!(observed.calls.len(), 1, "{label}");
+                let call = &observed.calls[0];
+                assert_eq!(call.service_name, EXTERNAL_SERVICE);
+                assert!(matches!(
+                    call.connection,
+                    RunnerConnectionKind::MachService { privileged: false }
+                ));
+                let delivered: Value = serde_json::from_str(&call.request).unwrap();
+                assert_eq!(delivered, request_value(&request), "{label}");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 0, "{label}");
+                assert_eq!(wire["result"]["ok"], true);
+                let specimen = &wire["data"]["specimen"];
+                assert!(specimen["app_provenance"].is_null(), "{label}");
+                // Registry-sourced provenance does not depend on the manifest.
+                assert_eq!(
+                    specimen["runner_provenance"]["runner_registry_id"],
+                    "runner-ext"
+                );
+                assert_eq!(
+                    specimen["runner_provenance"]["runner_signature"],
+                    serde_json::to_value(&record.signature).unwrap()
+                );
+                for role in ROLE_NAMES {
+                    let binary = &specimen["binaries"][role];
+                    assert_eq!(binary["verification"], "unavailable", "{label}: {role}");
+                    assert!(binary["baseline_sha256"].is_null(), "{label}: {role}");
+                    let reason = binary["reason"].as_str().unwrap();
+                    assert!(
+                        reason.contains("app evidence manifest unavailable")
+                            && reason.contains(detail)
+                            && reason.contains(manifest_path.to_str().unwrap()),
+                        "{label}: {role}: {reason}"
+                    );
+                    let path = PathBuf::from(binary["path"].as_str().unwrap());
+                    assert!(
+                        path.starts_with(&bundle),
+                        "{label}: {role}: {}",
+                        path.display()
+                    );
+                    assert_eq!(
+                        binary["actual_sha256"],
+                        evidence::sha256_hex(&path).unwrap(),
+                        "{label}: {role}"
+                    );
+                }
+                assert_eq!(wire["data"]["runner_result"], controlled_reply());
+                assert!(wire["data"]["runner_client"]["request_delivery"].is_object());
+                fs::remove_dir_all(&root).unwrap();
+            }
+        }
+
+        #[test]
+        fn byoxpc_selection_failures_make_one_load_and_no_client_call() {
+            let root = scratch("refusals");
+            let app = synthetic_app(&root);
+            let manifest_path = install_manifest(&app, ManifestState::Valid);
+            let bundle = byoxpc_bundle(&root, &app);
+            let mut pending = record(&bundle, &["A"]);
+            pending.id = "pending-ext".into();
+            pending.service_name = "com.controlled.pending".into();
+            pending.state = RunnerState::Pending;
+            let registry = registry_fixture(&root, vec![record(&bundle, &["A"]), pending]);
+            let cases: [(&str, Value, &str); 3] = [
+                (
+                    "entitlement shortfall",
+                    json!({"id": "runner-ext", "mode": "byoxpc", "required_entitlements": ["A", "B"]}),
+                    "external runner does not satisfy required entitlements",
+                ),
+                (
+                    "unknown id",
+                    json!({"id": "ghost", "mode": "byoxpc"}),
+                    "external runner not found in registry",
+                ),
+                (
+                    "pending record",
+                    json!({"id": "pending-ext", "mode": "byoxpc"}),
+                    "external runner is pending installation",
+                ),
+            ];
+            for (label, runner, expected) in cases {
+                let request = request_file(&root, Some(runner));
+                let observed = observe(
+                    &app,
+                    Some(&registry),
+                    &[request.to_str().unwrap(), "--no-log-capture"],
+                );
+                assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
+                assert!(observed.calls.is_empty(), "{label}");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 2, "{label}");
+                assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+                assert_eq!(wire["result"]["error"], expected, "{label}");
+                let specimen = &wire["data"]["specimen"];
+                assert!(specimen["runner_provenance"].is_null(), "{label}");
+                assert_eq!(
+                    specimen["app_provenance"]["evidence_manifest_path"],
+                    manifest_path.display().to_string()
+                );
+                for role in ROLE_NAMES {
+                    assert_eq!(
+                        specimen["binaries"][role]["reason"], expected,
+                        "{label}: {role}"
+                    );
+                }
+            }
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn refusals_before_selection_load_at_most_once_and_never_invoke_the_client() {
+            let root = scratch("arguments");
+            let app = synthetic_app(&root);
+            let manifest_path = install_manifest(&app, ManifestState::Valid);
+            // Argument refusals never reach the app root.
+            for args in [
+                &["--bogus"][..],
+                &["--runner-mode", "machme"],
+                &["--timeout-ms", "soon"],
+                &["/r.json", "--log-timeout-ms", "0"],
+            ] {
+                let observed = observe(&app, None, args);
+                assert!(observed.loads.is_empty(), "{args:?}");
+                assert!(observed.calls.is_empty(), "{args:?}");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 2, "{args:?}");
+                assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+                assert!(
+                    wire["data"]["specimen"]["app_provenance"].is_null(),
+                    "{args:?}"
+                );
+            }
+            let observed = observe(&app, None, &["--help"]);
+            assert!(matches!(observed.output, RunOutput::Help));
+            assert!(observed.loads.is_empty() && observed.calls.is_empty());
+            // Request refusals after admission carry the provenance of the one load.
+            let missing = root.join("absent.json");
+            for (label, args, error) in [
+                ("no path", vec![], "missing <request.json>"),
+                (
+                    "absent file",
+                    vec![missing.to_str().unwrap(), "--no-log-capture"],
+                    "request.json not found",
+                ),
+            ] {
+                let observed = observe(&app, None, &args);
+                assert_eq!(observed.loads, vec![manifest_path.clone()], "{label}");
+                assert!(observed.calls.is_empty(), "{label}");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 2, "{label}");
+                assert!(
+                    wire["result"]["error"].as_str().unwrap().contains(error),
+                    "{label}: {}",
+                    wire["result"]["error"]
+                );
+                assert_eq!(
+                    wire["data"]["specimen"]["app_provenance"]["evidence_manifest_path"],
+                    manifest_path.display().to_string(),
+                    "{label}"
+                );
+                assert!(wire["data"]["specimen"]["runner_provenance"].is_null());
+            }
+            fs::remove_dir_all(&root).unwrap();
+        }
     }
 }
