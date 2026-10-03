@@ -136,8 +136,13 @@ These are useful witness requests, even when one channel cannot answer.
 By contrast, unknown attempt/filter names and non-null fields that cannot be
 consumed refuse the whole specimen. PW does not run the recognized subset of
 a misspelled plan. Internal classifiers retain defensive unsupported-result
-handling for constructed or inconsistent inputs; that is not a public input
-acceptance rule.
+handling for constructed or inconsistent inputs. In
+[`buildStepResults`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift),
+an unsupported attempt uses `attempt.result_source: "synthetic"` with
+`missing_reason: "attempt_not_supported"`, even when handed a completed worker
+slot. This is not a public input acceptance rule; the defensive comparison
+case is covered in
+[`ComparisonEvidenceTests.swift`](../runner/Tests/PWRunnerCoreTests/ComparisonEvidenceTests.swift).
 
 A successful decode establishes neither valid SBPL nor a successful sandbox
 application or operation. A passing request contract cannot certify the host's

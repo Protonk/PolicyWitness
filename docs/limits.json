@@ -982,7 +982,7 @@
       "value": 240000,
       "unit": "milliseconds",
       "counting": "Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms.",
-      "effect": "An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets.",
+      "effect": "An expired wait yields xpc_timeout; it does not expand the inner worker or validator budgets.",
       "control": "Default; --timeout-ms changes only this wait and floors its value at 1 ms.",
       "sources": [
         {

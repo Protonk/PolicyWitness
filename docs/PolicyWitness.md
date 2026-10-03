@@ -253,9 +253,9 @@ observation:
 | Observed effects | A valid create encounters a permission failure, or succeeds and produces a file. | Read the attempt evidence and inspect the target. Acceptance establishes neither an allowed operation nor its effect. |
 
 Unknown attempt combinations and filter names refuse the whole specimen before
-attempts. Recognized queries with unavailable predictions still permit
-supported attempts. A request can therefore be useful even when the query
-channel cannot answer. For capacities and units, see [Limits](#limits).
+worker or validator creation. Recognized queries with unavailable predictions
+still permit supported attempts. A request can therefore be useful even when
+the query channel cannot answer. For capacities and units, see [Limits](#limits).
 
 ### Correcting a refused request
 
@@ -348,8 +348,15 @@ available native result, summarized as `runner_failed`. The controller runs
 `sbpl-check` only after `xpc_error`, retaining its independent result under
 `data.policy_check`. That fallback says nothing about how far a missing worker
 progressed or why its reply was lost. You can also run the tool directly for the
-diagnostics below. The sbpl-check envelope
-exposes:
+diagnostics below.
+
+The helper refuses an unsupported format (`unsupported_format`), missing source
+(`bad_policy`) or oversized source (`policy_too_large`) before compilation or
+literal parameter scanning. These early refusals supply empty scan lists and
+`params_scan_complete: true`; that flag alone does not establish that a scan ran.
+
+The sbpl-check envelope records the literal parameter scan separately from
+compilation:
 
 - `params_referenced`: names found in `(param "...")` forms in the source
   (string literals and `;` line comments are skipped).
@@ -359,12 +366,9 @@ exposes:
   check stops before scanning the source (unsupported format, missing or
   oversized source) and the name lists below are empty.
 - `params_supplied`: keys from `policy.params`.
-- `params_missing`: referenced but not supplied. If non-empty, sbpl-check
-  returns `result.normalized_outcome = "missing_params"` and exits 1 with a
-  clean `result.error` listing the names — instead of the cryptic libsandbox
-  message ("expected pattern, got boolean") that surfaces when an unbound
-  `(param ...)` is folded into a path filter. The libsandbox message is
-  still preserved under `data.compile_error` for auditability.
+- `params_missing`: literal names referenced but not supplied. A nonempty
+  list does not prevent the compile attempt; it takes precedence in the
+  helper's final summary as described below.
 - `params_unused`: supplied but never referenced. Recorded as info only;
   does not fail the check.
 - `params_scan_complete`: false when the source contains at least one
@@ -372,21 +376,33 @@ exposes:
   macro-indirected, e.g.
   `(define (helper pn) (subpath (param pn)))` with `(helper "FOO")` at the
   call site — the literal `"FOO"` is bound to `pn` at a level the surface
-  lexer doesn't expand. When this flag is false, treat `params_missing:
-  []` as "we couldn't tell" rather than "nothing required". The cryptic
-  libsandbox error ("expected pattern, got boolean") then surfaces under
-  `compile_error` as before. Resolving these would require real macro
-  expansion and is out of scope for the sbpl-check scanner.
+  lexer doesn't expand. When this flag is false, an empty `params_missing`
+  list cannot establish that no parameter is required. The flag describes
+  the scanner's limitations when it runs; the scanner does not perform
+  macro expansion.
 
-When libsandbox rejects the policy at compile time (syntax error,
-unknown operation, malformed filter, etc.), `sbpl-check` returns
-`result.normalized_outcome = "bad_policy"` and exit code 1, with
-`data.compile_error` carrying the libsandbox-side diagnostic (often
-cryptic — "expected pattern, got boolean" is the canonical example
-for a malformed filter argument). `bad_policy` is distinct from
-`missing_params` and `policy_too_large`, both of which gate
-before the policy reaches libsandbox. In the run flow a policy that
-fails to compile is **not** reported as `bad_policy`: it reaches the C
+After scanning, the helper attempts compilation. Input conversion or parameter
+setup can still fail before `sandbox_compile_string` is called.
+`data.compiled` reports success, while `data.compile_error` carries either a
+native compiler diagnostic or a helper validation/setup error, and is null on
+compilation success. An error in that field alone does not establish compiler invocation
+or show that a missing parameter caused the failure.
+
+The helper selects `result.normalized_outcome` after that attempt:
+
+| Condition | Helper outcome | Helper exit code |
+| --- | --- | --- |
+| `params_missing` is nonempty, even if `compiled` is true | `missing_params`; `result.error` lists the missing names | 1 |
+| No missing literal names and compilation succeeded | `ok` | 0 |
+| No missing literal names and compilation/setup failed | `compile_error` | 1 |
+
+For example, without a supplied `OPTIONAL` parameter,
+`(version 1) (allow default) (define unused (param "OPTIONAL"))` can compile
+successfully while the helper reports `missing_params` and exits 1. In the
+controller's fallback capture, `data.policy_check.status` follows `compiled`
+and can therefore say `compiled` beside that failed helper summary.
+
+In the run flow, a policy that fails to compile reaches the C
 worker and surfaces as `runner_failed` with an operation=5 compilation record,
 NULL-result evidence and any published compiler diagnostic. Parameter setup
 and application failures have their own operation/result records.
@@ -659,7 +675,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Local monotonic observation window for nonblocking waitpid after exec observation stops. Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling. | Fixed; no public override. |
 | Exec attempt descriptors (`exec_step_descriptors`) | 4 items | Descriptors opened before sandbox application per exec step: both ends of stdout and stderr pipes. Before opening any, the worker scans for free descriptor numbers, accounting for inherited descriptors, and raises its soft limit to fit the plan plus the descriptor reserve. Raises are capped at the hard limit and OPEN_MAX (10,240); an already higher soft limit is preserved. Only exec slots that fit without spending the reserve get pipes. Excess slots report exec_failed with errno 24 and an exec descriptor budget diagnostic naming the limit; no pipe syscall or child spawn is claimed. Actual pipe failures report their own syscall and errno. Budget refusal is per-step evidence, with sandbox attribution unestablished; imports and other attempts retain descriptor headroom. | Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it. |
 | Exec descriptor reserve (`exec_descriptor_reserve`) | 64 items | Free descriptor slots withheld from exec pipe setup, in addition to descriptors already open. The worker scans with fcntl(F_GETFD) to find room for this reserve plus four descriptors per exec step. Preserves headroom for policy compilation/imports, file probes, and spawn file actions. If the inherited/hard limit already leaves fewer free slots than the reserve, exec setup opens no pipes. This bounds exec pipe consumption; it does not guarantee that arbitrary imports or other resource users fit. | Fixed; no public override. |
-| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms. An expired wait yields runner_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
+| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms. An expired wait yields xpc_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait. A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery. | Fixed; no public override. Nothing is awaited when the call issued no bootout. |
 
 ### Queries and transport
@@ -810,17 +826,21 @@ no use for.
 
 Reply fields beyond `pid` / `runner_subprocess`:
 
-- `validator_subprocess: { pid, exit_code, term_signal } | null` —
-  populated whenever the validator child ran. Exactly one of
-  `exit_code` (clean exit) or `term_signal` (SIGKILL fallback) is
-  non-null. `null` in two cases:
-    1. No validator probes remained after orchestrator-side
-       filtering, so the validator was never spawned: an empty
-       `probe_plan`, or a plan where every step's `sandbox_check` is
-       `prediction_unavailable` (see [Per-step shape](#per-step-shape)).
-    2. The validator failed to spawn before any child process existed
-       (surfaced as `normalized_outcome =
-       "validator_spawn_failed"`).
+- `validator_subprocess` — optional validator child observations, including
+  `pid`, `reaped`, exit/signal status and the [receiver evidence](#receiver-evidence).
+
+  | Observed validator disposition | Current status fields |
+  | --- | --- |
+  | Confirmed normal termination | `exit_code` present, including nonzero codes; no `term_signal` |
+  | Confirmed signal termination | `term_signal` present; no `exit_code` |
+  | Final status unconfirmed | Neither status field supplies a value; the current encoder omits both |
+
+  Readers tolerate absent or null optional values. `reaped` records whether
+  final status was confirmed; termination requests and wait errors are
+  independent evidence. Any observed terminating signal can be recorded,
+  and its number alone does not identify the sender. An absent or null
+  subprocess object does not by itself establish why validator observation
+  is missing.
 - `validator_spawn_failure` — optional host launch evidence with `origin`,
   `operation`, `executable_path`, `return_code` and `diagnostic`. For a failed
   validator launch, these are `runner_host`, `posix_spawn`, the executable path,
@@ -885,19 +905,26 @@ and process status remain available. Written bytes do not prove child receipt.
 
 Both step channels carry `result_source` and, when no result exists,
 `missing_reason`; the query channel also carries `native_rc`. A missing
-prediction retains `rc=0` with source `synthetic`, `native_rc:null` and a
+requested prediction retains `rc=0` with source `synthetic`, `native_rc:null` and a
 `missing_reason` of `validator_not_invoked` (no validator process),
-`validator_no_verdict` (the process ran without this verdict) or
-`query_not_requested` (the planner excluded the query). An incomplete attempt
-retains `not_run_worker_died`, meaning no completed result; `attempt.lifecycle`
-says which: its `summary` is `completed`, `started_without_result`,
-`not_reached`, `unsupported`, `unresolved` or `conflicting`, and its `boundary`
-and `result` claims carry the supporting observations or the reason the
+or `validator_no_verdict` (the process ran without this verdict). Planner-excluded
+queries use `prediction_unavailable`, `rc=-1` and `query_not_requested` with
+the same synthetic source and null native return. Received predictions
+use source `validator`; `native_rc` is retained only for native-call result records.
+
+For supported attempts, completed worker slots use
+`attempt.result_source: "worker"`, including completed failed operations.
+Absent or incomplete publications use `"synthetic"` with `missing_reason: "slot_absent"` or
+`"slot_incomplete"`, respectively. Their `not_run_worker_died` outcome means
+no completed result, not proof that the operation never started. The separate
+`attempt.lifecycle` evidence addresses that question: its `summary` is
+`completed`, `started_without_result`, `not_reached`, `unsupported`, `unresolved`
+or `conflicting`, and its `boundary` and `result` claims carry the supporting
+observations or the reason the
 question is unresolved, projected from
-[the worker disposition record](#shape-and-schema_version). Completed attempts
-use source `worker`; their rc is PW attempt status, not a raw syscall return,
-and the attempt channel carries no native return. Received predictions use
-source `validator`; `native_rc` is retained only for native-call result records.
+[the worker disposition record](#shape-and-schema_version). A completed
+attempt's rc is PW attempt status, not a raw syscall return, and the attempt
+channel carries no native return.
 
 ### Receiver evidence
 
@@ -1058,19 +1085,19 @@ Notes:
     - `prediction_unavailable`: emitted when the runner deliberately
       skips `sandbox_check` for a step where the userland predicate
       is structurally suspect. Two public triggers, each named by a
-      `query_plan:*` entry in `comparison.limitations`:
+      `query_plan:*` entry in `comparison.limitations` when the comparison
+      is available (degraded replies can omit it):
         - **op+filter pair** in the set under
           [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)
           (`query_plan:prediction_unavailable_pair`).
         - **per-step host condition**: a `path` filter whose
           `filter_value` doesn't resolve via `realpath` on the host
-          (`query_plan:path_unresolved_at_planning`). For absent
-          paths the kernel ENOENTs file-* access vectors before
-          reaching the sandbox layer, so a libsandbox answer for that
-          path is a userland canonicalization artifact, not a kernel
-          prediction. `error` is populated naming the unresolved
-          path; `path_diagnostics.realpath_resolved` is `null` as a
-          second tell.
+          at planning time. PW excludes that query and records
+          `sandbox_check.error` naming the unresolved path, plus
+          `query_plan:path_unresolved_at_planning` when the comparison
+          is available. The later [path diagnostics](#path_diagnostics)
+          describe a separate observation after orchestration; they can
+          resolve a target created by the attempt.
       The `attempt` result remains the reliable evidence
       for these probes; the prediction is honestly absent rather
       than wrong.
@@ -1078,6 +1105,11 @@ Notes:
   `-1` (not `0`) and `errno`/`filter_type_id` are `null` — consumers
   that key on `rc == 0` for "allow" must check `outcome` first so the
   sentinel is not misread.
+
+For supported attempts, a completed slot has `attempt.result_source: "worker"`
+whether the operation succeeded or failed. Missing or incomplete publications
+have source `"synthetic"` with `missing_reason: "slot_absent"` or
+`"slot_incomplete"`; lifecycle evidence separately describes progress.
 
 `steps[].attempt.outcome` values:
 
@@ -1111,9 +1143,9 @@ Notes:
   → `("exec", "spawn")` for the `child_pid` sentinel rules that
   distinguish a spawn that produced no child from a helper that
   simply exited non-zero.
-- `unsupported` — the `(attempt.kind, attempt.action)` combination
-  has no implementation. Defensive result construction retains this spelling;
-  public request admission refuses such combinations before children.
+- `unsupported` — defensive output for an unimplemented attempt combination;
+  public admission refuses such combinations before children. See the
+  [developer construction rule](REQUEST-GRAMMAR.md#what-the-implementation-promises).
 - `not_run_worker_died` — no completed attempt result. Missing or incomplete
   publication does not prove the operation never started; `attempt.lifecycle`
   says which, and the comparison's limitation repeats its summary
@@ -1220,6 +1252,13 @@ present, or neither listed nor present, is malformed. A carried string
 must differ from `input` in UTF-8 bytes. Canonically equivalent Unicode
 spellings with different bytes remain separate strings.
 
+In the [file-create exercise](#try-an-accepted-request-and-a-refusal), an absent
+target can be excluded at query planning, then created successfully by the
+attempt and resolved by this later host pass. If the resolved bytes equal
+`input`, `same_as_input` lists `realpath_resolved` and that key is omitted;
+otherwise the diagnostic can carry a different resolved string. The earlier
+`prediction_unavailable` outcome does not require a later null path form.
+
 - `realpath_resolved`: `realpath(3)` of `input`, or null on failure.
   Computed in the unsandboxed host; under normal conditions this is
   populated whenever the file exists. Null only when the host's own
@@ -1262,8 +1301,9 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, o
 ### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
-(the standalone `sbpl-check` tool outcomes `bad_policy`, `missing_params`
-and `policy_too_large` are documented under SBPL check above):
+(for the standalone helper's `unsupported_format`, `bad_policy`,
+`policy_too_large`, `missing_params` and `compile_error` outcomes, see
+[SBPL check](#sbpl-check-sbpl-check)):
 
 - `ok` — worker completion and clean disposition are confirmed. Any invoked
   validator also has confirmed clean disposition, valid received records for
@@ -1318,14 +1358,34 @@ and `policy_too_large` are documented under SBPL check above):
   `runSpecimen` call. A second call returns this error.
 
 `xpc_error`, `xpc_timeout`, `xpc_proxy_type_mismatch`, and
-`xpc_no_reply` are synthesized by `pw-runner-client` when the XPC
-peer itself can't be reached. Rare in practice — the unsandboxed
-host always replies unless launchd or codesign reject the bundle
-outright.
+`xpc_no_reply` are synthesized by `pw-runner-client` for an XPC error,
+RPC wait expiry, a proxy type mismatch, or completion without a reply or error,
+respectively. A host reply can be delayed or lost.
 
-The controller's own outcomes (`tool_error`, `unsupported_runner_response`
-and `malformed_runner_response`) appear in `result.normalized_outcome` and are
-documented in the [controller README](../controller/README.md#output-contract).
+For ordinary, successfully captured client output, the two timeout layers map
+to these fields:
+
+| Event | `result.normalized_outcome` | `data.runner_result.normalized_outcome` | Result origin and distinguishing evidence |
+| --- | --- | --- | --- |
+| Client RPC wait expires | `xpc_timeout` | `xpc_timeout` | Client synthesizes a present result with empty steps and no host subprocess report. Client exit code is 1. |
+| Host sentinel budget expires and its reply arrives | `runner_timeout` | `runner_timeout` | Host result includes `runner_subprocess.poll_stop_reason: "sentinel_deadline"` and available disposition evidence. Client exit code is 0 because it delivered the reply. |
+
+The client exit code is `data.runner_client.exit_code`. The controller
+`policy-witness` exits 1 in both cases. RPC expiry means no reply was received
+before the client's deadline. It does not prove the host never ran, was
+unreachable or crashed, and does not establish cancellation of host work.
+
+If client stdout supplies no parsed reply, `data.runner_result` is null and
+the controller can report `runner_output_not_json`; inspect the
+[capture evidence](#receiver-evidence) for empty, undecodable or truncated output.
+Client launch or request-delivery failures are `tool_error` paths. These differ
+from a captured, client-synthesized RPC timeout and from a parsed reply retained
+but refused as `unsupported_runner_response` or `malformed_runner_response`.
+
+The controller's own outcomes (`tool_error`, `runner_output_not_json`,
+`unsupported_runner_response` and `malformed_runner_response`) appear in
+`result.normalized_outcome` and are documented in the
+[controller README](../controller/README.md#output-contract).
 
 ## What PolicyWitness understands
 
@@ -1422,9 +1482,9 @@ combinations:
   Exec children have their own PIDs; deny-log correlation covers the worker
   PID only (see [Denial-log correlation](#denial-log-correlation)).
 
-Other attempt combinations refuse the whole specimen before any attempt.
-A non-null `args` field is accepted only for `exec/spawn`, including when the
-array is empty. Query and attempt scopes can differ; recognized queries with
+Other attempt combinations refuse the whole specimen before worker or validator
+creation. A non-null `args` field is accepted only for `exec/spawn`, including
+when the array is empty. Query and attempt scopes can differ; recognized queries with
 unavailable predictions still permit supported attempts.
 
 ## Operating
@@ -1562,9 +1622,11 @@ Each run is its own controller, XPC host, worker and validator. Four processes
 per run, plus any exec children, count against the per-user process table, and
 a failed spawn is reported as `worker_spawn_failed` or `validator_spawn_failed`
 with the native return code (see the
-[outcome catalog](#normalized_outcome-catalog)). A run starved of CPU hits the
-fixed deadlines in the [limits inventory](#limits) and reports `runner_timeout`
-or a lifecycle limitation, never a different verdict. Denial records are
+[outcome catalog](#normalized_outcome-catalog)). Resource delays can exhaust
+the separate budgets in the [limits inventory](#limits): client RPC expiry
+produces `xpc_timeout`, while a delivered host sentinel-timeout reply reports
+`runner_timeout`. Worker or validator limits can also leave incomplete
+observations; read the available lifecycle evidence. Denial records are
 matched to the worker by PID inside the padded window with no protection
 against PID reuse: heavy process churn makes a reused PID inside that window
 more plausible, so read candidate associations under
@@ -1683,7 +1745,8 @@ that template inherits the check, which constrains how you may sign it:
 
 Symptom cheat-sheet: `xpc_error` right after install usually means an ad-hoc (or
 wrong-team) runner failing the signed-caller check; `xpc_timeout` means the host
-never answered (e.g. it crashed on launch).
+reply was not received before the deadline. A launch crash is one possible
+cause; the timeout alone does not establish it.
 
 ### Verify the runner
 

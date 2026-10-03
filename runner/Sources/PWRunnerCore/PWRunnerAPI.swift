@@ -951,13 +951,11 @@ public struct PWRunnerAttemptResult: Codable {
         } else {
             try container.encodeNil(forKey: .observed_path)
         }
-        // Exec output fields: emit when non-nil (as explicit JSON
-        // value), omit the key entirely when nil. A non-exec
-        // attempt's envelope therefore does not grow five new null
-        // keys; an exec attempt's envelope always carries all five
-        // (the orchestrator populates them from the shm slot,
-        // including child_pid == 0 / child_exit_code == -1 when
-        // spawn failed).
+        // Exec output fields: emit when non-nil, omit the key when nil.
+        // A completed exec slot supplies the three child fields, including
+        // child_pid == 0 / child_exit_code == -1 / child_term_signal == 0
+        // when spawn failed. stdout/stderr are included only when that
+        // stream produced bytes. Non-exec attempts omit all five fields.
         try container.encodeIfPresent(child_pid, forKey: .child_pid)
         try container.encodeIfPresent(child_exit_code, forKey: .child_exit_code)
         try container.encodeIfPresent(child_term_signal, forKey: .child_term_signal)

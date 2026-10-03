@@ -484,14 +484,12 @@ func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecisio
     }
 }
 
-/// True when the step's filter is a path whose value does not
-/// resolve on the host via realpath. The kernel's file-op vectors
-/// (open, access, …) ENOENT before they reach the sandbox layer for
-/// absent paths, so a libsandbox verdict for such a path is a
-/// userland artifact, not a kernel prediction. We skip the
-/// validator probe and synthesize prediction_unavailable for these
-/// steps; the attempt channel still runs and carries the real
-/// observation. NONE-filter and resolvable paths are unaffected.
+/// True when the step's path filter cannot resolve via realpath on the host
+/// at query planning time. The planner excludes that validator query and
+/// synthesizes prediction_unavailable; the attempt channel still runs.
+/// Later host path diagnostics are a separate observation and can resolve
+/// a target created by the attempt. Non-path filters and resolvable paths
+/// are unaffected.
 private func pathFilterIsUnresolvable(_ kind: String, _ value: String?) -> Bool {
     guard kind == PWRunnerWire.sandboxFilterPath else { return false }
     guard let v = value, !v.isEmpty else { return false }
