@@ -76,7 +76,7 @@ request refusal, see [Try an accepted request and a refusal](#try-an-accepted-re
 
 ### When should I use PolicyWitness?
 
-Use it to witness what a sandbox policy does to specific operations and targets. Each step records the `sandbox_check` answer for a query and the result of an attempted operation under that policy, as two separate channels, with the kernel's denial log attached when it is available. Use it when developing a policy, when investigating one operation, filter and target, or as a regression harness across macOS revisions, keeping the versions and observation conditions attached to the results.
+Use PolicyWitness when you need to determine whether an observed result follows from the sandbox policy under test or from some unrelated part of the execution environment.
 
 ### Who needs to use PolicyWitness?
 
