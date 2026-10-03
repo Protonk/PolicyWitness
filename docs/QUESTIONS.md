@@ -62,6 +62,6 @@ One runner client span plus, by default, one unified-log scan, plus the controll
 
 ## Can I evaluate specimens in parallel?
 
-Yes. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) queue behind launchd's respawn throttle.
+Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](PolicyWitness.md#external-runners-byoxpc) queue behind launchd's respawn throttle.
 
 <!-- END SHARED QUESTIONS -->
