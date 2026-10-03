@@ -1,281 +1,298 @@
-# SBPL helper change sketch
+# SBPL helper implementation plan
 
-This is a problem sketch for a later design discussion, not an implementation
-specification. It concerns the standalone `sbpl-check` helper, its captured
-result in the controller, and the readers of both. The direction is settled
-enough to state: native compilation decides the helper's outcome, exit code
-and error; the literal parameter scan and the import inventory are recorded
-as findings beside that verdict; a check that stopped before a stage says so
-instead of publishing empty results; and the controller's capture reader
-repeats the helper's verdict rather than deriving a second one. Field names,
-grouping and the exact stage vocabulary remain open.
+Remove the literal parameter scan from `sbpl-check`. Native compilation decides
+the helper's verdict, and the controller repeats it. Do not replace the scan
+with advisory fields, missing-name hints or an opt-in mode. Passing
+`policy.params` to libsandbox remains supported; only the scan and its findings
+are removed.
 
-The source question is “Missing parameters and compiler diagnostic provenance”
-in [the user report](../pw-user-guide-report.md). The
-[user guide](../docs/PolicyWitness.md#sbpl-check-sbpl-check) describes current
-helper behavior independently of this design sketch.
+Input refusal, parameter setup, compilation and import inventory must describe
+the work actually performed. Keep input facts and import provenance. This
+changes the helper's output contract and its capture, not specimen admission
+or worker execution.
 
-## Problem
+## Output contract
 
-The current helper attempts compilation after its literal parameter scan; a
-nonempty missing-name list then takes precedence in `result.normalized_outcome`,
-`result.error` and the exit code.
+### Helper verdict and compile record
 
-That precedence rejects successful compilations and misattributes failed ones.
-A literal reference can appear in an unused definition, or in an `if` guard an
-author uses as an optional feature flag; both compile without the parameter.
-The helper reports `compiled: true`, `compile_error: null`,
-`normalized_outcome: "missing_params"` and exit 1 together. When compilation
-fails for an unrelated reason, `result.error` names the missing parameter while
-the compiler's actual complaint sits only in `data.compile_error`. The
-controller's capture reader then derives its own `status` from `compiled`
-first, so one helper result is labeled `compiled` in the run envelope and
-`missing_params` in the nested envelope. These are two competing summaries of
-one check.
+Keep `kind: "sbpl_check"` and the common envelope. Remove `missing_params` as an
+outcome. Fold missing source and unsupported format into `bad_request`; keep
+`policy_too_large`. Use `setup_error` for failed native parameter setup.
 
-The scan is load-bearing nowhere the product routes users. The controller runs
-the helper only after an admitted `xpc_error`, to learn whether the policy
-compiles on this host independently of the missing runner reply; it reads five
-fields and none of them is a scan list. In a normal run a missing parameter
-reaches the C worker and surfaces as `runner_failed` with the native compiler
-text. The scan therefore serves direct invocation only. Its original aim, naming
-unsupplied parameters beside a cryptic native message, is served by adjacency
-in the data block, not by precedence over the compiler. The native message is
-also not one message: the same unsupplied parameter produces different wording
-in a path filter and in `string-append`.
+| Boundary or result | `result.normalized_outcome` | Exit / `result.ok` | `data.compile` |
+| --- | --- | --- | --- |
+| Unsupported format, missing source, or NUL in source/parameter key/value | `bad_request` | 1 / false | null |
+| Source exceeds the existing helper byte cap | `policy_too_large` | 1 / false | null |
+| `sandbox_create_params` returns NULL | `setup_error` | 1 / false | stage `params_create`, `ok: false` |
+| `sandbox_set_param` returns nonzero | `setup_error` | 1 / false | stage `param_set`, `ok: false` |
+| Compiler returns an error buffer, or no profile | `compile_error` | 1 / false | stage `compile`, `ok: false` |
+| Compiler returns a profile and no error buffer | `ok` | 0 / true | stage `compile`, `ok: true` |
 
-Diagnostic provenance has related problems. `compile_error` carries native
-compiler text behind a helper-added prefix, and also carries host validation
-and setup prose from paths on which `sandbox_compile_string` was never called:
-NUL in a key, a value or the source, `sandbox_create_params` returning NULL,
-`sandbox_set_param` failing, and a NULL profile with no error buffer. Early
-refusals manufacture empty scan lists with `params_scan_complete: true` and an
-empty import inventory with `imports_truncated: false` and no cycle, including
-when there was no source to scan or walk. The helper's missing-source refusal
-is called `bad_policy`, a token the runner reserves for its defensive
-policy-hash failure, while the controller refuses the identical request shape
-in a run as `bad_request`.
+`data.compile` is an explicit null or `{stage, ok, error}`. It records the last
+native stage attempted, not a history of all calls. Stage names align with
+`PW_OP_PARAMS_CREATE`, `PW_OP_PARAM_SET` and `PW_OP_COMPILE` without importing
+the worker ABI into the helper. An absent or empty params map goes directly to
+`compile`; do not invent successful setup calls.
 
-## Steps to reproduce
+Error rules:
 
-Use a helper built from the source being reviewed. From the repository root,
-set its path; an isolated app's corresponding path works too:
+- Input refusals put helper validation text in `result.error`.
+- Setup failures put helper text naming the failed call in `compile.error` and
+  `result.error`. A failed parameter set retains its direct return code and
+  parameter name in that text; do not substitute ambient errno or echo the value.
+- When the compiler supplies an error buffer, copy its decoded text unchanged
+  into both error fields: no prefix, trimming, missing-name hint or replacement.
+  Keep the existing C-string decoding convention; this is text, not a raw-byte
+  receipt. An empty native string remains an empty string, distinct from null.
+- A NULL profile without an error buffer is a completed compiler call with no
+  diagnostic: `compile.error` is null and `result.error` is the helper summary
+  `sandbox_compile_string returned NULL without a diagnostic`.
+- A profile and error buffer returned together remain a failure, retaining the
+  native text. Release both allocations. Success has both error fields null.
 
-```sh
-PW_SBPL_CHECK=dist/PolicyWitness.app/Contents/MacOS/sbpl-check
-```
+Preserve the direct helper's argument, request-read and JSON-decode failures:
+exit 2 with stderr and no JSON envelope. Do not replace its small request reader
+with the specimen decoder or make it require a specimen `schema_version`.
 
-These are helper requests. They only need the `policy` object and do not launch
-a sandboxed worker. The observations below were reproduced on macOS Sonoma
-14.8.3; native diagnostic wording can vary by OS.
+### Import inventory and input facts
 
-First, omit a parameter used by a path filter:
+Replace the flat helper result fields with these groups:
 
-```sh
-"$PW_SBPL_CHECK" --request - <<'JSON'
-{"policy":{"format":"sbpl","sbpl_source":"(version 1) (deny default) (allow file-read* (subpath (param \"ROOT\")))"}}
-JSON
-```
-
-Observed: exit 1, `result.normalized_outcome: "missing_params"`,
-`data.compiled: false`, and `data.params_missing: ["ROOT"]`.
-`data.compile_error` contains
-`sandbox_compile_string failed: invalid data type of path filter; expected pattern, got boolean`.
-Adding `"params": {"ROOT": "/private/tmp"}` to `policy` is the positive
-control: exit 0, outcome `ok`, `compiled: true`, and no compile error.
-
-Next, reference an unsupplied parameter in an unused definition:
-
-```sh
-"$PW_SBPL_CHECK" --request - <<'JSON'
-{"policy":{"format":"sbpl","sbpl_source":"(version 1) (allow default) (define unused (param \"OPTIONAL\"))"}}
-JSON
-```
-
-Observed: exit 1 and outcome `missing_params`, despite `data.compiled: true`
-and `data.compile_error: null`. `data.params_missing` is `["OPTIONAL"]`.
-
-The same precedence rejects an idiom an author writes on purpose, an optional
-feature flag:
-
-```sh
-"$PW_SBPL_CHECK" --request - <<'JSON'
-{"policy":{"format":"sbpl","sbpl_source":"(version 1) (deny default) (if (param \"DEBUG\") (allow file-read* (subpath \"/tmp\")))"}}
-JSON
-```
-
-Observed: exit 1 and outcome `missing_params`, with `data.compiled: true` and
-`data.compile_error: null`. The policy is well formed and compiles to the
-intended profile without `DEBUG`.
-
-Precedence also misattributes a genuine compiler failure. Place an unbound
-operation before the unbound parameter:
-
-```sh
-"$PW_SBPL_CHECK" --request - <<'JSON'
-{"policy":{"format":"sbpl","sbpl_source":"(version 1) (deny default) (allow bogus-op) (allow file-read* (subpath (param \"ROOT\")))"}}
-JSON
-```
-
-Observed: exit 1, outcome `missing_params`, and `result.error` reading
-`policy references params not supplied: ROOT`, while `data.compile_error`
-begins `sandbox_compile_string failed: unbound variable: bogus-op`. The summary
-blames a parameter; the compiler rejected an operation name.
-
-Additional controls isolate the provenance and authority problems:
-
-| Helper input | Current observation |
+| Field under `data` | Shape and meaning |
 | --- | --- |
-| `{"policy":{"format":"sbpl"}}` | `bad_policy`; `compile_error` says `missing policy.sbpl_source`; `params_scan_complete` is true and `imports_truncated` is false although neither ran. |
-| Source `(version 1) (allow certainly-not-a-sandbox-operation)` | `compile_error`, with a native unbound-variable diagnostic. |
-| Otherwise valid source followed by a JSON `\u0000` escape | `compile_error` says `sbpl_source contains NUL`; conversion to a C string fails before compilation. |
-| Unsupplied `HOME` inside `(string-append (param "HOME") "/x")` | `missing_params`; `compile_error` says `string-append: argument 1 must be: string`, not the path-filter wording. |
-| `(define (h pn) (allow file-read* (subpath (param pn)))) (h "FOO")`, nothing supplied | `compile_error` with the path-filter wording; `params_missing` is empty and `params_scan_complete` is false. The native text already serves as the summary on this path. |
-| `ROOT` supplied as the empty string, used in `subpath` | `compile_error` saying `empty subpath pattern`; `params_missing` is empty. Supplied is not usable; only the compiler knows. |
-| `(param "GHOST")` spelled only inside a `;` comment | `ok`; the scanner skips comments as documented. |
+| `compile` | Null or the stage record above; replaces `compiled` and `compile_error`. |
+| `import_inventory` | Null or `{records, truncated, cycle, policy_closure_sha256}`. Each record keeps the existing `ImportRecord` fields. Replaces `imports`, `imports_truncated`, `imports_cycle` and the top-level closure hash. |
 
-## Readers of the helper output
+Remove `params_referenced`, `params_supplied`, `params_missing`, `params_unused`
+and `params_scan_complete` entirely. They are absent, not null or empty. Do not
+introduce a `param_scan` group or another representation of those findings.
 
-Check these before preserving or removing any property; nothing else in the
-repository reads the scan lists or the capture's projected fields.
+Keep `policy_format`, `policy_sha256`, `params_present`, `params_count` and
+`macos_build_version` as input/host facts. Missing or null params means
+`params_present: false`; an empty map means true; both have count 0.
+`policy_sha256` is null on input refusal and populated after validation.
 
-- `parse_policy_check_output` in [src/policy_check.rs](src/policy_check.rs)
-  reads `data.compiled`, `data.policy_format`, `data.policy_sha256`,
-  `data.compile_error` and `result.normalized_outcome`, projects them to the
-  capture's top level beside the complete nested `envelope`, and derives
-  `status` from `compiled` before consulting the helper's outcome.
-- `fallback_policy_check` in [src/run_flow.rs](src/run_flow.rs) only gates the
-  invocation on `xpc_error` and treats the capture as opaque.
-- Tests: `sbpl_check_missing_params_returns_clean_outcome` and
-  `sbpl_check_records_import_provenance_for_system_sb` in
-  [integration/cli_contract.rs](integration/cli_contract.rs); the
-  `fallback_helper` case of `tests/suites/failure_boundaries/check.py`, which
-  pins `policy_too_large`, a nonzero exit and `compiled: false`; the two unit
-  tests in `policy_check.rs`, whose fabricated envelopes drive `status`
-  through `data.compiled`; and `check_shape_agrees_with_the_envelope_golden` in
-  `sbpl-check.rs`, which compares the helper's emitted shape with the
-  `sbpl_check_envelope()` fixture in `run_flow.rs` and the
-  `tests/fixtures/contract/envelope_shape.json` golden.
-- Documentation: the guide's SBPL check section and its cross-reference in the
-  `normalized_outcome` catalog; the `data.policy_check` bullets in
-  [README.md](README.md); the `helper_source` counting text in
-  `docs/limits.json` (“policy_too_large without a compile verdict”); the
-  `failure_boundaries` sentence in `tests/COVERAGE.md`.
+Order the work explicitly: decode; validate format, source presence, source byte
+cap and every native C string; collect the import inventory; perform native
+setup and compilation; construct the verdict. Convert source, keys and values
+to C strings before allocating native params. No import walk or libsandbox call
+occurs on an input refusal; `compile` and `import_inventory` are explicitly null.
+No stage scans for literal parameter references.
 
-## Scope
+On admitted input, the import inventory remains available even when setup or
+compilation fails. A performed walk with no imports has an object with empty
+`records`, not null. Import resolution errors, truncation and cycles stay in
+the inventory and never veto or replace native compilation. Preserve the
+existing closure hash algorithm and its treatment of unresolved imports.
 
-Most work stays in [src/bin/sbpl-check.rs](src/bin/sbpl-check.rs): `CheckData`,
-`empty_param_diff`, the three early refusal paths, `compile_sbpl`, and the
-outcome selection in `main`. The capture reader in
-[src/policy_check.rs](src/policy_check.rs) is in scope: its `status`
-derivation and its projected fields are where the second summary is made.
+### Controller capture
 
-The scan implementation in [src/sbpl_lex.rs](src/sbpl_lex.rs) and the import
-inventory in [src/sbpl_imports.rs](src/sbpl_imports.rs) are shared with the
-controller's dossier and do not change in logic; only the helper's
-representation of their results changes. The problem does not call for macro
-expansion or another SBPL interpreter.
+In [src/policy_check.rs](src/policy_check.rs), keep `status`, `tool_exit_code`,
+the flattened transport fields and the complete nested `envelope`. Remove the
+projected `compiled`, `compile_error`, `normalized_outcome`, `policy_format` and
+`policy_sha256` fields. Readers use the nested envelope for those observations.
 
-Keep the helper independent of specimen admission and worker execution. The
-controller keeps invoking it only after an admitted `xpc_error` reply, and its
-report never replaces the original runner result. No runner or worker source
-changes; the worker source identity is untouched.
+Apply capture status precedence in this order:
 
-## Direction
+| Observation | Capture `status` and retention |
+| --- | --- |
+| Helper cannot launch or request delivery fails | `unavailable`, following the existing unavailable-capture path |
+| Stdout capture is truncated | `capture_error`; no parsed envelope, even if the retained prefix is JSON |
+| Untruncated stdout fails UTF-8/JSON decoding | `parse_error`; no parsed envelope |
+| No parsed output (including empty stdout) | `tool_error` |
+| Parsed output lacks the helper kind, current integer envelope version, or nonempty string `result.normalized_outcome` | `invalid_reply`; retain parsed output unchanged |
+| Supported helper envelope with an outcome | Copy that outcome exactly into `status`; retain the envelope unchanged |
 
-1. **The outcome follows the compile attempt.** `result.normalized_outcome`,
-   `result.ok`, the exit code and `result.error` are functions of how far the
-   helper got and what the compiler said. `ok` with exit 0 means the compiler
-   returned a profile. A compiler rejection is `compile_error`, exit 1, with
-   `result.error` carrying the native text verbatim. Input refusals keep their
-   own tokens, and a failure in parameter setup gets its own token because the
-   compiler was never invoked. `missing_params` is removed as an outcome, and
-   with it the `result.error` text that listed names.
+Check the version before interpreting its outcome. A different integer version
+also uses `invalid_reply` with its bytes/parsed object retained; do not introduce
+another transport vocabulary or translate old fields. Do not infer success from
+`data.compile`, `result.ok` or the process exit code. Preserve an unfamiliar
+outcome string and independent `tool_exit_code`; producer tests enforce normal
+agreement, while the capture reader does not manufacture a second verdict.
 
-2. **One staged compile record replaces the boolean and the string.** The
-   record is null when the helper refused the input before any compile-related
-   work. Otherwise it names the stage reached, whether that stage succeeded,
-   and the error text of that stage. The stage names mirror the worker's
-   operations `PW_OP_PARAMS_CREATE`, `PW_OP_PARAM_SET` and `PW_OP_COMPILE`, so
-   a reader can line up the helper's failure point against a worker failure
-   record using the same words. Native text is stored without the helper's
-   `sandbox_compile_string failed:` prefix; the stage field is the provenance.
-   The NUL-in-source conversion failure moves up to the input refusals, so the
-   setup stages only begin on admitted input.
+The helper is still invoked only after an admitted `xpc_error` reply. Neither
+helper success, failure nor capture loss replaces the runner reply or changes
+the controller's original run outcome.
 
-3. **The scan and the inventory become nullable groups.** The parameter scan
-   is null when it did not run, otherwise a group holding the referenced,
-   supplied, missing and unused names and the completeness flag. The import
-   inventory is null when it was not walked, otherwise a group holding the
-   records, the truncation flag and the cycle. The closure hash travels with
-   the inventory because it is derived from the walk. Request facts stay at the
-   top level because they describe input rather than findings: `policy_format`,
-   `policy_sha256`, `params_present`, `params_count` and
-   `macos_build_version`.
+## Implementation order and owners
 
-4. **The capture reader repeats the helper's verdict.** When the nested
-   envelope parsed, `data.policy_check.status` is the helper's own outcome.
-   The transport vocabulary, `unavailable`, `capture_error`, `parse_error`,
-   `tool_error` and `invalid_reply`, remains for everything else. The projected
-   copies of `compiled`, `compile_error`, `normalized_outcome`,
-   `policy_format` and `policy_sha256` are dropped; the complete envelope is
-   already nested beside `status`.
+1. In [src/bin/sbpl-check.rs](src/bin/sbpl-check.rs), remove `ParamDiff`,
+   `compute_param_diff`, `empty_param_diff`, `missing_param_error`, the scan
+   invocation, its output fields and the missing-name precedence branch.
+   Remove scan-only imports and comments. In
+   [src/sbpl_lex.rs](src/sbpl_lex.rs), retire the unused `param_scan` entry point
+   and parameter-only tests. Rename the shared `ParamScanResult` type to
+   `ImportScanResult` and update its comments. Preserve `import_scan` and the
+   underlying lexer behavior, moving reusable lexer controls to import cases
+   as described below.
+2. In [src/bin/sbpl-check.rs](src/bin/sbpl-check.rs), introduce the typed nullable
+   groups, centralize validation, and replace `Result<(), String>` with the
+   stage result. Keep native resources and their C strings alive through the
+   call, then free every acquired resource on every return. Add narrow
+   injectable native-call and import-walk boundaries for unit
+   controls; no public flags, environment overrides or runner test seams.
+3. Update the capture reader and every `PolicyCheckCapture` construction in
+   [src/run_flow.rs](src/run_flow.rs). Keep `fallback_policy_check`'s invocation
+   gate. Implement the acceptance controls below alongside these changes.
+4. Batch the incompatible output changes into one `controller_envelope` bump,
+   currently 6 to 7, in [docs/contract.json](../docs/contract.json). Run
+   `python3 docs/generate_contract.py`; never edit generated numbers. If the
+   manifest has moved before implementation, rebase this change on its current
+   value. Request/response contracts and worker source identity do not change.
+5. Update `sbpl_check_envelope()` and the capture fixture in `run_flow.rs`, plus
+   `check_shape_agrees_with_the_envelope_golden` in `sbpl-check.rs`. Populate all
+   new optional object/string fields in the field-complete fixtures. Run the
+   golden test, inspect `envelope_shape.candidate.json`, and replace
+   [envelope_shape.json](../tests/fixtures/contract/envelope_shape.json) with
+   the reviewed candidate as prescribed by
+   [Shape goldens](../docs/CONTRACT.md#shape-goldens). Explicit null/absence
+   tests below remain necessary; the golden is not a required-field validator.
+6. Update the [guide's helper section](../docs/PolicyWitness.md#sbpl-check-sbpl-check)
+   and outcome-catalog reference, the `data.policy_check` account in
+   [README.md](README.md#output-contract), and the helper coverage sentence in
+   [tests/COVERAGE.md](../tests/COVERAGE.md). Review `helper_source` wording in
+   [limits.json](../docs/limits.json) without changing its value or counting;
+   run `python3 docs/generate_limits.py` for owned copies. Document the native
+   verdict, stage record and retained import inventory; remove scan-field
+   instructions and suggestions to consult missing-name findings.
 
-5. **The refusal tokens stop colliding.** The missing-source refusal is renamed
-   from `bad_policy` to the token the controller uses for the same request
-   shape, `bad_request`. `policy_too_large` stays as it is: a documented limit
-   with its own test. `unsupported_format` is a candidate to fold into
-   `bad_request` as well, since the controller refuses both conditions with one
-   token; see the remaining decisions.
+Keep [src/sbpl_imports.rs](src/sbpl_imports.rs)'s resolver/hash logic, the shared
+import lexer and the controller dossier unchanged in behavior. Retiring the
+parameter scanner must not remove import scanning or its completeness signal.
+No runner/worker source edits, new helper executable, capacity change or CLI
+surface change belongs in this implementation.
 
-6. **This is one `controller_envelope` bump.** Every honest representation of a
-   skipped scan changes a field's type, and dropping the projections removes
-   fields; [the contract](../docs/CONTRACT.md) requires a bump for either. The
-   helper's envelope shares the controller's frame number, so the shape changes
-   above are batched into a single bump from 6 to 7, edited in
-   `docs/contract.json` and regenerated with `docs/generate_contract.py`.
+## Acceptance tests
 
-7. **The original goal survives by adjacency.** On `compile_error`, the native
-   text is the error and the missing literal names sit in the scan group beside
-   it. The guide teaches readers to consult those names when the native wording
-   is the path-filter type mismatch or the `string-append` argument error. The
-   helper does not append a hint to the native text, because a missing literal
-   name beside a compiler error does not prove causation.
+Add these to the existing test owners; this section specifies tests to implement,
+not tests already run. Use controlled native-call results for unreliable failure
+paths and real helper invocations for compiler behavior. Do not assert an exact
+macOS diagnostic sentence in native integration tests.
 
-## Remaining decisions
+### Helper controls without native compilation
 
-- The stage vocabulary: whether the record's stage values are spelled after
-  the worker operations (`params_create`, `param_set`, `compile`) or after the
-  libsandbox calls, and the token for a setup failure.
-- Whether `unsupported_format` survives as its own token or folds into
-  `bad_request`.
-- Whether a refused input leaves the compile record null, as proposed, or
-  carries a `refused` stage; null keeps it parallel with the scan and the
-  inventory.
-- The direct-use exit code for a policy that compiles while referencing an
-  unsupplied literal name is 0 under this direction. Confirm that is the
-  intended direct-use experience before removing the current test's claim.
-- Whether any reader of the dropped capture projections exists outside this
-  repository; the survey above found none inside it.
+Owner: the `sbpl-check.rs` unit module, under `unit/rust.unit`. Drive the real
+admission/setup/compile routine with controlled native calls and import-walk
+spies; assert call counts and resource release as well as JSON. Pure serializer
+rows alone cannot prove that admission prevented a compiler call.
 
-## Verification for the implementation plan
+For every newly emitted helper envelope, assert that the five retired scan
+fields and `param_scan` are absent by key membership, rather than comparing
+lookups with null. No producer outcome is `missing_params`.
 
-- Replace `sbpl_check_missing_params_returns_clean_outcome` with a table-driven
-  integration test over the reproductions above, one row per case, asserting
-  the outcome, the exit code, the provenance of `result.error`, the scan
-  group and the compile record's stage.
-- Move the `policy_check.rs` unit fixtures from `data.compiled` to the new
-  deciding field, and add a parsed-envelope case whose helper outcome is
-  `compile_error` to assert that `status` equals it.
-- Keep `policy_too_large` in the `fallback_helper` case and replace its
-  `compiled: false` assertion with the null compile record.
-- Regenerate the field-complete fixtures and the envelope shape golden; the
-  bump is acknowledged by replacing the golden with the reviewed candidate.
-- Update the guide's SBPL check section and catalog cross-reference, the
-  controller README's `policy_check` bullets, the `helper_source` counting text
-  if the “compile verdict” wording changes, and the `failure_boundaries`
-  sentence in `tests/COVERAGE.md`.
+| Case | Required assertions |
+| --- | --- |
+| Unsupported format, missing source, over-cap source, NUL in source/key/value (separate inputs) | Exact refusal outcome/exit/ok from the contract; `compile` and `import_inventory` explicitly null; no import-walk/create/set/compile call. Params presence/count still describe the decoded map. |
+| Source at the byte cap and one byte over, including multibyte UTF-8 | At-cap input reaches the controlled compiler; over-cap input is refused before the import walk or native calls. Counting remains UTF-8 bytes, not characters. |
+| Absent, null and empty params | Correct presence/count; successful compilation reaches `compile` directly; no create/set call. An inventory object with empty records distinguishes a performed walk with no imports from refusal. |
+| Create returns NULL | `setup_error`, stage `params_create`; no set/compile call and no free of an unallocated params object. |
+| A later set returns an unfamiliar nonzero code after an earlier successful set | `setup_error`, stage `param_set`; error retains call/name/code; no compiler call; params freed once and no value echoed. |
+| Compiler returns NULL plus a distinctive diagnostic (also test an empty string) | `compile_error`, stage `compile`; both error strings equal the supplied diagnostic exactly; error buffer and any params freed once. |
+| Compiler returns NULL with no diagnostic | `compile_error`, stage `compile`, `compile.error: null`; exact helper summary in `result.error`. No setup-failure classification. |
+| Compiler returns a profile without error; separately, a profile with an error buffer | First is `ok`/0 with null errors; second is `compile_error`/1 with the native error. Free every profile, params object and error buffer acquired, once each. |
+| Inventory contains import errors, truncation or a cycle | The same controlled native result produces the same verdict/error/exit for every inventory variant; inventory findings survive in their group. |
 
-A later implementation plan turns the direction and the remaining decisions
-into exact expectations for every reproduction, for genuine compiler failure,
-for incomplete scans and for controller capture. This sketch stops there.
+Retain the import-resolver controls for cycles, diamond imports, limits and
+closure hashes. Before deleting parameter-scanner tests, express reusable lexer
+coverage with import forms: comments, quoted strings, escapes, whitespace,
+lookalike keywords, sorting/deduplication, empty or unterminated input, and
+literal/nonliteral mixtures. Keep the assertion that `import_scan` ignores
+`(param ...)`; remove the reverse assertion that calls the retired scanner.
+Test the new groups' serialization, including inventory with no imports and
+inventory with partial records; do not reimplement those algorithms in the
+helper tests.
+
+### Native helper acceptance matrix
+
+Owner: [integration/cli_contract.rs](integration/cli_contract.rs), under
+`integration/cli.integration`. Replace
+`sbpl_check_missing_params_returns_clean_outcome` with table-driven cases.
+Each source below is complete; params are absent unless listed. Every row also
+checks the actual process exit against `result.exit_code`, `result.ok`, the
+`compile` stage/boolean, params presence/count, and absence of all retired flat
+fields and `param_scan`.
+
+| Case | SBPL source / params | Outcome / exit |
+| --- | --- | --- |
+| Plain success | `(version 1) (allow default)` | `ok` / 0 |
+| Unused definition | `(version 1) (allow default) (define unused (param "OPTIONAL"))` | `ok` / 0 |
+| Optional guard | `(version 1) (deny default) (if (param "DEBUG") (allow file-read* (subpath "/tmp")))` | `ok` / 0 |
+| Required path parameter absent | `(version 1) (deny default) (allow file-read* (subpath (param "ROOT")))` | `compile_error` / 1 |
+| Required path parameter supplied | Same source; `{"ROOT":"/private/tmp"}` | `ok` / 0 |
+| Other compiler error beside missing name | `(version 1) (deny default) (allow bogus-op) (allow file-read* (subpath (param "ROOT")))` | `compile_error` / 1 |
+| String composition needs a value | `(version 1) (deny default) (allow file-read* (subpath (string-append (param "HOME") "/x")))` | `compile_error` / 1 |
+| Nonliteral parameter name | `(version 1) (deny default) (define (h pn) (allow file-read* (subpath (param pn)))) (h "FOO")` | `compile_error` / 1 |
+| Supplied value unusable | Path-parameter source above; `{"ROOT":""}` | `compile_error` / 1 |
+| Parameter text in a comment and an unused supplied value | `(version 1) (allow default)` followed by a newline and `; (param "GHOST")`; `{"UNUSED":"value"}` | `ok` / 0 |
+
+On native errors, require the diagnostic in `compile.error` to be present and
+identical to `result.error`; deterministic controls above establish the exact
+copying rule independently of OS wording. Success retains null errors even
+when source references an unsupplied parameter. These cases protect compiler
+authority and parameter transfer without preserving scan-specific assertions.
+Exercise both file and stdin helper input without requiring a full specimen.
+Also pin exit 2, stderr and no JSON envelope for invalid arguments, an unreadable
+request path and malformed request JSON.
+
+Adapt `sbpl_check_records_import_provenance_for_system_sb` to
+`import_inventory.records` and its nested closure hash, preserving its existing
+provenance assertions. Adapt `failure_boundaries/fallback_helper` in
+[check.py](../tests/suites/failure_boundaries/check.py) to require exit 1,
+`policy_too_large` and explicit null groups instead of `compiled: false`.
+That case is a direct helper size refusal, not a live fallback/XPC experiment.
+
+### Capture, fallback and contract acceptance
+
+Owners: `policy_check.rs` and `run_flow.rs` unit tests, the existing envelope
+shape tests, and `blackbox_e2e/checker_controls`.
+
+- Supported envelopes for `ok`, `compile_error`, `setup_error`, `bad_request`,
+  `policy_too_large` and an unfamiliar nonempty outcome: `status` equals the
+  nested outcome. Include a contradictory process exit and compile record to
+  prove the capture does not derive another verdict; preserve both as received.
+- Wrong kind; missing, noninteger or old version; missing, null, empty or
+  non-string outcome: `invalid_reply`, with parsed JSON retained unchanged.
+  An old-version envelope with `compiled: true` earns no recovered success.
+- Retain the oversized-valid-JSON, invalid UTF-8, malformed JSON, empty-output
+  and unfamiliar-diagnostic controls. Assert transport-status precedence,
+  exact byte counts/retention and nested-envelope presence independently.
+  Assert removed capture projections are absent, not present as null.
+- Extend `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`:
+  helper success, rejection and unavailable capture leave the original runner
+  reply and controller outcome unchanged. No helper invocation for `ok`,
+  `runner_failed`, `xpc_timeout` or no reply. Exercise refused response versions
+  through the existing run-flow admission controls, requiring a null
+  `policy_check`; do not bypass admission by handing them directly to the
+  fallback helper function.
+- The new helper shape and capture agree with the new envelope golden. Current
+  envelopes pass the independent consumer; old envelopes are rejected at the
+  version boundary. Runner response shape and worker identity remain unchanged.
+
+## Implementation validation and completion
+
+After implementation and reviewed golden replacement, run the limits, contract
+and worker-identity generators with `--check`, plus `git diff --check`.
+Use the public dispatcher with fresh managed output names:
+
+```sh
+PW_TEST_OUT_DIR=tests/out/runs/sbpl-check-source-01 tests/run.sh \
+  --suite source_drift --case unit/rust.fmt --case unit/rust.unit \
+  --case blackbox_e2e/checker_controls
+```
+
+When libsandbox is available, build/sign through `make build`, then run the
+native acceptance cases against that unchanged build. Serialize this work with
+other libsandbox use. `RUST_TEST_THREADS=1` also serializes the integration
+binary's helper and live PW cases, which otherwise run concurrently.
+
+```sh
+RUST_TEST_THREADS=1 PW_TEST_OUT_DIR=tests/out/runs/sbpl-check-native-01 \
+  tests/run.sh --case integration/cli.integration \
+  --case failure_boundaries/fallback_helper --case smoke/specimen_file_read_deny
+```
+
+Completion requires every acceptance case to pass, the one reviewed envelope
+bump and golden, current generated documentation, and removal of the literal
+parameter scanner and all its output fields. Parameter transfer, import
+scanning/resolution and runner behavior remain intact. Preserve original
+captures and run evidence; do not rewrite historical envelopes.
