@@ -1,5 +1,5 @@
 {
-  "controller_envelope": 6,
+  "controller_envelope": 7,
   "shape": {
     "envelope": {
       "build": "object",
@@ -27,12 +27,7 @@
     },
     "envelope.data.policy_check": {
       "capture_limit_bytes": "number",
-      "compile_error": "string",
-      "compiled": "boolean",
       "envelope": "object",
-      "normalized_outcome": "string",
-      "policy_format": "string",
-      "policy_sha256": "string",
       "status": "string",
       "stderr": "string",
       "stderr_bytes_received": "number",
@@ -61,24 +56,26 @@
       "version": "string"
     },
     "envelope.data.policy_check.envelope.data": {
-      "compile_error": "string",
-      "compiled": "boolean",
-      "imports": "array",
-      "imports_cycle": "array",
-      "imports_truncated": "boolean",
+      "compile": "object",
+      "import_inventory": "object",
       "macos_build_version": "string",
       "params_count": "number",
-      "params_missing": "array",
       "params_present": "boolean",
-      "params_referenced": "array",
-      "params_scan_complete": "boolean",
-      "params_supplied": "array",
-      "params_unused": "array",
-      "policy_closure_sha256": "string",
       "policy_format": "string",
       "policy_sha256": "string"
     },
-    "envelope.data.policy_check.envelope.data.imports[]": {
+    "envelope.data.policy_check.envelope.data.compile": {
+      "error": "string",
+      "ok": "boolean",
+      "stage": "string"
+    },
+    "envelope.data.policy_check.envelope.data.import_inventory": {
+      "cycle": "array",
+      "policy_closure_sha256": "string",
+      "records": "array",
+      "truncated": "boolean"
+    },
+    "envelope.data.policy_check.envelope.data.import_inventory.records[]": {
       "error": "string",
       "mtime_unix": "number",
       "name": "string",

@@ -350,57 +350,84 @@ available native result, summarized as `runner_failed`. The controller runs
 progressed or why its reply was lost. You can also run the tool directly for the
 diagnostics below.
 
-The helper refuses an unsupported format (`unsupported_format`), missing source
-(`bad_policy`) or oversized source (`policy_too_large`) before compilation or
-literal parameter scanning. These early refusals supply empty scan lists and
-`params_scan_complete: true`; that flag alone does not establish that a scan ran.
+The verdict is the native compiler's. The helper does not scan the source for
+`(param "...")` references and reports no missing or unused names: a parameter
+the source needs and the request does not supply is whatever libsandbox makes
+of it, usually a compile error whose diagnostic the helper copies unchanged.
+Supplied `policy.params` entries reach the compiler through
+`sandbox_set_param`.
 
-The sbpl-check envelope records the literal parameter scan separately from
-compilation:
+The helper works in a fixed order: decode the request; validate the format,
+the presence of `sbpl_source`, the source byte cap (`helper_source` under
+[Limits](#limits)) and the absence of NUL in the source and in every parameter
+key and value; inventory the literal import closure; set up parameters and
+compile; state the verdict. An input refusal performs no import walk and no
+libsandbox call.
 
-- `params_referenced`: names found in `(param "...")` forms in the source
-  (string literals and `;` line comments are skipped).
+| Condition | `result.normalized_outcome` | Exit / `result.ok` | `data.compile` |
+| --- | --- | --- | --- |
+| Unsupported `policy.format`, missing `sbpl_source`, or NUL in the source or in a parameter key or value | `bad_request` | 1 / false | null |
+| Source over the byte cap | `policy_too_large` | 1 / false | null |
+| `sandbox_create_params` returned NULL | `setup_error` | 1 / false | stage `params_create`, `ok: false` |
+| `sandbox_set_param` returned nonzero | `setup_error` | 1 / false | stage `param_set`, `ok: false` |
+| The compiler returned an error buffer, or no profile | `compile_error` | 1 / false | stage `compile`, `ok: false` |
+| The compiler returned a profile and no error buffer | `ok` | 0 / true | stage `compile`, `ok: true` |
+
+`data.compile` is null on an input refusal and otherwise `{stage, ok, error}`:
+the last native stage attempted, not a history of calls. An absent or empty
+`policy.params` map makes no setup call, so the record goes straight to
+`compile`. Read `compile.error` beside `result.error`:
+
+- An input refusal puts the helper's validation text in `result.error`;
+  `data.compile` is null.
+- A setup failure puts the helper's text naming the failed call in both
+  fields. A failed `sandbox_set_param` names the parameter and its return
+  code; the value is never echoed.
+- A compiler error buffer is copied unchanged into both fields: no prefix,
+  trimming or hint. An empty native string stays an empty string, distinct
+  from null.
+- A NULL profile without an error buffer is a completed compiler call with no
+  diagnostic: `compile.error` is null and `result.error` is the helper summary
+  `sandbox_compile_string returned NULL without a diagnostic`.
+- A profile returned beside an error buffer remains a failure with the native
+  text. On success both fields are null.
+
+A diagnostic in `compile.error` does not by itself show that a missing
+parameter caused the failure; read its text. For example, without a supplied
+`OPTIONAL` parameter, `(version 1) (allow default) (define unused (param
+"OPTIONAL"))` compiles and the helper reports `ok`, while `(allow file-read*
+(subpath (param "ROOT")))` without `ROOT` fails with the compiler's own type
+diagnostic.
+
+Invalid arguments, an unreadable request path and malformed request JSON exit 2
+with a message on stderr and no JSON envelope.
+
+The remaining `data` fields are input and host facts:
+
+- `policy_format`: the request's `policy.format`.
+- `policy_sha256`: sha256 of `policy.sbpl_source` only; null on an input
+  refusal.
 - `params_present`: whether the request carried a `policy.params` map at
   all. An empty map is present; a missing or null map is not.
 - `params_count`: the number of entries in that map, counted even when the
-  check stops before scanning the source (unsupported format, missing or
-  oversized source) and the name lists below are empty.
-- `params_supplied`: keys from `policy.params`.
-- `params_missing`: literal names referenced but not supplied. A nonempty
-  list does not prevent the compile attempt; it takes precedence in the
-  helper's final summary as described below.
-- `params_unused`: supplied but never referenced. Recorded as info only;
-  does not fail the check.
-- `params_scan_complete`: false when the source contains at least one
-  `(param X)` form where `X` is not a quoted string. That's typically
-  macro-indirected, e.g.
-  `(define (helper pn) (subpath (param pn)))` with `(helper "FOO")` at the
-  call site — the literal `"FOO"` is bound to `pn` at a level the surface
-  lexer doesn't expand. When this flag is false, an empty `params_missing`
-  list cannot establish that no parameter is required. The flag describes
-  the scanner's limitations when it runs; the scanner does not perform
-  macro expansion.
+  check refuses the input.
+- `macos_build_version`: the `kern.osversion` sysctl of the host that ran
+  `sbpl-check`. Import contents change between OS builds; this lets a
+  downstream auditor decide whether a closure hash is verifiable on their
+  machine.
 
-After scanning, the helper attempts compilation. Input conversion or parameter
-setup can still fail before `sandbox_compile_string` is called.
-`data.compiled` reports success, while `data.compile_error` carries either a
-native compiler diagnostic or a helper validation/setup error, and is null on
-compilation success. An error in that field alone does not establish compiler invocation
-or show that a missing parameter caused the failure.
-
-The helper selects `result.normalized_outcome` after that attempt:
-
-| Condition | Helper outcome | Helper exit code |
-| --- | --- | --- |
-| `params_missing` is nonempty, even if `compiled` is true | `missing_params`; `result.error` lists the missing names | 1 |
-| No missing literal names and compilation succeeded | `ok` | 0 |
-| No missing literal names and compilation/setup failed | `compile_error` | 1 |
-
-For example, without a supplied `OPTIONAL` parameter,
-`(version 1) (allow default) (define unused (param "OPTIONAL"))` can compile
-successfully while the helper reports `missing_params` and exits 1. In the
-controller's fallback capture, `data.policy_check.status` follows `compiled`
-and can therefore say `compiled` beside that failed helper summary.
+In the controller's fallback capture, `data.policy_check.status` is either a
+transport status or the helper's `normalized_outcome` copied exactly from a
+supported envelope (the helper kind, the current controller envelope version
+and a nonempty outcome string). The transport statuses, in precedence order,
+are `unavailable` (the helper could not be launched or the request was not
+delivered), `capture_error` (truncated stdout, never parsed), `parse_error`
+(untruncated stdout that is not UTF-8 JSON), `tool_error` (no parsed output)
+and `invalid_reply` (parsed output that is not a supported helper envelope,
+retained unchanged). The capture carries the helper envelope whole under
+`data.policy_check.envelope` and derives no second verdict from the compile
+record, `result.ok` or the process exit, which `tool_exit_code` records
+independently.
 
 In the run flow, a policy that fails to compile reaches the C
 worker and surfaces as `runner_failed` with an operation=5 compilation record,
@@ -410,33 +437,33 @@ In a run, a missing `sbpl_source` or non-`sbpl` `format` is a structured
 `bad_request` before children. The controller runs `sbpl-check` only on the
 `xpc_error` path.
 
-The sbpl-check envelope also records the imports closure:
+The sbpl-check envelope also records the imports closure under
+`data.import_inventory`: null on an input refusal, otherwise present even when
+setup or compilation fails. Resolution errors, truncation and cycles stay in
+the inventory; they never veto or replace native compilation.
 
-- `imports`: each entry is `{name, resolved_path, sha256, size_bytes,
+- `records`: each entry is `{name, resolved_path, sha256, size_bytes,
   mtime_unix, error}`. The resolver walks `(import "...")` statements
   recursively, trying
   `/System/Library/Sandbox/Profiles/<name>` first and then
-  `/usr/share/sandbox/<name>`. Names must include the `.sb` extension —
+  `/usr/share/sandbox/<name>`. Names must include the `.sb` extension;
   libsandbox does not auto-append. Absolute paths starting with `/` are
-  accepted as-is.
-- `imports_truncated`: true when either the count cap or the
+  accepted as-is. A performed walk over a source with no imports is an empty
+  list, distinct from the null of a refusal.
+- `truncated`: true when either the count cap or the
   depth cap was hit during resolution. Records still include the
   partial result up to the cap.
-- `imports_cycle`: when a back-edge to an in-progress import is detected
-  during resolution, the chain of import names that closed the cycle —
+- `cycle`: when a back-edge to an in-progress import is detected
+  during resolution, the chain of import names that closed the cycle,
   `[outer, ..., inner, repeated_name]`. Null when no cycle is present. The
   field is single-valued: only the first cycle observed in a given walk is
-  reported. (Diamond imports — the same file reached via two distinct paths
-  with no cycle — are deduplicated silently and do not populate this field.)
-- `policy_sha256`: sha256 of `policy.sbpl_source` only.
+  reported. (Diamond imports, the same file reached via two distinct paths
+  with no cycle, are deduplicated silently and do not populate this field.)
 - `policy_closure_sha256`: sha256 of the source plus the sorted
   `resolved_path + " " + sha256` of every successfully resolved import.
   This hash is reproducible iff every resolved file is content-identical
-  on the verifying host. Unresolved imports are excluded — check
-  `imports[].error` to see which ones failed.
-- `macos_build_version`: the `kern.osversion` sysctl of the host that ran `sbpl-check`. Import contents change between OS builds; this lets a
-  downstream auditor decide whether a closure hash is verifiable on their
-  machine.
+  on the verifying host. Unresolved imports are excluded; check
+  `records[].error` to see which ones failed.
 
 ### Augments
 
@@ -716,9 +743,9 @@ Values are maxima unless labelled as defaults or fixed allowances.
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large without a compile verdict. | Fixed; no public override. |
-| sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file. Stops inventory expansion on that branch and marks imports_truncated. Does not impose this depth on libsandbox compilation. | Fixed; no public override. |
-| sbpl-check import inventory count (`helper_import_count`) | 64 records | Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated. Stops further inventory traversal and marks imports_truncated. Does not impose this count on libsandbox compilation. | Fixed; no public override. |
+| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed; no public override. |
+| sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file. Stops inventory expansion on that branch and marks import_inventory.truncated. Does not impose this depth on libsandbox compilation. | Fixed; no public override. |
+| sbpl-check import inventory count (`helper_import_count`) | 64 records | Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated. Stops further inventory traversal and marks import_inventory.truncated. Does not impose this count on libsandbox compilation. | Fixed; no public override. |
 | Log observer stream text (`observer_stream_text`) | 1,048,576 bytes | Streaming helper mode only (--duration or --follow): retained nonempty, non-prelude log lines with one LF per line. Only whole lines that fit are retained. The first overflowing line sets log_truncated and stops text accumulation. Deny-event arrays and JSONL emission continue separately; this is not a memory or total-report cap. The normal CLI log-show path does not use this inner cap. | Fixed byte cap; --no-log-capture disables normal CLI log collection, not this helper capability. |
 
 <!-- END GENERATED LIMITS -->
@@ -736,7 +763,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -1301,8 +1328,8 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, o
 ### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
-(for the standalone helper's `unsupported_format`, `bad_policy`,
-`policy_too_large`, `missing_params` and `compile_error` outcomes, see
+(for the standalone helper's `bad_request`, `policy_too_large`,
+`setup_error`, `compile_error` and `ok` outcomes, see
 [SBPL check](#sbpl-check-sbpl-check)):
 
 - `ok` — worker completion and clean disposition are confirmed. Any invoked

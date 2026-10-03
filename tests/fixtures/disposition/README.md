@@ -5,8 +5,11 @@ Captured envelopes for the disposition record contract
 independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
 `tests/suites/blackbox_e2e/disposition_controls.py` consume the current fixture.
 
-- `response14/a1_expected.json`: an unmodified live capture of the `a1` specimen
-  from `witness_contract/worker_attempt_in_flight_at_deadline`. Its build stamp,
+- `response14/a1_expected.json`: a live capture of the `a1` specimen from
+  `witness_contract/worker_attempt_in_flight_at_deadline`, carried at the current
+  controller envelope: the top-level `schema_version` follows an envelope bump
+  that leaves this frame's keys unchanged; the reply and every record are the
+  captured bytes. Its build stamp,
   binary hashes and worker source identity identify the producer. The controls
   accept it and reject named mutations; Rust unit tests use its runner reply
   as the known-good disposition record. Missing-record controls remove the

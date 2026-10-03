@@ -234,84 +234,259 @@ fn specimen_smoke_file_read_deny() {
     assert_eq!(sb.get("outcome").and_then(|v| v.as_str()), Some("deny"));
 }
 
+static SBPL_CHECK_REQUESTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// One `sbpl-check` invocation with `args`, optionally with `stdin` delivered
+/// and closed before the output is collected.
+fn run_sbpl_check(bin: &Path, args: &[&str], stdin: Option<&str>) -> Output {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut child = Command::new(bin)
+        .args(args)
+        .stdin(if stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap_or_else(|err| panic!("failed to run {}: {err}", bin.display()));
+    if let Some(input) = stdin {
+        let mut pipe = child.stdin.take().expect("piped stdin");
+        pipe.write_all(input.as_bytes()).expect("deliver request");
+        drop(pipe);
+    }
+    child.wait_with_output().expect("collect sbpl-check output")
+}
+
+/// The request delivered as a file, or on stdin with `--request -`.
+fn run_sbpl_check_request(bin: &Path, request: &str, via_stdin: bool) -> Output {
+    if via_stdin {
+        return run_sbpl_check(bin, &["--request", "-"], Some(request));
+    }
+    let serial = SBPL_CHECK_REQUESTS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let tmp = std::env::temp_dir().join(format!(
+        "pw-sbpl-check-{}-{serial}.json",
+        std::process::id()
+    ));
+    std::fs::write(&tmp, request).expect("write sbpl-check request");
+    let out = run_sbpl_check(
+        bin,
+        &["--request", tmp.to_str().expect("tmp path utf8")],
+        None,
+    );
+    let _ = std::fs::remove_file(&tmp);
+    out
+}
+
+const RETIRED_HELPER_FIELDS: [&str; 12] = [
+    "params_referenced",
+    "params_supplied",
+    "params_missing",
+    "params_unused",
+    "params_scan_complete",
+    "param_scan",
+    "compiled",
+    "compile_error",
+    "imports",
+    "imports_truncated",
+    "imports_cycle",
+    "policy_closure_sha256",
+];
+
 #[test]
-fn sbpl_check_missing_params_returns_clean_outcome() {
+fn sbpl_check_verdicts_follow_the_native_compiler() {
     if !integration_enabled() {
         return;
     }
     let bin = require_sbpl_check_bin();
+    let path_param = "(version 1) (deny default) (allow file-read* (subpath (param \"ROOT\")))";
+    let cases: Vec<(&str, &str, Option<serde_json::Value>, &str, i32)> = vec![
+        (
+            "plain success",
+            "(version 1) (allow default)",
+            None,
+            "ok",
+            0,
+        ),
+        (
+            "unused definition",
+            "(version 1) (allow default) (define unused (param \"OPTIONAL\"))",
+            None,
+            "ok",
+            0,
+        ),
+        (
+            "optional guard",
+            "(version 1) (deny default) (if (param \"DEBUG\") (allow file-read* (subpath \"/tmp\")))",
+            None,
+            "ok",
+            0,
+        ),
+        (
+            "required path parameter absent",
+            path_param,
+            None,
+            "compile_error",
+            1,
+        ),
+        (
+            "required path parameter supplied",
+            path_param,
+            Some(serde_json::json!({"ROOT": "/private/tmp"})),
+            "ok",
+            0,
+        ),
+        (
+            "other compiler error beside missing name",
+            "(version 1) (deny default) (allow bogus-op) (allow file-read* (subpath (param \"ROOT\")))",
+            None,
+            "compile_error",
+            1,
+        ),
+        (
+            "string composition needs a value",
+            "(version 1) (deny default) (allow file-read* (subpath (string-append (param \"HOME\") \"/x\")))",
+            None,
+            "compile_error",
+            1,
+        ),
+        (
+            "nonliteral parameter name",
+            "(version 1) (deny default) (define (h pn) (allow file-read* (subpath (param pn)))) (h \"FOO\")",
+            None,
+            "compile_error",
+            1,
+        ),
+        (
+            "supplied value unusable",
+            path_param,
+            Some(serde_json::json!({"ROOT": ""})),
+            "compile_error",
+            1,
+        ),
+        (
+            "parameter text in a comment and an unused supplied value",
+            "(version 1) (allow default)\n; (param \"GHOST\")",
+            Some(serde_json::json!({"UNUSED": "value"})),
+            "ok",
+            0,
+        ),
+    ];
+    for (index, (label, source, params, outcome, exit)) in cases.into_iter().enumerate() {
+        let mut policy = serde_json::json!({"format": "sbpl", "sbpl_source": source});
+        if let Some(params) = &params {
+            policy["params"] = params.clone();
+        }
+        let request = serde_json::json!({"policy": policy, "probe_plan": []}).to_string();
+        // Alternate file and stdin delivery across the table.
+        let out = run_sbpl_check_request(&bin, &request, index % 2 == 1);
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let envelope: serde_json::Value = serde_json::from_str(&stdout).unwrap_or_else(|err| {
+            panic!(
+                "{label}: envelope did not parse ({err})\nstdout:\n{stdout}\nstderr:\n{}",
+                String::from_utf8_lossy(&out.stderr)
+            )
+        });
+        assert_eq!(out.status.code(), Some(exit), "{label}: {envelope}");
+        assert_eq!(envelope["kind"], "sbpl_check", "{label}");
+        assert_eq!(
+            envelope["result"]["normalized_outcome"], outcome,
+            "{label}: {envelope}"
+        );
+        assert_eq!(envelope["result"]["exit_code"], exit, "{label}");
+        assert_eq!(envelope["result"]["ok"], exit == 0, "{label}");
+        let data = envelope["data"]
+            .as_object()
+            .unwrap_or_else(|| panic!("{label}: data is not an object"));
+        for field in RETIRED_HELPER_FIELDS {
+            assert!(
+                !data.contains_key(field),
+                "{label}: retired field {field} present"
+            );
+        }
+        assert_eq!(data["policy_format"], "sbpl", "{label}");
+        assert_eq!(
+            data["policy_sha256"].as_str().map(str::len),
+            Some(64),
+            "{label}"
+        );
+        assert_eq!(data["params_present"], params.is_some(), "{label}");
+        assert_eq!(
+            data["params_count"],
+            params.as_ref().map_or(0, |p| p.as_object().unwrap().len()),
+            "{label}"
+        );
+        assert_eq!(data["compile"]["stage"], "compile", "{label}: {envelope}");
+        assert_eq!(data["compile"]["ok"], exit == 0, "{label}: {envelope}");
+        let inventory = &data["import_inventory"];
+        assert_eq!(inventory["records"], serde_json::json!([]), "{label}");
+        assert_eq!(inventory["truncated"], false, "{label}");
+        assert!(inventory["cycle"].is_null(), "{label}");
+        assert_eq!(
+            inventory["policy_closure_sha256"].as_str().map(str::len),
+            Some(64),
+            "{label}"
+        );
+        if exit == 0 {
+            assert!(data["compile"]["error"].is_null(), "{label}: {envelope}");
+            assert!(envelope["result"]["error"].is_null(), "{label}: {envelope}");
+        } else {
+            // The native diagnostic is present and identical in both fields;
+            // its wording is the OS's and is not pinned here.
+            let diagnostic = data["compile"]["error"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{label}: no compiler diagnostic: {envelope}"));
+            assert!(!diagnostic.is_empty(), "{label}");
+            assert_eq!(envelope["result"]["error"], diagnostic, "{label}");
+        }
+    }
+}
 
-    let tmp =
-        std::env::temp_dir().join(format!("pw-sbpl-check-missing-{}.json", std::process::id()));
-    let request = r#"{
-        "policy": {
-            "format": "sbpl",
-            "sbpl_source": "(version 1)\n(deny default)\n(allow file-read-data (subpath (param \"HOME\")))\n"
-        },
-        "probe_plan": []
-    }"#;
-    std::fs::write(&tmp, request).expect("write sbpl-check request");
-
-    let out = run_pw(&bin, &["--request", tmp.to_str().expect("tmp path utf8")]);
-    let _ = std::fs::remove_file(&tmp);
-
-    assert_eq!(
-        out.status.code(),
-        Some(1),
-        "expected exit code 1 (missing params); got {:?}\nstderr:\n{}",
-        out.status.code(),
-        String::from_utf8_lossy(&out.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    let envelope: serde_json::Value =
-        serde_json::from_str(&stdout).expect("parse sbpl-check envelope");
-    assert_eq!(
-        envelope.get("kind").and_then(|v| v.as_str()),
-        Some("sbpl_check")
-    );
-    assert_eq!(
-        envelope
-            .get("result")
-            .and_then(|v| v.get("normalized_outcome"))
-            .and_then(|v| v.as_str()),
-        Some("missing_params"),
-        "expected normalized_outcome=missing_params (envelope={envelope})"
-    );
-
-    let data = envelope.get("data").expect("missing data block");
-    let missing: Vec<String> = data
-        .get("params_missing")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-    assert_eq!(missing, vec!["HOME".to_string()]);
-
-    let referenced: Vec<String> = data
-        .get("params_referenced")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-    assert_eq!(referenced, vec!["HOME".to_string()]);
-
-    // The libsandbox-side cryptic message must still be surfaced under
-    // compile_error so the diagnostic is auditable.
-    let compile_error = data
-        .get("compile_error")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    assert!(
-        compile_error.contains("expected pattern"),
-        "expected compile_error to still carry the libsandbox message (got {compile_error:?})"
-    );
+#[test]
+fn sbpl_check_argument_and_request_failures_exit_2_without_an_envelope() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_sbpl_check_bin();
+    let dir = std::env::temp_dir().join(format!("pw-sbpl-check-exit2-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let malformed = dir.join("malformed.json");
+    std::fs::write(&malformed, "{not json").unwrap();
+    let absent = dir.join("absent").join("request.json");
+    let cases: Vec<(&str, Vec<&str>, Option<&str>)> = vec![
+        ("no arguments", vec![], None),
+        ("unknown argument", vec!["--bogus"], None),
+        ("missing --request value", vec!["--request"], None),
+        (
+            "unreadable request path",
+            vec!["--request", absent.to_str().unwrap()],
+            None,
+        ),
+        (
+            "malformed request file",
+            vec!["--request", malformed.to_str().unwrap()],
+            None,
+        ),
+        (
+            "malformed request on stdin",
+            vec!["--request", "-"],
+            Some("{not json"),
+        ),
+        (
+            "request without a policy on stdin",
+            vec!["--request", "-"],
+            Some("{\"probe_plan\": []}"),
+        ),
+    ];
+    for (label, args, stdin) in cases {
+        let out = run_sbpl_check(&bin, &args, stdin);
+        assert_eq!(out.status.code(), Some(2), "{label}");
+        assert!(out.stdout.is_empty(), "{label}: no JSON envelope on stdout");
+        assert!(!out.stderr.is_empty(), "{label}: a message on stderr");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
@@ -964,10 +1139,14 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         .get("policy_sha256")
         .and_then(|v| v.as_str())
         .expect("policy_sha256 missing");
-    let closure_sha = data
+    let inventory = data
+        .get("import_inventory")
+        .and_then(|v| v.as_object())
+        .expect("import_inventory missing");
+    let closure_sha = inventory
         .get("policy_closure_sha256")
         .and_then(|v| v.as_str())
-        .expect("policy_closure_sha256 missing");
+        .expect("import_inventory.policy_closure_sha256 missing");
     assert_ne!(
         policy_sha, closure_sha,
         "closure hash should differ from policy_sha256 when imports were resolved"
@@ -982,10 +1161,16 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
         "macos_build_version should be populated (got {build:?})"
     );
 
-    let imports = data
-        .get("imports")
+    assert_eq!(inventory.get("truncated"), Some(&serde_json::json!(false)));
+    assert_eq!(inventory.get("cycle"), Some(&serde_json::Value::Null));
+    assert_eq!(
+        data.get("compile"),
+        Some(&serde_json::json!({"stage": "compile", "ok": true, "error": null}))
+    );
+    let imports = inventory
+        .get("records")
         .and_then(|v| v.as_array())
-        .expect("imports missing");
+        .expect("import_inventory.records missing");
     assert!(
         imports.len() >= 1,
         "expected at least one resolved import, got {}",
@@ -995,7 +1180,7 @@ fn sbpl_check_records_import_provenance_for_system_sb() {
     let system_sb = imports
         .iter()
         .find(|imp| imp.get("name").and_then(|v| v.as_str()) == Some("system.sb"))
-        .expect("system.sb should be in imports");
+        .expect("system.sb should be in import_inventory.records");
     assert_eq!(
         system_sb.get("resolved_path").and_then(|v| v.as_str()),
         Some("/System/Library/Sandbox/Profiles/system.sb"),

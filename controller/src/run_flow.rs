@@ -1802,7 +1802,7 @@ fn permission_failures_without_record(
 mod tests {
     use super::*;
     use crate::sandbox_log::{SandboxDenyEvent, capture_sandbox_logs, match_step_denies};
-    use crate::utils::RequestDelivery;
+    use crate::utils::{JsonOutputCapture, RequestDelivery};
     use serde_json::json;
 
     include!("log_replay_tests.rs");
@@ -3514,7 +3514,7 @@ mod tests {
         assert_eq!(invoked, 1);
         let capture = capture.expect("an xpc_error reply requests the helper");
         assert_eq!(capture.status, "unavailable");
-        assert_eq!(capture.compiled, None);
+        assert!(capture.envelope.is_none());
         assert!(
             capture.output.stderr.contains("Broken pipe"),
             "{}",
@@ -3526,6 +3526,7 @@ mod tests {
         for reply in [
             Some(worker("ok", None)),
             Some(worker("runner_failed", Some(9))),
+            Some(worker("xpc_timeout", None)),
             None,
         ] {
             assert!(
@@ -3537,6 +3538,56 @@ mod tests {
             );
         }
         assert_eq!(invoked, 0);
+
+        // Helper success, rejection and an unavailable capture leave the
+        // runner reply and the controller's outcome unchanged.
+        let helper_envelope = |outcome: &str| {
+            json!({"schema_version": json_contract::SCHEMA_VERSION, "kind": "sbpl_check",
+                "result": {"normalized_outcome": outcome}, "data": {}})
+        };
+        let captures = [
+            ("ok", Some(helper_envelope("ok"))),
+            ("compile_error", Some(helper_envelope("compile_error"))),
+            ("unavailable", None),
+        ];
+        for (status, envelope) in captures {
+            let capture = PolicyCheckCapture {
+                status: status.into(),
+                tool_exit_code: if status == "ok" { 0 } else { 1 },
+                output: JsonOutputCapture::unavailable(
+                    String::new(),
+                    crate::utils::HELPER_CAPTURE_BYTES,
+                ),
+                envelope: envelope.clone(),
+            };
+            let completed = complete_execution(ExecutionData {
+                specimen: specimen(),
+                policy_check: Some(capture),
+                timeout_ms: Some(7),
+                runner_client: None,
+                runner_result: Some(xpc_error.clone()),
+                request_failure: None,
+            });
+            assert_eq!(completed.exit_code, 1, "{status}");
+            assert_eq!(
+                completed.result.normalized_outcome.as_deref(),
+                Some("xpc_error"),
+                "{status}"
+            );
+            assert_eq!(
+                completed.result.error.as_deref(),
+                Some("NSCocoaErrorDomain:4099 refused"),
+                "{status}"
+            );
+            assert_eq!(
+                completed.data.runner_result,
+                Some(before.clone()),
+                "{status}"
+            );
+            let check = completed.data.policy_check.as_ref().unwrap();
+            assert_eq!(check.status, status);
+            assert_eq!(check.envelope, envelope);
+        }
     }
 
     #[test]
@@ -3953,6 +4004,16 @@ mod tests {
 
         /// Production orchestration with the four dependencies controlled.
         fn observe(app: &Path, registry: Option<&Path>, args: &[&str]) -> Observed {
+            observe_reply(app, registry, args, controlled_reply())
+        }
+
+        /// The same orchestration with the controlled client returning `reply`.
+        fn observe_reply(
+            app: &Path,
+            registry: Option<&Path>,
+            args: &[&str],
+            reply: Value,
+        ) -> Observed {
             let loads = RefCell::new(Vec::new());
             let calls = RefCell::new(Vec::new());
             let load_manifest = |path: &Path| {
@@ -3969,7 +4030,7 @@ mod tests {
                     timeout_ms,
                     connection: *connection,
                 });
-                let reply = controlled_reply();
+                let reply = reply.clone();
                 Ok((client_run(Some(&reply)), Some(reply)))
             };
             let app_root = app.to_path_buf();
@@ -4164,6 +4225,79 @@ mod tests {
                 assert!(wire["data"]["runner_result"].is_null());
                 fs::remove_dir_all(&root).unwrap();
             }
+        }
+
+        #[test]
+        fn refused_reply_versions_request_no_fallback_compilation() {
+            // Through production admission: a reply under another response
+            // version is refused before anything reads it, so no helper is
+            // requested and `policy_check` is null. An admitted `xpc_error`
+            // reply requests the helper; the synthetic app embeds none, so the
+            // capture is unavailable while the reply and the outcome stand.
+            let root = scratch("refused-reply-versions");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let args = [request.to_str().unwrap(), "--no-log-capture"];
+            let current = i64::from(json_contract::RESPONSE_SCHEMA_VERSION);
+            for (label, reply, outcome) in [
+                (
+                    "previous",
+                    json!({"schema_version": current - 1, "normalized_outcome": "xpc_error",
+                        "error": "refused", "steps": []}),
+                    "unsupported_runner_response",
+                ),
+                (
+                    "next",
+                    json!({"schema_version": current + 1, "normalized_outcome": "xpc_error",
+                        "error": "refused", "steps": []}),
+                    "unsupported_runner_response",
+                ),
+                (
+                    "string",
+                    json!({"schema_version": current.to_string(), "normalized_outcome": "xpc_error",
+                        "error": "refused", "steps": []}),
+                    "malformed_runner_response",
+                ),
+                (
+                    "missing",
+                    json!({"normalized_outcome": "xpc_error", "error": "refused", "steps": []}),
+                    "malformed_runner_response",
+                ),
+            ] {
+                let observed = observe_reply(&app, None, &args, reply.clone());
+                assert_eq!(observed.calls.len(), 1, "{label}");
+                let (wire, exit_code) = envelope_of(&observed.output);
+                assert_eq!(exit_code, 1, "{label}");
+                assert_eq!(wire["result"]["normalized_outcome"], outcome, "{label}");
+                assert!(wire["data"]["policy_check"].is_null(), "{label}");
+                assert_eq!(wire["data"]["runner_result"], reply, "{label}");
+            }
+            let xpc_error = json!({"schema_version": current, "normalized_outcome": "xpc_error",
+                "error": "NSCocoaErrorDomain:4099 refused", "steps": []});
+            let observed = observe_reply(&app, None, &args, xpc_error.clone());
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 1);
+            assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+            assert_eq!(wire["result"]["error"], "NSCocoaErrorDomain:4099 refused");
+            assert_eq!(wire["data"]["runner_result"], xpc_error);
+            let check = &wire["data"]["policy_check"];
+            assert_eq!(check["status"], "unavailable");
+            assert!(check["envelope"].is_null());
+            assert!(
+                check["stderr"].as_str().unwrap().contains("sbpl-check"),
+                "{check}"
+            );
+            for key in [
+                "compiled",
+                "compile_error",
+                "normalized_outcome",
+                "policy_format",
+                "policy_sha256",
+            ] {
+                assert!(check.get(key).is_none(), "{key} projection retired");
+            }
+            fs::remove_dir_all(&root).unwrap();
         }
 
         #[test]
@@ -4601,13 +4735,14 @@ mod tests {
                 "sbpl_check",
                 json!({
                     "policy_format": "sbpl", "policy_sha256": "f".repeat(64),
-                    "policy_closure_sha256": "f".repeat(64), "macos_build_version": "23J220",
-                    "params_present": true, "params_count": 1, "params_referenced": ["K"],
-                    "params_supplied": ["K"], "params_missing": ["M"], "params_unused": ["U"],
-                    "params_scan_complete": true,
-                    "imports": [serde_json::to_value(import_record()).unwrap()],
-                    "imports_truncated": false, "imports_cycle": ["a", "b"],
-                    "compiled": true, "compile_error": "constructed",
+                    "macos_build_version": "23J220",
+                    "params_present": true, "params_count": 1,
+                    "compile": {"stage": "compile", "ok": true, "error": "constructed"},
+                    "import_inventory": {
+                        "records": [serde_json::to_value(import_record()).unwrap()],
+                        "truncated": false, "cycle": ["a", "b"],
+                        "policy_closure_sha256": "f".repeat(64),
+                    },
                 }),
             )
         }
@@ -4698,15 +4833,10 @@ mod tests {
                 execution: ExecutionData {
                     specimen,
                     policy_check: Some(PolicyCheckCapture {
-                        status: "captured".into(),
+                        status: "ok".into(),
                         tool_exit_code: 0,
                         output: capture(crate::utils::HELPER_CAPTURE_BYTES),
                         envelope: Some(sbpl_check_envelope()),
-                        policy_format: Some("sbpl".into()),
-                        policy_sha256: Some("f".repeat(64)),
-                        compiled: Some(true),
-                        compile_error: Some("constructed".into()),
-                        normalized_outcome: Some("ok".into()),
                     }),
                     timeout_ms: Some(DEFAULT_TIMEOUT_MS),
                     runner_client: Some(RunnerClientRun {

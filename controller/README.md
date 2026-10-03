@@ -175,7 +175,7 @@ Keep this list current when a run-path helper gains a read or a launch.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The controller forwards the runner reply without version coercion and
@@ -210,8 +210,14 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   (`bytes_written`, `error`); an accepted write does not prove the client read
   the bytes or that XPC delivered them. Null when the client was not invoked.
 - `data.policy_check`: independent `sbpl-check` report, requested only on
-  `xpc_error`. It describes that helper's compilation, not the missing worker's
-  progress or the cause of a lost reply. Worker failures use `runner_failed`;
+  `xpc_error`. `status` is a transport status (`unavailable`, `capture_error`,
+  `parse_error`, `tool_error`, `invalid_reply`) or the helper's own
+  `normalized_outcome` copied from a supported envelope (`ok`, `compile_error`,
+  `setup_error`, `bad_request`, `policy_too_large`); the helper envelope is
+  retained whole under `envelope`, `tool_exit_code` is recorded independently,
+  and the capture derives no second verdict from the compile record, `result.ok`
+  or the exit code. It describes that helper's compilation, not the missing
+  worker's progress or the cause of a lost reply. Worker failures use `runner_failed`;
   worker operation/result evidence identifies compilation, setup and application
   independently. The controller retains `runner_subprocess.worker_evidence` and
   `policy_transfer_error` without interpreting their diagnostic codes.

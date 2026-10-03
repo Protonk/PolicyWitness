@@ -408,10 +408,20 @@ def fallback_helper(pw, out):
     (out / 'helper.stdout').write_bytes(result.stdout)
     (out / 'helper.stderr').write_bytes(result.stderr)
     envelope = json.loads(result.stdout)
-    assert result.returncode != 0, result
+    assert result.returncode == 1, result
     assert envelope['result']['normalized_outcome'] == 'policy_too_large', envelope
-    assert envelope['data']['compiled'] is False, envelope
-    print('PASS helper-owned 4 MiB admission refusal; startup prose tested separately in Rust')
+    assert envelope['result']['ok'] is False and envelope['result']['exit_code'] == 1, envelope
+    data = envelope['data']
+    # A refused input performs no import walk and no native call: both groups
+    # are explicit nulls and the source hash is withheld.
+    for group in ('compile', 'import_inventory', 'policy_sha256'):
+        assert group in data and data[group] is None, (group, data)
+    for retired in ('compiled', 'compile_error', 'imports', 'imports_truncated', 'imports_cycle',
+                    'policy_closure_sha256', 'params_referenced', 'params_supplied', 'params_missing',
+                    'params_unused', 'params_scan_complete', 'param_scan'):
+        assert retired not in data, (retired, data)
+    assert data['params_present'] is False and data['params_count'] == 0, data
+    print('PASS helper-owned 4 MiB admission refusal with null compile and inventory groups; startup prose tested separately in Rust')
 
 
 if __name__ == '__main__':

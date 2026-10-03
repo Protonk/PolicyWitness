@@ -100,7 +100,11 @@ kernel policy attribution from a signal or synthesize a native call from text.
 
 `failure_boundaries` checks every admission capacity, worker and host-only
 (exact/over and UTF-8 multibyte boundaries, capacity before shape, no echo of the
-refused string), independent sbpl-check admission, admission refusal of an
+refused string), independent sbpl-check admission (the shipped helper's size
+refusal with null compile and import-inventory groups; the helper's native
+verdict matrix, stage record and exit-2 paths are `integration/cli.integration`,
+its controlled setup/compile/release paths and the capture's status precedence
+are `unit/rust.unit`), admission refusal of an
 overlong query with the largest admitted probe line measured against the native
 cap, control-character round trip through the real validator, and fixture reply
 UTF-8/structure/association.

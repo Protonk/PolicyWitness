@@ -824,8 +824,10 @@ precede lossy context conversion; log collection's counts are actual bounded
 reads, while the other receivers count fully collected buffers.
 `stdout_capture_error` identifies local truncation and precludes parsing the
 prefix; `stdout_parse_error` identifies malformed untruncated bytes. Helper
-`status="invalid_reply"` means parsed JSON lacks the required compilation
-observation; `compiled` remains null and the original envelope is retained.
+`status="invalid_reply"` means parsed JSON is not a supported helper envelope
+(the helper kind, the current controller envelope version and a nonempty
+`result.normalized_outcome`); the parsed output is retained unchanged and no
+verdict is derived from it.
 The observer uses `capture_status="invalid_reply"` when parsed JSON lacks the
 required observation, identity, metadata or supervision shape. An interrupted
 outer reply keeps only its bounded raw prefix. Receiver completeness does not

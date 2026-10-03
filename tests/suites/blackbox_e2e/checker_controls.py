@@ -69,11 +69,12 @@ def consumer_controls(artifacts, current):
     run('current_format_other_producer_and_os', other_producer, allowed_write)
 
     # Keep the original captured bytes unsupported; never relabel their schema
-    # to make them a current acceptance baseline.
+    # to make them a current acceptance baseline. The envelope number is the
+    # first gate, so a capture behind both numbers is refused there.
     historical = json.loads((FIXTURES / 'checker/valid_run.json').read_text())
     errors = validate(historical)
-    assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
-    run('historical_capture_rejected', historical, rejected_by='unsupported runner response')
+    assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
+    run('historical_capture_rejected', historical, rejected_by='unsupported controller envelope')
 
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)

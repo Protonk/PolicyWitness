@@ -1812,7 +1812,7 @@
       "value": 4194304,
       "unit": "bytes",
       "counting": "Top-level source bytes read by the diagnostic helper; not the runner policy cap.",
-      "effect": "policy_too_large without a compile verdict.",
+      "effect": "policy_too_large with null compile and import_inventory groups; no compile verdict.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -1841,7 +1841,7 @@
       "value": 8,
       "unit": "levels",
       "counting": "Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file.",
-      "effect": "Stops inventory expansion on that branch and marks imports_truncated. Does not impose this depth on libsandbox compilation.",
+      "effect": "Stops inventory expansion on that branch and marks import_inventory.truncated. Does not impose this depth on libsandbox compilation.",
       "control": "Fixed; no public override.",
       "sources": [
         {
@@ -1870,7 +1870,7 @@
       "value": 64,
       "unit": "records",
       "counting": "Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated.",
-      "effect": "Stops further inventory traversal and marks imports_truncated. Does not impose this count on libsandbox compilation.",
+      "effect": "Stops further inventory traversal and marks import_inventory.truncated. Does not impose this count on libsandbox compilation.",
       "control": "Fixed; no public override.",
       "sources": [
         {

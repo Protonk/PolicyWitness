@@ -6,7 +6,7 @@ admission and the worker ABI have separate contracts.
 # BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 REQUEST_SCHEMA = 4
 RESPONSE_SCHEMA = 14
-CONTROLLER_ENVELOPE = 6
+CONTROLLER_ENVELOPE = 7
 # END GENERATED CONTRACT VERSIONS
 
 # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
