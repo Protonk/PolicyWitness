@@ -28,6 +28,111 @@ from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
 
 
+def policy_check_controls(run):
+    """Constructed captures distinguish rejected payloads from admitted helper data."""
+    base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
+        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure',
+        'steps': []}, ok=False)
+    helper = {
+        'schema_version': contract.CONTROLLER_ENVELOPE, 'kind': 'sbpl_check',
+        'result': {'normalized_outcome': 'ok', 'ok': True, 'exit_code': 0, 'error': None},
+        'data': {'policy_format': 'sbpl', 'policy_sha256': 'f' * 64,
+                 'params_present': False, 'params_count': 0,
+                 'compile': {'stage': 'compile', 'ok': True, 'error': None},
+                 'import_inventory': {'records': [], 'truncated': False, 'cycle': None,
+                                      'policy_closure_sha256': 'f' * 64}},
+    }
+
+    def capture(payload, status):
+        document = copy.deepcopy(base)
+        size = len(json.dumps(payload).encode('utf-8'))
+        document['data']['policy_check'] = {
+            'status': status, 'tool_exit_code': 17, 'envelope': copy.deepcopy(payload),
+            'capture_limit_bytes': 8 * 1024 * 1024, 'stdout_bytes_received': size,
+            'stdout_bytes_retained': size, 'stdout_truncated': False,
+            'stdout_capture_error': None, 'stdout_parse_error': None, 'stdout_raw': None,
+            'stderr': '', 'stderr_bytes_received': 0, 'stderr_bytes_retained': 0,
+            'stderr_truncated': False,
+        }
+        return document
+
+    def check(name, document, rejected_by=None):
+        before = copy.deepcopy(document)
+        run('policy_check_' + name, document, rejected_by=rejected_by)
+        assert document == before, (name, 'validation changed the retained evidence')
+
+    # Neither process exit nor compile.ok supplies another verdict. Unfamiliar
+    # outcomes, including strings also used for transport statuses, are admitted.
+    for outcome in ('ok', 'compile_error', 'setup_error', 'bad_request', 'policy_too_large',
+                    'future_outcome', 'invalid_reply', 'tool_error'):
+        payload = copy.deepcopy(helper)
+        payload['result']['normalized_outcome'] = outcome
+        check('admitted_' + outcome, capture(payload, outcome))
+
+    rejected = [('array', [helper]), ('string', 'unrecognized reply'), ('number', 7),
+                ('boolean', False), ('null', None), ('object', {'unknown': ['retained', None]})]
+    for name, change in [
+        ('wrong_kind', lambda p: p.update(kind='another_helper')),
+        ('missing_kind', lambda p: p.pop('kind')),
+        ('previous_version', lambda p: p.update(schema_version=contract.CONTROLLER_ENVELOPE - 1)),
+        ('next_version', lambda p: p.update(schema_version=contract.CONTROLLER_ENVELOPE + 1)),
+        ('string_version', lambda p: p.update(schema_version=str(contract.CONTROLLER_ENVELOPE))),
+        ('float_version', lambda p: p.update(schema_version=float(contract.CONTROLLER_ENVELOPE))),
+        ('boolean_version', lambda p: p.update(schema_version=True)),
+        ('missing_version', lambda p: p.pop('schema_version')),
+        ('missing_result', lambda p: p.pop('result')),
+        ('nonobject_result', lambda p: p.update(result=[])),
+        ('missing_outcome', lambda p: p['result'].pop('normalized_outcome')),
+        ('null_outcome', lambda p: p['result'].update(normalized_outcome=None)),
+        ('empty_outcome', lambda p: p['result'].update(normalized_outcome='')),
+        ('numeric_outcome', lambda p: p['result'].update(normalized_outcome=1)),
+    ]:
+        payload = copy.deepcopy(helper)
+        change(payload)
+        # No refused body is read under the current schema, regardless of why
+        # admission failed. There is no historical helper schema here.
+        payload['data'] = {'unrecognized': {'retained': [1, False, None]}}
+        rejected.append((name, payload))
+    for name, payload in rejected:
+        check('retained_' + name, capture(payload, 'invalid_reply'))
+        check('mislabelled_' + name, capture(payload, 'ok'),
+              'policy_check.status requires an admitted helper envelope')
+
+    # Other wrapper fields remain governed by the current golden even when
+    # the payload is opaque.
+    for name, change, diagnostic in [
+        ('wrapper_unknown', lambda c: c.update(compiled=True),
+         'unknown key envelope.data.policy_check.compiled'),
+        ('wrapper_type', lambda c: c.update(tool_exit_code='17'),
+         'envelope.data.policy_check.tool_exit_code is string, not number'),
+    ]:
+        document = capture([], 'invalid_reply')
+        change(document['data']['policy_check'])
+        check(name, document, diagnostic)
+
+    # Admitted helper bodies retain the normal shape checks. An outcome named
+    # invalid_reply is still an admitted outcome, so it cannot bypass them.
+    for outcome in ('ok', 'invalid_reply'):
+        for name, change, diagnostic in [
+            ('unknown', lambda p: p['data'].update(unrecognized=True),
+             'unknown key envelope.data.policy_check.envelope.data.unrecognized'),
+            ('type', lambda p: p['data']['compile'].update(ok='yes'),
+             'envelope.data.policy_check.envelope.data.compile.ok is string, not boolean'),
+        ]:
+            payload = copy.deepcopy(helper)
+            payload['result']['normalized_outcome'] = outcome
+            change(payload)
+            check('admitted_' + outcome + '_' + name, capture(payload, outcome), diagnostic)
+    check('outcome_mismatch', capture(helper, 'compile_error'),
+          'policy_check.status differs from the admitted helper outcome')
+    check('admitted_marked_invalid', capture(helper, 'invalid_reply'),
+          'policy_check.status differs from the admitted helper outcome')
+    for status in ('unavailable', 'capture_error', 'parse_error', 'tool_error'):
+        document = copy.deepcopy(base)
+        document['data']['policy_check'] = {'status': status, 'envelope': None}
+        check('without_reply_' + status, document)
+
+
 def consumer_controls(artifacts, current):
     """Constructed JSON interpretation controls against a retained live envelope."""
     records = []
@@ -68,13 +173,14 @@ def consumer_controls(artifacts, current):
     other_producer['data']['specimen']['host'].update(macos_version='15.0', macos_build='24A000')
     run('current_format_other_producer_and_os', other_producer, allowed_write)
 
-    # Keep the original captured bytes unsupported; never relabel their schema
-    # to make them a current acceptance baseline. The envelope number is the
-    # first gate, so a capture behind both numbers is refused there.
-    historical = json.loads((FIXTURES / 'checker/valid_run.json').read_text())
-    errors = validate(historical)
+    # Version refusal needs only a constructed frame. The version gate must
+    # reject it before requiring the current envelope's fields.
+    previous = {'schema_version': contract.CONTROLLER_ENVELOPE - 1,
+                'kind': 'run', 'data': {}}
+    errors = validate(previous)
     assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
-    run('historical_capture_rejected', historical, rejected_by='unsupported controller envelope')
+    run('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
+    policy_check_controls(run)
 
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)

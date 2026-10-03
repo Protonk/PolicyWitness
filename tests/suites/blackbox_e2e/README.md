@@ -60,8 +60,11 @@ and does not skip the case.
 
 The `response14/` envelopes are unmodified captures from the corresponding
 current-producer cases; each carries its own build stamp, binary hashes and
-worker source identity. The sibling older captures remain stored with their
-original bytes and are unsupported, with no translation into these fixtures.
+worker source identity. Their sibling `valid_specimen.json` and
+`missing_path_specimen.json` files are the exact submitted requests. Refresh
+each envelope and specimen together from a passing live case. Superseded
+acceptance captures remain available in Git; previous-envelope rejection uses
+constructed controls.
 
 `checker_controls` runs without the app, before the live cases. Its checked-in
 live envelope passes BBX-001's expectations. Controlled changes must fail:
@@ -135,3 +138,10 @@ each limitation outside the vocabulary, a record that contradicts its raw
 fields and a `query_first` claim without its chain are rejected; the client's
 own failure replies validate; and the ordering of a successful unlink against
 its query is read from `order` alone.
+
+Constructed policy-check captures cover the same current helper admission gate
+as the controller. Rejected parsed payloads remain unchanged and opaque under
+`invalid_reply`; wrapper fields still receive shape checks. Admitted helper
+envelopes receive current-shape checks and must agree with the capture's copied
+outcome, including unfamiliar outcomes. Previous versions and malformed replies
+are constructed inputs, without historical helper fixtures or schema readers.

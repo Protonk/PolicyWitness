@@ -5,6 +5,8 @@ supported document is validated against the current contract: first its shape
 against the goldens under tests/fixtures/contract/ (the readers' allowlists:
 an unknown key at a recorded path is an error naming the path, a present key
 must carry the golden's type, absence is allowed), then the record rules below.
+Rejected policy-check payloads remain opaque inside their validated capture
+wrappers; admitted helper envelopes are checked against the current shape.
 Evidence is then selected by field. No policy, specimen, errno rule, file or
 production implementation is an input, and nothing here asserts agreement or
 disagreement between the prediction and the attempt. Scenario expectations
@@ -44,7 +46,8 @@ COMPARISON_KEYS = ('observation', 'observation_basis', 'operation_relation', 'ta
 # The shape goldens: per object path, every key the producers emit and its JSON
 # type. `envelope_shape.json` is rooted at `envelope` and treats the runner
 # reply as opaque; `response_shape.json` is rooted at `reply`. A key absent
-# from the golden at its path belongs to no current document.
+# from the golden at its path belongs to no current document. A policy-check
+# payload refused by helper admission is retained evidence, outside that shape.
 _CONTRACT_DIR = Path(__file__).resolve().parents[1] / 'fixtures' / 'contract'
 ENVELOPE_SHAPE = json.loads((_CONTRACT_DIR / 'envelope_shape.json').read_text())['shape']
 REPLY_SHAPE = json.loads((_CONTRACT_DIR / 'response_shape.json').read_text())['shape']
@@ -210,6 +213,27 @@ def _json_type(value):
     return 'object'
 
 
+def _validate_policy_check_reply(capture, path, shape, errors):
+    """Admit only the current helper frame; keep rejected JSON opaque."""
+    reply, status = capture['envelope'], capture.get('status')
+    outcome = None
+    if isinstance(reply, dict) and reply.get('kind') == 'sbpl_check' and \
+            type(reply.get('schema_version')) is int and \
+            reply['schema_version'] == contract.CONTROLLER_ENVELOPE:
+        result = reply.get('result')
+        candidate = result.get('normalized_outcome') if isinstance(result, dict) else None
+        if isinstance(candidate, str) and candidate:
+            outcome = candidate
+    if outcome is None:
+        if status != 'invalid_reply' and not (reply is None and status in
+                ('unavailable', 'capture_error', 'parse_error', 'tool_error')):
+            errors.append('data.policy_check.status requires an admitted helper envelope')
+        return
+    if status != outcome:
+        errors.append('data.policy_check.status differs from the admitted helper outcome')
+    validate_shape(reply, path, shape, errors)
+
+
 def validate_shape(value, path, shape, errors):
     """Check one object and everything under it against the golden for its path.
 
@@ -217,6 +241,7 @@ def validate_shape(value, path, shape, errors):
     carry the golden's type; a golden type of `null` constrains nothing. Absent
     keys are allowed: the goldens are allowlists, not required sets. Objects at
     a path another golden records (`_REROOTED`) continue under that golden.
+    Policy-check admission precedes shape checks on its retained payload.
     """
     allowed = shape.get(path)
     if allowed is None or not isinstance(value, dict):
@@ -226,6 +251,9 @@ def validate_shape(value, path, shape, errors):
             errors.append(f'unknown key {path}.{key}')
             continue
         child_path = f'{path}.{key}'
+        if child_path == 'envelope.data.policy_check.envelope':
+            _validate_policy_check_reply(value, child_path, shape, errors)
+            continue
         actual = _json_type(child)
         if child is not None and allowed[key] != 'null' and actual != allowed[key]:
             errors.append(f'{child_path} is {actual}, not {allowed[key]}')

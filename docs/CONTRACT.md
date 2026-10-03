@@ -269,6 +269,16 @@ emitted it, so a new field reaches the readers only through the fixture that
 records it. These response-shape checks in Python readers and golden comparisons
 are separate from the closed request decoding described above.
 
+For `data.policy_check`, the consumer validates the capture wrapper and applies
+helper admission to its nested `envelope`. Admission requires `kind: "sbpl_check"`,
+the exact current integer envelope version and a nonempty string
+`result.normalized_outcome`. An admitted envelope must have its outcome copied
+into capture `status`, and its body is checked against the current helper shape.
+Rejected parsed output under `status: "invalid_reply"` is opaque retained
+evidence, including arrays and scalars; the current helper shape does not apply
+to it. Transport failures may carry a null envelope. There is no interpretation
+of historical helper schemas.
+
 ## Build stamp
 
 The app version is a coordinate, not a contract, and nobody edits it. build.sh

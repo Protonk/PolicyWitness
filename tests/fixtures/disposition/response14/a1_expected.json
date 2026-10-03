@@ -1,15 +1,15 @@
 {
   "build": {
-    "commit": "a318a255de6242d97133eb04e7038a1d25eb4dc4",
-    "describe": "v0.2.4-64-ga318a25-dirty",
-    "number": "385",
+    "commit": "076ec253bc6618d1c5e15182daf2b79b25027dd6",
+    "describe": "v0.2.4-80-g076ec25-dirty",
+    "number": "401",
     "version": "0.2.4"
   },
   "data": {
     "policy_check": null,
     "runner_client": {
       "argv": [
-        "/Users/achyland/Desktop/Security/PolicyWitness/.tmp/contract-simplification/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
         "run",
         "--timeout-ms",
         "20000",
@@ -18,13 +18,13 @@
         "com.yourteam.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 75497472,
-      "ended_at_unix_ms": 1790984284461,
+      "ended_at_unix_ms": 1791066560787,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 932,
         "error": null
       },
-      "started_at_unix_ms": 1790984280687,
+      "started_at_unix_ms": 1791066557030,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -40,7 +40,7 @@
       "bundle_id": "com.yourteam.policy-witness.PWRunner",
       "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
       "normalized_outcome": "runner_timeout",
-      "pid": 10191,
+      "pid": 85200,
       "policy_format": "sbpl",
       "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
       "rc": 1,
@@ -191,7 +191,7 @@
           "worker_lifetime_established": true
         },
         "partial_steps": true,
-        "pid": 10191,
+        "pid": 85200,
         "poll_stop_reason": "sentinel_deadline",
         "ready_byte_received": true,
         "reaped": true,
@@ -202,7 +202,7 @@
         },
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "84a5cc164b9dedf53af0671e56f04e22f9981ea73ddf02ca29647cf1989d0087",
+          "abi_identity": "7d4d9e1cdb1cfc76fa478a3507b25e96cc51fe2e718447db38d39e67b1766f79",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -253,7 +253,7 @@
             "observed_path": null,
             "outcome": "not_run_worker_died",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
@@ -264,7 +264,7 @@
             "rc": -1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
+            "requested_path": "/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
             "result_source": "synthetic"
           },
           "comparison": {
@@ -282,20 +282,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
-              "input": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
+              "input": "/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
                 "realpath_resolved"
               ]
             },
-            "pid": 10191,
+            "pid": 85200,
             "rc": 0,
             "result_source": "validator"
           },
@@ -370,7 +370,7 @@
               "realpath_resolved": "/private/etc/hosts",
               "same_as_input": []
             },
-            "pid": 10191,
+            "pid": 85200,
             "rc": 0,
             "result_source": "validator"
           },
@@ -387,7 +387,7 @@
           "fifo",
           "hosts"
         ],
-        "pid": 10192,
+        "pid": 85201,
         "probe_bytes_expected": 238,
         "probe_bytes_written": 238,
         "reaped": true,
@@ -396,10 +396,10 @@
             "errno": 0,
             "filter_type": "PATH",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo",
+            "filter_value": "/private/tmp/pw-in-flight-biav6xl1/blocker.fifo",
             "operation": "file-read-data",
             "outcome": "allow",
-            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fifo\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-in-flight-biav6xl1/blocker.fifo\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
             "rc": 0,
             "step_id": "fifo"
           },
@@ -432,7 +432,7 @@
     "sandbox_log_capture": null,
     "specimen": {
       "app_provenance": {
-        "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/.tmp/contract-simplification/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_manifest_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
         "evidence_verify": null
       },
       "binaries": {
@@ -463,16 +463,16 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/contract-simplification-fresh-records/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
+      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/sbpl-fixture-refresh-live-02/suites/witness_contract/worker_attempt_in_flight_at_deadline/artifacts/a1/specimen.json",
       "runner_provenance": {
         "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
-        "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/.tmp/contract-simplification/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
         "runner_entitlements": {
           "error": null,
           "keys": [],
           "raw_plist": "{}"
         },
-        "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/.tmp/contract-simplification/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_executable_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
         "runner_kind": "standard",
         "runner_registry_id": null,
         "runner_service_name": "com.yourteam.policy-witness.PWRunner",
@@ -481,7 +481,7 @@
     },
     "timeout_ms": 20000
   },
-  "generated_at_unix_ms": 1790984284461,
+  "generated_at_unix_ms": 1791066560787,
   "kind": "run",
   "result": {
     "errno": null,

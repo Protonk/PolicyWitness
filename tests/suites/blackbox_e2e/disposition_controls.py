@@ -220,8 +220,8 @@ sys.exit(config['status'])
 def expected_fixture_controls(out):
     """E2: the accepted expected envelope, the known-loss capture, and named rejections.
 
-    The expected fixture was built from the witnessed A1 raw facts and the
-    reviewed claim row; it is an expected-output fixture, not a live result.
+    The expected fixture is an unmodified live A1 capture. Its raw witnesses
+    and disposition claims are checked together by the independent oracle.
     Each rejection starts from a fresh copy of the accepted baseline and must be
     rejected with the independently expected rule; the baseline stays accepted.
     """

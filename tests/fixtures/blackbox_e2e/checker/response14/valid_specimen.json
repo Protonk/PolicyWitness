@@ -2,8 +2,8 @@
   "policy": {
     "format": "sbpl",
     "params": {
-      "ALLOW_WRITE_DIR": "/private/tmp/pw-bbx.SvRLjL/allow-write",
-      "DENY_WRITE_DIR": "/private/tmp/pw-bbx.SvRLjL/deny-write"
+      "ALLOW_WRITE_DIR": "/private/tmp/pw-bbx.EeEWAz/allow-write",
+      "DENY_WRITE_DIR": "/private/tmp/pw-bbx.EeEWAz/deny-write"
     },
     "sbpl_source": "(version 1)\n\n; BBX-001: SBPL with params + deny signal on file-write.\n(allow default)\n\n(allow file-write* (subpath (param \"ALLOW_WRITE_DIR\")))\n\n(deny file-write* (subpath (param \"DENY_WRITE_DIR\"))\n     (with send-signal SIGUSR1))\n\n(deny mach-lookup (global-name \"com.apple.cfprefsd.xpc.daemon\"))\n\n(allow mach-lookup (global-name \"com.apple.logd\"))\n"
   },
@@ -12,12 +12,12 @@
       "attempt": {
         "action": "open_write",
         "kind": "file",
-        "target": "/private/tmp/pw-bbx.SvRLjL/allow-write/existing.txt"
+        "target": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt"
       },
       "sandbox_check": {
         "filter": {
           "kind": "path",
-          "value": "/private/tmp/pw-bbx.SvRLjL/allow-write/existing.txt"
+          "value": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt"
         },
         "operation": "file-write-data"
       },
@@ -27,12 +27,12 @@
       "attempt": {
         "action": "open_write",
         "kind": "file",
-        "target": "/private/tmp/pw-bbx.SvRLjL/deny-write/existing.txt"
+        "target": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
       },
       "sandbox_check": {
         "filter": {
           "kind": "path",
-          "value": "/private/tmp/pw-bbx.SvRLjL/deny-write/existing.txt"
+          "value": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
         },
         "operation": "file-write-data"
       },
@@ -54,6 +54,6 @@
       "step_id": "mach_lookup_denied"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 4,
   "specimen_id": "BBX-001"
 }
