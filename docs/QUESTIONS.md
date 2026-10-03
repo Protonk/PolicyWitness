@@ -34,7 +34,7 @@ No. PolicyWitness has its own limits, documented in [the limits inventory](Polic
 
 ## What versions of SBPL are supported?
 
-`(version 1)` is the officially supported SBPL profile prologue, but a small fraction of the profiles Apple ships under `/System/Library/Sandbox/Profiles/` open with `(version 2)` or `(version 3)` — the higher numbers are not documented in any public reference. PolicyWitness compiles whatever the host's `sandbox_compile_string` accepts, so all three work.
+PolicyWitness passes the submitted SBPL source to the host's `libsandbox` compiler and supports whatever profile versions that compiler accepts. `(version 1)` is the documented profile version; some Apple-shipped profiles use higher version numbers.
 
 ## How do I use imports with PolicyWitness?
 
