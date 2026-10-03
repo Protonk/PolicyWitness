@@ -1,22 +1,22 @@
 # Disposition record fixtures
 
-Constructed and captured envelopes for the disposition record contract
+Captured envelopes for the disposition record contract
 (`tests/FAILURE-PROPAGATION-CONTRACT.md` → Worker disposition record). The
 independent checker `tests/lib/lifecycle_oracle.py` and the offline controls in
-`tests/suites/blackbox_e2e/disposition_controls.py` consume them.
+`tests/suites/blackbox_e2e/disposition_controls.py` consume the current fixture.
 
-- `a1_known_loss.json`: a real envelope captured from the
-  `worker_attempt_in_flight_at_deadline` case's `a1` specimen against the build
-  that predates the record (response 9, envelope 2). It witnesses the deadline,
-  the SIGKILL request, the reaped signal and the attempt 0 started progress
-  while that controller reported `termination_cause: unknown`. Readers refuse
-  it as an unsupported version before any claim is read. Missing-record
-  controls remove the record from the current-shaped `a1_expected.json`.
-  It is never a baseline for unrelated rejection controls.
-- `a1_expected.json`: a live envelope of the same `a1` specimen captured from
-  the current build under the current contract (controller envelope 5,
-  response 13): the host facts, the carried record, the per-step lifecycle
-  objects and limitations, the uniform `data.specimen` dossier and the
-  projected `host_sentinel_deadline`, `sentinel_deadline` and `signaled`. The
-  controls accept it and reject named mutations of it; the controller's own
-  unit tests read it as the known-good disposition reply.
+- `response14/a1_expected.json`: an unmodified live capture of the `a1` specimen
+  from `witness_contract/worker_attempt_in_flight_at_deadline`. Its build stamp,
+  binary hashes and worker source identity identify the producer. The controls
+  accept it and reject named mutations; Rust unit tests use its runner reply
+  as the known-good disposition record. Missing-record controls remove the
+  record from a copy of this current-format fixture.
+- `a1_expected.json`: a preserved response-13, envelope-6 capture of the same
+  specimen. Current readers reject its response version. It remains evidence
+  of that producer and is not rewritten into the current format.
+- `a1_known_loss.json`: a preserved response-9, envelope-2 capture. It witnesses
+  the deadline, SIGKILL request, reaped signal and attempt-0 started progress
+  while that controller reported `termination_cause: unknown`. Rejection
+  controls refuse it before reading claims. It is never an acceptance baseline.
+
+All three carry disabled log capture; log evidence supplies no worker cause.

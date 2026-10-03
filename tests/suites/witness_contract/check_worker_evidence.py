@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
         runner = envelope['data']['runner_result']
         process = runner['runner_subprocess']
         evidence = process['worker_evidence']
-        assert evidence['abi_version'] >= 7, evidence  # progress/failure record codes: ABI 7
+        assert isinstance(evidence['abi_identity'], str) and len(evidence['abi_identity']) == 64, evidence
         assert runner.get('test_overrides') == override, runner
         assert process['reaped'] and process['exit_code'] == 0, process
         step = runner['steps'][0]

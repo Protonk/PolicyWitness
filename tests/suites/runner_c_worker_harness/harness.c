@@ -99,7 +99,7 @@ typedef struct {
      * corrupted shm header. E2e the host always populates that header
      * correctly, so the harness — which pipes policy straight to the
      * worker — is the only vehicle that can reach them. */
-    int corrupt_abi;               /* set hdr->abi_version = 6 → worker exits 4 */
+    int corrupt_abi;               /* 1: change last identity byte; 2: ordinal magic; both exit 4 */
     int skip_prepared;             /* leave hdr->prepared = 0     → worker exits 5 */
     uint32_t override_step_count;  /* if !=0, force hdr->step_count after populate (overflow → exit 6) */
     uint32_t override_param_count; /* if !=0, force hdr->param_count after populate (overflow → exit 8) */
@@ -319,6 +319,8 @@ static scenario_t SCENARIOS[] = {
     /* #2 — pre-apply self-defense / refusal branches. */
     { "compile_failure",        SCEN_COMPILE_FAILURE_POLICY,   1,            1, populate_happy,        NULL,                   0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0 },
     { "abi_mismatch",           SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   1, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0 },
+    { .name = "abi_magic_mismatch", .policy = SCEN_ALLOW_DEFAULT_POLICY,
+      .step_count = 1, .request_exit = 1, .populate_slots = populate_happy, .corrupt_abi = 2 },
     { "prepared_unset",         SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 1, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0 },
     { "step_count_overflow",    SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, PW_SHM_MAX_STEPS + 1u, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0 },
     { "param_count_overflow",   SCEN_ALLOW_DEFAULT_POLICY, 1,                1, populate_happy,        NULL,                   0, 0, 0, PW_SHM_MAX_PARAMS + 1u, 0, TEMP_NONE, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0 },
@@ -476,7 +478,8 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     pw_shm_param_t *params = (pw_shm_param_t *)((char *)slots
                               + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
     memset(hdr, 0, sizeof(*hdr));
-    hdr->abi_version = PW_PROBE_RUNNER_ABI_VERSION;
+    hdr->abi_magic = PW_SHM_ABI_MAGIC;
+    memcpy(hdr->abi_identity, PW_WORKER_ABI_IDENTITY, PW_SHM_ABI_IDENTITY_BYTES);
     hdr->step_count = scen->step_count;
     if (scen->populate_slots) scen->populate_slots(slots);
     if (scen->populate_params) {
@@ -514,8 +517,10 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     /* Corruption knobs — applied after normal population so they
      * overwrite a valid header field with the value the worker must
      * reject (drives the pre-apply self-defense branches). */
-    if (scen->corrupt_abi) {
-        hdr->abi_version = 6u;
+    if (scen->corrupt_abi == 1) {
+        hdr->abi_identity[PW_SHM_ABI_IDENTITY_BYTES - 1] ^= 1;
+    } else if (scen->corrupt_abi == 2) {
+        hdr->abi_magic = 7;
     }
     if (scen->override_step_count != 0u) {
         hdr->step_count = scen->override_step_count;

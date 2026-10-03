@@ -61,6 +61,20 @@ def consumer_controls(artifacts, current):
         require(len(chosen) == 1 and chosen[0]['attempt']['outcome'] == 'ok', 'allowed write must be selectable by its record')
     run('retained_live_run', current, allowed_write)
 
+    # Source identity is provenance across runs, not a reader admission gate.
+    # These constructed metadata changes assert no agreement between hosts.
+    other_producer = copy.deepcopy(current)
+    other_producer['data']['runner_result']['runner_subprocess']['worker_evidence']['abi_identity'] = 'a' * 64
+    other_producer['data']['specimen']['host'].update(macos_version='15.0', macos_build='24A000')
+    run('current_format_other_producer_and_os', other_producer, allowed_write)
+
+    # Keep the original captured bytes unsupported; never relabel their schema
+    # to make them a current acceptance baseline.
+    historical = json.loads((FIXTURES / 'checker/valid_run.json').read_text())
+    errors = validate(historical)
+    assert len(errors) == 1 and 'unsupported runner response' in errors[0], errors
+    run('historical_capture_rejected', historical, rejected_by='unsupported runner response')
+
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)
     attempt = first(resolved)['attempt']
@@ -421,7 +435,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response14/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -497,7 +511,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response14/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

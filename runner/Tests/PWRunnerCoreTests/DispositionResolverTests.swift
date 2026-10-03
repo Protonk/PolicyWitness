@@ -25,7 +25,7 @@ private func progressWord(_ op: UInt32, _ phase: UInt32, index: UInt32? = nil) -
 }
 
 private func evidence(progress: PWWorkerProgress?) -> PWWorkerEvidence {
-    PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: progress, failure_publication: 0,
+    PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: progress, failure_publication: 0,
                      failure_state: "absent", failure: nil, readiness: nil,
                      diagnostic: PWWorkerDiagnostic(state: 0, status: "absent", length: nil, text: nil))
 }

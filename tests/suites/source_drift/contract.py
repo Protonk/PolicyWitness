@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('generate_contract', ROOT / 'docs/generate_contract.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
+identity_spec = importlib.util.spec_from_file_location('generate_worker_identity', ROOT / 'docs/generate_worker_identity.py')
+identity_generator = importlib.util.module_from_spec(identity_spec)
+identity_spec.loader.exec_module(identity_generator)
 
 # build.sh checks the limits documents first; a build checkout needs their inputs.
 LIMITS_FILES = {'docs/generate_limits.py', 'docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md',
@@ -86,7 +89,7 @@ class ContractVersionTests(unittest.TestCase):
         module = importlib.util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)
         self.assertEqual({'request_schema': module.REQUEST_SCHEMA, 'response_schema': module.RESPONSE_SCHEMA,
-                          'worker_abi': module.WORKER_ABI, 'controller_envelope': module.CONTROLLER_ENVELOPE},
+                          'controller_envelope': module.CONTROLLER_ENVELOPE},
                          self.manifest['versions'])
 
     def test_copies_table_names_generated_symbols_with_their_values(self):
@@ -155,7 +158,7 @@ class ContractVersionTests(unittest.TestCase):
 
     def test_manifest_rejects_invalid_shapes_and_the_command_writes_nothing(self):
         mutations = [
-            ('missing key', lambda d: d['versions'].pop('worker_abi')),
+            ('missing key', lambda d: d['versions'].pop('response_schema')),
             ('extra key', lambda d: d['versions'].update(extra=1)),
             ('string', lambda d: d['versions'].update(response_schema='8')),
             ('zero', lambda d: d['versions'].update(response_schema=0)),
@@ -189,20 +192,14 @@ class ContractVersionTests(unittest.TestCase):
 
     def test_abi_layout_golden_is_current_and_comparison_classifies_changes(self):
         golden = (ROOT / 'tests/fixtures/contract/abi_layout.txt').read_text()
-        values = abi_golden.parse(golden)
-        self.assertEqual(int(values['PW_PROBE_RUNNER_ABI_VERSION']), self.versions['worker_abi'])
         self.assertEqual(abi_golden.compare(golden, golden), ('ok', ''))
         self.assertEqual(abi_golden.compare(golden, '')[0], 'missing_golden')
-        moved = golden.replace('PW_SHM_HEADER_BYTES=64', 'PW_SHM_HEADER_BYTES=72', 1)
-        self.assertNotEqual(moved, golden)
+        values = abi_golden.parse(golden)
+        size = values['PW_SHM_HEADER_BYTES']
+        moved = golden.replace(f'PW_SHM_HEADER_BYTES={size}', f'PW_SHM_HEADER_BYTES={int(size) + 8}', 1)
         status, detail = abi_golden.compare(moved, golden)
-        self.assertEqual(status, 'needs_bump')
-        self.assertIn('PW_SHM_HEADER_BYTES', detail)
-        bumped = moved.replace(f"PW_PROBE_RUNNER_ABI_VERSION={values['PW_PROBE_RUNNER_ABI_VERSION']}",
-                               f"PW_PROBE_RUNNER_ABI_VERSION={int(values['PW_PROBE_RUNNER_ABI_VERSION']) + 1}", 1)
-        status, detail = abi_golden.compare(bumped, golden)
         self.assertEqual(status, 'update')
-        self.assertIn('with a bump', detail)
+        self.assertIn('PW_SHM_HEADER_BYTES', detail)
         self.assertEqual(abi_golden.compare(golden + '\n', golden)[0], 'update')
 
     def test_reply_shape_golden_records_the_manifest_version(self):
@@ -222,6 +219,94 @@ class ContractVersionTests(unittest.TestCase):
         self.assertIn('Checking limits documentation', result.stdout)
         self.assertIn('stale controller/src/json_contract.rs', result.stderr)
         self.assertFalse(destination.exists())
+
+
+class WorkerIdentityTests(unittest.TestCase):
+    def checkout(self):
+        directory = tempfile.TemporaryDirectory(prefix='pw-identity-')
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        for name in {*identity_generator.source_paths(ROOT), *identity_generator.TARGETS}:
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, target)
+        return root
+
+    def command(self, root, *args):
+        return subprocess.run([sys.executable, '-B', str(root / 'docs/generate_worker_identity.py'), *args],
+                              cwd=root, capture_output=True, text=True, timeout=10)
+
+    def test_identity_is_current_relocatable_and_regeneration_is_idempotent(self):
+        root = self.checkout()
+        expected = identity_generator.identity(ROOT)
+        self.assertEqual(identity_generator.identity(root), expected)
+        self.assertRegex(expected, r'^[0-9a-f]{64}$')
+        result = self.command(root, '--check')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        before = {name: (root / name).read_bytes() for name in identity_generator.TARGETS}
+        self.assertEqual(self.command(root).returncode, 0)
+        self.assertEqual(before, {name: (root / name).read_bytes() for name in before})
+
+    def test_layout_and_both_handshake_implementations_change_identity(self):
+        changes = [
+            ('controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
+             '#define PW_SHM_MAX_STEPS    256u', '#define PW_SHM_MAX_STEPS    257u'),
+            ('controller/tools/pw_probe_runner/pw_probe_runner.c',
+             'atomic_load_explicit(&hdr->proceed, memory_order_acquire)',
+             'atomic_load_explicit(&hdr->proceed, memory_order_relaxed)'),
+            ('runner/Sources/PWRunnerCore/CWorker.swift',
+             'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 1)',
+             'storeRelease(rawBase, offset: PWShmLayout.proceedOffset, 0)'),
+        ]
+        for name, old, new in changes:
+            with self.subTest(source=name):
+                root = self.checkout()
+                expected = identity_generator.identity(root)
+                path = root / name
+                self.assertIn(old, path.read_text())
+                path.write_text(path.read_text().replace(old, new))
+                changed = identity_generator.identity(root)
+                self.assertNotEqual(changed, expected)
+                self.assertEqual(self.command(root, '--check').returncode, 1)
+                self.assertEqual(self.command(root).returncode, 0)
+                self.assertEqual(self.command(root, '--check').returncode, 0)
+                self.assertEqual(identity_generator.identity(root), changed)
+                for target in identity_generator.TARGETS:
+                    self.assertIn(changed, (root / target).read_text())
+
+    def test_new_protocol_helpers_are_discovered_but_tests_are_not_identity_inputs(self):
+        root = self.checkout()
+        expected = identity_generator.identity(root)
+        test = root / 'runner/Tests/new.swift'
+        test.parent.mkdir(parents=True, exist_ok=True)
+        test.write_text('// test only\n')
+        self.assertEqual(identity_generator.identity(root), expected)
+        helper = root / 'controller/tools/pw_probe_runner/new_helper.h'
+        helper.write_text('#define NEW_PROTOCOL_DETAIL 1\n')
+        added = identity_generator.identity(root)
+        self.assertNotEqual(added, expected)
+        helper.rename(helper.with_name('renamed_helper.h'))
+        self.assertNotEqual(identity_generator.identity(root), added)
+
+    def test_stale_generated_value_is_detected_and_repaired_without_changing_identity(self):
+        root = self.checkout()
+        expected = identity_generator.identity(root)
+        header = root / identity_generator.TARGETS[0]
+        header.write_text(header.read_text().replace(expected, '0' * 64))
+        self.assertEqual(identity_generator.identity(root), expected)
+        self.assertEqual(self.command(root, '--check').returncode, 1)
+        self.assertEqual(self.command(root).returncode, 0)
+        self.assertEqual(self.command(root, '--check').returncode, 0)
+
+    def test_missing_marker_refuses_without_partial_writes(self):
+        root = self.checkout()
+        target = root / identity_generator.TARGETS[-1]
+        target.write_text(target.read_text().replace(identity_generator.END, 'broken marker'))
+        before = {name: (root / name).read_bytes() for name in identity_generator.TARGETS}
+        result = self.command(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('exactly one ordered', result.stderr)
+        self.assertEqual(before, {name: (root / name).read_bytes() for name in before})
 
 
 if __name__ == '__main__':

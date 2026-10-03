@@ -188,7 +188,10 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
             func word(_ offset: Int, _ value: UInt32) { raw.storeBytes(of: value, toByteOffset: offset, as: UInt32.self) }
             let base = raw.assumingMemoryBound(to: UInt8.self)
             let e = PWShmLayout.evidenceOffset
-            word(0, 7)
+            word(PWShmLayout.abiMagicOffset, PWShmLayout.abiMagic)
+            for (i, byte) in PWShmLayout.abiIdentity.enumerated() {
+                base[PWShmLayout.abiIdentityOffset + i] = byte
+            }
             word(e + PWShmLayout.evidenceOperationOffset, 8)
             word(e + PWShmLayout.evidenceCodeOffset, 123)
             for (pub, state): (UInt32, String) in [(0,"absent"), (2,"incomplete"), (9,"invalid")] {
@@ -220,7 +223,10 @@ func runWorkerEvidenceTests(_ tk: TestKit) {
                 try expectNil(got?.diagnostic.text)
                 try expectEqual(got?.failure?.code, 123)
             }
-            word(0, 5)
+            base[PWShmLayout.abiIdentityOffset + PWShmLayout.abiIdentityBytes - 1] ^= 1
+            try expectNil(decodeWorkerEvidence(base))
+            base[PWShmLayout.abiIdentityOffset + PWShmLayout.abiIdentityBytes - 1] ^= 1
+            word(PWShmLayout.abiMagicOffset, 7)
             try expectNil(decodeWorkerEvidence(base))
         }
         tk.run("excluded query keeps synthetic provenance despite an unexpected verdict") {

@@ -17,7 +17,7 @@ They independently clean up their child after a simulated unconfirmed reap.
 The ready byte is sent after fixture publication for deterministic controls;
 real-worker readiness and deadline/grace behavior remain separate tests.
 
-The ABI 7 scenarios also publish unfamiliar/zero failure records, late slots,
+The worker evidence scenarios also publish unfamiliar/zero failure records, late slots,
 started-but-unpublished slots, and rich/missing/empty/truncated diagnostics.
 `skip_publication` takes a two-step plan and deliberately violates the
 completion-before-return rule through the real publication primitives: slot 0
@@ -67,7 +67,7 @@ This forces a raw acknowledgement after the driver has broken ownership.
 An optional `|/tmp/receipt` suffix records waiting/ack/attempt/expiry for the
 test-owned collection gate. For the pre-ack signal token, `<receipt>.die` gates
 the signal. These unsandboxed fixtures test protocol interpretation, not native
-policy enforcement. `.abi6` refuses the new header. `.clock-failure` and
+policy enforcement. `.identity-mismatch` refuses a header whose last identity byte differs. `.clock-failure` and
 `.clock-failure-later` substitute only the real C producer's clock boundary and
 fail closed at the initial and subsequent clock reads.
 

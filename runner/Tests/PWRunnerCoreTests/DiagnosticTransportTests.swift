@@ -22,7 +22,10 @@ func runDiagnosticTransportTests(_ tk: TestKit) {
                 raw.initializeMemory(as: UInt8.self, repeating: 0, count: PWShmLayout.regionBytes)
                 func word(_ offset: Int, _ value: UInt32) { raw.storeBytes(of: value, toByteOffset: offset, as: UInt32.self) }
                 let e = PWShmLayout.evidenceOffset
-                word(0, 7)
+                word(PWShmLayout.abiMagicOffset, PWShmLayout.abiMagic)
+                for (i, byte) in PWShmLayout.abiIdentity.enumerated() {
+                    raw.storeBytes(of: byte, toByteOffset: PWShmLayout.abiIdentityOffset + i, as: UInt8.self)
+                }
                 for (key, offset) in [("operation", PWShmLayout.evidenceOperationOffset),
                     ("code", PWShmLayout.evidenceCodeOffset), ("native_kind", PWShmLayout.evidenceNativeKindOffset),
                     ("detail", PWShmLayout.evidenceDetailOffset)] {

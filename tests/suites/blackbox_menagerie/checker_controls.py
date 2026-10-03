@@ -13,13 +13,16 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/missing_path_run.json"
+BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response14/missing_path_run.json"
 
 
 def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     baseline = json.loads(BASELINE.read_text())
+    submitted = json.loads(BASELINE.with_name("missing_path_specimen.json").read_text())
+    allowed_read = next(step["attempt"] for step in submitted["probe_plan"]
+                        if step["step_id"] == "fs_read_allowed")
     baseline["data"]["runner_result"]["policy_sha256"] = "a" * 64
     expectations = {
         "blackbox_e2e": {
@@ -231,7 +234,7 @@ def main():
 
     expected = copy.deepcopy(expectations)
     expected["blackbox_menagerie"]["steps"][2]["attempt"] = {
-        "kind": "file", "action": "open_read", "target": "/private/tmp/pw-bbx-checker/allow.txt"}
+        "kind": "file", "action": "open_read", "target": allowed_read["target"]}
     check("file_observation", baseline, expected=expected, suites=("blackbox_menagerie",))
     broken, steps = mutate()
     steps[2]["attempt"]["observed_path"] = None

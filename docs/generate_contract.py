@@ -16,9 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "docs/contract.json"
-KEYS = ("request_schema", "response_schema", "worker_abi", "controller_envelope")
+KEYS = ("request_schema", "response_schema", "controller_envelope")
 TITLES = {"request_schema": "request schema", "response_schema": "response schema",
-          "worker_abi": "worker ABI", "controller_envelope": "controller envelope"}
+          "controller_envelope": "controller envelope"}
 BEGIN = "BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)"
 END = "END GENERATED CONTRACT VERSIONS"
 TABLE_BEGIN = "<!-- BEGIN GENERATED CONTRACT TABLE -->"
@@ -32,9 +32,6 @@ COPIES = {
     "response_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.responseSchema"),
                         ("controller/src/json_contract.rs", "RESPONSE_SCHEMA_VERSION"),
                         ("tests/lib/contract.py", "RESPONSE_SCHEMA")],
-    "worker_abi": [("controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "PW_PROBE_RUNNER_ABI_VERSION"),
-                   ("runner/Sources/PWRunnerCore/CWorker.swift", "PWShmLayout.abiVersion"),
-                   ("tests/lib/contract.py", "WORKER_ABI")],
     "controller_envelope": [("controller/src/json_contract.rs", "SCHEMA_VERSION"),
                             ("tests/lib/contract.py", "CONTROLLER_ENVELOPE")],
 }
@@ -64,8 +61,8 @@ def load_versions(path: Path) -> dict:
 
 def sentence(v):
     return ("Current wire contracts: " + ", ".join(f"{TITLES[k]} {v[k]}" for k in KEYS)
-            + ". Each number is a separate contract. `docs/contract.json` owns all four, and"
-            " generated copies carry them into code and documents.")
+            + ". Each number is a separate contract. `docs/contract.json` owns these numbers;"
+            " the internal host/worker boundary uses a generated source identity.")
 
 
 def table(v):
@@ -82,10 +79,6 @@ def region(open_comment, close_comment, indent=""):
 
 
 TARGETS = {
-    "controller/tools/pw_probe_runner/pw_probe_runner_abi.h": [
-        (*region("/* ", " */"), lambda v: f"#define PW_PROBE_RUNNER_ABI_VERSION {v['worker_abi']}u")],
-    "runner/Sources/PWRunnerCore/CWorker.swift": [
-        (*region("// ", "", "    "), lambda v: f"    public static let abiVersion: UInt32   = {v['worker_abi']}")],
     "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": [
         (*region("// ", ""), lambda v: "\n".join([
             "/// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.",

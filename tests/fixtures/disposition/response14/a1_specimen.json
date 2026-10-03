@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "specimen_id": "a1_fifo_then_file",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "fifo",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "/private/tmp/pw-in-flight-in_8l_p3/blocker.fifo"
+      }
+    },
+    {
+      "step_id": "hosts",
+      "sandbox_check": {
+        "operation": "file-read-data",
+        "filter": {
+          "kind": "path",
+          "value": "/etc/hosts"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_read",
+        "target": "/etc/hosts"
+      }
+    }
+  ],
+  "_test_overrides": {
+    "worker_timeout_ms": 2000
+  }
+}

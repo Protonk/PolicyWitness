@@ -71,9 +71,9 @@ if runner.get("schema_version") != contract.RESPONSE_SCHEMA:
     raise SystemExit(f"built app reports response schema {runner.get('schema_version')!r}; "
                      f"docs/contract.json says {contract.RESPONSE_SCHEMA}")
 evidence = (runner.get("runner_subprocess") or {}).get("worker_evidence") or {}
-if evidence.get("abi_version") != contract.WORKER_ABI:
-    raise SystemExit(f"built app reports worker ABI {evidence.get('abi_version')!r}; "
-                     f"docs/contract.json says {contract.WORKER_ABI}")
+if evidence.get("abi_identity") != contract.WORKER_IDENTITY:
+    raise SystemExit(f"built app reports worker ABI {evidence.get('abi_identity')!r}; "
+                     f"generated source identity says {contract.WORKER_IDENTITY}")
 steps = runner.get("steps") or []
 if len(steps) != 1:
     raise SystemExit(f"expected 1 step (got {len(steps)})")

@@ -492,7 +492,7 @@ reporting obligations and registered test owners.
 | Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
 | `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
-| `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; ABI 7 layout and exact-version rejection |
+| `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; compiled layout and exact-identity rejection |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the current response schema; missing channels remain distinct from observed failures |
 | `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Actual subprocess assembler and JSON round-trip preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
@@ -518,10 +518,9 @@ missing. Constructed classifier/encoding cases have separate credit.
 ## Worker evidence contract
 
 The authoritative layout is `pw_probe_runner_abi.h::pw_shm_evidence_t`, appended
-following the capture bytes. Host and worker require exactly the same ABI number, with no older fallback. Header offsets 56 and 60 carry proceed and proceed_observed, and the header is 64 bytes. The reply carries the ordering evidence described below.
+following the capture bytes. Host and worker require exactly the same generated source identity, with no fallback. Header offsets 56 and 60 carry proceed and proceed_observed; bytes 64 through 95 carry the identity, and the header is 96 bytes. The reply carries the ordering evidence described below.
 The worker record is `data.runner_result.runner_subprocess.worker_evidence`.
-Its `abi_version` is the host-selected UInt32
-layout encoded as a JSON integer, not proof the child reached ABI validation.
+Its `abi_identity` is the host-selected SHA-256 source identity encoded as a hex string, not proof the child reached ABI validation.
 An entirely absent publication remains explicit even after a mapping failure.
 Host process observations remain independent.
 

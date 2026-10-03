@@ -81,12 +81,16 @@ if [[ "${RC}" -ne 0 ]]; then
     "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+/usr/bin/python3 - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" <<'PY'
 import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, sys.argv[2])
+from document_versions import require_supported
+
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+require_supported(env)
 
 if env.get("kind") != "run":
     raise SystemExit(f"expected kind=run (got {env.get('kind')!r})")
@@ -121,7 +125,6 @@ assert sub["ready_byte_received"] is False, sub
 assert sub["worker_evidence"]["readiness"] == {"rc": -1, "errno": errno.EPIPE}, sub
 assert sub["worker_evidence"]["failure_state"] == "absent", sub
 assert runner["sandboxed_after_apply"] is True, runner
-assert runner["schema_version"] >= 8, runner  # runner_subprocess.ordering: response 8
 ordering = sub["ordering"]
 assert all(ordering[k] is True for k in ("collection_closed_before_proceed", "proceed_set", "proceed_observed", "worker_lifetime_established")), ordering
 assert ordering["validator_disposition"] == "reaped" and not ordering["protocol_violations"], ordering

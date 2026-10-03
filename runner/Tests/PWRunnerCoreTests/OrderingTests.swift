@@ -254,9 +254,9 @@ func runOrderingTests(_ tk: TestKit) {
             let validator = ValidatorOutput(validatorPid: 7, verdicts: [orderingVerdict()], reaped: true)
             try expectEqual(orderedSteps(out, validator)[0].comparison?.order, "query_first")
         }
-        tk.run("abi6_worker: an ABI 6 worker refuses the ABI 7 header without application or hook") {
+        tk.run("a worker with a different identity refuses the header without application or hook") {
             var invoked = false
-            let out = try orderingWorker("proceed_wait", suffix: ".abi6") { _ in invoked = true }
+            let out = try orderingWorker("proceed_wait", suffix: ".identity-mismatch") { _ in invoked = true }
             try expectEqual(out.exitCode, 92)
             try expectFalse(out.applied || invoked || out.proceedSet || out.proceedObserved)
         }

@@ -1,5 +1,5 @@
 {
-  "response_schema" : 13,
+  "response_schema" : 14,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -200,7 +200,7 @@
       "rc" : "number"
     },
     "reply.runner_subprocess.worker_evidence" : {
-      "abi_version" : "number",
+      "abi_identity" : "string",
       "diagnostic" : "object",
       "failure" : "object",
       "failure_publication" : "number",

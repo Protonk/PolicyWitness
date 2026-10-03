@@ -302,7 +302,7 @@ def build_envelope(obs, schema_version=contract.RESPONSE_SCHEMA, envelope_versio
     step_ids = [f'step{i}' for i in range(len(obs['steps']))]
     record = build_record(claims, steps, issues, step_ids, obs)
     sub = {'pid': 4242, 'reaped': obs['reaped'], 'partial_steps': projections['partial_steps'],
-           'worker_evidence': {'abi_version': 7, 'failure_publication': 0, 'failure_state': 'absent',
+           'worker_evidence': {'abi_identity': contract.WORKER_IDENTITY, 'failure_publication': 0, 'failure_state': 'absent',
                                'diagnostic': {'state': 0, 'status': 'absent'}}}
     if obs['exit_code'] is not None:
         sub['exit_code'] = obs['exit_code']

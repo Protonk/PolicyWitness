@@ -66,7 +66,7 @@ deterministic, and checked into the repo so tests are hermetic.
 - `comparison/`: the comparison-record scenario matrix. `matrix.json` holds
   every S, B, C and T row with its specimen inputs, the raw channel inputs the
   Swift unit reader feeds to `comparisonEvidence(...)`, the raw fields the
-  live case asserts beside the record, and the expected response 13
+  live case asserts beside the record, and the expected current-response
   `comparison` object; `stub_validator.py` is specimen B's steered validator,
   and `build.sh` compiles the exit-status helpers (`helper_status.c`) the spawn
   rows copy into the scenario root, named in `PW_COMPARISON_HELPER_FIXTURE`.
@@ -104,7 +104,7 @@ checks their manifests and inventories. Real signing controls use disposable cop
 through `caller_auth/bundle.py`; caller-auth and BYOXPC both reuse the inventory
 in `tests/lib/artifact.py` to protect their source app.
 
-`worker_lifecycle` includes ABI 7 progress/failure/diagnostic and closed-input
+`worker_lifecycle` includes worker progress/failure/diagnostic and closed-input
 controls plus production C-main native-call/mapping companions. See its README
 for the attribution and cleanup boundaries.
 

@@ -1,0 +1,55 @@
+{
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n\n; BBX-002: plain SBPL, allow default.\n(allow default)\n"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/pw-bbx.XuBrRl/does-not-exist.txt"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-bbx.XuBrRl/does-not-exist.txt"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "fs_read_missing"
+    },
+    {
+      "attempt": {
+        "action": "bootstrap_look_up",
+        "kind": "mach_lookup",
+        "target": "com.example.policywitness.invalid"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "global_name",
+          "value": "com.example.policywitness.invalid"
+        },
+        "operation": "mach-lookup"
+      },
+      "step_id": "mach_lookup_invalid"
+    },
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/pw-bbx.XuBrRl/allow-read/existing.txt"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-bbx.XuBrRl/allow-read/existing.txt"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "fs_read_allowed"
+    }
+  ],
+  "schema_version": 1,
+  "specimen_id": "BBX-002"
+}

@@ -37,6 +37,7 @@ private let stringPolicy: [String: Int?] = [
     "failure_state": nil, "origin": nil, "field": nil, "unit": nil, "kind": nil,
     "filter_type": nil, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
+    "abi_identity": nil,
     // Bounded echoes of request strings.
     "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes,
     "step_id": PWShmLayout.stepIdMax - 1, "operation": sandboxCheckOperationMaxBytes,

@@ -14,7 +14,7 @@ import CryptoKit
  * Flow (mirrors tests/suites/runner_c_worker_harness/harness.c):
  *   1. shm_open + ftruncate + mmap a PWShmLayout.regionBytes region;
  *      clear FD_CLOEXEC so the child inherits the FD.
- *   2. Memset the header to zero, populate abi_version, step_count,
+ *   2. Memset the header to zero, populate ABI identity, step_count,
  *      param_count; populate slot inputs from the request; populate
  *      param keys/values from policy.params.
  *   3. Pre-touch every page so the worker's post-apply writes never
@@ -40,18 +40,22 @@ import CryptoKit
 // MARK: - ABI mirror
 
 /// Wire-stable layout of the shm region. Mirrors pw_probe_runner_abi.h.
-/// A future ABI bump in the C header MUST update these constants.
+/// Layout changes in the C header must update these constants.
 /// The runner_abi_layout suite compiles a C printer against
 /// pw_probe_runner_abi.h at test time and asserts that every
 /// constant + offset here matches the C-side `sizeof` / `offsetof`,
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
-    // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
-    public static let abiVersion: UInt32   = 7
-    // END GENERATED CONTRACT VERSIONS
+    // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
+    public static let abiIdentityHex = "84a5cc164b9dedf53af0671e56f04e22f9981ea73ddf02ca29647cf1989d0087"
+    public static let abiIdentity: [UInt8] = [0x84, 0xa5, 0xcc, 0x16, 0x4b, 0x9d, 0xed, 0xf5, 0x3a, 0xf0, 0x67, 0x1e, 0x56, 0xf0, 0x4e, 0x22, 0xf9, 0x98, 0x1e, 0xa7, 0x3d, 0xdf, 0x02, 0xca, 0x29, 0x64, 0x7c, 0xf1, 0x98, 0x9d, 0x00, 0x87]
+    // END GENERATED WORKER IDENTITY
 
-    public static let headerBytes: Int     = 64
+    public static let abiMagic: UInt32 = 0x50574944
+    public static let abiIdentityBytes: Int = 32
+
+    public static let headerBytes: Int     = 96
     public static let slotBytes: Int       = 8192
     public static let maxSteps: Int        = 256
     public static let policyBytes: Int     = 262144
@@ -63,13 +67,13 @@ public enum PWShmLayout {
     public static let evidenceHeaderBytes: Int = 64
     public static let diagnosticBytes: Int = 4096
 
-    // Exec-attempt input bounds (ABI v4). argvBytes is the per-entry
+    // Exec-attempt input bounds. argvBytes is the per-entry
     // byte cap (including the trailing NUL); maxArgv is the number of
     // entries the slot's argv table holds. The runner host validates
     // both before shm allocation.
     public static let maxArgv: Int          = 16
     public static let argvBytes: Int        = 128
-    // Exec-attempt output bounds (ABI v4). Per-stream child output
+    // Exec-attempt output bounds. Per-stream child output
     // capture; output past the buffer is truncated and tagged.
     public static let childOutputBytes: Int = 1024
 
@@ -77,7 +81,8 @@ public enum PWShmLayout {
         headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes + evidenceHeaderBytes + diagnosticBytes
 
     // Header field offsets (in bytes from region base).
-    public static let abiVersionOffset: Int    = 0
+    public static let abiMagicOffset: Int      = 0
+    public static let abiIdentityOffset: Int   = 64
     public static let stepCountOffset: Int     = 4
     public static let preparedOffset: Int      = 8
     public static let appliedOffset: Int       = 12
@@ -123,11 +128,7 @@ public enum PWShmLayout {
     public static let evidenceDiagnosticStateOffset: Int = 52
     public static let evidenceDiagnosticLengthOffset: Int = 56
 
-    // Slot field offsets (from the slot's base). ABI v4 interposes
-    // argv_count + argv between the v3 inputs and the v3 outputs, so
-    // rc / errno_val / observed_path / error / completed offsets all
-    // shifted relative to v3 by (sizeof(uint32_t) + maxArgv*argvBytes)
-    // = 2052 bytes.
+    // Slot field offsets (from the slot's base), checked against compiled C.
     public static let stepIdMax: Int           = 64
     public static let targetMax: Int           = 512
     public static let observedPathMax: Int     = 1024
@@ -353,8 +354,14 @@ public struct CWorkerOutput {
 
 // Only publication words gate non-atomic payload reads. Progress itself is atomic.
 // Unknown codes remain numbers; structural bounds, not recognition, gate validity.
+func workerIdentityMatches(_ base: UnsafePointer<UInt8>) -> Bool {
+    UInt32(bitPattern: readI32(base, offset: PWShmLayout.abiMagicOffset)) == PWShmLayout.abiMagic
+        && UnsafeBufferPointer(start: base.advanced(by: PWShmLayout.abiIdentityOffset),
+                               count: PWShmLayout.abiIdentityBytes).elementsEqual(PWShmLayout.abiIdentity)
+}
+
 func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
-    guard UInt32(bitPattern: readI32(base, offset: PWShmLayout.abiVersionOffset)) == PWShmLayout.abiVersion else { return nil }
+    guard workerIdentityMatches(base) else { return nil }
     let e = base.advanced(by: PWShmLayout.evidenceOffset)
     func u(_ offset: Int) -> UInt32 { UInt32(bitPattern: readI32(e, offset: offset)) }
     let raw = loadAcquire(e, offset: PWShmLayout.evidenceProgressOffset)
@@ -394,7 +401,7 @@ func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
                 e.advanced(by: PWShmLayout.evidenceHeaderBytes), count: Int(length)), as: UTF8.self)
         } else { diagnostic.status = "invalid" }
     }
-    return PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: progress,
+    return PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: progress,
         failure_publication: published, failure_state: state, failure: failure,
         readiness: readiness, diagnostic: diagnostic)
 }
@@ -714,7 +721,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         close(shmFD)
     }
 
-    // Zero the region. The worker checks abi_version + prepared so a
+    // Zero the region. The worker checks ABI identity + prepared so a
     // leftover non-zero from a recycled mapping wouldn't be confusing,
     // but zeroing is cheap and removes a class of "did I clear it?"
     // questions.
@@ -722,7 +729,11 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
 
     // ---- Populate header.
     let rawBase = base.assumingMemoryBound(to: UInt8.self)
-    writeU32(rawBase, offset: PWShmLayout.abiVersionOffset, PWShmLayout.abiVersion)
+    writeU32(rawBase, offset: PWShmLayout.abiMagicOffset, PWShmLayout.abiMagic)
+    PWShmLayout.abiIdentity.withUnsafeBytes { identity in
+        rawBase.advanced(by: PWShmLayout.abiIdentityOffset).update(from: identity.bindMemory(to: UInt8.self).baseAddress!,
+                                                                 count: PWShmLayout.abiIdentityBytes)
+    }
     writeU32(rawBase, offset: PWShmLayout.stepCountOffset, UInt32(input.slots.count))
     writeU32(rawBase, offset: PWShmLayout.paramCountOffset, UInt32(input.params.count))
     writeU32(rawBase, offset: PWShmLayout.captureRequestedOffset, input.captureAppliedProfile ? 1 : 0)
@@ -953,7 +964,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
             // can't finish before the hook starts.
             if sawApplied && !hookFired
                 && readI32(rawBase, offset: PWShmLayout.applyRcOffset) == 0
-                && UInt32(bitPattern: readI32(rawBase, offset: PWShmLayout.abiVersionOffset)) == PWShmLayout.abiVersion {
+                && workerIdentityMatches(rawBase) {
                 checkPrematurePublication()
                 hookFired = true
                 if let hook = postApplied { hook(pid) }

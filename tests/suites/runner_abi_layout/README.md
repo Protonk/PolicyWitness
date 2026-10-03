@@ -43,7 +43,7 @@ spec for printer-key → Swift-constant naming. Brief summary:
 
 | printer key                                      | Swift constant            |
 |--------------------------------------------------|---------------------------|
-| `PW_PROBE_RUNNER_ABI_VERSION`                    | `abiVersion`              |
+| `PW_SHM_ABI_MAGIC`, `PW_SHM_ABI_IDENTITY_BYTES` | `abiMagic`, `abiIdentityBytes` |
 | `PW_SHM_HEADER_BYTES`                            | `headerBytes`             |
 | `PW_SHM_SLOT_BYTES`                              | `slotBytes`               |
 | `sizeof.pw_shm_slot_t`                           | `slotBytes` (cross-check) |
@@ -100,12 +100,14 @@ controls. Values are compared with `docs/limits.json`; the behavioral inputs are
 independent of that manifest. A changed manifest value is a required negative
 control, even when its generated Markdown would be self-consistent.
 
-## Contract versions
+## Identity and layout review
 
-The harvested `PW_PROBE_RUNNER_ABI_VERSION` must equal `worker_abi` in
-`docs/contract.json`. The header's generated region is text; this is the
-compiled value. The whole harvest must also equal the golden
-`tests/fixtures/contract/abi_layout.txt`. A layout change under an unchanged ABI
-number fails with an instruction to bump first; any change writes
-`abi_layout.candidate.txt` into the artifacts to replace the golden after review.
-See `docs/CONTRACT.md`.
+The compiled `PW_WORKER_ABI_IDENTITY` bytes must agree with the generated Swift
+and Python identities. The generator covers layout declarations and host/worker
+protocol sources; `source_drift` controls prove that changing either handshake
+changes the identity even with unchanged layout.
+
+The geometry harvest must equal `tests/fixtures/contract/abi_layout.txt`. A
+change writes `abi_layout.candidate.txt` for review. The identity is excluded
+from this golden, so a protocol-only edit requires no manual layout update or
+ordinal bump. See [the contract](../../../docs/CONTRACT.md#internal-hostworker-identity).

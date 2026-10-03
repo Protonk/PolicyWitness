@@ -66,7 +66,7 @@ def check_worker(pw, output, fixture, mode):
         assert evidence is None, evidence
         assert 'native return unavailable' in runner['error'], runner
         return
-    assert evidence['abi_version'] >= 7, evidence  # progress/failure record codes: ABI 7
+    assert isinstance(evidence['abi_identity'], str) and len(evidence['abi_identity']) == 64, evidence
     progress = dict(evidence['progress']); progress.pop('raw')
     assert progress == oracle['progress'], progress
     if mode in ('transport_absent', 'transport_unpublished', 'transport_malformed'):

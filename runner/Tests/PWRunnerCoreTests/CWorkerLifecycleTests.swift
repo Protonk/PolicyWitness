@@ -114,7 +114,7 @@ func runCWorkerLifecycleTests(_ tk: TestKit) {
             try checkLifecycleJSON(out, stop: "done", reaped: true, signal: SIGTERM)
             try expectNil(out.terminationRequest)
         }
-        tk.run("published legacy failure survives cleanup termination") {
+        tk.run("published coarse failure survives cleanup termination") {
             let out = try lifecycleFixture("reported_failure_hang")
             try expectFalse(out.applied)
             try expectTrue(out.done)

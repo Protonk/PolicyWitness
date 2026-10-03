@@ -8,7 +8,6 @@ private struct ContractManifest: Decodable {
     struct Versions: Decodable {
         let request_schema: Int
         let response_schema: Int
-        let worker_abi: Int
         let controller_envelope: Int
     }
     let versions: Versions
@@ -100,7 +99,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         workerPid: 42, readyByteReceived: true, applied: true, applyRC: 0, applyErrno: 0, done: true,
         exitCode: 0, termSignal: nil, slots: [shapeSlot("first", completed: true), shapeSlot("second", completed: false)],
         pollStopReason: "done", exitRequested: true, terminationRequest: nil, reaped: true, waitErrors: [],
-        workerEvidence: PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: shapeProgress(9, 2, index: 1),
+        workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(9, 2, index: 1),
             failure_publication: 0, failure_state: "absent", failure: nil,
             readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))
     conflict.cleanupTrigger = "completion"
@@ -112,7 +111,7 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
         pollStopReason: "sentinel_deadline", exitRequested: true,
         terminationRequest: PWRunnerTerminationRequest(signal: 9, rc: 0, errno: nil), reaped: true,
         waitErrors: [PWRunnerWaitError(phase: "exit_grace", rc: -1, errno: 10)],
-        workerEvidence: PWWorkerEvidence(abi_version: PWShmLayout.abiVersion, progress: shapeProgress(10, 2),
+        workerEvidence: PWWorkerEvidence(abi_identity: PWShmLayout.abiIdentityHex, progress: shapeProgress(10, 2),
             failure_publication: 1, failure_state: "published",
             failure: PWWorkerFailure(operation: 10, code: 1, native_kind: 1, native_result: -1, errno: 22, index: 0, detail: 0),
             readiness: PWWorkerReadiness(rc: 1, errno: 0), diagnostic: shapeDiagnostic()))
@@ -231,7 +230,9 @@ func runContractVersionTests(_ tk: TestKit) {
                 from: Data(contentsOf: root.appendingPathComponent("docs/contract.json")))
             try expectEqual(PWContract.requestSchema, manifest.versions.request_schema)
             try expectEqual(PWContract.responseSchema, manifest.versions.response_schema)
-            try expectEqual(Int(PWShmLayout.abiVersion), manifest.versions.worker_abi)
+            try expectEqual(PWShmLayout.abiIdentity.count, PWShmLayout.abiIdentityBytes)
+            try expectEqual(PWShmLayout.abiIdentity.map { String(format: "%02x", $0) }.joined(),
+                            PWShmLayout.abiIdentityHex)
         }
         tk.run("shape classification separates additive, breaking and unacknowledged changes") {
             let base: [String: [String: String]] = ["reply": ["a": "number", "b": "null"], "reply.o": ["k": "string"]]

@@ -59,7 +59,6 @@ DIFF_REPORT="${PW_TEST_ARTIFACTS}/diff.json"
 if ! PW_PRINTER_OUT="${PRINTER_OUT}" \
      PW_SWIFT_LAYOUT_FILE="${SWIFT_LAYOUT_FILE}" \
      PW_DIFF_REPORT="${DIFF_REPORT}" \
-     PW_CONTRACT_JSON="${ROOT_DIR}/docs/contract.json" \
      PW_ABI_GOLDEN="${ROOT_DIR}/tests/fixtures/contract/abi_layout.txt" \
      PW_ABI_GOLDEN_CANDIDATE="${PW_TEST_ARTIFACTS}/abi_layout.candidate.txt" \
      PW_TESTS_LIB="${ROOT_DIR}/tests/lib" \
@@ -89,8 +88,6 @@ def title_first(s: str) -> str:
 # adding a new printer line that maps to a name not in this table will
 # raise, forcing the table to stay current as the layout grows.
 def swift_name_for(printer_key: str) -> str:
-    if printer_key == "PW_PROBE_RUNNER_ABI_VERSION":
-        return "abiVersion"
     if printer_key.startswith("PW_SHM_"):
         return to_camel(printer_key[len("PW_SHM_"):])
     if printer_key == "sizeof.pw_shm_header_t":
@@ -133,6 +130,7 @@ def swift_name_for(printer_key: str) -> str:
 
 
 printer_values: dict[str, int] = {}
+compiled_identity = None
 for line in printer_out.splitlines():
     line = line.strip()
     if not line:
@@ -140,35 +138,32 @@ for line in printer_out.splitlines():
     if "=" not in line:
         raise SystemExit(f"malformed printer line (no '='): {line!r}")
     key, value = line.split("=", 1)
+    if key == "PW_WORKER_ABI_IDENTITY":
+        compiled_identity = value
+        continue
     try:
         printer_values[key] = int(value)
     except ValueError as e:
         raise SystemExit(f"non-integer printer value: {line!r} ({e})")
 
-# The compiled ABI number must be the one docs/contract.json declares; the
-# generated header region is text, and this is the compiled ground truth.
-contract = json.loads(Path(os.environ["PW_CONTRACT_JSON"]).read_text(encoding="utf-8"))
-declared_abi = contract["versions"]["worker_abi"]
-if printer_values.get("PW_PROBE_RUNNER_ABI_VERSION") != declared_abi:
-    raise SystemExit(
-        f"compiled PW_PROBE_RUNNER_ABI_VERSION={printer_values.get('PW_PROBE_RUNNER_ABI_VERSION')!r} "
-        f"disagrees with docs/contract.json worker_abi={declared_abi}"
-    )
-
-# The layout golden records the last accepted harvest. Any change fails until
-# the golden is replaced; a change that keeps the ABI number also needs a bump,
-# because host and worker rely on that number to refuse a mismatched layout.
 sys.path.insert(0, os.environ["PW_TESTS_LIB"])
+from contract import WORKER_IDENTITY
+swift_identity = re.search(r'public static let abiIdentityHex = "([0-9a-f]{64})"', swift_text)
+if not swift_identity or compiled_identity != swift_identity.group(1) or compiled_identity != WORKER_IDENTITY:
+    raise SystemExit("compiled C identity, Swift identity and generated Python identity disagree")
+
+# Only geometry belongs in the layout golden. Source identity changes are
+# automatic and do not create another manual golden update obligation.
+layout_text = ''.join(line + '\n' for line in printer_out.splitlines()
+                      if not line.startswith('PW_WORKER_ABI_IDENTITY='))
 from abi_golden import compare
 golden_path = Path(os.environ["PW_ABI_GOLDEN"])
 golden_text = golden_path.read_text(encoding="utf-8") if golden_path.exists() else ""
-status, detail = compare(printer_out, golden_text)
+status, detail = compare(layout_text, golden_text)
 if status != "ok":
     candidate = Path(os.environ["PW_ABI_GOLDEN_CANDIDATE"])
-    candidate.write_text(printer_out, encoding="utf-8")
+    candidate.write_text(layout_text, encoding="utf-8")
     advice = f"review the diff, then replace {golden_path} with {candidate}"
-    if status == "needs_bump":
-        advice = "bump worker_abi in docs/contract.json, regenerate, then " + advice
     raise SystemExit(f"{detail}; {advice}")
 
 # Parse PWShmLayout constants out of CWorker.swift. The regex
@@ -224,9 +219,7 @@ for c_key, c_val in sorted(printer_values.items()):
         })
 
 # Catch the reverse direction: a Swift constant nobody on the C side
-# verifies. Skip the two version constants whose printer keys live
-# under different names — abiVersion is already covered via
-# PW_PROBE_RUNNER_ABI_VERSION.
+# verifies. Identity bytes are checked separately above.
 swift_only = sorted(set(swift_values.keys()) - covered_swift)
 
 report = {

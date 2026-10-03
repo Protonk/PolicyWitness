@@ -23,7 +23,12 @@ int main(void) {
     /* Top-level constants. Keys are the C macro spellings so a
      * reader of this file can grep them directly against the
      * header; the driver maps each C name to its Swift counterpart. */
-    printf("PW_PROBE_RUNNER_ABI_VERSION=%u\n", PW_PROBE_RUNNER_ABI_VERSION);
+    /* Emit actual bytes, independently of the generated printable spelling. */
+    printf("PW_WORKER_ABI_IDENTITY=");
+    for (size_t i = 0; i < sizeof(PW_WORKER_ABI_IDENTITY); i++) printf("%02x", PW_WORKER_ABI_IDENTITY[i]);
+    printf("\n");
+    printf("PW_SHM_ABI_MAGIC=%u\n", PW_SHM_ABI_MAGIC);
+    printf("PW_SHM_ABI_IDENTITY_BYTES=%u\n", PW_SHM_ABI_IDENTITY_BYTES);
     printf("PW_SHM_HEADER_BYTES=%u\n",         PW_SHM_HEADER_BYTES);
     printf("PW_SHM_POLICY_BYTES=%u\n", PW_SHM_POLICY_BYTES);
     printf("PW_SHM_MAX_STEPS=%u\n",            PW_SHM_MAX_STEPS);
@@ -54,7 +59,8 @@ int main(void) {
     printf("sizeof.pw_shm_capture_t=%zu\n", sizeof(pw_shm_capture_t));
 
     /* Header field offsets. */
-    printf("offsetof.pw_shm_header_t.abi_version=%zu\n",    offsetof(pw_shm_header_t, abi_version));
+    printf("offsetof.pw_shm_header_t.abi_magic=%zu\n",    offsetof(pw_shm_header_t, abi_magic));
+    printf("offsetof.pw_shm_header_t.abi_identity=%zu\n", offsetof(pw_shm_header_t, abi_identity));
     printf("offsetof.pw_shm_header_t.step_count=%zu\n",     offsetof(pw_shm_header_t, step_count));
     printf("offsetof.pw_shm_header_t.prepared=%zu\n",       offsetof(pw_shm_header_t, prepared));
     printf("offsetof.pw_shm_header_t.applied=%zu\n",        offsetof(pw_shm_header_t, applied));

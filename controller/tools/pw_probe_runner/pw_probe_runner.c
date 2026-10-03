@@ -6,7 +6,7 @@
  *   1. Parse argv: --shm-fd <N> --ready-fd <N> --step-count <N>
  *                  [--policy-fd <N>] (defaults to stdin).
  *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
- *      --shm-fd. Verify abi_version and prepared sentinel.
+ *      --shm-fd. Verify ABI identity and prepared sentinel.
  *   2b. Raise the soft descriptor limit to fit the plan's exec slots (a
  *      bound change, not a resource), then create each exec slot's
  *      pipes and file actions. Both happen before the policy is read.
@@ -239,7 +239,7 @@ static void print_usage(FILE *to) {
         "                         (1..%ld ms). Exec children spawn only while\n"
         "                         the worker's local active time is\n"
         "                         below it; later exec steps are refused.\n"
-        "  --version              Print ABI version and exit.\n",
+        "  --version              Print ABI identity and exit.\n",
         PW_SHM_MAX_STEPS, PW_EXEC_CHILD_DEADLINE_MS_DEFAULT,
         PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT);
 }
@@ -381,7 +381,8 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
 
 /* ---- shm + policy + sandbox --------------------------------------------- */
 
-/* mmap the host's region. Verifies abi_version and prepared sentinel.
+/* mmap the host's region. The caller checks the fixed bootstrap identity
+ * before accessing layout-dependent fields or the prepared sentinel.
  * Returns the base pointer on success, NULL on failure (caller logs +
  * exits; no further shm communication is possible). */
 static void *map_region(int shm_fd) {
@@ -583,7 +584,7 @@ static void attempt_sysctl_read(pw_shm_slot_t *slot) {
     slot->errno_val = 0;
 }
 
-/* ---- exec attempt machinery (ABI v4) ------------------------------------ */
+/* ---- exec attempt machinery ------------------------------------ */
 
 /*
  * Exec attempts need pipes + posix_spawn_file_actions to capture
@@ -1276,8 +1277,8 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
 
     if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
-        printf("pw-probe-runner abi=%u region_bytes=%zu max_steps=%u slot_bytes=%u\n",
-               PW_PROBE_RUNNER_ABI_VERSION,
+        printf("pw-probe-runner abi_identity=%s region_bytes=%zu max_steps=%u slot_bytes=%u\n",
+               PW_WORKER_ABI_IDENTITY_HEX,
                (size_t)PW_SHM_REGION_BYTES,
                PW_SHM_MAX_STEPS,
                PW_SHM_SLOT_BYTES);
@@ -1299,16 +1300,16 @@ int main(int argc, char **argv) {
     if (!base) return 3;
 
     pw_shm_header_t *hdr = (pw_shm_header_t *)base;
+    if (hdr->abi_magic != PW_SHM_ABI_MAGIC ||
+        memcmp(hdr->abi_identity, PW_WORKER_ABI_IDENTITY, PW_SHM_ABI_IDENTITY_BYTES) != 0) {
+        fprintf(stderr,
+                "pw-probe-runner: ABI identity mismatch (worker %s); refusing shared interface\n",
+                PW_WORKER_ABI_IDENTITY_HEX);
+        return 4;
+    }
     pw_shm_slot_t   *slots = (pw_shm_slot_t *)((char *)base + PW_SHM_HEADER_BYTES);
     pw_shm_param_t  *params = (pw_shm_param_t *)((char *)slots
                               + ((size_t)PW_SHM_MAX_STEPS * PW_SHM_SLOT_BYTES));
-
-    if (hdr->abi_version != PW_PROBE_RUNNER_ABI_VERSION) {
-        fprintf(stderr,
-                "pw-probe-runner: ABI mismatch — header says %u, worker built for %u\n",
-                hdr->abi_version, PW_PROBE_RUNNER_ABI_VERSION);
-        return 4;
-    }
     pw_shm_evidence_t *evidence = pw_evidence(base);
     pw_progress(evidence, PW_OP_HEADER, PW_PROGRESS_STARTED, UINT32_MAX);
     if (atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1u) {

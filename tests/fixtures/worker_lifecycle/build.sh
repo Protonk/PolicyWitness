@@ -21,9 +21,9 @@ done
 /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 \
   "${ROOT_DIR}/tests/fixtures/worker_lifecycle/validator.c" -o "${OUTPUT}.validator"
 
-/usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 -DPW_LEGACY_ABI6 \
+/usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 -DPW_MISMATCHED_IDENTITY \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
-  "${ROOT_DIR}/tests/fixtures/worker_lifecycle/worker.c" -lsandbox -o "${OUTPUT}.abi6"
+  "${ROOT_DIR}/tests/fixtures/worker_lifecycle/worker.c" -lsandbox -o "${OUTPUT}.identity-mismatch"
 for suffix in clock-failure clock-failure-later; do
   flags=(-DPW_CLOCK_FAIL_INITIAL)
   if [[ "$suffix" == clock-failure-later ]]; then flags+=(-DPW_CLOCK_FAIL_LATER); fi

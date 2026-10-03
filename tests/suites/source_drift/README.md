@@ -118,3 +118,10 @@ a disposable checkout with changed, stale, broken-marker and malformed inputs, a
 proves a stale copy stops the build before signing. Compiled values are compared
 elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
 See [`docs/CONTRACT.md`](../../../docs/CONTRACT.md).
+
+The same case checks the generated host/worker source identity and exercises
+relocation, deterministic regeneration, stale generated values, malformed
+markers, automatic helper discovery, layout edits and both handshake edits.
+The identity changes on protocol implementation edits even when geometry does
+not change. Runtime mismatch refusal is covered by `runner_c_worker_harness`
+and the `runner_unit` host-driver control.

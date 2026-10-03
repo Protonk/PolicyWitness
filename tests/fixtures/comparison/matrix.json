@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected response 13 comparison object.",
+  "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected current-response comparison object.",
   "contract": {
-    "response_schema": 13,
+    "response_schema": 14,
     "request_schema": 1
   },
   "placeholders": {

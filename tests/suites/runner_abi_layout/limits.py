@@ -29,7 +29,8 @@ NATIVE_LIMITS = {'worker_proceed_wait', 'exec_child_wait', 'exec_attempt_budget'
 
 
 def values(text):
-    return {key: int(value) for key, value in (line.split('=') for line in text.splitlines())}
+    return {key: int(value) for key, value in (line.split('=', 1) for line in text.splitlines())
+            if key != 'PW_WORKER_ABI_IDENTITY'}
 
 
 def compare(limits, observed):

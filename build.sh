@@ -99,6 +99,8 @@ echo "==> Checking limits documentation"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_limits.py" --check
 echo "==> Checking contract versions"
 /usr/bin/python3 -B "${ROOT_DIR}/docs/generate_contract.py" --check
+echo "==> Generating host/worker identity"
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py"
 
 # ---- Build stamp -------------------------------------------------------------
 # The app version is a coordinate derived from git, never edited by hand:
@@ -415,6 +417,9 @@ else
 fi
 
 # ---- Codesign --------------------------------------------------------------
+
+# Refuse a source edit during compilation instead of signing mixed components.
+/usr/bin/python3 -B "${ROOT_DIR}/docs/generate_worker_identity.py" --check
 
 if [[ ! -f "${ENTITLEMENTS_PLIST}" ]]; then
   echo "ERROR: missing entitlements plist: ${ENTITLEMENTS_PLIST}" 1>&2

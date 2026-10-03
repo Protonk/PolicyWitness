@@ -25,10 +25,13 @@ int main(void) {
     void *base = mmap(NULL, PW_SHM_REGION_BYTES, PROT_READ | PROT_WRITE, MAP_SHARED, 3, 0);
     if (base == MAP_FAILED) return 91;
     pw_shm_header_t *hdr = base;
-#ifdef PW_LEGACY_ABI6
-    if (hdr->abi_version != 6) return 92;
+    uint8_t expected_identity[PW_SHM_ABI_IDENTITY_BYTES];
+    memcpy(expected_identity, PW_WORKER_ABI_IDENTITY, sizeof(expected_identity));
+#ifdef PW_MISMATCHED_IDENTITY
+    expected_identity[sizeof(expected_identity) - 1] ^= 1;
 #endif
-    if (hdr->abi_version != PW_PROBE_RUNNER_ABI_VERSION ||
+    if (hdr->abi_magic != PW_SHM_ABI_MAGIC ||
+        memcmp(hdr->abi_identity, expected_identity, sizeof(expected_identity)) != 0 ||
         atomic_load_explicit(&hdr->prepared, memory_order_acquire) != 1) return 92;
     char mode[128] = {0};
     size_t used = 0;
@@ -126,7 +129,7 @@ int main(void) {
     pw_shm_evidence_t *e = pw_evidence(base);
     if (!strncmp(mode, "transport_", 10)) {
         transport_record(e, strstr(mode, "beta") != NULL, mode);
-        if (!strcmp(mode, "transport_incompatible")) hdr->abi_version = PW_PROBE_RUNNER_ABI_VERSION + 1;
+        if (!strcmp(mode, "transport_incompatible")) hdr->abi_identity[PW_SHM_ABI_IDENTITY_BYTES - 1] ^= 1;
         hdr->apply_rc = -1;
         atomic_store_explicit(&hdr->done, 1, memory_order_release);
         close(4);

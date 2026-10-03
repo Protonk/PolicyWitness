@@ -77,8 +77,8 @@ run_refusal_case() {
   local test_id="$1" scenario="$2" expect_code="$3" desc="$4"
   run_harness_case "${test_id}" "${scenario}" "${desc}" || return 0
   set +e
-  PW_EXPECT_CODE="${expect_code}" /usr/bin/python3 - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
-import json, os, sys
+  PW_EXPECT_CODE="${expect_code}" /usr/bin/python3 - "${RESULT_FILE}" "${HARNESS_BIN}" "${WORKER_PATH}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, os, subprocess, sys
 from pathlib import Path
 r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 want = int(os.environ["PW_EXPECT_CODE"])
@@ -89,6 +89,19 @@ assert not r["applied"], f"applied must stay false on a pre-apply refusal: {r}"
 assert not r["done"], f"done must stay false on a pre-apply refusal: {r}"
 assert not r["ready_byte_received"], f"ready byte must not precede a pre-apply refusal: {r}"
 assert not r["sent_sigkill"], f"worker should self-exit; no SIGKILL fallback expected: {r}"
+if r['scenario'] == 'abi_mismatch':
+    assert r['failure_published'] == 0 and all(s['completed'] == 0 for s in r['slots']), r
+    # Correct full identity plus an ordinal-era prefix must also fail before
+    # any policy application, attempt or shared evidence publication.
+    probe = subprocess.run([sys.argv[2], sys.argv[3], 'abi_magic_mismatch'],
+                           capture_output=True, text=True, timeout=10)
+    Path(sys.argv[1]).with_name('magic-mismatch.json').write_text(probe.stdout)
+    Path(sys.argv[1]).with_name('magic-mismatch.stderr').write_text(probe.stderr)
+    assert probe.returncode == 0, probe.stderr
+    old = json.loads(probe.stdout)
+    assert old['exit_code'] == 4 and old['term_signal'] is None, old
+    assert not any(old[k] for k in ('ready_byte_received', 'applied', 'done', 'sent_sigkill', 'failure_published')), old
+    assert all(s['completed'] == 0 for s in old['slots']), old
 if r['scenario'] == 'policy_overflow':
     assert r['failure_published'] == 1, r
     assert r['failure'] == {'operation': 2, 'code': 2, 'detail': 262143,
@@ -430,7 +443,7 @@ run_create_allow
 # #2 — pre-apply self-defense / refusal branches.
 run_compile_failure
 run_refusal_case "abi_mismatch_refused"        "abi_mismatch"        4 \
-  "header abi_version != worker build → exit 4, no apply"
+  "header ABI identity differs from worker build → exit 4, no apply"
 run_refusal_case "prepared_unset_refused"      "prepared_unset"      5 \
   "host did not set prepared=1 → exit 5, no apply"
 run_refusal_case "step_count_overflow_refused" "step_count_overflow" 6 \

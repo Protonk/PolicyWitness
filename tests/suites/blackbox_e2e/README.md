@@ -55,11 +55,16 @@ and does not skip the case.
 ## Fixtures
 
 - Case directories: `tests/fixtures/blackbox_e2e/BBX-001/`, `BBX-002/`
-- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/valid_run.json`
-  and `missing_path_run.json`
+- Checker control envelopes: `tests/fixtures/blackbox_e2e/checker/response14/valid_run.json`
+  and `response14/missing_path_run.json`
+
+The `response14/` envelopes are unmodified captures from the corresponding
+current-producer cases; each carries its own build stamp, binary hashes and
+worker source identity. The sibling older captures remain stored with their
+original bytes and are unsupported, with no translation into these fixtures.
 
 `checker_controls` runs without the app, before the live cases. Its checked-in
-synthetic envelope passes BBX-001's expectations. Controlled changes must fail:
+live envelope passes BBX-001's expectations. Controlled changes must fail:
 an incorrect later attempt, a prediction mismatch, both together, both on the
 same step, malformed evidence channels, duplicate IDs, and reordered steps.
 Combined failures must report each independent problem, so changing a skip
@@ -83,7 +88,7 @@ self-check also run here: every hand-reviewed example row is reproduced by the
 claim tables, a record built from it is accepted, its mutations are rejected with
 the expected rule, and the core D-model evaluates totally. These are constructed
 controls; they establish interpretation, not live reachability.
-The expected-fixture controls accept `tests/fixtures/disposition/a1_expected.json`
+The expected-fixture controls accept `tests/fixtures/disposition/response14/a1_expected.json`
 (a live envelope of the a1 specimen at the current contract), refuse the
 captured `a1_known_loss.json` as the unsupported version it is before any
 claim is read, and reject named mutations of the accepted baseline (missing

@@ -50,20 +50,22 @@ if [[ "${RC}" -ne 0 ]]; then
   test_fail "policy-witness run failed (rc=${RC})" "{\"stdout\":\"${RUN_STDOUT}\",\"stderr\":\"${RUN_STDERR}\"}"
 fi
 
-/usr/bin/python3 - "${RUN_STDOUT}" <<'PY'
+/usr/bin/python3 - "${RUN_STDOUT}" "${ROOT_DIR}/tests/lib" <<'PY'
 import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, sys.argv[2])
+from document_versions import require_supported
+
 env = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+require_supported(env)
 if env.get("kind") != "run":
     raise SystemExit(f"expected kind=run (got {env.get('kind')!r})")
 if env.get("result", {}).get("ok") is not True:
     raise SystemExit(f"expected top-level ok=true (got {env.get('result')!r})")
 
 runner = env.get("data", {}).get("runner_result") or {}
-if runner.get("schema_version", 0) < 3:
-    raise SystemExit(f"expected runner schema_version >= 3 (got {runner.get('schema_version')!r})")
 if runner.get("normalized_outcome") != "ok":
     raise SystemExit(f"expected runner normalized_outcome=ok (got {runner.get('normalized_outcome')!r})")
 # The point of this suite is the apply/isolation, so witness it: the worker

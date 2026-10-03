@@ -2,8 +2,8 @@
 
 `runner_abi_layout` harvests every size, offset and constant from the ABI header
 with a compiled printer. The golden under tests/fixtures/contract/ is the last
-accepted harvest. Host and worker refuse a mismatched ABI number, so a layout
-change under an unchanged number is a forgotten bump, not an additive change.
+accepted layout harvest. The independently generated source identity is checked
+separately; changing protocol code does not require acknowledging a new layout.
 """
 
 
@@ -17,7 +17,7 @@ def parse(text):
 
 
 def compare(printer_text, golden_text):
-    """Return (status, detail); status is ok, missing_golden, needs_bump or update."""
+    """Return (status, detail); status is ok, missing_golden or update."""
     if printer_text == golden_text:
         return "ok", ""
     if not golden_text.strip():
@@ -27,6 +27,4 @@ def compare(printer_text, golden_text):
     if not changed:
         return "update", "harvest formatting changed; every value agrees"
     detail = ", ".join(changed)
-    if now.get("PW_PROBE_RUNNER_ABI_VERSION") == old.get("PW_PROBE_RUNNER_ABI_VERSION"):
-        return "needs_bump", f"ABI layout changed without a worker ABI bump ({detail})"
-    return "update", f"ABI layout changed with a bump ({detail})"
+    return "update", f"ABI layout changed ({detail})"

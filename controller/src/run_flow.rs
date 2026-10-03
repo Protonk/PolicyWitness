@@ -2132,7 +2132,7 @@ mod tests {
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/a1_expected.json"
+            "../../tests/fixtures/disposition/response14/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -2326,7 +2326,7 @@ mod tests {
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/a1_expected.json"
+            "../../tests/fixtures/disposition/response14/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();
@@ -3247,7 +3247,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/a1_expected.json"
+            "../../tests/fixtures/disposition/response14/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

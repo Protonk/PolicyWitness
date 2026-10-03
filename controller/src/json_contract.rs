@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 pub const SCHEMA_VERSION: u32 = 6;
 /// The one runner response schema this controller reads; any other version is refused.
-pub const RESPONSE_SCHEMA_VERSION: u32 = 13;
+pub const RESPONSE_SCHEMA_VERSION: u32 = 14;
 // END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]
@@ -260,12 +260,7 @@ mod build_stamp_tests {
     #[test]
     fn embedded_contract_versions_match_the_manifest_keys() {
         let versions = contract_versions();
-        for key in [
-            "request_schema",
-            "response_schema",
-            "worker_abi",
-            "controller_envelope",
-        ] {
+        for key in ["request_schema", "response_schema", "controller_envelope"] {
             assert!(versions[key].is_u64(), "contract.{key} must be an integer");
         }
         assert_eq!(

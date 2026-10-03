@@ -128,7 +128,7 @@ sentinel and no ready byte (except compile_failure, which flips `done`).
     `apply_rc=-1`, `applied` stays 0, `done` flips so the host stops
     polling, and the worker still `_exit(0)`s on the exit byte instead of
     dying. The "honest even on bad input" contract.
-11. **abi_mismatch** — header `abi_version` ≠ the worker's build → exit 4.
+11. **abi_mismatch** — header ABI identity ≠ the worker's build → exit 4.
 12. **prepared_unset** — host never set `prepared=1` → exit 5.
 13. **step_count_overflow** — header `step_count > PW_SHM_MAX_STEPS` → exit 6.
 14. **policy_overflow** — policy text exceeds the worker's 256 KiB cap → exit 7.
@@ -149,7 +149,7 @@ posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated 
   SIGKILL fallback by withholding `exit_requested`; it does not prove
   that a real SBPL rule can deny `_exit`.
 - Silent ABI *semantic* drift. The worker's runtime refusal when the
-  header `abi_version` disagrees is covered (abi_mismatch), and the
+  header ABI identity disagrees is covered (abi_mismatch), and the
   header has `_Static_assert`s pinning layout sizes at compile time — but
   a change that keeps the version constant while altering a field's
   meaning (e.g. renaming/repurposing a slot field) wouldn't be caught

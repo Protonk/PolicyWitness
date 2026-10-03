@@ -41,7 +41,7 @@ runContractVersionTests(tk)
 // Synthesized maximal reply (256 steps, every string at its limit) and the
 // runner client budget derived from it; unclassified reply keys fail here.
 runReplyMaximumTests(tk)
-// Shared path-wire fixtures, strict compact states, legacy omissions and UTF-8 identity.
+// Shared path-wire fixtures, strict compact states, rejected omissions and UTF-8 identity.
 runPathDiagnosticsTests(tk)
 // CWorker driver with a real worker: shm setup, sentinel polling, publication.
 runCWorkerTests(tk)
@@ -49,7 +49,7 @@ runCWorkerTests(tk)
 // controlled kill/waitpid faults; host lifecycle observations only. The fixture
 // never applies a sandbox, so no policy cause can be claimed here.
 runCWorkerLifecycleTests(tk)
-// Production C main with isolated native-call substitutions: ABI 6 progress and
+// Production C main with isolated native-call substitutions: worker progress and
 // failure publication, missing step evidence, policy-write partial results,
 // EPIPE partial output. Controlled call failures are not kernel attribution.
 runWorkerEvidenceTests(tk)

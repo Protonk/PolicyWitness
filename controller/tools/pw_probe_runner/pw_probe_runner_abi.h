@@ -35,17 +35,19 @@
 #include <stdint.h>
 
 /*
- * The two reserved header words carry host release and worker acknowledgement
- * (since ABI 7). Observer-owned evidence follows the capture region. See tests/FAILURE-PROPAGATION-CONTRACT.md. The version is a hard host↔worker
- * boundary, defended by the
- * abi_version check at worker entry. In practice host + worker ship
- * together (the worker binary is bundle-local inside each XPC service),
- * so the check is a defense-in-depth tripwire rather than a live
- * compatibility boundary.
+ * Host and worker ship together inside each XPC service. Their generated
+ * source identity covers representation and protocol implementation, and is
+ * checked before any layout-dependent work or policy input. The bootstrap
+ * magic at offset 0 and 32 identity bytes at offset 64 are fixed. The magic
+ * also makes ordinal-era workers refuse this header before using its layout.
+ * See docs/CONTRACT.md and tests/FAILURE-PROPAGATION-CONTRACT.md.
  */
-/* BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) */
-#define PW_PROBE_RUNNER_ABI_VERSION 7u
-/* END GENERATED CONTRACT VERSIONS */
+#define PW_SHM_ABI_MAGIC 0x50574944u
+#define PW_SHM_ABI_IDENTITY_BYTES 32u
+/* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
+#define PW_WORKER_ABI_IDENTITY_HEX "84a5cc164b9dedf53af0671e56f04e22f9981ea73ddf02ca29647cf1989d0087"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x84, 0xa5, 0xcc, 0x16, 0x4b, 0x9d, 0xed, 0xf5, 0x3a, 0xf0, 0x67, 0x1e, 0x56, 0xf0, 0x4e, 0x22, 0xf9, 0x98, 0x1e, 0xa7, 0x3d, 0xdf, 0x02, 0xca, 0x29, 0x64, 0x7c, 0xf1, 0x98, 0x9d, 0x00, 0x87};
+/* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
  * 8 KiB + 1024 params × 512 B + bounded capture = about 3.5 MiB per run.
@@ -59,10 +61,9 @@
 #define PW_SHM_SLOT_BYTES   8192u
 #define PW_SHM_MAX_PARAMS   1024u
 #define PW_SHM_PARAM_BYTES  512u
-#define PW_SHM_HEADER_BYTES 64u
+#define PW_SHM_HEADER_BYTES 96u
 /* Optional compiled-object capture. The host pre-touches this bounded region;
- * no capture pipe or post-apply allocation/file output is needed. ABI v5 is a
- * hard boundary: old workers must not silently ignore a capture request. */
+ * no capture pipe or post-apply allocation/file output is needed. */
 #define PW_SHM_CAPTURE_HEADER_BYTES 144u
 #define PW_SHM_CAPTURE_BYTES 1048576u
 #define PW_SHM_CAPTURE_NONCE_BYTES 16u
@@ -114,12 +115,9 @@
  * can distinguish "received but skipped" from "worker died before
  * reaching this slot."
  *
- * PW_ATTEMPT_EXEC_SPAWN is declared at ABI v4 so the host↔worker
- * shm layout carries the necessary argv / child-status fields, but
- * the worker does not yet implement the `case` for it — a slot with
- * kind=EXEC_SPAWN currently lands in the default branch and reports
- * the unsupported-attempt outcome. The implementation lands in a
- * later change (the runtime exec path).
+ * PW_ATTEMPT_EXEC_SPAWN uses the slot's argv inputs and child-status/output
+ * fields. The worker observes spawn, bounded output and confirmed child reap
+ * separately; these observations do not establish sandbox attribution.
  */
 typedef enum {
     PW_ATTEMPT_NONE             = 0,
@@ -138,7 +136,7 @@ typedef enum {
  * offset PW_SHM_HEADER_BYTES + i * PW_SHM_SLOT_BYTES.
  *
  * Field ownership:
- *   abi_version    — host writes pre-spawn; worker reads, aborts on mismatch.
+ *   abi_magic, abi_identity — host writes pre-spawn; worker aborts on mismatch.
  *   step_count     — host writes pre-spawn; worker reads. 0..PW_SHM_MAX_STEPS.
  *   prepared       — host → worker. Set to 1 pre-spawn. The worker
  *                    sanity-checks (a defense against a host bug or
@@ -170,7 +168,7 @@ typedef enum {
  *                    parameter/compile failure paths do not write this field.
  */
 typedef struct {
-    uint32_t abi_version;
+    uint32_t abi_magic;
     uint32_t step_count;
     _Atomic uint32_t prepared;
     _Atomic uint32_t applied;
@@ -183,7 +181,13 @@ typedef struct {
     uint8_t capture_nonce[PW_SHM_CAPTURE_NONCE_BYTES]; /* caller's per-application identity */
     _Atomic uint32_t proceed;          /* host: collection closed, release attempts */
     _Atomic uint32_t proceed_observed; /* worker: acquired release before attempts */
+    uint8_t abi_identity[PW_SHM_ABI_IDENTITY_BYTES];
 } pw_shm_header_t;
+
+_Static_assert(offsetof(pw_shm_header_t, abi_magic) == 0,
+               "bootstrap magic must stay at offset 0");
+_Static_assert(offsetof(pw_shm_header_t, abi_identity) == 64,
+               "bootstrap identity must stay at offset 64");
 
 /* Open numeric values: unknown operation/code values remain transportable. */
 enum {
@@ -206,7 +210,7 @@ enum {
 enum { PW_NATIVE_NONE = 0, PW_NATIVE_INTEGER = 1, PW_NATIVE_NULL = 2,
        PW_NATIVE_CLOCK = 3 };
 
-/* ABI 7. Worker-owned publication contract is specified in
+/* Worker-owned publication contract is specified in
  * tests/FAILURE-PROPAGATION-CONTRACT.md, "Worker evidence contract".
  * All payloads immutable after
  * their publication word reaches 1 (diagnostic also accepts 2=truncated).
@@ -244,9 +248,8 @@ _Static_assert(sizeof(pw_shm_evidence_t) == PW_SHM_EVIDENCE_HEADER_BYTES,
  * child_exit_code / child_term_signal / child_stdout / child_stderr
  * carry exec-attempt output. Non-exec attempts leave the exec fields
  * zeroed (the region is memset to zero by the host before populating
- * any slot). Both ends of the exec wiring land in a later change;
- * checkpoint 2 defines the layout so a future field-offset drift
- * across host and worker is caught by the runner_abi_layout suite.
+ * any slot). The runner_abi_layout suite checks the compiled field offsets
+ * against the host's mirror.
  */
 typedef struct {
     /* Inputs (host writes pre-spawn; worker reads post-apply). */
@@ -261,7 +264,7 @@ typedef struct {
     int32_t  errno_val;
     char     observed_path[PW_SHM_OBSERVED_PATH_MAX];
     char     error[PW_SHM_ERROR_MAX];
-    /* Exec output fields (ABI v4 layout). child_pid > 0 establishes spawn,
+    /* Exec output fields. child_pid > 0 establishes spawn,
      * not reaping. Zero means no child was produced (including admission or
      * setup refusal). Final status is populated only after a confirmed reap:
      * child_exit_code >= 0 is a natural exit; child_term_signal > 0 is a

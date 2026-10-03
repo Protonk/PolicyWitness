@@ -156,7 +156,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 3
-    public static let responseSchema: Int = 13
+    public static let responseSchema: Int = 14
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -932,7 +932,7 @@ public struct PWWorkerPolicyTransferError: Codable {
     public var bytes_written: Int
     public var bytes_expected: Int
 }
-/// ABI 7 worker publications. Numeric codes are open, never Codable enums.
+/// Worker publications. Numeric codes are open, never Codable enums.
 public struct PWWorkerProgress: Codable {
     public var raw: UInt32
     public var operation: UInt32
@@ -959,8 +959,8 @@ public struct PWWorkerDiagnostic: Codable {
     public var text: String?
 }
 public struct PWWorkerEvidence: Codable {
-    /// Host-selected layout, not proof that a child reached ABI validation.
-    public var abi_version: UInt32
+    /// Host-selected source identity, not proof that a child reached ABI validation.
+    public var abi_identity: String
     public var progress: PWWorkerProgress?
     public var failure_publication: UInt32
     public var failure_state: String
@@ -970,7 +970,7 @@ public struct PWWorkerEvidence: Codable {
 }
 
 /// Authoritative worker process metadata, produced by the unsandboxed host.
-/// Lifecycle observations are host-owned; worker_evidence uses worker ABI 7.
+/// Lifecycle observations are host-owned; worker_evidence uses the exact host/worker identity.
 /// All live CWorkerOutput paths populate the optional observation fields below;
 /// an absent observation is unknown, not false. Policy-write failures retain
 /// partial child observations.
