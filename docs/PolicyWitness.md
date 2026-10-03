@@ -82,10 +82,6 @@ Use PolicyWitness when you need to determine whether an observed result follows 
 
 Almost no one. Folks authoring SBPL profiles can call `sandbox_check` and `sandbox-exec` directly and Apple's entitlements model plus their app's actual runtime behavior cover practical sandbox questions. A small wrapper script around `sandbox_check` plus `sandbox-exec` can obtain a prediction and an attempt result in the common case. 
 
-### Why might I want to use PolicyWitness even if I don't need to?
-
-Ergonomics. `sandbox_check` answers for a live PID, so asking it about a draft policy means standing up a process under that policy, querying it before it exits, and getting the answer out — work PolicyWitness does behind one JSON-in, JSON-out call. PolicyWitness also provides structured failure reporting across the worker, validator and transport boundaries.
-
 ### What does PolicyWitness's attempt channel record?
 
 The sandboxed worker supports four built-in attempt kinds: `file` (open/read/write/create/unlink/access), `mach_lookup` (`bootstrap_look_up`), `sysctl` (`sysctlbyname` read), and `exec` (`posix_spawn`). Completed results carry operation-specific status and error observations in a uniform per-step envelope; those status fields are PolicyWitness attempt status, not raw syscall returns. Result provenance and missing reasons distinguish completed observations from missing or incomplete reports.
@@ -132,7 +128,7 @@ One runner client span plus, by default, one unified-log scan, plus the controll
 
 ### Can I evaluate specimens in parallel?
 
-Yes and no. Each run is its own controller, XPC host, worker and validator, and nothing PolicyWitness owns is shared between runs, but the host owns the boundary being witnessed. The kernel applies each profile and allocates memory for it on its own time. Runs that depend on the denial log face one rate-limited channel, with concurrent denials raising the odds of each missing a record. Runs through one installed [external runner](#external-runners-byoxpc) queue behind launchd's respawn throttle.
+Yes. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) queue behind launchd's respawn throttle.
 
 <!-- END COPIED QUESTIONS -->
 
