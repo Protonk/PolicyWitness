@@ -17,6 +17,7 @@
     },
     "envelope.data": {
       "policy_check": "object",
+      "request_failure": "object",
       "runner_client": "object",
       "runner_result": "object",
       "runner_sandbox_diagnostics": "object",
@@ -94,6 +95,11 @@
       "rc": "number",
       "stderr": "string",
       "stdout": "string"
+    },
+    "envelope.data.request_failure": {
+      "code": "string",
+      "expected_schema": "number",
+      "path": "array"
     },
     "envelope.data.runner_client": {
       "argv": "array",

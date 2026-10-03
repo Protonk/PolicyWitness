@@ -75,7 +75,7 @@ class Witness:
         self.temp_before = temp_request_files()
 
     def specimen(self, name, *, policy=None, plan=None, overrides=None):
-        request = {'schema_version': 3, 'specimen_id': 'dossier-' + name,
+        request = {'schema_version': 4, 'specimen_id': 'dossier-' + name,
                    'policy': policy if policy is not None else {'format': 'sbpl', 'sbpl_source': SOURCE},
                    'probe_plan': plan if plan is not None else []}
         if self.byoxpc:
@@ -231,13 +231,13 @@ class Witness:
         # The request was still delivered; the runner owns the refusal and
         # names the missing field.
         assert envelope['data']['runner_client'] is not None
-        assert rc == 1 and envelope['data']['runner_result']['normalized_outcome'] == 'bad_policy', envelope['result']
+        assert rc == 1 and envelope['data']['runner_result']['normalized_outcome'] == 'bad_request', envelope['result']
         assert 'sbpl_source' in envelope['data']['runner_result']['error'], envelope['result']
         self.delivery(envelope['data'], request, 'no-source')
         self.record('no-source', runner_outcome=envelope['data']['runner_result']['normalized_outcome'])
 
     def controller_refusals(self):
-        """Uniform tool_error envelopes with the dossier collected so far."""
+        """Request and tool refusals retain the dossier collected so far."""
         cases = []
         # Missing argument: no path at all.
         result = subprocess.run([str(self.pw), 'run'], capture_output=True, timeout=30)
@@ -263,8 +263,11 @@ class Witness:
         rc, envelope, path = self.run('unknown_runner', request)
         cases.append(('unknown_runner', rc, envelope, path))
         for name, rc, envelope, path in cases:
-            assert rc == 2, (name, rc, envelope['result'])
-            assert envelope['result']['ok'] is False and envelope['result']['normalized_outcome'] == 'tool_error', (name, envelope['result'])
+            malformed = name in ('not_json', 'not_object')
+            assert rc == (1 if malformed else 2), (name, rc, envelope['result'])
+            assert envelope['result']['ok'] is False and envelope['result']['normalized_outcome'] == ('bad_request' if malformed else 'tool_error'), (name, envelope['result'])
+            if malformed:
+                assert envelope['data']['request_failure'] == {'code': 'invalid_json' if name == 'not_json' else 'type_mismatch', 'path': []}, envelope
             assert isinstance(envelope['result']['error'], str) and envelope['result']['error'], (name, envelope['result'])
             specimen = self.common(envelope, name)
             assert specimen['request_path'] == path, (name, specimen['request_path'], path)

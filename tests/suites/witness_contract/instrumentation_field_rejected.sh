@@ -28,7 +28,7 @@ SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 3,
+    "schema_version": 4,
     "specimen_id": "witness_contract_instrumentation_rejected",
     "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
     "probe_plan": [],

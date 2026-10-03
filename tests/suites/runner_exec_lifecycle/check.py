@@ -24,7 +24,7 @@ def main():
         (out / "before.bin").write_bytes(seed)
         stderr_marker = secrets.token_hex(16)
         spec = {
-            "schema_version": 3,
+            "schema_version": 4,
             "specimen_id": "exec_timeout_continuation",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{

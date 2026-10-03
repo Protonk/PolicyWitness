@@ -1,0 +1,1231 @@
+[
+  {
+    "id": "create",
+    "phase": "execution",
+    "lesson": "Acceptance is witnessed by a newly created file.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "integral_version",
+    "phase": "structure",
+    "lesson": "An integer-valued JSON number can be written with a decimal point.",
+    "request": {
+      "schema_version": 4.0,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "optional_nulls",
+    "phase": "structure",
+    "lesson": "Optional null means absent.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "params": null,
+        "capture_nonce": null
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT",
+            "args": null
+          }
+        }
+      ],
+      "run_kind": null
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "capture_typo",
+    "phase": "structure",
+    "lesson": "Unknown field names cannot silently remove a requested observation.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "capture_applied_profiel": true
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_field",
+        "path": [
+          "policy",
+          "capture_applied_profiel"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "policy",
+          "capture_applied_profiel"
+        ]
+      }
+    }
+  },
+  {
+    "id": "wrong_args_type",
+    "phase": "structure",
+    "lesson": "Recognized optional fields still have types.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT",
+            "args": "hello"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "probe_plan",
+          "0",
+          "attempt",
+          "args"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "probe_plan",
+          "0",
+          "attempt",
+          "args"
+        ]
+      }
+    }
+  },
+  {
+    "id": "parameter_value",
+    "phase": "structure",
+    "lesson": "Parameter names are open data; their values must be strings.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "params": {
+          "TARGET": 42
+        }
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "policy",
+          "params",
+          "TARGET"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "policy",
+          "params",
+          "TARGET"
+        ]
+      }
+    }
+  },
+  {
+    "id": "file_args",
+    "phase": "meaning",
+    "lesson": "Arguments have meaning only for exec/spawn.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT",
+            "args": []
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "inapplicable_field",
+        "path": [
+          "probe_plan",
+          "0",
+          "attempt",
+          "args"
+        ]
+      },
+      "xpc": {
+        "code": "inapplicable_field",
+        "path": [
+          "probe_plan",
+          "0",
+          "attempt",
+          "args"
+        ]
+      }
+    }
+  },
+  {
+    "id": "unused_nonce",
+    "phase": "meaning",
+    "lesson": "A capture nonce requires capture to be enabled.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "capture_nonce": "$NONCE"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "inapplicable_field",
+        "path": [
+          "policy",
+          "capture_nonce"
+        ]
+      },
+      "xpc": {
+        "code": "inapplicable_field",
+        "path": [
+          "policy",
+          "capture_nonce"
+        ]
+      }
+    }
+  },
+  {
+    "id": "unused_filter_value",
+    "phase": "meaning",
+    "lesson": "The none filter takes no value, including an empty string.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "none",
+              "value": ""
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "inapplicable_field",
+        "path": [
+          "probe_plan",
+          "0",
+          "sandbox_check",
+          "filter",
+          "value"
+        ]
+      },
+      "xpc": {
+        "code": "inapplicable_field",
+        "path": [
+          "probe_plan",
+          "0",
+          "sandbox_check",
+          "filter",
+          "value"
+        ]
+      }
+    }
+  },
+  {
+    "id": "unknown_filter",
+    "phase": "meaning",
+    "lesson": "An unknown filter name refuses the whole specimen.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "paht",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unknown_filter_kind",
+        "path": [
+          "probe_plan",
+          "0",
+          "sandbox_check",
+          "filter",
+          "kind"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_filter_kind",
+        "path": [
+          "probe_plan",
+          "0",
+          "sandbox_check",
+          "filter",
+          "kind"
+        ]
+      }
+    }
+  },
+  {
+    "id": "unknown_attempt",
+    "phase": "meaning",
+    "lesson": "A bad later attempt prevents the earlier valid create from executing.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        },
+        {
+          "step_id": "unsupported",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "craete",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_attempt",
+        "path": [
+          "probe_plan",
+          "1",
+          "attempt"
+        ]
+      },
+      "xpc": {
+        "code": "unsupported_attempt",
+        "path": [
+          "probe_plan",
+          "1",
+          "attempt"
+        ]
+      }
+    }
+  },
+  {
+    "id": "duplicate_ids",
+    "phase": "meaning",
+    "lesson": "Joining evidence requires distinct step IDs.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        },
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "duplicate_step_id",
+        "path": [
+          "probe_plan",
+          "1",
+          "step_id"
+        ]
+      },
+      "xpc": {
+        "code": "duplicate_step_id",
+        "path": [
+          "probe_plan",
+          "1",
+          "step_id"
+        ]
+      }
+    }
+  },
+  {
+    "id": "over_capacity",
+    "phase": "capacity",
+    "lesson": "The grammar admits an array that this worker cannot accommodate.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "admission_refused",
+        "path": [
+          "probe_plan"
+        ]
+      },
+      "xpc": {
+        "code": "admission_refused",
+        "path": [
+          "probe_plan"
+        ]
+      }
+    },
+    "repeat_steps": 257
+  },
+  {
+    "id": "old_marker",
+    "phase": "version",
+    "lesson": "Another request contract is refused before its fields are interpreted.",
+    "request": {
+      "schema_version": 3,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "unsupported_schema",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      },
+      "xpc": {
+        "code": "unsupported_schema",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      }
+    }
+  },
+  {
+    "id": "malformed_json",
+    "phase": "syntax",
+    "lesson": "JSON syntax is checked before request structure.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "invalid_json",
+        "path": []
+      },
+      "xpc": {
+        "code": "invalid_json",
+        "path": []
+      }
+    },
+    "raw_request": "{\"schema_version\":4"
+  },
+  {
+    "id": "selector",
+    "phase": "boundary",
+    "lesson": "The controller consumes runner selection; direct XPC refuses it.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ],
+      "runner": {
+        "mode": "standard"
+      }
+    },
+    "expected": {
+      "cli": null,
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "runner"
+        ]
+      }
+    }
+  },
+  {
+    "id": "selector_typo",
+    "phase": "boundary",
+    "lesson": "Malformed controller input has the same refusal record shape.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ],
+      "runner": {
+        "required_entitlements": [
+          "required",
+          42
+        ]
+      }
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "runner",
+          "required_entitlements",
+          "1"
+        ]
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "runner"
+        ]
+      }
+    }
+  },
+  {
+    "id": "augment",
+    "phase": "boundary",
+    "lesson": "The controller resolves fragments; direct XPC refuses unresolved intent.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "augments": [
+          "exec_baseline"
+        ]
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": {
+        "code": "unresolved_augments",
+        "path": [
+          "policy",
+          "augments"
+        ]
+      }
+    }
+  },
+  {
+    "id": "exec_args",
+    "phase": "execution",
+    "lesson": "An exec argument is consumed: touch creates the named file.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "process-exec",
+            "filter": {
+              "kind": "path",
+              "value": "/usr/bin/touch"
+            }
+          },
+          "attempt": {
+            "kind": "exec",
+            "action": "spawn",
+            "target": "/usr/bin/touch",
+            "args": [
+              "$EFFECT"
+            ]
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "capture",
+    "phase": "execution",
+    "lesson": "Enabled capture returns the submitted nonce with its receipt.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)",
+        "capture_applied_profile": true,
+        "capture_nonce": "$NONCE"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    }
+  },
+  {
+    "id": "known_unavailable_prediction",
+    "phase": "execution",
+    "lesson": "A known excluded query preserves its unavailable observation and the independent attempt.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "sysctl-read",
+            "filter": {
+              "kind": "sysctl_name",
+              "value": "kern.osrelease"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": null,
+      "xpc": null
+    },
+    "prediction": "prediction_unavailable"
+  },
+  {
+    "id": "fractional_version",
+    "phase": "structure",
+    "lesson": "The version field must be an integer-valued number.",
+    "request": {
+      "schema_version": 4.5,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      }
+    }
+  },
+  {
+    "id": "null_version",
+    "phase": "structure",
+    "lesson": "The version field must be an integer-valued number.",
+    "request": {
+      "schema_version": null,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "cli": {
+        "code": "missing_value",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      },
+      "xpc": {
+        "code": "missing_value",
+        "path": [
+          "schema_version"
+        ],
+        "expected_schema": 4
+      }
+    }
+  },
+  {
+    "id": "selector_conflict",
+    "phase": "meaning",
+    "lesson": "Conflicting selection instructions are request errors before registry lookup.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ],
+      "runner": {
+        "mode": "standard",
+        "id": "external"
+      }
+    },
+    "expected": {
+      "cli": {
+        "code": "conflicting_selector",
+        "path": []
+      },
+      "xpc": {
+        "code": "unknown_field",
+        "path": [
+          "runner"
+        ]
+      }
+    }
+  },
+  {
+    "id": "empty_json",
+    "phase": "syntax",
+    "lesson": "A malformed root cannot become a default request.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "raw_request": "",
+    "expected": {
+      "cli": {
+        "code": "invalid_json",
+        "path": []
+      },
+      "xpc": {
+        "code": "invalid_json",
+        "path": []
+      }
+    }
+  },
+  {
+    "id": "null_root",
+    "phase": "structure",
+    "lesson": "A malformed root cannot become a default request.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ]
+    },
+    "raw_request": "null",
+    "expected": {
+      "cli": {
+        "code": "missing_value",
+        "path": []
+      },
+      "xpc": {
+        "code": "missing_value",
+        "path": []
+      }
+    }
+  },
+  {
+    "id": "fractional_override",
+    "phase": "structure",
+    "lesson": "Fractional integers are field type errors, including test-seam inputs.",
+    "request": {
+      "schema_version": 4,
+      "specimen_id": "request-grammar",
+      "policy": {
+        "format": "sbpl",
+        "sbpl_source": "(version 1) (allow default)"
+      },
+      "probe_plan": [
+        {
+          "step_id": "create",
+          "sandbox_check": {
+            "operation": "file-write-create",
+            "filter": {
+              "kind": "path",
+              "value": "$EFFECT"
+            }
+          },
+          "attempt": {
+            "kind": "file",
+            "action": "create",
+            "target": "$EFFECT"
+          }
+        }
+      ],
+      "_test_overrides": {
+        "worker_timeout_ms": 1.5
+      }
+    },
+    "expected": {
+      "cli": {
+        "code": "type_mismatch",
+        "path": [
+          "_test_overrides",
+          "worker_timeout_ms"
+        ]
+      },
+      "xpc": {
+        "code": "type_mismatch",
+        "path": [
+          "_test_overrides",
+          "worker_timeout_ms"
+        ]
+      }
+    }
+  }
+]

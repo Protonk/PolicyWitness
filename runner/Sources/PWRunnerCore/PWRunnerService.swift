@@ -157,11 +157,35 @@ func pwRunnerReplyData(_ result: PWRunnerRunResult,
 }
 
 /// A decoder error can contain an unbounded dictionary key in its coding path.
+func requestDecodeFailure(_ error: Error) -> PWRunnerRequestFailure {
+    let code: String
+    let path: [String]
+    switch error {
+    case let failure as PWRunnerRequestFailure: return failure
+    case RequestContractError.unsupportedSchema:
+        return PWRunnerRequestFailure(code: "unsupported_schema", path: ["schema_version"],
+            expected_schema: PWContract.requestSchema)
+    case RequestContractError.unresolvedAugments:
+        return PWRunnerRequestFailure(code: "unresolved_augments", path: ["policy", "augments"])
+    case RequestContractError.unknownField(let keys):
+        code = "unknown_field"; path = keys.map { $0.intValue.map(String.init) ?? $0.stringValue }
+    case DecodingError.typeMismatch(_, let c): code = "type_mismatch"; path = c.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
+    case DecodingError.valueNotFound(_, let c): code = "missing_value"; path = c.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
+    case DecodingError.keyNotFound(let key, let c): code = "missing_field"; path = (c.codingPath + [key]).map { $0.intValue.map(String.init) ?? $0.stringValue }
+    case DecodingError.dataCorrupted(let c):
+        code = c.codingPath.isEmpty ? "invalid_json" : "invalid_value"; path = c.codingPath.map { $0.intValue.map(String.init) ?? $0.stringValue }
+    default: return PWRunnerRequestFailure(code: "invalid_json", path: nil)
+    }
+    return PWRunnerRequestFailure(code: code, path: path,
+        expected_schema: path == ["schema_version"] ? PWContract.requestSchema : nil)
+}
+
 /// Report the category and bounded path, never arbitrary decoder prose/input.
 func requestDecodeDiagnostic(_ error: Error) -> String {
     let kind: String
     let path: [CodingKey]
     switch error {
+    case let failure as PWRunnerRequestFailure: return failure.description
     case RequestContractError.unsupportedSchema(let version):
         return "request decode failed: unsupported request schema \(version) (expected \(PWContract.requestSchema))"
     case RequestContractError.unresolvedAugments:
@@ -221,7 +245,8 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 pid: Int(getpid()),
                 bundle_id: bundleString("CFBundleIdentifier"),
                 policy_format: "unknown",
-                steps: []
+                steps: [],
+                request_failure: requestDecodeFailure(error)
             )
             replyAndExit(resp)
             return
@@ -234,21 +259,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        do {
-            try validateSandboxChecks(parsed.probe_plan)
-        } catch {
-            let resp = PWRunnerRunResult(
-                specimen_id: parsed.specimen_id,
-                run_kind: parsed.run_kind,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.badRequest,
-                error: String(describing: error),
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
-                steps: []
-            )
-            replyAndExit(resp)
+        if let failure = requestMeaningFailure(parsed) {
+            replyAndExit(requestRefusalReply(parsed: parsed, failure: failure,
+                bundleId: bundleString("CFBundleIdentifier")))
             return
         }
 
@@ -271,27 +284,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
 
-        // C-worker-specific validation: catches probe_plan shapes
-        // the host would otherwise mishandle (duplicate step_ids would
-        // trap when joining results). Unknown attempt values retain their
-        // explicit per-step unsupported observation.
-        if let problem = CWorkerOrchestrator.validateProbePlanForCWorker(parsed.probe_plan) {
-            let resp = PWRunnerRunResult(
-                specimen_id: parsed.specimen_id,
-                run_kind: parsed.run_kind,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.badRequest,
-                error: problem,
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: parsed.policy.format,
-                policy_sha256: policyHash,
-                steps: [],
-                test_overrides: parsed._test_overrides
-            )
-            replyAndExit(resp)
-            return
-        }
         let workerPath = parsed._test_overrides?.worker_executable_path
             ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
         let validatorPath = parsed._test_overrides?.validator_executable_path

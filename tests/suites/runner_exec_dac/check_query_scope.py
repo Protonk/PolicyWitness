@@ -88,7 +88,7 @@ def main():
                               'sandbox_check': {'operation': 'process-exec*',
                                                 'filter': {'kind': 'path', 'value': str(helper)}},
                               'attempt': {'kind': 'exec', 'action': 'spawn', 'target': str(other)}})
-            spec = {'schema_version': 3, 'specimen_id': 'native-exec-' + name,
+            spec = {'schema_version': 4, 'specimen_id': 'native-exec-' + name,
                     'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)' + policy},
                     'probe_plan': steps}
             with RunCapture(pw, out / name, spec, cli_args=['--no-log-capture']) as run:

@@ -9,6 +9,7 @@
 //! The `augments` field is stripped from the forwarded request — the
 //! runner is augment-agnostic by design.
 
+use crate::request_patch::RequestError;
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -40,7 +41,7 @@ pub enum AugmentResolution {
     Applied(PolicyAugmentation),
     /// Resolution failed. The caller should emit a `bad_request` envelope
     /// with this error string and not invoke the runner.
-    BadRequest(String),
+    BadRequest(RequestError),
 }
 
 /// Augment names are the one request string the controller itself echoes into
@@ -100,8 +101,10 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
                 match item.as_str() {
                     Some(s) => collected.push(s.to_string()),
                     None => {
-                        return AugmentResolution::BadRequest(format!(
-                            "policy.augments[{idx}] must be a string"
+                        return AugmentResolution::BadRequest(RequestError::new(
+                            "type_mismatch",
+                            &["policy", "augments", &idx.to_string()],
+                            format!("policy.augments[{idx}] must be a string"),
                         ));
                     }
                 }
@@ -109,9 +112,11 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
             collected
         }
         _ => {
-            return AugmentResolution::BadRequest(
-                "policy.augments must be an array of strings".to_string(),
-            );
+            return AugmentResolution::BadRequest(RequestError::new(
+                "type_mismatch",
+                &["policy", "augments"],
+                "policy.augments must be an array of strings",
+            ));
         }
     };
 
@@ -121,19 +126,30 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
 
     // Never replace a missing or mistyped source with just the augment text.
     let Some(original_source) = policy.get("sbpl_source").and_then(Value::as_str) else {
-        return AugmentResolution::BadRequest(
-            "policy.sbpl_source must be a string when policy.augments is nonempty".into(),
-        );
+        let code = if policy.get("sbpl_source").is_none_or(Value::is_null) {
+            "missing_policy_source"
+        } else {
+            "type_mismatch"
+        };
+        return AugmentResolution::BadRequest(RequestError::new(
+            code,
+            &["policy", "sbpl_source"],
+            "policy.sbpl_source must be a string when policy.augments is nonempty",
+        ));
     };
     let original_source = original_source.to_owned();
 
     // Validate every name BEFORE touching the filesystem so a typo in
     // the last entry can't leak partial-resolution state.
-    for name in &names {
+    for (index, name) in names.iter().enumerate() {
         if !is_valid_augment_name(name) {
-            return AugmentResolution::BadRequest(format!(
-                "invalid augment name {} (must be ASCII alphanumeric or underscore)",
-                reportable_name(name)
+            return AugmentResolution::BadRequest(RequestError::new(
+                "invalid_value",
+                &["policy", "augments", &index.to_string()],
+                format!(
+                    "invalid augment name {} (must be ASCII alphanumeric or underscore)",
+                    reportable_name(name)
+                ),
             ));
         }
     }
@@ -141,14 +157,15 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
     let augments_dir = app_root.join("Contents").join("Resources").join("Augments");
 
     let mut appended = String::new();
-    for name in &names {
+    for (index, name) in names.iter().enumerate() {
         let path = augments_dir.join(format!("{name}.sb"));
         let contents = match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(_) => {
-                return AugmentResolution::BadRequest(format!(
-                    "unknown augment {}",
-                    reportable_name(name)
+                return AugmentResolution::BadRequest(RequestError::new(
+                    "augment_unavailable",
+                    &["policy", "augments", &index.to_string()],
+                    format!("unknown augment {}", reportable_name(name)),
                 ));
             }
         };
@@ -279,7 +296,7 @@ mod tests {
         let resolution = resolve_augments(&mut req, &app);
         match &resolution {
             AugmentResolution::BadRequest(msg) => {
-                assert!(msg.contains("does_not_exist"), "msg={msg}");
+                assert!(msg.message.contains("does_not_exist"), "msg={msg}");
             }
             other => panic!("expected BadRequest, got {:?}", outcome_name(other)),
         }
@@ -343,7 +360,7 @@ mod tests {
             let before = req["policy"].get("sbpl_source").cloned();
             match resolve_augments(&mut req, &app) {
                 AugmentResolution::BadRequest(error) => {
-                    assert!(error.contains("policy.sbpl_source"))
+                    assert!(error.message.contains("policy.sbpl_source"))
                 }
                 _ => panic!("malformed source was replaced by augment text"),
             }

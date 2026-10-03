@@ -153,7 +153,7 @@ def main():
 
     steps = substitute(case.get("steps") or [], mapping)
     specimen = {
-        "schema_version": 3,
+        "schema_version": 4,
         "specimen_id": case["case_id"],
         "policy": policy_spec,
         # Expectations belong to the independent checker, never to the runner.

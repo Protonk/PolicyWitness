@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='pw-evidence-', dir='/private/tmp') as t
     ]:
         target.write_bytes(b'original independent witness')
         before = target.read_bytes()
-        request = {'schema_version': 3, 'specimen_id': 'worker-evidence-' + mode,
+        request = {'schema_version': 4, 'specimen_id': 'worker-evidence-' + mode,
                    'policy': {'format': 'sbpl', 'sbpl_source': source},
                    'probe_plan': [{'step_id': 'write',
                        'sandbox_check': {'operation': 'file-write-data',

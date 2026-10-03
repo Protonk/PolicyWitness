@@ -15,7 +15,7 @@ runEnvelopeInvariantTests(tk)
 // unrecognized-filter exclusion, with literal expectations.
 runPredictionUnavailableTests(tk)
 // validateSandboxChecks tristate: value-required kinds, the no-value kind, and
-// unknown kinds that downgrade rather than reject.
+// unknown kinds and ineffective combinations rejected before execution.
 runFilterKindValidationTests(tk)
 // The comparison record producer, table-driven over the shared scenario matrix
 // (tests/fixtures/comparison/matrix.json), the limitations vocabulary and host

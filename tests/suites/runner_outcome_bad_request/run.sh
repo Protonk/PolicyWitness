@@ -39,7 +39,7 @@ from pathlib import Path
 # controller forwards untouched. Missing the required specimen_id field so
 # the Swift PWRunnerRunSpec decoder rejects it.
 spec = {
-    "schema_version": 3,
+    "schema_version": 4,
     "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
@@ -104,16 +104,7 @@ test_pass "Swift decode failure surfaced as bad_request" "{}"
 # ----------------------------------------------------------------------
 # Fully Swift-decodable spec with one probe step whose sandbox_check.filter
 # is `kind=path, value=""`. This passes JSON decode, then trips
-# validateSandboxChecks at the host ("filter.value required for kind path").
-#
-# This used to be an `unknown_filter_kind` case (filter.kind set to
-# something not in knownFilterKinds). After the unknown-kind path was
-# downgraded to per-step prediction_unavailable rather than a
-# plan-killer, "unknown kind" no longer reaches bad_request. The
-# value-required branch is the remaining filter-side bad_request
-# trigger and exercises the same emit site
-# (PWRunnerService.runSpecimen catching SpecValidationError from
-# validateSandboxChecks in runner/Sources/PWRunnerCore/ProbeRunner.swift).
+# request meaning validation at the host ("filter.value required").
 
 fi
 
@@ -129,7 +120,7 @@ import sys
 from pathlib import Path
 
 spec = {
-    "schema_version": 3,
+    "schema_version": 4,
     "specimen_id": "missing_required_filter_value_probe",
     "policy": {
         "format": "sbpl",

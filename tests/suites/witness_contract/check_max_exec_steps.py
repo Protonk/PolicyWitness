@@ -23,7 +23,7 @@ def main():
     out = Path(directory)
     ids = [f'e{i:03d}' for i in range(STEPS)]
     specimen = {
-        'schema_version': 3, 'specimen_id': secrets.token_hex(12),
+        'schema_version': 4, 'specimen_id': secrets.token_hex(12),
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
         'probe_plan': [{'step_id': step_id,
                         'sandbox_check': {'operation': 'process-exec*', 'filter': {'kind': 'path', 'value': TARGET}},

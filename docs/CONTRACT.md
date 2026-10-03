@@ -7,13 +7,13 @@ build runs the check before compiling. Nothing reads the JSON at run time; the
 controller embeds it at compile time so `policy-witness --version` can report it.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
-| request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
+| request schema (`request_schema`) | 4 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 14 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 6 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
@@ -122,19 +122,23 @@ provenance. Direct XPC requests reject them. Nonempty augment lists require a
 string `sbpl_source`; the controller splices the named fragments and strips
 the list. A direct XPC request with unresolved fragments is rejected.
 
-Closed object fields do not close the existing probe value vocabulary. Unknown
-attempt kind/action pairs still produce the explicit per-step `unsupported`
-observation; unknown filter kinds still produce `prediction_unavailable`.
-Those records retain submitted intent and make no successful-operation claim.
-These documented outcomes are part of the accepted input contract.
+Meaning checks reject unknown attempt kind/action pairs and filter kinds before
+any worker or validator is created. A non-null `attempt.args` is accepted only
+for `exec/spawn`; a non-null `filter.value` is refused for `kind: "none"`;
+`capture_nonce` requires enabled `capture_applied_profile`. Enabled capture
+requires a valid nonce. Step IDs must be distinct and exec targets absolute.
+Known operation/filter pairs excluded from prediction still produce explicit
+`prediction_unavailable` observations, with supported attempts executed normally.
+Operation names passed to `sandbox_check` remain OS queries; the validator can
+report `unsupported_operation`. Query and attempt scopes need not match.
 
 Changes fall into four categories:
 
 | Change | Contract consequence |
 | --- | --- |
-| Replace the `probe_plan` array with an object, require a new field, or remove an accepted spelling | Callers must change their requests; use a new request contract value and reject unsupported values explicitly. |
+| Replace the `probe_plan` array with an object, require a new field, remove an accepted spelling, or refuse an accepted combination | Callers must change their requests; use a new request contract value and reject unsupported values explicitly. |
 | Change what `action: "open_read"` does | A new action spelling or request contract is required; do not reinterpret the same request as a different operation. |
-| Add an optional field or action while preserving existing requests and meanings | The request value can stay stable. Older builds must reject an unknown field or report an unsupported action explicitly; acceptance by a newer build does not promise acceptance by an older one. |
+| Add an optional field or action while preserving existing requests and meanings | The request value can stay stable. Older builds reject unknown fields and unsupported actions explicitly; acceptance by a newer build does not promise acceptance by an older one. |
 | Fix parameter transfer or another implementation defect to honor the documented request | Keep the request value; build provenance identifies the implementation and results can change. |
 
 [Runtime admission limits](LIMITS.md) are separate from this syntax and meaning.
@@ -149,6 +153,43 @@ Maintenance consists of the existing decoder/selector fields, their meaning
 in the guide, and acceptance/refusal tests. No additional schema language or
 parser generator is used. These rules protect requested intent; they do not
 promise identical sandbox observations across builds or macOS versions.
+
+The [developer lesson](REQUEST-GRAMMAR.md) works through the same specimens
+used by Swift decoding/validation tests and signed CLI/direct-XPC controls.
+
+### Structured request refusals
+
+Malformed JSON, request versions, selectors, augments, field structure and
+meaning, and capacity refusals report `bad_request`; the controller exits 1.
+Unreadable request files, unavailable runner installations and transport failures
+remain tool/execution failures. The controller exposes `data.request_failure`;
+when the runner refuses the request, this is an unchanged copy of the runner's
+`request_failure`. It is optional additive response/envelope information: absence
+means no structured diagnostic was supplied, never that execution succeeded.
+
+The record has `code` and `path`, plus `expected_schema` for version-field
+refusals. `path` is an array of object keys and decimal array positions, with
+`[]` naming the root. It is `null` when the full location cannot be reported:
+at most eight components of at most 63 UTF-8 bytes each are echoed. Refused
+parameter keys are also withheld. Human-readable `error` is supplementary;
+consumers use the code and path without parsing that prose.
+
+| Codes | Meaning |
+| --- | --- |
+| `invalid_json` | The request could not be parsed as JSON. |
+| `unsupported_schema` | The request marker names another contract. |
+| `unknown_field`, `missing_field`, `missing_value`, `type_mismatch`, `invalid_value` | The named input is unknown, absent, null where required, mistyped or invalid. |
+| `unsupported_policy_format`, `missing_policy_source` | The policy's structural prerequisites are absent. |
+| `unknown_filter_kind`, `missing_filter_value`, `empty_operation` | A sandbox query cannot be formed from the request. |
+| `unsupported_attempt`, `relative_exec_target`, `duplicate_step_id` | The plan cannot be carried out with its submitted meaning. |
+| `inapplicable_field`, `invalid_capture_nonce` | A supplied field cannot take effect or satisfy its prerequisites. |
+| `conflicting_selector`, `unresolved_augments`, `augment_unavailable` | Controller-owned instructions conflict, remain unresolved at XPC, or name unavailable fragments. |
+| `admission_refused` | Capacity or native-string admission failed; `admission_failure` retains the field, actual count, maximum and applicable positions. |
+
+These refusals contain no steps or child-process observations. The XPC host
+itself may have launched to decode a request. Capacity checks precede meaning
+checks; diagnostics identify one refusal, not an exhaustive list of defects.
+Retain unfamiliar codes as unclassified refusals rather than guessing their cause.
 
 ## Internal host/worker identity
 

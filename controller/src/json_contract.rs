@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 pub const SCHEMA_VERSION: u32 = 6;
 /// The accepted request contract, independent of implementation revisions.
-pub const REQUEST_SCHEMA_VERSION: u32 = 3;
+pub const REQUEST_SCHEMA_VERSION: u32 = 4;
 /// The one runner response schema this controller reads; any other version is refused.
 pub const RESPONSE_SCHEMA_VERSION: u32 = 14;
 // END GENERATED CONTRACT VERSIONS

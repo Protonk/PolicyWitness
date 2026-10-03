@@ -11,4 +11,4 @@ test_build_fixture "${ROOT_DIR}/tests/fixtures/comparison/build.sh" \
 test_step run "run the S, B and C specimens of tests/fixtures/comparison/matrix.json and check every step against its reviewed row"
 test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "comparison matrix contract failed" \
   "${ROOT_DIR}/tests/suites/witness_contract/check_comparison_matrix.py" "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
-test_pass "every matrix row's comparison record, raw fields and file effects match the reviewed fixture" "{}"
+test_pass "every live matrix row's comparison record, raw fields and file effects match the reviewed fixture" "{}"

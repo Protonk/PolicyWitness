@@ -21,12 +21,12 @@ SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 3,
+    "schema_version": 4,
     "specimen_id": "witness_contract_verdicts",
     "policy": {"format": "sbpl", "sbpl_source": "(version 2)\n(deny default)\n(allow file-read-data)"},
     "probe_plan": [{
         "step_id": "fr1",
-        "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "none", "value": ""}},
+        "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "none"}},
         "attempt": {"kind": "file", "action": "open_read", "target": "/etc/hosts"},
     }],
 }

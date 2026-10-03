@@ -471,8 +471,8 @@ requires no retained mutation experiment or acceptance output.
 ## Comparison matrix
 
 `comparison_matrix` runs the three live specimens of
-[`tests/fixtures/comparison/matrix.json`](../../fixtures/comparison/README.md)
-through the CLI with `--no-log-capture`: S (real validator, twenty-four rows),
+[`tests/fixtures/comparison/matrix.json`](../../fixtures/comparison/matrix.json)
+through the CLI with `--no-log-capture`: S (real validator, twenty-three rows),
 B (the validator steered by `stub_validator.py` through
 `_test_overrides.validator_executable_path` and the I/O deadline seam; its
 records are stub output, so expectations come from submitted scopes and
@@ -487,6 +487,10 @@ by field through `tests/lib/consumer.py`, and the file effects after the run
 Combined failures are reported together in `matrix-summary.json`. The T row
 is owned by `worker_attempt_in_flight_at_deadline`; the same fixture rows are
 read by `runner_unit`'s `ComparisonEvidenceTests`.
+S09's unsupported attempt is constructed-only coverage of the defensive
+comparison classifier. Public requests refuse unsupported attempts before
+children; the shared request-contract corpus checks that an earlier valid
+create in the refused specimen does not run.
 
 ## Specimen dossier
 
@@ -498,10 +502,11 @@ and the evidence manifest's entries. Seven examples: an ordinary run, a run
 with imports, an applied augment, a refused augment (`failed` with
 `augmentation_failed` imports and no client invocation), a policy without
 source (`not_applicable`, delivered and refused by the runner as
-`bad_policy`), controller refusals (a missing argument, an absent file,
-invalid JSON and a non-object request each print the uniform `tool_error`
-envelope with the dossier collected so far, exit 2 and no temporary request
-file), and executable overrides (a byte-identical worker copy records
+`bad_request`), controller refusals (missing arguments and absent files produce
+`tool_error` and exit 2; invalid JSON and non-object requests produce
+`bad_request` and exit 1 with a structured `request_failure`; all retain the
+dossier collected so far without creating a temporary request file), and
+executable overrides (a byte-identical worker copy records
 `match`; different bytes record `mismatch`; a nonexistent, relative, NUL or
 overlong path records `unavailable` with its reason; both helper roles are
 independent). `request_delivery` must report the held byte count on every

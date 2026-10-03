@@ -116,8 +116,8 @@ Runs a **single runner evaluation** against the selected runner service:
     `(sysctl-read, sysctl_name)`. The runner short-circuits to
     `sandbox_check.outcome="prediction_unavailable"` (`rc=-1`); the
     `attempt` result is the reliable evidence.
-  - **Unrecognized filter kinds** produce `prediction_unavailable` with the
-    submitted kind retained. Known kinds requiring a value reject an absent
+  - **Unrecognized filter kinds** reject the specimen as `bad_request`.
+    Known kinds requiring a value reject an absent
     or empty value as `bad_request` before any worker spawn.
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.specimen`, the dossier that keeps results auditable: request path,
@@ -130,8 +130,12 @@ Exit codes:
 - `1`: `result.ok=false`: a runner-reported failure, `bad_request`, or a reply
   the controller cannot read (`unsupported_runner_response` for another response
   schema, `malformed_runner_response` for a missing or noninteger version)
+  Malformed JSON, versions, selectors and augment instructions are `bad_request`
+  even when the controller refuses them before XPC. `data.request_failure`
+  supplies a stable code and bounded field path; runner refusals are copied
+  from `runner_result.request_failure`. See the [request refusal record](../docs/CONTRACT.md#structured-request-refusals).
 - `2`: usage / tool error (`result.normalized_outcome: tool_error`): a missing or
-  invalid argument, an absent or unreadable request, a runner-selection or
+  invalid usage argument, an absent or unreadable request, a runner-availability or
   manifest failure, or a request-delivery failure. The same `kind: "run"`
   envelope is printed with `result.error`, null execution records and the
   dossier collected so far.
@@ -171,7 +175,7 @@ Keep this list current when a run-path helper gains a read or a launch.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The controller forwards the runner reply without version coercion and

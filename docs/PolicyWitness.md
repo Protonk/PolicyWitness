@@ -41,7 +41,7 @@ Create a specimen:
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -150,7 +150,7 @@ Minimal skeleton (copy/paste):
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "skeleton",
   "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
@@ -193,6 +193,7 @@ An SBPL policy may set `capture_applied_profile: true` and a fresh per-applicati
 `bytecode_length`, `bytecode_b64`, `bytecode_sha256`, `source_length`,
 `source_sha256`, `parameter_count` and `params_sha256`. These are sensitive outputs:
 the caller must arrange restricted receipt storage before opting in.
+A non-null nonce without enabled capture is a `bad_request`.
 
 The C worker copies the bytecode from the same compiler-result pointer it passes
 to `sandbox_apply`, before applying. The host requires successful apply,
@@ -264,9 +265,8 @@ fails to compile is **not** reported as `bad_policy`: it reaches the C
 worker and surfaces as `runner_failed` with an operation=5 compilation record,
 NULL-result evidence and any published compiler diagnostic. Parameter setup
 and application failures have their own operation/result records.
-In a run, `bad_policy` comes only from the runner host, for a
-structurally invalid policy (missing `sbpl_source`, or a non-`sbpl`
-`format`); the controller runs `sbpl-check` only on the
+In a run, a missing `sbpl_source` or non-`sbpl` `format` is a structured
+`bad_request` before children. The controller runs `sbpl-check` only on the
 `xpc_error` path.
 
 The sbpl-check envelope also records the imports closure:
@@ -512,7 +512,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Parameter value (`parameter_value`) | 383 UTF-8 bytes | Each value, excluding terminating NUL. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Query operation (`query_operation`) | 127 UTF-8 bytes | Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Query filter value (`query_filter_value`) | 511 UTF-8 bytes | Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound are refused during meaning validation before children. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Specimen ID (`specimen_id`) | 255 UTF-8 bytes | The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Request labels (`request_label`) | 63 UTF-8 bytes | Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
 | Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | Each of _test_overrides.worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
@@ -542,7 +542,7 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
-| Synthesized maximal reply (`runner_reply_maximum`) | 24,822,203 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
+| Synthesized maximal reply (`runner_reply_maximum`) | 24,825,335 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
 | Runner client output (`controller_output`) | 75,497,472 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
@@ -595,7 +595,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -932,12 +932,11 @@ Notes:
       (`different` for bare `process-exec` beside a spawn).
     - `prediction_unavailable`: emitted when the runner deliberately
       skips `sandbox_check` for a step where the userland predicate
-      is structurally suspect. Three triggers, each named by a
+      is structurally suspect. Two public triggers, each named by a
       `query_plan:*` entry in `comparison.limitations`:
         - **op+filter pair** in the set under
           [Filter kinds where prediction is unavailable](#filter-kinds-where-prediction-is-unavailable)
           (`query_plan:prediction_unavailable_pair`).
-        - **unrecognized filter kind** (`query_plan:unrecognized_filter_kind`).
         - **per-step host condition**: a `path` filter whose
           `filter_value` doesn't resolve via `realpath` on the host
           (`query_plan:path_unresolved_at_planning`). For absent
@@ -988,10 +987,8 @@ Notes:
   distinguish a spawn that produced no child from a helper that
   simply exited non-zero.
 - `unsupported` — the `(attempt.kind, attempt.action)` combination
-  isn't in PolicyWitness's implemented set. Per-step skip: the
-  worker no-ops this slot; the `sandbox_check` query still runs;
-  the comparison carries `attempt:unsupported` with both relations
-  `unresolved`.
+  has no implementation. Defensive result construction retains this spelling;
+  public request admission refuses such combinations before children.
 - `not_run_worker_died` — no completed attempt result. Missing or incomplete
   publication does not prove the operation never started; `attempt.lifecycle`
   says which, and the comparison's limitation repeats its summary
@@ -1140,9 +1137,8 @@ jq '.data.runner_result.steps[].sandbox_check | {filter_value, filter_type_id, o
 ### normalized_outcome catalog
 
 `data.runner_result.normalized_outcome` values the runner can produce
-(`bad_policy` for a structurally invalid policy, plus the standalone
-`sbpl-check` tool outcomes `missing_params` and `policy_too_large`,
-are documented under SBPL check above):
+(the standalone `sbpl-check` tool outcomes `bad_policy`, `missing_params`
+and `policy_too_large` are documented under SBPL check above):
 
 - `ok` — worker completion and clean disposition are confirmed. Any invoked
   validator also has confirmed clean disposition, valid received records for
@@ -1175,8 +1171,7 @@ are documented under SBPL check above):
   the `outcome="error"`, `rc=0` shape with `result_source="synthetic"`,
   `native_rc:null`, and a missing reason.
 - `bad_request` — request rejected before any worker spawn. Causes
-  include: JSON decode failure, empty `sandbox_check.operation`
-  (`validateSandboxChecks`), unsupported top-level field (e.g.
+  include: JSON decode failure, empty `sandbox_check.operation`, an unknown field (e.g.
   `instrumentation`), duplicate `step_id`, or a capacity refusal: the worker's
   shared-memory bounds, the host-only query strings and filter/attempt labels,
   or the top-level and test-seam strings. Admission runs after decoding, before
@@ -1184,14 +1179,16 @@ are documented under SBPL check above):
   Capacity refusals carry host-owned `admission_failure` with field, actual and
   maximum, `utf8_bytes`, `items` or `nul_bytes`, and applicable `step_id`, `step_index`,
   `parameter_key` and `index`. Every `bad_request` reply has `steps: []`:
-  nothing ran, so the refused probe plan is omitted. A refusal never repeats
+  nothing ran, so the refused probe plan is omitted. A capacity refusal never repeats
   the string it refused: a refused step ID or parameter key is identified by
   position or by field, and a refused `specimen_id`, `run_kind`, `policy.format`
   or seam path is replaced by `<admission_refused>`, omitted, `unknown` or
   dropped from the mirrored `test_overrides` respectively. Every echoed field
   is checked independently, including when several fields are invalid.
-  Unknown filter kinds and unsupported attempt combinations within the
-  admission limits are per-step outcomes, not refusals.
+  Unknown filter kinds, unsupported attempt combinations and non-null fields
+  that cannot take effect are also refused. `request_failure` supplies the
+  structured code and field path; the controller mirrors it at
+  `data.request_failure`. See [request refusals](CONTRACT.md#structured-request-refusals).
 - `already_ran` — the XPC service instance only accepts one
   `runSpecimen` call. A second call returns this error.
 
@@ -1212,13 +1209,9 @@ documented in the [controller README](../controller/README.md#output-contract).
 The runner predicts (asks `sandbox_check` about) these filter kinds:
 `none`, `path`, `global_name`, `local_name`,
 `iokit_registry_entry_class`, `iokit_user_client_class`,
-`sysctl_name`. Specimens are free to author probes with other
-filter kinds (`preference_domain`, `mach_port`, anything else SBPL
-accepts) — those steps short-circuit to
-`step.sandbox_check.outcome = "prediction_unavailable"` with
-`rc == -1` per-step. The plan is not rejected; sibling steps with
-predicted kinds run normally and the attempt for the
-unpredicted step still produces evidence.
+`sysctl_name`. Unknown filter kinds refuse the specimen before any attempts.
+Known kinds other than `none` require a nonempty value. A `none` filter accepts
+only an absent or null value.
 
 ### Filter kinds where prediction is unavailable
 
@@ -1228,8 +1221,8 @@ checked, no `sandbox_check` filter ID in 1..200 produced an answer
 that matched what the kernel enforced for the policy under test.
 For these, the runner accepts the filter in specimens (so policies
 can be authored), compiles and applies the policy normally, but
-skips `sandbox_check` entirely and emits the same
-`prediction_unavailable` shape as for unknown filter kinds, with
+skips `sandbox_check` entirely and emits
+`prediction_unavailable`, with
 `query_plan:prediction_unavailable_pair` in the step's
 `comparison.limitations`. The attempt still runs and provides the
 real evidence.
@@ -1304,12 +1297,10 @@ combinations:
   Exec children have their own PIDs; deny-log correlation covers the worker
   PID only (see [Denial-log correlation](#denial-log-correlation)).
 
-Specimens are free to author probes with other attempt combinations
-(`("iokit", "open")`, future kinds, etc.) — those steps surface
-`step.attempt.outcome = "unsupported"` per-step. The `sandbox_check`
-query for the same step still runs normally; only the attempt
-slot is no-op'd. The step's comparison carries `attempt:unsupported`
-with `observation: unavailable` and both relations `unresolved`.
+Other attempt combinations refuse the whole specimen before any attempt.
+A non-null `args` field is accepted only for `exec/spawn`, including when the
+array is empty. Query and attempt scopes can differ; recognized queries with
+unavailable predictions still permit supported attempts.
 
 ## Operating
 
@@ -1615,7 +1606,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "byoxpc_smoke",
   "policy": {
     "format": "sbpl",

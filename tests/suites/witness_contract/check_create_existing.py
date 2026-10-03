@@ -94,7 +94,7 @@ def main():
         assert before == seeds, 'could not seed existing files'
         step_ids = [secrets.token_hex(12) for _ in paths]
         specimen = {
-            'schema_version': 3, 'specimen_id': secrets.token_hex(12),
+            'schema_version': 4, 'specimen_id': secrets.token_hex(12),
             'policy': {
                 'format': 'sbpl',
                 'sbpl_source': '(version 1)(allow default)'

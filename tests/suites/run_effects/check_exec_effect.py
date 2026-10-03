@@ -22,7 +22,7 @@ def specimen_for(name, helper, marker, allow_write):
     if allow_write:
         policy += f'(allow file-write* (literal "{marker}"))\n'
     return {
-        'schema_version': 3,
+        'schema_version': 4,
         'specimen_id': f'run_effects_exec_{name}',
         'policy': {'format': 'sbpl', 'sbpl_source': policy, 'augments': ['exec_baseline']},
         'probe_plan': [{

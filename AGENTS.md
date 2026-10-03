@@ -22,6 +22,7 @@ Pick what you’re changing:
 - **Opt-in tests registry** → [tests/OPT_IN_TESTS.md](tests/OPT_IN_TESTS.md)
 - **Limits and their documentation** → [docs/LIMITS.md](docs/LIMITS.md), [docs/limits.json](docs/limits.json), [docs/generate_limits.py](docs/generate_limits.py)
 - **Wire contracts (request/response schema, worker identity, envelope)** → [docs/CONTRACT.md](docs/CONTRACT.md), [docs/contract.json](docs/contract.json), [docs/generate_contract.py](docs/generate_contract.py)
+- **Accepted-input teaching examples and refusal diagnostics** → [docs/REQUEST-GRAMMAR.md](docs/REQUEST-GRAMMAR.md), [tests/fixtures/request_contract/examples.json](tests/fixtures/request_contract/examples.json)
 - **User guide** → [docs/PolicyWitness.md](docs/PolicyWitness.md); its Limits and Questions sections are copied from [docs/LIMITS.md](docs/LIMITS.md) and [docs/QUESTIONS.md](docs/QUESTIONS.md) by [docs/generate_limits.py](docs/generate_limits.py)
 
 ## Vocabulary (repo-anchored)

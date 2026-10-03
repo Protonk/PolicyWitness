@@ -7,7 +7,8 @@ import Foundation
 // Each row's `unit` inputs are constructed channel results; the expectations
 // were reviewed against the matrix and its independent controls, not taken
 // from this producer. The live reader (`witness_contract/comparison_matrix`)
-// runs the same rows through the CLI.
+// runs the rows not marked constructed through the CLI. S09 protects defensive
+// result construction; public requests refuse unsupported attempts before children.
 
 private struct MatrixRow {
     let id: String

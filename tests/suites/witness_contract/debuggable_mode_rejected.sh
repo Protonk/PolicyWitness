@@ -21,7 +21,7 @@ SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 3,
+    "schema_version": 4,
     "specimen_id": "witness_contract_debuggable_rejected",
     "runner": {"mode": "debuggable"},
     "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
@@ -52,13 +52,14 @@ if result.get("ok") is True:
 
 # parse_runner_selector_value returns
 # Err("invalid runner.mode value: debuggable"), which cmd_run wraps
-# in a tool_error envelope before any runner is invoked.
+# in a bad_request envelope before any runner is invoked.
 outcome = result.get("normalized_outcome")
-if outcome != "tool_error":
+if outcome != "bad_request":
     raise SystemExit(
-        f"expected normalized_outcome=tool_error from controller-side "
+        f"expected normalized_outcome=bad_request from controller-side "
         f"parse rejection (got {outcome!r})"
     )
+assert env["data"]["request_failure"] == {"code": "invalid_value", "path": ["runner", "mode"]}, env
 top_err = result.get("error") or ""
 if "debuggable" not in top_err:
     raise SystemExit(

@@ -1,5 +1,6 @@
 """Run the comparison matrix's S, B and C specimens through the CLI and check
-every step against its row in tests/fixtures/comparison/matrix.json.
+every live step against its row in tests/fixtures/comparison/matrix.json.
+Rows explicitly marked constructed are covered by the Swift comparison tests.
 
 Expectations come from the fixture, which was reviewed against the D1 matrix
 and the independent controls recorded here: a direct EACCES open and spawn of
@@ -187,7 +188,7 @@ def check_effects(specimen_rows, before, root, failures):
 
 def run_specimen(pw, out, name, root):
     spec = FIXTURE['specimens'][name]
-    request = {'schema_version': 3, 'specimen_id': spec['specimen_id'],
+    request = {'schema_version': 4, 'specimen_id': spec['specimen_id'],
                'policy': {'format': 'sbpl', 'sbpl_source': expand(spec['policy'], root)},
                'probe_plan': expand(spec['probe_plan'], root)}
     if spec.get('test_overrides'):
@@ -218,7 +219,8 @@ def main():
                     failures.append(f'{name}: consumer validation: {errors}')
                     continue
                 check_expected(name, envelope, FIXTURE['specimens'][name]['expected'], root, failures)
-                rows = [r for r in FIXTURE['rows'] if r['specimen'] == name]
+                assert all(r.get('coverage', 'live') in ('live', 'constructed') for r in FIXTURE['rows'])
+                rows = [r for r in FIXTURE['rows'] if r['specimen'] == name and r.get('coverage', 'live') == 'live']
                 steps = consumer.steps(envelope)
                 by_id = {s.get('step_id'): s for s in steps}
                 for row in rows:
@@ -238,6 +240,7 @@ def main():
         finally:
             restore_modes(root)
     (out / 'matrix-summary.json').write_text(json.dumps({'rows_checked': sum(len(v['rows']) for v in summary.values()),
+                                                         'constructed_only_rows': [r['id'] for r in FIXTURE['rows'] if r.get('coverage') == 'constructed'],
                                                          'specimens': summary, 'failures': failures}, indent=2) + '\n')
     if failures:
         raise SystemExit('\n'.join(failures))

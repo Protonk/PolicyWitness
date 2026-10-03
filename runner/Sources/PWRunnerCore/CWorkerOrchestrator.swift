@@ -64,6 +64,9 @@ public enum CWorkerOrchestrator {
         if let refused = admissionFailure(for: parsed) {
             return admissionRefusalReply(parsed: parsed, refused: refused, bundleId: bundleId, policyHash: policyHash)
         }
+        if let failure = requestMeaningFailure(parsed) {
+            return requestRefusalReply(parsed: parsed, failure: failure, bundleId: bundleId, policyHash: policyHash)
+        }
 
         // ---- translation: request → driver inputs ------------------------
         let workerSlots = workerSlotsFromProbePlan(parsed.probe_plan)
@@ -230,35 +233,6 @@ public enum CWorkerOrchestrator {
         if let refused = workerAdmissionFailure(capacity) { return refused }
         return queryAdmissionFailure(parsed.probe_plan)
     }
-
-    /// Pre-spawn validation specific to the C-worker code path.
-    /// Returns a human-readable error string when the plan is
-    /// malformed; nil when it's safe to orchestrate. Callers map a
-    /// non-nil return to bad_request.
-    ///
-    /// Only one plan-killing check today: step_ids must be unique.
-    /// The orchestrator joins the worker's per-slot outputs and the
-    /// validator's verdicts back to steps by step_id; a duplicate
-    /// would crash the Dictionary(uniqueKeysWithValues:) constructor
-    /// and kill the XPC service.
-    ///
-    /// Unsupported (attempt.kind, attempt.action) combos are NOT
-    /// plan-killers — they downgrade to per-step
-    /// `attempt.outcome = "unsupported"` in the step builder,
-    /// mirroring the per-step skip behavior for unknown filter
-    /// kinds. The slot is mapped to PW_ATTEMPT_NONE so the C worker
-    /// no-ops it; the validator's sandbox_check verdict for that
-    /// step still runs.
-    public static func validateProbePlanForCWorker(_ plan: [PWRunnerProbeStep]) -> String? {
-        var seenStepIds: Set<String> = []
-        seenStepIds.reserveCapacity(plan.count)
-        for step in plan {
-            if !seenStepIds.insert(step.step_id).inserted {
-                return "duplicate step_id '\(step.step_id)' in probe_plan"
-            }
-        }
-        return nil
-    }
 }
 
 // MARK: - Helpers
@@ -379,8 +353,8 @@ struct ValidatorQueryDecision {
 /// Units are UTF-8 bytes excluding any terminating NUL, like the worker bounds.
 let sandboxCheckOperationMaxBytes = 127
 let sandboxCheckFilterValueMaxBytes = 511
-// Unknown labels remain supported as per-step unavailable/unsupported results
-// within this bound. They are echoed verbatim, sometimes in several fields.
+// Bound submitted labels before meaning validation. Unknown labels within the
+// bound are refused; recognized labels may be echoed in several evidence fields.
 let probePlanLabelMaxBytes = 127
 
 /// Host-only capacity check for the sandbox_check strings, using the same
@@ -463,7 +437,27 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
         normalized_outcome: NormalizedOutcome.badRequest,
         error: CWorkerRunError.admissionFailed(record).description, pid: Int(getpid()),
         bundle_id: bundleId, policy_format: policyFormatAdmission.safeEcho(parsed.policy.format) ?? "unknown",
-        policy_sha256: policyHash, steps: [], test_overrides: mirrored, admission_failure: record)
+        policy_sha256: policyHash, steps: [], test_overrides: mirrored, admission_failure: record,
+        request_failure: requestCapacityFailure(record))
+}
+
+func requestCapacityFailure(_ record: PWRunnerAdmissionFailure) -> PWRunnerRequestFailure {
+    var path = record.field.split(separator: ".").map(String.init)
+    if let index = record.step_index {
+        if record.field == "target" || record.field == "args" { path.insert("attempt", at: 0) }
+        path = ["probe_plan", String(index)] + path
+    }
+    if let index = record.index { path.append(String(index)) }
+    // Parameter-key refusals deliberately withhold the key. The existing
+    // admission record remains authoritative for exact counts and positions.
+    if record.field == "key" {
+        return PWRunnerRequestFailure(code: "admission_refused", path: nil)
+    }
+    if record.field == "value" {
+        guard let key = record.parameter_key else { return PWRunnerRequestFailure(code: "admission_refused", path: nil) }
+        path = ["policy", "params", key]
+    }
+    return PWRunnerRequestFailure(code: "admission_refused", path: path)
 }
 
 func planValidatorQueries(_ plan: [PWRunnerProbeStep]) -> [ValidatorQueryDecision] {

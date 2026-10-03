@@ -60,7 +60,7 @@ def specimen(targets, queries, *, denied=False, exec_args=None, large_filter=Fal
         steps.append(dict(step_id=sid, sandbox_check=dict(
             operation='sysctl-read' if large_filter else 'file-read-data',
             filter=dict(kind='sysctl_name' if large_filter else 'path', value=query)), attempt=attempt))
-    return dict(schema_version=3, specimen_id=secrets.token_hex(12),
+    return dict(schema_version=4, specimen_id=secrets.token_hex(12),
                 policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)' +
                             ('(deny file-read-data)' if denied else '')),
                 probe_plan=steps)

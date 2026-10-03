@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "path_diagnostics_strict",
   "policy": {
     "format": "sbpl",

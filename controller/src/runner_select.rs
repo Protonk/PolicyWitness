@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use crate::app_layout::SHIPPED_SERVICE;
 use crate::evidence::{self, EvidenceManifest};
+use crate::request_patch::RequestError;
 use crate::runner_manager::{
     self, RunnerEntitlements, RunnerKind, RunnerRecord, RunnerRegistry, RunnerScope,
     RunnerSignature,
@@ -66,47 +67,73 @@ fn selector_string<'a>(
     object: &'a serde_json::Map<String, Value>,
     key: &str,
     path: &str,
-) -> Result<Option<&'a str>, String> {
+) -> Result<Option<&'a str>, RequestError> {
     match object.get(key) {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(value)) => Ok(Some(value)),
-        Some(_) => Err(format!("{path}{key} must be a string or null")),
+        Some(_) => Err(selector_error(
+            "type_mismatch",
+            path,
+            &[key],
+            format!("{path}{key} must be a string or null"),
+        )),
     }
 }
 
 fn selector_entitlements(
     object: &serde_json::Map<String, Value>,
     path: &str,
-) -> Result<Option<Vec<String>>, String> {
+) -> Result<Option<Vec<String>>, RequestError> {
     match object.get("required_entitlements") {
         None | Some(Value::Null) => Ok(None),
         Some(Value::Array(items)) => items
             .iter()
             .enumerate()
             .map(|(i, item)| {
-                item.as_str()
-                    .map(str::to_owned)
-                    .ok_or_else(|| format!("{path}required_entitlements[{i}] must be a string"))
+                item.as_str().map(str::to_owned).ok_or_else(|| {
+                    selector_error(
+                        "type_mismatch",
+                        path,
+                        &["required_entitlements", &i.to_string()],
+                        format!("{path}required_entitlements[{i}] must be a string"),
+                    )
+                })
             })
             .collect::<Result<Vec<_>, _>>()
             .map(Some),
-        Some(_) => Err(format!(
-            "{path}required_entitlements must be an array of strings or null"
+        Some(_) => Err(selector_error(
+            "type_mismatch",
+            path,
+            &["required_entitlements"],
+            format!("{path}required_entitlements must be an array of strings or null"),
         )),
     }
 }
 
-pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, String> {
-    let root = value
-        .as_object()
-        .ok_or("request.json must be a JSON object")?;
+fn selector_error(code: &str, prefix: &str, suffix: &[&str], message: String) -> RequestError {
+    let mut path = if prefix.is_empty() {
+        vec![]
+    } else {
+        vec!["runner"]
+    };
+    path.extend_from_slice(suffix);
+    RequestError::new(code, &path, message)
+}
+
+pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, RequestError> {
+    let root = value.as_object().ok_or_else(|| {
+        RequestError::new("type_mismatch", &[], "request.json must be a JSON object")
+    })?;
     // Validate every supplied spelling, including a shadowed alias. A bad
     // entitlement entry must never disappear through filter_map.
     let id = selector_string(root, "runner_id", "")?;
     let service = selector_string(root, "runner_service", "")?;
     let entitlements = selector_entitlements(root, "")?;
     let mode = selector_string(root, "runner_mode", "")?
-        .map(|v| parse_runner_mode(v, "runner_mode"))
+        .map(|v| {
+            parse_runner_mode(v, "runner_mode")
+                .map_err(|e| RequestError::new("invalid_value", &["runner_mode"], e))
+        })
         .transpose()?;
     let mut selector = RunnerSelector {
         runner_id: id.map(str::to_owned),
@@ -115,9 +142,15 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
         mode,
     };
     let runner = match root.get("runner") {
-        None | Some(Value::Null) => return Ok(selector),
+        None | Some(Value::Null) => return checked_selector(selector),
         Some(Value::Object(object)) => object,
-        Some(_) => return Err("runner must be a JSON object or null".into()),
+        Some(_) => {
+            return Err(RequestError::new(
+                "type_mismatch",
+                &["runner"],
+                "runner must be a JSON object or null",
+            ));
+        }
     };
     for key in runner.keys() {
         if !["id", "service", "required_entitlements", "mode"].contains(&key.as_str()) {
@@ -126,7 +159,11 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
             } else {
                 "<unreported_key>".into()
             };
-            return Err(format!("unknown field in runner: {name}"));
+            return Err(RequestError::new(
+                "unknown_field",
+                &["runner", key],
+                format!("unknown field in runner: {name}"),
+            ));
         }
     }
     if let Some(id) = selector_string(runner, "id", "runner.")? {
@@ -139,7 +176,29 @@ pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, Stri
         selector.required_entitlements = entitlements;
     }
     if let Some(mode) = selector_string(runner, "mode", "runner.")? {
-        selector.mode = Some(parse_runner_mode(mode, "runner.mode")?);
+        selector.mode = Some(
+            parse_runner_mode(mode, "runner.mode")
+                .map_err(|e| RequestError::new("invalid_value", &["runner", "mode"], e))?,
+        );
+    }
+    checked_selector(selector)
+}
+
+fn selector_problem(selector: &RunnerSelector) -> Option<&'static str> {
+    let external = selector.runner_id.is_some() || selector.runner_service.is_some();
+    if matches!(selector.mode, Some(RunnerKind::Standard)) && external {
+        Some("runner.mode=standard cannot be combined with an external runner selection")
+    } else if matches!(selector.mode, Some(RunnerKind::Byoxpc)) && !external {
+        Some("runner.mode requires runner.id or runner.service for external runners")
+    } else {
+        None
+    }
+}
+
+fn checked_selector(selector: RunnerSelector) -> Result<RunnerSelector, RequestError> {
+    if let Some(problem) = selector_problem(&selector) {
+        // A relationship between selector fields; the root is its location.
+        return Err(RequestError::new("conflicting_selector", &[], problem));
     }
     Ok(selector)
 }
@@ -292,23 +351,11 @@ pub fn resolve_runner_target_with_registry(
     registry_path_override: Option<&Path>,
 ) -> Result<RunnerTarget, String> {
     let needs_external = selector.runner_id.is_some() || selector.runner_service.is_some();
-    if matches!(selector.mode, Some(RunnerKind::Standard)) && needs_external {
-        return Err(
-            "runner.mode=standard cannot be combined with an external runner selection".to_string(),
-        );
-    }
-    if matches!(selector.mode, Some(RunnerKind::Byoxpc)) && !needs_external {
-        return Err(
-            "runner.mode requires runner.id or runner.service for external runners".to_string(),
-        );
+    if let Some(problem) = selector_problem(selector) {
+        return Err(problem.into());
     }
     if !needs_external {
         let kind = selector.mode.unwrap_or(RunnerKind::Standard);
-        if matches!(kind, RunnerKind::Byoxpc) {
-            return Err(
-                "runner.mode requires runner.id or runner.service for external runners".to_string(),
-            );
-        }
         let target = builtin_runner_target(app_root, manifest, kind)?;
         enforce_required_entitlements(
             &selector.required_entitlements,
@@ -565,7 +612,7 @@ mod tests {
             let error = parse_runner_selector_value(&value)
                 .err()
                 .expect("must reject malformed intent");
-            assert!(error.contains(field), "{error}: expected {field}");
+            assert!(error.message.contains(field), "{error}: expected {field}");
         }
     }
 

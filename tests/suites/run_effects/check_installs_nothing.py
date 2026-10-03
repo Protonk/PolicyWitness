@@ -73,7 +73,7 @@ def main():
     (out / 'launchd_labels.before.json').write_text(json.dumps(launchd_labels(), indent=2) + '\n')
 
     spec = {
-        'schema_version': 3,
+        'schema_version': 4,
         'specimen_id': 'run_effects_plain_run',
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'},
         'probe_plan': [{

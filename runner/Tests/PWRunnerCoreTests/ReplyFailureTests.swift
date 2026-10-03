@@ -68,6 +68,7 @@ func replyFixture() throws -> PWRunnerRunResult {
           "readiness":{"rc":1,"errno":0},
           "diagnostic":{"state":2,"status":"truncated","length":4,"text":"text"}}},
       "admission_failure":{"origin":"runner_host","field":"constructed","actual":2,"maximum":1,"unit":"items","step_id":"s","step_index":0,"parameter_key":"K","index":0},
+      "request_failure":{"code":"unsupported_policy_format","path":["policy","format"],"expected_schema":4},
       "validator_spawn_failure":{"origin":"runner_host","operation":"posix_spawn",
         "executable_path":"/constructed/validator","return_code":123456,"diagnostic":"unfamiliar native failure"},
       "validator_subprocess":{"pid":43,"exit_code":0,"reaped":true,"stdout_collection_stop":"eof",
@@ -97,7 +98,7 @@ func runReplyFailureTests(_ tk: TestKit) {
     tk.group("host reply failure contract") {
         tk.run("malformed request diagnostics do not echo unbounded dictionary keys") {
             let key = String(repeating: "é", count: 32_768)
-            let malformed: [String: Any] = ["schema_version": 3, "specimen_id": "decode",
+            let malformed: [String: Any] = ["schema_version": 4, "specimen_id": "decode",
                 "policy": ["format": "sbpl", "sbpl_source": "(version 1)", "params": [key: [1, 2]]],
                 "probe_plan": []]
             let data = try JSONSerialization.data(withJSONObject: malformed)

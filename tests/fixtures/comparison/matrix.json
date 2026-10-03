@@ -218,21 +218,6 @@
           }
         },
         {
-          "step_id": "s09",
-          "sandbox_check": {
-            "operation": "file-read-data",
-            "filter": {
-              "kind": "path",
-              "value": "{{SCEN_ROOT}}/readable"
-            }
-          },
-          "attempt": {
-            "kind": "future",
-            "action": "future",
-            "target": "{{SCEN_ROOT}}/readable"
-          }
-        },
-        {
           "step_id": "s10",
           "sandbox_check": {
             "operation": "sysctl-read",
@@ -1073,7 +1058,7 @@
     },
     {
       "id": "S09",
-      "scenario": "unsupported attempt kind",
+      "scenario": "unsupported attempt kind (constructed only)",
       "specimen": "S",
       "step_id": "s09",
       "query": "allow",
@@ -1113,7 +1098,7 @@
         "attempt.missing_reason": "attempt_not_supported",
         "attempt.lifecycle.summary": "unsupported"
       },
-      "control": "readable bytes unchanged; admission accepts the kind and the worker no-ops it",
+      "control": "constructed channel results exercise the defensive comparison; public admission refuses the request (request-contract unknown_attempt example)",
       "comparison": {
         "observation": "unavailable",
         "observation_basis": "no_completed_worker_result",
@@ -1123,7 +1108,8 @@
         "limitations": [
           "attempt:unsupported"
         ]
-      }
+      },
+      "coverage": "constructed"
     },
     {
       "id": "S10",

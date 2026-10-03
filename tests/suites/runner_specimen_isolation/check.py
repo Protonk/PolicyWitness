@@ -273,7 +273,7 @@ def main():
                     path.write_bytes(seed)
                 marker = secrets.token_hex(16)
                 spec = {
-                    'schema_version': 3, 'specimen_id': secrets.token_hex(16),
+                    'schema_version': 4, 'specimen_id': secrets.token_hex(16),
                     'runner': {'mode': 'standard'},
                     'policy': {'format': 'sbpl', 'sbpl_source':
                                '(version 1)(allow default)(deny file-write-data (literal (param "TARGET")))',

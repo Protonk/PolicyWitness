@@ -55,14 +55,12 @@ guards for the request-validation and comparison rules:
 
 4. **duplicate_step_id_rejected** — request with two probes that
    share a `step_id`. Asserts `normalized_outcome == "bad_request"`
-   before any worker spawn (pre-spawn `validateProbePlanForCWorker`).
-5. **unsupported_attempt_per_step_skip** — two-step plan: a valid
+   before any worker spawn (`requestMeaningFailure`).
+5. **unsupported_attempt_rejected** — two-step plan: a valid
    file probe plus a step with an `attempt.kind`/`action` combo the
-   C worker doesn't implement. Asserts the run completes (`ok`), the
-   good step runs end-to-end, and the unrecognized step gets
-   `attempt.outcome == "unsupported"` while its `sandbox_check`
-   query still runs; its comparison carries `attempt:unsupported`
-   with both relations `unresolved`.
+   C worker doesn't implement. Asserts `bad_request`, the exact structured
+   refusal path, no steps and no worker or validator. The shared teaching
+   corpus independently checks absence of an earlier file-creation effect.
 6. **worker_timeout_ms_honored** — a 2-second worker deadline and 8-second
    post-apply hang produce a host SIGKILL timeout after an allowed write.
    Independent file bytes must change before the envelope is checked. The

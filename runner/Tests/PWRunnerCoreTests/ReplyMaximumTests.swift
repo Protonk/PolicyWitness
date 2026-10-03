@@ -37,9 +37,9 @@ private let stringPolicy: [String: Int?] = [
     "failure_state": nil, "origin": nil, "field": nil, "unit": nil, "kind": nil,
     "filter_type": nil, "signal": nil, "stdout_collection_stop": nil, "question": nil,
     "request_nonce": nil, "bytecode_sha256": nil, "source_sha256": nil, "params_sha256": nil,
-    "abi_identity": nil,
+    "abi_identity": nil, "code": nil,
     // Bounded echoes of request strings.
-    "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes,
+    "specimen_id": specimenIdMaxBytes, "run_kind": requestLabelMaxBytes, "path": 63,
     "step_id": PWShmLayout.stepIdMax - 1, "operation": sandboxCheckOperationMaxBytes,
     "filter_kind": probePlanLabelMaxBytes, "filter_value": sandboxCheckFilterValueMaxBytes,
     "input": sandboxCheckFilterValueMaxBytes, "requested_kind": probePlanLabelMaxBytes,
@@ -82,6 +82,9 @@ private func maximize(_ value: Any, key: String?, unknown: inout Set<String>) ->
 /// The maximal per-step attempt error text is the worker's bounded buffer; the
 /// sandbox_check error is the validator's bounded diagnostic (its buffer is 512).
 private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
+    var requestFailure = reply["request_failure"] as! [String: Any]
+    requestFailure["path"] = Array(repeating: maximal(63), count: 8)
+    reply["request_failure"] = requestFailure
     var steps = reply["steps"] as! [[String: Any]]
     var step = steps[0]
     var check = step["sandbox_check"] as! [String: Any]

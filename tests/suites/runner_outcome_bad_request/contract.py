@@ -3,6 +3,7 @@ import copy
 import json
 from pathlib import Path
 import plistlib
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 from contract import REQUEST_SCHEMA, RESPONSE_SCHEMA
 from run_capture import RunCapture
+from request_examples import CORPUS, examples, materialize
 
 
 def changed(specimen, path, value):
@@ -36,8 +38,10 @@ def main():
                         sandbox_check=dict(operation='file-write-create', filter=dict(kind='path', value=str(effect))),
                         attempt=dict(kind='file', action='create', target=str(effect)))])
 
-        def cli(name, specimen, *, accepted=False, error='', args=()):
+        def cli(name, specimen, *, accepted=False, error='', args=(), failure=None, raw=None, prediction=None):
             capture = RunCapture(pw, out / name, specimen, cli_args=['--no-log-capture', *args])
+            if raw is not None:
+                capture.request_path.write_text(raw)
             original = capture.request_path.read_bytes()
             with capture as run:
                 rc = run.wait(timeout=30)
@@ -50,20 +54,58 @@ def main():
                 assert rc == 0 and env['result']['ok'] is True, env
                 assert observed, f'{name}: accepted request produced no file effect'
                 assert runner['steps'][0]['attempt']['outcome'] == 'ok', runner
+                if prediction:
+                    assert runner['steps'][0]['sandbox_check']['outcome'] == prediction, runner
+                if specimen['policy'].get('capture_applied_profile'):
+                    assert runner['applied_profile']['request_nonce'] == specimen['policy']['capture_nonce'], runner
                 effect.unlink()
             else:
-                assert rc != 0 and env['result']['ok'] is False, env
+                assert rc == 1 and env['result']['normalized_outcome'] == 'bad_request' and env['result']['ok'] is False, env
                 assert error in (env['result'].get('error') or ''), (name, env)
+                diagnostic = env['data']['request_failure']
+                assert isinstance(diagnostic['code'], str) and 'path' in diagnostic, env
+                if failure is not None:
+                    assert diagnostic == failure, (name, diagnostic, failure)
                 assert not observed, f'{name}: refused intent still executed'
                 if runner is not None:
+                    assert runner['request_failure'] == diagnostic, env
                     assert runner['normalized_outcome'] == 'bad_request', runner
                     assert runner.get('runner_subprocess') is None and runner['steps'] == [], runner
                     assert runner.get('validator_subprocess') is None, runner
                 else:
                     assert env['data']['runner_client'] is None, env
 
-        cli('current', base, accepted=True)
-        cli('integral_version', changed(base, ['schema_version'], float(REQUEST_SCHEMA)), accepted=True)
+        (out / 'examples.json').write_bytes(CORPUS.read_bytes())
+        for example in examples():
+            specimen = materialize(example, effect, secrets.token_hex(16))
+            expected = example['expected']
+            cli('lesson-cli-' + example['id'], specimen, accepted=expected['cli'] is None,
+                failure=expected['cli'], raw=example.get('raw_request'), prediction=example.get('prediction'))
+            specimen = materialize(example, effect, secrets.token_hex(16))
+            case = out / ('lesson-xpc-' + example['id']); case.mkdir()
+            request = case / 'specimen.json'
+            request.write_text(example['raw_request'] if 'raw_request' in example else json.dumps(specimen) + '\n')
+            original = request.read_bytes()
+            with (case / 'reply.json').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
+                result = subprocess.run([str(client), 'run', '--timeout-ms', '10000', service, str(request)],
+                                        stdout=stdout, stderr=stderr, timeout=20)
+            assert request.read_bytes() == original, example['id']
+            assert result.returncode == 0, example['id']
+            reply = json.loads((case / 'reply.json').read_text())
+            observed = effect.is_file()
+            (case / 'effect.json').write_text(json.dumps(dict(observed=observed, expected=expected['xpc'] is None)) + '\n')
+            if expected['xpc'] is None:
+                assert reply['normalized_outcome'] == 'ok' and observed, (example['id'], reply)
+                if example.get('prediction'):
+                    assert reply['steps'][0]['sandbox_check']['outcome'] == example['prediction'], reply
+                if specimen['policy'].get('capture_applied_profile'):
+                    assert reply['applied_profile']['request_nonce'] == specimen['policy']['capture_nonce'], reply
+                effect.unlink()
+            else:
+                assert reply['normalized_outcome'] == 'bad_request' and reply['request_failure'] == expected['xpc'], (example['id'], reply)
+                assert not observed and reply['steps'] == [], reply
+                assert reply.get('runner_subprocess') is None and reply.get('validator_subprocess') is None, reply
+
         cli('selector_alias', dict(base, runner_mode='standard', required_entitlements=[]), accepted=True)
         cli('selector_nested', dict(base, runner=dict(mode='standard', required_entitlements=[])), accepted=True)
         cli('selector_null_option', dict(base, runner=None), accepted=True, args=['--runner-mode', 'standard'])

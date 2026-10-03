@@ -425,7 +425,7 @@
       "title": "Probe filter and attempt labels",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "counting": "Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound retain their per-step prediction_unavailable or unsupported behavior.",
+      "counting": "Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound are refused during meaning validation before children.",
       "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
       "control": "Fixed; no public override.",
       "sources": [
@@ -531,7 +531,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; an at-limit format passes admission and fails as bad_policy."
+      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; an at-limit format passes capacity admission and fails meaning validation as bad_request."
     },
     {
       "id": "test_override_path",
@@ -1083,7 +1083,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Synthesized maximal reply",
-      "value": 24822203,
+      "value": 24825335,
       "unit": "bytes",
       "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions.",
       "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",

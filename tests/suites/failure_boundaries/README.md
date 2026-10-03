@@ -12,11 +12,11 @@ host record, offending identity, units, absence of both children and an empty
 `steps` array, and that the refused string appears nowhere in the reply: a
 refused step ID is named by `step_index` alone, a refused key by field alone,
 and a refused top-level string is replaced or dropped. Accepted boundaries
-require actual child completion, except the at-limit format and seam paths,
-which pass admission and fail as `bad_policy` or their own spawn/dlopen
-outcome. Two precedence controls submit an oversized step ID beside an empty
-operation and beside a duplicate ID: capacity is refused first, so the shape
-diagnostics that quote step IDs never see an unbounded one.
+require actual child completion, except the at-limit format, unknown plan
+labels and seam paths. Those pass capacity admission, then fail meaning
+validation as `bad_request` or produce their own spawn/dlopen outcome.
+Two precedence controls submit an oversized step ID beside an empty operation
+and beside a duplicate ID: capacity is refused before meaning validation.
 
 `validator_frames` uses checked-in transcripts for valid replies followed by
 invalid UTF-8, incomplete allow/deny, and a valid unfamiliar diagnostic. File

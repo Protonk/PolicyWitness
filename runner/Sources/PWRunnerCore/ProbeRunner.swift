@@ -5,23 +5,8 @@ import Darwin
 // the submitted queries and decides which of them the validator child asks
 // about; it performs no sandbox query or attempt of its own.
 
-private enum SpecValidationError: Error, CustomStringConvertible {
-    case invalidSandboxCheck(stepId: String, message: String)
-
-    var description: String {
-        switch self {
-        case .invalidSandboxCheck(let stepId, let message):
-            return "invalid sandbox_check for step \(stepId): \(message)"
-        }
-    }
-}
-
 // Filter kinds the runner knows how to validate, predict, and route to
-// the sb_api_validator. Unknown kinds are still accepted in the
-// probe_plan — they fall through to per-step prediction_unavailable
-// in the step builder instead of killing the whole plan with
-// bad_request. This bounds the blast radius when a specimen mixes a
-// recognized probe with one whose filter kind hasn't been verified.
+// the sb_api_validator. Unknown names refuse the whole request before attempts.
 let knownFilterKinds: Set<String> = [
     PWRunnerWire.sandboxFilterNone,
     PWRunnerWire.sandboxFilterPath,
@@ -32,28 +17,82 @@ let knownFilterKinds: Set<String> = [
     PWRunnerWire.sandboxFilterSysctlName,
 ]
 
-func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
-    for step in steps {
+func sandboxCheckFailure(_ steps: [PWRunnerProbeStep]) -> PWRunnerRequestFailure? {
+    for (index, step) in steps.enumerated() {
+        let path = ["probe_plan", String(index), "sandbox_check"]
         let op = step.sandbox_check.operation.trimmingCharacters(in: .whitespacesAndNewlines)
         if op.isEmpty {
-            throw SpecValidationError.invalidSandboxCheck(stepId: step.step_id, message: "operation is empty")
+            return PWRunnerRequestFailure(code: "empty_operation", path: path + ["operation"])
         }
         let kind = step.sandbox_check.filter.kind
-        // Value-required check applies only to known kinds that take
-        // a value. Unknown kinds skip both predictions and validator
-        // probes, so their value isn't consulted.
-        let needsValue = knownFilterKinds.contains(kind)
-            && kind != PWRunnerWire.sandboxFilterNone
+        guard knownFilterKinds.contains(kind) else {
+            return PWRunnerRequestFailure(code: "unknown_filter_kind", path: path + ["filter", "kind"])
+        }
+        let needsValue = kind != PWRunnerWire.sandboxFilterNone
         if needsValue {
             let value = step.sandbox_check.filter.value?.trimmingCharacters(in: .whitespacesAndNewlines)
             if value == nil || value == "" {
-                throw SpecValidationError.invalidSandboxCheck(
-                    stepId: step.step_id,
-                    message: "filter.value required for kind \(kind)"
-                )
+                return PWRunnerRequestFailure(code: "missing_filter_value", path: path + ["filter", "value"])
             }
+        } else if step.sandbox_check.filter.value != nil {
+            return PWRunnerRequestFailure(code: "inapplicable_field", path: path + ["filter", "value"])
         }
     }
+    return nil
+}
+
+func validateSandboxChecks(_ steps: [PWRunnerProbeStep]) throws {
+    if let failure = sandboxCheckFailure(steps) { throw failure }
+}
+
+/// Meanings that structural decoding cannot express. Run after capacity checks
+/// and before either child is created, at both host orchestration entry points.
+/// Query and attempt scopes need not match; a known but unavailable prediction
+/// still permits a supported attempt and an honest unavailable observation.
+func requestMeaningFailure(_ spec: PWRunnerRunSpec) -> PWRunnerRequestFailure? {
+    if let augments = spec.policy.augments, !augments.isEmpty {
+        return PWRunnerRequestFailure(code: "unresolved_augments", path: ["policy", "augments"])
+    }
+    if spec.policy.format != PWRunnerWire.policyFormatSbpl {
+        return PWRunnerRequestFailure(code: "unsupported_policy_format", path: ["policy", "format"])
+    }
+    if spec.policy.sbpl_source == nil {
+        return PWRunnerRequestFailure(code: "missing_policy_source", path: ["policy", "sbpl_source"])
+    }
+    if spec.policy.capture_applied_profile == true {
+        if captureNonceBytes(spec.policy.capture_nonce) == nil {
+            return PWRunnerRequestFailure(code: "invalid_capture_nonce", path: ["policy", "capture_nonce"])
+        }
+    } else if spec.policy.capture_nonce != nil {
+        return PWRunnerRequestFailure(code: "inapplicable_field", path: ["policy", "capture_nonce"])
+    }
+    if let failure = sandboxCheckFailure(spec.probe_plan) { return failure }
+    var ids = Set<String>()
+    for (index, step) in spec.probe_plan.enumerated() {
+        let path = ["probe_plan", String(index)]
+        if !ids.insert(step.step_id).inserted {
+            return PWRunnerRequestFailure(code: "duplicate_step_id", path: path + ["step_id"])
+        }
+        guard let kind = mapAttemptKindOrNil(step.attempt) else {
+            return PWRunnerRequestFailure(code: "unsupported_attempt", path: path + ["attempt"])
+        }
+        if kind != .execSpawn && step.attempt.args != nil {
+            return PWRunnerRequestFailure(code: "inapplicable_field", path: path + ["attempt", "args"])
+        }
+        if kind == .execSpawn && !step.attempt.target.hasPrefix("/") {
+            return PWRunnerRequestFailure(code: "relative_exec_target", path: path + ["attempt", "target"])
+        }
+    }
+    return nil
+}
+
+func requestRefusalReply(parsed: PWRunnerRunSpec, failure: PWRunnerRequestFailure,
+                         bundleId: String?, policyHash: String? = nil) -> PWRunnerRunResult {
+    PWRunnerRunResult(specimen_id: parsed.specimen_id, run_kind: parsed.run_kind,
+        rc: 1, normalized_outcome: NormalizedOutcome.badRequest, error: failure.description,
+        pid: Int(getpid()), bundle_id: bundleId, policy_format: parsed.policy.format,
+        policy_sha256: policyHash, steps: [], test_overrides: parsed._test_overrides,
+        request_failure: failure)
 }
 
 // (operation, filter_kind) pairs the planner excludes from the validator

@@ -15,7 +15,7 @@ def main():
     target = out / ('unlink-' + secrets.token_hex(8))
     target.write_bytes(b'independent unlink witness\n')
     spec = {
-        'schema_version': 3, 'specimen_id': 'removed-target-prediction',
+        'schema_version': 4, 'specimen_id': 'removed-target-prediction',
         'policy': {'format': 'sbpl', 'sbpl_source': '(version 1) (allow default)'},
         'probe_plan': [{
             'step_id': 'read',

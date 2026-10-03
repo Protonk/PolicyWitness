@@ -34,7 +34,7 @@ def main():
         target.write_bytes(seed)
         ids = [secrets.token_hex(8), secrets.token_hex(8)]
         base = {
-            'schema_version': 3, 'specimen_id': secrets.token_hex(12),
+            'schema_version': 4, 'specimen_id': secrets.token_hex(12),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "BLOCKED")))',
                        'params': {'BLOCKED': str(target)}},

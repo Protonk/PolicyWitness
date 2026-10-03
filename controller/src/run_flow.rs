@@ -26,12 +26,12 @@ use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
 use crate::log_capture::LogTimeout;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
-use crate::request_patch::{read_json_file, validate_request_version};
+use crate::request_patch::{RequestError, parse_request, validate_request_version};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
-    RunnerConnectionKind, RunnerTarget, parse_runner_selector_value,
-    resolve_runner_target_with_registry, runner_provenance_from_target, strip_runner_selector,
+    RunnerConnectionKind, parse_runner_selector_value, resolve_runner_target_with_registry,
+    runner_provenance_from_target, strip_runner_selector,
 };
 use crate::sandbox_log::{
     SandboxLogCapture, SandboxLogWindow, bounded_step_denies, capture_sandbox_logs_with_timeout,
@@ -41,8 +41,8 @@ use crate::sandbox_log::{
 pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 
 /// `data` of a `kind: "run"` envelope: the dossier plus the execution records.
-/// Every key is present on every run envelope; a record that was never
-/// collected is null.
+/// Execution keys are present on every run envelope; an uncollected record is
+/// null. The optional request_failure is included only when supplied.
 #[derive(Serialize)]
 struct ExecutionData {
     pub specimen: Specimen,
@@ -50,6 +50,8 @@ struct ExecutionData {
     pub timeout_ms: Option<u64>,
     pub runner_client: Option<RunnerClientRun>,
     pub runner_result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_failure: Option<Value>,
 }
 
 #[derive(Serialize)]
@@ -167,6 +169,7 @@ fn execution_only(
             timeout_ms,
             runner_client,
             runner_result,
+            request_failure: None,
         },
         sandbox_log_capture: None,
         runner_sandbox_diagnostics: None,
@@ -213,6 +216,20 @@ fn tool_error(
 ) -> Result<RunOutput, String> {
     let (result, data) = tool_error_envelope(specimen, timeout_ms, error);
     envelope(result, &data, 2)
+}
+
+fn bad_request(
+    specimen: Specimen,
+    timeout_ms: Option<u64>,
+    error: RequestError,
+) -> Result<RunOutput, String> {
+    let mut data = execution_only(specimen, timeout_ms, None, None);
+    data.execution.request_failure = Some(json!(error.failure));
+    envelope(
+        result(false, 1, "bad_request", Some(error.message)),
+        &data,
+        1,
+    )
 }
 
 /// The envelope for an error that escaped `cmd_run` (the `cli.rs` catch-all).
@@ -287,7 +304,7 @@ fn policy_dossier(
     original_source: Option<&str>,
     resolution: &AugmentResolution,
     selected_source: Option<&str>,
-) -> (PolicyDossier, Option<String>) {
+) -> (PolicyDossier, Option<RequestError>) {
     let (augmentation, error) = match resolution {
         AugmentResolution::NotPresent | AugmentResolution::StrippedNoOp => (
             match original_source {
@@ -301,7 +318,7 @@ fn policy_dossier(
             None,
         ),
         AugmentResolution::BadRequest(error) => (
-            Augmentation::failed(original_source, error.clone()),
+            Augmentation::failed(original_source, error.to_string()),
             Some(error.clone()),
         ),
     };
@@ -471,32 +488,42 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
 }
 
 /// Inject `--runner-mode` into the request value; errors are request errors.
-fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), String> {
+fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), RequestError> {
     // Check the submitted selector before an option can replace an invalid value.
     parse_runner_selector_value(request_value)?;
     if mode == "machme" {
-        return Err("--runner-mode machme is not supported; use --runner-mode byoxpc".to_string());
+        return Err(RequestError::new(
+            "invalid_value",
+            &["runner", "mode"],
+            "--runner-mode machme is not supported; use --runner-mode byoxpc",
+        ));
     }
-    let kind = RunnerKind::parse(mode)
-        .ok_or_else(|| format!("invalid value for --runner-mode: {mode}"))?;
-    let obj = request_value
-        .as_object_mut()
-        .ok_or_else(|| "request.json must be a JSON object".to_string())?;
+    let kind = RunnerKind::parse(mode).ok_or_else(|| {
+        RequestError::new(
+            "invalid_value",
+            &["runner", "mode"],
+            format!("invalid value for --runner-mode: {mode}"),
+        )
+    })?;
+    let obj = request_value.as_object_mut().ok_or_else(|| {
+        RequestError::new("type_mismatch", &[], "request.json must be a JSON object")
+    })?;
     let runner_entry = obj
         .entry("runner")
         .or_insert_with(|| Value::Object(serde_json::Map::new()));
     if runner_entry.is_null() {
         *runner_entry = Value::Object(serde_json::Map::new());
     }
-    let runner_obj = runner_entry
-        .as_object_mut()
-        .ok_or_else(|| "runner must be a JSON object".to_string())?;
+    let runner_obj = runner_entry.as_object_mut().ok_or_else(|| {
+        RequestError::new("type_mismatch", &["runner"], "runner must be a JSON object")
+    })?;
     if let Some(existing) = runner_obj.get("mode").and_then(|v| v.as_str()) {
         if existing != kind.as_str() {
-            return Err(
-                "request.json already includes runner.mode; remove it or omit --runner-mode"
-                    .to_string(),
-            );
+            return Err(RequestError::new(
+                "conflicting_selector",
+                &["runner", "mode"],
+                "request.json already includes runner.mode; remove it or omit --runner-mode",
+            ));
         }
     } else {
         runner_obj.insert("mode".to_string(), Value::String(kind.as_str().to_string()));
@@ -557,6 +584,15 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
         specimen.app_provenance = app_provenance.clone();
         tool_error(specimen, timeout_ms, error)
     };
+    let refused_request = |error: RequestError| -> Result<RunOutput, String> {
+        let mut specimen = Specimen::unavailable(
+            request_path_text.clone(),
+            host.clone(),
+            "no runner was selected: malformed request",
+        );
+        specimen.app_provenance = app_provenance.clone();
+        bad_request(specimen, timeout_ms, error)
+    };
 
     let Some(request_path) = parsed.request_path.clone() else {
         return refused("missing <request.json>".to_string());
@@ -567,41 +603,33 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
             request_path.display()
         ));
     }
-    let mut request_value = match read_json_file(&request_path, "request.json") {
-        Ok(value) => value,
-        Err(error) => return refused(error),
+    let request_text = match std::fs::read_to_string(&request_path) {
+        Ok(text) => text,
+        Err(error) => return refused(format!("failed to read request.json: {error}")),
     };
-    if !request_value.is_object() {
-        return refused("request.json must be a JSON object".to_string());
-    }
+    let mut request_value = match parse_request(&request_text) {
+        Ok(value) => value,
+        Err(error) => return refused_request(error),
+    };
     if let Err(error) = validate_request_version(&request_value) {
-        let mut specimen = Specimen::unavailable(
-            request_path_text.clone(),
-            host.clone(),
-            "no runner was selected: unsupported or malformed request version",
-        );
-        specimen.app_provenance = app_provenance.clone();
-        return envelope(
-            result(false, 1, "bad_request", Some(error)),
-            &execution_only(specimen, timeout_ms, None, None),
-            1,
-        );
+        return refused_request(error);
     }
     if let Some(mode) = parsed.runner_mode_arg.as_deref() {
         if let Err(error) = inject_runner_mode(&mut request_value, mode) {
-            return refused(error);
+            return refused_request(error);
         }
     }
 
-    let selection: Result<RunnerTarget, String> = parse_runner_selector_value(&request_value)
-        .and_then(|selector| {
-            resolve_runner_target_with_registry(
-                &app_root,
-                manifest.as_ref(),
-                &selector,
-                deps.registry_path,
-            )
-        });
+    let selector = match parse_runner_selector_value(&request_value) {
+        Ok(selector) => selector,
+        Err(error) => return refused_request(error),
+    };
+    let selection = resolve_runner_target_with_registry(
+        &app_root,
+        manifest.as_ref(),
+        &selector,
+        deps.registry_path,
+    );
 
     // Resolve named augments before the runner (and the fallback compilation)
     // so every reader sees the same bytes. The original string's hash is
@@ -637,8 +665,7 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
     let runner_target = runner_target.expect("selection succeeded");
 
     if let Some(error) = augmentation_error {
-        let data = execution_only(specimen, timeout_ms, None, None);
-        return envelope(result(false, 1, "bad_request", Some(error)), &data, 1);
+        return bad_request(specimen, timeout_ms, error);
     }
 
     // Selection is already recorded in the dossier. The runner receives only
@@ -674,6 +701,7 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
                 timeout_ms,
                 runner_client: Some(runner_client),
                 runner_result,
+                request_failure: None,
             });
             let (result, data, exit_code) = attach_sandbox_logs(
                 execution,
@@ -694,9 +722,16 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
     )
 }
 
-fn complete_execution(data: ExecutionData) -> CompletedExecution {
+fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
     let diagnostics = execution_diagnostics(data.runner_result.as_ref());
     let runner_outcome = runner_outcome(data.runner_result.as_ref()).to_string();
+    if runner_outcome == "bad_request" {
+        data.request_failure = data
+            .runner_result
+            .as_ref()
+            .and_then(|r| r.get("request_failure"))
+            .cloned();
+    }
     let ok = runner_outcome == "ok";
     let exit_code = if ok { 0 } else { 1 };
 
@@ -1821,6 +1856,7 @@ mod tests {
             timeout_ms: Some(DEFAULT_TIMEOUT_MS),
             runner_client: Some(client_run(runner.as_ref())),
             runner_result: runner,
+            request_failure: None,
         }
     }
 
@@ -3613,9 +3649,16 @@ mod tests {
             );
         }
         // Augment resolution refused: atomic, nothing applied, imports not run.
-        let refusal = AugmentResolution::BadRequest("unknown augment: nope".into());
+        let refusal = AugmentResolution::BadRequest(RequestError::new(
+            "augment_unavailable",
+            &["policy", "augments", "0"],
+            "unknown augment: nope",
+        ));
         let (policy, error) = policy_dossier(Some(source), &refusal, Some(source));
-        assert_eq!(error.as_deref(), Some("unknown augment: nope"));
+        assert_eq!(
+            error.as_ref().map(|e| e.message.as_str()),
+            Some("unknown augment: nope")
+        );
         assert_eq!(policy.augmentation.status, "failed");
         assert!(policy.augmentation.applied.is_empty());
         assert_eq!(
@@ -3668,15 +3711,17 @@ mod tests {
 
     #[test]
     fn runner_mode_injection_rules() {
-        let mut request = json!({"policy": {}});
+        let mut request = json!({"policy": {}, "runner": {"id": "external"}});
         assert!(
             inject_runner_mode(&mut request, "machme")
                 .unwrap_err()
+                .message
                 .contains("byoxpc")
         );
         assert!(
             inject_runner_mode(&mut request, "nope")
                 .unwrap_err()
+                .message
                 .contains("invalid value for --runner-mode")
         );
         inject_runner_mode(&mut request, "byoxpc").unwrap();
@@ -3685,12 +3730,14 @@ mod tests {
         assert!(
             inject_runner_mode(&mut request, "standard")
                 .unwrap_err()
+                .message
                 .contains("already includes runner.mode")
         );
         let mut scalar = json!({"runner": 5});
         assert!(
             inject_runner_mode(&mut scalar, "standard")
                 .unwrap_err()
+                .message
                 .contains("runner must be a JSON object")
         );
     }
@@ -4009,6 +4056,7 @@ mod tests {
             assert!(
                 inject_runner_mode(&mut value, "standard")
                     .unwrap_err()
+                    .message
                     .contains("runner.mode")
             );
             assert_eq!(value["runner"]["mode"], 42);
@@ -4673,6 +4721,11 @@ mod tests {
                         output: capture(crate::utils::RUNNER_CAPTURE_BYTES),
                     }),
                     runner_result: Some(reply),
+                    // Field-complete shape fixture, including an optional refusal record.
+                    request_failure: Some(
+                        json!({"code": "unknown_field", "path": ["policy", "typo"],
+                        "expected_schema": json_contract::REQUEST_SCHEMA_VERSION}),
+                    ),
                 },
                 sandbox_log_capture: Some(SandboxLogCapture {
                     window: SandboxLogWindow {

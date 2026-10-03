@@ -42,11 +42,12 @@ bundle scaffolding under `runner/Services/PWRunner/`.
   - `PWRunnerProtocol` (`runSpecimen(Data) -> Data`)
   - Codable JSON types: `PWRunnerRunSpec`, `PWRunnerPolicySpec`, `PWRunnerProbeStep`, and the returned `PWRunnerRunResult`
 - `Sources/PWRunnerCore/SandboxApply.swift`
-  - `computePolicyHash`: the host's structural policy check (`bad_policy` for a
-    missing source or wrong format) and `policy_sha256`. Compilation and
-    application run only in the C worker.
+  - `computePolicyHash`: the host's policy hash, with a defensive `bad_policy`
+    path. Public admission rejects missing source or wrong format earlier as
+    `bad_request`. Compilation and application run only in the C worker.
 - `Sources/PWRunnerCore/ProbeRunner.swift`
-  - Query planning metadata: `knownFilterKinds`, `validateSandboxChecks` and
+  - Request meaning validation: `requestMeaningFailure` and `sandboxCheckFailure`.
+  - Query planning metadata: `knownFilterKinds` and
     `predictionUnavailableOpFilters`, the set of `(operation, filter_kind)`
     pairs the runner never predicts. Adding a pair requires empirical
     verification with `tests/suites/witness_contract/harness/verify_filter_id.sh`;
@@ -159,6 +160,10 @@ checked before any worker or validator is created. Unknown fields at every
 request object, wrong field types and unsupported versions produce explicit
 `bad_request` replies. The decoder uses the existing Codable types and their
 CodingKeys; no independent schema parser is involved.
+Meaning validation also rejects unsupported attempt/filter names and ineffective
+field combinations before either child. Refusals include a bounded
+`request_failure` code and path. The [developer lesson](../docs/REQUEST-GRAMMAR.md)
+uses specimens shared by unit tests and live CLI/XPC controls.
 
 The runner consumes a `PWRunnerRunSpec` which contains:
 
@@ -227,7 +232,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 3, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 14, controller envelope 6. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Readers accept exactly the current response schema; the Swift decoder and

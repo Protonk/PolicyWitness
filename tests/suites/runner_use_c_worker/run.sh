@@ -45,7 +45,7 @@ run_happy_default_allow() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_happy",
   "policy": {
     "format": "sbpl",
@@ -130,7 +130,7 @@ run_bare_deny_default() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_deny_default",
   "policy": {
     "format": "sbpl",
@@ -207,7 +207,7 @@ run_prediction_unavailable_pair() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_prediction_unavailable",
   "policy": {
     "format": "sbpl",
@@ -280,7 +280,7 @@ run_duplicate_step_id_rejected() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_dup_step_id",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -321,25 +321,21 @@ PY
   test_pass "duplicate step_id → bad_request before spawn (no XPC crash)" "{\"stdout\":\"${run_stdout}\"}"
 }
 
-# ---- test_id: unsupported_attempt_per_step_skip --------------------------
+# ---- test_id: unsupported_attempt_rejected --------------------------
 
-run_unsupported_attempt_per_step_skip() {
-  local test_id="unsupported_attempt_per_step_skip"
+run_unsupported_attempt_rejected() {
+  local test_id="unsupported_attempt_rejected"
   test_selected "${test_id}" || return 0
   test_begin "${PW_TEST_SUITE}" "${test_id}"
-  test_step "run" "unknown (kind, action) combo → per-step attempt.outcome=unsupported (run still ok; sibling step + sandbox_check verdict survive)"
+  test_step "run" "unknown (kind, action) combo refuses the whole specimen before children"
 
   if ! require_pw_app "${PW_BIN}"; then exit 0; fi
 
-  # Two probes: a valid file probe and one with an unknown
-  # attempt (kind, action). Pins both halves of the per-step skip
-  # contract: the good step runs normally AND the unrecognized
-  # step's sandbox_check verdict still runs while its attempt
-  # surfaces as outcome=unsupported.
+  # A later unsupported attempt must prevent the valid earlier step.
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_mixed_attempt_support",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read*)"},
   "probe_plan": [
@@ -365,36 +361,14 @@ import json, sys
 env = json.loads(open(sys.argv[1]).read())
 r = env["data"]["runner_result"]
 
-# Run completes; the unsupported-attempt step doesn't kill the plan.
-assert r["normalized_outcome"] == "ok", "outcome={0!r}".format(r["normalized_outcome"])
-assert r["rc"] == 0
-
-steps = r["steps"]
-assert len(steps) == 2, "expected both steps in envelope, got {0}".format(len(steps))
-
-# Step 0: the good probe runs end-to-end as a sanity check.
-good = steps[0]
-assert good["step_id"] == "good"
-assert good["sandbox_check"]["outcome"] == "allow", good["sandbox_check"]
-assert good["attempt"]["outcome"] == "ok", good["attempt"]
-assert good["comparison"]["observation"] == "succeeded", good["comparison"]
-
-# Step 1: unknown attempt kind. sandbox_check still ran (none-filter
-# probe under the iokit-open-user-client op isn't in the
-# prediction-unavailable set), attempt is unsupported, and the record
-# says the attempt was unsupported.
-ua = steps[1]
-assert ua["step_id"] == "unknown_attempt"
-sb = ua["sandbox_check"]
-assert sb["outcome"] in ("allow", "deny"), "sandbox_check should produce a verdict, got {0!r}".format(sb["outcome"])
-at = ua["attempt"]
-assert at["outcome"] == "unsupported", "attempt.outcome={0!r}".format(at["outcome"])
-err = at.get("error") or ""
-assert "iokit" in err and "open" in err, "attempt.error should name kind+action, got {0!r}".format(err)
-assert ua["comparison"]["observation"] == "unavailable", ua["comparison"]
-assert ua["comparison"]["limitations"] == ["attempt:unsupported"], ua["comparison"]
-
-print("ok: unknown attempt downgrades to per-step skip; sibling step + sandbox_check verdict survive")
+assert env["result"]["normalized_outcome"] == "bad_request", env
+assert env["result"]["exit_code"] == 1, env
+assert r["normalized_outcome"] == "bad_request" and r["rc"] == 1, r
+expected = {"code": "unsupported_attempt", "path": ["probe_plan", "1", "attempt"]}
+assert env["data"]["request_failure"] == r["request_failure"] == expected, r
+assert r["steps"] == [] and r.get("runner_subprocess") is None, r
+assert r.get("validator_subprocess") is None, r
+print("ok: unsupported attempt refuses all steps before children")
 PY
   local arc=$?
   set -e
@@ -404,7 +378,7 @@ PY
     test_fail "${msg}" "{\"log\":\"${assert_log}\",\"stdout\":\"${run_stdout}\"}"
     return 0
   fi
-  test_pass "unknown attempt → per-step skip; sibling step + sandbox_check verdict survive" "{\"stdout\":\"${run_stdout}\"}"
+  test_pass "unsupported attempt → bad_request before any step executes" "{\"stdout\":\"${run_stdout}\"}"
 }
 
 # ---- test_id: worker_timeout_ms_honored ---------------------------------
@@ -434,7 +408,7 @@ run_sandbox_check_pid_matches_worker() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_sb_pid",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -495,7 +469,7 @@ run_access_failure_classified() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_access_failed",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)(deny file-read-data (subpath \"/private/etc\"))"},
   "probe_plan": [{
@@ -569,7 +543,7 @@ run_exec_attempt_without_baseline_fails_cleanly() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_exec_unaugmented",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"},
   "probe_plan": [{
@@ -687,7 +661,7 @@ run_exec_attempt_with_baseline_succeeds() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_exec_baseline_succeeds",
   "policy": {
     "format": "sbpl",
@@ -787,7 +761,7 @@ run_exec_attempt_args_and_stderr_round_trip() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, secrets, sys
 spec = {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_exec_args_stderr",
   "policy": {
     "format": "sbpl",
@@ -873,7 +847,7 @@ run_exec_attempt_stdout_truncation_marker() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "use_c_worker_exec_truncation",
   "policy": {
     "format": "sbpl",
@@ -954,7 +928,7 @@ run_sandbox_check_unsupported_operation_diagnostic() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "unsupported_operation_repro",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
   "probe_plan": [
@@ -1066,7 +1040,7 @@ run_sandbox_check_path_unresolved_prediction_unavailable() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "specimen_id": "path_unresolved_repro",
   "policy": {
     "format": "sbpl",
@@ -1157,7 +1131,7 @@ PY
 }
 
 run_duplicate_step_id_rejected
-run_unsupported_attempt_per_step_skip
+run_unsupported_attempt_rejected
 run_worker_timeout_ms_honored
 run_sandbox_check_pid_matches_worker
 run_access_failure_classified

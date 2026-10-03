@@ -14,7 +14,7 @@ from run_capture import RunCapture
 
 
 def specimen():
-    return {'schema_version': 3, 'specimen_id': 'failure-boundaries',
+    return {'schema_version': 4, 'specimen_id': 'failure-boundaries',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-read-data',
                 'filter': {'kind': 'path', 'value': '/etc/hosts'}},
@@ -70,7 +70,8 @@ def admission(pw, out):
             '_test_overrides.validator_executable_path': 1023}
     # At-limit strings that pass admission but cannot run: the format is not sbpl
     # and the seam paths do not exist. Each fails later, in its own way.
-    later = {'policy.format': 'bad_policy',
+    later = {'policy.format': 'bad_request', 'sandbox_check.filter.kind': 'bad_request',
+             'attempt.kind': 'bad_request', 'attempt.action': 'bad_request',
              '_test_overrides.worker_executable_path': 'worker_spawn_failed',
              '_test_overrides.validator_executable_path': 'validator_spawn_failed'}
     top_level = ('specimen_id', 'run_kind', 'policy.format') + tuple(f for f in caps if f.startswith('_test_overrides.'))
@@ -150,6 +151,11 @@ def admission(pw, out):
             elif field in later:
                 assert runner.get('admission_failure') is None, runner
                 assert rc == 1 and runner['normalized_outcome'] == later[field], runner
+                if later[field] == 'bad_request':
+                    code = {'policy.format': 'unsupported_policy_format', 'sandbox_check.filter.kind': 'unknown_filter_kind',
+                            'attempt.kind': 'unsupported_attempt', 'attempt.action': 'unsupported_attempt'}[field]
+                    assert runner['request_failure']['code'] == code, runner
+                    assert runner['steps'] == [] and runner.get('runner_subprocess') is None and runner.get('validator_subprocess') is None, runner
                 if field.startswith('_test_overrides.'):
                     assert runner['test_overrides'][field.split('.')[1]] == request['_test_overrides'][field.split('.')[1]], runner
             else:
@@ -158,16 +164,9 @@ def admission(pw, out):
                 assert runner['runner_subprocess']['reaped'] is True, runner
                 if field == 'specimen_id': assert runner['specimen_id'] == text, runner
                 if field == 'run_kind': assert runner['run_kind'] == text, runner
-                if field == 'sandbox_check.filter.kind':
-                    assert runner['steps'][0]['sandbox_check']['outcome'] == 'prediction_unavailable', runner
-                    assert runner['steps'][0]['sandbox_check']['filter_kind'] == text, runner
-                elif field in ('attempt.kind', 'attempt.action'):
-                    assert runner['steps'][0]['attempt']['outcome'] == 'unsupported', runner
-                    assert runner['steps'][0]['attempt']['requested_' + field.split('.')[1]] == text, runner
             print('PASS admission', field, variant, actual, maximum, unit, flush=True)
-    # Capacity precedes shape: an empty operation and a duplicate step ID are
-    # reported by later validators that quote the step ID verbatim, so an
-    # oversized ID must be refused first and never appear in the reply.
+    # Capacity precedes meaning: an oversized ID must be refused before an
+    # empty operation or duplicate ID, and never appear in the reply.
     huge = 'x' * 4096
     empty = specimen(); empty['probe_plan'][0]['step_id'] = huge; empty['probe_plan'][0]['sandbox_check']['operation'] = ''
     duplicate = specimen(); duplicate['probe_plan'] = [copy.deepcopy(duplicate['probe_plan'][0]) for _ in range(2)]

@@ -632,8 +632,8 @@
           "description": "bare check operation surfaces as unsupported_operation with populated diagnostic"
         },
         {
-          "id": "unsupported_attempt_per_step_skip",
-          "description": "unknown attempt \u2192 per-step skip; sibling step + sandbox_check verdict survive"
+          "id": "unsupported_attempt_rejected",
+          "description": "unsupported attempt refuses the whole specimen before children"
         },
         {
           "id": "worker_timeout_ms_honored",
@@ -1041,7 +1041,7 @@
         },
         {
           "id": "comparison_matrix",
-          "description": "The S, B and C specimens of tests/fixtures/comparison/matrix.json produce the reviewed comparison record, raw fields and file effects on every row",
+          "description": "The S, B and C specimens of tests/fixtures/comparison/matrix.json produce the reviewed comparison record, raw fields and file effects on every live row",
           "command": [
             "bash",
             "tests/suites/witness_contract/comparison_matrix.sh"

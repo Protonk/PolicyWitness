@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 specimen = {
-    "schema_version": 3,
+    "schema_version": 4,
     "specimen_id": "runner_apply_isolation_v3",
     "policy": {
         "format": "sbpl",

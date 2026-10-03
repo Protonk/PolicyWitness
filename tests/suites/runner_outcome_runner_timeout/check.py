@@ -112,7 +112,7 @@ def check_cli(variant, pw, out):
             policy['sbpl_source'] += '(deny file-write-data (literal (param "BLOCKED")))'
             policy['params'] = {'BLOCKED': str(paths[1])}
         specimen = {
-            'schema_version': 3, 'specimen_id': secrets.token_hex(12),
+            'schema_version': 4, 'specimen_id': secrets.token_hex(12),
             'policy': policy, 'probe_plan': plan,
             # The hang starts after every slot is durable, before done. Leave
             # ample room beyond the worker deadline and its 1-second reap grace

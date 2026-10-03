@@ -22,7 +22,7 @@ def run_cli(pw, helper, out):
         'attempt': {'kind': 'exec', 'action': 'spawn', 'target': helper,
                     'args': ['--inspect', f'{nonce}-{i}', '--read-fd', str(canary_fd)]},
     } for i in range(3)]
-    specimen = {'schema_version': 3, 'specimen_id': 'exec_inheritance',
+    specimen = {'schema_version': 4, 'specimen_id': 'exec_inheritance',
                 'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                 'probe_plan': plan}
     request = out / 'specimen.json'

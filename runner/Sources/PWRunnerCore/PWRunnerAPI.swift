@@ -145,8 +145,7 @@ public enum SandboxCheckOutcome {
     /// the unstar'd form of an SBPL family operation
     /// (e.g. "process-exec" instead of the canonical "process-exec*").
     /// Surfaced as a distinct outcome so consumers can treat it as a
-    /// per-step skip rather than a runtime failure — parallel to how
-    /// unsupported attempt kinds are handled. `error` is always
+    /// per-step unavailable observation. `error` is always
     /// populated with the rejected operation name + the wildcard-form
     /// hint. The query channel's answer is unavailable for these steps.
     public static let unsupportedOperation = "unsupported_operation"
@@ -155,7 +154,7 @@ public enum SandboxCheckOutcome {
 // BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py)
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
-    public static let requestSchema: Int = 3
+    public static let requestSchema: Int = 4
     public static let responseSchema: Int = 14
 }
 // END GENERATED CONTRACT VERSIONS
@@ -173,6 +172,50 @@ enum RequestContractError: Error {
     case unsupportedSchema(Int)
     case unknownField([CodingKey])
     case unresolvedAugments
+}
+
+/// A request refusal before execution. Path components are object keys or
+/// decimal array positions. A null path withholds an overlong location; it
+/// never substitutes a shortened key that could name a different field.
+public struct PWRunnerRequestFailure: Codable, Error, CustomStringConvertible {
+    public var code: String
+    public var path: [String]?
+    public var expected_schema: Int?
+
+    public init(code: String, path: [String]?, expected_schema: Int? = nil) {
+        self.code = code
+        self.path = path.flatMap { parts in
+            parts.count <= 8 && parts.allSatisfy({ $0.utf8.count <= 63 }) ? parts : nil
+        }
+        self.expected_schema = expected_schema
+    }
+
+    enum CodingKeys: String, CodingKey { case code, path, expected_schema }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(code, forKey: .code)
+        try c.encode(path, forKey: .path)
+        try c.encodeIfPresent(expected_schema, forKey: .expected_schema)
+    }
+
+    public var description: String {
+        let location = path.map { $0.isEmpty ? "<root>" : $0.joined(separator: ".") } ?? "<unreported_path>"
+        let explanations = [
+            "duplicate_step_id": "duplicate step_id in probe_plan",
+            "missing_filter_value": "filter.value required for this kind",
+            "empty_operation": "sandbox_check.operation is empty",
+            "unsupported_attempt": "unsupported attempt kind/action",
+            "unknown_filter_kind": "unknown filter kind",
+            "inapplicable_field": "field has no effect in this request",
+            "unsupported_policy_format": "policy.format must be sbpl",
+            "missing_policy_source": "policy.sbpl_source is required",
+            "invalid_capture_nonce": "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce",
+            "relative_exec_target": "exec target must be absolute",
+        ]
+        let detail = expected_schema.map { " (expected \($0))" }
+            ?? explanations[code].map { ": \($0)" } ?? ""
+        return "request refused: \(code) at \(location)\(detail)"
+    }
 }
 
 private func rejectUnknownRequestKeys<K: CodingKey & CaseIterable>(_ type: K.Type, from decoder: Decoder) throws {
@@ -215,7 +258,19 @@ public struct PWRunnerRunSpec: Codable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        schema_version = try c.decode(Int.self, forKey: .schema_version)
+        do { schema_version = try c.decode(Int.self, forKey: .schema_version) }
+        catch {
+            // Foundation wraps its private integer-conversion error as a root
+            // JSON error outside this initializer. Identify numeric values here
+            // so a fractional/oversized marker keeps its actual field location.
+            guard let number = try? c.decode(Double.self, forKey: .schema_version), number.isFinite else { throw error }
+            if number == Double(PWContract.requestSchema) {
+                schema_version = PWContract.requestSchema
+            } else {
+                throw PWRunnerRequestFailure(code: number.rounded(.towardZero) == number ? "unsupported_schema" : "type_mismatch",
+                    path: ["schema_version"], expected_schema: PWContract.requestSchema)
+            }
+        }
         guard schema_version == PWContract.requestSchema else {
             throw RequestContractError.unsupportedSchema(schema_version)
         }
@@ -297,13 +352,22 @@ public struct PWRunnerTestOverrides: Codable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        func optionalInteger(_ key: CodingKeys) throws -> Int? {
+            do { return try c.decodeIfPresent(Int.self, forKey: key) }
+            catch {
+                // Keep Foundation's private numeric-conversion errors at the
+                // supplied field instead of letting them become root errors.
+                throw DecodingError.typeMismatch(Int.self, .init(
+                    codingPath: c.codingPath + [key], debugDescription: "expected a representable integer"))
+            }
+        }
         worker_executable_path = try c.decodeIfPresent(String.self, forKey: .worker_executable_path)
-        worker_timeout_ms = try c.decodeIfPresent(Int.self, forKey: .worker_timeout_ms)
+        worker_timeout_ms = try optionalInteger(.worker_timeout_ms)
         validator_executable_path = try c.decodeIfPresent(String.self, forKey: .validator_executable_path)
-        validator_io_timeout_ms = try c.decodeIfPresent(Int.self, forKey: .validator_io_timeout_ms)
-        worker_post_apply_hang_ms = try c.decodeIfPresent(Int.self, forKey: .worker_post_apply_hang_ms)
-        worker_post_apply_kill_signal = try c.decodeIfPresent(Int.self, forKey: .worker_post_apply_kill_signal)
-        worker_pre_ready_hang_ms = try c.decodeIfPresent(Int.self, forKey: .worker_pre_ready_hang_ms)
+        validator_io_timeout_ms = try optionalInteger(.validator_io_timeout_ms)
+        worker_post_apply_hang_ms = try optionalInteger(.worker_post_apply_hang_ms)
+        worker_post_apply_kill_signal = try optionalInteger(.worker_post_apply_kill_signal)
+        worker_pre_ready_hang_ms = try optionalInteger(.worker_pre_ready_hang_ms)
     }
 
 }
@@ -1749,6 +1813,7 @@ public struct PWRunnerRunResult: Codable {
     public var steps: [PWRunnerStepResult]
     public var runner_subprocess: PWRunnerSubprocess?
     public var admission_failure: PWRunnerAdmissionFailure?
+    public var request_failure: PWRunnerRequestFailure?
     public var validator_subprocess: PWRunnerValidatorSubprocess?
     public var validator_spawn_failure: PWRunnerSpawnFailure?
     public var test_overrides: PWRunnerTestOverrides?
@@ -1773,7 +1838,8 @@ public struct PWRunnerRunResult: Codable {
         applied_profile: AppliedProfileCapture? = nil,
         admission_failure: PWRunnerAdmissionFailure? = nil,
         reporting_failure: PWRunnerReportingFailure? = nil,
-        validator_spawn_failure: PWRunnerSpawnFailure? = nil
+        validator_spawn_failure: PWRunnerSpawnFailure? = nil,
+        request_failure: PWRunnerRequestFailure? = nil
     ) {
         self.schema_version = schema_version
         self.specimen_id = specimen_id
@@ -1787,6 +1853,7 @@ public struct PWRunnerRunResult: Codable {
         self.policy_sha256 = policy_sha256
         self.applied_profile = applied_profile
         self.admission_failure = admission_failure
+        self.request_failure = request_failure
         self.sandboxed_after_apply = sandboxed_after_apply
         self.steps = steps
         self.runner_subprocess = runner_subprocess
@@ -1797,7 +1864,7 @@ public struct PWRunnerRunResult: Codable {
     }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
+        case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, request_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1822,6 +1889,7 @@ public struct PWRunnerRunResult: Codable {
         steps = try c.decode([PWRunnerStepResult].self, forKey: .steps)
         runner_subprocess = try c.decodeIfPresent(PWRunnerSubprocess.self, forKey: .runner_subprocess)
         admission_failure = try c.decodeIfPresent(PWRunnerAdmissionFailure.self, forKey: .admission_failure)
+        request_failure = try c.decodeIfPresent(PWRunnerRequestFailure.self, forKey: .request_failure)
         validator_subprocess = try c.decodeIfPresent(PWRunnerValidatorSubprocess.self, forKey: .validator_subprocess)
         validator_spawn_failure = try c.decodeIfPresent(PWRunnerSpawnFailure.self, forKey: .validator_spawn_failure)
         test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: .test_overrides)
@@ -1907,6 +1975,7 @@ public struct PWRunnerRunResult: Codable {
         try c.encode(steps, forKey: .steps)
         try c.encodeIfPresent(runner_subprocess, forKey: .runner_subprocess)
         try c.encodeIfPresent(admission_failure, forKey: .admission_failure)
+        try c.encodeIfPresent(request_failure, forKey: .request_failure)
         try c.encodeIfPresent(validator_subprocess, forKey: .validator_subprocess)
         try c.encodeIfPresent(validator_spawn_failure, forKey: .validator_spawn_failure)
         try c.encodeIfPresent(test_overrides, forKey: .test_overrides)

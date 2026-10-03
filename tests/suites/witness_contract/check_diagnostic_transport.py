@@ -27,7 +27,7 @@ def run(pw, output, request):
 
 
 def specimen(source, target, overrides):
-    return {'schema_version': 3, 'specimen_id': 'unfamiliar-transport',
+    return {'schema_version': 4, 'specimen_id': 'unfamiliar-transport',
             'policy': {'format': 'sbpl', 'sbpl_source': source},
             'probe_plan': [{'step_id': 's', 'sandbox_check': {'operation': 'file-write-data',
                 'filter': {'kind': 'path', 'value': str(target)}},

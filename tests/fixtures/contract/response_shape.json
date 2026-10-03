@@ -12,6 +12,7 @@
       "policy_sha256" : "string",
       "rc" : "number",
       "reporting_failure" : "object",
+      "request_failure" : "object",
       "run_kind" : "string",
       "runner_subprocess" : "object",
       "sandboxed_after_apply" : "boolean",
@@ -55,6 +56,11 @@
       "original_error" : "string",
       "original_normalized_outcome" : "string",
       "original_rc" : "number"
+    },
+    "reply.request_failure" : {
+      "code" : "string",
+      "expected_schema" : "number",
+      "path" : "array"
     },
     "reply.runner_subprocess" : {
       "cleanup_trigger" : "string",

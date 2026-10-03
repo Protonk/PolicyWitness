@@ -1049,7 +1049,9 @@ label.
 `tests/fixtures/comparison/matrix.json` is the single source of these rows:
 each carries the specimen inputs, the raw channel values the Swift reader
 feeds to the producer, the raw fields the live reader asserts beside the
-record, an independent control and the expected record.
+record, an independent control and the expected record. S09 is explicitly
+constructed-only: its unsupported attempt is refused by public admission,
+while the unit reader exercises defensive handling of constructed results.
 `docs/generate_limits.py` renders the table below from it, and `source_drift`
 fails when the committed table differs from the generator's output. The query column is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome is
@@ -1072,7 +1074,7 @@ summary.
 | S06 | S | query write, attempt read | `allow` | `succeeded` | `completed_worker_status` | `different` | `same_submitted` | `query_first` | — | readable bytes unchanged |
 | S07 | S | absent path, both channels | `unavailable` | `other_failure` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | absent does not exist before or after the run |
 | S08 | S | compound create | `unavailable` | `succeeded` | `completed_worker_status` | `unresolved` | `same_submitted` | `unestablished` | `query_plan:path_unresolved_at_planning` | created is absent before the run and present after it |
-| S09 | S | unsupported attempt kind | `allow` | `unavailable` | `no_completed_worker_result` | `unresolved` | `unresolved` | `query_first` | `attempt:unsupported` | readable bytes unchanged; admission accepts the kind and the worker no-ops it |
+| S09 | S | unsupported attempt kind (constructed only) | `allow` | `unavailable` | `no_completed_worker_result` | `unresolved` | `unresolved` | `query_first` | `attempt:unsupported` | constructed channel results exercise the defensive comparison; public admission refuses the request (request-contract unknown_attempt example) |
 | S10 | S | sysctl planning exclusion | `unavailable` | `succeeded` | `completed_worker_status` | `matched` | `same_submitted` | `unestablished` | `query_plan:prediction_unavailable_pair` | the planner's prediction_unavailable set lists (sysctl-read, sysctl_name); a direct sysctlbyname of kern.osrelease succeeds |
 | S11 | S | bare process-exec query, spawn ok | `unavailable` | `succeeded` | `spawned_child` | `different` | `same_submitted` | `unestablished` | — | direct spawn of helper_true exits 0; the native API rejects the bare spelling |
 | S12 | S | file-read* query | `allow` | `succeeded` | `completed_worker_status` | `unresolved` | `same_submitted` | `query_first` | — | readable bytes unchanged |
@@ -1105,7 +1107,8 @@ summary.
 
 | Rows or invariant | Owner | Independent control |
 | --- | --- | --- |
-| S01–S25 with S04 unused (specimen S, real validator) | `witness_contract/comparison_matrix` (live); `runner_unit` `ComparisonEvidenceTests` (constructed inputs through `comparisonEvidence(...)`) | Direct file reads, mode-000 opens, helper spawns and absence checks recorded in `direct-controls.json`; file bytes compared before decoding |
+| S01–S25 with S04 unused and S09 constructed only (specimen S, real validator) | `witness_contract/comparison_matrix` (live); `runner_unit` `ComparisonEvidenceTests` (constructed inputs through `comparisonEvidence(...)`) | Direct file reads, mode-000 opens, helper spawns and absence checks recorded in `direct-controls.json`; file bytes compared before decoding |
+| S09 (unsupported attempt, constructed only) | `runner_unit` `ComparisonEvidenceTests`; public refusal covered by `runner_outcome_bad_request/accepted_input_contract` | Constructed comparison inputs; the live refusal control proves an earlier valid create did not execute. |
 | B1–B7 (specimen B, steered validator) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Stub transcript plus file effects; the run ends in `validator_no_reply` while B1, B6 and B7 retain `query_first` |
 | C1 (compile failure, nothing runs) | `witness_contract/comparison_matrix`; `runner_unit` `ComparisonEvidenceTests` | Files unchanged; `runner_failed` with the validator not invoked |
 | T (FIFO in flight at the deadline) | `witness_contract/worker_attempt_in_flight_at_deadline` (live, with the `a1` specimen of `tests/fixtures/disposition/`); `runner_unit` `ComparisonEvidenceTests` | OS-observed deadline, SIGKILL request and reaped signal; the lifecycle oracle |

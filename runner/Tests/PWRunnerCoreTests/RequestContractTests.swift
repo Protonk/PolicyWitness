@@ -4,7 +4,7 @@ import Foundation
 private func requestFixture() -> [String: Any] {
     ["schema_version": PWContract.requestSchema, "specimen_id": "request-contract", "run_kind": "experiment",
      "policy": ["format": "sbpl", "sbpl_source": "(version 1) (allow default)",
-                "params": ["arbitrary_parameter": "value"], "capture_applied_profile": false,
+                "params": ["arbitrary_parameter": "value"], "capture_applied_profile": true,
                 "capture_nonce": "0123456789abcdef0123456789abcdef"],
      "probe_plan": [["step_id": "s", "sandbox_check": ["operation": "process-exec",
                        "filter": ["kind": "path", "value": "/bin/echo"]],
@@ -31,6 +31,40 @@ private func decodeRequest(_ object: Any) throws -> PWRunnerRunSpec {
 }
 
 func runRequestContractTests(_ tk: TestKit) {
+    tk.group("developer request examples through the runner boundary") {
+        tk.run("shared executable teaching corpus") {
+            let url = repositoryRoot().appendingPathComponent("tests/fixtures/request_contract/examples.json")
+            let examples = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [[String: Any]]
+            for example in examples {
+                var request = example["request"] as! [String: Any]
+                if let count = example["repeat_steps"] as? Int {
+                    let step = (request["probe_plan"] as! [[String: Any]])[0]
+                    request["probe_plan"] = (0..<count).map { index -> [String: Any] in
+                        var copy = step; copy["step_id"] = "s\(index)"; return copy
+                    }
+                }
+                let encoded = try JSONSerialization.data(withJSONObject: request)
+                let text = (example["raw_request"] as? String ?? String(decoding: encoded, as: UTF8.self))
+                    .replacingOccurrences(of: "$EFFECT", with: "/private/tmp/request-grammar-effect")
+                    .replacingOccurrences(of: "$NONCE", with: "0123456789abcdef0123456789abcdef")
+                let failure: PWRunnerRequestFailure?
+                do {
+                    let parsed = try pwRunnerDecodeJSON(PWRunnerRunSpec.self, from: Data(text.utf8))
+                    if let capacity = CWorkerOrchestrator.admissionFailure(for: parsed) {
+                        failure = requestCapacityFailure(capacity)
+                    } else { failure = requestMeaningFailure(parsed) }
+                } catch { failure = requestDecodeFailure(error) }
+                let expected = (example["expected"] as! [String: Any])["xpc"]!
+                let name = example["id"] as! String
+                if expected is NSNull { try expectNil(failure, name) }
+                else {
+                    guard let failure else { throw TestFailure(message: "\(name): expected refusal") }
+                    let actual = try JSONSerialization.jsonObject(with: pwRunnerEncodeJSON(failure)) as! NSDictionary
+                    try expectTrue(actual.isEqual(to: expected as! [String: Any]), "\(name): \(actual) != \(expected)")
+                }
+            }
+        }
+    }
     tk.group("accepted request contract") {
         tk.run("all declared input fields round-trip without losing supplied intent") {
             let input = requestFixture()
@@ -39,7 +73,7 @@ func runRequestContractTests(_ tk: TestKit) {
             try expectTrue(encoded.isEqual(to: input))
         }
         tk.run("versions are gated before interpreting unknown fields") {
-            for version in [-1, 0, 1, 2, PWContract.requestSchema + 1, Int.max] {
+            for version in Array(-1..<PWContract.requestSchema) + [PWContract.requestSchema + 1, Int.max] {
                 var input = requestFixture()
                 input["schema_version"] = version
                 input["future_field"] = true
@@ -76,6 +110,9 @@ func runRequestContractTests(_ tk: TestKit) {
                     try expectContains(diagnostic, "unknown_field")
                     try expectContains(diagnostic, "misspelled_intent")
                     if path.contains("0") { try expectContains(diagnostic, "[0]") }
+                    let failure = requestDecodeFailure(error)
+                    try expectEqual(failure.code, "unknown_field")
+                    try expectEqual(failure.path, path + ["misspelled_intent"])
                 }
             }
         }
@@ -90,6 +127,7 @@ func runRequestContractTests(_ tk: TestKit) {
                 let diagnostic = requestDecodeDiagnostic(error)
                 try expectContains(diagnostic, "<unreported_key>")
                 try expectTrue(diagnostic.utf8.count < 512)
+                try expectNil(requestDecodeFailure(error).path)
             }
         }
         tk.run("optional nulls preserve defaults and wrong optional types cannot disappear") {

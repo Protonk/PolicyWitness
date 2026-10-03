@@ -20,7 +20,7 @@ def main():
         for path in (allowed, denied):
             path.write_bytes(secrets.token_bytes(32))
         spec = {
-            "schema_version": 3,
+            "schema_version": 4,
             "specimen_id": "live_worker_identity",
             "policy": {"format": "sbpl", "sbpl_source":
                        '(version 1)(allow default)(deny file-read-data (literal (param "TARGET")))',
