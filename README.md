@@ -6,12 +6,7 @@ PolicyWitness records `sandbox_check` queries and attempted operations under
 macOS sandbox policies. When prediction is available, the validator queries
 the worker's PID; the worker attempts its operation after applying the policy
 and receiving release from the host. Each step records available results, missing
-observations, submitted-scope relations and ordering. The controller adds
-request identity, source hashes, imports, runner and app provenance, host
-facts and hashes of selected binaries outside the app manifest. It does not
-embed the full specimen. Optional log capture adds kernel denial records
-with correlation limits. No record asserts agreement or disagreement between
-prediction and enforcement.
+observations, submitted-scope relations and ordering. 
 
 Querying `sandbox_check` about a process and attempting an operation in that process under the same policy requires managing process lifecycles. `sandbox_check` answers for an existing PID, and sandbox application is one-way — a process gets exactly one sandbox. Evaluating a policy therefore means a fresh process per evaluation: compile and apply the policy to it once, aim both the query and the attempted operation at that PID while it lives, and carry the answer out through a channel the policy under test cannot sever.
 
