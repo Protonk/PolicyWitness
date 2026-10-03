@@ -7,6 +7,11 @@ describes authoring. The examples here are executable inputs from
 Their expected refusals are independent data, checked by both the Swift unit
 tests and live CLI/direct-XPC controls.
 
+The [user guide exercise](PolicyWitness.md#try-an-accepted-request-and-a-refusal)
+presents `create` and `capture_typo` as standalone commands. Keep its requests
+aligned with those corpus cases so readers can repeat the same experiment
+using the shipped app.
+
 ## Start with an observable instruction
 
 The `create` example supplies an SBPL policy, one sandbox query, and one file

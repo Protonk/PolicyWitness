@@ -67,6 +67,9 @@ Run it:
 $PW run /tmp/pw_specimen_file_read_deny.json > /tmp/pw_result.json
 ```
 
+For an experiment that checks a file effect and then deliberately triggers a
+request refusal, see [Try an accepted request and a refusal](#try-an-accepted-request-and-a-refusal).
+
 ## Questions
 
 <!-- BEGIN COPIED QUESTIONS -->
@@ -166,6 +169,128 @@ Notes:
 - `probe_plan` may be empty when you only want to exercise sandbox
   apply (the validator child is only spawned when there are probes
   to query).
+
+### Try an accepted request and a refusal
+
+This specimen asks a sandbox query and attempts to create an empty file. Use a
+fresh directory so you can observe whether the file was created. Adjust `PW`
+to your installed app; the commands need no repository files or extra tools.
+
+```sh
+PW="/Applications/PolicyWitness.app/Contents/MacOS/policy-witness"
+PW_EXAMPLE_DIR=$(mktemp -d /private/tmp/pw-input.XXXXXX)
+cat > "$PW_EXAMPLE_DIR/request.json" <<JSON
+{
+  "schema_version": 4,
+  "specimen_id": "request-grammar",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "create",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": { "kind": "path", "value": "$PW_EXAMPLE_DIR/created" }
+      },
+      "attempt": { "kind": "file", "action": "create", "target": "$PW_EXAMPLE_DIR/created" }
+    }
+  ]
+}
+JSON
+"$PW" run "$PW_EXAMPLE_DIR/request.json" --no-log-capture > "$PW_EXAMPLE_DIR/run.json"
+test -f "$PW_EXAMPLE_DIR/created"
+```
+
+The run should exit 0, and `test -f` should succeed. The newly created file is
+an observation outside the JSON reply. A query answer alone cannot establish
+that effect. In particular, a query about an absent path can report
+`prediction_unavailable` while the creation attempt succeeds.
+
+Now make a copy with a new target and the deliberately misspelled field
+`capture_applied_profiel`. The new target lets you check that refusal prevents
+an otherwise valid create from running:
+
+```sh
+sed -e 's|/created"|/refused"|g' \
+    -e 's|"format": "sbpl",|"format": "sbpl", "capture_applied_profiel": true,|' \
+    "$PW_EXAMPLE_DIR/request.json" > "$PW_EXAMPLE_DIR/typo.json"
+PW_REFUSAL_RC=0
+"$PW" run "$PW_EXAMPLE_DIR/typo.json" --no-log-capture > "$PW_EXAMPLE_DIR/refusal.json" || PW_REFUSAL_RC=$?
+test "$PW_REFUSAL_RC" -eq 1
+test ! -e "$PW_EXAMPLE_DIR/refused"
+```
+
+Both `test` commands should succeed: PW exited 1 and the file is absent.
+In `refusal.json`, `result.normalized_outcome` is `bad_request`, and
+`data.request_failure` contains:
+
+```json
+{
+  "code": "unknown_field",
+  "path": ["policy", "capture_applied_profiel"]
+}
+```
+
+No worker or validator is created for this refusal; the XPC host may have
+launched to inspect the request. Keep the directory to inspect the submitted
+requests and both envelopes. Removing the misspelled field restores the
+original instruction. Enabling capture instead requires both the correctly
+spelled field and its [nonce](#compiled-object-receipt-opt-in).
+
+### What acceptance establishes
+
+An accepted-input grammar describes which input shapes are allowed. PW also
+checks their meaning and the build's capacity. Execution supplies a separate
+observation:
+
+| Distinction | Example | What it tells you |
+| --- | --- | --- |
+| Syntax and structure | Broken JSON, an unknown field, or a string where `args` requires an array of strings. | Correct the request's spelling or shape. Optional nulls mean absence; names inside `policy.params` are caller data, but their values must be strings. |
+| Meaning | `args: []` on a file attempt, or duplicate step IDs. | The fields decode, but the submitted instruction is invalid. Correct their relationship or choose a supported operation. |
+| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum. Revise the experiment or use a build with sufficient capacity; PW never truncates the plan. |
+| Observed effects | A valid create encounters a permission failure, or succeeds and produces a file. | Read the attempt evidence and inspect the target. Acceptance establishes neither an allowed operation nor its effect. |
+
+Unknown attempt combinations and filter names refuse the whole specimen before
+attempts. Recognized queries with unavailable predictions still permit
+supported attempts. A request can therefore be useful even when the query
+channel cannot answer. For capacities and units, see [Limits](#limits).
+
+### Correcting a refused request
+
+Use `data.request_failure.code` to classify the refusal and `path` to locate
+the field. Human-readable `result.error` supplies context; programs should not
+parse that prose. Path components are exact keys and decimal array positions:
+`["probe_plan", "1", "attempt", "args"]` identifies the second step's arguments.
+`[]` names the root; `null` means the location was withheld. An absent
+`request_failure` does not establish success. Capacity refusals also retain
+counts and positions in `data.runner_result.admission_failure`.
+
+Three field relationships commonly matter:
+
+| Field | When it applies |
+| --- | --- |
+| `attempt.args` | A non-null array, including `[]`, is accepted only for `exec/spawn`. |
+| `sandbox_check.filter.value` | `none` accepts only absence or null. Other recognized kinds require a nonempty string. |
+| `policy.capture_nonce` | Requires `capture_applied_profile: true`; enabled capture requires a fresh nonce of 32 lowercase hexadecimal characters. |
+
+A refusal identifies one problem. Correct it and rerun; another problem may
+then be reported. `bad_request` exits 1 and executes no probe steps. Missing or
+unreadable files and unavailable runners are separate failures; correcting a
+request's grammar cannot make an unavailable runner launch.
+
+The request's `schema_version` names its accepted shapes and meanings. It is
+separate from `(version 1)` in the SBPL source and from the app's build number.
+Removing a field, requiring a new one, or changing an action's meaning requires
+a revised contract and corresponding request changes. Review those changes
+before replacing an unsupported marker with the current one.
+
+An implementation correction that honors the documented instruction can keep
+the marker and the same request, even when observations change. Additions can
+also preserve the marker: existing requests remain valid, while older builds
+can refuse newly added fields or actions. Equal markers do not promise equal
+capacity or identical observations across builds and macOS versions.
 
 ### Policy
 
