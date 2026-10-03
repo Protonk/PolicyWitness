@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='pw-sparse-', dir='/private/tmp') as tem
     for mode, policy, overrides in modes:
         target.write_bytes(b'independent pre-run bytes')
         before = target.read_bytes()
-        request = {'schema_version': 1, 'specimen_id': 'sparse-' + mode,
+        request = {'schema_version': 3, 'specimen_id': 'sparse-' + mode,
                    'policy': {'format': 'sbpl', 'sbpl_source': policy},
                    'probe_plan': [{'step_id': 'write',
                        'sandbox_check': {'operation': 'file-write-data', 'filter': {'kind': 'path', 'value': str(target)}},

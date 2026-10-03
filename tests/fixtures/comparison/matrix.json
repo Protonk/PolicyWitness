@@ -3,7 +3,7 @@
   "description": "Comparison-record scenario matrix (tests/FAILURE-PROPAGATION-CONTRACT.md, Comparison record). Rows carry specimen inputs, the raw channel inputs for the Swift unit reader, the raw fields the live reader asserts beside the record, the independent control, and the expected current-response comparison object.",
   "contract": {
     "response_schema": 14,
-    "request_schema": 1
+    "request_schema": 3
   },
   "placeholders": {
     "SCEN_ROOT": "absolute directory the live reader creates under /private/tmp; the unit reader substitutes any fixed absolute string",

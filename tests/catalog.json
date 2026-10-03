@@ -279,6 +279,10 @@
         {
           "id": "swift_decode_failure",
           "description": "Swift decode failure surfaced as bad_request"
+        },
+        {
+          "id": "accepted_input_contract",
+          "description": "Current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts"
         }
       ]
     },

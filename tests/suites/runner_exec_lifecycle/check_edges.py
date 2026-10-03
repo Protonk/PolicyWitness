@@ -29,7 +29,7 @@ def main():
             return dict(step_id=name, sandbox_check=dict(operation='file-write-data',
                 filter=dict(kind='path', value=str(target))),
                 attempt=dict(kind='file', action='open_write', target=str(target)))
-        request = dict(schema_version=1, specimen_id=mode,
+        request = dict(schema_version=3, specimen_id=mode,
             policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=[
                 write_step('before', before),
                 dict(step_id='exec', sandbox_check=dict(operation='process-exec*',

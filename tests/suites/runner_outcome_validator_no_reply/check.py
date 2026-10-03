@@ -31,7 +31,7 @@ def main():
                     filter=dict(kind='path', value=str(path))),
                     attempt=dict(kind='file', action='open_write', target=str(path)))
                 for i, path in enumerate(paths)]
-        spec = dict(schema_version=1, specimen_id='validator-io-deadline',
+        spec = dict(schema_version=3, specimen_id='validator-io-deadline',
                     policy=dict(format='sbpl', sbpl_source='(version 1)(allow default)'), probe_plan=plan,
                     _test_overrides=dict(validator_executable_path=str(validator), validator_io_timeout_ms=500))
         started = time.monotonic()

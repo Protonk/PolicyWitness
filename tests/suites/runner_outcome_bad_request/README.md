@@ -1,39 +1,26 @@
 # runner_outcome_bad_request
 
-Drives `normalized_outcome = "bad_request"` end-to-end through both
-emit sites in `PWRunnerService.runSpecimen`. No `_test_overrides` needed
-— `bad_request` is the only runner-side outcome reachable through normal
-e2e.
+Exercises request refusal at the controller and XPC service. The host rejects
+malformed intent before worker or validator creation; a refused request cannot
+produce the independent file effect used by the accepted-input controls.
 
-## Invariants
+## Cases
 
-- The Rust controller forwards both fixtures to the runner; the Swift
-  side is responsible for the rejection.
-- The host short-circuits before posix_spawning a worker, so
-  `runner_subprocess` is absent and `steps` is empty.
+- **`swift_decode_failure`**: current-version request missing `specimen_id`.
+  It reaches the Swift decoder and reports `bad_request` with a decode error.
+- **`missing_required_filter_value`**: a path filter with an empty value
+  reports `bad_request` from `validateSandboxChecks`.
+- **`accepted_input_contract`**: current requests, selector aliases, nulls and
+  nested selectors execute a file create. Unsupported versions, unknown fields
+  at every object depth, malformed entitlements, optional types and augment
+  sources fail explicitly without creating the file. Direct XPC controls prove
+  the service independently checks versions and rejects unresolved controller
+  options. Raw inputs, replies and stderr are retained per subcase.
 
-## Success criteria
-
-Two cases, each `result.ok == false` and `runner_subprocess == null`:
-
-- **`swift_decode_failure`** — request JSON is missing required Swift
-  fields (`schema_version`, `specimen_id`) but has enough policy
-  structure that the controller forwards it to the runner. Asserts
-  `normalized_outcome == "bad_request"` and the error mentions
-  "request decode failed".
-- **`missing_required_filter_value`** — Swift-decodable spec whose probe
-  step has `sandbox_check.filter.kind == "path"` with an empty
-  `value`. Asserts `normalized_outcome == "bad_request"` and the error
-  mentions "filter.value required". Exercises the
-  `validateSandboxChecks` value-required branch.
-  (Was `unknown_filter_kind`; unknown kinds now downgrade to per-step
-  `prediction_unavailable` rather than killing the plan, so the
-  remaining filter-side `bad_request` trigger is the
-  missing-required-value check.)
-
-## Fixtures
-
-- Both specimens generated inline by `run.sh`.
+The first two specimens are constructed in `run.sh`; the contract controls
+are in `contract.py`. Every runner refusal asserts an absent subprocess and
+empty steps. Controller refusals assert no client invocation. Submitted files
+remain unchanged.
 
 ## Artifacts
 

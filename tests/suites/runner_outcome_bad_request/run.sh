@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
-source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="runner_outcome_bad_request"
 PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
@@ -13,7 +13,7 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 # ----------------------------------------------------------------------
 # Well-formed JSON that the Rust controller passes through unchanged
 # (valid JSON object, so it reaches the runner) but PWRunnerRunSpec
-# cannot decode (missing required schema_version and specimen_id).
+# cannot decode (missing required specimen_id).
 # Hits the JSON decode branch of PWRunnerService.runSpecimen.
 #
 # Do not use "not json at all" here: the Rust controller rejects
@@ -23,7 +23,7 @@ PW_BIN="${PW_BIN:-${PW_APP_DIR}/Contents/MacOS/policy-witness}"
 if test_selected swift_decode_failure; then
 PW_TEST_ID="swift_decode_failure"
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-test_step "run" "request JSON missing schema_version / specimen_id — expect bad_request"
+test_step "run" "request JSON missing specimen_id — expect bad_request"
 
 if ! require_pw_app "${PW_BIN}"; then
   exit 0
@@ -36,9 +36,10 @@ import sys
 from pathlib import Path
 
 # Has policy.format + sbpl_source so it is a plausible request the
-# controller forwards untouched. Missing the required schema_version
-# and specimen_id fields so the Swift PWRunnerRunSpec decoder rejects it.
+# controller forwards untouched. Missing the required specimen_id field so
+# the Swift PWRunnerRunSpec decoder rejects it.
 spec = {
+    "schema_version": 3,
     "policy": {
         "format": "sbpl",
         "sbpl_source": "(version 1) (allow default)",
@@ -128,7 +129,7 @@ import sys
 from pathlib import Path
 
 spec = {
-    "schema_version": 1,
+    "schema_version": 3,
     "specimen_id": "missing_required_filter_value_probe",
     "policy": {
         "format": "sbpl",
@@ -198,4 +199,13 @@ if runner.get("steps"):
 PY
 
 test_pass "missing required filter.value surfaced as bad_request" "{}"
+fi
+
+if test_selected accepted_input_contract; then
+  test_begin runner_outcome_bad_request accepted_input_contract
+  test_require_pw
+  test_step contract "exercise current inputs and explicit refusals through CLI and direct XPC"
+  test_check_python "${PW_TEST_ARTIFACTS}/assert.log" "accepted input contract failed" \
+    "${ROOT_DIR}/tests/suites/runner_outcome_bad_request/contract.py" "${PW_BIN}" "${PW_TEST_ARTIFACTS}"
+  test_pass "current requests execute; malformed intent refuses before attempts"
 fi

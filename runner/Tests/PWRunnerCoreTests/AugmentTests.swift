@@ -5,7 +5,7 @@ import Foundation
 // callers can opt into named controller-resolved augments without the
 // runner needing augment-aware code. By the time the runner sees the
 // request, the controller has already stripped the field. These tests
-// pin the Codable round-trip so a future refactor that changes the
+// pin refusal of unresolved fragments and the optional shape so changes to the
 // field's optionality (e.g. defaulting to []) doesn't accidentally
 // surface the field on the runner's parsed view of an
 // already-resolved request.
@@ -27,15 +27,17 @@ func runAugmentTests(_ tk: TestKit) {
             try expectNil(spec.augments)
         }
 
-        tk.run("populated array round-trips") {
+        tk.run("unresolved augments cannot silently disappear in a direct runner request") {
             let spec = PWRunnerPolicySpec(
                 format: PWRunnerWire.policyFormatSbpl,
                 sbpl_source: "(version 1)\n",
                 augments: ["exec_baseline", "another"]
             )
             let data = try pwRunnerEncodeJSON(spec)
-            let decoded = try pwRunnerDecodeJSON(PWRunnerPolicySpec.self, from: data)
-            try expectEqual(decoded.augments ?? [], ["exec_baseline", "another"])
+            do {
+                _ = try pwRunnerDecodeJSON(PWRunnerPolicySpec.self, from: data)
+                throw TestFailure(message: "unresolved augments accepted")
+            } catch RequestContractError.unresolvedAugments { }
         }
 
         tk.run("nil augments omits or nulls the wire key (consumer-visible)") {

@@ -506,7 +506,7 @@ const RUNNER_VERIFY_DEFAULT_TIMEOUT_MS: u64 = 5_000;
 /// The fixed verification specimen: an allow-all policy with no probe steps.
 fn verify_request() -> Value {
     json!({
-        "schema_version": 1,
+        "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION,
         "specimen_id": "runner_verify",
         "run_kind": "runner_verify",
         "policy": {
@@ -919,6 +919,10 @@ mod verify_tests {
     #[test]
     fn verification_request_is_the_fixed_allow_all_specimen() {
         let request = verify_request();
+        assert_eq!(
+            request["schema_version"],
+            crate::json_contract::REQUEST_SCHEMA_VERSION
+        );
         assert_eq!(request["probe_plan"], json!([]));
         assert_eq!(request["run_kind"], "runner_verify");
         assert_eq!(request["specimen_id"], "runner_verify");

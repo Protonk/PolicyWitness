@@ -21,7 +21,7 @@ SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 1,
+    "schema_version": 3,
     "specimen_id": "runner_filter_iokit_user_client_class",
     "policy": {
         "format": "sbpl",

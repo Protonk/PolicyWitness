@@ -119,6 +119,14 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         return AugmentResolution::StrippedNoOp;
     }
 
+    // Never replace a missing or mistyped source with just the augment text.
+    let Some(original_source) = policy.get("sbpl_source").and_then(Value::as_str) else {
+        return AugmentResolution::BadRequest(
+            "policy.sbpl_source must be a string when policy.augments is nonempty".into(),
+        );
+    };
+    let original_source = original_source.to_owned();
+
     // Validate every name BEFORE touching the filesystem so a typo in
     // the last entry can't leak partial-resolution state.
     for name in &names {
@@ -152,11 +160,6 @@ pub fn resolve_augments(request_value: &mut Value, app_root: &Path) -> AugmentRe
         appended.push_str(&contents);
     }
 
-    let original_source = policy
-        .get("sbpl_source")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
     let original_sha256 = sha256_hex_of(&original_source);
 
     let mut applied_source = original_source.clone();
@@ -322,6 +325,31 @@ mod tests {
         });
         let resolution = resolve_augments(&mut req, &app);
         assert!(matches!(resolution, AugmentResolution::BadRequest(_)));
+    }
+
+    #[test]
+    fn augments_cannot_replace_missing_or_malformed_policy_source() {
+        let app = tempdir("malformed-source");
+        write_augment(&app, "exec_baseline", "(allow default)");
+        for source in [
+            None,
+            Some(serde_json::json!(null)),
+            Some(serde_json::json!(42)),
+        ] {
+            let mut req = json!({"policy": {"format": "sbpl", "augments": ["exec_baseline"]}});
+            if let Some(value) = source {
+                req["policy"]["sbpl_source"] = value;
+            }
+            let before = req["policy"].get("sbpl_source").cloned();
+            match resolve_augments(&mut req, &app) {
+                AugmentResolution::BadRequest(error) => {
+                    assert!(error.contains("policy.sbpl_source"))
+                }
+                _ => panic!("malformed source was replaced by augment text"),
+            }
+            assert_eq!(req["policy"].get("sbpl_source").cloned(), before);
+        }
+        fs::remove_dir_all(app).unwrap();
     }
 
     fn outcome_name(r: &AugmentResolution) -> &'static str {

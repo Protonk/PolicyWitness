@@ -153,10 +153,13 @@ def main():
 
     steps = substitute(case.get("steps") or [], mapping)
     specimen = {
-        "schema_version": 1,
+        "schema_version": 3,
         "specimen_id": case["case_id"],
         "policy": policy_spec,
-        "probe_plan": steps,
+        # Expectations belong to the independent checker, never to the runner.
+        # Strip only that annotation; an unknown request field must still fail.
+        "probe_plan": [{key: value for key, value in step.items() if key != "expect"}
+                       for step in steps],
     }
     apply_runner_selector(specimen)
 
@@ -165,6 +168,8 @@ def main():
     stdout_path = artifacts_dir / "policy_witness.run.stdout.json"
     stderr_path = artifacts_dir / "policy_witness.run.stderr.txt"
     specimen_path.write_text(json.dumps(specimen, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (artifacts_dir / "expected.steps.json").write_text(
+        json.dumps(steps, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     if not pw_bin.exists() or not os.access(pw_bin, os.X_OK):
         print(f"missing policy-witness binary at {pw_bin}")

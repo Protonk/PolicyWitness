@@ -29,7 +29,7 @@ def step(path, action, name):
 
 
 def specimen(plan, policy='(version 1)(allow default)', overrides=None):
-    result = dict(schema_version=1, specimen_id=secrets.token_hex(12),
+    result = dict(schema_version=3, specimen_id=secrets.token_hex(12),
                   policy=dict(format='sbpl', sbpl_source=policy), probe_plan=plan)
     if overrides: result['_test_overrides'] = overrides
     return result

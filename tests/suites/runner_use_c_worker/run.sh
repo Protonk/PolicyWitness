@@ -45,7 +45,7 @@ run_happy_default_allow() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_happy",
   "policy": {
     "format": "sbpl",
@@ -130,7 +130,7 @@ run_bare_deny_default() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_deny_default",
   "policy": {
     "format": "sbpl",
@@ -207,7 +207,7 @@ run_prediction_unavailable_pair() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_prediction_unavailable",
   "policy": {
     "format": "sbpl",
@@ -280,7 +280,7 @@ run_duplicate_step_id_rejected() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_dup_step_id",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -339,7 +339,7 @@ run_unsupported_attempt_per_step_skip() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_mixed_attempt_support",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)(allow file-read*)"},
   "probe_plan": [
@@ -434,7 +434,7 @@ run_sandbox_check_pid_matches_worker() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_sb_pid",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
   "probe_plan": [
@@ -495,7 +495,7 @@ run_access_failure_classified() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_access_failed",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)(deny file-read-data (subpath \"/private/etc\"))"},
   "probe_plan": [{
@@ -569,7 +569,7 @@ run_exec_attempt_without_baseline_fails_cleanly() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_exec_unaugmented",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1)(deny default)"},
   "probe_plan": [{
@@ -687,7 +687,7 @@ run_exec_attempt_with_baseline_succeeds() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_exec_baseline_succeeds",
   "policy": {
     "format": "sbpl",
@@ -787,7 +787,7 @@ run_exec_attempt_args_and_stderr_round_trip() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, secrets, sys
 spec = {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_exec_args_stderr",
   "policy": {
     "format": "sbpl",
@@ -873,7 +873,7 @@ run_exec_attempt_stdout_truncation_marker() {
   /usr/bin/python3 - "${specimen}" "${EXEC_FIXTURE_BIN}" <<'PY'
 import json, sys
 spec = {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "use_c_worker_exec_truncation",
   "policy": {
     "format": "sbpl",
@@ -954,7 +954,7 @@ run_sandbox_check_unsupported_operation_diagnostic() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "unsupported_operation_repro",
   "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
   "probe_plan": [
@@ -1066,7 +1066,7 @@ run_sandbox_check_path_unresolved_prediction_unavailable() {
   local specimen="${PW_TEST_ARTIFACTS}/specimen.json"
   cat >"${specimen}" <<'EOF'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "path_unresolved_repro",
   "policy": {
     "format": "sbpl",

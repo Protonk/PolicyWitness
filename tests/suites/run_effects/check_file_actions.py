@@ -55,7 +55,7 @@ def policy_for(denied_operation, target):
 
 def specimen_for(name, action, target, denied_operation):
     return {
-        'schema_version': 1,
+        'schema_version': 3,
         'specimen_id': f'run_effects_{name}',
         'policy': {'format': 'sbpl', 'sbpl_source': policy_for(denied_operation, target)},
         'probe_plan': [{

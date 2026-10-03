@@ -77,7 +77,7 @@ def read_step(step_id, target):
 
 
 def specimen(specimen_id, plan, overrides):
-    return {'schema_version': 1, 'specimen_id': specimen_id, 'policy': dict(POLICY),
+    return {'schema_version': 3, 'specimen_id': specimen_id, 'policy': dict(POLICY),
             'probe_plan': plan, '_test_overrides': dict(overrides)}
 
 

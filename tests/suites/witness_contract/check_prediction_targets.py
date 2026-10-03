@@ -31,7 +31,7 @@ def main():
         seeds = [secrets.token_bytes(64) for _ in paths]
         step_ids = [secrets.token_hex(12) for _ in paths]
         base = {
-            'schema_version': 1, 'specimen_id': secrets.token_hex(12),
+            'schema_version': 3, 'specimen_id': secrets.token_hex(12),
             'policy': {
                 'format': 'sbpl',
                 'sbpl_source': '(version 1)(allow default)'

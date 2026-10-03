@@ -43,7 +43,7 @@ import sys
 from pathlib import Path
 
 specimen = {
-    "schema_version": 1,
+    "schema_version": 3,
     "specimen_id": "ready_byte_resilience_probe",
     "policy": {
         "format": "sbpl",

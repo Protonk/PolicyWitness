@@ -28,6 +28,7 @@ TABLE_END = "<!-- END GENERATED CONTRACT TABLE -->"
 # the CONTRACT.md table is rendered from this list, so it cannot go stale.
 COPIES = {
     "request_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.requestSchema"),
+                       ("controller/src/json_contract.rs", "REQUEST_SCHEMA_VERSION"),
                        ("tests/lib/contract.py", "REQUEST_SCHEMA")],
     "response_schema": [("runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "PWContract.responseSchema"),
                         ("controller/src/json_contract.rs", "RESPONSE_SCHEMA_VERSION"),
@@ -89,6 +90,8 @@ TARGETS = {
     "controller/src/json_contract.rs": [
         (*region("// ", ""), lambda v: "\n".join([
             f"pub const SCHEMA_VERSION: u32 = {v['controller_envelope']};",
+            "/// The accepted request contract, independent of implementation revisions.",
+            f"pub const REQUEST_SCHEMA_VERSION: u32 = {v['request_schema']};",
             "/// The one runner response schema this controller reads; any other version is refused.",
             f"pub const RESPONSE_SCHEMA_VERSION: u32 = {v['response_schema']};"]))],
     "tests/lib/contract.py": [

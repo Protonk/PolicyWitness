@@ -162,6 +162,11 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     let kind: String
     let path: [CodingKey]
     switch error {
+    case RequestContractError.unsupportedSchema(let version):
+        return "request decode failed: unsupported request schema \(version) (expected \(PWContract.requestSchema))"
+    case RequestContractError.unresolvedAugments:
+        return "request decode failed: policy.augments must be resolved by the controller before XPC delivery"
+    case RequestContractError.unknownField(let keys): kind = "unknown_field"; path = keys
     case DecodingError.typeMismatch(_, let context): kind = "type_mismatch"; path = context.codingPath
     case DecodingError.valueNotFound(_, let context): kind = "value_missing"; path = context.codingPath
     case DecodingError.keyNotFound(let key, let context): kind = "key_missing"; path = context.codingPath + [key]
@@ -202,29 +207,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             return
         }
         didRun = true
-
-        // Reject requests carrying unsupported top-level keys
-        // explicitly. Swift's JSONDecoder silently ignores unknown
-        // keys, so without this pre-check a request with one of those
-        // keys would decode into PWRunnerRunSpec as if the field
-        // didn't exist — silently dropping the data while letting the
-        // caller think the field was honoured. The guard is
-        // load-bearing; see witness_contract/instrumentation_field_rejected.sh.
-        if let rejected = rejectedRetiredRequestKey(in: request) {
-            let resp = PWRunnerRunResult(
-                specimen_id: "<rejected>",
-                run_kind: nil,
-                rc: 1,
-                normalized_outcome: NormalizedOutcome.badRequest,
-                error: "request carries unsupported top-level field '\(rejected)'",
-                pid: Int(getpid()),
-                bundle_id: bundleString("CFBundleIdentifier"),
-                policy_format: "unknown",
-                steps: []
-            )
-            replyAndExit(resp)
-            return
-        }
 
         let parsed: PWRunnerRunSpec
         do {
@@ -290,10 +272,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         }
 
         // C-worker-specific validation: catches probe_plan shapes
-        // the C worker would otherwise mishandle (duplicate
-        // step_ids → Dictionary trap; unknown attempt combos →
-        // silent successful no-op). bad_request before any
-        // process work happens.
+        // the host would otherwise mishandle (duplicate step_ids would
+        // trap when joining results). Unknown attempt values retain their
+        // explicit per-step unsupported observation.
         if let problem = CWorkerOrchestrator.validateProbePlanForCWorker(parsed.probe_plan) {
             let resp = PWRunnerRunResult(
                 specimen_id: parsed.specimen_id,
@@ -329,29 +310,6 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         enrichedResp.steps = enrichPathDiagnostics(steps: cResp.steps)
         replyAndExit(enrichedResp)
     }
-}
-
-// Top-level request keys that are not part of PWRunnerRunSpec.
-// Swift's JSONDecoder ignores unknown keys by default, so a request
-// that sets one of these would otherwise decode as if the field
-// were absent. We do an extra JSONSerialization pass to flag the
-// unsupported key explicitly so callers get a clean bad_request
-// instead of a silent drop.
-private let retiredRequestKeys: [String] = [
-    "instrumentation",
-]
-
-private func rejectedRetiredRequestKey(in request: Data) -> String? {
-    guard let object = try? JSONSerialization.jsonObject(with: request) else {
-        return nil
-    }
-    guard let dict = object as? [String: Any] else {
-        return nil
-    }
-    for key in retiredRequestKeys where dict[key] != nil {
-        return key
-    }
-    return nil
 }
 
 // path_diagnostics is computed here in the unsandboxed host rather

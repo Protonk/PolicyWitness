@@ -154,15 +154,24 @@ recipe, and the rules for adding a new override.
 
 ## Specimen inputs
 
+The [accepted input contract](../docs/CONTRACT.md#accepted-input-contract) is
+checked before any worker or validator is created. Unknown fields at every
+request object, wrong field types and unsupported versions produce explicit
+`bad_request` replies. The decoder uses the existing Codable types and their
+CodingKeys; no independent schema parser is involved.
+
 The runner consumes a `PWRunnerRunSpec` which contains:
 
-- `policy`: `sbpl` source (with optional `params` and `augments`)
+- `schema_version`: the current accepted request contract
+- `policy`: `sbpl` source (with optional `params`)
 - `probe_plan`: ordered probe steps (sandbox_check + attempt)
 
 `policy.augments` is resolved upstream by the controller (the runner
 itself is augment-agnostic — by the time a request reaches
 `PWRunnerService.runSpecimen`, the field has been stripped and any
 named augment contents have been spliced onto `policy.sbpl_source`).
+Direct XPC requests with nonempty unresolved augments are rejected. Controller
+selection fields are also rejected at this boundary.
 See docs/PolicyWitness.md → Augments for the wire surface and the
 single shipped augment (`exec_baseline` — three allows that let a
 libSystem-dynamic helper spawn under `(deny default)`).

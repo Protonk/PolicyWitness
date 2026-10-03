@@ -66,6 +66,8 @@ public command, or the explicit `PW_TEST_OUT_DIR`; direct shell entrypoints
 default to `tests/out/runs/direct`.
 
 - `<run>/suites/<suite>/<case>/artifacts/*` (suite is `blackbox_menagerie` when run directly).
+- `specimen.rendered.json` contains only submitted probe fields;
+  `expected.steps.json` retains the checker-only `expect` annotations beside them.
 - Validation controls retain each input, expectation file, exit status, and
   diagnostics, separately for each checker CLI.
 

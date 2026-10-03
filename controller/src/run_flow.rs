@@ -26,12 +26,12 @@ use crate::evidence::{self, EvidenceManifest};
 use crate::json_contract;
 use crate::log_capture::LogTimeout;
 use crate::policy_check::{PolicyCheckCapture, run_policy_check};
-use crate::request_patch::read_json_file;
+use crate::request_patch::{read_json_file, validate_request_version};
 use crate::runner_client::{RunnerClientRun, run_pw_runner_client};
 use crate::runner_manager::RunnerKind;
 use crate::runner_select::{
     RunnerConnectionKind, RunnerTarget, parse_runner_selector_value,
-    resolve_runner_target_with_registry, runner_provenance_from_target,
+    resolve_runner_target_with_registry, runner_provenance_from_target, strip_runner_selector,
 };
 use crate::sandbox_log::{
     SandboxLogCapture, SandboxLogWindow, bounded_step_denies, capture_sandbox_logs_with_timeout,
@@ -472,6 +472,8 @@ fn parse_arguments(args: &[OsString]) -> Arguments {
 
 /// Inject `--runner-mode` into the request value; errors are request errors.
 fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), String> {
+    // Check the submitted selector before an option can replace an invalid value.
+    parse_runner_selector_value(request_value)?;
     if mode == "machme" {
         return Err("--runner-mode machme is not supported; use --runner-mode byoxpc".to_string());
     }
@@ -483,6 +485,9 @@ fn inject_runner_mode(request_value: &mut Value, mode: &str) -> Result<(), Strin
     let runner_entry = obj
         .entry("runner")
         .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    if runner_entry.is_null() {
+        *runner_entry = Value::Object(serde_json::Map::new());
+    }
     let runner_obj = runner_entry
         .as_object_mut()
         .ok_or_else(|| "runner must be a JSON object".to_string())?;
@@ -569,6 +574,19 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
     if !request_value.is_object() {
         return refused("request.json must be a JSON object".to_string());
     }
+    if let Err(error) = validate_request_version(&request_value) {
+        let mut specimen = Specimen::unavailable(
+            request_path_text.clone(),
+            host.clone(),
+            "no runner was selected: unsupported or malformed request version",
+        );
+        specimen.app_provenance = app_provenance.clone();
+        return envelope(
+            result(false, 1, "bad_request", Some(error)),
+            &execution_only(specimen, timeout_ms, None, None),
+            1,
+        );
+    }
     if let Some(mode) = parsed.runner_mode_arg.as_deref() {
         if let Err(error) = inject_runner_mode(&mut request_value, mode) {
             return refused(error);
@@ -622,6 +640,10 @@ pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, Strin
         let data = execution_only(specimen, timeout_ms, None, None);
         return envelope(result(false, 1, "bad_request", Some(error)), &data, 1);
     }
+
+    // Selection is already recorded in the dossier. The runner receives only
+    // fields it implements; direct XPC callers cannot silently request selection.
+    strip_runner_selector(&mut request_value);
 
     // The held request string: serialized once, delivered to every reader.
     // Replacing the file after this point cannot change the submitted bytes.
@@ -3850,7 +3872,7 @@ mod tests {
 
         fn request_file(root: &Path, runner: Option<Value>) -> PathBuf {
             let mut request = json!({
-                "schema_version": 1, "specimen_id": "controlled",
+                "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION, "specimen_id": "controlled",
                 "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
                 "probe_plan": [],
             });
@@ -3928,8 +3950,68 @@ mod tests {
             }
         }
 
-        fn request_value(path: &Path) -> Value {
-            serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+        fn forwarded_request_value(path: &Path) -> Value {
+            let mut value: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+            // Expect only worker-owned fields after controller selection.
+            for key in [
+                "runner",
+                "runner_id",
+                "runner_service",
+                "required_entitlements",
+                "runner_mode",
+            ] {
+                value.as_object_mut().unwrap().remove(key);
+            }
+            value
+        }
+
+        #[test]
+        fn invalid_request_version_stops_before_selection_augments_or_client_invocation() {
+            let root = scratch("input-version");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let original: Value = serde_json::from_slice(&fs::read(&request).unwrap()).unwrap();
+            for version in [
+                json!(1),
+                json!(json_contract::REQUEST_SCHEMA_VERSION + 1),
+                json!(null),
+                json!(true),
+            ] {
+                let mut value = original.clone();
+                value["schema_version"] = version;
+                // These would fail if interpreted before the version gate.
+                value["runner"] = json!({"mode": "unknown-mode"});
+                value["policy"]["augments"] = json!(["unknown_augment"]);
+                let bytes = serde_json::to_vec(&value).unwrap();
+                fs::write(&request, &bytes).unwrap();
+                let observed =
+                    observe(&app, None, &[request.to_str().unwrap(), "--no-log-capture"]);
+                assert!(observed.calls.is_empty());
+                let (wire, code) = envelope_of(&observed.output);
+                assert_eq!(code, 1);
+                assert_eq!(wire["result"]["normalized_outcome"], "bad_request");
+                assert!(
+                    wire["result"]["error"]
+                        .as_str()
+                        .unwrap()
+                        .contains("expected")
+                );
+                assert!(wire["data"]["runner_result"].is_null());
+                assert_eq!(fs::read(&request).unwrap(), bytes);
+            }
+            fs::remove_dir_all(root).unwrap();
+        }
+
+        #[test]
+        fn runner_mode_option_cannot_overwrite_a_malformed_selector() {
+            let mut value = json!({"runner": {"mode": 42}});
+            assert!(
+                inject_runner_mode(&mut value, "standard")
+                    .unwrap_err()
+                    .contains("runner.mode")
+            );
+            assert_eq!(value["runner"]["mode"], 42);
         }
 
         #[test]
@@ -3948,7 +4030,7 @@ mod tests {
             assert!(matches!(call.connection, RunnerConnectionKind::XpcService));
             assert_eq!(call.timeout_ms, DEFAULT_TIMEOUT_MS);
             let delivered: Value = serde_json::from_str(&call.request).unwrap();
-            assert_eq!(delivered, request_value(&request));
+            assert_eq!(delivered, forwarded_request_value(&request));
             let (wire, exit_code) = envelope_of(&observed.output);
             assert_eq!(exit_code, 0);
             assert_eq!(wire["result"]["ok"], true);
@@ -4144,7 +4226,7 @@ mod tests {
                     RunnerConnectionKind::MachService { privileged: false }
                 ));
                 let delivered: Value = serde_json::from_str(&call.request).unwrap();
-                assert_eq!(delivered, request_value(&request), "{label}");
+                assert_eq!(delivered, forwarded_request_value(&request), "{label}");
                 let (wire, exit_code) = envelope_of(&observed.output);
                 assert_eq!(exit_code, 0, "{label}");
                 assert_eq!(wire["result"]["ok"], true);

@@ -160,6 +160,30 @@ public enum PWContract {
 }
 // END GENERATED CONTRACT VERSIONS
 
+// Request objects are closed; dictionary keys inside policy.params are data.
+// CodingKeys owns both encoding and acceptance, so there is no second schema.
+private struct RequestKey: CodingKey {
+    let stringValue: String
+    let intValue: Int? = nil
+    init(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { return nil }
+}
+
+enum RequestContractError: Error {
+    case unsupportedSchema(Int)
+    case unknownField([CodingKey])
+    case unresolvedAugments
+}
+
+private func rejectUnknownRequestKeys<K: CodingKey & CaseIterable>(_ type: K.Type, from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: RequestKey.self)
+    let accepted = Set(K.allCases.map { $0.stringValue })
+    if let key = container.allKeys.sorted(by: { $0.stringValue < $1.stringValue })
+        .first(where: { !accepted.contains($0.stringValue) }) {
+        throw RequestContractError.unknownField(decoder.codingPath + [key])
+    }
+}
+
 public struct PWRunnerRunSpec: Codable {
     // The request contract and its admission rules: docs/CONTRACT.md.
     public var schema_version: Int
@@ -183,6 +207,24 @@ public struct PWRunnerRunSpec: Codable {
         self.policy = policy
         self.probe_plan = probe_plan
         self._test_overrides = _test_overrides
+    }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case schema_version, specimen_id, run_kind, policy, probe_plan, _test_overrides
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schema_version = try c.decode(Int.self, forKey: .schema_version)
+        guard schema_version == PWContract.requestSchema else {
+            throw RequestContractError.unsupportedSchema(schema_version)
+        }
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        specimen_id = try c.decode(String.self, forKey: .specimen_id)
+        run_kind = try c.decodeIfPresent(String.self, forKey: .run_kind)
+        policy = try c.decode(PWRunnerPolicySpec.self, forKey: .policy)
+        probe_plan = try c.decode([PWRunnerProbeStep].self, forKey: .probe_plan)
+        _test_overrides = try c.decodeIfPresent(PWRunnerTestOverrides.self, forKey: ._test_overrides)
     }
 }
 
@@ -246,6 +288,24 @@ public struct PWRunnerTestOverrides: Codable {
         self.worker_post_apply_kill_signal = worker_post_apply_kill_signal
         self.worker_pre_ready_hang_ms = worker_pre_ready_hang_ms
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case worker_executable_path, worker_timeout_ms, validator_executable_path, validator_io_timeout_ms
+        case worker_post_apply_hang_ms, worker_post_apply_kill_signal, worker_pre_ready_hang_ms
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        worker_executable_path = try c.decodeIfPresent(String.self, forKey: .worker_executable_path)
+        worker_timeout_ms = try c.decodeIfPresent(Int.self, forKey: .worker_timeout_ms)
+        validator_executable_path = try c.decodeIfPresent(String.self, forKey: .validator_executable_path)
+        validator_io_timeout_ms = try c.decodeIfPresent(Int.self, forKey: .validator_io_timeout_ms)
+        worker_post_apply_hang_ms = try c.decodeIfPresent(Int.self, forKey: .worker_post_apply_hang_ms)
+        worker_post_apply_kill_signal = try c.decodeIfPresent(Int.self, forKey: .worker_post_apply_kill_signal)
+        worker_pre_ready_hang_ms = try c.decodeIfPresent(Int.self, forKey: .worker_pre_ready_hang_ms)
+    }
+
 }
 
 /// Versioned optional receipt for the exact compiler result supplied to apply.
@@ -300,6 +360,25 @@ public struct PWRunnerPolicySpec: Codable {
         self.capture_applied_profile = capture_applied_profile
         self.capture_nonce = capture_nonce
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case format, sbpl_source, params, capture_applied_profile, capture_nonce, augments
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        format = try c.decode(String.self, forKey: .format)
+        sbpl_source = try c.decodeIfPresent(String.self, forKey: .sbpl_source)
+        params = try c.decodeIfPresent([String: String].self, forKey: .params)
+        capture_applied_profile = try c.decodeIfPresent(Bool.self, forKey: .capture_applied_profile)
+        capture_nonce = try c.decodeIfPresent(String.self, forKey: .capture_nonce)
+        augments = try c.decodeIfPresent([String].self, forKey: .augments)
+        // Only the controller resolves named augments. Direct XPC must not
+        // accept a request whose policy fragments would silently disappear.
+        if let augments, !augments.isEmpty { throw RequestContractError.unresolvedAugments }
+    }
+
 }
 
 public struct PWRunnerSandboxCheck: Codable {
@@ -310,6 +389,18 @@ public struct PWRunnerSandboxCheck: Codable {
         self.operation = operation
         self.filter = filter
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case operation, filter
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        operation = try c.decode(String.self, forKey: .operation)
+        filter = try c.decode(PWRunnerSandboxFilter.self, forKey: .filter)
+    }
+
 }
 
 public struct PWRunnerSandboxFilter: Codable {
@@ -321,6 +412,18 @@ public struct PWRunnerSandboxFilter: Codable {
         self.kind = kind
         self.value = value
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case kind, value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        kind = try c.decode(String.self, forKey: .kind)
+        value = try c.decodeIfPresent(String.self, forKey: .value)
+    }
+
 }
 
 public struct PWRunnerAttempt: Codable {
@@ -352,6 +455,20 @@ public struct PWRunnerAttempt: Codable {
         self.target = target
         self.args = args
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case kind, action, target, args
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        kind = try c.decode(String.self, forKey: .kind)
+        action = try c.decode(String.self, forKey: .action)
+        target = try c.decode(String.self, forKey: .target)
+        args = try c.decodeIfPresent([String].self, forKey: .args)
+    }
+
 }
 
 public struct PWRunnerProbeStep: Codable {
@@ -364,6 +481,19 @@ public struct PWRunnerProbeStep: Codable {
         self.sandbox_check = sandbox_check
         self.attempt = attempt
     }
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case step_id, sandbox_check, attempt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        try rejectUnknownRequestKeys(CodingKeys.self, from: decoder)
+        step_id = try c.decode(String.self, forKey: .step_id)
+        sandbox_check = try c.decode(PWRunnerSandboxCheck.self, forKey: .sandbox_check)
+        attempt = try c.decode(PWRunnerAttempt.self, forKey: .attempt)
+    }
+
 }
 
 // Path forms observed by the unsandboxed runner host after orchestration.
@@ -1665,6 +1795,7 @@ public struct PWRunnerRunResult: Codable {
         self.reporting_failure = reporting_failure
         self.validator_spawn_failure = validator_spawn_failure
     }
+
     enum CodingKeys: String, CodingKey, CaseIterable {
         case schema_version, specimen_id, run_kind, rc, normalized_outcome, error, pid, bundle_id, policy_format, policy_sha256, applied_profile, sandboxed_after_apply, steps, runner_subprocess, admission_failure, validator_subprocess, validator_spawn_failure, test_overrides, reporting_failure
     }

@@ -84,7 +84,7 @@ def check_cli(case, out, pw):
                 ('file-write-data', 'file-write-data', 'file-read-data'),
                 ('open_write', 'open_write', 'access'))]
         specimen = {
-            'schema_version': 1, 'specimen_id': f'validator_failure_{case}',
+            'schema_version': 3, 'specimen_id': f'validator_failure_{case}',
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'
                        '(deny file-write-data (literal (param "NO_WRITE")))'
                        '(deny file-read-data (literal (param "NO_READ")))',

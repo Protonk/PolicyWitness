@@ -41,7 +41,7 @@ Create a specimen:
 ```sh
 cat > /tmp/pw_specimen_file_read_deny.json <<'JSON'
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "file_read_deny",
   "policy": {
     "format": "sbpl",
@@ -139,7 +139,7 @@ Yes and no. Each run is its own controller, XPC host, worker and validator, and 
 
 Top-level fields:
 
-- `schema_version`: number
+- `schema_version`: integer-valued number equal to the current request schema
 - `specimen_id`: string
 - `run_kind`: string (optional)
 - `policy`: object
@@ -150,7 +150,7 @@ Minimal skeleton (copy/paste):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "skeleton",
   "runner": { "mode": "standard" },
   "policy": { "format": "sbpl", "sbpl_source": "(version 1) (allow default)" },
@@ -158,6 +158,10 @@ Minimal skeleton (copy/paste):
 }
 ```
 Notes:
+- The [accepted input contract](CONTRACT.md#accepted-input-contract) rejects
+  unsupported request versions, unknown fields and wrong types explicitly.
+  Optional nulls mean absence; parameter names inside `policy.params` remain
+  caller-defined. Runtime capacity limits are checked separately.
 - All path rules live inside `policy.sbpl_source`; there is no `path_membership` field.
 - `probe_plan` may be empty when you only want to exercise sandbox
   apply (the validator child is only spawned when there are probes
@@ -1611,7 +1615,7 @@ Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "specimen_id": "byoxpc_smoke",
   "policy": {
     "format": "sbpl",

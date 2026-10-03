@@ -413,7 +413,7 @@ fn sandbox_check_path_diagnostics_lists_forms_equal_to_input() {
     std::fs::write(
         &specimen,
         serde_json::json!({
-            "schema_version": 1, "specimen_id": "same-as-input",
+            "schema_version": 3, "specimen_id": "same-as-input",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{"step_id": "s",
                 "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": target}},
@@ -479,7 +479,7 @@ fn path_diagnostics_preserves_native_unicode_spelling() {
     std::fs::write(
         &request,
         serde_json::json!({
-            "schema_version": 1, "specimen_id": "unicode-path",
+            "schema_version": 3, "specimen_id": "unicode-path",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{"step_id": "unicode", "sandbox_check": {
                 "operation": "file-read-data", "filter": {"kind": "path", "value": submitted}},
@@ -673,7 +673,7 @@ fn augment_applied_records_the_applied_augmentation() {
     // appended bytes regardless of what those bytes grant.
     let tmp = std::env::temp_dir().join(format!("pw-augment-applied-{}.json", std::process::id()));
     let request = r#"{
-        "schema_version": 1,
+        "schema_version": 3,
         "specimen_id": "augment_applied",
         "policy": {
             "format": "sbpl",
@@ -778,7 +778,7 @@ fn unknown_augment_short_circuits_to_bad_request() {
 
     let tmp = std::env::temp_dir().join(format!("pw-augment-unknown-{}.json", std::process::id()));
     let request = r#"{
-        "schema_version": 1,
+        "schema_version": 3,
         "specimen_id": "augment_unknown",
         "policy": {
             "format": "sbpl",
@@ -867,7 +867,7 @@ fn invalid_augment_name_rejected_as_bad_request() {
     // "../etc/passwd" is the canonical traversal attempt; the resolver
     // must reject it for shape, not for whether the file exists.
     let request = r#"{
-        "schema_version": 1,
+        "schema_version": 3,
         "specimen_id": "augment_invalid",
         "policy": {
             "format": "sbpl",

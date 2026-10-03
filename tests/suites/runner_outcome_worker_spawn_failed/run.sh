@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 specimen = {
-    "schema_version": 1,
+    "schema_version": 3,
     "specimen_id": "worker_spawn_failed_probe",
     "policy": {
         "format": "sbpl",

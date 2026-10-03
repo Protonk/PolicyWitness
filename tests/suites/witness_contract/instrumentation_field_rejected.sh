@@ -19,7 +19,7 @@ fi
 # Swift's JSONDecoder ignores unknown keys, so without a guard the
 # decoder would happily decode the request as a valid PWRunnerRunSpec
 # with the instrumentation field silently dropped — and the run would
-# succeed. PWRunnerService.rejectedRetiredRequestKey runs a separate
+# succeed. the closed request decoder runs a separate
 # JSONSerialization pass to flag the retired key and emit a clean
 # bad_request. This test is the load-bearing guard against the field
 # being silently re-accepted.
@@ -28,7 +28,7 @@ SPECIMEN_PATH="${PW_TEST_ARTIFACTS}/specimen.json"
 import json, sys
 from pathlib import Path
 spec = {
-    "schema_version": 1,
+    "schema_version": 3,
     "specimen_id": "witness_contract_instrumentation_rejected",
     "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)"},
     "probe_plan": [],
@@ -61,7 +61,7 @@ runner = env.get("data", {}).get("runner_result") or {}
 if result.get("ok") is True:
     raise SystemExit(
         "request carrying retired 'instrumentation' field was accepted "
-        "(result.ok=true). PWRunnerService.rejectedRetiredRequestKey "
+        "(result.ok=true). the closed request decoder "
         "should have produced normalized_outcome=bad_request before any "
         "worker spawn."
     )

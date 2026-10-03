@@ -21,7 +21,7 @@ def call(fixture, work, label, *, authorized=False, service=None):
     seed = secrets.token_bytes(64)
     target.write_bytes(seed)
     (out / 'before.bin').write_bytes(seed)
-    spec = {'schema_version': 1, 'specimen_id': secrets.token_hex(16),
+    spec = {'schema_version': 3, 'specimen_id': secrets.token_hex(16),
             'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
             'probe_plan': [{'step_id': secrets.token_hex(16),
                            'sandbox_check': {'operation': 'file-write-data',

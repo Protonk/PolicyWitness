@@ -340,7 +340,7 @@ def client_output_control(artifacts):
     client = app / 'Contents/MacOS/pw-runner-client'
     assert client.is_file(), f'shipped client missing: {client}'
     request = artifacts / 'client-request.json'
-    request.write_text(json.dumps({'schema_version': 1, 'specimen_id': 'client-control',
+    request.write_text(json.dumps({'schema_version': 3, 'specimen_id': 'client-control',
                                    'policy': {'format': 'sbpl', 'sbpl_source': '(version 1)(allow default)'},
                                    'probe_plan': []}) + '\n')
     result = subprocess.run([str(client), 'run', '--timeout-ms', '2000', '--request', '-',

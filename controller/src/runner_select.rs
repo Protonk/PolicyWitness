@@ -53,59 +53,103 @@ pub struct RunnerProvenance {
     runner_entitlements: Option<RunnerEntitlements>,
 }
 
+/// Controller-owned keys are consumed before the worker request is delivered.
+pub const SELECTOR_FIELDS: &[&str] = &[
+    "runner",
+    "runner_id",
+    "runner_service",
+    "required_entitlements",
+    "runner_mode",
+];
+
+fn selector_string<'a>(
+    object: &'a serde_json::Map<String, Value>,
+    key: &str,
+    path: &str,
+) -> Result<Option<&'a str>, String> {
+    match object.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(value)) => Ok(Some(value)),
+        Some(_) => Err(format!("{path}{key} must be a string or null")),
+    }
+}
+
+fn selector_entitlements(
+    object: &serde_json::Map<String, Value>,
+    path: &str,
+) -> Result<Option<Vec<String>>, String> {
+    match object.get("required_entitlements") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(items)) => items
+            .iter()
+            .enumerate()
+            .map(|(i, item)| {
+                item.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| format!("{path}required_entitlements[{i}] must be a string"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Some),
+        Some(_) => Err(format!(
+            "{path}required_entitlements must be an array of strings or null"
+        )),
+    }
+}
+
 pub fn parse_runner_selector_value(value: &Value) -> Result<RunnerSelector, String> {
-    let mut selector = RunnerSelector::default();
-
-    if let Some(runner) = value.get("runner").and_then(|v| v.as_object()) {
-        if let Some(v) = runner.get("id").and_then(|v| v.as_str()) {
-            selector.runner_id = Some(v.to_string());
-        }
-        if let Some(v) = runner.get("service").and_then(|v| v.as_str()) {
-            selector.runner_service = Some(v.to_string());
-        }
-        if let Some(list) = runner
-            .get("required_entitlements")
-            .and_then(|v| v.as_array())
-        {
-            selector.required_entitlements = list
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect();
-        }
-        if let Some(v) = runner.get("mode").and_then(|v| v.as_str()) {
-            selector.mode = Some(parse_runner_mode(v, "runner.mode")?);
-        }
-    }
-
-    if selector.runner_id.is_none() {
-        // Legacy top-level fields are still accepted for backward compatibility.
-        if let Some(v) = value.get("runner_id").and_then(|v| v.as_str()) {
-            selector.runner_id = Some(v.to_string());
-        }
-    }
-    if selector.runner_service.is_none() {
-        if let Some(v) = value.get("runner_service").and_then(|v| v.as_str()) {
-            selector.runner_service = Some(v.to_string());
+    let root = value
+        .as_object()
+        .ok_or("request.json must be a JSON object")?;
+    // Validate every supplied spelling, including a shadowed alias. A bad
+    // entitlement entry must never disappear through filter_map.
+    let id = selector_string(root, "runner_id", "")?;
+    let service = selector_string(root, "runner_service", "")?;
+    let entitlements = selector_entitlements(root, "")?;
+    let mode = selector_string(root, "runner_mode", "")?
+        .map(|v| parse_runner_mode(v, "runner_mode"))
+        .transpose()?;
+    let mut selector = RunnerSelector {
+        runner_id: id.map(str::to_owned),
+        runner_service: service.map(str::to_owned),
+        required_entitlements: entitlements.unwrap_or_default(),
+        mode,
+    };
+    let runner = match root.get("runner") {
+        None | Some(Value::Null) => return Ok(selector),
+        Some(Value::Object(object)) => object,
+        Some(_) => return Err("runner must be a JSON object or null".into()),
+    };
+    for key in runner.keys() {
+        if !["id", "service", "required_entitlements", "mode"].contains(&key.as_str()) {
+            let name = if key.len() <= 63 {
+                format!("{key:?}")
+            } else {
+                "<unreported_key>".into()
+            };
+            return Err(format!("unknown field in runner: {name}"));
         }
     }
-    if selector.required_entitlements.is_empty() {
-        if let Some(list) = value
-            .get("required_entitlements")
-            .and_then(|v| v.as_array())
-        {
-            selector.required_entitlements = list
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect();
-        }
+    if let Some(id) = selector_string(runner, "id", "runner.")? {
+        selector.runner_id = Some(id.to_owned());
     }
-    if selector.mode.is_none() {
-        if let Some(v) = value.get("runner_mode").and_then(|v| v.as_str()) {
-            selector.mode = Some(parse_runner_mode(v, "runner_mode")?);
-        }
+    if let Some(service) = selector_string(runner, "service", "runner.")? {
+        selector.runner_service = Some(service.to_owned());
     }
-
+    if let Some(entitlements) = selector_entitlements(runner, "runner.")? {
+        selector.required_entitlements = entitlements;
+    }
+    if let Some(mode) = selector_string(runner, "mode", "runner.")? {
+        selector.mode = Some(parse_runner_mode(mode, "runner.mode")?);
+    }
     Ok(selector)
+}
+
+pub fn strip_runner_selector(value: &mut Value) {
+    if let Some(object) = value.as_object_mut() {
+        for key in SELECTOR_FIELDS {
+            object.remove(*key);
+        }
+    }
 }
 
 fn parse_runner_mode(value: &str, field: &str) -> Result<RunnerKind, String> {
@@ -114,7 +158,14 @@ fn parse_runner_mode(value: &str, field: &str) -> Result<RunnerKind, String> {
             "{field}=\"machme\" is not supported; use \"byoxpc\""
         ));
     }
-    RunnerKind::parse(value).ok_or_else(|| format!("invalid {field} value: {value}"))
+    RunnerKind::parse(value).ok_or_else(|| {
+        let shown = if value.len() <= 63 {
+            format!("{value:?}")
+        } else {
+            "<unreported_value>".into()
+        };
+        format!("invalid {field} value: {shown}")
+    })
 }
 
 fn entitlements_from_manifest_value(
@@ -382,7 +433,7 @@ mod tests {
     fn parses_runner_selector_from_nested_runner() {
         let path = temp_path();
         let payload = json!({
-            "schema_version": 1,
+            "schema_version": crate::json_contract::REQUEST_SCHEMA_VERSION,
             "specimen_id": "specimen",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
             "probe_plan": [],
@@ -483,6 +534,57 @@ mod tests {
     }
 
     // ---- cheap batch: selector parsing + mode parsing + conflict guards ------
+
+    #[test]
+    fn malformed_selection_never_falls_back_or_discards_entitlements() {
+        for (value, field) in [
+            (json!({"runner": "standard"}), "runner"),
+            (json!({"runner": {"servce": "external"}}), "servce"),
+            (json!({"runner": {"id": 42}}), "runner.id"),
+            (json!({"runner": {"mode": false}}), "runner.mode"),
+            (
+                json!({"runner": {"required_entitlements": "required"}}),
+                "runner.required_entitlements",
+            ),
+            (
+                json!({"runner": {"required_entitlements": ["required", false]}}),
+                "runner.required_entitlements[1]",
+            ),
+            (json!({"runner_id": 42}), "runner_id"),
+            (json!({"runner_service": []}), "runner_service"),
+            (json!({"runner_mode": false}), "runner_mode"),
+            (
+                json!({"runner": {"id": "valid"}, "runner_id": 42}),
+                "runner_id",
+            ),
+            (
+                json!({"required_entitlements": ["required", 42]}),
+                "required_entitlements[1]",
+            ),
+        ] {
+            let error = parse_runner_selector_value(&value)
+                .err()
+                .expect("must reject malformed intent");
+            assert!(error.contains(field), "{error}: expected {field}");
+        }
+    }
+
+    #[test]
+    fn optional_nulls_and_explicit_nested_empty_entitlements_have_defined_meanings() {
+        let value = json!({"runner": null, "runner_id": null, "runner_mode": null,
+                           "required_entitlements": null});
+        let parsed = parse_runner_selector_value(&value).unwrap();
+        assert!(parsed.runner_id.is_none() && parsed.mode.is_none());
+        assert!(parsed.required_entitlements.is_empty());
+        let parsed = parse_runner_selector_value(&json!({
+            "required_entitlements": ["outer"], "runner": {"required_entitlements": []}
+        }))
+        .unwrap();
+        assert!(
+            parsed.required_entitlements.is_empty(),
+            "the explicit nested value takes precedence"
+        );
+    }
 
     #[test]
     fn parses_legacy_top_level_fields() {

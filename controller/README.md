@@ -85,7 +85,8 @@ Runs a **single runner evaluation** against the selected runner service:
 - Reads a request JSON file (runner request schema) that contains:
   - a sandbox policy (`sbpl` source),
   - and a probe plan (steps with `sandbox_check` + an attempted operation).
-- Resolves augments, serializes the request once, scans it for the dossier and
+- Checks the request version and runner-selector types, resolves augments,
+  removes controller-owned selection fields, serializes the request once, scans it for the dossier and
   delivers the same bytes to `pw-runner-client run --request -` on stdin. No
   temporary request file is written; `data.runner_client.request_delivery`
   records the bytes written and any delivery error.
@@ -115,13 +116,9 @@ Runs a **single runner evaluation** against the selected runner service:
     `(sysctl-read, sysctl_name)`. The runner short-circuits to
     `sandbox_check.outcome="prediction_unavailable"` (`rc=-1`); the
     `attempt` result is the reliable evidence.
-  - **Rejected upstream**: filter kinds the validator could in
-    principle author but the runner refuses to admit into the probe
-    plan (`MACH_PORT`, `PREFERENCE_DOMAIN`, …). `validateSandboxChecks`
-    rejects requests carrying these as `bad_request` before any worker
-    spawn; adding one to the supported set requires empirical
-    verification that the userland predicate matches kernel
-    enforcement (see `tests/suites/witness_contract/harness/verify_filter_id.sh`).
+  - **Unrecognized filter kinds** produce `prediction_unavailable` with the
+    submitted kind retained. Known kinds requiring a value reject an absent
+    or empty value as `bad_request` before any worker spawn.
 - Prints a single JSON envelope to stdout (no output directories; stdout is the artifact).
 - Emits `data.specimen`, the dossier that keeps results auditable: request path,
   policy augmentation and imports, host facts, runner and app provenance, and
@@ -500,6 +497,12 @@ their stored fixtures. Consumers outside this checkout were not audited.
 
 - `runner: { mode, id, service, required_entitlements }` (preferred)
 - Top-level fields `runner_id`, `runner_service`, `required_entitlements` and `runner_mode` (accepted beside the `runner` object; the object takes precedence)
+
+Selector objects reject unknown keys and wrong types. Every entitlement entry
+must be a string; malformed entries are never dropped. Non-null nested values
+take precedence per field, including an empty `required_entitlements` list;
+null means absent. Even shadowed aliases are validated. The controller consumes
+these fields before XPC delivery; they are not runner-executed request options.
 
 If `required_entitlements` is present, the controller enforces a **superset**
 check against the runner’s recorded entitlements before dispatch.

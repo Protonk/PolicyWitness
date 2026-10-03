@@ -38,6 +38,8 @@ runLimitsContractTests(tk)
 runQueryAdmissionTests(tk)
 // Wire contract versions in docs/contract.json against the generated Swift copies.
 runContractVersionTests(tk)
+// Closed request objects, exact input version, lossless fields and separate admission limits.
+runRequestContractTests(tk)
 // Synthesized maximal reply (256 steps, every string at its limit) and the
 // runner client budget derived from it; unclassified reply keys fail here.
 runReplyMaximumTests(tk)
@@ -63,8 +65,7 @@ runValidatorEvidenceTests(tk)
 // Unfamiliar diagnostic codes and payloads survive worker and validator
 // forwarding; inputs are independent of the receiver's enums.
 runDiagnosticTransportTests(tk)
-// Codable round-trip of the already-resolved `augments` field on the runner's
-// parsed view of a request.
+// Optional augment shape and refusal of unresolved fragments in direct runner requests.
 runAugmentTests(tk)
 // pwListenerConfig argv → listener selection table (service vs --mach-service).
 runListenerConfigTests(tk)

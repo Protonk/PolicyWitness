@@ -13,7 +13,7 @@ Current wire contracts: request schema 3, response schema 14, controller envelop
 <!-- BEGIN GENERATED CONTRACT TABLE -->
 | Contract | Version | Generated copies |
 | --- | --- | --- |
-| request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
+| request schema (`request_schema`) | 3 | [`PWContract.requestSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`REQUEST_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`REQUEST_SCHEMA`](../tests/lib/contract.py) |
 | response schema (`response_schema`) | 14 | [`PWContract.responseSchema`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`RESPONSE_SCHEMA_VERSION`](../controller/src/json_contract.rs); [`RESPONSE_SCHEMA`](../tests/lib/contract.py) |
 | controller envelope (`controller_envelope`) | 6 | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`CONTROLLER_ENVELOPE`](../tests/lib/contract.py) |
 <!-- END GENERATED CONTRACT TABLE -->
@@ -21,9 +21,10 @@ Current wire contracts: request schema 3, response schema 14, controller envelop
 ## What each number identifies
 
 - **Request schema**: the specimen JSON the controller hands the runner
-  (`PWRunnerRunSpec`). Decoding requires an integer `schema_version`, but
-  admission does not currently gate its value. The reply carries its own
-  response version; it does not echo the request version.
+  (`PWRunnerRunSpec`). The marker identifies the accepted input contract,
+  independently of implementation revisions. Both controller and runner
+  require the current value before interpreting the request. The reply carries
+  its own response version; it does not echo the request version.
 - **Response schema**: the runner reply (`PWRunnerRunResult`). It tells a
   reader which rules apply; `tests/lib/consumer.py` and the controller accept
   exactly this number. `steps[].comparison` records the attempt channel's
@@ -82,14 +83,72 @@ a build carries the numbers this repository believes it does.
 
 ## When a number moves
 
-Bump a number when the rules for reading change: a field removed, its type or
-meaning changed, or a new requirement placed on readers. An added field alone
+For responses and envelopes, bump a number when the rules for reading change:
+a field removed, its type or meaning changed, or a new requirement placed on
+readers. An added field alone
 does not require a bump. An absent field means unknown, never false. An
 additive contract change may also carry a bump, recorded in
 [contract.json](contract.json).
 
 The generated sentence above is the one place that states the current numbers;
 describe current behavior without repeating them in prose.
+
+## Accepted input contract
+
+The request marker names the shapes and meanings described in
+[the specimen format](PolicyWitness.md#specimen-format), not a runner build.
+`schema_version` must be an integer-valued JSON number equal to the current
+request schema. Other values are rejected explicitly with the expected value;
+there is no older-request adapter or version negotiation. The controller checks
+before runner selection or augment resolution; the XPC service independently
+checks before worker or validator creation.
+
+The existing Swift `Codable` types remain the parser. Their `CodingKeys` also
+define the accepted fields of every request object: the root, policy, each
+probe step, sandbox check, filter, attempt and `_test_overrides`. An unknown key
+is a `bad_request` with a bounded field path, rather than an ignored option.
+For example, `policy.capture_applied_profiel` is rejected. `policy.params`
+is a dictionary of caller-chosen names to string values; its names are data,
+not closed object fields. Missing required fields and wrong value types are
+also rejected. Optional null values have the same meaning as absence.
+
+The controller additionally accepts [runner selection](../controller/README.md#runner-selection-external-entitlements)
+and resolves `policy.augments`. It validates selector types and every required
+entitlement, including shadowed aliases; unknown nested selector fields are
+errors. A non-null nested selector value takes precedence over its top-level
+alias, including an explicit empty entitlement list. Selection fields are
+removed before XPC delivery and their resolved meaning is recorded in runner
+provenance. Direct XPC requests reject them. Nonempty augment lists require a
+string `sbpl_source`; the controller splices the named fragments and strips
+the list. A direct XPC request with unresolved fragments is rejected.
+
+Closed object fields do not close the existing probe value vocabulary. Unknown
+attempt kind/action pairs still produce the explicit per-step `unsupported`
+observation; unknown filter kinds still produce `prediction_unavailable`.
+Those records retain submitted intent and make no successful-operation claim.
+These documented outcomes are part of the accepted input contract.
+
+Changes fall into four categories:
+
+| Change | Contract consequence |
+| --- | --- |
+| Replace the `probe_plan` array with an object, require a new field, or remove an accepted spelling | Callers must change their requests; use a new request contract value and reject unsupported values explicitly. |
+| Change what `action: "open_read"` does | A new action spelling or request contract is required; do not reinterpret the same request as a different operation. |
+| Add an optional field or action while preserving existing requests and meanings | The request value can stay stable. Older builds must reject an unknown field or report an unsupported action explicitly; acceptance by a newer build does not promise acceptance by an older one. |
+| Fix parameter transfer or another implementation defect to honor the documented request | Keep the request value; build provenance identifies the implementation and results can change. |
+
+[Runtime admission limits](LIMITS.md) are separate from this syntax and meaning.
+For example, a structurally valid plan can exceed the worker's step capacity;
+the refusal names the field, actual count and maximum before any attempts.
+Raising capacity accepts more plans; lowering it can refuse previously runnable
+requests. The caller decides whether to revise the specimen or use a build with
+more capacity; PW never truncates or reinterprets the plan. Capacity changes must
+be documented and tested even when they do not change the input grammar.
+
+Maintenance consists of the existing decoder/selector fields, their meaning
+in the guide, and acceptance/refusal tests. No additional schema language or
+parser generator is used. These rules protect requested intent; they do not
+promise identical sandbox observations across builds or macOS versions.
 
 ## Internal host/worker identity
 
@@ -166,8 +225,8 @@ documents against: an unknown key at a recorded path is an error naming the
 path, a present key must carry the golden's type (a recorded `null` constrains
 nothing), and absence is allowed. A key appears in a golden because a producer
 emitted it, so a new field reaches the readers only through the fixture that
-records it. The Swift decoder keeps ignoring unknown keys; strictness lives in
-the Python readers and the golden comparisons.
+records it. These response-shape checks in Python readers and golden comparisons
+are separate from the closed request decoding described above.
 
 ## Build stamp
 

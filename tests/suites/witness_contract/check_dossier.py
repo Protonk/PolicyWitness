@@ -75,7 +75,7 @@ class Witness:
         self.temp_before = temp_request_files()
 
     def specimen(self, name, *, policy=None, plan=None, overrides=None):
-        request = {'schema_version': 1, 'specimen_id': 'dossier-' + name,
+        request = {'schema_version': 3, 'specimen_id': 'dossier-' + name,
                    'policy': policy if policy is not None else {'format': 'sbpl', 'sbpl_source': SOURCE},
                    'probe_plan': plan if plan is not None else []}
         if self.byoxpc:

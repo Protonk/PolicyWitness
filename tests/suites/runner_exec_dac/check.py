@@ -20,7 +20,7 @@ def main():
         helper = Path(work) / "helper"
         shutil.copyfile("/usr/bin/true", helper)
         spec = {
-            "schema_version": 1,
+            "schema_version": 3,
             "specimen_id": "execute_permission_control",
             "policy": {"format": "sbpl", "sbpl_source": "(version 1)(allow default)"},
             "probe_plan": [{
