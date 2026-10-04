@@ -10,7 +10,9 @@ PolicyWitness is **specimen-first**:
     policy (SBPL source + params) exactly once to itself and runs the
     probe plan's attempts.
   - `sb_api_validator --batch` — queries `sandbox_check` for each probe
-    against the worker's PID.
+    against the worker's PID, with `SANDBOX_CHECK_NO_REPORT` so that a
+    prediction never writes a denial record into the log that witnesses
+    the attempt.
 - The host joins both children's outputs into a single `PWRunnerRunResult`
   envelope and replies. Because the host never applies the specimen
   policy, default-deny policies can't block the XPC reply path.

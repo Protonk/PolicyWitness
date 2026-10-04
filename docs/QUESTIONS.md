@@ -54,7 +54,7 @@ A `query_first` comparison identifies an eligible native prediction collected be
 
 ## How do I read the denial log?
 
-As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator's own `sandbox_check` queries can generate denial records naming the worker PID before any attempt begins. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
+As optional, possibly incomplete evidence. The kernel's sandbox log intermittently omits denial lines for any sandboxed process, so a missing record never establishes that an operation was allowed. The validator queries `sandbox_check` with `SANDBOX_CHECK_NO_REPORT`, so a denial record naming the worker PID comes from an attempt, never from a prediction. A candidate association (`sandbox_log_capture.step_denies`) says that a record's PID, operation and path match a submitted attempt; it does not say the attempt produced that record, and it changes no comparison field.
 
 ## How long does a run take?
 

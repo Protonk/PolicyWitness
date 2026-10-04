@@ -363,6 +363,10 @@
         {
           "id": "batch_ndjson_roundtrip",
           "description": "10 verdicts validated (3 allow + 1 deny + 1 unsupported_operation + 1 bad_filter + 4 parse_error)"
+        },
+        {
+          "id": "predictions_do_not_report",
+          "description": "The production validator source, compiled with a recording sandbox_check, issues every batch and per-probe query with SANDBOX_CHECK_NO_REPORT and an intact filter id"
         }
       ]
     },

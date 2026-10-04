@@ -95,7 +95,8 @@ Runs a **single runner evaluation** against the selected runner service:
 - The embedded `sb_api_validator` runs in `--batch` NDJSON mode (one
   process per run), spawned by the runner host alongside the C
   worker. It reads NDJSON probes from stdin and writes NDJSON
-  verdicts to stdout; the host folds each verdict into the matching
+  verdicts to stdout, querying with `SANDBOX_CHECK_NO_REPORT` so that
+  predictions leave no denial records; the host folds each verdict into the matching
   `runner_result.steps[*].sandbox_check` block and surfaces process
   metadata as `runner_result.validator_subprocess`. See
   `tests/suites/validator_batch_mode/README.md` for the wire contract.

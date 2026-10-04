@@ -31,6 +31,16 @@
 #ifndef SANDBOX_FILTER_LOCAL_NAME
 #define SANDBOX_FILTER_LOCAL_NAME 17
 #endif
+/* OR'd into the type argument. Without it the kernel reports every denied
+ * query as a "Sandbox: <worker>(pid) deny(1) <op> <path>" line attributed to
+ * the queried PID, indistinguishable from the line the worker's own attempt
+ * produces, and the attempt's line then arrives only as a coalesced
+ * "duplicate report". A prediction must never write into the deny-log channel
+ * that witnesses the attempt. Verdicts are identical with and without the
+ * flag (checked live on Darwin 23.6). */
+#ifndef SANDBOX_CHECK_NO_REPORT
+#define SANDBOX_CHECK_NO_REPORT 0x40000000
+#endif
 
 int sandbox_check(pid_t pid, const char *operation, int type, ...);
 
@@ -502,9 +512,9 @@ static int run_batch(int pid) {
         errno = 0;
         int rc;
         if (filter_type_id == 0) {
-            rc = sandbox_check(pid, operation, 0);
+            rc = sandbox_check(pid, operation, SANDBOX_CHECK_NO_REPORT);
         } else {
-            rc = sandbox_check(pid, operation, filter_type_id, filter_value);
+            rc = sandbox_check(pid, operation, filter_type_id | SANDBOX_CHECK_NO_REPORT, filter_value);
         }
         emit_verdict(step_id, operation, filter_type, filter_type_id, filter_value, rc, errno);
 
@@ -657,9 +667,9 @@ int main(int argc, char **argv) {
     int rc;
     if (filter_type_id == 0) {
         /* type=0 indicates no filter argument. */
-        rc = sandbox_check(pid, operation, 0);
+        rc = sandbox_check(pid, operation, SANDBOX_CHECK_NO_REPORT);
     } else {
-        rc = sandbox_check(pid, operation, filter_type_id, filter_value);
+        rc = sandbox_check(pid, operation, filter_type_id | SANDBOX_CHECK_NO_REPORT, filter_value);
     }
 
     if (!json) {

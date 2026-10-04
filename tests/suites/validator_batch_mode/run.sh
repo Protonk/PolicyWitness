@@ -4,17 +4,19 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PW_APP_DIR="${PW_APP_DIR:-${ROOT_DIR}/dist/PolicyWitness.app}"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
+source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="validator_batch_mode"
 PW_TEST_ID="batch_ndjson_roundtrip"
 SB_VALIDATOR="${PW_APP_DIR}/Contents/MacOS/sb_api_validator"
 
+run_batch_ndjson_roundtrip() {
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
 test_step "smoke" "sb_api_validator --batch reads NDJSON probes from stdin and writes NDJSON verdicts to stdout"
 
 if [[ ! -x "${SB_VALIDATOR}" ]]; then
   test_skip "missing ${SB_VALIDATOR} — run ./build.sh first" "{}"
-  exit 0
+  return 0
 fi
 
 # Spawn a sandboxed child via /usr/bin/sandbox-exec to serve as the
@@ -224,3 +226,27 @@ fi
 
 SUMMARY="$(tail -1 "${ASSERT_LOG}")"
 test_pass "${SUMMARY}" "{\"request\":\"${REQUEST_FILE}\",\"response\":\"${RESPONSE_FILE}\"}"
+}
+
+if test_selected "${PW_TEST_ID}"; then
+  run_batch_ndjson_roundtrip
+fi
+
+# ---- test_id: predictions_do_not_report ------------------------------------
+# Every sandbox_check the validator issues must carry SANDBOX_CHECK_NO_REPORT.
+# Without it a denied prediction writes a kernel deny line against the worker
+# PID that the deny-log channel cannot tell from the attempt's own line, and
+# the attempt's line then arrives only as a coalesced "duplicate report". The
+# control compiles the production source with a recording sandbox_check, so
+# it needs no kernel query, sandbox or child.
+if test_selected predictions_do_not_report; then
+  test_begin "${PW_TEST_SUITE}" predictions_do_not_report
+  test_step build "compile the validator source with a recording sandbox_check and drive both query modes"
+  CONTROL="${PW_TEST_ARTIFACTS}/no-report"
+  test_build_fixture "${ROOT_DIR}/tests/fixtures/validator/build_no_report.sh" "${CONTROL}"
+  if "${CONTROL}" >"${PW_TEST_ARTIFACTS}/control.log" 2>&1; then
+    test_pass "$(tail -1 "${PW_TEST_ARTIFACTS}/control.log")" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  else
+    test_fail "a validator query reports to the kernel: $(tail -1 "${PW_TEST_ARTIFACTS}/control.log")" "{\"log\":\"${PW_TEST_ARTIFACTS}/control.log\"}"
+  fi
+fi

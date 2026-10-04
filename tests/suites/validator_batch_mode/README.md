@@ -60,3 +60,15 @@ four sandbox_check outcomes plus all parser failure modes:
 ```
 ./tests/run.sh --suite validator_batch_mode
 ```
+
+## predictions_do_not_report
+
+`tests/fixtures/validator/no_report.c` compiles the production validator
+source with a recording `sandbox_check` and drives three batch probes
+(PATH, GLOBAL_NAME, NONE) and two per-probe invocations. Every recorded
+`type` argument must carry `SANDBOX_CHECK_NO_REPORT` (0x40000000) with the
+filter id intact. Without the flag the kernel reports a denied prediction as
+`Sandbox: pw-probe-runner(PID) deny(1) <op> <path>`, which the deny-log
+channel cannot tell from the attempt's own line; the attempt's line then
+arrives only as a coalesced "duplicate report". No kernel query, sandbox or
+child is involved, so the control is deterministic.
