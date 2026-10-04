@@ -1,4 +1,26 @@
 {
   "schema_version": 1,
-  "runs": []
+  "runs": [
+    {
+      "path": "release-acceptance/run-7d2cf8181e234be286e3cdde083e41dd",
+      "run_id": "20261004T165054Z_a5814610",
+      "reason": "PolicyWitness 0.2.6 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.2.6.",
+      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
+      "app_inventory": "before.json"
+    },
+    {
+      "path": "runs/release-0.2.6-default-confirmation",
+      "run_id": "20261004T165914Z_f239bccf",
+      "reason": "PolicyWitness 0.2.6 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.2.6.",
+      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/release-0.2.6-default",
+      "run_id": "20261004T165058Z_6f601a3f",
+      "reason": "PolicyWitness 0.2.6 initial default battery: 160/161 cases passed; unit/rust.unit log-replay capture assertion failed. Retained for diagnosis alongside a successful unchanged-app confirmation; cause unconfirmed.",
+      "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
+      "app_inventory": "artifact-integrity/before.json"
+    }
+  ]
 }
