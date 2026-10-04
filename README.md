@@ -61,13 +61,13 @@ release evidence, and preserved archives.
 
 ## How this is built
 
-All of the code here was written by AI coding agents (Claude and GPT 5.x), including the tests. This project is a bet that a focus on testing and iteration over real use on top of some reasonable architectural choices **will suffice** for narrow, well-defined problem spaces. 
+All of the code here was written by AI coding agents (Claude and ChatGPT), including the tests. This project is a bet that a focus on testing and iteration over real use on top of some reasonable architectural choices **will suffice** for narrow, well-defined problem spaces. 
 
 ## Documentation
 
 - Using the app:
   - User guide: [docs/PolicyWitness.md](docs/PolicyWitness.md)
-  - Limits: [LIMITS.md](docs/LIMITS.md)
+  - Limits: [docs/LIMITS.md](docs/LIMITS.md)
   - FAQ: [docs/QUESTIONS.md](docs/QUESTIONS.md)
   - Signing/distribution: [docs/SIGNING.md](docs/SIGNING.md)
 - Implementation details:
