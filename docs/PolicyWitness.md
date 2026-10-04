@@ -249,7 +249,7 @@ observation:
 | --- | --- | --- |
 | Syntax and structure | Broken JSON, an unknown field, or a string where `args` requires an array of strings. | Correct the request's spelling or shape. Optional nulls mean absence; names inside `policy.params` are caller data, but their values must be strings. |
 | Meaning | `args: []` on a file attempt, or duplicate step IDs. | The fields decode, but the submitted instruction is invalid. Correct their relationship or choose a supported operation. |
-| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum. Revise the experiment or use a build with sufficient capacity; PW never truncates the plan. |
+| Capacity | A plan contains more steps than this build admits. | Inspect `admission_failure` for the field, actual count and maximum, and find the field in the Specimen admission table under [Limits](#limits). Revise the experiment or use a build with sufficient capacity; PW never truncates the plan. |
 | Observed effects | A valid create encounters a permission failure, or succeeds and produces a file. | Read the attempt evidence and inspect the target. Acceptance establishes neither an allowed operation nor its effect. |
 
 Unknown attempt combinations and filter names refuse the whole specimen before
@@ -581,165 +581,195 @@ Example:
 
 <!-- BEGIN COPIED LIMITS -->
 
-A profile accepted by `libsandbox` can still exceed PolicyWitness's input
-capacities, exhaust an execution budget, or produce more evidence than a reply
-can carry. This inventory covers specimen admission, execution, comparison 
-transport and retained evidence.
+A specimen that `libsandbox` would compile can still be refused here, or run
+with less evidence than it produced. This section lists every such limit with
+its value, what it counts and what happens at the boundary.
 
-Counts of UTF-8 bytes are not counts of characters. Admission limits apply before
-worker launch. Capture limits usually reduce evidence after work has happened.
-The diagnostic `sbpl-check` helper has separate limits and is not the normal
-worker admission path. Its import inventory does not control libsandbox's own
-import resolution or compilation.
+Capacity refusals carry `data.runner_result.admission_failure`, which names the
+`field`, the `actual` count, the `maximum` and the `unit`, with location details
+where available and `origin: "runner_host"`. Find that field in the "Refusal
+names" column of the Specimen admission table; the row says what was measured
+and which location fields are reported. To check a specimen before submitting
+it, compare it with the same rows.
 
-### Interactions that matter
+Request files must be UTF-8 JSON. A file containing invalid UTF-8 yields exit
+code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
+`failed to read request.json` and `data.runner_result: null`. It has no
+`admission_failure` to look up.
 
-- Raising `--timeout-ms` changes the client wait only. The worker and validator
-  retain their own budgets. None of these numbers promises an end-to-end runtime:
-  worker policy transfer precedes polling, synchronous validator work is outside
-  the worker polling budget, and cleanup/reaping can take additional time.
-- The controller's runner-client budget is derived, not tuned: three times the
-  synthesized maximal reply (`runner_reply_maximum`, the field-complete reply
-  fixture with 256 steps and records and every string at its limit, encoded by
-  the production encoder), rounded up to a whole 4 MiB. The sbpl-check streams
-  keep an independent 8 MiB. These receivers report their budget in
-  `capture_limit_bytes`; collection buffers the whole stream first. The
-  synthesized number is an upper bound for the schema, since it puts fields
-  that cannot co-occur in one run side by side; the live 256-step corpus is
-  evidence that real replies stay inside it. A reply string key added without a
-  size classification fails runner_unit, so the bound follows the schema.
-- Log collection enforces limits during reads: inner log-show stdout 1 MiB and
-  stderr 128 KiB, observer stdout 32 MiB and stderr 128 KiB. The outer allowance
-  accommodates repeated raw lines, JSON escaping and metadata from bounded
-  inner output; derived structures have independent guards. The runner's reply
-  size and step count cannot bound OS log volume. Both supervisors share one
-  monotonic deadline and a fixed cleanup grace. `--log-timeout-ms` changes the
-  time allowance, leaving byte limits and the padded query interval unchanged.
-- Service and direct orchestration share admission. Top-level metadata comes
-  first, then plan/parameter counts, worker strings and host query fields.
-  Each string checks its UTF-8 capacity before its native-string constraint.
-  Refusals select one diagnostic but independently sanitize every echoed
-  metadata field. Oversized or invalid identities are omitted or replaced by
-  explicit placeholders, never shortened into apparent submitted identities.
-- Native C strings (source, parameters, step IDs, targets, exec arguments,
-  query operations/values and override paths) reject embedded NUL before any
-  process work. The admission record counts `nul_bytes` against maximum zero.
-  The worker's reader refuses a NUL in the policy on its own (exit 9, failure
-  code 9, offset in detail) rather than compile a prefix; the shared-memory
-  string slots carry no length, so for them the host rule is the only guard.
-  Other control characters and valid Unicode survive JSON transport exactly;
-  host-only metadata and labels may also contain escaped NUL. The validator
-  rejects raw controls, invalid UTF-8, malformed escapes and lone surrogates,
-  while preserving the next physical probe line. Decoder failures report a
-  bounded category/path instead of arbitrary input-derived exception prose.
-- Exec attempts share a local active-time budget as well as a per-child
-  deadline. The plan cutoff starts before worker setup, excludes the measured
-  release wait, and never restarts after spawn. This is separate from the host
-  polling budget; the nominal 5,000 ms margin is a configuration allowance,
-  not a guarantee against blocking calls or delayed scheduling.
-- Pipe EOF does not establish child exit. The worker retains the unreaped
-  leader while observing streams so deadline cleanup can still target its
-  process group after a leader exit. Kill/wait/clock errors remain errors;
-  final reaping uses a separate bounded, nonblocking observation window.
-  Group termination cannot cover descendants that leave that group. A worker
-  dying before slot completion leaves exec details unpublished, not proof
-  that no child spawned or that cleanup succeeded.
-- Deny-log capture has no fixed lookback limit. The requested interval is the
-  runner client's wall-clock span: `floor(start) - 2 s` through `ceil(end) + 2 s`.
-  Whole-second rounding accommodates `log show` precision; the additional pad
-  allows for client/archive clock differences. `window.pad_seconds` records 2.
-  Raw client milliseconds are unchanged.
-  Reversed endpoints prevent the scan; ordered endpoints
-  do not establish clock continuity or complete log delivery. Archive access has
-  been observed to cost seconds even for short spans; scan cost is not guaranteed
-  to be independent of span or log volume.
+### How to read the tables
+
+- Capacities are inclusive maxima unless the row says otherwise: a 63-byte
+  step ID fits, a 64-byte one exceeds its limit. UTF-8 counts measure decoded
+  strings rather than JSON escapes or characters. Rows labeled `bytes` specify
+  whether they count raw output, bytecode or a calculated allowance. String
+  capacities exclude any terminating NUL.
+- Time rows distinguish defaults, elapsed monotonic deadlines, nominal waits
+  and unenforced allowances. Monotonic deadlines are unaffected by wall-clock
+  adjustments. Nominal waits can take longer than their listed duration; each
+  row describes what expiry does.
+- The Control column describes `policy-witness` flags using four words.
+  "Fixed" means no flag changes the value in this build. "Flag" names the flag
+  that does. "Derived" means the value follows from another row.
+  "Not enforced" means the number is informative.
+- Specimen admission answers whether a specimen fits this build's capacities
+  and why one did not. A capacity refusal names one field, has empty `steps`
+  and carries no worker or validator subprocess record. PolicyWitness never
+  truncates a plan to fit.
+- Execution budgets describe waits and deadlines within a run. Some expiries
+  lead to cleanup or missing results; the readiness hint can expire while the
+  run continues. The nominal release margin has no expiry of its own.
+- Queries and transport describe query sizes and received output. The rows
+  identify rejected queries, truncated output and unavailable parsing or
+  correlation. Truncated JSON is not parsed as a complete reply.
+- Evidence capture bounds optional evidence: deny-log records, child output and
+  compiled-object receipts. Excess can retain a prefix with a truncation marker
+  or make capture or correlation unavailable, as the row describes. Attempt
+  status and `sandbox_check` verdicts are unchanged by these evidence limits.
+- Diagnostic helpers lists the limits of `sbpl-check`, which runs only after an
+  XPC error, and of the log observer's streaming mode. Neither is the normal
+  admission path, and the helper's import inventory does not control how
+  `libsandbox` resolves or compiles imports.
 
 <!-- BEGIN GENERATED LIMITS -->
 
-Values are maxima unless labelled as defaults or fixed allowances.
-
 ### Specimen admission
 
-| Limit | Value | Counting and consequence | Control |
-| --- | --- | --- | --- |
-| Policy source (`policy_source`) | 262,143 UTF-8 bytes | Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Probe steps (`probe_steps`) | 256 items | Entries in probe_plan. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Policy parameters (`policy_parameters`) | 1,024 items | Entries in the policy parameter dictionary. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Step ID (`step_id`) | 63 UTF-8 bytes | Each step_id, excluding terminating NUL. A refused step ID is identified by step_index only, never echoed. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Attempt target (`attempt_target`) | 511 UTF-8 bytes | Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0]. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Supplied exec arguments (`exec_arguments`) | 15 items | Arguments supplied in attempt.args; the target occupies the additional argv[0] slot. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | Each supplied argument, excluding terminating NUL; the target has its own larger limit. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Parameter key (`parameter_key`) | 127 UTF-8 bytes | Each key, excluding terminating NUL. A refused key is identified by field and byte count only, never echoed. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Parameter value (`parameter_value`) | 383 UTF-8 bytes | Each value, excluding terminating NUL. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Query operation (`query_operation`) | 127 UTF-8 bytes | Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Query filter value (`query_filter_value`) | 511 UTF-8 bytes | Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound are refused during meaning validation before children. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Specimen ID (`specimen_id`) | 255 UTF-8 bytes | The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Request labels (`request_label`) | 63 UTF-8 bytes | Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
-| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | Each of _test_overrides.worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first. Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure. | Fixed; no public override. |
+| Limit | Value | Refusal names | Counting and consequence | Control |
+| --- | --- | --- | --- | --- |
+| Policy source (`policy_source`) | 262,143 UTF-8 bytes | `policy.sbpl_source` | Final SBPL source after augments. Imported file contents are not added to this count. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Probe steps (`probe_steps`) | 256 items | `probe_plan` | Entries in `probe_plan`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Policy parameters (`policy_parameters`) | 1,024 items | `policy.params` | Entries in `policy.params`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Step ID (`step_id`) | 63 UTF-8 bytes | `step_id`, with `step_index` | Each `step_id`. A refused ID is identified by `step_index` and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Attempt target (`attempt_target`) | 511 UTF-8 bytes | `target`, with `step_id` and `step_index` | Each attempt target (path, service or sysctl name). For exec, this is also argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Supplied exec arguments (`exec_arguments`) | 15 items | `args` with unit `items`, with `step_id` and `step_index` | Arguments supplied in `attempt.args`; the exec target is the additional argument zero. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Each supplied exec argument (`exec_argument`) | 127 UTF-8 bytes | `args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index` | Each supplied exec argument; the target has its own larger limit. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Parameter key (`parameter_key`) | 127 UTF-8 bytes | `key` | Each parameter key. A refused key is identified by field and byte count and is never echoed. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Parameter value (`parameter_value`) | 383 UTF-8 bytes | `value`, with `parameter_key` | Each parameter value. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Query operation (`query_operation`) | 127 UTF-8 bytes | `sandbox_check.operation`, with `step_id` and `step_index` | Each `sandbox_check.operation`, also echoed per step in the reply. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Query filter value (`query_filter_value`) | 511 UTF-8 bytes | `sandbox_check.filter.value`, with `step_id` and `step_index` | Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Probe filter and attempt labels (`probe_plan_label`) | 127 UTF-8 bytes | `sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index` | Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Specimen ID (`specimen_id`) | 255 UTF-8 bytes | `specimen_id` | The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Request labels (`request_label`) | 63 UTF-8 bytes | `run_kind` or `policy.format` | Each of `run_kind` and `policy.format`. A refused `run_kind` is omitted and a refused format reads `unknown`. Excess returns `bad_request` with `admission_failure`. | Fixed. |
+| Test-seam executable paths (`test_override_path`) | 1,023 UTF-8 bytes | `_test_overrides.worker_executable_path` or `_test_overrides.validator_executable_path` | Each of `_test_overrides.worker_executable_path` and `_test_overrides.validator_executable_path`. Every path that fails byte or NUL admission is omitted from a refusal's `test_overrides`, even when another field is refused first. Excess returns `bad_request` with `admission_failure`. | Fixed. |
 
 ### Execution budgets
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Initial ready-byte polling budget. Expiry alone does not abort: the host still checks shared-memory publication. | Production default; test-only controls are not a public tuning interface. |
-| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal host polling budget from the end of the ready-byte wait until done. Synchronous validator work is outside this count; policy transfer before polling and scheduler delays are separate. The worker uses a separate local active-time budget for exec attempts. Expiry can trigger worker cleanup and runner_timeout with partial evidence. The exec budget is configured below this window but does not guarantee an end-to-end deadline. | Production default; test-only controls are not a public tuning interface. |
-| Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Polling grace after the host requests exit. Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported. | Production default; test-only controls are not a public tuning interface. |
-| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement. Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host. | Production default and internal test equipment; not a public CLI tuning interface. |
-| Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. | Production default and internal test equipment; not a public CLI tuning interface. |
-| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective _test_overrides.validator_io_timeout_ms. Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply. | Production default and internal test equipment; not a public CLI tuning interface. |
-| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. Retains received verdicts and records an I/O timeout; cleanup follows. | Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results. |
-| Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Polling grace after closing validator pipes. Expiry triggers a SIGKILL attempt, then reaping; failures remain reported. | Production default; test-only controls are not a public tuning interface. |
-| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped. | Production default; test-only controls are not a public tuning interface. |
-| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Local CLOCK_MONOTONIC active time starting before worker setup. Only the interval returned by the release barrier is excluded. An absolute cutoff is passed to exec attempts; this is not a reconstruction of the host polling clock. An exhausted budget refuses spawn with exec_failed and ETIMEDOUT, no child identity and no sandbox attribution. Clock failure before spawn refuses the attempt; clock failure after spawn triggers cleanup and is retained as an observation error. Blocking spawn and non-exec operations are not preemptible here. | Production default leaves a nominal 5,000 ms margin below worker_sentinel_wait. Internal test equipment may shorten it independently; the specimen worker_timeout_ms override does not move it. |
-| Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Local monotonic observation window for nonblocking waitpid after exec observation stops. Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling. | Fixed; no public override. |
-| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms. An expired wait yields xpc_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
-| Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait. A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery. | Fixed; no public override. Nothing is awaited when the call issued no bootout. |
+| Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
+| Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
+| Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
+| Worker release wait (`worker_proceed_wait`) | 60,000 milliseconds | Elapsed monotonic deadline for worker release after successful policy application. Expiry or clock failure records a proceed failure with no attempts. | Fixed. |
+| Nominal release margin (`validator_release_margin`) | 5,000 milliseconds | Informative allowance between the validator budgets and worker release wait. No separate timeout or refusal occurs at this value. | Not enforced; no flag. |
+| Validator I/O test override floor (`validator_io_override_floor`) | 50 milliseconds | Minimum effective `_test_overrides.validator_io_timeout_ms`. Smaller supplied values use 50 ms; there is no ceiling. The reply mirrors the supplied value. This changes only the validator I/O deadline; a longer value can outlast `worker_proceed_wait` without restoring expired attempts. | Fixed. |
+| Validator I/O deadline (`validator_io_wait`) | 30,000 milliseconds | Default elapsed monotonic deadline for validator query delivery and verdict collection. Received verdicts survive an I/O timeout; cleanup results remain reported. | Fixed. |
+| Validator exit grace (`validator_exit_grace`) | 1,000 milliseconds | Nominal wait for validator exit after collection closes. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
+| Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Elapsed monotonic deadline after successful spawn, limited by the remaining `exec_attempt_budget`. Expiry fails the attempt while preserving any observed natural exit code. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped. | Fixed. |
+| Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Elapsed monotonic budget shared by exec steps, including worker setup and intervening work but excluding the worker release wait. Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A clock failure refuses spawn or leaves an observation error after spawn. Blocking spawn and non-exec operations may outlast this allowance. | Fixed. |
+| Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Elapsed monotonic allowance to confirm an exec child's exit after observation ends. Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
+| Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
+| Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
 
 ### Queries and transport
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line. An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB. | Fixed; no public override. |
-| Synthesized maximal reply (`runner_reply_maximum`) | 24,825,335 bytes | Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. | Recomputed by runner_unit; edit the manifest when the synthesizer's number moves. |
-| Runner client output (`controller_output`) | 75,497,472 bytes | Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override. |
-| Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap. One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation. | Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. |
-| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
-| Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
-| Log observer stderr (`log_observer_stderr`) | 131,072 bytes | Raw bytes read from observer stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation. | Fixed; no public override. |
-| Observer JSON structure (`log_reply_structure`) | 262,144 items | Opening object/array delimiters, commas and colons outside quoted strings, counted before allocating a JSON tree. Excess retains bounded raw diagnostic text and withholds parsing and correlation. | Fixed; no public override. |
-| Observer echoed metadata (`log_observer_metadata`) | 4,096 UTF-8 bytes | Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID. Observer rejects excess before launching log show; controller also rejects oversized reply metadata. | Fixed; no public override. |
-| Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Per stdout or stderr stream captured from sbpl-check. Byte prefix before lossy text decoding; independent of the runner reply budget. Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed; no public override. |
-| Rejected validator frame context (`validator_fault_context`) | 256 bytes | Raw prefix of the first rejected frame, before base64 encoding. The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss. | Fixed; no public override. |
+| Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
+| Informative reply size bound (`runner_reply_maximum`) | 24,825,335 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Runner client output (`controller_output`) | 75,497,472 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
+| Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
+| Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
+| Log show stderr (`log_show_stderr`) | 131,072 bytes | Raw bytes from `log show` stderr, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
+| Log observer stderr (`log_observer_stderr`) | 131,072 bytes | Raw bytes from observer stderr, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
+| Observer JSON structure (`log_reply_structure`) | 262,144 items | Opening object/array delimiters, commas and colons outside quoted strings in the observer reply. Excess retains bounded raw diagnostic text with unavailable parsing and correlation. | Fixed. |
+| Observer echoed metadata (`log_observer_metadata`) | 4,096 UTF-8 bytes | Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID. Oversized arguments are rejected; oversized reply metadata leaves correlation unavailable. | Fixed. |
+| Policy helper output (`policy_helper_output`) | 8,388,608 bytes | Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Fixed. |
+| Rejected validator frame context (`validator_fault_context`) | 256 bytes | Retained prefix of the first rejected validator frame, measured before base64 encoding. `frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained. | Fixed. |
 
 ### Evidence capture
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition. Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection. | Fixed; no public override. window.pad_seconds records the pad. |
-| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default. The reply records the actual cost as data.sandbox_log_capture.supervision.elapsed_ms at the observer boundary and observer.data.collection.elapsed_ms for the log child. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. | Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture. |
-| Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed; no public override. |
-| Log report reserve (`log_report_reserve`) | 1,000 milliseconds | Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged. Leaves time for an intact observer reply containing the inner cutoff and retained diagnostics. Cleanup and scheduling can consume this reserve; an interrupted report retains only bounded transport diagnostics. An allowance at or below the reserve leaves no time for the query itself. | Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection. |
-| Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed; no public override. |
-| Candidate associations (`log_candidate_count`) | 4,096 items | Total event-to-step candidates, including ambiguous matches. Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic. | Fixed; no public override. |
-| Candidate allocation allowance (`log_candidate_bytes`) | 8,388,608 bytes | Conservative encoded/allocation charge per candidate: six times the sum of twice the step-ID length plus path, operation, kind and action lengths, plus 1,024 bytes of structure. Excess discards all associations and withholds correlation. | Fixed; no public override. |
-| Steps admitted to correlation (`log_correlation_steps`) | 256 items | Each of the submitted plan and returned step arrays. Excess withholds log correlation; execution evidence is unchanged. | Fixed; no public override. |
-| Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained bytes in each stdout/stderr text buffer, excluding NUL. A truncation marker occupies part of this space on overflow. Additional output is drained but not retained. | Fixed; no public override. |
-| Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Diagnostic payload bytes, excluding NUL. The primary diagnostic is bounded and reports retained length and truncation state; it is not a transcript. | Fixed; no public override. |
-| Optional compiled-object capture (`applied_profile`) | 1,048,576 bytes | Raw bytecode bytes for a nonempty supported single-profile (type 0) object, before base64 encoding. Oversize or unsupported objects leave capture unavailable without preventing policy application. | Fixed; no public override. |
-| Worker observed path (`observed_path`) | 1,023 bytes | Per-step C path-buffer payload bytes, excluding NUL. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed; no public override. |
-| Worker attempt error text (`attempt_error`) | 255 bytes | Per-step error-buffer payload bytes, excluding NUL. Error prose is bounded; structured result/status fields remain separate. | Fixed; no public override. |
+| Deny-log scan padding per endpoint (`log_window_pad`) | 2 seconds | Padding at each end of the runner client's span after rounding outward to whole seconds. The scan covers `floor(start) - 2 seconds` through `ceil(end) + 2 seconds`, including both pads. Raw client timestamps are unchanged; reversed endpoints prevent collection. | Fixed; `window.pad_seconds` records it. |
+| Default log collection timeout (`log_collection_timeout`) | 10,000 milliseconds | Default elapsed monotonic allowance for log collection, including startup and processing. Actual costs appear in `data.sandbox_log_capture.supervision.elapsed_ms` and `observer.data.collection.elapsed_ms`. Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. Standalone `show` uses the same default. | Flag `--log-timeout-ms`: a positive integer of milliseconds that fits a monotonic deadline plus the cleanup grace, validated before the runner starts even with `--no-log-capture`. |
+| Log cleanup grace (`log_cleanup_grace`) | 1,000 milliseconds | Elapsed monotonic allowance for observing log-process cleanup after collection stops. Early failures start the grace immediately. The allowance expires no later than the original collection deadline plus this grace. Unconfirmed reaping or group absence is reported; retries never restart the allowance. | Fixed. |
+| Log report reserve (`log_report_reserve`) | 1,000 milliseconds | Allowance withheld from the log query within `log_collection_timeout`. The observer's report can arrive after the query times out. Collection allowances at or below this reserve leave no query time. The reserve does not guarantee an intact report; interruption leaves bounded transport diagnostics. | Fixed; `supervision.reserve_ms` records 0 at the observer boundary and this value under `observer.data.collection`. |
+| Parsed deny events (`log_deny_events`) | 8,192 records | Parsed deny events in show output and the derived controller array. An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive. | Fixed. |
+| Candidate associations (`log_candidate_count`) | 4,096 items | Total event-to-step candidates, including ambiguous matches. Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic. | Fixed. |
+| Candidate allocation allowance (`log_candidate_bytes`) | 8,388,608 bytes | Total candidate charge: six times the sum of twice the step-ID byte length plus the path, operation, kind and action byte lengths, plus 1,024 bytes per candidate. Excess reports the `association_bytes` cutoff, discards associations and withholds correlation. | Fixed. |
+| Steps admitted to correlation (`log_correlation_steps`) | 256 items | Each of the submitted plan and returned step arrays. Excess withholds log correlation; execution evidence is unchanged. | Fixed. |
+| Exec child output per stream (`exec_stream`) | 1,023 bytes | Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance. Excess output is not retained. | Fixed. |
+| Primary worker diagnostic (`worker_diagnostic`) | 4,095 bytes | Retained primary diagnostic bytes. The reply reports retained length and truncation state; this is not a complete transcript. | Fixed. |
+| Optional compiled-object capture (`applied_profile`) | 1,048,576 bytes | Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding. Oversized or unsupported objects leave capture unavailable without preventing policy application. | Fixed. |
+| Worker observed path (`observed_path`) | 1,023 bytes | Retained bytes in each worker-observed path. Path observation can be absent or bounded; a host-side path diagnostic is a separate observation. | Fixed. |
+| Worker attempt error text (`attempt_error`) | 255 bytes | Retained bytes in each worker attempt error message. Error text is bounded; structured result and status fields remain separate. | Fixed. |
 
 ### Diagnostic helpers
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
-| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed; no public override. |
-| sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file. Stops inventory expansion on that branch and marks import_inventory.truncated. Does not impose this depth on libsandbox compilation. | Fixed; no public override. |
-| sbpl-check import inventory count (`helper_import_count`) | 64 records | Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated. Stops further inventory traversal and marks import_inventory.truncated. Does not impose this count on libsandbox compilation. | Fixed; no public override. |
-| Log observer stream text (`observer_stream_text`) | 1,048,576 bytes | Streaming helper mode only (--duration or --follow): retained nonempty, non-prelude log lines with one LF per line. Only whole lines that fit are retained. The first overflowing line sets log_truncated and stops text accumulation. Deny-event arrays and JSONL emission continue separately; this is not a memory or total-report cap. The normal CLI log-show path does not use this inner cap. | Fixed byte cap; --no-log-capture disables normal CLI log collection, not this helper capability. |
+| sbpl-check source admission (`helper_source`) | 4,194,304 bytes | Top-level source bytes read by the diagnostic helper; not the runner policy cap. policy_too_large with null compile and import_inventory groups; no compile verdict. | Fixed. |
+| sbpl-check import inventory depth (`helper_import_depth`) | 8 levels | Import depth in the helper inventory, starting at 0. Depth 8 is the first depth replaced by a depth-limit diagnostic. The affected branch stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
+| sbpl-check import inventory count (`helper_import_count`) | 64 records | Import-inventory records, including unresolved and error records. Repeated files or names are listed once. Further inventory stops and `import_inventory.truncated` is set. This does not limit compilation of imports. | Fixed. |
+| Log observer stream text (`observer_stream_text`) | 1,048,576 bytes | Streaming helper mode only (`--duration` or `--follow`): retained nonempty log lines after the prelude, with one LF per line. Only whole lines that fit are retained. The first overflowing line sets `log_truncated` and ends text retention. Deny-event arrays and JSONL emission continue. The normal CLI log-show path does not use this cap. | Fixed. `--no-log-capture` disables the CLI's log collection, not this helper mode. |
 
 <!-- END GENERATED LIMITS -->
+
+### Interactions that matter
+
+- Budgets nest, and one flag changes one of them. `--timeout-ms` sets
+  `client_rpc_wait`, which bounds only the client's wait. The worker polling
+  window `worker_sentinel_wait`, the validator deadline `validator_io_wait`,
+  the release wait `worker_proceed_wait` and the exec budgets keep their own
+  values, so no number here is an end-to-end runtime. The reply records the
+  client span in `data.runner_client.started_at_unix_ms` and
+  `ended_at_unix_ms`; an expired client wait yields `xpc_timeout`.
+- Output budgets mark, they never silently cut. Each receiver reports the
+  budget it applied in `capture_limit_bytes` (`controller_output`,
+  `policy_helper_output`). Output beyond it is marked truncated, and a
+  truncated JSON stream is not parsed as a reply.
+- Log limits change evidence only. The byte caps on `log show` and the
+  observer (`log_show_stdout`, `log_show_stderr`, `log_observer_output`,
+  `log_observer_stderr`) and the event and candidate counts (`log_deny_events`,
+  `log_candidate_count`, `log_candidate_bytes`) are fixed; when one is
+  exceeded, the capture keeps a bounded prefix and withholds correlation.
+  `--log-timeout-ms` changes only the time allowance, `log_collection_timeout`.
+  Attempt results and `sandbox_check` verdicts never change because of a log
+  limit, and the plan's step count does not bound how much the OS log holds.
+- One refusal names the first failing field. When a specimen exceeds several
+  admission limits, the order is: top-level metadata (`specimen_id`,
+  `request_label`) and `test_override_path` executable overrides, then plan
+  and parameter counts (`probe_steps`, `policy_parameters`), then worker strings
+  (`policy_source`, `step_id`, `attempt_target`, exec arguments, parameter keys
+  and values), then host query
+  fields (`query_operation`, `query_filter_value`, `probe_plan_label`). A
+  refused value is never echoed shortened: an oversized `specimen_id` is
+  replaced by `<admission_refused>`, an oversized `run_kind` is omitted and an
+  oversized `policy.format` reads `unknown`.
+- The `policy_source`, `parameter_key`, `parameter_value`, `step_id`,
+  `attempt_target`, `exec_argument`, `query_operation`, `query_filter_value`
+  and `test_override_path` limits also reject embedded NUL. For a string within
+  its byte capacity, that refusal reports unit `nul_bytes`, maximum 0 and the
+  same field. Metadata and labels (`specimen_id`, `request_label`,
+  `probe_plan_label`) permit escaped NUL at this gate; their
+  normal meaning rules still apply. Within the capacities above, other control
+  characters and valid Unicode survive request transport unchanged.
+- Exec steps share a budget and each child has a deadline. `exec_attempt_budget`
+  bounds all exec steps of a plan together and `exec_child_wait` bounds each
+  child; neither has a flag. A step the exhausted budget refuses reports
+  `exec_failed` with `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A
+  child cut by its deadline fails the attempt but keeps any exit code that was
+  observed. A worker that dies first leaves the step's exec details
+  unpublished, which establishes neither that no child spawned nor that cleanup
+  succeeded.
+- What the deny-log capture covers. The requested window is the runner
+  client's own span, rounded outward to whole seconds and padded by
+  `log_window_pad` at each end; `window.start`, `window.end` and
+  `window.pad_seconds` record it, and reversed wall-clock endpoints prevent the
+  scan. Captured records name the worker's process name and PID. Denials inside
+  exec children and prediction queries contribute no captured records. A
+  missing record never establishes that an operation was allowed.
 
 <!-- END COPIED LIMITS -->
 

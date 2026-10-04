@@ -42,6 +42,7 @@ GUIDE_NAME = "PolicyWitness.md"
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
 COMPARISON_KEYS = ("observation", "observation_basis", "operation_relation", "target_relation", "order", "limitations")
+CONTROL_WORDS = ("Fixed", "Flag `--", "Derived", "Not enforced")
 SECTIONS = {
     "admission": "Specimen admission",
     "execution": "Execution budgets",
@@ -70,7 +71,11 @@ def load_limits(path: Path, root: Path = ROOT):
     fields = {"id", "section", "title", "value", "unit", "counting", "effect",
               "control", "sources", "checks", "behavior"}
     for item in data["limits"]:
-        if set(item) != fields:
+        # Admission rows also name the field a refusal reports, so a reader can
+        # go from `admission_failure.field` to the row. Other sections have no
+        # specimen-admission lookup, so they must not carry one.
+        expected_fields = fields | {"refusal_field"} if item.get("section") == "admission" else fields
+        if set(item) != expected_fields:
             raise ValueError(f"unexpected/missing fields: {item.get('id')}")
         ident = item["id"]
         if not re.fullmatch(r"[a-z][a-z0-9_]*", ident) or ident in seen:
@@ -82,9 +87,13 @@ def load_limits(path: Path, root: Path = ROOT):
             raise ValueError(f"{ident}: unknown section")
         if item["unit"] not in {"UTF-8 bytes", "bytes", "items", "milliseconds", "seconds", "levels", "records"}:
             raise ValueError(f"{ident}: unknown unit")
-        for key in ("title", "counting", "effect", "control", "behavior"):
+        for key in ("title", "counting", "effect", "control", "behavior") + (("refusal_field",) if "refusal_field" in item else ()):
             if not isinstance(item[key], str) or not item[key].strip():
                 raise ValueError(f"{ident}: empty {key}")
+        # The Control column uses four words the guide defines; dev-only
+        # remarks belong in `behavior`, which only LIMITS.md renders.
+        if not item["control"].startswith(CONTROL_WORDS):
+            raise ValueError(f"{ident}: control must start with one of {CONTROL_WORDS}")
         for key in ("sources", "checks"):
             if not isinstance(item[key], list) or not item[key]:
                 raise ValueError(f"{ident}: missing {key}")
@@ -171,17 +180,20 @@ def reference(ref):
 
 
 def render(limits):
-    lines = [START, "", "Values are maxima unless labelled as defaults or fixed allowances."]
+    lines = [START]
     for section, title in SECTIONS.items():
-        lines += ["", f"## {title}", "", "| Limit | Value | Counting and consequence | Control |",
-                  "| --- | --- | --- | --- |"]
+        refuses = section == "admission"
+        columns = ["Limit", "Value"] + (["Refusal names"] if refuses else []) + ["Counting and consequence", "Control"]
+        lines += ["", f"## {title}", "", "| " + " | ".join(columns) + " |",
+                  "| " + " | ".join("---" for _ in columns) + " |"]
         for item in limits:
             if item["section"] != section:
                 continue
-            lines.append("| " + " | ".join(map(cell, [
-                f"{item['title']} (`{item['id']}`)",
-                f"{item['value']:,} {item['unit']}",
-                item['counting'] + " " + item['effect'], item['control']])) + " |")
+            cells = [f"{item['title']} (`{item['id']}`)", f"{item['value']:,} {item['unit']}"]
+            if refuses:
+                cells.append(item["refusal_field"])
+            cells += [item['counting'] + " " + item['effect'], item['control']]
+            lines.append("| " + " | ".join(map(cell, cells)) + " |")
     return "\n".join(lines) + "\n\n" + END
 
 

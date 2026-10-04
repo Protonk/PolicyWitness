@@ -7,9 +7,10 @@
       "title": "Policy source",
       "value": 262143,
       "unit": "UTF-8 bytes",
-      "counting": "Final SBPL source after augments; excludes terminating NUL. Imported file contents are not added to this count.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`policy.sbpl_source`",
+      "counting": "Final SBPL source after augments. Imported file contents are not added to this count.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -45,9 +46,10 @@
       "title": "Probe steps",
       "value": 256,
       "unit": "items",
-      "counting": "Entries in probe_plan.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`probe_plan`",
+      "counting": "Entries in `probe_plan`.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -83,9 +85,10 @@
       "title": "Policy parameters",
       "value": 1024,
       "unit": "items",
-      "counting": "Entries in the policy parameter dictionary.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`policy.params`",
+      "counting": "Entries in `policy.params`.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -121,9 +124,10 @@
       "title": "Step ID",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "counting": "Each step_id, excluding terminating NUL. A refused step ID is identified by step_index only, never echoed.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`step_id`, with `step_index`",
+      "counting": "Each `step_id`. A refused ID is identified by `step_index` and is never echoed.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -159,9 +163,10 @@
       "title": "Attempt target",
       "value": 511,
       "unit": "UTF-8 bytes",
-      "counting": "Each attempt target (path, service or sysctl name), excluding terminating NUL. Also the exec argv[0].",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`target`, with `step_id` and `step_index`",
+      "counting": "Each attempt target (path, service or sysctl name). For exec, this is also argument zero.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -197,9 +202,10 @@
       "title": "Supplied exec arguments",
       "value": 15,
       "unit": "items",
-      "counting": "Arguments supplied in attempt.args; the target occupies the additional argv[0] slot.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`args` with unit `items`, with `step_id` and `step_index`",
+      "counting": "Arguments supplied in `attempt.args`; the exec target is the additional argument zero.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -235,9 +241,10 @@
       "title": "Each supplied exec argument",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "counting": "Each supplied argument, excluding terminating NUL; the target has its own larger limit.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index`",
+      "counting": "Each supplied exec argument; the target has its own larger limit.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -273,9 +280,10 @@
       "title": "Parameter key",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "counting": "Each key, excluding terminating NUL. A refused key is identified by field and byte count only, never echoed.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`key`",
+      "counting": "Each parameter key. A refused key is identified by field and byte count and is never echoed.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -311,9 +319,10 @@
       "title": "Parameter value",
       "value": 383,
       "unit": "UTF-8 bytes",
-      "counting": "Each value, excluding terminating NUL.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`value`, with `parameter_key`",
+      "counting": "Each parameter value.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -349,9 +358,10 @@
       "title": "Query operation",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "counting": "Each sandbox_check.operation, excluding terminating NUL. Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`sandbox_check.operation`, with `step_id` and `step_index`",
+      "counting": "Each `sandbox_check.operation`, also echoed per step in the reply.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -379,7 +389,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
+      "behavior": "Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
     },
     {
       "id": "query_filter_value",
@@ -387,9 +397,10 @@
       "title": "Query filter value",
       "value": 511,
       "unit": "UTF-8 bytes",
-      "counting": "Each sandbox_check.filter.value when present, for every filter kind including none and unrecognized kinds, excluding terminating NUL. Independent of the attempt target: a step may query one path and attempt another, and each string is bounded on its own.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`sandbox_check.filter.value`, with `step_id` and `step_index`",
+      "counting": "Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -425,9 +436,10 @@
       "title": "Probe filter and attempt labels",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "counting": "Each sandbox_check.filter.kind, attempt.kind and attempt.action, excluding terminating NUL. Unknown labels within the bound are refused during meaning validation before children.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index`",
+      "counting": "Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -463,9 +475,10 @@
       "title": "Specimen ID",
       "value": 255,
       "unit": "UTF-8 bytes",
-      "counting": "The specimen_id string, excluding terminating NUL. Echoed once per reply; a refused ID is replaced by the placeholder <admission_refused>.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`specimen_id`",
+      "counting": "The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -501,9 +514,10 @@
       "title": "Request labels",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "counting": "Each of run_kind and policy.format, excluding terminating NUL. Echoed once per reply; a refused run_kind is omitted and a refused format reads unknown.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`run_kind` or `policy.format`",
+      "counting": "Each of `run_kind` and `policy.format`. A refused `run_kind` is omitted and a refused format reads `unknown`.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -539,9 +553,10 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "counting": "Each of _test_overrides.worker_executable_path and validator_executable_path, excluding terminating NUL. Mirrored back in test_overrides and named in dlopen and spawn diagnostics; every invalid path is independently dropped from a refusal mirror, even if another field is reported first.",
-      "effect": "Excess rejects the specimen after decoding and before semantic validation or process work: bad_request with host-owned admission_failure.",
-      "control": "Fixed; no public override.",
+      "refusal_field": "`_test_overrides.worker_executable_path` or `_test_overrides.validator_executable_path`",
+      "counting": "Each of `_test_overrides.worker_executable_path` and `_test_overrides.validator_executable_path`. Every path that fails byte or NUL admission is omitted from a refusal's `test_overrides`, even when another field is refused first.",
+      "effect": "Excess returns `bad_request` with `admission_failure`.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -569,7 +584,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
+      "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
     },
     {
       "id": "worker_ready_wait",
@@ -577,9 +592,9 @@
       "title": "Worker readiness hint wait",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Initial ready-byte polling budget.",
-      "effect": "Expiry alone does not abort: the host still checks shared-memory publication.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "counting": "Nominal wait for the worker readiness hint.",
+      "effect": "Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -598,7 +613,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Normal readiness is tested; expiry without aborting is source-inspected."
+      "behavior": "runCWorker counts ready-byte polling iterations, then checks shared-memory publication even if the hint was not received. Normal readiness is tested; expiry without aborting is source-inspected."
     },
     {
       "id": "worker_sentinel_wait",
@@ -606,9 +621,9 @@
       "title": "Worker publication wait",
       "value": 120000,
       "unit": "milliseconds",
-      "counting": "Nominal host polling budget from the end of the ready-byte wait until done. Synchronous validator work is outside this count; policy transfer before polling and scheduler delays are separate. The worker uses a separate local active-time budget for exec attempts.",
-      "effect": "Expiry can trigger worker cleanup and runner_timeout with partial evidence. The exec budget is configured below this window but does not guarantee an end-to-end deadline.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "counting": "Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit.",
+      "effect": "Expiry can yield `runner_timeout` with partial evidence and reported cleanup results.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -627,7 +642,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Deadline and partial-publication paths use shortened test budgets; the production duration is source-inspected."
+      "behavior": "runCWorker counts polling iterations until done. Policy transfer precedes polling; synchronous validator work is outside the count, and scheduler delays add time. The worker uses a separate local active-time exec budget, configured below this window without an end-to-end guarantee. Deadline and partial-publication paths use shortened test budgets; the production duration is source-inspected."
     },
     {
       "id": "worker_exit_grace",
@@ -635,9 +650,9 @@
       "title": "Worker exit grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Polling grace after the host requests exit.",
-      "effect": "Expiry triggers a SIGKILL attempt, then reaping. Kill/reap failures remain reported.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "counting": "Nominal wait for worker exit after an exit request.",
+      "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -656,7 +671,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Deadline/cleanup paths use controlled children; the production duration is source-inspected."
+      "behavior": "runCWorker counts polling iterations after storing exit_requested, then attempts SIGKILL and reaping. Deadline/cleanup paths use controlled children; the production duration is source-inspected."
     },
     {
       "id": "worker_proceed_wait",
@@ -664,9 +679,9 @@
       "title": "Worker release wait",
       "value": 60000,
       "unit": "milliseconds",
-      "counting": "Elapsed CLOCK_MONOTONIC time after successful apply, before host release acknowledgement.",
-      "effect": "Expiry or clock failure publishes a proceed failure and done with no attempts. The existing exit-request spin can outlive a dead host.",
-      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "counting": "Elapsed monotonic deadline for worker release after successful policy application.",
+      "effect": "Expiry or clock failure records a proceed failure with no attempts.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -695,7 +710,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+      "behavior": "wait_for_proceed uses CLOCK_MONOTONIC before acknowledging host release. Failure publishes done, then the exit-request spin can outlive a dead host. Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
     },
     {
       "id": "validator_release_margin",
@@ -703,9 +718,9 @@
       "title": "Nominal release margin",
       "value": 5000,
       "unit": "milliseconds",
-      "counting": "Configuration allowance for host observation, setup, decoding and scheduling, not a separately enforced timer.",
-      "effect": "Production defaults satisfy 60000 > 30000 + 1000 + 5000. This guard does not cover test overrides or bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup.",
-      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "counting": "Informative allowance between the validator budgets and worker release wait.",
+      "effect": "No separate timeout or refusal occurs at this value.",
+      "control": "Not enforced; no flag.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -719,7 +734,7 @@
           "kind": "value"
         }
       ],
-      "behavior": "Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
+      "behavior": "validatorReleaseMarginMs allows for host observation, setup, decoding and scheduling. Production defaults satisfy 60000 > 30000 + 1000 + 5000. This configuration guard excludes test overrides and does not bound final blocking reap, host descheduling, prompt replies or eventual orphan cleanup. Short-budget, delayed-release, clock-failure and delayed-cleanup controls establish fail-closed behavior; production duration is value-checked."
     },
     {
       "id": "validator_io_override_floor",
@@ -727,9 +742,9 @@
       "title": "Validator I/O test override floor",
       "value": 50,
       "unit": "milliseconds",
-      "counting": "Minimum effective _test_overrides.validator_io_timeout_ms.",
-      "effect": "Changes only the real validator I/O deadline, with no ceiling. Over-budget values may intentionally outlast the worker release wait; expiry cannot revive attempts. The supplied value is mirrored in every reply.",
-      "control": "Production default and internal test equipment; not a public CLI tuning interface.",
+      "counting": "Minimum effective `_test_overrides.validator_io_timeout_ms`.",
+      "effect": "Smaller supplied values use 50 ms; there is no ceiling. The reply mirrors the supplied value. This changes only the validator I/O deadline; a longer value can outlast `worker_proceed_wait` without restoring expired attempts.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift",
@@ -751,9 +766,9 @@
       "title": "Validator I/O deadline",
       "value": 30000,
       "unit": "milliseconds",
-      "counting": "Elapsed CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it.",
-      "effect": "Retains received verdicts and records an I/O timeout; cleanup follows.",
-      "control": "Production default; _test_overrides.validator_io_timeout_ms replaces this deadline, floored at 50 ms without a ceiling and mirrored in results.",
+      "counting": "Default elapsed monotonic deadline for validator query delivery and verdict collection.",
+      "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -772,7 +787,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "I/O deadline and partial-evidence paths use shortened budgets; the production duration is source-inspected."
+      "behavior": "runValidator uses a CLOCK_MONOTONIC deadline for nonblocking probe writes and verdict reads; wall-clock changes cannot extend it. The `_test_overrides.validator_io_timeout_ms` test seam replaces this deadline, floored at 50 ms without a ceiling and mirrored in results; production has no flag. I/O deadline and partial-evidence paths use shortened budgets; the production duration is source-inspected."
     },
     {
       "id": "validator_exit_grace",
@@ -780,9 +795,9 @@
       "title": "Validator exit grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Polling grace after closing validator pipes.",
-      "effect": "Expiry triggers a SIGKILL attempt, then reaping; failures remain reported.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "counting": "Nominal wait for validator exit after collection closes.",
+      "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -801,7 +816,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Cleanup paths use controlled children; the production duration is source-inspected."
+      "behavior": "runValidator closes the validator pipes and counts exit-grace polling iterations before attempting SIGKILL and reaping. Cleanup paths use controlled children; the production duration is source-inspected."
     },
     {
       "id": "exec_child_wait",
@@ -809,9 +824,9 @@
       "title": "Exec child deadline",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget.",
-      "effect": "EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped.",
-      "control": "Production default; test-only controls are not a public tuning interface.",
+      "counting": "Elapsed monotonic deadline after successful spawn, limited by the remaining `exec_attempt_budget`.",
+      "effect": "Expiry fails the attempt while preserving any observed natural exit code. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -830,7 +845,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
+      "behavior": "The absolute child deadline and local exec plan cutoff are compared without restarting the plan budget after spawn. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even after leader exit. Live controls close streams while both processes remain alive and exit the leader while a descendant retains streams. Independent socket credentials, OS exit events and file effects establish the behavior."
     },
     {
       "id": "exec_attempt_budget",
@@ -838,9 +853,9 @@
       "title": "Exec attempt budget",
       "value": 115000,
       "unit": "milliseconds",
-      "counting": "Local CLOCK_MONOTONIC active time starting before worker setup. Only the interval returned by the release barrier is excluded. An absolute cutoff is passed to exec attempts; this is not a reconstruction of the host polling clock.",
-      "effect": "An exhausted budget refuses spawn with exec_failed and ETIMEDOUT, no child identity and no sandbox attribution. Clock failure before spawn refuses the attempt; clock failure after spawn triggers cleanup and is retained as an observation error. Blocking spawn and non-exec operations are not preemptible here.",
-      "control": "Production default leaves a nominal 5,000 ms margin below worker_sentinel_wait. Internal test equipment may shorten it independently; the specimen worker_timeout_ms override does not move it.",
+      "counting": "Elapsed monotonic budget shared by exec steps, including worker setup and intervening work but excluding the worker release wait.",
+      "effect": "Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. A clock failure refuses spawn or leaves an observation error after spawn. Blocking spawn and non-exec operations may outlast this allowance.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -868,7 +883,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, clock failures and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
+      "behavior": "attempt_budget_start runs before worker setup; attempt_budget_exclude removes only the interval returned by the release barrier. Exec attempts receive an absolute cutoff independent of the host polling clock. Clock failure after spawn triggers cleanup. Blocking spawn and non-exec operations are not preemptible here. The production default sits a nominal 5,000 ms below worker_sentinel_wait; test equipment may shorten it independently and the specimen worker_timeout_ms override does not move it. Compiled values agree with the host configuration. Deterministic native controls vary spawn latency, release exclusion, intervening work, exact exhaustion, clock failures and cleanup. Real short-budget plans preserve completed prefix and trailing file effects through host assembly and serialization."
     },
     {
       "id": "exec_reap_grace",
@@ -876,9 +891,9 @@
       "title": "Exec child reap grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Local monotonic observation window for nonblocking waitpid after exec observation stops.",
-      "effect": "Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling.",
-      "control": "Fixed; no public override.",
+      "counting": "Elapsed monotonic allowance to confirm an exec child's exit after observation ends.",
+      "effect": "Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -897,7 +912,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Controlled pending/EINTR waits exhaust the grace; kill, wait and clock failures retain missing status. Every wait is required to be nonblocking."
+      "behavior": "Final reaping uses nonblocking waitpid in a local monotonic observation window. Failed group termination permits only an immediate nonblocking reap. The allowance does not bound native syscall duration or host descheduling. Controlled pending/EINTR waits exhaust the grace; kill, wait and clock failures retain missing status. Every wait is required to be nonblocking."
     },
     {
       "id": "client_rpc_wait",
@@ -905,9 +920,9 @@
       "title": "Runner RPC wait",
       "value": 240000,
       "unit": "milliseconds",
-      "counting": "Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms.",
-      "effect": "An expired wait yields xpc_timeout; it does not expand the inner worker or validator budgets.",
-      "control": "Default; --timeout-ms changes only this wait and floors its value at 1 ms.",
+      "counting": "Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`.",
+      "effect": "An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets.",
+      "control": "Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted.",
       "sources": [
         {
           "path": "controller/src/run_flow.rs",
@@ -942,9 +957,9 @@
       "title": "Runner removal teardown wait",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait.",
-      "effect": "A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery.",
-      "control": "Fixed; no public override. Nothing is awaited when the call issued no bootout.",
+      "counting": "Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait.",
+      "effect": "A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery.",
+      "control": "Fixed. No wait when the removal issued no bootout.",
       "sources": [
         {
           "path": "controller/src/runner_manager.rs",
@@ -963,7 +978,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
+      "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
     },
     {
       "id": "validator_query_payload",
@@ -971,9 +986,9 @@
       "title": "Validator query payload",
       "value": 65534,
       "unit": "bytes",
-      "counting": "Serialized JSON bytes for one probe, before the LF delimiter. Escaping counts. The fixed 65536-byte buffer retains the 65534-byte payload allowance; the reader counts physical bytes, including raw NUL, and drains the rest of an overlong line.",
-      "effect": "An overlong line produces one parse_error with no step ID; that prediction is unavailable. Later lines can still be processed. Admitted specimens cannot reach it: with the operation and filter value admission-bounded, a fully escaped probe line stays a few KiB.",
-      "control": "Fixed; no public override.",
+      "counting": "Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size.",
+      "effect": "An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/sb_api_validator/sb_api_validator.c",
@@ -1001,17 +1016,17 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact payload boundary, over-limit drain/recovery, valid raw and escaped Unicode, malformed escapes/UTF-8/raw controls and raw-NUL physical framing. Every rejected probe is followed by a valid recovery probe."
+      "behavior": "The fixed 65536-byte buffer allows a 65534-byte payload. The reader counts physical bytes, including raw NUL, and drains an overlong line. Admission bounds on operation and filter value keep a fully escaped probe line to a few KiB. Exact payload boundary, over-limit drain/recovery, valid raw and escaped Unicode, malformed escapes/UTF-8/raw controls and raw-NUL physical framing. Every rejected probe is followed by a valid recovery probe."
     },
     {
       "id": "runner_reply_maximum",
       "section": "transport",
-      "title": "Synthesized maximal reply",
+      "title": "Informative reply size bound",
       "value": 24825335,
       "unit": "bytes",
-      "counting": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions.",
-      "effect": "Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema.",
-      "control": "Recomputed by runner_unit; edit the manifest when the synthesizer's number moves.",
+      "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
+      "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",
+      "control": "Not enforced; it sizes `controller_output`.",
       "sources": [
         {
           "path": "runner/Tests/PWRunnerCoreTests/ReplyMaximumTests.swift",
@@ -1039,7 +1054,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "The synthesizer's value is compared with the manifest; the budget relation is asserted; an injected unclassified key is detected. Live 256-step workloads are measured against this bound."
+      "behavior": "Encoded size, through the production encoder, of the field-complete reply fixture with 256 steps, 256 validator records and disposition entries, every request- or host-derived string at its documented limit and made of U+0001 (six JSON bytes per byte), the largest worker diagnostic, and the largest slash-heavy compiled-profile receipt. An upper bound for the current response schema: fields that cannot co-occur in one run are all present. Composed host path strings allow 1,535 bytes for a resolved parent plus literal leaf and 1,043 bytes for a realpath plus the supported system firmlink prefix; runner_unit checks both expansions. Not enforced anywhere; it derives the runner client budget. A reply string key added to the fixture without a size classification fails runner_unit, so the number cannot silently fall behind the schema. runner_unit recomputes the number; edit the manifest when the synthesizer's value moves. The synthesizer's value is compared with the manifest; the budget relation is asserted; an injected unclassified key is detected. Live 256-step workloads are measured against this bound."
     },
     {
       "id": "controller_output",
@@ -1047,9 +1062,9 @@
       "title": "Runner client output",
       "value": 75497472,
       "unit": "bytes",
-      "counting": "Per stdout or stderr stream captured from the runner client. Byte prefix before lossy text decoding; not an envelope-wide cap.",
-      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
-      "control": "Derived: three times runner_reply_maximum, rounded up to a whole 4 MiB. runner_unit asserts the relation against the compiled Rust constant's documented value; no public override.",
+      "counting": "Captured bytes per stdout or stderr stream from the runner client, before text decoding.",
+      "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "control": "Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag.",
       "sources": [
         {
           "path": "controller/src/utils.rs",
@@ -1073,7 +1088,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Five admitted 256-step CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. runner_unit asserts the derivation against the compiled Rust constant's documented value. Exact prefix and truncation-boundary controls, including small arbitrary budgets and every cut within multibyte scalars. Collection buffers the entire stream first; this is not a memory limit. Five admitted 256-step CLI workloads at the admitted maxima, including the control-character exec workload with 511-byte targets and queries, 63-byte step IDs, maximal metadata and live profile capture, must each stay under runner_reply_maximum; the budget then holds a complete reply with a threefold margin by construction."
     },
     {
       "id": "log_observer_output",
@@ -1081,9 +1096,9 @@
       "title": "Log observer stdout",
       "value": 33554432,
       "unit": "bytes",
-      "counting": "Raw observer stdout bytes, enforced while reading; includes the JSON report and final newline. Independent stderr has its own cap.",
-      "effect": "One extra byte witnesses overflow; retain only the bounded raw prefix without JSON fragment recovery and withhold correlation.",
-      "control": "Fixed. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata.",
+      "counting": "Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap.",
+      "effect": "Overflow retains a bounded raw prefix, with unavailable parsing and correlation.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1112,7 +1127,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under the production default allowance. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
+      "behavior": "The cap is enforced while reading. One extra byte witnesses overflow; no JSON fragments are recovered from the retained prefix. Sized for bounded inner text, duplicated deny lines and parsed raw lines, six-byte JSON escaping, event metadata and reply metadata. Streaming cap controls cover both pipes. A 256-record corpus with 511-byte targets preserves all records and candidate references through parser, supervised receiver, assembly and consumer recovery under the production default allowance. Exact inner stdout/stderr caps with maximum escaping fit the bounded serializer. Interrupted or failed capture changes log evidence only; live volume has no bound derived from step count."
     },
     {
       "id": "log_show_stdout",
@@ -1120,9 +1135,9 @@
       "title": "Log show stdout",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading.",
-      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
-      "control": "Fixed; no public override.",
+      "counting": "Raw bytes from `log show` stdout, before text decoding.",
+      "effect": "Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1141,7 +1156,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+      "behavior": "Raw bytes read from log show stdout, already selected by the OS predicate, before PW decoding, parsing or PID filtering; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
     },
     {
       "id": "log_show_stderr",
@@ -1149,9 +1164,9 @@
       "title": "Log show stderr",
       "value": 131072,
       "unit": "bytes",
-      "counting": "Raw bytes read from log show stderr, before decoding or parsing; enforced while reading.",
-      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
-      "control": "Fixed; no public override.",
+      "counting": "Raw bytes from `log show` stderr, before text decoding.",
+      "effect": "Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1170,7 +1185,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+      "behavior": "Raw bytes read from log show stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
     },
     {
       "id": "log_observer_stderr",
@@ -1178,9 +1193,9 @@
       "title": "Log observer stderr",
       "value": 131072,
       "unit": "bytes",
-      "counting": "Raw bytes read from observer stderr, before decoding or parsing; enforced while reading.",
-      "effect": "One extra byte witnesses overflow; retain only the budgeted prefix, stop collection, clean up and withhold correlation.",
-      "control": "Fixed; no public override.",
+      "counting": "Raw bytes from observer stderr, before text decoding.",
+      "effect": "Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1199,7 +1214,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
+      "behavior": "Raw bytes read from observer stderr, before decoding or parsing; enforced while reading. One extra byte witnesses overflow; only the budgeted prefix is retained. Both stream boundaries are tested at, below and above a substituted small cap, including concurrent stdout/stderr. Counts describe bytes actually read, never the unavailable remainder."
     },
     {
       "id": "log_window_pad",
@@ -1207,9 +1222,9 @@
       "title": "Deny-log scan padding per endpoint",
       "value": 2,
       "unit": "seconds",
-      "counting": "Symmetric padding after flooring the runner client's start and ceiling its end to whole seconds. Allows for differences between the client's wall clock and the archive's displayed event timestamps; does not guarantee delivery or coverage under every clock condition.",
-      "effect": "Queries floor(start) - 2 seconds through ceil(end) + 2 seconds; records in either pad remain eligible for correlation. Raw client milliseconds are unchanged; reversed endpoints still prevent collection.",
-      "control": "Fixed; no public override. window.pad_seconds records the pad.",
+      "counting": "Padding at each end of the runner client's span after rounding outward to whole seconds.",
+      "effect": "The scan covers `floor(start) - 2 seconds` through `ceil(end) + 2 seconds`, including both pads. Raw client timestamps are unchanged; reversed endpoints prevent collection.",
+      "control": "Fixed; `window.pad_seconds` records it.",
       "sources": [
         {
           "path": "controller/src/sandbox_log.rs",
@@ -1238,7 +1253,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Independent timestamp fixtures cover both padding regions, exact and exterior bounds, equal spans and rollback. Complete full, early-only, late-only and empty replies preserve eligible candidates and missing-record diagnostics through assembly, serialization and consumer recovery."
+      "behavior": "The pad allows for differences between client wall-clock and archive event timestamps; it guarantees neither delivery nor coverage under every clock condition. Independent timestamp fixtures cover both padding regions, exact and exterior bounds, equal spans and rollback. Complete full, early-only, late-only and empty replies preserve eligible candidates and missing-record diagnostics through assembly, serialization and consumer recovery."
     },
     {
       "id": "log_collection_timeout",
@@ -1246,9 +1261,9 @@
       "title": "Default log collection timeout",
       "value": 10000,
       "unit": "milliseconds",
-      "counting": "Shared CLOCK_MONOTONIC allowance starting before observer launch; includes startup, inner log show capture and processing. The log child receives the allowance minus the report reserve. Standalone show uses the same finite default. The reply records the actual cost as data.sandbox_log_capture.supervision.elapsed_ms at the observer boundary and observer.data.collection.elapsed_ms for the log child.",
-      "effect": "Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations.",
-      "control": "Override with --log-timeout-ms: positive integer milliseconds representable as a monotonic deadline plus cleanup grace. Validated before runner invocation even with --no-log-capture.",
+      "counting": "Default elapsed monotonic allowance for log collection, including startup and processing. Actual costs appear in `data.sandbox_log_capture.supervision.elapsed_ms` and `observer.data.collection.elapsed_ms`.",
+      "effect": "Expiry stops collection and starts the fixed cleanup grace; available diagnostics survive without associations. Standalone `show` uses the same default.",
+      "control": "Flag `--log-timeout-ms`: a positive integer of milliseconds that fits a monotonic deadline plus the cleanup grace, validated before the runner starts even with `--no-log-capture`.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1267,7 +1282,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Independent slow-success and permanent-hang fixtures prove that a larger finite allowance buys waiting time only; shared absolute deadlines are not restarted by the observer."
+      "behavior": "The shared CLOCK_MONOTONIC allowance starts before observer launch and includes inner log show capture. The log child receives the allowance minus the report reserve. Independent slow-success and permanent-hang fixtures prove that a larger finite allowance buys waiting time only; shared absolute deadlines are not restarted by the observer."
     },
     {
       "id": "log_cleanup_grace",
@@ -1275,9 +1290,9 @@
       "title": "Log cleanup grace",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Cleanup ends no later than the original collection deadline plus this grace; early failures start the grace immediately.",
-      "effect": "Unconfirmed reaping or group absence is reported; retries never restart the allowance.",
-      "control": "Fixed; no public override.",
+      "counting": "Elapsed monotonic allowance for observing log-process cleanup after collection stops. Early failures start the grace immediately.",
+      "effect": "The allowance expires no later than the original collection deadline plus this grace. Unconfirmed reaping or group absence is reported; retries never restart the allowance.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1304,9 +1319,9 @@
       "title": "Log report reserve",
       "value": 1000,
       "unit": "milliseconds",
-      "counting": "Withheld from the shared deadline at the log show boundary: the observer stops its log child this long before the controller's deadline so it can reap the child and deliver its report. The controller's own deadline is unchanged.",
-      "effect": "Leaves time for an intact observer reply containing the inner cutoff and retained diagnostics. Cleanup and scheduling can consume this reserve; an interrupted report retains only bounded transport diagnostics. An allowance at or below the reserve leaves no time for the query itself.",
-      "control": "Fixed; no public override. supervision.reserve_ms records 0 at the observer boundary and this value under observer.data.collection.",
+      "counting": "Allowance withheld from the log query within `log_collection_timeout`. The observer's report can arrive after the query times out.",
+      "effect": "Collection allowances at or below this reserve leave no query time. The reserve does not guarantee an intact report; interruption leaves bounded transport diagnostics.",
+      "control": "Fixed; `supervision.reserve_ms` records 0 at the observer boundary and this value under `observer.data.collection`.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1330,7 +1345,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "A short inner allowance cuts off the log child while the observer's report, including its inner cutoff, still reaches the controller; a stalled query exhausts the reserved inner allowance and is reported the same way."
+      "behavior": "At the log show boundary the observer stops its log child this long before the controller deadline to allow reaping and report delivery. The controller deadline is unchanged; cleanup and scheduling can consume the reserve. A short inner allowance cuts off the log child while the observer's report, including its inner cutoff, still reaches the controller; a stalled query exhausts the reserved inner allowance and is reported the same way."
     },
     {
       "id": "log_deny_events",
@@ -1340,7 +1355,7 @@
       "unit": "records",
       "counting": "Parsed deny events in show output and the derived controller array.",
       "effect": "An additional event makes capture incomplete and correlation unavailable; bounded raw output and available diagnostic events survive.",
-      "control": "Fixed; no public override.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1374,7 +1389,7 @@
       "unit": "items",
       "counting": "Total event-to-step candidates, including ambiguous matches.",
       "effect": "Excess discards the whole derived association result and withholds correlation; retained events remain diagnostic.",
-      "control": "Fixed; no public override.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1401,9 +1416,9 @@
       "title": "Candidate allocation allowance",
       "value": 8388608,
       "unit": "bytes",
-      "counting": "Conservative encoded/allocation charge per candidate: six times the sum of twice the step-ID length plus path, operation, kind and action lengths, plus 1,024 bytes of structure.",
-      "effect": "Excess discards all associations and withholds correlation.",
-      "control": "Fixed; no public override.",
+      "counting": "Total candidate charge: six times the sum of twice the step-ID byte length plus the path, operation, kind and action byte lengths, plus 1,024 bytes per candidate.",
+      "effect": "Excess reports the `association_bytes` cutoff, discards associations and withholds correlation.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1422,7 +1437,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Long repeated paths exercise the allocation allowance independently of the candidate count. This is a derived-data bound, not a peak-process-memory claim."
+      "behavior": "The charge is a conservative encoded/allocation allowance, not a measurement of peak process memory. Long repeated paths exercise the allocation allowance independently of the candidate count. This is a derived-data bound, not a peak-process-memory claim."
     },
     {
       "id": "log_correlation_steps",
@@ -1432,7 +1447,7 @@
       "unit": "items",
       "counting": "Each of the submitted plan and returned step arrays.",
       "effect": "Excess withholds log correlation; execution evidence is unchanged.",
-      "control": "Fixed; no public override.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1459,9 +1474,9 @@
       "title": "Observer JSON structure",
       "value": 262144,
       "unit": "items",
-      "counting": "Opening object/array delimiters, commas and colons outside quoted strings, counted before allocating a JSON tree.",
-      "effect": "Excess retains bounded raw diagnostic text and withholds parsing and correlation.",
-      "control": "Fixed; no public override.",
+      "counting": "Opening object/array delimiters, commas and colons outside quoted strings in the observer reply.",
+      "effect": "Excess retains bounded raw diagnostic text with unavailable parsing and correlation.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1480,7 +1495,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Independent oversized JSON array trips the structural guard before Value allocation."
+      "behavior": "The structural count is checked before allocating a JSON tree. Independent oversized JSON array trips the structural guard before Value allocation."
     },
     {
       "id": "log_observer_metadata",
@@ -1489,8 +1504,8 @@
       "value": 4096,
       "unit": "UTF-8 bytes",
       "counting": "Each echoed show argument: predicate, process name, start, end, last, plan, row and correlation ID.",
-      "effect": "Observer rejects excess before launching log show; controller also rejects oversized reply metadata.",
-      "control": "Fixed; no public override.",
+      "effect": "Oversized arguments are rejected; oversized reply metadata leaves correlation unavailable.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/log_capture.rs",
@@ -1509,7 +1524,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Receiver malformed-shape controls cover excess metadata; direct argument admission is source-inspected."
+      "behavior": "The observer rejects excess metadata before launching log show; the controller also rejects oversized reply metadata. Receiver malformed-shape controls cover excess metadata; direct argument admission is source-inspected."
     },
     {
       "id": "policy_helper_output",
@@ -1517,9 +1532,9 @@
       "title": "Policy helper output",
       "value": 8388608,
       "unit": "bytes",
-      "counting": "Per stdout or stderr stream captured from sbpl-check. Byte prefix before lossy text decoding; independent of the runner reply budget.",
-      "effect": "Output beyond the prefix is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
-      "control": "Fixed; no public override.",
+      "counting": "Captured bytes per stdout or stderr stream from `sbpl-check`, before text decoding.",
+      "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/utils.rs",
@@ -1538,7 +1553,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The shared receiver accepts an explicit per-stream retention budget for this producer; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget."
     },
     {
       "id": "validator_fault_context",
@@ -1546,9 +1561,9 @@
       "title": "Rejected validator frame context",
       "value": 256,
       "unit": "bytes",
-      "counting": "Raw prefix of the first rejected frame, before base64 encoding.",
-      "effect": "The remaining frame is not retained as context; frame_bytes, retained_bytes and context_truncated describe the loss.",
-      "control": "Fixed; no public override.",
+      "counting": "Retained prefix of the first rejected validator frame, measured before base64 encoding.",
+      "effect": "`frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -1575,9 +1590,9 @@
       "title": "Exec child output per stream",
       "value": 1023,
       "unit": "bytes",
-      "counting": "Retained bytes in each stdout/stderr text buffer, excluding NUL. A truncation marker occupies part of this space on overflow.",
-      "effect": "Additional output is drained but not retained.",
-      "control": "Fixed; no public override.",
+      "counting": "Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance.",
+      "effect": "Excess output is not retained.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1601,7 +1616,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Small stdout/stderr capture is tested. Overflow truncation and the exact retained-prefix/marker split are source-inspected."
+      "behavior": "Each text buffer reserves its terminating NUL outside this payload limit. Additional output is drained even after retention stops. Small stdout/stderr capture is tested. Overflow truncation and the exact retained-prefix/marker split are source-inspected."
     },
     {
       "id": "worker_diagnostic",
@@ -1609,9 +1624,9 @@
       "title": "Primary worker diagnostic",
       "value": 4095,
       "unit": "bytes",
-      "counting": "Diagnostic payload bytes, excluding NUL.",
-      "effect": "The primary diagnostic is bounded and reports retained length and truncation state; it is not a transcript.",
-      "control": "Fixed; no public override.",
+      "counting": "Retained primary diagnostic bytes.",
+      "effect": "The reply reports retained length and truncation state; this is not a complete transcript.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1635,7 +1650,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Bounded diagnostic/truncation controls in the Swift worker evidence tests."
+      "behavior": "The diagnostic buffer reserves its terminating NUL outside the payload limit. Bounded diagnostic/truncation controls in the Swift worker evidence tests."
     },
     {
       "id": "applied_profile",
@@ -1643,9 +1658,9 @@
       "title": "Optional compiled-object capture",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Raw bytecode bytes for a nonempty supported single-profile (type 0) object, before base64 encoding.",
-      "effect": "Oversize or unsupported objects leave capture unavailable without preventing policy application.",
-      "control": "Fixed; no public override.",
+      "counting": "Raw bytecode bytes in an optional compiled-object receipt, before base64 encoding.",
+      "effect": "Oversized or unsupported objects leave capture unavailable without preventing policy application.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1669,7 +1684,7 @@
           "kind": "boundary"
         }
       ],
-      "behavior": "Independently constructed object controls cover exact, excessive and unsupported captures."
+      "behavior": "Capture supports nonempty single-profile (type 0) objects; it runs before applying the same object. Failed capture leaves application unchanged. Independently constructed object controls cover exact, excessive and unsupported captures."
     },
     {
       "id": "observed_path",
@@ -1677,9 +1692,9 @@
       "title": "Worker observed path",
       "value": 1023,
       "unit": "bytes",
-      "counting": "Per-step C path-buffer payload bytes, excluding NUL.",
+      "counting": "Retained bytes in each worker-observed path.",
       "effect": "Path observation can be absent or bounded; a host-side path diagnostic is a separate observation.",
-      "control": "Fixed; no public override.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1698,7 +1713,7 @@
           "kind": "value"
         }
       ],
-      "behavior": "Source-inspected buffer use; no exact path-length behavior claim is tested."
+      "behavior": "The per-step C path-buffer payload excludes its terminating NUL. Source-inspected buffer use; no exact path-length behavior claim is tested."
     },
     {
       "id": "attempt_error",
@@ -1706,9 +1721,9 @@
       "title": "Worker attempt error text",
       "value": 255,
       "unit": "bytes",
-      "counting": "Per-step error-buffer payload bytes, excluding NUL.",
-      "effect": "Error prose is bounded; structured result/status fields remain separate.",
-      "control": "Fixed; no public override.",
+      "counting": "Retained bytes in each worker attempt error message.",
+      "effect": "Error text is bounded; structured result and status fields remain separate.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1727,7 +1742,7 @@
           "kind": "value"
         }
       ],
-      "behavior": "Source-inspected bounded formatting; no exact error-text boundary claim is tested."
+      "behavior": "The per-step C error-buffer payload excludes its terminating NUL. Source-inspected bounded formatting; no exact error-text boundary claim is tested."
     },
     {
       "id": "helper_source",
@@ -1737,7 +1752,7 @@
       "unit": "bytes",
       "counting": "Top-level source bytes read by the diagnostic helper; not the runner policy cap.",
       "effect": "policy_too_large with null compile and import_inventory groups; no compile verdict.",
-      "control": "Fixed; no public override.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1764,9 +1779,9 @@
       "title": "sbpl-check import inventory depth",
       "value": 8,
       "unit": "levels",
-      "counting": "Top-level imports start at depth 0. At depth 8 the helper records a depth-limit diagnostic instead of reading/expanding that file.",
-      "effect": "Stops inventory expansion on that branch and marks import_inventory.truncated. Does not impose this depth on libsandbox compilation.",
-      "control": "Fixed; no public override.",
+      "counting": "Import depth in the helper inventory, starting at 0. Depth 8 is the first depth replaced by a depth-limit diagnostic.",
+      "effect": "The affected branch stops and `import_inventory.truncated` is set. This does not limit compilation of imports.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1785,7 +1800,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Deep import-chain control in the helper unit tests."
+      "behavior": "At depth 8 the helper records a diagnostic instead of reading or expanding that file; libsandbox compilation has its own import resolution. Deep import-chain control in the helper unit tests."
     },
     {
       "id": "helper_import_count",
@@ -1793,9 +1808,9 @@
       "title": "sbpl-check import inventory count",
       "value": 64,
       "unit": "records",
-      "counting": "Maximum records accumulated by the helper traversal, including unresolved/error records; visited files/names are deduplicated.",
-      "effect": "Stops further inventory traversal and marks import_inventory.truncated. Does not impose this count on libsandbox compilation.",
-      "control": "Fixed; no public override.",
+      "counting": "Import-inventory records, including unresolved and error records. Repeated files or names are listed once.",
+      "effect": "Further inventory stops and `import_inventory.truncated` is set. This does not limit compilation of imports.",
+      "control": "Fixed.",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1814,7 +1829,7 @@
           "kind": "path"
         }
       ],
-      "behavior": "Import-count exhaustion control in the helper unit tests."
+      "behavior": "The helper traversal deduplicates visited files/names and accumulates at most this many records; libsandbox compilation does not use that inventory as a limit. Import-count exhaustion control in the helper unit tests."
     },
     {
       "id": "observer_stream_text",
@@ -1822,9 +1837,9 @@
       "title": "Log observer stream text",
       "value": 1048576,
       "unit": "bytes",
-      "counting": "Streaming helper mode only (--duration or --follow): retained nonempty, non-prelude log lines with one LF per line. Only whole lines that fit are retained.",
-      "effect": "The first overflowing line sets log_truncated and stops text accumulation. Deny-event arrays and JSONL emission continue separately; this is not a memory or total-report cap. The normal CLI log-show path does not use this inner cap.",
-      "control": "Fixed byte cap; --no-log-capture disables normal CLI log collection, not this helper capability.",
+      "counting": "Streaming helper mode only (`--duration` or `--follow`): retained nonempty log lines after the prelude, with one LF per line. Only whole lines that fit are retained.",
+      "effect": "The first overflowing line sets `log_truncated` and ends text retention. Deny-event arrays and JSONL emission continue. The normal CLI log-show path does not use this cap.",
+      "control": "Fixed. `--no-log-capture` disables the CLI's log collection, not this helper mode.",
       "sources": [
         {
           "path": "controller/src/bin/sandbox-log-observer.rs",
@@ -1838,7 +1853,7 @@
           "kind": "value"
         }
       ],
-      "behavior": "Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected."
+      "behavior": "This bound covers streaming text accumulation only, not memory use or total report size. Compiled value agreement is tested. Streaming accumulation and overflow behavior are source-inspected."
     }
   ]
 }

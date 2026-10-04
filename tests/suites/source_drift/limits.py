@@ -179,7 +179,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         manifest_path.write_text(json.dumps(data))
         source_path = root / 'docs/LIMITS.md'
         source_path.write_text(source_path.read_text().replace(
-            'A profile accepted', 'An independently revised profile accepted', 1))
+            'can still be refused here', 'can still be independently refused here', 1))
         questions_path = root / 'docs/QUESTIONS.md'
         questions_path.write_text(questions_path.read_text().replace('Almost no one.', 'Almost nobody.', 1))
         questions_before = questions_path.read_bytes()
@@ -189,7 +189,7 @@ class LimitsDocumentationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         for path in [source_path, guide_path]:
             self.assertIn('262,144 UTF-8 bytes', path.read_text())
-            self.assertIn('An independently revised profile accepted', path.read_text())
+            self.assertIn('can still be independently refused here', path.read_text())
         guide = guide_path.read_text()
         self.assertIn('Almost nobody.', guide.split(generator.GUIDE_QUESTIONS_START)[1])
         self.assertEqual(questions_path.read_bytes(), questions_before)
@@ -206,8 +206,8 @@ class LimitsDocumentationTests(unittest.TestCase):
         mutations = [
             ('LIMITS.md', lambda text: text.replace('262,143', '262,144', 1)),
             ('PolicyWitness.md', lambda text: text.replace('262,143', '262,144', 1)),
-            ('LIMITS.md', lambda text: text.replace('A profile accepted', 'An edited profile accepted', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('A profile accepted', 'An edited profile accepted', 1)),
+            ('LIMITS.md', lambda text: text.replace('can still be refused here', 'can still be edited and refused here', 1)),
+            ('PolicyWitness.md', lambda text: text.replace('can still be refused here', 'can still be edited and refused here', 1)),
             ('PolicyWitness.md', lambda text: '\n'.join(line for line in text.splitlines()
                                                        if '(`policy_source`)' not in line)),
             ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_END, '')),
