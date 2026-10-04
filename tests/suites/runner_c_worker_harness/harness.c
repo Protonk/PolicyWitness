@@ -112,7 +112,9 @@ typedef struct {
 
     /* Descriptor limits set on the harness, and inherited by the worker,
      * right before spawn; 0 keeps the inherited value. Lowering the hard
-     * limit is irreversible for this process, which runs one scenario. */
+     * limit is irreversible for this process, which runs one scenario. A
+     * ceiling the plan's exec steps could not share proves that exec pipes
+     * exist only inside each attempt. */
     unsigned rlimit_soft, rlimit_hard;
 
     /* Pipe "(version 1)(allow default)" NUL "(deny default)" → worker exits 9. */
@@ -143,11 +145,12 @@ static void populate_deny_default(pw_shm_slot_t *slots) {
     snprintf(slots[0].target, sizeof(slots[0].target), "/etc/hosts");
 }
 
-/* Exec slots that spawn /usr/bin/true: enough to outgrow a 64-descriptor
- * soft limit four descriptors at a time, well under the plan capacity. */
+/* Exec slots that spawn /usr/bin/true. Held open together, 32 pipe pairs
+ * would need 128 descriptors, twice the 64-descriptor ceiling the
+ * per-attempt scenario imposes; created per attempt they need four. */
 #define EXEC_TRUE_SLOTS 32u
-static void populate_exec_true(pw_shm_slot_t *slots) {
-    for (uint32_t i = 0; i < EXEC_TRUE_SLOTS; i++) {
+static void populate_exec_true_n(pw_shm_slot_t *slots, uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) {
         pw_shm_slot_t *s = &slots[i];
         snprintf(s->step_id, sizeof(s->step_id), "true_%03u", i);
         s->attempt_kind = PW_ATTEMPT_EXEC_SPAWN;
@@ -156,9 +159,11 @@ static void populate_exec_true(pw_shm_slot_t *slots) {
         snprintf(s->argv[0], sizeof(s->argv[0]), "/usr/bin/true");
     }
 }
+static void populate_exec_true(pw_shm_slot_t *slots) { populate_exec_true_n(slots, EXEC_TRUE_SLOTS); }
+static void populate_exec_true_single(pw_shm_slot_t *slots) { populate_exec_true_n(slots, 1u); }
 
-/* Reads surround exec steps so preallocated pipes cannot starve an unrelated
- * attempt, even before any successful exec has released its descriptors. */
+/* Reads surround the exec steps so a real system import and file probes
+ * share the capped descriptor table with the exec attempts. */
 static void populate_exec_mixed(pw_shm_slot_t *slots) {
     populate_happy(slots);
     populate_exec_true(slots + 1);
@@ -181,20 +186,6 @@ static void populate_exec_budget(pw_shm_slot_t *slots) {
     }
     populate_happy(slots + EXEC_SLEEP_SLOTS);
     snprintf(slots[EXEC_SLEEP_SLOTS].step_id, sizeof(slots[0].step_id), "read_after_budget");
-}
-
-static int inherited_fds[80];
-static unsigned inherited_fd_count;
-static void populate_exec_inherited(pw_shm_slot_t *slots) {
-    populate_exec_true(slots);
-    for (unsigned i = 0; i < sizeof(inherited_fds) / sizeof(inherited_fds[0]); i++) {
-        int fd = open("/dev/null", O_RDONLY);
-        if (fd < 0) {
-            fprintf(stderr, "harness: inherited descriptor: %s\n", strerror(errno));
-            exit(1);
-        }
-        inherited_fds[inherited_fd_count++] = fd;
-    }
 }
 
 static void populate_max_slots(pw_shm_slot_t *slots) {
@@ -328,28 +319,16 @@ static scenario_t SCENARIOS[] = {
     { .name = "policy_nul", .policy = SCEN_ALLOW_DEFAULT_POLICY, .step_count = 1, .request_exit = 1,
       .populate_slots = populate_happy, .nul_policy = 1 },
 
-    /* #3 — exec descriptor budget. Capped mixed plans import a real system
-     * profile and read files before/after execs. Adjacent ceilings vary the
-     * number of descriptors left over after four-descriptor pipe groups. */
-    { "exec_descriptor_limit_raised", SCEN_ALLOW_DEFAULT_POLICY, EXEC_TRUE_SLOTS, 1, populate_exec_true, NULL, 0, 0, 0, 0, 0, TEMP_NONE, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0 },
-    { .name = "exec_descriptor_limit_capped", .policy = "(version 1)(allow default)(import \"system.sb\")",
+    /* #3 — exec resources are per attempt. A hard descriptor ceiling of 64
+     * cannot hold 32 pre-opened pipe pairs, so every clean spawn around a
+     * real system import and file reads proves no exec step holds
+     * descriptors across another step's work. Under bare (deny default) the
+     * post-apply setup must succeed and posix_spawn must be the denied call. */
+    { .name = "exec_pipes_per_attempt", .policy = "(version 1)(allow default)(import \"system.sb\")",
       .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
       .rlimit_soft = 64, .rlimit_hard = 64 },
-    { .name = "exec_descriptor_cap_126", .policy = "(version 1)(allow default)(import \"system.sb\")",
-      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
-      .rlimit_soft = 64, .rlimit_hard = 126 },
-    { .name = "exec_descriptor_cap_127", .policy = "(version 1)(allow default)(import \"system.sb\")",
-      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
-      .rlimit_soft = 64, .rlimit_hard = 127 },
-    { .name = "exec_descriptor_cap_128", .policy = "(version 1)(allow default)(import \"system.sb\")",
-      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
-      .rlimit_soft = 64, .rlimit_hard = 128 },
-    { .name = "exec_descriptor_cap_129", .policy = "(version 1)(allow default)(import \"system.sb\")",
-      .step_count = EXEC_TRUE_SLOTS + 2, .request_exit = 1, .populate_slots = populate_exec_mixed,
-      .rlimit_soft = 64, .rlimit_hard = 129 },
-    { .name = "exec_descriptor_inherited", .policy = SCEN_ALLOW_DEFAULT_POLICY,
-      .step_count = EXEC_TRUE_SLOTS, .request_exit = 1, .populate_slots = populate_exec_inherited,
-      .rlimit_soft = 128, .rlimit_hard = 4096 },
+    { .name = "exec_setup_post_apply_denied", .policy = SCEN_DENY_DEFAULT_POLICY,
+      .step_count = 1, .request_exit = 1, .populate_slots = populate_exec_true_single },
 
     /* #4 — exec attempt budget. Six /bin/sleep helpers each outlive their
      * deadline. The budget cuts the plan: the last spawned child's deadline is
@@ -618,7 +597,6 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     int spawn_rc = posix_spawn(&pid, exec_helper ? exec_helper : worker_path, &fa, NULL,
                                exec_helper ? inspected_argv : worker_argv, environ);
     posix_spawn_file_actions_destroy(&fa);
-    for (unsigned i = 0; i < inherited_fd_count; i++) close(inherited_fds[i]);
     if (spawn_rc != 0) {
         fprintf(stderr, "harness: posix_spawn: %s\n", strerror(spawn_rc));
         return 1;
@@ -762,8 +740,7 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
     /* Emit result envelope. */
     printf("{");
     printf("\"scenario\":"); emit_json_string(stdout, scen->name);
-    printf(",\"inherited_extra_fds\":%u,\"rlimit_soft\":%u,\"rlimit_hard\":%u",
-           inherited_fd_count, scen->rlimit_soft, scen->rlimit_hard);
+    printf(",\"rlimit_soft\":%u,\"rlimit_hard\":%u", scen->rlimit_soft, scen->rlimit_hard);
     printf(",\"worker_pid\":%d", pid);
     printf(",\"ready_byte_received\":%s", ready_received ? "true" : "false");
     printf(",\"applied\":%s", saw_applied ? "true" : "false");

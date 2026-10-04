@@ -632,13 +632,6 @@ import resolution or compilation.
   rejects raw controls, invalid UTF-8, malformed escapes and lone surrogates,
   while preserving the next physical probe line. Decoder failures report a
   bounded category/path instead of arbitrary input-derived exception prose.
-- Exec attempts spend descriptors before the sandbox applies, four per step,
-  so the worker counts free descriptor slots and raises its soft limit to fit
-  the plan plus reserved headroom before opening any pipe. Inherited descriptors
-  count against availability. If the hard limit prevents the plan from fitting,
-  excess exec steps report a descriptor-budget refusal before opening pipes;
-  compilation and other attempts keep their headroom. The refusal is per-step
-  evidence and does not by itself fail the run.
 - Exec attempts share a local active-time budget as well as a per-child
   deadline. The plan cutoff starts before worker setup, excludes the measured
   release wait, and never restarts after spawn. This is separate from the host
@@ -700,8 +693,6 @@ Values are maxima unless labelled as defaults or fixed allowances.
 | Exec child deadline (`exec_child_wait`) | 10,000 milliseconds | Child observation time after successful spawn, limited by the earlier of its absolute deadline and the local exec plan deadline. Time spent spawning cannot restart the plan budget. EOF and child exit are observed separately. Deadline or observation failure requests process-group termination while the leader is still owned, even if that leader already exited. A deadline makes the attempt fail while preserving any observed natural exit code. A successful leader reap does not prove every descendant stopped. | Production default; test-only controls are not a public tuning interface. |
 | Exec attempt budget (`exec_attempt_budget`) | 115,000 milliseconds | Local CLOCK_MONOTONIC active time starting before worker setup. Only the interval returned by the release barrier is excluded. An absolute cutoff is passed to exec attempts; this is not a reconstruction of the host polling clock. An exhausted budget refuses spawn with exec_failed and ETIMEDOUT, no child identity and no sandbox attribution. Clock failure before spawn refuses the attempt; clock failure after spawn triggers cleanup and is retained as an observation error. Blocking spawn and non-exec operations are not preemptible here. | Production default leaves a nominal 5,000 ms margin below worker_sentinel_wait. Internal test equipment may shorten it independently; the specimen worker_timeout_ms override does not move it. |
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Local monotonic observation window for nonblocking waitpid after exec observation stops. Expiry, clock failure or native wait failure retains an unconfirmed reap without inventing exit status. Failed group termination permits only an immediate nonblocking reap. This does not bound a native syscall or host descheduling. | Fixed; no public override. |
-| Exec attempt descriptors (`exec_step_descriptors`) | 4 items | Descriptors opened before sandbox application per exec step: both ends of stdout and stderr pipes. Before opening any, the worker scans for free descriptor numbers, accounting for inherited descriptors, and raises its soft limit to fit the plan plus the descriptor reserve. Raises are capped at the hard limit and OPEN_MAX (10,240); an already higher soft limit is preserved. Only exec slots that fit without spending the reserve get pipes. Excess slots report exec_failed with errno 24 and an exec descriptor budget diagnostic naming the limit; no pipe syscall or child spawn is claimed. Actual pipe failures report their own syscall and errno. Budget refusal is per-step evidence, with sandbox attribution unestablished; imports and other attempts retain descriptor headroom. | Host-derived hard ceiling; no public override. The worker raises the soft limit and never lowers it. |
-| Exec descriptor reserve (`exec_descriptor_reserve`) | 64 items | Free descriptor slots withheld from exec pipe setup, in addition to descriptors already open. The worker scans with fcntl(F_GETFD) to find room for this reserve plus four descriptors per exec step. Preserves headroom for policy compilation/imports, file probes, and spawn file actions. If the inherited/hard limit already leaves fewer free slots than the reserve, exec setup opens no pipes. This bounds exec pipe consumption; it does not guarantee that arbitrary imports or other resource users fit. | Fixed; no public override. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Client wait for the runner reply. The reply records the actual span as data.runner_client.started_at_unix_ms and ended_at_unix_ms. An expired wait yields xpc_timeout; it does not expand the inner worker or validator budgets. | Default; --timeout-ms changes only this wait and floors its value at 1 ms. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for launchd to stop listing a BYOXPC service after the bootout that runner remove issued: the service is re-read every 50 milliseconds until it is absent or this allowance is spent, and the cleanup observation records the reads and the wait. A service still listed when the allowance ends retains the cleanup record with a warning; a later runner remove or reconcile continues recovery. | Fixed; no public override. Nothing is awaited when the call issued no bootout. |
 
@@ -1476,10 +1467,12 @@ combinations:
 - `("exec", "spawn")` — `posix_spawn(target, argv, ...)` of a helper
   binary. `target` is the absolute path to the helper (becomes
   argv[0]). Optional `args: ["…", …]` supplies argv[1..N].
-  The worker creates each child's stdout/stderr pipes before the sandbox
-  applies (so the post-apply syscall surface stays minimal — see
-  [Augments](#augments) → `exec_baseline` for the policy contract), bounds
-  each child by the deadlines and descriptor budget under
+  The worker creates each child's stdout/stderr pipes and spawn handles
+  inside the attempt, after the sandbox applies, and releases them before
+  the step completes. None of that setup is a sandbox operation, so under
+  an unaugmented `(deny default)` the denied call is `posix_spawn` itself
+  (see [Augments](#augments) → `exec_baseline` for the policy that lets a
+  spawn succeed). It bounds each child by the deadlines under
   [Execution budgets](#execution-budgets), drains both streams while the
   child runs, reaps it, and surfaces these fields under `attempt`:
 

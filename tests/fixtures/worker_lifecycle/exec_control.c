@@ -1,6 +1,8 @@
 /* Production exec control flow with independent, deterministic native-call
- * equipment. No child or sandbox is created. Real process/pipe controls live
- * in runner_exec_lifecycle. These tests pin observations, not error wording. */
+ * equipment. No child or sandbox is created; each attempt's pipes and spawn
+ * handles are real and released through the close stub. Real process/pipe
+ * controls live in runner_exec_lifecycle. These tests pin observations, not
+ * error wording. */
 #include <assert.h>
 #include <errno.h>
 #include <poll.h>
@@ -34,7 +36,9 @@ static int controlled_poll(struct pollfd *fds, nfds_t count, int timeout) {
 static ssize_t controlled_read(int fd, void *buf, size_t bytes) {
     (void)fd; (void)buf; (void)bytes; return 0;
 }
-static int controlled_close(int fd) { (void)fd; errno = EBADF; return 0; }
+/* The attempt acquires real pipes after admission; release them so repeated
+ * attempts cannot exhaust the descriptor table. */
+static int controlled_close(int fd) { return close(fd); }
 static int controlled_waitid(idtype_t type, id_t id, siginfo_t *info, int options) {
     (void)type;
     assert(options == (WEXITED | WNOHANG | WNOWAIT));
@@ -83,9 +87,7 @@ static void reset(void) {
 static pw_shm_slot_t attempt(const pw_attempt_budget_t *budget, long child_limit) {
     pw_shm_slot_t slot = {0};
     strcpy(slot.target, "/controlled");
-    pw_exec_resources_t resources = {.actions_initialized = 1,
-        .stdout_rfd = 10, .stdout_wfd = -1, .stderr_rfd = 11, .stderr_wfd = -1};
-    attempt_exec_spawn(&slot, &resources, budget, child_limit);
+    attempt_exec_spawn(&slot, budget, child_limit);
     assert(slot.child_pid == (spawn_count ? 12345 : 0));
     return slot;
 }

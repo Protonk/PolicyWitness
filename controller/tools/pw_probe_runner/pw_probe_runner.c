@@ -7,9 +7,6 @@
  *                  [--policy-fd <N>] (defaults to stdin).
  *   2. mmap the host's pre-populated PW_SHM_REGION_BYTES region from
  *      --shm-fd. Verify ABI identity and prepared sentinel.
- *   2b. Raise the soft descriptor limit to fit the plan's exec slots (a
- *      bound change, not a resource), then create each exec slot's
- *      pipes and file actions. Both happen before the policy is read.
  *   3. Read SBPL policy text from --policy-fd (or stdin) until EOF
  *      into a stack-fixed buffer. This is the LAST allocation
  *      attempt before sandbox_apply().
@@ -19,7 +16,10 @@
  *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
  *   6. sandbox_apply(). Write apply_rc to header.
  *   7. Write applied sentinel (release ordering).
- *   8. For each populated slot: run the requested attempt. Exec
+ *   8. For each populated slot: run the requested attempt. An exec
+ *      attempt creates its pipes and spawn handles here, after apply,
+ *      and releases them before its slot completes; none of that setup
+ *      is sandbox-gated (see the exec attempt machinery comment). Exec
  *      children are bounded per step by the exec deadline and per plan
  *      by the exec attempt budget (see PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT).
  *      Slot output writes use regular stores; the slot's `completed`
@@ -50,7 +50,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
@@ -126,21 +125,6 @@ static void attempt_budget_exclude(pw_attempt_budget_t *budget, int64_t interval
 /* 30s validator I/O + 1s exit grace + 5s release margin < 60s.
  * This is a worker observation deadline, not a bound on host scheduling/reap. */
 #define PW_PROCEED_WAIT_MS_DEFAULT 60000L
-
-/* Descriptors each exec step holds open before sandbox_apply: both ends of
- * a stdout pipe and a stderr pipe, created in setup_exec_resources. The
- * worker raises its inherited soft descriptor limit (launchd's default is
- * 256) to fit the plan before opening any pipe; when the raise falls short,
- * excess exec steps record exec_failed with EMFILE at budget admission,
- * leaving headroom for compilation and attempts. Documented as exec_step_descriptors in
- * docs/limits.json. */
-#define PW_EXEC_DESCRIPTORS_PER_STEP 4
-
-/* Free descriptor slots left unused by exec setup, in addition to descriptors
- * already open. Compilation (including imports), file probes and spawn file
- * actions still need descriptors. Documented as exec_descriptor_reserve in
- * docs/limits.json. */
-#define PW_EXEC_DESCRIPTOR_RESERVE 64
 
 /* SPI symbols from libsandbox. The public sandbox.h does not declare
  * them; they live in /usr/lib/libsandbox.dylib (link via -lsandbox).
@@ -587,269 +571,154 @@ static void attempt_sysctl_read(pw_shm_slot_t *slot) {
 /* ---- exec attempt machinery ------------------------------------ */
 
 /*
- * Exec attempts need pipes + posix_spawn_file_actions to capture
- * stdout/stderr. Both of those are syscalls/allocations that we MUST
- * perform pre-apply so the witness honestly reports "the sandbox
- * blocked posix_spawn", not "the worker couldn't even set up the
- * observation frame."
+ * Exec attempts need two pipes and posix_spawn handles to capture the
+ * child's stdout/stderr. The worker creates them inside the attempt,
+ * after sandbox_apply, and releases them before the slot completes, so
+ * no exec step holds descriptors across compilation, application or
+ * another step's attempt, and a plan needs no descriptor budget.
  *
- * Why this matters: the rest of the worker is intentionally simple
- * after sandbox_apply — fixed inputs, no hidden resource
- * acquisition, shared-memory writes as the durable output channel.
- * The exec attempt is the one place that needs pipe creation, a
- * posix_spawn_file_actions handle, an interleaved poll/read drain,
- * and waitpid. If any of those pre-spawn setup syscalls happen
- * AFTER sandbox_apply, an unaugmented (deny default) policy can
- * fail the setup syscall before posix_spawn is reached. The
- * attempt would surface as exec_failed but the per-attempt error
- * attribution would point at pipe()/file_actions_init() — not at
- * the process execution the caller actually wanted to probe.
- * That blurs the witness in exactly the case we exist to surface.
+ * None of that setup is sandbox-gated. pipe(2), read/write on a pipe,
+ * dup2 and the posix_spawn_file_actions/posix_spawnattr calls are not
+ * Sandbox operations: inside a profile that denies default plus
+ * system*, ipc*, file*, process* and mach*, every one of them succeeds
+ * and only posix_spawn returns EPERM (measured on Darwin 23.6). So the
+ * attribution contract holds without pre-apply preparation: under an
+ * unaugmented (deny default) policy the failure MUST be posix_spawn
+ * itself (child_pid == 0, errno in {EPERM, EACCES}, error names
+ * "posix_spawn"). The harness case `exec_setup_post_apply_denied` and
+ * `tests/suites/runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly`
+ * pin that contract. A setup failure attributed to pipe() or a spawn
+ * handle under (deny default) would mean a macOS revision started
+ * gating this surface; the answer is then a documented augment or a
+ * smaller capture surface, not pre-apply resource acquisition.
  *
- * The contract this enforces, tested by
- * `tests/suites/runner_use_c_worker/exec_attempt_without_baseline_fails_cleanly`:
- * under (deny default), the failure attribution MUST be
- * posix_spawn itself (child_pid == 0 + errno ∈ {EPERM, EACCES} +
- * error contains "posix_spawn"). Any other failure source means
- * the post-apply syscall surface has grown and the witness is
- * unreliable.
- *
- * Three deliberate fallbacks exist if the preferred model fails
- * empirically on a future macOS revision (do NOT silently degrade
- * to whichever failure happens first):
- *
- *   1. Move pipe/file-action setup into the augment surface and
- *      document that unaugmented exec can fail during setup, not
- *      just at spawn (loses witness purity but preserves observability).
- *   2. Drop stdout/stderr capture from the worker and report only
- *      child_pid/status/spawn errno (smaller post-apply surface).
- *   3. Pre-create only pipes and keep file-action setup post-apply
- *      iff empirically proven allocation-free and not sandbox-gated.
- *
- * Resources are parallel to the slot array (index-aligned). Slots
- * whose kind is not PW_ATTEMPT_EXEC_SPAWN leave their resource entry
- * at its default zero state and never visit attempt_exec_spawn.
+ * A setup failure reports its own call and errno. It is resource
+ * exhaustion evidence (EMFILE, ENFILE, ENOMEM), never a sandbox
+ * attribution, and it claims no spawn.
  */
 typedef struct {
-    int stdout_rfd;                 /* parent's read end; -1 when unused */
-    int stdout_wfd;                 /* parent's copy of child's stdout; closed post-spawn */
+    int stdout_rfd;                 /* parent's read end; -1 when closed */
+    int stdout_wfd;                 /* child's stdout source; closed post-spawn */
     int stderr_rfd;
     int stderr_wfd;
     posix_spawn_file_actions_t actions;
     posix_spawnattr_t           attr;
-    int actions_initialized;        /* 1 if posix_spawn_file_actions_init was called */
-    int attr_initialized;           /* 1 if posix_spawnattr_init was called */
-    int setup_failed;               /* 1 if pre-apply setup failed for this slot */
-    int setup_errno;
-    char setup_error[PW_SHM_ERROR_MAX];
+    int actions_initialized;
+    int attr_initialized;
 } pw_exec_resources_t;
 
-static pw_exec_resources_t exec_resources[PW_SHM_MAX_STEPS];
-
-/* Explanation for slots refused by descriptor-budget admission. Actual pipe
- * failures retain their own syscall/errno; budget refusals never claim pipe()
- * was called. */
-static char g_descriptor_limit_note[160];
-
-/* Pre-apply: count free descriptor numbers, including inherited holes, until
- * the plan plus reserve fits or the usable ceiling is reached. Only EBADF
- * establishes a free slot. This single-threaded worker opens nothing between
- * this scan and setup_exec_resources. No inherited descriptor is discarded.
- * The soft limit is never lowered; a raise is capped at hard/OPEN_MAX.
- * Return how many exec slots can be prepared without spending the reserve. */
-static uint32_t prepare_exec_descriptor_budget(uint32_t exec_count) {
-    g_descriptor_limit_note[0] = '\0';
-    if (exec_count == 0) return 0;
-    struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        int e = errno;
-        snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
-                 "getrlimit(RLIMIT_NOFILE): %s", strerror(e));
-        return 0;
+static void exec_resources_release(pw_exec_resources_t *r) {
+    if (r->stdout_rfd >= 0) { close(r->stdout_rfd); r->stdout_rfd = -1; }
+    if (r->stdout_wfd >= 0) { close(r->stdout_wfd); r->stdout_wfd = -1; }
+    if (r->stderr_rfd >= 0) { close(r->stderr_rfd); r->stderr_rfd = -1; }
+    if (r->stderr_wfd >= 0) { close(r->stderr_wfd); r->stderr_wfd = -1; }
+    if (r->actions_initialized) {
+        posix_spawn_file_actions_destroy(&r->actions);
+        r->actions_initialized = 0;
     }
-    rlim_t ceiling = rl.rlim_max < (rlim_t)OPEN_MAX ? rl.rlim_max : (rlim_t)OPEN_MAX;
-    if (ceiling < rl.rlim_cur) ceiling = rl.rlim_cur;
-    if (ceiling > (rlim_t)INT_MAX) ceiling = (rlim_t)INT_MAX;
-    rlim_t required_free = PW_EXEC_DESCRIPTOR_RESERVE
-                        + (rlim_t)exec_count * PW_EXEC_DESCRIPTORS_PER_STEP;
-    rlim_t free_slots = 0, current_free = 0, target = 0;
-    while (target < ceiling && free_slots < required_free) {
-        int rc;
-        do { rc = fcntl((int)target, F_GETFD); } while (rc < 0 && errno == EINTR);
-        if (rc < 0) {
-            int e = errno;
-            if (e != EBADF) {
-                snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
-                         "fcntl(F_GETFD, %llu): %s", (unsigned long long)target, strerror(e));
-                return 0;
-            }
-            free_slots++;
-            if (target < rl.rlim_cur) current_free++;
-        }
-        target++;
-    }
-    if (target > rl.rlim_cur) {
-        struct rlimit want = rl;
-        want.rlim_cur = target;
-        if (setrlimit(RLIMIT_NOFILE, &want) != 0) {
-            int e = errno;
-            snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
-                     "setrlimit(RLIMIT_NOFILE %llu->%llu): %s",
-                     (unsigned long long)rl.rlim_cur, (unsigned long long)target, strerror(e));
-            free_slots = current_free;
-        }
-    }
-    uint32_t capacity = free_slots > PW_EXEC_DESCRIPTOR_RESERVE
-        ? (uint32_t)((free_slots - PW_EXEC_DESCRIPTOR_RESERVE) / PW_EXEC_DESCRIPTORS_PER_STEP) : 0;
-    if (capacity < exec_count && !g_descriptor_limit_note[0]) {
-        snprintf(g_descriptor_limit_note, sizeof(g_descriptor_limit_note),
-                 "RLIMIT_NOFILE ceiling %llu: %llu free, reserve %u",
-                 (unsigned long long)ceiling, (unsigned long long)free_slots,
-                 PW_EXEC_DESCRIPTOR_RESERVE);
-    }
-    return capacity;
-}
-
-static void exec_resources_reset_all(void) {
-    for (uint32_t i = 0; i < PW_SHM_MAX_STEPS; i++) {
-        exec_resources[i].stdout_rfd          = -1;
-        exec_resources[i].stdout_wfd          = -1;
-        exec_resources[i].stderr_rfd          = -1;
-        exec_resources[i].stderr_wfd          = -1;
-        exec_resources[i].actions_initialized = 0;
-        exec_resources[i].attr_initialized    = 0;
-        exec_resources[i].setup_failed        = 0;
-        exec_resources[i].setup_errno         = 0;
-        exec_resources[i].setup_error[0]      = '\0';
+    if (r->attr_initialized) {
+        posix_spawnattr_destroy(&r->attr);
+        r->attr_initialized = 0;
     }
 }
 
-/* Pre-apply: walk every slot, and for each exec slot create both pipes
- * (PW_EXEC_DESCRIPTORS_PER_STEP descriptors) and build the
- * posix_spawn_file_actions handle that wires them to the child's
- * STDOUT/STDERR. Per-slot failures are recorded into the resource entry
- * (and surfaced by attempt_exec_spawn at execution time) so a resource
- * shortage on one exec slot doesn't kill the whole run. Slots beyond the
- * descriptor budget fail without opening pipes or consuming the reserve.
- *
- * IMPORTANT: this MUST be called before sandbox_apply. After
- * sandbox_apply the worker should only call posix_spawn + close/poll/
- * read/waitpid; opening new pipes post-apply would muddy the
- * "sandbox blocked spawn" reading. */
-static void setup_exec_resources(pw_shm_slot_t *slots, uint32_t step_count, uint32_t exec_budget) {
-    for (uint32_t i = 0; i < step_count; i++) {
-        if (slots[i].attempt_kind != PW_ATTEMPT_EXEC_SPAWN) continue;
-        pw_exec_resources_t *r = &exec_resources[i];
+/* Record a failed setup call: rc -1 with the call's errno, the exec
+ * sentinel shape with no child (file probes use rc 1 for their own
+ * failures). */
+static void exec_setup_failed(pw_shm_slot_t *slot, const char *what, int err) {
+    slot->rc = -1;
+    slot->errno_val = err;
+    snprintf(slot->error, sizeof(slot->error), "%s: %s", what, strerror(err));
+}
 
-        if (exec_budget == 0) {
-            r->setup_failed = 1;
-            r->setup_errno = EMFILE;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "exec descriptor budget: %s", g_descriptor_limit_note);
-            continue;
-        }
-        exec_budget--;
+/* Create both pipes and the spawn handles for one attempt. On failure the
+ * slot names the failing call, nothing stays open, and the caller must
+ * not spawn. */
+static int exec_resources_acquire(pw_exec_resources_t *r, pw_shm_slot_t *slot) {
+    r->stdout_rfd = r->stdout_wfd = r->stderr_rfd = r->stderr_wfd = -1;
+    r->actions_initialized = r->attr_initialized = 0;
 
-        int out_pipe[2] = {-1, -1};
-        int err_pipe[2] = {-1, -1};
-        if (pipe(out_pipe) != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "pipe(stdout): %s", strerror(r->setup_errno));
-            continue;
-        }
-        if (pipe(err_pipe) != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "pipe(stderr): %s", strerror(r->setup_errno));
-            close(out_pipe[0]); close(out_pipe[1]);
-            continue;
-        }
-
-        r->stdout_rfd = out_pipe[0];
-        r->stdout_wfd = out_pipe[1];
-        r->stderr_rfd = err_pipe[0];
-        r->stderr_wfd = err_pipe[1];
-
-        if (posix_spawn_file_actions_init(&r->actions) != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "posix_spawn_file_actions_init: %s", strerror(errno));
-            close(out_pipe[0]); close(out_pipe[1]);
-            close(err_pipe[0]); close(err_pipe[1]);
-            r->stdout_rfd = r->stdout_wfd = r->stderr_rfd = r->stderr_wfd = -1;
-            continue;
-        }
-        r->actions_initialized = 1;
-
-        if (posix_spawnattr_init(&r->attr) != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "posix_spawnattr_init: %s", strerror(errno));
-            continue;
-        }
-        r->attr_initialized = 1;
-
-        /*
-         * Two attr flags carry the witness-honesty guarantees:
-         *
-         *   POSIX_SPAWN_CLOEXEC_DEFAULT — Darwin extension. Closes
-         *     every inherited FD in the child EXCEPT those mentioned
-         *     in this file_actions handle. Without this, the helper
-         *     would inherit the worker's shm fd (FD 3 carries the
-         *     result region), the policy-pipe read end (would expose
-         *     the SBPL source), and every OTHER exec slot's pipe ends.
-         *     With it, the child sees exactly the FDs we explicitly
-         *     dup/open below — nothing more.
-         *
-         *   POSIX_SPAWN_SETPGROUP + setpgroup(0) — puts the child in
-         *     its own process group with pgid == child_pid. Lets the
-         *     cleanup path request termination of members that remain
-         *     in this group. Descendants can leave the group; this is
-         *     not a general process-tree containment mechanism.
-         */
-        short flags = (short)(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP);
-        if (posix_spawnattr_setflags(&r->attr, flags) != 0 ||
-            posix_spawnattr_setpgroup(&r->attr, 0) != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno ? errno : EINVAL;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "posix_spawnattr_set*: %s", strerror(errno));
-            continue;
-        }
-
-        /* File actions: child gets stdin from /dev/null (so a helper
-         * that read(STDIN) gets EOF rather than blocking on an
-         * inherited fd that doesn't exist under CLOEXEC_DEFAULT),
-         * stdout/stderr dup'd from our pipes. addopen runs in the
-         * child after fork, so the FD it produces is one of the
-         * CLOEXEC_DEFAULT exceptions. */
-        int rc = 0;
-        rc |= posix_spawn_file_actions_addopen(&r->actions, STDIN_FILENO,
-                                                "/dev/null", O_RDONLY, 0);
-        rc |= posix_spawn_file_actions_adddup2(&r->actions, out_pipe[1], STDOUT_FILENO);
-        rc |= posix_spawn_file_actions_adddup2(&r->actions, err_pipe[1], STDERR_FILENO);
-        /* Close the originals after the adddup2 so the child doesn't
-         * carry the pipe-source fds redundantly. CLOEXEC_DEFAULT would
-         * close them anyway but we're explicit so future readers see
-         * the intent. */
-        rc |= posix_spawn_file_actions_addclose(&r->actions, out_pipe[1]);
-        rc |= posix_spawn_file_actions_addclose(&r->actions, err_pipe[1]);
-        rc |= posix_spawn_file_actions_addclose(&r->actions, out_pipe[0]);
-        rc |= posix_spawn_file_actions_addclose(&r->actions, err_pipe[0]);
-        if (rc != 0) {
-            r->setup_failed = 1;
-            r->setup_errno = errno ? errno : EINVAL;
-            snprintf(r->setup_error, sizeof(r->setup_error),
-                     "posix_spawn_file_actions_add*: rc=%d", rc);
-            /* Leave actions_initialized=1 so the destroy in cleanup
-             * still runs and frees any partial state. */
-        }
+    int out_pipe[2] = {-1, -1};
+    int err_pipe[2] = {-1, -1};
+    if (pipe(out_pipe) != 0) {
+        exec_setup_failed(slot, "pipe(stdout)", errno);
+        return -1;
     }
+    r->stdout_rfd = out_pipe[0];
+    r->stdout_wfd = out_pipe[1];
+    if (pipe(err_pipe) != 0) {
+        exec_setup_failed(slot, "pipe(stderr)", errno);
+        exec_resources_release(r);
+        return -1;
+    }
+    r->stderr_rfd = err_pipe[0];
+    r->stderr_wfd = err_pipe[1];
+
+    /* The posix_spawn* setup calls return errno-style values. */
+    int rc = posix_spawn_file_actions_init(&r->actions);
+    if (rc != 0) {
+        exec_setup_failed(slot, "posix_spawn_file_actions_init", rc);
+        exec_resources_release(r);
+        return -1;
+    }
+    r->actions_initialized = 1;
+
+    rc = posix_spawnattr_init(&r->attr);
+    if (rc != 0) {
+        exec_setup_failed(slot, "posix_spawnattr_init", rc);
+        exec_resources_release(r);
+        return -1;
+    }
+    r->attr_initialized = 1;
+
+    /*
+     * Two attr flags carry the witness-honesty guarantees:
+     *
+     *   POSIX_SPAWN_CLOEXEC_DEFAULT - Darwin extension. Closes
+     *     every inherited FD in the child EXCEPT those mentioned
+     *     in this file_actions handle. Without this, the helper
+     *     would inherit the worker's shm fd (FD 3 carries the
+     *     result region) and the policy-pipe read end (would expose
+     *     the SBPL source). With it, the child sees exactly the FDs
+     *     we explicitly dup/open below and nothing more.
+     *
+     *   POSIX_SPAWN_SETPGROUP + setpgroup(0) - puts the child in
+     *     its own process group with pgid == child_pid. Lets the
+     *     cleanup path request termination of members that remain
+     *     in this group. Descendants can leave the group; this is
+     *     not a general process-tree containment mechanism.
+     */
+    short flags = (short)(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETPGROUP);
+    rc = posix_spawnattr_setflags(&r->attr, flags);
+    if (rc == 0) rc = posix_spawnattr_setpgroup(&r->attr, 0);
+    if (rc != 0) {
+        exec_setup_failed(slot, "posix_spawnattr_set*", rc);
+        exec_resources_release(r);
+        return -1;
+    }
+
+    /* File actions: child gets stdin from /dev/null (so a helper
+     * that read(STDIN) gets EOF rather than blocking on an
+     * inherited fd that doesn't exist under CLOEXEC_DEFAULT),
+     * stdout/stderr dup'd from our pipes. addopen runs in the
+     * child after fork, so the FD it produces is one of the
+     * CLOEXEC_DEFAULT exceptions. The originals are closed after
+     * the adddup2 so the child doesn't carry the pipe-source fds
+     * redundantly; CLOEXEC_DEFAULT would close them anyway. */
+    rc = posix_spawn_file_actions_addopen(&r->actions, STDIN_FILENO,
+                                          "/dev/null", O_RDONLY, 0);
+    if (rc == 0) rc = posix_spawn_file_actions_adddup2(&r->actions, out_pipe[1], STDOUT_FILENO);
+    if (rc == 0) rc = posix_spawn_file_actions_adddup2(&r->actions, err_pipe[1], STDERR_FILENO);
+    if (rc == 0) rc = posix_spawn_file_actions_addclose(&r->actions, out_pipe[1]);
+    if (rc == 0) rc = posix_spawn_file_actions_addclose(&r->actions, err_pipe[1]);
+    if (rc == 0) rc = posix_spawn_file_actions_addclose(&r->actions, out_pipe[0]);
+    if (rc == 0) rc = posix_spawn_file_actions_addclose(&r->actions, err_pipe[0]);
+    if (rc != 0) {
+        exec_setup_failed(slot, "posix_spawn_file_actions_add*", rc);
+        exec_resources_release(r);
+        return -1;
+    }
+    return 0;
 }
 
 /* Drain a single stream into the slot buffer. Returns updated `*used`
@@ -868,7 +737,7 @@ static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow)
     return (int)n;
 }
 
-static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
+static void attempt_exec_spawn(pw_shm_slot_t *slot,
                                const pw_attempt_budget_t *budget, long child_deadline_ms) {
     /* Sentinel conventions when no child runs (header documents these). */
     slot->child_pid          = 0;
@@ -876,23 +745,6 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
     slot->child_term_signal  = 0;
     slot->child_stdout[0]    = '\0';
     slot->child_stderr[0]    = '\0';
-
-    if (r->setup_failed) {
-        slot->rc = -1;
-        slot->errno_val = r->setup_errno;
-        size_t n = strnlen(r->setup_error, sizeof(r->setup_error));
-        if (n >= sizeof(slot->error)) n = sizeof(slot->error) - 1u;
-        memcpy(slot->error, r->setup_error, n);
-        slot->error[n] = '\0';
-        return;
-    }
-    if (!r->actions_initialized) {
-        slot->rc = -1;
-        slot->errno_val = EINVAL;
-        snprintf(slot->error, sizeof(slot->error),
-                 "exec slot: file_actions not prepared");
-        return;
-    }
 
     /* Attempt budget admission. Refusal is per-step evidence with no spawn
      * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
@@ -946,10 +798,17 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
      * pass absolute paths via target/args anyway. */
     static char *empty_envp[] = { NULL };
 
+    /* Post-apply setup: the pipes and spawn handles live only for this
+     * attempt. A failure here names its own call and claims no spawn. */
+    pw_exec_resources_t res;
+    pw_exec_resources_t *r = &res;
+    if (exec_resources_acquire(r, slot) != 0) return;
+
     pid_t child = 0;
     int spawn_rc = posix_spawn(&child, slot->target, &r->actions, &r->attr,
                                argv_local, empty_envp);
     if (spawn_rc != 0) {
+        exec_resources_release(r);
         /* posix_spawn returns an errno-style value rather than -1+errno. */
         slot->rc = -1;
         slot->errno_val = spawn_rc;
@@ -1107,8 +966,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
         (void)poll(NULL, 0, 1);
     }
 
-    if (r->stdout_rfd >= 0) { close(r->stdout_rfd); r->stdout_rfd = -1; }
-    if (r->stderr_rfd >= 0) { close(r->stderr_rfd); r->stderr_rfd = -1; }
+    exec_resources_release(r);
 
     if (reaped == child) {
         if (WIFEXITED(status)) slot->child_exit_code = WEXITSTATUS(status);
@@ -1163,12 +1021,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_exec_resources_t *r,
  * before the per-kind helper runs so a kind that leaves a field
  * untouched lands at a known state. `completed` is the LAST write
  * (release ordering) so the host's acquire-load of completed
- * synchronizes with every other slot write.
- *
- * The slot_idx parameter is required by PW_ATTEMPT_EXEC_SPAWN to find
- * its pre-apply-prepared pipe/file_actions resources; other kinds
- * ignore it. */
-static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx,
+ * synchronizes with every other slot write. */
+static void run_attempt(pw_shm_slot_t *slot,
                         const pw_attempt_budget_t *budget, long child_deadline_ms) {
     slot->rc = 0;
     slot->errno_val = 0;
@@ -1185,7 +1039,7 @@ static void run_attempt(pw_shm_slot_t *slot, uint32_t slot_idx,
     case PW_ATTEMPT_MACH_LOOKUP:      attempt_mach_lookup(slot);          break;
     case PW_ATTEMPT_SYSCTL_READ:      attempt_sysctl_read(slot);          break;
     case PW_ATTEMPT_EXEC_SPAWN:
-        attempt_exec_spawn(slot, &exec_resources[slot_idx], budget, child_deadline_ms);
+        attempt_exec_spawn(slot, budget, child_deadline_ms);
         break;
     default:
         slot->rc = -1;
@@ -1363,21 +1217,6 @@ int main(int argc, char **argv) {
         params[i].key[PW_SHM_PARAM_KEY_MAX - 1u] = '\0';
         params[i].value[PW_SHM_PARAM_VALUE_MAX - 1u] = '\0';
     }
-
-    /* Pre-apply: for every exec slot, create stdout/stderr pipes and
-     * build the posix_spawn_file_actions handle that wires them to the
-     * child. Doing this before sandbox_apply is load-bearing: the
-     * post-apply worker should only call posix_spawn + close/poll/
-     * read/waitpid so a sandbox-denied spawn surfaces cleanly rather
-     * than being masked by a denied pipe() or denied
-     * posix_spawn_file_actions_init(). */
-    exec_resources_reset_all();
-    uint32_t exec_count = 0;
-    for (uint32_t i = 0; i < step_count; i++) {
-        if (slots[i].attempt_kind == PW_ATTEMPT_EXEC_SPAWN) exec_count++;
-    }
-    uint32_t exec_budget = prepare_exec_descriptor_budget(exec_count);
-    setup_exec_resources(slots, step_count, exec_budget);
 
     /* Read policy text into a fixed buffer. SBPL policies are
      * typically small (KiB); cap at 256 KiB so a runaway producer
@@ -1569,7 +1408,7 @@ int main(int argc, char **argv) {
      * outputs before the slot's `completed` flag is released. */
     for (uint32_t i = 0; i < step_count; i++) {
         pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_STARTED, i);
-        run_attempt(&slots[i], i, &attempt_budget, child_deadline_ms);
+        run_attempt(&slots[i], &attempt_budget, child_deadline_ms);
         pw_progress(evidence, PW_OP_ATTEMPT, PW_PROGRESS_RETURNED, i);
     }
 

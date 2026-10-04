@@ -492,32 +492,12 @@
           "description": "unlink denied (errno=1); target survived under (deny default)"
         },
         {
-          "id": "exec_descriptor_limit_raised",
-          "description": "32 exec slots spawn under an inherited 64-descriptor soft limit; the worker raises it pre-apply"
+          "id": "exec_pipes_per_attempt",
+          "description": "32 exec slots with a system import and surrounding reads all spawn and exit cleanly under a 64-descriptor hard ceiling; pipes and spawn handles exist only inside each attempt"
         },
         {
-          "id": "exec_descriptor_limit_capped",
-          "description": "Hard cap 64 refuses exec setup while preserving policy imports and file reads"
-        },
-        {
-          "id": "exec_descriptor_cap_126",
-          "description": "Soft/hard limits 64/126: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
-        },
-        {
-          "id": "exec_descriptor_cap_127",
-          "description": "Soft/hard limits 64/127: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
-        },
-        {
-          "id": "exec_descriptor_cap_128",
-          "description": "Soft/hard limits 64/128: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
-        },
-        {
-          "id": "exec_descriptor_cap_129",
-          "description": "Soft/hard limits 64/129: imports and mixed-plan reads survive; prepared execs exit cleanly and excess execs report budget refusal"
-        },
-        {
-          "id": "exec_descriptor_inherited",
-          "description": "32 execs spawn with 80 extra inherited descriptors and soft/hard limits 128/4096"
+          "id": "exec_setup_post_apply_denied",
+          "description": "One exec slot under bare (deny default): post-apply pipe and spawn-handle setup succeeds and the attempt fails at posix_spawn with EPERM/EACCES and child_pid=0"
         },
         {
           "id": "exec_attempt_budget_remainder",

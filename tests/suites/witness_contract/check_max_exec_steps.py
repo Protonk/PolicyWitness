@@ -1,10 +1,10 @@
 """Every exec step of a maximum plan spawns.
 
-256 exec steps of /usr/bin/true under an allow-all policy. Each exec step
-holds four descriptors before the sandbox applies, so under launchd's default
-soft limit of 256 only the first 62 could open their pipes and the rest failed
-at pipe() with EMFILE. The worker now raises its soft limit to fit the plan
-first, so every attempt must report a child that exited cleanly and no error.
+256 exec steps of /usr/bin/true under an allow-all policy. Each exec attempt
+creates its two pipes inside the attempt and releases them before the step
+completes, so a full plan never holds more than one step's descriptors and
+launchd's default soft limit of 256 is never approached. Every attempt must
+report a child that exited cleanly and no error.
 """
 import json
 import secrets

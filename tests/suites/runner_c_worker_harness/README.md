@@ -13,8 +13,8 @@ itself broke rather than the host wiring around it.
 
 ## What's pinned
 
-Thirty-four scenarios, each driven by `harness.c`: six core lifecycle cases,
-eighteen attempt and pre-apply cases, and ten release controls listed below.
+Twenty-nine scenarios, each driven by `harness.c`: six core lifecycle cases,
+thirteen attempt and pre-apply cases, and ten release controls listed below.
 
 ### Core lifecycle
 
@@ -82,23 +82,23 @@ while enforcing write permission.
    against an absent path: `rc=0`, `observed_path` captured from the open
    fd, and the target exists afterward.
 
-### Exec descriptor budget
+### Exec resources are per attempt
 
-`exec_descriptor_limit_raised` lowers the soft limit to 64 and requires all
-32 `/usr/bin/true` children to exit cleanly. `exec_descriptor_inherited` adds
-80 inheritable descriptors with soft/hard limits 128/4096 and requires the
-same result, so a fixed allowance for existing descriptors cannot pass.
+`exec_pipes_per_attempt` sets the soft and hard descriptor limits to 64 and
+runs a plan that imports `system.sb`, reads `/etc/hosts`, spawns 32
+`/usr/bin/true` children and reads again. Held open together, 32 pipe pairs
+would need 128 descriptors, so every child exiting cleanly proves that the
+worker creates each attempt's pipes and spawn handles inside the attempt,
+after apply, and releases them before the slot completes. Both reads and the
+import must succeed under the same ceiling.
 
-`exec_descriptor_limit_capped` sets both limits to 64. The worker refuses all
-exec setup to preserve its 64-descriptor reserve. `exec_descriptor_cap_126`
-through `exec_descriptor_cap_129` start at soft limit 64 and exercise four
-adjacent hard ceilings: some children must spawn and exit cleanly, and excess
-slots must report descriptor-budget refusal without claiming `pipe()` ran.
-All capped plans import `system.sb` and read `/etc/hosts` before and after the
-32 exec steps. Successful compilation and reads prove that pipe setup did not
-starve unrelated work. Every case requires completed slots and a clean worker
-exit. See `exec_step_descriptors` and `exec_descriptor_reserve` in
-`docs/LIMITS.md`.
+`exec_setup_post_apply_denied` runs one exec slot under bare `(deny default)`.
+The post-apply pipe and spawn-handle setup must succeed and the attempt must
+fail at `posix_spawn` itself: `child_pid=0`, `rc=-1`, `errno` ∈ {EPERM,
+EACCES} and an error naming `posix_spawn` rather than `pipe()` or a
+spawn-handle call. A setup-attributed failure here would mean a macOS revision
+has started gating that surface; the C worker's exec attempt machinery comment
+says what to do then.
 
 ### Exec attempt budget
 

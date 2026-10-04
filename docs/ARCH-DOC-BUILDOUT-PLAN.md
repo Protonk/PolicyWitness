@@ -255,16 +255,17 @@ Size target: 300 to 500 lines. Current behavior only.
    and 4; write the policy bytes; read the ready byte within its window.
 5. Worker before apply: map the region; refuse on magic or identity mismatch
    (exit 4) or unprepared header (exit 5); bound counts; NUL-terminate strings;
-   create exec pipes and file actions under the descriptor budget; read the
-   policy (size cap, embedded NUL refusal); params; compile; optional capture;
-   ready byte; `sandbox_apply`; `applied`.
+   read the policy (size cap, embedded NUL refusal); params; compile; optional
+   capture; ready byte; `sandbox_apply`; `applied`.
 6. Host on `applied` with `apply_rc` zero and identity match: premature
    publication check; fire the hook; validator spawned as `--batch <pid>`,
    probes written and verdicts read under `poll()` with an I/O deadline;
    the hook returns; collection is closed; `proceed` stored.
 7. Worker: `wait_for_proceed` within its budget (failure code 8 on expiry);
-   `proceed_observed`; attempts in plan order; each slot's outputs then
-   `completed` with release ordering; `done`; spin until `exit_requested`.
+   `proceed_observed`; attempts in plan order (an exec attempt creates its
+   pipes and spawn handles here and releases them before its slot completes);
+   each slot's outputs then `completed` with release ordering; `done`; spin
+   until `exit_requested`.
 8. Host: poll for `done`, a reaped child, the sentinel deadline or a wait
    error; `exit_requested`; grace; terminate; final acquire snapshot; decode
    worker evidence; build output.
