@@ -1,26 +1,4 @@
 {
   "schema_version": 1,
-  "runs": [
-    {
-      "path": "release-acceptance/run-5ccb76cacc514faa8ef93fb826748439",
-      "run_id": "20260929T190818Z_2f492440",
-      "reason": "PolicyWitness 0.2.4 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; published as GitHub release v0.2.4.",
-      "source": "ff2b192728268b5dc33024b2ce01ec4e830f0c32",
-      "app_inventory": "before.json"
-    },
-    {
-      "path": "release-acceptance/run-ad999b758ce142ee8e23a38970133975",
-      "run_id": "20261003T231959Z_642a2395",
-      "reason": "PolicyWitness 0.2.5 release ZIP acceptance: signatures, staple, Gatekeeper, allow and deny witnesses, and unchanged archive and extracted app; archived as v0.2.5.",
-      "source": "4e02cf5166b5e647feffdf07311676e90d113807",
-      "app_inventory": "before.json"
-    },
-    {
-      "path": "runs/release-0.2.5-default",
-      "run_id": "20261003T232002Z_4859a076",
-      "reason": "PolicyWitness 0.2.5 release validation: the default battery passed against the final stapled app with no skips, unrun cases or harness errors and an unchanged app; archived as v0.2.5.",
-      "source": "4e02cf5166b5e647feffdf07311676e90d113807",
-      "app_inventory": "artifact-integrity/before.json"
-    }
-  ]
+  "runs": []
 }
