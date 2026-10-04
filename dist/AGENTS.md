@@ -10,6 +10,12 @@
   `tests/lib/release_publish.py` (`make publish`), which records origin only after
   verifying the uploaded assets. Preserve original receipts, including recorded
   paths. Never substitute a later build or rebuild a tag to represent a published ZIP.
+- New archives carry full test evidence under `evidence/test-runs/`; validate the
+  new release before cleanup. `release_rotate.py` keeps its acceptance and battery
+  plus the newest completed local output and journals cleanup of older managed
+  runs in `evidence/rotation.json`. Resume that helper after an interruption;
+  preserve its quarantine under `tests/out/.release-rotation/`. Scratch follows
+  [.tmp/AGENTS.md](../.tmp/AGENTS.md). Evidence stays local; no backup service is required.
 - Preserve `v2.3.0` and `v0.2.3` as the two version-reset examples. Check provenance
   before removing other release material; test-evidence retention is governed
   separately by `tests/RETAINED.json`.

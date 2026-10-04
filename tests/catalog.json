@@ -38,6 +38,11 @@
           "id": "release_publish_controls",
           "requires": [],
           "description": "Tag preflight, release archiving with retention, and GitHub publication verify their inputs offline and refuse mismatches"
+        },
+        {
+          "id": "release_rotation_controls",
+          "requires": [],
+          "description": "Release cleanup keeps the latest release and newest local output, protects active and recovery work, and resumes interrupted deletion"
         }
       ]
     },

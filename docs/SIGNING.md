@@ -75,23 +75,104 @@ make publish VERSION=0.2.4
 `make release` runs the preflight, then the `make notarize` chain below (build,
 sign, submit, wait, staple, validate, re-zip, accept), then the full default
 battery against the stapled app into `tests/out/runs/release-<version>-default`,
-and finally `tests/lib/release_archive.py`, which archives the accepted release
-under `dist/archive/v<version>/`. Archiving copies the final ZIP and staged
-guide, writes `SHA256SUMS` and `release.json`, moves the attempt's receipts to
-`evidence/` (leaving a `<attempt>.archived` pointer under `dist/evidence/`),
-archives the notes as `evidence/release-notes.md`, and appends the acceptance
-run and the battery run to `tests/RETAINED.json`. Commit that index change.
-Release acceptance and the battery take the test checkout lock, so run no other
-battery while `make release` runs. Nothing in `make release` leaves the machine
-except the notarization submission.
+then `tests/lib/release_archive.py`, which archives the accepted release under
+`dist/archive/v<version>/`. Archiving stages the ZIP, guide, checksums, original
+command receipts, notes and complete test evidence, verifies the copy, and
+exposes the completed archive by rename. The attempt's receipts end up under
+`evidence/`, with a `<attempt>.archived` pointer under `dist/evidence/`.
+The acceptance and battery working directories are added to `tests/RETAINED.json`.
+Finally, `tests/lib/release_rotate.py` removes eligible older working test output
+as described below. Commit the resulting retention index change.
+Archiving and rotation each hold the test checkout lock across their reads and
+mutations; acceptance and the battery also use that lock. Run no other battery
+while `make release` runs. Nothing in `make release` leaves the machine except
+the notarization submission.
+
+### Portable test evidence and release cleanup
+
+Each archive contains `evidence/test-runs/runs.tar.gz`, with the full acceptance
+directory under `acceptance/` and the default battery under `battery/` when
+provided. Its `manifest.json` records the original retention entries, per-file
+hashes, modes, symlink targets, and checksums of the compressed archive and
+standalone summaries. `release.json` binds that manifest by SHA-256. Its
+`acceptance.path` and `battery.path` resolve to summaries within the release
+archive; `original_path` records the former location under `tests/out`.
+Original command receipts retain their original paths. Verifying the portable
+copy does not need the working test directories or extract any archive member.
+
+Successful release packaging is the automatic cleanup checkpoint. Tests can
+create fresh run directories freely during development; no new-test hook,
+schedule, age threshold or disk-size threshold prunes other output. Growth
+during a refactor is expected until the next packaged release.
+
+Cleanup keeps the new release's working acceptance and battery plus the newest
+completed local output under `tests/out/runs/` or `tests/out/release-acceptance/`.
+The recorded completion timestamp determines newest, including failed runs;
+ties are all kept. Names, file modification times and sizes do not determine
+retention. Starting cleanup for an older release while a newer one is indexed
+is refused. Explicit manual pins remain protected exceptions.
+
+Both release retention entries carry `"release": "v<version>"`, making them
+eligible at a later release checkpoint. An omitted or null `release` is an
+explicit pin. Release entries should carry their established tag, including
+entries for older archives without portable bundles. Do not infer ownership
+from directory names or reason text. Absent older rotating entries are retired
+from the index too; absent pins remain protected.
+
+Older owned runs and acceptance output are disposable at the checkpoint.
+Interrupted or ambiguous output with valid ownership is eligible when it started
+before the new release battery. Newer unfinished work survives until a later
+checkpoint. Acceptance holds a separate lifetime lock through extraction, its
+nested dispatcher, final checks and receipts, so even work outside the nested
+tests stays protected. Legacy acceptance requires a report and valid nested
+dispatcher ownership. Unknown ownership, symlink redirects, explicit pins,
+overlaps, and pending external-runner cleanup are kept with reported reasons.
+Session removal and registry-recovery receipts must establish cleanup before
+their output can be removed; release cleanup never removes machine services.
+
+The new release's portable evidence must verify before cleanup begins. Older
+development output is not automatically archived before deletion, and historical
+release archives are not modified. There is no off-machine evidence backup,
+monitoring, or backup prerequisite. `.tmp` is outside test cleanup and follows
+[its disposable-scratch policy](../.tmp/AGENTS.md), preserving that policy file.
+
+Cleanup holds `tests/.checkout.lock` through planning, atomic retention
+replacement and deletion. It records ownership and file inventories in
+`evidence/rotation.json`, then renames eligible directories into a private
+transaction under `tests/out/.release-rotation/`. Only after staging does it
+retire their index entries and delete the quarantined copies. That directory
+is outside ordinary pruning. The journal survives interruption, including a
+partial deletion; resumption rechecks the new archive, pins and remaining bytes.
+It never deletes a replacement run at an original path. Keep the quarantine and
+journal together until completion. A later checkpoint refuses to start while
+an earlier transaction still has quarantined output; resume that transaction first.
+
+Preview or resume just this last step with the archived version:
+
+```sh
+python3 -B tests/lib/release_rotate.py dist/archive/v0.2.7
+python3 -B tests/lib/release_rotate.py dist/archive/v0.2.7 --apply
+```
+
+Preview is read-only. `--apply` either creates a journal or resumes its existing
+transaction; a completed journal is a no-op, so later test runs cannot trigger
+another sweep under the same release. A cleanup failure does not require
+rebuilding or resubmitting the release. Evidence archives remain local, ignored
+files; the three published assets do not include the test evidence bundle.
+
+### Publication
 
 `make publish` is the outward step. `tests/lib/release_publish.py` pushes the
 tag if the remote lacks it, creates the GitHub release once from the archived
 assets with `--verify-tag`, reads the release back, downloads every asset,
 compares bytes and digests with `SHA256SUMS`, and only then records the release
 and asset URLs in `release.json` and the reply in `evidence/github-release.json`.
-Re-running it verifies an existing release and creates nothing. It needs an
-authenticated `gh`; `RELEASE_NOTES=` overrides the archived notes.
+Re-running it verifies an existing release and creates nothing. Archives that
+declare portable test evidence must pass its verification before any push or
+GitHub operation. It needs an authenticated `gh`; `RELEASE_NOTES=` overrides
+the archived notes.
+
+### Lower-level notarization
 
 `make notarize` is the lower-level chain. It **builds again**, even if you
 already built and tested the app, and its last step tests the actual final ZIP;
@@ -126,7 +207,8 @@ directories hold raw receipts. Missing steps have no recorded result.
 | Re-zip | Replaces ZIP with the stapled app | ZIP creation succeeds |
 | Accept archive | Extracts a disposable copy and runs checks | `acceptance.json` has `ok: true` for the final ZIP's SHA-256 |
 | Battery (`make release`) | Runs the default battery against the stapled app | `run.json` passes with no skips, unrun cases or harness errors and an unchanged app |
-| Archive (`make release`) | Copies the ZIP and guide, moves receipts, retains evidence | `dist/archive/v<version>/release.json` with `origin: null` |
+| Archive (`make release`) | Verifies staged assets, receipts and portable test evidence; retains working runs | `dist/archive/v<version>/release.json` with `origin: null` |
+| Cleanup (`make release`) | Keeps the release and newest local evidence; retires older owned output under the checkout lock | `evidence/rotation.json` records a completed transaction |
 | Publish (`make publish`) | Pushes the tag, creates the release, verifies uploads | `release.json` records `origin` and `evidence/github-release.json` exists |
 
 `notarize.py` owns only submission and one bounded wait. It preserves the input
@@ -267,7 +349,8 @@ assessment, not a claim about every recipient's machine or Gatekeeper cache.
 ## Preserved release archives
 
 `dist/archive/<version>/` contains exact release assets, `SHA256SUMS`, a
-`release.json` provenance record, and supporting `evidence/`. `make release`
+`release.json` provenance record, and supporting `evidence/`, including the
+portable test bundle and rotation receipt when produced by these helpers. `make release`
 creates one per version through `tests/lib/release_archive.py`; the two earlier
 examples, `v2.3.0` and `v0.2.3`, were assembled by hand on either side of the
 version reset. The guide is included when it was distributed. Provenance records

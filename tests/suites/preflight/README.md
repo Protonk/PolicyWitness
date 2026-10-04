@@ -63,11 +63,26 @@ Offline release controls also exercise the release procedure's decision points.
   refuse a hash, acceptance, notarization, tag, guide, notes or battery
   mismatch without touching the distribution or the retention index, and on
   success must move the attempt, write the checksums and provenance record,
-  and retain the acceptance and battery runs. Publication runs `git` for real
+  pack and verify complete test evidence with portable summaries, and retain
+  the acceptance and battery runs. Publication runs `git` for real
   against the bare remote and a GitHub stand-in: it pushes the tag once,
   creates the release once with the tag verified, downloads every asset back,
   and records origin only when digests and bytes match; a second run verifies
   without creating, and a mismatch leaves origin unrecorded.
+- `release_rotation_controls` creates successive releases in real fixture
+  repositories. It verifies compressed files and symlink targets independently,
+  reads a detached archive after deleting its source runs, and observes that
+  cleanup keeps the latest release plus the newest completed local output,
+  including failed runs and completion-time ties. Older owned development,
+  acceptance and abandoned output is removed. Explicit pins, active acceptance,
+  newer unfinished work, pending resource cleanup, unknown output and scratch
+  survive. The new archive must verify; old release entries can expire even
+  without an older portable bundle. Corrupt new archives and symlink redirects
+  stop unsafe cleanup. Names, filesystem timestamps and sizes do not choose newest.
+  Abrupt child exits after rename, index replacement, partial deletion and
+  completed deletion must resume from the journal without deleting a replacement
+  at the original path. Competing processes must respect the stable checkout
+  lock, and a failed atomic index replacement must preserve its prior bytes.
 
 ## Fixtures
 
@@ -97,4 +112,5 @@ Run:
 ./tests/run.sh --case preflight/release_controls
 ./tests/run.sh --case preflight/release_deadline_controls
 ./tests/run.sh --case preflight/release_publish_controls
+./tests/run.sh --case preflight/release_rotation_controls
 ```

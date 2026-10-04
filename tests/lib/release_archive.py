@@ -5,9 +5,10 @@ guide from the same build, SHA256SUMS, release.json and the attempt's receipts
 moved under evidence/ (a `<attempt>.archived` pointer stays behind). The attempt
 must record an accepted notarization and a passed archive acceptance of the same
 bytes, and the ZIP must be stamped exactly at the annotated tag v<version>. A
-completed default battery run against the final app can be recorded beside the
-acceptance run; both are appended to tests/RETAINED.json. Publishing is the
-separate release_publish.py step, which fills `origin` afterwards.
+completed default battery run against the final app is packed beside the
+acceptance run, with portable summaries and a verified file inventory. Both
+working runs are retained and explicitly opt into release rotation.
+Publishing is the separate release_publish.py step, which fills `origin` afterwards.
 """
 import argparse
 import json
@@ -17,10 +18,13 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 
-from artifact import digest
+from artifact import digest, inventory
 import retention
+import release_runs
+import release_cleanup
 
 ROOT = Path(__file__).resolve().parents[2]
 STEPS = ('notarization', 'staple', 'staple-validation', 'gatekeeper', 're-zip')
@@ -32,7 +36,7 @@ def git(root, *args):
 
 
 def load_attempt(attempt):
-    attempt = Path(attempt).resolve()
+    attempt = release_runs.real_path(attempt)
     record = retention.read_object(attempt / 'release.json')
     acceptance = retention.read_object(attempt / 'acceptance.json')
     notarization = retention.read_object(attempt / 'notarization/result.json')
@@ -76,6 +80,8 @@ def battery_record(root, dist, battery):
         problems.append('battery did not confirm an unchanged, valid app')
     if integrity.get('app') != str((Path(dist) / 'PolicyWitness.app').resolve()):
         problems.append('battery did not run against the final app')
+    if retention.disposition(path) != 'completed':
+        problems.append('battery has no matching managed completion record')
     if problems:
         raise ValueError('; '.join(problems))
     inventory = 'artifact-integrity/before.json'
@@ -84,25 +90,31 @@ def battery_record(root, dist, battery):
 
 
 def retain(root, entries):
-    """Append entries to tests/RETAINED.json; restore the file if the result would be invalid."""
+    """Caller holds the checkout lock; validate before atomic replacement."""
     path = root / 'tests/RETAINED.json'
-    original = path.read_text()
+    retention.load_index(root)
     index = retention.read_object(path)
-    existing = {entry.get('path') for entry in index['runs']}
+    existing = {entry['path']: entry for entry in index['runs']}
+    for entry in entries:
+        prior = existing.get(entry['path'])
+        if prior and any(prior[k] != entry[k] for k in ('run_id', 'source', 'app_inventory')):
+            raise ValueError(f'retained run identity differs: {entry["path"]}')
     added = [entry for entry in entries if entry['path'] not in existing]
     index['runs'] += added
-    path.write_text(json.dumps(index, indent=2) + '\n')
-    try:
-        retention.load_index(root)
-    except ValueError:
-        path.write_text(original)
-        raise
+    retention.write_index(root, index)
     return added
 
 
 def archive(attempt, *, dist, root=ROOT, notes=None, battery=None):
+    root = Path(root).resolve()
+    with retention.checkout_lock(root):
+        return archive_locked(attempt, dist=dist, root=root, notes=notes, battery=battery)
+
+
+def archive_locked(attempt, *, dist, root, notes, battery):
+    retention.load_index(root)
     attempt, record, acceptance, notarization = load_attempt(attempt)
-    root, dist = Path(root), Path(dist)
+    dist = release_runs.real_path(dist)
     problems = []
     if notarization.get('state') != 'accepted':
         problems.append(f"notarization state is {notarization.get('state')!r}, not accepted")
@@ -136,14 +148,22 @@ def archive(attempt, *, dist, root=ROOT, notes=None, battery=None):
     dest = dist / 'archive' / tag
     if dest.exists():
         problems.append(f'{dest} already exists; a version is archived once')
-    acceptance_run = Path(acceptance['path']).parent
     try:
+        acceptance_run = retention.bounded_path(root, Path(acceptance['path']).parent)
+        accepted = retention.read_object(acceptance_run / 'acceptance.json')
+        acceptance_owner = release_cleanup.describe(acceptance_run)
+        if (accepted.get('ok') is not True or accepted.get('sha256_before') != final_hash
+                or accepted.get('sha256_after') != final_hash
+                or acceptance_owner['disposition'] != 'completed'
+                or retention.disposition(acceptance_run / 'tests') != 'completed'):
+            raise ValueError('acceptance has no matching successful completion and ZIP hashes')
         acceptance_entry = dict(
             path=str(acceptance_run.relative_to(root / 'tests/out')),
-            run_id=retention.read_object(acceptance_run / 'tests/run.json')['run_id'],
+            run_id=acceptance_owner['run_id'],
             reason=f'PolicyWitness {version} release ZIP acceptance: signatures, staple, Gatekeeper, allow and '
                    f'deny witnesses, and unchanged archive and extracted app; archived as {tag}.',
-            source=commit, app_inventory='before.json' if (acceptance_run / 'before.json').is_file() else None)
+            source=commit, app_inventory='before.json' if (acceptance_run / 'before.json').is_file() else None,
+            release=tag)
     except (ValueError, OSError, KeyError) as exc:
         problems.append(f'acceptance run is not readable: {exc}')
         acceptance_entry = None
@@ -155,7 +175,7 @@ def archive(attempt, *, dist, root=ROOT, notes=None, battery=None):
                                  reason=f'PolicyWitness {version} release validation: the default battery passed '
                                         f'against the final stapled app with no skips, unrun cases or harness '
                                         f'errors and an unchanged app; archived as {tag}.',
-                                 source=commit, app_inventory=found['app_inventory'])
+                                 source=commit, app_inventory=found['app_inventory'], release=tag)
         except (ValueError, OSError, KeyError) as exc:
             problems.append(f'battery run rejected: {exc}')
     if notes is not None and not Path(notes).is_file():
@@ -163,32 +183,64 @@ def archive(attempt, *, dist, root=ROOT, notes=None, battery=None):
     if problems:
         raise ValueError('; '.join(problems))
 
-    dest.mkdir(parents=True)
     name = f'PolicyWitness-{version}.zip'
-    shutil.copy2(final, dest / name)
-    shutil.copy2(guide, dest / 'PolicyWitness.md')
-    (dest / 'SHA256SUMS').write_text(f'{digest(dest / name)}  {name}\n'
-                                     f'{digest(dest / "PolicyWitness.md")}  PolicyWitness.md\n')
-    evidence = dest / 'evidence'
-    shutil.move(str(attempt), str(evidence))
-    attempt.with_name(attempt.name + '.archived').write_text(f'{evidence}\n')
-    if notes is not None:
-        shutil.copy2(notes, evidence / 'release-notes.md')
+    entries = [entry for entry in (acceptance_entry, battery_entry) if entry is not None]
+    retention.index_paths(root, dict(schema_version=1, runs=entries))
+    existing = retention.read_object(root / 'tests/RETAINED.json')['runs']
+    for entry in entries:
+        for prior in existing:
+            if prior['path'] == entry['path'] and any(prior[k] != entry[k] for k in ('run_id', 'source', 'app_inventory')):
+                raise ValueError(f'retained run identity differs: {entry["path"]}')
     relative_attempt = attempt.relative_to(root) if root in attempt.parents else attempt
     receipts = [dict(original_path=str(relative_attempt / step), archived_path=f'evidence/{step}')
-                for step in STEPS if (evidence / step).is_dir()]
+                for step in STEPS if (attempt / step).is_dir()]
     receipts += [dict(original_path=str(relative_attempt / item), archived_path=f'evidence/{item}')
                  for item in ('acceptance.json', 'release.json')]
-    entries = [entry for entry in (acceptance_entry, battery_entry) if entry is not None]
-    (dest / 'release.json').write_text(json.dumps(dict(
+    archived = dict(
         schema_version=1, version=version, build_number=str(info.get('CFBundleVersion')), tag=tag,
         source_commit=commit, origin=None, archive=name, sha256=final_hash, guide='PolicyWitness.md',
         notarization_submission_id=notarization.get('submission_id'),
         submitted_sha256=record.get('submitted_sha256'),
-        acceptance=dict(path=acceptance_entry['path'] + '/acceptance.json', ok=True, sha256=final_hash),
-        battery=None if battery_entry is None else dict(path=battery_entry['path'], run_id=battery_entry['run_id']),
-        receipts=receipts, notes=[]), indent=2) + '\n')
+        acceptance=dict(path=release_runs.BUNDLE + '/acceptance.json',
+                        original_path=acceptance_entry['path'] + '/acceptance.json', ok=True, sha256=final_hash),
+        battery=None if battery_entry is None else dict(path=release_runs.BUNDLE + '/battery.json',
+                        original_path=battery_entry['path'], run_id=battery_entry['run_id']),
+        receipts=receipts, notes=[])
+    runs = {'acceptance': (acceptance_run, acceptance_entry)}
+    if battery_entry:
+        runs['battery'] = (root / 'tests/out' / battery_entry['path'], battery_entry)
+    # Stage and verify the complete archive before exposing it or changing any
+    # retention. A failed copy leaves all original evidence available.
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    release_runs.real_path(dest.parent)
+    with tempfile.TemporaryDirectory(prefix='.' + tag + '-', dir=dest.parent) as temporary:
+        staged = Path(temporary) / tag
+        staged.mkdir()
+        shutil.copy2(final, staged / name)
+        shutil.copy2(guide, staged / 'PolicyWitness.md')
+        if digest(staged / name) != final_hash or digest(staged / 'PolicyWitness.md') != digest(guide):
+            raise ValueError('release assets changed while archiving')
+        (staged / 'SHA256SUMS').write_text(f'{final_hash}  {name}\n'
+                                         f'{digest(staged / "PolicyWitness.md")}  PolicyWitness.md\n')
+        original = inventory(attempt)
+        evidence = staged / 'evidence'
+        shutil.copytree(attempt, evidence, symlinks=True)
+        if inventory(evidence) != original or inventory(attempt) != original:
+            raise ValueError('release receipts changed while archiving')
+        if notes is not None:
+            shutil.copy2(notes, evidence / 'release-notes.md')
+        archived['test_evidence'] = release_runs.pack(staged / release_runs.BUNDLE,
+                                                    tag=tag, source=commit, runs=runs)
+        retention.atomic_json(staged / 'release.json', archived)
+        release_runs.verify_release(staged)
+        release_runs.sync_tree(staged)
+        if dest.exists():
+            raise ValueError(f'{dest} already exists; a version is archived once')
+        staged.rename(dest)
+        retention.sync_directory(dest.parent)
     added = retain(root, entries)
+    attempt.with_name(attempt.name + '.archived').write_text(f'{dest / "evidence"}\n')
+    shutil.rmtree(attempt)
     return dest, added
 
 

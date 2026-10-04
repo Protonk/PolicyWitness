@@ -61,7 +61,9 @@ release:
 	  PW_APP_DIR="$(DIST_DIR)/PolicyWitness.app" PW_TEST_OUT_DIR="$$battery" ./tests/run.sh; \
 	  echo "==> [release] archive $(DIST_DIR)/archive/v$$version"; \
 	  /usr/bin/python3 -B tests/lib/release_archive.py --latest --dist "$(DIST_DIR)" --battery "$$battery" \
-	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",)
+	    $(if $(RELEASE_NOTES),--notes "$(RELEASE_NOTES)",); \
+	  echo "==> [release] clean up older working test output"; \
+	  /usr/bin/python3 -B tests/lib/release_rotate.py "$(DIST_DIR)/archive/v$$version" --apply
 
 publish:
 	@if [ -z "$(VERSION)" ]; then \

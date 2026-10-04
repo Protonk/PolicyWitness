@@ -108,7 +108,8 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect):
         save(out / 'acceptance.json', report)
     print(f'Release acceptance: {out / "acceptance.json"}', flush=True)
     if report['ok']:
-        entry = dict(path=str(out.relative_to(ROOT / 'tests/out')), run_id=run['run_id'],
+        run_id = retention.valid_owner(out)['run_id'] if (out / 'owner.json').exists() else run['run_id']
+        entry = dict(path=str(out.relative_to(ROOT / 'tests/out')), run_id=run_id,
                      reason='Release ZIP acceptance', source=None, app_inventory='before.json')
         print('Suggested tests/RETAINED.json entry: ' + json.dumps(entry, sort_keys=True), flush=True)
     for error in report['errors']:
@@ -132,11 +133,10 @@ def main():
     try:
         if args.evidence_dir:
             release_evidence.check_archive(args.evidence_dir, archive)
-        retention.replacement_allowed(ROOT, out, retention.load_index(ROOT))
-        out.mkdir(parents=True)
-        result = accept(archive, out)
-        if args.evidence_dir:
-            release_evidence.record_acceptance(args.evidence_dir, out / 'acceptance.json')
+        with retention.acceptance_output(ROOT, out):
+            result = accept(archive, out)
+            if args.evidence_dir:
+                release_evidence.record_acceptance(args.evidence_dir, out / 'acceptance.json')
         return result
     except (ValueError, OSError, KeyError) as exc:
         parser.error(str(exc))

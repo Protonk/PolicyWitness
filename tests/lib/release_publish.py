@@ -16,6 +16,7 @@ import tempfile
 import shutil
 
 from artifact import digest
+import release_runs
 
 ROOT = Path(__file__).resolve().parents[2]
 VIEW_FIELDS = 'assets,isDraft,publishedAt,tagName,targetCommitish,url'
@@ -37,6 +38,8 @@ def publish(archive_dir, *, notes=None, remote='origin', root=ROOT):
     archive_dir, root = Path(archive_dir).resolve(), Path(root)
     record_path = archive_dir / 'release.json'
     record = json.loads(record_path.read_text())
+    if 'test_evidence' in record:
+        release_runs.verify_release(archive_dir)
     version, tag = record['version'], record['tag']
     assets = [record['archive'], 'SHA256SUMS', record['guide']]
     sums = {}

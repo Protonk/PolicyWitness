@@ -172,6 +172,15 @@ absent locally. A missing, malformed or unreadable index prevents replacement.
 Targets equal to, containing or inside a retained path are refused before any
 output is changed. Symlink redirects and path escapes are rejected.
 
+An optional `release` field marks a direct managed run or acceptance directory
+for release-checkpoint cleanup: a `v<major>.<minor>.<patch>` value identifies its
+release. An omitted or null value explicitly pins the entry. The archive helper
+marks both the release battery and acceptance; existing release entries should
+carry their established tag so they expire at a later checkpoint.
+Ordinary pruning protects all indexed entries, regardless of this field.
+Archive helpers replace the validated index atomically while holding the
+checkout lock.
+
 The dispatcher writes `owner.json` first, with its run ID, resolved output path
 and start time. Only a matching, valid terminal `run.json` establishes completed
 output. Failed cases and ordinary Ctrl-C cancellation still produce terminal
@@ -197,7 +206,10 @@ worktree. Help and `--list` remain available while execution holds the lock.
 Direct shell entrypoints default to `tests/out/runs/direct`; they do not replace
 output or provide dispatcher ownership/completion guarantees. Release acceptance
 keeps unique directories under `tests/out/release-acceptance/run-*`; its nested
-`tests` output passes the same dispatcher checks. Passing acceptance prints a
+`tests` output passes the same dispatcher checks. An outer `owner.json` and
+`acceptance.lock` protect extraction, tests and finalization as one lifetime;
+process exit releases the lock, and normal return records the completion time.
+Passing acceptance prints a
 suggested index entry. Record source provenance only when established; the
 commit that adds an index entry is not the source of an earlier build.
 
@@ -249,6 +261,27 @@ preserved. Output outside `runs/`, including release acceptance, is reported as
 unmanaged and kept. Symlink redirects are never traversed or deleted. `make
 clean` delegates to `tests/run.sh --prune --apply` and follows exactly these
 rules; it preserves release acceptance, retained and unfinished evidence.
+
+Successful release packaging invokes `tests/lib/release_rotate.py` once, after
+verifying the new archive. It keeps that release's working acceptance and
+battery plus the newest completed local output, including failures; completion
+timestamps determine newest and ties are kept. Other owned run and acceptance
+directories can be removed, including interrupted or ambiguous output started
+before the release battery. Active acceptance, newer unfinished work, explicit
+pins, unknown ownership and pending external-runner cleanup remain protected.
+Older marked release entries are retired from the index, including absent ones.
+
+Fresh test runs never trigger cleanup of other directories. There is no schedule,
+age threshold, size threshold or off-machine backup requirement. Output may
+accumulate throughout a refactor until the next successful release packaging.
+The ordinary explicit pruner above retains its separate, more conservative
+ownership rules and does not select a newest run to keep.
+
+The durable cleanup journal lives at `dist/archive/<tag>/evidence/rotation.json`;
+staged deletions live under `tests/out/.release-rotation/`, which ordinary
+pruning preserves. Resume with the same archived release and `--apply`; completed
+journals are no-ops. See [the release procedure](../docs/SIGNING.md#portable-test-evidence-and-release-cleanup).
+Scratch contents follow [.tmp/AGENTS.md](../.tmp/AGENTS.md) and are outside this operation.
 
 ## Tiers
 

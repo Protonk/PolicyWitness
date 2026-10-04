@@ -19,6 +19,9 @@ import release_evidence
 import release_preflight
 import release_publish
 import retention
+import release_runs
+sys.path.insert(0, str(ROOT / 'tests/fixtures/dispatcher'))
+from repository import completed_output
 sys.path.insert(0, str(ROOT / 'tests/fixtures/release'))
 from publish_tools import GitHub
 
@@ -129,14 +132,20 @@ def make_dist(repo, *, version='0.9.0', commit=None, describe=None, attempt=True
         (session / step).mkdir()
         (session / step / 'command.json').write_text(json.dumps(dict(
             argv=[step], timeout_seconds=1, returncode=0, timed_out=False, interrupted=False, elapsed_seconds=0.1)))
-    run_dir = repo / 'tests/out/release-acceptance/run-fixture'
-    (run_dir / 'tests').mkdir(parents=True)
-    (run_dir / 'before.json').write_text('{}\n')
-    (run_dir / 'tests/run.json').write_text(json.dumps(dict(run_id='20260929T000000Z_accept01')))
-    (run_dir / 'acceptance.json').write_text(json.dumps(dict(
-        schema_version=1, archive=str(archive), ok=True, errors=[],
-        sha256_before=hashlib.sha256(archive.read_bytes()).hexdigest(),
-        sha256_after=hashlib.sha256(archive.read_bytes()).hexdigest())))
+    run_dir = repo / 'tests/out/release-acceptance' / ('run-' + version.replace('.', '-'))
+    with retention.acceptance_output(repo, run_dir) as owner:
+        owner['run_id'] = 'accept-' + version
+        (run_dir / 'before.json').write_text('{}\n')
+        completed_output(run_dir / 'tests')
+        for name in ('owner.json', 'run.json'):
+            path = run_dir / 'tests' / name
+            value = json.loads(path.read_text())
+            value['run_id'] = 'nested-accept-' + version
+            path.write_text(json.dumps(value))
+        (run_dir / 'acceptance.json').write_text(json.dumps(dict(
+            schema_version=1, archive=str(archive), ok=True, errors=[],
+            sha256_before=hashlib.sha256(archive.read_bytes()).hexdigest(),
+            sha256_after=hashlib.sha256(archive.read_bytes()).hexdigest())))
     release_evidence.record_acceptance(session, run_dir / 'acceptance.json')
     return dist, session
 
@@ -145,11 +154,18 @@ def make_battery(repo, dist, *, version='0.9.0', **overrides):
     run_dir = repo / 'tests/out/runs' / f'release-{version}-default'
     (run_dir / 'artifact-integrity').mkdir(parents=True)
     (run_dir / 'artifact-integrity/before.json').write_text('{}\n')
-    run = dict(schema_version=1, run_id='20260929T000100Z_battery1', ok=True, terminal=True,
+    completed_output(run_dir)
+    owner = json.loads((run_dir / 'owner.json').read_text())
+    owner['run_id'] = 'battery-' + version
+    (run_dir / 'owner.json').write_text(json.dumps(owner))
+    run = json.loads((run_dir / 'run.json').read_text())
+    run.update(schema_version=1, run_id=owner['run_id'], ok=True, terminal=True,
                counts={'fail': 0, 'pass': 3, 'skip': 0, 'total': 3},
                completion=dict(selected=3, completed=3, skipped=0, unrun=0),
                requested_cases=[], requested_suites=[], harness_errors=[],
                artifact_integrity=dict(app=str((dist / 'PolicyWitness.app').resolve()), unchanged=True, valid_before=True))
+    run['plan']['cases'] = [dict(id='fixture/' + str(i)) for i in range(3)]
+    run['case_results'] = [dict(id=c['id'], state='completed', status='pass') for c in run['plan']['cases']]
     run.update(overrides)
     (run_dir / 'run.json').write_text(json.dumps(run))
     return run_dir
@@ -185,18 +201,22 @@ def check_archive(out):
     assert record['version'] == '0.9.0' and record['tag'] == 'v0.9.0' and record['origin'] is None
     assert record['source_commit'] == git(repo, 'rev-parse', 'HEAD') and record['build_number'] == '3'
     assert record['sha256'] == sums['PolicyWitness-0.9.0.zip'] and record['notarization_submission_id'].startswith('00000000')
-    assert record['acceptance'] == dict(path='release-acceptance/run-fixture/acceptance.json', ok=True, sha256=record['sha256'])
-    assert record['battery'] == dict(path='runs/release-0.9.0-default', run_id='20260929T000100Z_battery1')
+    assert record['acceptance'] == dict(path=release_runs.BUNDLE + '/acceptance.json',
+                                      original_path='release-acceptance/run-0-9-0/acceptance.json', ok=True, sha256=record['sha256'])
+    assert record['battery'] == dict(path=release_runs.BUNDLE + '/battery.json',
+                                   original_path='runs/release-0.9.0-default', run_id='battery-0.9.0')
     assert [r['archived_path'] for r in record['receipts']] == [
         'evidence/notarization', 'evidence/staple', 'evidence/staple-validation', 'evidence/gatekeeper',
         'evidence/re-zip', 'evidence/acceptance.json', 'evidence/release.json']
     assert all(r['original_path'].startswith('dist/evidence/' + attempt_name) for r in record['receipts'])
-    assert [e['path'] for e in added] == ['release-acceptance/run-fixture', 'runs/release-0.9.0-default']
-    assert added[0]['run_id'] == '20260929T000000Z_accept01' and added[0]['app_inventory'] == 'before.json'
+    assert [e['path'] for e in added] == ['release-acceptance/run-0-9-0', 'runs/release-0.9.0-default']
+    assert added[0]['run_id'] == 'accept-0.9.0' and added[0]['app_inventory'] == 'before.json'
     assert added[1]['app_inventory'] == 'artifact-integrity/before.json'
+    assert all(e['release'] == 'v0.9.0' for e in added)
     assert all(e['source'] == record['source_commit'] and '0.9.0' in e['reason'] for e in added)
     retained = retention.load_index(repo)
-    assert retained == [repo / 'tests/out/release-acceptance/run-fixture', repo / 'tests/out/runs/release-0.9.0-default']
+    assert retained == [repo / 'tests/out/release-acceptance/run-0-9-0', repo / 'tests/out/runs/release-0.9.0-default']
+    release_runs.verify_release(dest)
     # Archiving the same version again is refused before anything is written.
     try:
         release_archive.archive(decoy, dist=dist, root=repo)
@@ -317,14 +337,41 @@ def check_publish(out, repo, dest, notes):
     assert record['receipts'][-1]['archived_path'] == 'evidence/github-release.json'
     assert record['notes'] and 'match' in record['notes'][0]
 
-    # A second run verifies and creates nothing; a changed local tag is refused before any call.
+    # A second run verifies and creates nothing; damaged local evidence stops before any call.
     calls_before = len(github.calls)
     with patch.object(release_publish, 'run', github):
         meta2, created2 = release_publish.publish(dest, root=repo)
     assert not created2 and meta2 == meta
     assert not any(c[1:3] == ['release', 'create'] for c in github.calls[calls_before:])
     assert json.loads((dest / 'release.json').read_text()) == record
+    calls_before = len(github.calls)
     (dest / 'release.json').write_text(json.dumps(dict(record, source_commit='0' * 40)))
+    with patch.object(release_publish, 'run', github):
+        try:
+            release_publish.publish(dest, root=repo)
+        except ValueError as exc:
+            assert 'ZIP stamp differs from the release record' in str(exc), exc
+        else:
+            raise AssertionError('mismatched source was published')
+    assert len(github.calls) == calls_before
+    (dest / 'release.json').write_text(json.dumps(record, indent=2) + '\n')
+
+    copy = work / 'corrupt-evidence'
+    shutil.copytree(dest, copy)
+    (copy / release_runs.BUNDLE / 'runs.tar.gz').write_bytes(b'corrupt')
+    with patch.object(release_publish, 'run', github):
+        try:
+            release_publish.publish(copy, root=repo)
+        except ValueError as exc:
+            assert 'test evidence archive checksum mismatch' in str(exc), exc
+        else:
+            raise AssertionError('damaged evidence was published')
+    assert len(github.calls) == calls_before
+
+    # The local tag is checked separately from the archive's internal consistency.
+    original_tag = git(repo, 'rev-parse', 'v0.9.0')
+    git(repo, 'commit', '--allow-empty', '-q', '-m', 'other commit')
+    git(repo, 'tag', '-f', '-a', 'v0.9.0', '-m', 'moved')
     with patch.object(release_publish, 'run', github):
         try:
             release_publish.publish(dest, root=repo)
@@ -332,8 +379,8 @@ def check_publish(out, repo, dest, notes):
             assert 'does not name the archived commit' in str(exc), exc
         else:
             raise AssertionError('mismatched tag was published')
-    assert len(github.calls) == calls_before + len([c for c in github.calls[calls_before:]])
-    (dest / 'release.json').write_text(json.dumps(record, indent=2) + '\n')
+    assert all(c[0] == 'git' and c[3] == 'rev-parse' for c in github.calls[calls_before:])
+    git(repo, 'update-ref', 'refs/tags/v0.9.0', original_tag)
 
     # Mismatched digests or bytes stop before origin is recorded.
     for mode, needle in (('digest_mismatch', 'GitHub digest'), ('corrupt_download', 'downloaded bytes differ')):
@@ -362,6 +409,17 @@ def check_publish(out, repo, dest, notes):
         with redirect_stdout(stdout):
             assert release_publish.main([str(dest)]) == 0
         assert stdout.getvalue().startswith('verified https://github.invalid/releases/tag/v0.9.0')
+
+    # Historical releases without a portable bundle remain publishable.
+    legacy = work / 'legacy'
+    shutil.copytree(dest, legacy)
+    historical = json.loads((legacy / 'release.json').read_text())
+    historical.pop('test_evidence')
+    (legacy / 'release.json').write_text(json.dumps(historical))
+    shutil.rmtree(legacy / release_runs.BUNDLE)
+    with patch.object(release_publish, 'run', github):
+        _, created = release_publish.publish(legacy, root=repo)
+    assert not created
 
 
 def main(out):

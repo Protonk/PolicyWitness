@@ -9,9 +9,12 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import tempfile
 import time
+import uuid
 
 RUN_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
+RELEASE_TAG = re.compile(r'v\d+\.\d+\.\d+')
 
 
 def unique_object(pairs):
@@ -53,14 +56,16 @@ def bounded_path(root, path):
     return path
 
 
-def load_index(root):
+def index_paths(root, index):
+    """Validate an index before installing it, as well as when reading it."""
     try:
-        index = read_object(root / 'tests/RETAINED.json')
         if type(index.get('schema_version')) is not int or index['schema_version'] != 1 or not isinstance(index.get('runs'), list):
             raise ValueError('expected schema_version 1 and a runs array')
         paths = []
         for entry in index['runs']:
-            if not isinstance(entry, dict) or set(entry) != {'path', 'run_id', 'reason', 'source', 'app_inventory'}:
+            required = {'path', 'run_id', 'reason', 'source', 'app_inventory'}
+            if (not isinstance(entry, dict) or not required <= set(entry)
+                    or set(entry) - required - {'release'}):
                 raise ValueError('invalid retained entry fields')
             path = bounded_path(root, root / 'tests/out' / relative_path(entry['path']))
             if path.exists() and not path.is_dir():
@@ -76,10 +81,60 @@ def load_index(root):
                 raise ValueError('source must be a full commit hash or null')
             if entry['app_inventory'] is not None:
                 bounded_path(root, path / relative_path(entry['app_inventory']))
+            release = entry.get('release')
+            if release is not None:
+                if not isinstance(release, str) or not RELEASE_TAG.fullmatch(release):
+                    raise ValueError('release must be a release tag or null (a pin)')
+                if (len(Path(entry['path']).parts) != 2
+                        or Path(entry['path']).parts[0] not in ('runs', 'release-acceptance')):
+                    raise ValueError('only direct managed runs or acceptance output can opt into release rotation')
+                if not RUN_ID.fullmatch(Path(entry['path']).name):
+                    raise ValueError('invalid release run directory name')
             paths.append(path)
         return paths
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise ValueError(f'invalid retention index tests/RETAINED.json: {exc}') from exc
+
+
+def load_index(root):
+    try:
+        index = read_object(root / 'tests/RETAINED.json')
+    except (OSError, ValueError) as exc:
+        raise ValueError(f'invalid retention index tests/RETAINED.json: {exc}') from exc
+    return index_paths(root, index)
+
+
+def atomic_json(path, value):
+    """Install complete JSON on the same filesystem; never follow an output link."""
+    if path.is_symlink() or path.parent.resolve() != path.parent:
+        raise ValueError(f'symlink redirects are not allowed: {path}')
+    fd, name = tempfile.mkstemp(prefix='.' + path.name + '-', dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            if path.exists():
+                os.fchmod(stream.fileno(), path.stat().st_mode & 0o7777)
+            stream.write(json.dumps(value, indent=2) + '\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        sync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def write_index(root, index):
+    """Caller holds checkout_lock across read, validation and replacement."""
+    index_paths(root, index)
+    atomic_json(root / 'tests/RETAINED.json', index)
 
 
 def overlaps(path, other):
@@ -181,6 +236,37 @@ def valid_owner(path):
             or type(owner.get('started_at_unix_ms')) is not int or owner['started_at_unix_ms'] < 0):
         raise ValueError(f'no valid managed run ownership: {path}')
     return owner
+
+
+@contextmanager
+def acceptance_output(root, out):
+    """Own acceptance through extraction, nested tests and final receipts.
+
+    Creation takes the checkout lock. A separate lifetime lock protects the
+    outer operation while allowing its child dispatcher to take that same
+    checkout lock. Release cleanup probes the lifetime lock without blocking.
+    """
+    with checkout_lock(root):
+        bounded_path(root, out)
+        replacement_allowed(root, out, load_index(root))
+        out.mkdir(parents=True)  # Acceptance always uses a fresh directory.
+        fd = os.open(out / 'acceptance.lock', os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            owner = dict(schema_version=1, kind='release_acceptance', run_id='accept-' + uuid.uuid4().hex,
+                         out_dir=str(out), started_at_unix_ms=time.time_ns() // 1_000_000)
+            atomic_json(out / 'owner.json', owner)
+        except BaseException:
+            os.close(fd)
+            raise
+    try:
+        yield owner
+    finally:
+        try:
+            owner.update(terminal=True, finished_at_unix_ms=time.time_ns() // 1_000_000)
+            atomic_json(out / 'owner.json', owner)
+        finally:
+            os.close(fd)
 
 
 def prune_rows(root, retained, *, busy=False):

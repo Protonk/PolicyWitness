@@ -32,6 +32,14 @@ test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release publish control
 test_pass "release archiving and publication verify their inputs and refuse every mismatch"
 fi
 
+if test_selected release_rotation_controls; then
+test_begin preflight release_rotation_controls
+test_step rotation "verify portable test evidence, pins, atomic retirement and interrupted cleanup"
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "release rotation controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_release_rotation.py" "${PW_TEST_ARTIFACTS}"
+test_pass "portable release evidence and transactional rotation preserve pins and survive interruption"
+fi
+
 if test_selected codesign.preflight; then
 bash "${ROOT_DIR}/tests/suites/preflight/preflight.sh"
 fi

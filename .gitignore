@@ -11,8 +11,9 @@ controller/target
 /controller/tools/pw_probe_runner/pw-probe-runner
 /controller/tools/sb_api_validator/sb_api_validator
 
-# local scratch
-.tmp/
+# Local scratch is disposable; keep its contributor policy.
+/.tmp/*
+!/.tmp/AGENTS.md
 
 # tests artifacts
 tests/out/
