@@ -1,6 +1,6 @@
 **PolicyWitness integration feedback from PAWL**
 
-PAWL uses PolicyWitness (PW) as a runtime oracle for macOS Seatbelt policies, including comparisons between original and reconstructed policies. The request behind this review was to identify where PAWL spends substantial effort shaping its questions into PW requests or accommodating awkward interactions, and how it actually uses the supplied response data. We examined policy comparisons, path-membership and calibration experiments, runner preflight, completion handling, tests, and retained execution evidence. The five user-experience findings below have equal standing as feedback. They are followed by observations about PAWL's consumption of PW responses.
+PAWL uses PolicyWitness (PW) as a runtime oracle for macOS Seatbelt policies, including comparisons between original and reconstructed policies. The request behind this review was to identify where PAWL spends substantial effort shaping its questions into PW requests or accommodating awkward interactions, and how it actually uses the supplied response data. We examined policy comparisons, path-membership and calibration experiments, runner preflight, completion handling, tests, and retained execution evidence. The first section describes the work PAWL does to obtain usable policy observations: constructing requests, managing execution and filesystem witnesses, and establishing completion. Its five findings have equal standing as feedback. The second examines how PAWL uses the evidence PW returns, distinguishing fields that affect automated decisions, fields exercised by tests, and evidence retained without automated interpretation.
 
 1. **Query-focused use requires constructing an independent attempt.**
 
@@ -42,9 +42,9 @@ PAWL uses PolicyWitness (PW) as a runtime oracle for macOS Seatbelt policies, in
 
    Capacity also has a concrete workload consequence. Retained corpus evidence identifies the WebProcess profile and five mutations whose reversed submissions exceed the source-text limit while their corresponding source submissions are admitted. One retained reversed submission contains 306,731 UTF-8 bytes against a maximum of 262,143. PAWL keeps explicit tests for this population and an expected failure for the unmet admission requirement.
 
-   The cause remains unresolved. PAWL may emit unnecessarily large reconstructed text; PW's bound may constrain a legitimate workload; both may contribute. Both submission paths expand imports, so their input sizes alone do not distinguish those accounts. The feedback is the blocked comparison and the continuing admission-maintenance effort, with ownership of the capacity problem still open.
+   The cause remains unresolved. PAWL may emit unnecessarily large reconstructed text; PW's bound may constrain a legitimate workload; both may contribute. The retained WebProcess source and reversed submissions are already import-free, and their sizes alone do not distinguish those accounts. The feedback is the blocked comparison and the continuing admission-maintenance effort, with ownership of the capacity problem still open.
 
-PAWL's policy-comparison reports preserve the full PW envelope and native step records. Its automated decisions consume selected fields from that retained evidence.
+The following observations trace PW’s returned evidence into PAWL’s policy comparisons, completion decisions, tests, and retained receipts. Comparator observations and persisted executor receipts preserve the full PW envelope and native step records, while automated decisions consume selected fields. Each entry identifies what PAWL reads, what that reading establishes, and what supplied evidence has no dedicated consumer. Together, these observations describe how much of PW’s response PAWL turns into decisions or explanations, and where the calling path retains or discards the remaining evidence.
 
 1. **Per-step comparison summaries are exercised in tests but do not drive PAWL's policy comparison.**
 
@@ -58,7 +58,7 @@ PAWL's policy-comparison reports preserve the full PW envelope and native step r
 
    PAWL's path-membership question is whether the submitted operation and path receive an allow or deny prediction. It assigns the answer to that exact submitted path. Host `path_diagnostics`, including resolved spellings, neither relabel the membership entry nor change its verdict. PAWL tests this directly: changing the query outcome changes the membership answer, while changing only the diagnostic spelling leaves it unchanged.
 
-   PAWL retains these diagnostics with the full response, but has no automated reader that uses them to investigate unavailable or surprising predictions. The enforced exclusion concerns membership decisions; there is no corresponding diagnostic workflow built around the retained spellings.
+   PAWL retains these diagnostics in comparator observations and persisted executor receipts. The path-membership helper itself returns a Boolean cache without archiving the response. PAWL has no automated reader that uses retained diagnostics to investigate unavailable or surprising predictions. The enforced exclusion concerns membership decisions; there is no corresponding diagnostic workflow built around the retained spellings.
 
 3. **Several dossier inventories are retained without interpretation, alongside dossier fields PAWL actively checks.**
 
