@@ -600,19 +600,7 @@ The launcher does not speak NSXPC directly. It drives the Swift client helper em
 
 The Swift client is responsible for `NSXPCConnection` wiring; the Rust launcher owns run orchestration and evidence capture.
 
-
-`steps[].sandbox_check.pid` is the spawned worker PID, or explicit null when no
-worker exists. It never substitutes the host PID. Typed readers must accept
-null. Request schema and worker ABI are separate contracts.
-
-The query channel's `native_rc` is authoritative for native returns. A received
-diagnostic without a native return retains `result_source="validator"`,
-`native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
-claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"`
-with a missing reason. `outcome="error"` alone does not identify a native call
-failure. The attempt channel carries PolicyWitness attempt status in `rc` and
-operation-specific error observations in `errno` and `error`.
-
-See [the query and receiver contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#query-and-receiver-evidence)
-for immutable query planning, query association, independent pipe collection,
-and exact-byte controller capture semantics.
+The reading rules for the query PID (`steps[].sandbox_check.pid`) and the
+query channel's `native_rc` are stated once, under
+[Evidence contract pointers](../runner/README.md#evidence-contract-pointers)
+in the runner README.
