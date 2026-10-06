@@ -390,6 +390,19 @@ one more implementation gap, register row 20. The corrections, all applied
 15. Register row 7 still carried the rejected fallback claim; rewritten to
     the independent-compile-result wording. Done.
 
+Found while planning remediation (2026-10-06), to apply in the next
+documentation pass:
+
+16. "Nominal durations are lower bounds" overstates the polling loops: the
+    allowances are iteration counts and not wall-clock guarantees in either
+    direction. Pending.
+17. The delivery gap should say that the client's timeout is already running
+    while the unbounded delivery precedes the ready and sentinel budgets.
+    Pending.
+18. The delivery gap should say that a stalled reader blocks delivery only
+    once the pipe's capacity is exhausted; a policy smaller than the buffer
+    lands in it and never blocks. Pending.
+
 ## Drafting log
 
 Entries are added during step 3. Each names the claim, where it was pinned or
@@ -431,3 +444,11 @@ why it could not be, and any contradiction found with an existing document.
   one new gap stated in the timeline section and indexed with the others
   (register row 20, with its record). The second review report was retired
   once this plan carried its substance; its record remains.
+- 2026-10-06, daughter plan reviewed. The remediation plan now names the two
+  service seams it must add, the shipped hang override and reply receipts
+  for the live BYOXPC control and launchd's respawn throttle, the red-first
+  baseline pattern, the validator client's deadline loop as the code to
+  reuse, the limits-manifest requirements for the new budget, the
+  response-schema bump the transfer-timeout shape implies, and the stop
+  reason vocabulary sites. Three wording corrections it had queued for its
+  closeout moved here as 16 to 18.

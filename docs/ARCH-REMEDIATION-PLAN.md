@@ -56,10 +56,17 @@ than being calculated by the code under test.
 Demonstrate that the controls detect the original defects: unsupported
 observer frames are interpreted, distinct service objects independently admit
 requests, and a stalled policy reader prevents the driver from reaching its
-timers. Where a new internal seam prevents directly running a test against the
-original source, use a narrowly reverted implementation in a disposable copy
-and record which regression it restores. A broad mutation framework is not
-required. Keep mutations outside the app used by the acceptance run.
+timers. Write each regression first and record its failure on the starting
+commit. Rust reds use the repository's existing pattern: `#[ignore]` with this
+plan as the reason, selected by exact name through a wrapper shaped like
+[disposition_reds.sh](../tests/suites/unit/disposition_reds.sh) until the fix
+promotes them. TestKit has no ignore mechanism, so a Swift red is run once on
+the starting commit through a temporary registration, its log retained in the
+execution notes, and registered permanently with the fix. Where a new
+internal seam makes a red impossible to express against the original source,
+and only then, use a narrowly reverted implementation in a disposable copy
+and record which regression it restores. Keep mutations outside the app used
+by the acceptance run.
 
 Use explicit gates and receipts to order concurrent operations. Do not rely
 on repeatedly racing the host's 50 ms exit delay. Run possible hangs under
@@ -95,6 +102,11 @@ Extend the receiver tests in `sandbox_log.rs` and the independent controls in
 [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) and
 [log_capture_controls.py](../tests/suites/witness_contract/log_capture_controls.py).
 
+- Name the `capture_status` an intact but inadmissible frame produces before
+  writing the receiver, and check it against the vocabulary
+  [log_capture_contract.py](../tests/lib/log_capture_contract.py) and
+  [consumer.py](../tests/lib/consumer.py) accept. A new spelling is a reader
+  change and is treated as one.
 - A complete report with both current markers retains its events and can
   supply correlation. Repair the existing positive fixture that omits the
   outer version before deriving refusal cases from it.
@@ -121,7 +133,10 @@ semantic refusal and preservation of valid capture and independent evidence.
 ### Implementation
 
 Give all exported service objects in one host the same synchronized
-admission state. Claim it atomically on entry to the first authorized
+admission state: one object created by `PWRunnerSessionDelegate` and handed
+to every `PWRunnerService` it exports, guarded by a lock (`NSLock` or
+`OSAllocatedUnfairLock`), because NSXPC invokes each exported object on its
+own queue. Claim it atomically on entry to the first authorized
 `runSpecimen`, before decoding or child creation. Merely accepting a
 connection does not claim it. Keep the claim terminal through reply and exit,
 including when the owning request fails input admission.
@@ -131,6 +146,17 @@ separate the owner's reply-and-exit path from subsequent requests' reply-only
 `already_ran` refusal. Only the owner may schedule process exit. Retain the
 existing normal reply flush delay; it is not a readiness protocol for another
 run.
+
+Two seams do not exist today and this group adds them, with production
+defaults: an injected exit scheduler in place of the inline
+`DispatchQueue.global().asyncAfter { exit(0) }`, and an injected orchestration
+entry in place of the direct `CWorkerOrchestrator.run` call, so a test can
+observe the claim, the entry into specimen work and the scheduled exit
+without spawning children or ending the test process. No test today
+constructs a service object or calls `runSpecimen`. Both seams follow the
+rules for injected controls in [runner/AGENTS.md](../runner/AGENTS.md): they
+replace a boundary the test cannot otherwise cross and never manufacture a
+specimen result.
 
 ### Service level controls
 
@@ -150,24 +176,35 @@ the tests in [main.swift](../runner/Tests/PWRunnerCoreTests/main.swift).
   exit; later requests remain refused.
 - A fresh host state accepts a new request. Existing caller-authorization
   controls remain applicable and passing.
+- Parent row 13 closes here: the `already_ran` row of
+  [COVERAGE.md](../tests/COVERAGE.md) stops saying out of scope and cites the
+  new case, which the source-drift matrix rule then checks.
 
 ### Live BYOXPC control
 
 Add an explicitly selected case under
 [runner_byoxpc](../tests/suites/runner_byoxpc/README.md), using its owned
-installation/session machinery and a test client signed for the host's
-caller-auth requirements. The client opens two connections to the same
-installed host. Hold the first request at an observed worker gate before
-reply, then send the second. Require its refusal, release the owner, and
-require the owner to finish successfully.
+installation/session machinery. The shipped pieces suffice: two concurrent
+`policy-witness run` invocations selecting the installed service are two
+connections from two client processes, and `pw-runner-client` already
+satisfies the host's caller-auth requirement. The first request carries
+`_test_overrides.worker_post_apply_hang_ms`, which holds the real worker
+after apply for up to a minute; send the second while it is held. Require
+the second's refusal, let the hang expire, and require the first to finish
+successfully.
 
-Retain host identity, request/reply records and independent worker invocation
-or effect receipts. The evidence must establish the same host served the
-connections, only the owner entered specimen work, and the rejection did not
-terminate it. Use a test-owned fixture or gate at a real boundary; preserve
-the inspected app's bytes. After confirmed retirement, a fresh host must be
-able to serve a normal request. Transport failure during retirement remains
-permitted and does not justify resubmitting a specimen of unknown execution.
+The receipts are in the replies: both carry the host's `pid`, which
+establishes that one host served both connections; the refusal carries a
+null `runner_subprocess` and no steps, which establishes that it entered no
+specimen work; the owner's reply carries its worker evidence and its file
+effects. Preserve the inspected app's bytes. After the owner's host has
+retired, wait out launchd's default respawn throttle before the next step:
+the generated plist sets no `ThrottleInterval`, so a run issued within about
+ten seconds of the previous launch waits for the remainder, and an immediate
+one can fail with XPC error 4097, which inside that window is not a
+regression. A fresh host must then serve a normal request. Transport failure
+during retirement remains permitted and does not justify resubmitting a
+specimen of unknown execution.
 
 The current
 [Mach-service liveness test](../tests/suites/runner_mach_service_liveness/README.md)
@@ -187,7 +224,11 @@ the first write. Fail into cleanup if nonblocking setup cannot be established.
 Account for partial writes; wait for writability using the remaining budget;
 check the deadline through interrupted calls, backpressure and progress.
 Never restart the deadline. Preserve `SIGPIPE` protection and handle
-zero-progress writes explicitly.
+zero-progress writes explicitly. Build the loop on the nonblocking `poll()`
+and monotonic-deadline code that
+[ValidatorClient.swift](../runner/Sources/PWRunnerCore/ValidatorClient.swift)
+already uses in the same host, extracted into a shared helper, rather than
+on a second deadline implementation with its own edge cases.
 
 On failure or expiry, close the write endpoint, skip normal ready/sentinel
 polling and enter the existing exit-request, grace and termination sequence.
@@ -197,18 +238,30 @@ path.
 
 Before implementing the wire change, choose and record:
 
-- An internal production transfer budget, documented in
-  [limits.json](limits.json), with a short setting available to driver tests.
-  Explain its relationship to existing phase and client budgets; it does not
-  establish end-to-end cancellation.
+- An internal production transfer budget as a [limits.json](limits.json) row
+  in the execution section. The limits generator accepts a row only with a
+  value-kind check owner (`LimitsContractTests` for the host's compiled
+  defaults) and a boundary check, so both are part of this decision, with a
+  short setting available to driver tests. State its relationship to
+  `worker_ready_wait`, which starts only after it, and to the client's wait,
+  inside which it must fit; it does not establish end-to-end cancellation.
 - An explicit host timeout observation and its disposition/summary mapping.
   Preserve `policy_transfer_error.errno` as an errno actually returned by a
-  failed write. Prefer additive evidence that keeps this meaning intact;
-  do not synthesize an errno for timer expiry. Counts record bytes accepted
-  by writes, not bytes read or interpreted by the child.
-- Required reader, shape-golden and contract-version changes under
-  [CONTRACT.md](CONTRACT.md#when-a-number-moves). Do not assume a version bump
-  is unnecessary merely because one field is added if reading rules change.
+  failed write; do not synthesize an errno for timer expiry. Counts record
+  bytes accepted by writes, not bytes read or interpreted by the child. Both
+  shapes available change a reading rule: a sibling object changes the
+  contract's rule that omission of `policy_transfer_error` means no observed
+  transfer failure, and folding the timeout into that object makes `errno`
+  optional, a type change. Plan the response-schema bump under
+  [CONTRACT.md](CONTRACT.md#when-a-number-moves) from the start, including
+  the version-named fixture directories and stored envelopes it renames.
+- The poll stop reason vocabulary. A timeout needs its own spelling beside
+  `policy_write_error`, which `project_disposition` in
+  [disposition.rs](../controller/src/disposition.rs) filters against a closed
+  list, [lifecycle_contract.py](../tests/lib/lifecycle_contract.py) spells
+  out, and the failure contract's host-observation tables carry. The failure
+  contract's policy-transfer section ends with the sentence that states this
+  gap; it goes with the fix.
 
 Update the producer, disposition interpretation, Rust/Python readers and
 contract controls together. No additional public request option is needed
@@ -217,12 +270,17 @@ solely to shorten the driver test's budget.
 ### Real pipe and deterministic controls
 
 Extend the [worker lifecycle fixture](../tests/fixtures/worker_lifecycle/README.md)
-with a mode that reads only a short command prefix, then keeps stdin open
-without draining the rest. Exercise the real driver and pipe from the
+with a `hold_` mode beside its existing `close_*` modes, which already read a
+command prefix and act on stdin: it reads the prefix, then keeps stdin open
+without draining the rest, with the test-owned watchdog and host-cleanup
+ownership that `close_hang_report` established. Exercise the real driver and
+pipe from the
 [worker evidence tests](../runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift)
-or a dedicated registered Swift group. Use an admitted payload large enough
-to cause observable backpressure. The real worker's pre-ready delay occurs
-after policy consumption and cannot reproduce this condition.
+or a dedicated registered Swift group. Use an admitted payload larger than
+the pipe's capacity, about 64 KiB on macOS against an admitted policy limit
+four times that, because a smaller policy lands in the pipe buffer and never
+blocks. The real worker's pre-ready delay occurs after policy consumption and
+cannot reproduce this condition.
 
 - Require PW's transfer timeout to initiate cleanup before the independent
   watchdog intervenes. Assert the chosen host timeout record, consistent
@@ -266,9 +324,11 @@ state. The acceptance record must include:
    dispatcher, fresh owned output directories and its app-integrity checks.
    Missing signing/GUI equipment leaves the live gate unfulfilled.
 3. Source-drift, generated contract/limits/architecture checks and reviewed
-   shape goldens. If the release store, wait or ordering eligibility changes,
-   also run `witness_contract/order_barrier_mutations` as required by
-   [AGENTS.md](../AGENTS.md).
+   shape goldens. Run `witness_contract/order_barrier_mutations` for the
+   policy-delivery group unconditionally: the release store may be
+   untouched, but `runCWorker` is restructured around it, and
+   [AGENTS.md](../AGENTS.md) requires the control whenever the wait or the
+   release code changes.
 4. One final default battery against the completed signed artifact. Record
    retained evidence paths, source snapshot and applicable build; keep any
    failed or incomplete run's evidence according to the test retention rules.
@@ -284,10 +344,9 @@ Update architecture prose and [architecture.json](architecture.json) to
 describe only established behavior; regenerate affected copies rather than
 editing them. Remove the three resolved Known gap entries only after their
 acceptance gates pass. Retain the entitlement gap and residual retirement and
-cleanup limits. Correct the remaining timing wording: nominal polling
-allowances are not wall-clock lower-bound guarantees; unbounded delivery
-precedes host ready/sentinel budgets while the client timeout is already
-active; a stalled reader blocks delivery once pipe capacity is exhausted.
+cleanup limits. The three timing-wording corrections found while planning
+are the parent's (its Step 4 corrections 16 to 18) and are independent of
+this work.
 
 Record the completed dispositions of parent rows 13, 17, 18 and 20, update
 the investigation records' status without replacing their original evidence,
