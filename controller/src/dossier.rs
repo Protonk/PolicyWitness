@@ -513,7 +513,8 @@ mod tests {
     const ROLES: [&ShippedBinary; 3] = [&SHIPPED_SERVICE, &SHIPPED_WORKER, &SHIPPED_VALIDATOR];
 
     /// A synthetic app root: the three shipped binaries as small distinct
-    /// files, an app-level validator decoy, and no Info.plist anywhere.
+    /// files, a decoy sharing the validator's id at an app-level path the app
+    /// does not ship, and no Info.plist anywhere.
     fn synthetic_app(tag: &str) -> PathBuf {
         let root = temp_root(tag);
         for role in ROLES {

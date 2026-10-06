@@ -190,7 +190,7 @@ func runOrderingTests(_ tk: TestKit) {
             // particular native answer for a dead PID is assumed.
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
                 .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            let validatorPath = root.appendingPathComponent("dist/PolicyWitness.app/Contents/MacOS/sb_api_validator").path
+            let validatorPath = root.appendingPathComponent("dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator").path
             var childDied = false
             let out = try orderingWorker("signal_awaiting_proceed|" + receipt) { pid in
                 _ = waitForReceipt(receipt, "waiting")

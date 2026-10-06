@@ -49,7 +49,6 @@ This repo builds a single distributable app bundle:
   - `Contents/MacOS/pw-runner-client` (Swift NSXPCConnection wrapper)
   - `Contents/MacOS/sandbox-log-observer` (Rust unified-log capture helper)
   - `Contents/MacOS/sbpl-check` (SBPL compile-check helper)
-  - `Contents/MacOS/sb_api_validator` (diagnostic copy of the validator CLI)
   - `Contents/XPCServices/PWRunner.xpc` (Swift XPC host; one host + two short-lived children per specimen)
     - `Contents/MacOS/pw-probe-runner` (bundle-local C worker that applies the policy and runs probe attempts)
     - `Contents/MacOS/sb_api_validator` (bundle-local validator launched once per run for sandbox_check verdicts)

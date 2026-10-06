@@ -501,10 +501,10 @@ reporting obligations and registered test owners.
 
 Real-worker `CWorkerTests` cases guarded by `workerExists()` require
 `<PW_APP_DIR>/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner`.
-`CWorkerValidatorTests` live cases use that worker and the diagnostic app-level
-`<PW_APP_DIR>/Contents/MacOS/sb_api_validator` (including the compile-failure
-case's `bothBinariesExist()` guard). Production CLI orchestration uses the
-bundle-local validator in the XPC service. Tests without `PW_APP_DIR` select
+`CWorkerValidatorTests` live cases use that worker and the bundle-local
+`<PW_APP_DIR>/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator`
+(including the compile-failure case's `bothBinariesExist()` guard), the same
+copy production orchestration launches. Tests without `PW_APP_DIR` select
 `dist/PolicyWitness.app`. Record those actual paths in retained provenance.
 
 `TestKit.run` counts a guarded early return as passed; the shell wrapper rejects

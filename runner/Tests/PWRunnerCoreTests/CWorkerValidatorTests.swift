@@ -37,10 +37,10 @@ private func workerPathForCV() -> String {
 
 private func validatorPathForCV() -> String {
     if let app = ProcessInfo.processInfo.environment["PW_APP_DIR"] {
-        return app + "/Contents/MacOS/sb_api_validator"
+        return app + "/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
     }
     return repoRootForCV()
-        .appendingPathComponent("dist/PolicyWitness.app/Contents/MacOS/sb_api_validator")
+        .appendingPathComponent("dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator")
         .path
 }
 

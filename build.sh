@@ -271,15 +271,10 @@ chmod +x "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 cp "${SBPL_CHECK_BIN}" "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
 
-# sb_api_validator is embedded INSIDE each XPC service bundle (see
-# the XPC build loop below) and resolved relative to that bundle by
-# the runner host. The top-level copy below is preserved for
-# diagnostic tooling — test harnesses under
-# `tests/suites/{validator_batch_mode,witness_contract/harness}/`
-# invoke the validator CLI directly to exercise its `--batch` and
-# per-probe modes outside any runner flow.
-cp "${SB_API_VALIDATOR_BIN}" "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
-chmod +x "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
+# sb_api_validator is embedded only INSIDE each XPC service bundle (see
+# the XPC build loop below) and resolved relative to that bundle by the
+# runner host; test harnesses that drive the validator CLI directly use
+# that bundle-local copy.
 
 # Copy named augments under Contents/Resources/Augments/. The
 # controller reads from this directory when resolving
@@ -441,7 +436,6 @@ echo "==> Codesigning embedded MacOS tools"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/pw-runner-client"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sandbox-log-observer"
 sign_macho "${APP_BUNDLE}/Contents/MacOS/sbpl-check"
-sign_macho "${APP_BUNDLE}/Contents/MacOS/sb_api_validator"
 
 if [[ "${BUILD_XPC}" == "1" ]] && [[ -d "${XPC_SERVICES_DIR}" ]]; then
   echo "==> Codesigning embedded XPC services"

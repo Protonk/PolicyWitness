@@ -8,7 +8,7 @@ source "${ROOT_DIR}/tests/lib/case.sh"
 
 PW_TEST_SUITE="validator_batch_mode"
 PW_TEST_ID="batch_ndjson_roundtrip"
-SB_VALIDATOR="${PW_APP_DIR}/Contents/MacOS/sb_api_validator"
+SB_VALIDATOR="${PW_APP_DIR}/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
 
 run_batch_ndjson_roundtrip() {
 test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"

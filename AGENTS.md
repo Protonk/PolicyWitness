@@ -41,7 +41,7 @@ Tests and evidence generation assume fixed paths inside `dist/PolicyWitness.app`
 - [tests/lib/artifact.py](tests/lib/artifact.py) (`EXECUTABLES`) is the machine-checked list; the `preflight` suite fails a build that does not match it.
 - [build.sh](build.sh) holds the signing list; notarization fails if any embedded tool is left ad hoc-signed.
 
-Read those before adding, renaming, or moving anything under `Contents/`. Two conventions are not obvious from the list. The C worker and the validator are embedded inside each XPC service bundle rather than at the app's top level, so the built-in runner and a BYOXPC copy each resolve their own helpers relative to their own bundle. The app-level validator copy is diagnostic only; production traffic uses the bundle-local copy. What to update when a path changes is in the maintenance checklist below.
+Read those before adding, renaming, or moving anything under `Contents/`. One convention is not obvious from the list. The C worker and the validator are embedded inside each XPC service bundle rather than at the app's top level, so the built-in runner and a BYOXPC copy each resolve their own helpers relative to their own bundle. What to update when a path changes is in the maintenance checklist below.
 
 ## CLI surface is a contract
 

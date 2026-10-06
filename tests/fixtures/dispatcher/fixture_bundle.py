@@ -16,7 +16,7 @@ import plistlib
 from seal_tool import fingerprint, seal as seal_paths
 
 FILES = ['Contents/MacOS/' + name for name in
-         ('policy-witness', 'pw-runner-client', 'sbpl-check', 'sandbox-log-observer', 'sb_api_validator')]
+         ('policy-witness', 'pw-runner-client', 'sbpl-check', 'sandbox-log-observer')]
 XPC = 'Contents/XPCServices/PWRunner.xpc'
 FILES += [XPC + '/Contents/MacOS/' + name for name in ('PWRunner', 'pw-probe-runner', 'sb_api_validator')]
 HOST = XPC + '/Contents/MacOS/PWRunner'
