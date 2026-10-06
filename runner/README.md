@@ -198,9 +198,9 @@ Top-level fields:
   Imprecise published failures, incomplete reports, abnormal/unconfirmed exits and
   cleanup faults use `runner_failed`; cause may remain unknown. Deadline expiry
   uses `runner_timeout` even after voluntary grace exit. A cleanup request alone
-  is not a timeout. `runner_sandbox_denied` and `sandbox_apply_failed` are
-  recognized constants that no producer emits; specific native failure
-  evidence lives under `runner_failed`.
+  is not a timeout. Specific native failure evidence lives under
+  `runner_failed`; signals and PID-matched denials establish no sandbox cause
+  and have no outcome spelling.
 - `validator_subprocess` carries the validator child's process observations,
   accepted records, expected IDs, association issues, byte counts, and independent
   I/O/decode faults, or is `null` when no validator

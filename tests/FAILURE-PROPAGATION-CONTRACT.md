@@ -43,7 +43,7 @@ which the child stopped.
 | Valid worker failure publication | Retain operation/code/native result, optional text, and independent host observations | `runner_failed` |
 | Incomplete or malformed worker failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
 | No worker spawned | Retain the host admission/setup/spawn error; no worker report or subprocess object | Existing applicable host outcome |
-| A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never `sandbox_apply_failed` |
+| A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never an application-failure claim |
 | A=false, D=true, R nonzero | Worker published a preparation/application failure through the status word only; precise failed operation and native return unavailable | `runner_failed`; describe a published status-word failure, without saying an apply or compile call returned R |
 | A=false, D=true, R=0 | Inconsistent terminal publication; not evidence of successful application or a library failure | `runner_failed` |
 | A=true, published R nonzero | Inconsistent successful-application marker and status; preserve flags, do not choose a library cause | `runner_failed` |
@@ -397,15 +397,14 @@ contracts, owned by [docs/contract.json](../docs/CONTRACT.md). Semantic readers
 accept exactly the current numbers (see [Supported versions](#supported-versions)).
 Steps carry no signal channel; a null per-step `errno` requires key presence.
 
-Current producers do not emit `runner_sandbox_denied`: existing evidence cannot justify
-its causal meaning. It remains a recognized constant, not a spelling to which
-new unknown terminations are assigned. `sandbox_apply_failed` is reserved for
-precise operation/result evidence; an imprecise published status does not
-justify it. Both constants keep coverage rows as recognized, unemitted
-entries. `runner_failed` covers execution/reporting failure with cause possibly
-unknown; it does not mean a proven host defect. `bad_policy` keeps its existing
-structural-policy admission meaning. Published worker failures also use `runner_failed`; the operation/code record
-provides the precise account without adding outcome strings.
+No outcome spelling claims a sandbox termination cause or a precise
+application failure: signals and PID-matched denials cannot justify the first,
+and an imprecise published status cannot justify the second. The pre-apply
+witness case forbids both spellings outright. `runner_failed` covers
+execution/reporting failure with cause possibly unknown; it does not mean a
+proven host defect. `bad_policy` keeps its existing structural-policy admission
+meaning. Published worker failures also use `runner_failed`; the operation/code
+record provides the precise account without adding outcome strings.
 
 The pre-apply CLI witness asserts excluded claims, not one exact summary;
 the table's classifier controls pin the mapping. The attempt

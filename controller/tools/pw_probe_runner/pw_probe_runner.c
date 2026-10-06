@@ -299,8 +299,9 @@ static int parse_args(int argc, char **argv, pw_args_t *args) {
                 args->post_apply_hang_ms = v;
             } else if (strcmp(flag, "--post-apply-kill-signal") == 0) {
                 /* 0 disables; otherwise a signal number (1..31) the worker
-                 * raises on itself post-apply / pre-done to reach the
-                 * runner_sandbox_denied classifier path deterministically. */
+                 * raises on itself post-apply / pre-done so the host's
+                 * self-signal classification (runner_failed with the signal
+                 * preserved) is reached deterministically. */
                 if (v < 0 || v > 31) {
                     fprintf(stderr, "pw-probe-runner: --post-apply-kill-signal %ld out of range (0..31)\n", v);
                     return -1;

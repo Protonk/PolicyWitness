@@ -3058,7 +3058,7 @@ mod tests {
 
     #[test]
     fn no_worker_never_uses_host_or_client_pid() {
-        for outcome in ["bad_request", "xpc_error", "runner_sandbox_denied"] {
+        for outcome in ["bad_request", "xpc_error", "worker_spawn_failed"] {
             let runner =
                 json!({"pid": 42, "normalized_outcome": outcome, "runner_subprocess": null});
             let cap = capture_with("captured", vec![event(Some(42))]);

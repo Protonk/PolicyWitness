@@ -365,10 +365,11 @@ operation never started.
 
 This is the one override-driven case exempt from the exact-outcome assertion in
 the `_test_overrides` recipe in [`runner/AGENTS.md`](../../../runner/AGENTS.md).
-It checks that `normalized_outcome` excludes `ok`, `sandbox_apply_failed`,
-`bad_policy`, and `runner_sandbox_denied` rather than pinning one replacement
-outcome, so it protects the absence of library/policy claims across outcome
-renames; classifier tests pin the mapping. It keeps the recipe's other
+It checks that `normalized_outcome` excludes `ok` and `bad_policy`, and the
+spellings `sandbox_apply_failed` and `runner_sandbox_denied` that no constant
+defines, rather than pinning one replacement outcome, so it protects the
+absence of library/policy claims across outcome renames; classifier tests pin
+the mapping. It keeps the recipe's other
 assertions: a real failure artifact in the error, both mirrored overrides,
 subprocess and missing-step evidence checks, and the un-overridden positive
 control. Optional subprocess objects may be omitted or null; a null per-step

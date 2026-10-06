@@ -51,11 +51,10 @@ enum PWRunnerWire {
 // against it. docs/PolicyWitness.md should also list it in the "Run output"
 // section so callers can recognize it.
 public enum NormalizedOutcome {
-    // Successful execution and a reserved precise apply-failure spelling.
-    // The worker's status word cannot identify a failed native operation;
-    // published preparation/application failures map to runner_failed.
+    // Successful execution. The worker's status word cannot identify a failed
+    // native operation; published preparation/application failures map to
+    // runner_failed, and no precise apply-failure spelling exists.
     public static let ok = "ok"
-    public static let sandboxApplyFailed = "sandbox_apply_failed"
 
     // ----- emitted by the host short-circuit (PWRunnerService.swift).
     // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
@@ -68,10 +67,9 @@ public enum NormalizedOutcome {
     public static let workerSpawnFailed = "worker_spawn_failed"
 
     // ----- emitted by the host classifier (CWorker.swift sentinel
-    // observation + CWorkerOrchestrator classification)
-    // Recognized constant only; signals and PID-matched denials do not
-    // establish a sandbox cause, so no producer emits this label.
-    public static let runnerSandboxDenied = "runner_sandbox_denied"
+    // observation + CWorkerOrchestrator classification). Signals and
+    // PID-matched denials do not establish a sandbox cause, so no
+    // sandbox-denied spelling exists; such terminations are runner_failed.
     public static let runnerTimeout = "runner_timeout"
     public static let runnerFailed = "runner_failed"
     // Host reply construction failed; the original execution summary is retained

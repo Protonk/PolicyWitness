@@ -19,6 +19,9 @@ from lifecycle_contract import CAUSE_LABELS
 import consumer
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
+# `ok` and `bad_policy` are live outcomes. The other two spellings have no
+# constant; they stay forbidden so no producer can reintroduce a library or
+# sandbox-cause claim under them.
 FORBIDDEN_OUTCOMES = {'ok', 'sandbox_apply_failed', 'bad_policy', 'runner_sandbox_denied'}
 
 
