@@ -80,16 +80,7 @@ fn now_unix_ms() -> u64 {
 }
 
 fn json_result(ok: bool) -> json_contract::JsonResult {
-    json_contract::JsonResult {
-        ok,
-        rc: None,
-        exit_code: Some(if ok { 0 } else { 3 }),
-        normalized_outcome: None,
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    }
+    json_contract::JsonResult::new(ok, if ok { 0 } else { 3 }, None, None)
 }
 
 fn is_pid_alive(pid: i32) -> bool {

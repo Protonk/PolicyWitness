@@ -124,24 +124,6 @@ pub fn reply_version(reply: &Value) -> ReplyVersion {
     }
 }
 
-fn result(
-    ok: bool,
-    exit_code: i32,
-    outcome: &str,
-    error: Option<String>,
-) -> json_contract::JsonResult {
-    json_contract::JsonResult {
-        ok,
-        rc: None,
-        exit_code: Some(exit_code),
-        normalized_outcome: Some(outcome.to_string()),
-        errno: None,
-        error,
-        stderr: None,
-        stdout: None,
-    }
-}
-
 /// `data` for an envelope written without log collection: the dossier and
 /// whatever execution records exist, every other key null.
 fn execution_only(
@@ -173,7 +155,7 @@ fn tool_error_envelope(
     error: String,
 ) -> (json_contract::JsonResult, RunData) {
     (
-        result(false, 2, "tool_error", Some(error)),
+        json_contract::JsonResult::new(false, 2, Some("tool_error"), Some(error)),
         execution_only(specimen, timeout_ms, None, None),
     )
 }
@@ -214,7 +196,7 @@ fn bad_request(
     let mut data = execution_only(specimen, timeout_ms, None, None);
     data.execution.request_failure = Some(json!(error.failure));
     envelope(
-        result(false, 1, "bad_request", Some(error.message)),
+        json_contract::JsonResult::new(false, 1, Some("bad_request"), Some(error.message)),
         &data,
         1,
     )
@@ -704,7 +686,7 @@ fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     };
     let data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
     envelope(
-        result(false, exit_code, outcome, Some(error)),
+        json_contract::JsonResult::new(false, exit_code, Some(outcome), Some(error)),
         &data,
         exit_code,
     )
@@ -741,16 +723,8 @@ fn complete_execution(mut data: ExecutionData) -> CompletedExecution {
         Some("run did not complete successfully".to_string())
     };
 
-    let result = json_contract::JsonResult {
-        ok,
-        rc: None,
-        exit_code: Some(exit_code),
-        normalized_outcome: Some(runner_outcome),
-        errno: None,
-        error,
-        stderr: None,
-        stdout: None,
-    };
+    let result =
+        json_contract::JsonResult::new(ok, exit_code, Some(runner_outcome.as_str()), error);
 
     CompletedExecution {
         data,
@@ -2215,7 +2189,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
         let data = execution_only(specimen(), Some(7), Some(broken), Some(unsupported.clone()));
         let text = json_contract::render_envelope(
             "run",
-            result(false, 2, "tool_error", Some("controlled".into())),
+            json_contract::JsonResult::new(false, 2, Some("tool_error"), Some("controlled".into())),
             &data,
         )
         .unwrap();

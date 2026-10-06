@@ -69,16 +69,12 @@ fn emit_runner_not_found(
         requested_id: requested_id.map(str::to_string),
         requested_service_name: requested_service_name.map(str::to_string),
     };
-    let result = json_contract::JsonResult {
-        ok: false,
-        rc: None,
-        exit_code: Some(2),
-        normalized_outcome: Some("not_found".to_string()),
-        errno: None,
-        error: Some("runner not found in registry".to_string()),
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(
+        false,
+        2,
+        Some("not_found"),
+        Some("runner not found in registry".to_string()),
+    );
     json_contract::print_envelope(kind, result, &data)?;
     Ok(2)
 }
@@ -434,32 +430,14 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         plist_path: plist_path.display().to_string(),
         bootstrapped: !skip_bootstrap,
     };
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".to_string()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_install", result, &data)?;
     Ok(0)
 }
 
 fn cmd_runner_list() -> Result<i32, String> {
     let (_, registry) = load_registry_or_default()?;
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".to_string()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_registry", result, &registry)?;
     Ok(0)
 }
@@ -491,13 +469,10 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
     }
 
     let (_, registry) = load_registry_or_default()?;
-    let record = if let Some(id) = runner_id.as_ref() {
-        registry.runners.iter().find(|r| &r.id == id)
-    } else if let Some(service) = service_name.as_ref() {
-        registry.runners.iter().find(|r| &r.service_name == service)
-    } else {
+    if runner_id.is_none() && service_name.is_none() {
         return Err("runner status requires --id or --service-name".to_string());
-    };
+    }
+    let record = registry.find(runner_id.as_deref(), service_name.as_deref());
 
     let record = match record {
         Some(record) => record,
@@ -510,16 +485,7 @@ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
         }
     };
 
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".to_string()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_status", result, record)?;
     Ok(0)
 }
@@ -607,13 +573,10 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     }
 
     let (_, registry) = load_registry_or_default()?;
-    let record = if let Some(id) = runner_id.as_ref() {
-        registry.runners.iter().find(|r| &r.id == id)
-    } else if let Some(service) = service_name.as_ref() {
-        registry.runners.iter().find(|r| &r.service_name == service)
-    } else {
+    if runner_id.is_none() && service_name.is_none() {
         return Err("runner verify requires --id or --service-name".to_string());
-    };
+    }
+    let record = registry.find(runner_id.as_deref(), service_name.as_deref());
 
     let record = match record {
         Some(record) => record,
@@ -652,16 +615,8 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
         runner_pid,
         normalized_outcome: outcome.clone(),
     };
-    let result = json_contract::JsonResult {
-        ok,
-        rc: None,
-        exit_code: Some(if ok { 0 } else { 1 }),
-        normalized_outcome: Some(outcome),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result =
+        json_contract::JsonResult::new(ok, if ok { 0 } else { 1 }, Some(outcome.as_str()), None);
     json_contract::print_envelope("runner_verify", result, &data)?;
     Ok(if ok { 0 } else { 1 })
 }
@@ -718,16 +673,7 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
             service_name.as_deref(),
         );
     };
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".to_string()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_remove", result, &data)?;
     Ok(0)
 }
@@ -775,16 +721,7 @@ fn cmd_runner_validate() -> Result<i32, String> {
         invalid,
         failures,
     };
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".to_string()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_validate", result, &data)?;
     Ok(0)
 }
@@ -905,16 +842,7 @@ fn cmd_runner_reconcile() -> Result<i32, String> {
         }
     }
     let data = json!({"registry_path":path, "records":records, "candidates":candidates, "inspection_errors":inspection_errors});
-    let result = json_contract::JsonResult {
-        ok: true,
-        rc: None,
-        exit_code: Some(0),
-        normalized_outcome: Some("ok".into()),
-        errno: None,
-        error: None,
-        stderr: None,
-        stdout: None,
-    };
+    let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_reconcile", result, &data)?;
     Ok(0)
 }

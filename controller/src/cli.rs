@@ -44,16 +44,7 @@ pub fn run(argv: Vec<OsString>) -> i32 {
     }
 
     if sub == "--version" || sub == "version" {
-        let result = json_contract::JsonResult {
-            ok: true,
-            rc: None,
-            exit_code: Some(0),
-            normalized_outcome: None,
-            errno: None,
-            error: None,
-            stderr: None,
-            stdout: None,
-        };
+        let result = json_contract::JsonResult::new(true, 0, None, None);
         let data = json!({"contract": json_contract::contract_versions()});
         return match json_contract::print_envelope("version", result, &data) {
             Ok(()) => 0,

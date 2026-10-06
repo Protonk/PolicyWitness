@@ -444,14 +444,12 @@ fn find_external_record<'a>(
     registry: &'a RunnerRegistry,
     selector: &RunnerSelector,
 ) -> Result<&'a RunnerRecord, String> {
-    let record = if let Some(id) = selector.runner_id.as_ref() {
-        registry.runners.iter().find(|r| &r.id == id)
-    } else if let Some(service) = selector.runner_service.as_ref() {
-        registry.runners.iter().find(|r| &r.service_name == service)
-    } else {
-        None
-    }
-    .ok_or_else(|| "external runner not found in registry".to_string())?;
+    let record = registry
+        .find(
+            selector.runner_id.as_deref(),
+            selector.runner_service.as_deref(),
+        )
+        .ok_or_else(|| "external runner not found in registry".to_string())?;
     if record.state == runner_manager::RunnerState::Pending {
         return Err("external runner is pending installation".into());
     }

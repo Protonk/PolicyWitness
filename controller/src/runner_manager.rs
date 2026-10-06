@@ -161,6 +161,21 @@ pub struct RunnerRegistry {
     pub pending_cleanup: Vec<PendingCleanup>,
 }
 
+impl RunnerRegistry {
+    /// The record a request names: by id when one is given, otherwise by
+    /// service name. An id that matches nothing is a miss; the service name
+    /// is not consulted as a fallback.
+    pub fn find(&self, id: Option<&str>, service_name: Option<&str>) -> Option<&RunnerRecord> {
+        if let Some(id) = id {
+            self.runners.iter().find(|r| r.id == id)
+        } else if let Some(service_name) = service_name {
+            self.runners.iter().find(|r| r.service_name == service_name)
+        } else {
+            None
+        }
+    }
+}
+
 pub fn runner_registry_path() -> Result<PathBuf, String> {
     // Ops/test seam: point PW at an alternate registry without touching
     // $HOME. Mirrors the PW_VERIFY_EVIDENCE override in run_flow.rs. The

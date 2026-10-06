@@ -29,6 +29,28 @@ pub struct JsonResult {
     pub stdout: Option<String>,
 }
 
+impl JsonResult {
+    /// A result the controller or a helper makes itself. `rc`, `errno`,
+    /// `stderr` and `stdout` are never set on this path and serialize as null.
+    pub fn new(
+        ok: bool,
+        exit_code: i32,
+        normalized_outcome: Option<&str>,
+        error: Option<String>,
+    ) -> Self {
+        JsonResult {
+            ok,
+            rc: None,
+            exit_code: Some(exit_code),
+            normalized_outcome: normalized_outcome.map(str::to_string),
+            errno: None,
+            error,
+            stderr: None,
+            stdout: None,
+        }
+    }
+}
+
 /// The build stamp says which code produced an envelope. build.sh derives it
 /// from git (nearest `v*` tag, commit count, `git describe --dirty`, commit
 /// hash) and passes it to cargo; a plain `cargo build` reads "unknown". It is a

@@ -305,19 +305,6 @@ fn verdict(compile: &CompileRecord) -> (&'static str, i32, Option<String>) {
     }
 }
 
-fn result_for(outcome: &str, exit_code: i32, error: Option<String>) -> json_contract::JsonResult {
-    json_contract::JsonResult {
-        ok: exit_code == 0,
-        rc: None,
-        exit_code: Some(exit_code),
-        normalized_outcome: Some(outcome.to_string()),
-        errno: None,
-        error,
-        stderr: None,
-        stdout: None,
-    }
-}
-
 /// Admission, import inventory, native setup and compilation, then the
 /// verdict, in that order. An input refusal performs no walk and no native
 /// call and leaves both groups explicitly null.
@@ -347,7 +334,7 @@ fn check(
                 Refusal::PolicyTooLarge(error) => ("policy_too_large", error),
             };
             return CheckReport {
-                result: result_for(outcome, 1, Some(error)),
+                result: json_contract::JsonResult::new(false, 1, Some(outcome), Some(error)),
                 data: data(None, None, None),
             };
         }
@@ -367,7 +354,7 @@ fn check(
     let compile = compile_with(native, &admitted);
     let (outcome, exit_code, error) = verdict(&compile);
     CheckReport {
-        result: result_for(outcome, exit_code, error),
+        result: json_contract::JsonResult::new(exit_code == 0, exit_code, Some(outcome), error),
         data: data(Some(policy_sha256), Some(compile), Some(inventory)),
     }
 }
