@@ -1,6 +1,8 @@
-//! JSON envelope helpers for controller output.
-//!
-//! The controller emits a single JSON object per run. Keys are sorted so
+//! The envelope frame: the outer JSON object every controller-family binary
+//! prints (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
+//! `data`). `policy-witness` uses this file as a module; `sbpl-check` and
+//! `sandbox-log-observer` compile the same file in by `#[path]`, so one frame
+//! and one version (`SCHEMA_VERSION`) cover the family. Keys are sorted so
 //! envelopes are stable for diffing and hashing.
 
 use serde::Serialize;

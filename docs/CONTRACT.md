@@ -35,11 +35,13 @@ Current wire contracts: request schema 4, response schema 14, controller envelop
   `data.specimen` is the dossier: request path, policy augmentation and
   imports, host facts, runner and app provenance, and hashes of any selected
   binary the app manifest does not describe; the raw runner reply, transport,
-  diagnostics and log capture stay beside it. The same number is the frame
-  every controller-family binary prints (`kind`, `schema_version`,
-  `generated_at_unix_ms`, `build`, `result`, `data`), so it also appears on
-  the helper envelopes the controller nests unchanged:
-  `data.policy_check.envelope` from `sbpl-check` and
+  diagnostics and log capture stay beside it. The same number versions the
+  **envelope frame**: the outer object every controller-family binary prints
+  (`kind`, `schema_version`, `generated_at_unix_ms`, `build`, `result`,
+  `data`), rendered by [`json_contract.rs`](../controller/src/json_contract.rs),
+  which `sbpl-check` and `sandbox-log-observer` compile in by `#[path]`. The
+  frame therefore also appears on the helper envelopes the controller nests
+  unchanged: `data.policy_check.envelope` from `sbpl-check` and
   `data.sandbox_log_capture.observer` from `sandbox-log-observer`. Inside the
   observer's frame, `data.observer_schema_version` identifies the observer's
   own report; the two numbers name different things and move independently.
@@ -271,7 +273,7 @@ are separate from the closed request decoding described above.
 
 For `data.policy_check`, the consumer validates the capture wrapper and applies
 helper admission to its nested `envelope`. Admission requires `kind: "sbpl_check"`,
-the exact current integer envelope version and a nonempty string
+the envelope frame's exact current integer version and a nonempty string
 `result.normalized_outcome`. An admitted envelope must have its outcome copied
 into capture `status`, and its body is checked against the current helper shape.
 Rejected parsed output under `status: "invalid_reply"` is opaque retained

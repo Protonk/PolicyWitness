@@ -259,10 +259,10 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
 - `data.sandbox_log_capture`: optional observer evidence, also captured for
   successful runs; null when disabled or no authoritative worker PID exists.
   `observer` is the observer's own envelope, retained unchanged: its
-  `schema_version` is the controller envelope number, the frame every
-  controller-family binary prints, and its `data.observer_schema_version`
-  identifies the observer's report inside that frame (see
-  [docs/CONTRACT.md](../docs/CONTRACT.md)). The report attributes nothing: it
+  `schema_version` is the controller envelope number, which versions the
+  envelope frame every controller-family binary prints, and its
+  `data.observer_schema_version` identifies the observer's report inside that
+  frame (see [docs/CONTRACT.md](../docs/CONTRACT.md)). The report attributes nothing: it
   carries the denial records the log showed, each with its parsed fields and
   `raw_line`, beside the raw `log_stdout`.
   `window` records the scanned interval: the runner client's start and end
