@@ -12,7 +12,8 @@ Started 2026-10-03 at v0.2.5.
 - [x] Step 0: survey the repository (2026-10-03)
 - [x] Step 1: triage conversation over the strain register (2026-10-05)
 - [x] Step 2: carry out the eliminations chosen in step 1 (2026-10-05; gate: default battery under `tests/out/runs/arch-step2-gate`, dispatcher rerun under `arch-step2-gate-dispatcher` after an unrelated Makefile fix)
-- [ ] Step 3: draft the document from source
+- [ ] Step 3a: the manifest, generator, figures and drift case, from source
+- [ ] Step 3b: the prose and the ASCII timeline, from source
 - [ ] Step 4: review the draft with a human
 - [ ] Step 5: integrate, verify, close out
 
@@ -146,10 +147,15 @@ and nothing else.
 
 Write the document from the code, not from the existing documents. For every
 claim, name the symbol that implements it and the test that pins it. Keep a
-drafting log. A claim that needs a footnote, or has no pin, goes into the
-register as a new row marked "found while drafting". After the draft is
-complete, diff it against the existing documents for contradictions and record
-those in the log as well.
+drafting log (the section at the end of this file). A claim that needs a
+footnote, or has no pin, goes into the register as a new row marked "found
+while drafting". After the draft is complete, diff it against the existing
+documents for contradictions and record those in the log as well.
+
+Step 3a builds the manifest, the generator, the three figures and the
+`source_drift` case; every node and edge cites its source symbol and its
+check, and the generator refuses a citation it cannot find. Step 3b writes the
+prose around the generated regions and the ASCII timeline.
 
 The proposed shape is below. Use it unless the draft shows a better one.
 
@@ -161,8 +167,11 @@ before the document is finished.
 
 ### Step 5: integrate and close out
 
-- Add a router row in [AGENTS.md](../AGENTS.md) and a line under
-  "Implementation details" in the [README](../README.md).
+- Add a router row in [AGENTS.md](../AGENTS.md) for the document, the
+  manifest and the generator, a maintenance-checklist line (a change to who
+  spawns whom, a channel or a boundary guard updates `docs/architecture.json`
+  and regenerates), and a line under "Implementation details" in the
+  [README](../README.md).
 - Run `python3 docs/generate_limits.py --check` and
   `tests/run.sh --suite source_drift`. The source-drift link check globs every
   `docs/*.md`, so the new document's relative links are checked without
@@ -209,10 +218,15 @@ Sections in order:
 2. Process inventory (table below).
 3. One run in time, with an ASCII sequence diagram. The repository has no
    diagram anywhere; the release-barrier timeline is the single highest-value
-   artifact the document can add. Diagram form is open: Graphviz (`dot`) is
-   installed on the development machine, and whether the process topology or
-   the document graph gets a dot-rendered figure beside the ASCII timeline is
-   settled with a human before this section is drafted.
+   artifact the document can add. Diagram decision (2026-10-05): dot is
+   preferred. Figures are generated from `docs/architecture.json` by
+   `docs/generate_architecture.py`, so a node or edge is chased by its id to a
+   manifest row and from there to the symbol and the check that pin it. The
+   SVGs are rendered by the installed Graphviz and stamped with the hash of
+   their dot text; a `source_drift` case checks every copy without needing
+   Graphviz. ASCII is used only where dot cannot express the figure, which is
+   this timeline. Three dot graphs: process topology (section 2), boundaries
+   (section 5) and the document graph (section 7).
 4. Evidence channels and a field-group ownership map: prediction, attempt,
    comparison, disposition, dossier, log capture; who writes each; the rule that
    log evidence never changes execution evidence.
@@ -299,3 +313,8 @@ Size target: 300 to 500 lines. Current behavior only.
 - Prefer links to copies. If the document must state a fact another document
   also states, the two should either share text under a checked marker region
   or one should link the other.
+
+## Drafting log
+
+Entries are added during step 3. Each names the claim, where it was pinned or
+why it could not be, and any contradiction found with an existing document.
