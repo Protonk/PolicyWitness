@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: unchanged by the 2026-10-06 remediation; no shipped path reads the worker's own environment back, and the guide states that an exec helper sees three descriptors and no environment.
+
 ## Observation
 
 Two installations supplied `PW_BYOXPC_CANARY=byoxpc-canary` and

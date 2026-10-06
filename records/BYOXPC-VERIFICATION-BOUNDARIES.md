@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: the verification boundary observed here was closed on 2026-10-06; installation and `runner validate` verify recursively (`--deep --strict`) and validate reports which binary failed. Mixed signing authorities across the three binaries no longer arise from an install, since the installer signs all three with one identity.
+
 ## Observations
 
 A Developer ID host, an ad-hoc worker carrying an entitlement, and a

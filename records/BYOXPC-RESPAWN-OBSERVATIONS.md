@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: the wait observed here was bounded on 2026-10-06; the generated plist sets `ThrottleInterval` to one second (limit `byoxpc_throttle_interval`), and the guide describes what follows `runner verify`.
+
 ## Observations
 
 Sequential requests to one installed runner did not all behave like requests

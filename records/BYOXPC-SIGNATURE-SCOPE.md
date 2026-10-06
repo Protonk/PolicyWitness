@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: the scope observed here was closed on 2026-10-06; `runner install` now signs the embedded worker with the supplied plist and the validator with the identity before sealing the bundle, and the registry records each binary's read-back (guide, External runners).
+
 ## Observation
 
 Installing a copied runner with `com.apple.security.cs.allow-jit = true`

@@ -198,7 +198,7 @@
         },
         {
           "id": "rust.byoxpc_reds",
-          "description": "The BYOXPC remediation plan's selection controller tests by exact name (a required key present with value false is refused, naming the worker and the key); promoted from red",
+          "description": "BYOXPC selection controller tests by exact name (a required entitlement key present with value false is refused, naming the worker and the key); promoted from red",
           "command": [
             "bash",
             "tests/suites/unit/byoxpc_reds.sh"

@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-# The BYOXPC remediation plan's selection controller tests, promoted from red.
+# The BYOXPC selection controller tests, promoted from red (a required
+# entitlement key present with value false is refused, naming the worker).
 # rust.unit runs the whole crate too; this case keeps them individually
 # selectable by exact name (with --include-ignored, so the selector was the
 # same while they carried #[ignore]) and classifies build, equipment and

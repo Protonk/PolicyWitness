@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: unchanged in substance by the 2026-10-06 remediation; an ad-hoc install now signs the worker and validator ad hoc as well, before the bundle seal.
+
 ## Observation
 
 An ad-hoc-signed worker carrying `com.apple.security.cs.allow-jit = true`

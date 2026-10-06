@@ -5,6 +5,8 @@ CLI, copied runners and the existing exec fixture. No product code, native
 probe implementation or registered test was changed. Remediation remains
 separate.
 
+Status: the false-valued admission observed here was closed on 2026-10-06; selection requires the worker's read-back to hold each required key with the value `true` and names the worker and the key when it does not. The timed-out request's independent effects and the exec helper's environment are described in the guide as observed here.
+
 ## Scope and equipment
 
 The three workflows were moving a specimen to BYOXPC, bringing an exec helper,

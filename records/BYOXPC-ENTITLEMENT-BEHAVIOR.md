@@ -2,6 +2,8 @@
 
 Investigation, 2026-10-06. No product changes.
 
+Status: the behavior observed here is what the 2026-10-06 remediation builds on; the installer now embeds the supplied plist in the worker, the process whose entitlement the kernel consults, and selection checks that worker's true-valued keys.
+
 ## Observation
 
 With the same SBPL and probe plan, moving an entitlement from host-only

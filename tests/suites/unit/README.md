@@ -12,8 +12,7 @@ Rust unit tests and formatting for the controller crate.
   (B1's status-conflict report and E1's projection and withholding of the carried
   record). They also run inside `rust.unit`; this case keeps them individually
   selectable and classifies build, equipment and unrelated failures separately.
-- `rust.byoxpc_reds` selects the BYOXPC remediation plan's two selection tests
-  the same way (a required entitlement key present with value `false` is
+- `rust.byoxpc_reds` selects the two BYOXPC selection tests the same way (a required entitlement key present with value `false` is
   refused, naming the worker and the key); promoted from red.
 - No case requires a built `.app` bundle.
 
