@@ -11,7 +11,7 @@ Started 2026-10-03 at v0.2.5.
 
 - [x] Step 0: survey the repository (2026-10-03)
 - [x] Step 1: triage conversation over the strain register (2026-10-05)
-- [ ] Step 2: carry out the eliminations chosen in step 1
+- [x] Step 2: carry out the eliminations chosen in step 1 (2026-10-05; gate: default battery under `tests/out/runs/arch-step2-gate`, dispatcher rerun under `arch-step2-gate-dispatcher` after an unrelated Makefile fix)
 - [ ] Step 3: draft the document from source
 - [ ] Step 4: review the draft with a human
 - [ ] Step 5: integrate, verify, close out
