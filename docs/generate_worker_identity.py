@@ -61,8 +61,8 @@ def render_all(root):
     bodies = (
         f'#define PW_WORKER_ABI_IDENTITY_HEX "{value}"\n'
         f"static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {{{octets}}};\n",
-        f'    public static let abiIdentityHex = "{value}"\n'
-        f"    public static let abiIdentity: [UInt8] = [{octets}]\n",
+        f'    static let abiIdentityHex = "{value}"\n'
+        f"    static let abiIdentity: [UInt8] = [{octets}]\n",
         f'WORKER_IDENTITY = "{value}"\n',
     )
     results = []

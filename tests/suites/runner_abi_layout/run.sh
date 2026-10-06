@@ -148,7 +148,7 @@ for line in printer_out.splitlines():
 
 sys.path.insert(0, os.environ["PW_TESTS_LIB"])
 from contract import WORKER_IDENTITY
-swift_identity = re.search(r'public static let abiIdentityHex = "([0-9a-f]{64})"', swift_text)
+swift_identity = re.search(r'(?:public\s+)?static let abiIdentityHex = "([0-9a-f]{64})"', swift_text)
 if not swift_identity or compiled_identity != swift_identity.group(1) or compiled_identity != WORKER_IDENTITY:
     raise SystemExit("compiled C identity, Swift identity and generated Python identity disagree")
 
@@ -170,17 +170,17 @@ if status != "ok":
 # tolerates Int / UInt32 (and any future numeric type) since the
 # value comparison is what's load-bearing, not the declared type.
 layout_block_match = re.search(
-    r"public enum PWShmLayout\s*\{(?P<body>.*?)\n\}",
+    r"(?:public\s+)?enum PWShmLayout\s*\{(?P<body>.*?)\n\}",
     swift_text,
     re.DOTALL,
 )
 if not layout_block_match:
-    raise SystemExit("could not locate `public enum PWShmLayout { ... }` in CWorker.swift")
+    raise SystemExit("could not locate `enum PWShmLayout { ... }` in CWorker.swift")
 layout_body = layout_block_match.group("body")
 
 swift_values: dict[str, int] = {}
 const_re = re.compile(
-    r"public\s+static\s+let\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z0-9_]+\s*=\s*(?P<value>[^\n]+)"
+    r"(?:public\s+)?static\s+let\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z0-9_]+\s*=\s*(?P<value>[^\n]+)"
 )
 for m in const_re.finditer(layout_body):
     name = m.group("name")

@@ -9,7 +9,7 @@ import Foundation
 ///   generates passes `--mach-service <name>` and a `MachServices` key). That
 ///   process was NOT launched as an XPCService bundle, so `.service()` traps in
 ///   `xpc_main`; it must bind `NSXPCListener(machServiceName:)` instead.
-public enum PWListenerConfig: Equatable {
+enum PWListenerConfig: Equatable {
     case machService(String)
     case xpcService
 }
@@ -21,7 +21,7 @@ public enum PWListenerConfig: Equatable {
 /// This is deliberately a standalone, side-effect-free function so the
 /// selection is unit-testable in `PWRunnerCore` — the executable entrypoint
 /// (`Services/PWRunner/main.swift`) is not part of the SwiftPM test package.
-public func pwListenerConfig(argv: [String]) -> PWListenerConfig {
+func pwListenerConfig(argv: [String]) -> PWListenerConfig {
     var i = 0
     while i < argv.count {
         if argv[i] == "--mach-service", i + 1 < argv.count {

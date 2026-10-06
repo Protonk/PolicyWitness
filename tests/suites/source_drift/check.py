@@ -252,7 +252,7 @@ def parse_attempt_outcome_matrix() -> set[str]:
 def _parse_swift_enum_constants(enum_name: str) -> set[str]:
     text = PWRUNNER_API.read_text(encoding="utf-8")
     enum_re = re.compile(
-        r'public enum ' + re.escape(enum_name) + r'\s*\{(.*?)\n\}',
+        r'(?:public\s+)?enum ' + re.escape(enum_name) + r'\s*\{(.*?)\n\}',
         re.DOTALL,
     )
     match = enum_re.search(text)
@@ -260,7 +260,7 @@ def _parse_swift_enum_constants(enum_name: str) -> set[str]:
         fail(f"could not locate {enum_name} enum in runner/Sources/PWRunnerCore/PWRunnerAPI.swift")
         sys.exit(2)
     body = match.group(1)
-    constant_re = re.compile(r'public static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"')
+    constant_re = re.compile(r'(?:public\s+)?static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"')
     return {m.group(1) for m in constant_re.finditer(body)}
 
 
@@ -396,7 +396,7 @@ def parse_c_attempt_kinds() -> dict[int, str]:
 
 def parse_swift_attempt_kinds() -> dict[int, str]:
     text = CWORKER_SWIFT.read_text(encoding="utf-8")
-    enum_re = re.compile(r'public enum PWAttemptKind:\s*UInt32\s*\{(.*?)\n\}', re.DOTALL)
+    enum_re = re.compile(r'(?:public\s+)?enum PWAttemptKind:\s*UInt32\s*\{(.*?)\n\}', re.DOTALL)
     match = enum_re.search(text)
     if match is None:
         fail("could not locate PWAttemptKind in runner/Sources/PWRunnerCore/CWorker.swift")
@@ -824,14 +824,14 @@ def host_invariance_controls() -> list[str]:
 def parse_test_override_fields() -> set[str]:
     text = PWRUNNER_API.read_text(encoding="utf-8")
     struct_re = re.compile(
-        r'public struct PWRunnerTestOverrides\s*:\s*Codable\s*\{(.*?)\n\}',
+        r'(?:public\s+)?struct PWRunnerTestOverrides\s*:\s*Codable\s*\{(.*?)\n\}',
         re.DOTALL,
     )
     match = struct_re.search(text)
     if match is None:
         fail("could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerAPI.swift")
         sys.exit(2)
-    field_re = re.compile(r'^\s*public var ([a-z_][a-z0-9_]*)\s*:', re.MULTILINE)
+    field_re = re.compile(r'^\s*(?:public\s+)?var ([a-z_][a-z0-9_]*)\s*:', re.MULTILINE)
     fields = {m.group(1) for m in field_re.finditer(match.group(1))}
     if not fields:
         fail("PWRunnerTestOverrides contains no parseable stored properties")

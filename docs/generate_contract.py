@@ -83,9 +83,9 @@ TARGETS = {
     "runner/Sources/PWRunnerCore/PWRunnerAPI.swift": [
         (*region("// ", ""), lambda v: "\n".join([
             "/// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.",
-            "public enum PWContract {",
-            f"    public static let requestSchema: Int = {v['request_schema']}",
-            f"    public static let responseSchema: Int = {v['response_schema']}",
+            "enum PWContract {",
+            f"    static let requestSchema: Int = {v['request_schema']}",
+            f"    static let responseSchema: Int = {v['response_schema']}",
             "}"]))],
     "controller/src/json_contract.rs": [
         (*region("// ", ""), lambda v: "\n".join([

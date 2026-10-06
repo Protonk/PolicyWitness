@@ -35,11 +35,11 @@ import Foundation
  * those gates.
  */
 
-public enum CWorkerOrchestrator {
+enum CWorkerOrchestrator {
 
     // ---- entry point -----------------------------------------------------
 
-    public static func run(
+    static func run(
         parsed: PWRunnerRunSpec,
         policyHash: String,
         bundleId: String?,
@@ -179,7 +179,7 @@ public enum CWorkerOrchestrator {
     /// The XPC service binary itself lives at
     /// `<this xpc service>/Contents/MacOS/<service-name>` — Bundle.main
     /// resolves to the service bundle. Sibling resolution.
-    public static func defaultWorkerExecutablePath() -> String {
+    static func defaultWorkerExecutablePath() -> String {
         let bundleURL = Bundle.main.bundleURL
         return bundleURL
             .appendingPathComponent("Contents/MacOS/pw-probe-runner")
@@ -192,7 +192,7 @@ public enum CWorkerOrchestrator {
     /// runners — which live outside any app bundle — still find a
     /// validator. The app-level path is the fallback for older
     /// layouts where the bundle-local copy may be missing.
-    public static func defaultValidatorExecutablePath() -> String {
+    static func defaultValidatorExecutablePath() -> String {
         let bundleURL = Bundle.main.bundleURL
         let bundleLocal = bundleURL
             .appendingPathComponent("Contents/MacOS/sb_api_validator")
@@ -217,7 +217,7 @@ public enum CWorkerOrchestrator {
     /// the worker's shared-memory bounds in plan order, then the host-only
     /// query strings and labels. Both service and direct orchestration use this
     /// gate; the driver also retains its checks local to the ABI writer.
-    public static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
+    static func admissionFailure(for parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
         if let refused = requestAdmissionFailure(parsed) { return refused }
         // Count checks precede translating an unbounded plan or sorting params.
         if parsed.probe_plan.count > PWShmLayout.maxSteps {

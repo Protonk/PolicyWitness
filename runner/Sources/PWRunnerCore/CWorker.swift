@@ -46,115 +46,115 @@ import CryptoKit
 /// constant + offset here matches the C-side `sizeof` / `offsetof`,
 /// so a drift between this enum and the header fails as a test
 /// rather than a runtime shm misalignment.
-public enum PWShmLayout {
+enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    public static let abiIdentityHex = "7e789d3c2dfcd7c0fd5c550e9d6f0e05a8884b63c559a9b5484fa288c9ea0610"
-    public static let abiIdentity: [UInt8] = [0x7e, 0x78, 0x9d, 0x3c, 0x2d, 0xfc, 0xd7, 0xc0, 0xfd, 0x5c, 0x55, 0x0e, 0x9d, 0x6f, 0x0e, 0x05, 0xa8, 0x88, 0x4b, 0x63, 0xc5, 0x59, 0xa9, 0xb5, 0x48, 0x4f, 0xa2, 0x88, 0xc9, 0xea, 0x06, 0x10]
+    static let abiIdentityHex = "45a7eeba1626a22b061106a676fd7acb5c28dc2a6fc440d88c0a7eb721668d79"
+    static let abiIdentity: [UInt8] = [0x45, 0xa7, 0xee, 0xba, 0x16, 0x26, 0xa2, 0x2b, 0x06, 0x11, 0x06, 0xa6, 0x76, 0xfd, 0x7a, 0xcb, 0x5c, 0x28, 0xdc, 0x2a, 0x6f, 0xc4, 0x40, 0xd8, 0x8c, 0x0a, 0x7e, 0xb7, 0x21, 0x66, 0x8d, 0x79]
     // END GENERATED WORKER IDENTITY
 
-    public static let abiMagic: UInt32 = 0x50574944
-    public static let abiIdentityBytes: Int = 32
+    static let abiMagic: UInt32 = 0x50574944
+    static let abiIdentityBytes: Int = 32
 
-    public static let headerBytes: Int     = 96
-    public static let slotBytes: Int       = 8192
-    public static let maxSteps: Int        = 256
-    public static let policyBytes: Int     = 262144
-    public static let paramBytes: Int      = 512
-    public static let maxParams: Int       = 1024
-    public static let captureHeaderBytes: Int = 144
-    public static let captureBytes: Int = 1048576
-    public static let captureNonceBytes: Int = 16
-    public static let evidenceHeaderBytes: Int = 64
-    public static let diagnosticBytes: Int = 4096
+    static let headerBytes: Int     = 96
+    static let slotBytes: Int       = 8192
+    static let maxSteps: Int        = 256
+    static let policyBytes: Int     = 262144
+    static let paramBytes: Int      = 512
+    static let maxParams: Int       = 1024
+    static let captureHeaderBytes: Int = 144
+    static let captureBytes: Int = 1048576
+    static let captureNonceBytes: Int = 16
+    static let evidenceHeaderBytes: Int = 64
+    static let diagnosticBytes: Int = 4096
 
     // Exec-attempt input bounds. argvBytes is the per-entry
     // byte cap (including the trailing NUL); maxArgv is the number of
     // entries the slot's argv table holds. The runner host validates
     // both before shm allocation.
-    public static let maxArgv: Int          = 16
-    public static let argvBytes: Int        = 128
+    static let maxArgv: Int          = 16
+    static let argvBytes: Int        = 128
     // Exec-attempt output bounds. Per-stream child output
     // capture; output past the buffer is truncated and tagged.
-    public static let childOutputBytes: Int = 1024
+    static let childOutputBytes: Int = 1024
 
-    public static let regionBytes: Int =
+    static let regionBytes: Int =
         headerBytes + maxSteps * slotBytes + maxParams * paramBytes + captureHeaderBytes + captureBytes + evidenceHeaderBytes + diagnosticBytes
 
     // Header field offsets (in bytes from region base).
-    public static let abiMagicOffset: Int      = 0
-    public static let abiIdentityOffset: Int   = 64
-    public static let stepCountOffset: Int     = 4
-    public static let preparedOffset: Int      = 8
-    public static let appliedOffset: Int       = 12
-    public static let doneOffset: Int          = 16
-    public static let exitRequestedOffset: Int = 20
-    public static let applyRcOffset: Int       = 24
-    public static let paramCountOffset: Int    = 28
-    public static let applyErrnoOffset: Int    = 32
-    public static let captureRequestedOffset: Int = 36
-    public static let captureNonceOffset: Int = 40
-    public static let proceedOffset: Int = 56
-    public static let proceedObservedOffset: Int = 60
+    static let abiMagicOffset: Int      = 0
+    static let abiIdentityOffset: Int   = 64
+    static let stepCountOffset: Int     = 4
+    static let preparedOffset: Int      = 8
+    static let appliedOffset: Int       = 12
+    static let doneOffset: Int          = 16
+    static let exitRequestedOffset: Int = 20
+    static let applyRcOffset: Int       = 24
+    static let paramCountOffset: Int    = 28
+    static let applyErrnoOffset: Int    = 32
+    static let captureRequestedOffset: Int = 36
+    static let captureNonceOffset: Int = 40
+    static let proceedOffset: Int = 56
+    static let proceedObservedOffset: Int = 60
 
-    public static let slotsOffset: Int    = headerBytes
-    public static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
-    public static let captureOffset: Int = headerBytes + maxSteps * slotBytes + maxParams * paramBytes
-    public static let captureCompletedOffset: Int = 0
-    public static let captureStatusOffset: Int = 4
-    public static let captureProfileTypeOffset: Int = 8
-    public static let captureBytecodeLengthOffset: Int = 12
-    public static let captureWorkerPidOffset: Int = 16
-    public static let captureSourceLengthOffset: Int = 20
-    public static let captureParamCountOffset: Int = 24
-    public static let captureSourceSha256Offset: Int = 32
-    public static let captureParamsSha256Offset: Int = 64
-    public static let captureBytecodeSha256Offset: Int = 96
-    public static let captureRequestNonceOffset: Int = 128
+    static let slotsOffset: Int    = headerBytes
+    static let paramsOffset: Int   = headerBytes + maxSteps * slotBytes
+    static let captureOffset: Int = headerBytes + maxSteps * slotBytes + maxParams * paramBytes
+    static let captureCompletedOffset: Int = 0
+    static let captureStatusOffset: Int = 4
+    static let captureProfileTypeOffset: Int = 8
+    static let captureBytecodeLengthOffset: Int = 12
+    static let captureWorkerPidOffset: Int = 16
+    static let captureSourceLengthOffset: Int = 20
+    static let captureParamCountOffset: Int = 24
+    static let captureSourceSha256Offset: Int = 32
+    static let captureParamsSha256Offset: Int = 64
+    static let captureBytecodeSha256Offset: Int = 96
+    static let captureRequestNonceOffset: Int = 128
 
-    public static let evidenceOffset: Int = captureOffset + captureHeaderBytes + captureBytes
-    public static let evidenceProgressOffset: Int = 0
-    public static let evidenceFailurePublishedOffset: Int = 4
-    public static let evidenceOperationOffset: Int = 8
-    public static let evidenceCodeOffset: Int = 12
-    public static let evidenceNativeKindOffset: Int = 16
-    public static let evidenceNativeResultOffset: Int = 20
-    public static let evidenceErrnoValOffset: Int = 24
-    public static let evidenceErrnoPresentOffset: Int = 28
-    public static let evidenceItemIndexOffset: Int = 32
-    public static let evidenceDetailOffset: Int = 36
-    public static let evidenceReadyPublishedOffset: Int = 40
-    public static let evidenceReadyRcOffset: Int = 44
-    public static let evidenceReadyErrnoOffset: Int = 48
-    public static let evidenceDiagnosticStateOffset: Int = 52
-    public static let evidenceDiagnosticLengthOffset: Int = 56
+    static let evidenceOffset: Int = captureOffset + captureHeaderBytes + captureBytes
+    static let evidenceProgressOffset: Int = 0
+    static let evidenceFailurePublishedOffset: Int = 4
+    static let evidenceOperationOffset: Int = 8
+    static let evidenceCodeOffset: Int = 12
+    static let evidenceNativeKindOffset: Int = 16
+    static let evidenceNativeResultOffset: Int = 20
+    static let evidenceErrnoValOffset: Int = 24
+    static let evidenceErrnoPresentOffset: Int = 28
+    static let evidenceItemIndexOffset: Int = 32
+    static let evidenceDetailOffset: Int = 36
+    static let evidenceReadyPublishedOffset: Int = 40
+    static let evidenceReadyRcOffset: Int = 44
+    static let evidenceReadyErrnoOffset: Int = 48
+    static let evidenceDiagnosticStateOffset: Int = 52
+    static let evidenceDiagnosticLengthOffset: Int = 56
 
     // Slot field offsets (from the slot's base), checked against compiled C.
-    public static let stepIdMax: Int           = 64
-    public static let targetMax: Int           = 512
-    public static let observedPathMax: Int     = 1024
-    public static let errorMax: Int            = 256
+    static let stepIdMax: Int           = 64
+    static let targetMax: Int           = 512
+    static let observedPathMax: Int     = 1024
+    static let errorMax: Int            = 256
 
-    public static let slotStepIdOffset: Int           = 0
-    public static let slotAttemptKindOffset: Int      = 64
-    public static let slotTargetOffset: Int           = 68
-    public static let slotArgvCountOffset: Int        = 580
-    public static let slotArgvOffset: Int             = 584
-    public static let slotRcOffset: Int               = 2632
-    public static let slotErrnoValOffset: Int         = 2636
-    public static let slotObservedPathOffset: Int     = 2640
-    public static let slotErrorOffset: Int            = 3664
-    public static let slotChildPidOffset: Int         = 3920
-    public static let slotChildExitCodeOffset: Int    = 3924
-    public static let slotChildTermSignalOffset: Int  = 3928
-    public static let slotChildStdoutOffset: Int      = 3932
-    public static let slotChildStderrOffset: Int      = 4956
-    public static let slotCompletedOffset: Int        = 5980
+    static let slotStepIdOffset: Int           = 0
+    static let slotAttemptKindOffset: Int      = 64
+    static let slotTargetOffset: Int           = 68
+    static let slotArgvCountOffset: Int        = 580
+    static let slotArgvOffset: Int             = 584
+    static let slotRcOffset: Int               = 2632
+    static let slotErrnoValOffset: Int         = 2636
+    static let slotObservedPathOffset: Int     = 2640
+    static let slotErrorOffset: Int            = 3664
+    static let slotChildPidOffset: Int         = 3920
+    static let slotChildExitCodeOffset: Int    = 3924
+    static let slotChildTermSignalOffset: Int  = 3928
+    static let slotChildStdoutOffset: Int      = 3932
+    static let slotChildStderrOffset: Int      = 4956
+    static let slotCompletedOffset: Int        = 5980
 
     // Param field offsets (from the param's base).
-    public static let paramKeyMax: Int    = 128
-    public static let paramValueMax: Int  = 384
-    public static let paramKeyOffset: Int   = 0
-    public static let paramValueOffset: Int = 128
+    static let paramKeyMax: Int    = 128
+    static let paramValueMax: Int  = 384
+    static let paramKeyOffset: Int   = 0
+    static let paramValueOffset: Int = 128
 }
 
 /// Mirrors pw_attempt_kind_t in the C ABI. Wire-stable: NEVER renumber.
@@ -163,7 +163,7 @@ public enum PWShmLayout {
 /// from wire requests with `kind="exec", action="spawn"` via
 /// `CWorkerOrchestrator.mapAttemptKindOrNil`. See docs/PolicyWitness.md →
 /// Attempt kinds for the wire contract.
-public enum PWAttemptKind: UInt32 {
+enum PWAttemptKind: UInt32 {
     case none           = 0
     case fileOpenRead   = 1
     case fileOpenWrite  = 2
@@ -188,19 +188,19 @@ private func pw_cworker_shm_open_create(_ name: UnsafePointer<CChar>, _ mode: mo
 
 // MARK: - Public input/output types
 
-public struct CWorkerSlotInput {
-    public var stepId: String
-    public var attemptKind: PWAttemptKind
-    public var target: String
+struct CWorkerSlotInput {
+    var stepId: String
+    var attemptKind: PWAttemptKind
+    var target: String
     /// argv[1..N] for exec attempts. `target` is argv[0]; the C worker
     /// reads the full argv table (argv_count = 1 + args.count) out of
     /// the shm slot and passes it straight to `posix_spawn`. Capped
     /// per the ABI: count ≤ PWShmLayout.maxArgv - 1, per-arg UTF-8
     /// length ≤ PWShmLayout.argvBytes - 1 (room for the trailing NUL).
     /// Ignored for non-exec attempts.
-    public var args: [String]
+    var args: [String]
 
-    public init(stepId: String, attemptKind: PWAttemptKind, target: String, args: [String] = []) {
+    init(stepId: String, attemptKind: PWAttemptKind, target: String, args: [String] = []) {
         self.stepId = stepId
         self.attemptKind = attemptKind
         self.target = target
@@ -208,49 +208,49 @@ public struct CWorkerSlotInput {
     }
 }
 
-public struct CWorkerParam {
-    public var key: String
-    public var value: String
+struct CWorkerParam {
+    var key: String
+    var value: String
 
-    public init(key: String, value: String) {
+    init(key: String, value: String) {
         self.key = key
         self.value = value
     }
 }
 
-public struct CWorkerInput {
-    public static let defaultPolicyTransferTimeoutMs = 5_000
+struct CWorkerInput {
+    static let defaultPolicyTransferTimeoutMs = 5_000
     // Internal test setting; never admitted from request JSON.
     var policyTransferTimeoutMs = CWorkerInput.defaultPolicyTransferTimeoutMs
-    public static let defaultSentinelTimeoutMs = 120_000
-    public var workerExecutablePath: String
-    public var policy: String
-    public var params: [CWorkerParam]
+    static let defaultSentinelTimeoutMs = 120_000
+    var workerExecutablePath: String
+    var policy: String
+    var params: [CWorkerParam]
     /// Explicit opt-in: captured bytecode and input hashes are sensitive output.
-    public var captureAppliedProfile: Bool
-    public var captureNonce: String?
-    public var slots: [CWorkerSlotInput]
-    public var readyByteTimeoutMs: Int
-    public var sentinelTimeoutMs: Int
-    public var exitGraceMs: Int
+    var captureAppliedProfile: Bool
+    var captureNonce: String?
+    var slots: [CWorkerSlotInput]
+    var readyByteTimeoutMs: Int
+    var sentinelTimeoutMs: Int
+    var exitGraceMs: Int
     /// Optional test-seam routed to pw-probe-runner as
     /// `--post-apply-hang-ms <N>`. When > 0, the worker sleeps for
     /// N ms after every slot is durable but before flipping `done`;
     /// drives the host's `runner_timeout` outcome from a real
     /// specimen. Production callers pass nil.
-    public var postApplyHangMs: Int?
+    var postApplyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--post-apply-kill-signal <N>`. When > 0, the worker raises signal N
     /// on itself after `applied` but before `done`, so the host observes a
     /// termination signal with done unset: runner_failed, without a policy
     /// cause. Production callers pass nil.
-    public var postApplyKillSignal: Int?
+    var postApplyKillSignal: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--pre-ready-hang-ms <N>`. When > 0, the worker sleeps N ms
     /// after compilation/capture and before the ready byte. A sufficient
     /// sentinel budget lets it survive a closed ready pipe (SIGPIPE ignored);
     /// a shorter budget can expire before application. Production callers pass nil.
-    public var preReadyHangMs: Int?
+    var preReadyHangMs: Int?
     /// Optional test-seam routed to pw-probe-runner as
     /// `--exec-child-deadline-ms <N>`. Overrides the worker's
     /// default per-exec wall-clock cap (10s). Test cases that pin
@@ -258,12 +258,12 @@ public struct CWorkerInput {
     /// against a long-running helper so the bounded-runtime path
     /// runs in seconds rather than tens of seconds. Production
     /// callers pass nil.
-    public var execChildDeadlineMs: Int?
+    var execChildDeadlineMs: Int?
     /// Internal test equipment: shorten the local exec plan budget independently
     /// of the host sentinel. Never populated from specimen JSON.
-    public var execAttemptBudgetMs: Int?
+    var execAttemptBudgetMs: Int?
 
-    public init(workerExecutablePath: String,
+    init(workerExecutablePath: String,
                 policy: String,
                 params: [CWorkerParam] = [],
                 slots: [CWorkerSlotInput],
@@ -294,65 +294,65 @@ public struct CWorkerInput {
     }
 }
 
-public struct CWorkerSlotResult {
-    public var stepId: String
-    public var rc: Int32
-    public var errnoVal: Int32
-    public var observedPath: String?
-    public var error: String?
-    public var completed: Bool
+struct CWorkerSlotResult {
+    var stepId: String
+    var rc: Int32
+    var errnoVal: Int32
+    var observedPath: String?
+    var error: String?
+    var completed: Bool
     /// Exec output fields, populated only when the slot's attempt
     /// kind was `.execSpawn`. Non-exec slots leave these nil so the
     /// orchestrator can branch on `childPid != nil` rather than
     /// inspecting kind.
-    public var childPid: Int32?
-    public var childExitCode: Int32?
-    public var childTermSignal: Int32?
-    public var childStdout: String?
-    public var childStderr: String?
+    var childPid: Int32?
+    var childExitCode: Int32?
+    var childTermSignal: Int32?
+    var childStdout: String?
+    var childStderr: String?
 }
 
-public struct CWorkerOutput {
-    public var workerPid: pid_t
-    public var readyByteReceived: Bool
-    public var applied: Bool
+struct CWorkerOutput {
+    var workerPid: pid_t
+    var readyByteReceived: Bool
+    var applied: Bool
     /// The status word, published by applied/done. -1 also represents parameter
     /// setup and compilation failures; without publication it is not a result.
-    public var applyRC: Int32
+    var applyRC: Int32
     /// Meaningful native errno only on a failed apply published by done.
     /// Zero alone distinguishes neither success nor absence of a call.
-    public var applyErrno: Int32
-    public var done: Bool
+    var applyErrno: Int32
+    var done: Bool
     /// Derived convenience for existing driver tests: a SIGKILL request was made, regardless
     /// of its result. Derived, not an independent authoritative observation.
-    public var sentSigkill: Bool { terminationRequest?.signal == SIGKILL }
-    public var exitCode: Int32?     // nil unless successfully reaped with exit
-    public var termSignal: Int32?   // nil unless successfully reaped with signal
-    public var slots: [CWorkerSlotResult]
-    public var profileCapture: AppliedProfileCapture? = nil
+    var sentSigkill: Bool { terminationRequest?.signal == SIGKILL }
+    var exitCode: Int32?     // nil unless successfully reaped with exit
+    var termSignal: Int32?   // nil unless successfully reaped with signal
+    var slots: [CWorkerSlotResult]
+    var profileCapture: AppliedProfileCapture? = nil
     /// Host-only fields, forwarded to runner_subprocess without reinterpretation.
     /// Defaults support constructed test inputs, not live observations.
     /// See PWRunnerSubprocess for JSON paths, types and absence semantics.
-    public var pollStopReason: String? = nil
-    public var exitRequested: Bool? = nil
-    public var terminationRequest: PWRunnerTerminationRequest? = nil
-    public var reaped: Bool? = nil
-    public var waitErrors: [PWRunnerWaitError]? = nil
-    public var workerEvidence: PWWorkerEvidence? = nil
-    public var policyTransferTimeout: PWWorkerPolicyTransferTimeout? = nil
-    public var policyTransferError: PWWorkerPolicyTransferError? = nil
-    public var hookInvoked: Bool = false
-    public var proceedSet: Bool = false
-    public var proceedObserved: Bool = false
-    public var proceedOwnershipEstablished: Bool = false
-    public var orderingProtocolViolations: [String] = []
+    var pollStopReason: String? = nil
+    var exitRequested: Bool? = nil
+    var terminationRequest: PWRunnerTerminationRequest? = nil
+    var reaped: Bool? = nil
+    var waitErrors: [PWRunnerWaitError]? = nil
+    var workerEvidence: PWWorkerEvidence? = nil
+    var policyTransferTimeout: PWWorkerPolicyTransferTimeout? = nil
+    var policyTransferError: PWWorkerPolicyTransferError? = nil
+    var hookInvoked: Bool = false
+    var proceedSet: Bool = false
+    var proceedObserved: Bool = false
+    var proceedOwnershipEstablished: Bool = false
+    var orderingProtocolViolations: [String] = []
     /// Direct host observations for the disposition record: why exit was
     /// requested (recorded at the exit-request store), how the exit-grace wait
     /// ended, and whether the final reads followed a confirmed reap. Nil only
     /// for constructed test inputs.
-    public var cleanupTrigger: String? = nil
-    public var graceEnd: String? = nil
-    public var collectionBasis: String? = nil
+    var cleanupTrigger: String? = nil
+    var graceEnd: String? = nil
+    var collectionBasis: String? = nil
 }
 
 
@@ -479,7 +479,7 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
         params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
 }
 
-public enum CWorkerRunError: Error, CustomStringConvertible {
+enum CWorkerRunError: Error, CustomStringConvertible {
     case captureNonceInvalid
     case admissionFailed(PWRunnerAdmissionFailure)
     case execTargetNotAbsolute(stepId: String, target: String)
@@ -494,14 +494,14 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     /// refusal and no steps. Echoing the plan would repeat the strings a
     /// capacity refusal rejected, and 256 refused queries can outgrow the
     /// reply cap on their own.
-    public var isPreSpawnRefusal: Bool {
+    var isPreSpawnRefusal: Bool {
         switch self {
         case .captureNonceInvalid, .admissionFailed, .execTargetNotAbsolute: return true
         case .shmSetupFailed, .pipeFailed, .spawnFailed, .policyWriteFailed, .policyTransferTimedOut: return false
         }
     }
 
-    public var description: String {
+    var description: String {
         switch self {
         case .captureNonceInvalid:
             return "capture_applied_profile requires a fresh 32-character lowercase hex capture_nonce"
@@ -518,7 +518,7 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     }
 }
 
-public enum CWorkerRunResult {
+enum CWorkerRunResult {
     case success(CWorkerOutput)
     case failure(CWorkerRunError, CWorkerOutput? = nil)
 }
@@ -602,9 +602,9 @@ func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? 
 /// it's executing. Hook time is outside the host sentinel budget, but the
 /// worker's monotonic proceed budget continues independently. Returning closes
 /// collection and releases attempts, including after validator failure.
-public typealias CWorkerPostAppliedHook = (pid_t) -> Void
+typealias CWorkerPostAppliedHook = (pid_t) -> Void
 
-public func runCWorker(_ input: CWorkerInput,
+func runCWorker(_ input: CWorkerInput,
                        postApplied: CWorkerPostAppliedHook? = nil) -> CWorkerRunResult {
     runCWorker(input, processCalls: ChildProcessCalls(), postApplied: postApplied)
 }

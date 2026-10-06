@@ -25,13 +25,13 @@ import CoreFoundation
 
 // MARK: - Public input/output types
 
-public struct ValidatorProbe {
-    public var stepId: String
-    public var operation: String
-    public var filterType: String          // "NONE" | "PATH" | "GLOBAL_NAME" | ...
-    public var filterValue: String?        // required for non-NONE
+struct ValidatorProbe {
+    var stepId: String
+    var operation: String
+    var filterType: String          // "NONE" | "PATH" | "GLOBAL_NAME" | ...
+    var filterValue: String?        // required for non-NONE
 
-    public init(stepId: String, operation: String,
+    init(stepId: String, operation: String,
                 filterType: String, filterValue: String? = nil) {
         self.stepId = stepId
         self.operation = operation
@@ -40,32 +40,32 @@ public struct ValidatorProbe {
     }
 }
 
-public struct ValidatorOutput {
-    public var validatorPid: pid_t
-    public var verdicts: [ValidatorVerdict]
-    public var exitCode: Int32?            // nil if signaled or still alive
-    public var termSignal: Int32?
-    public var sentSigkill: Bool
+struct ValidatorOutput {
+    var validatorPid: pid_t
+    var verdicts: [ValidatorVerdict]
+    var exitCode: Int32?            // nil if signaled or still alive
+    var termSignal: Int32?
+    var sentSigkill: Bool
     /// Total bytes drained from the validator's stdout. Equal to the
     /// concatenated verdict-line byte length on a clean run; useful on
     /// partial-failure returns to distinguish "validator never wrote
     /// anything" (0) from "validator wrote a partial stream that
     /// failed to parse mid-line" (> 0 with verdicts.count smaller
     /// than expected).
-    public var rawStdoutBytes: Int
-    public var reaped: Bool?
-    public var terminationRequest: PWRunnerTerminationRequest?
-    public var waitErrors: [PWRunnerWaitError]?
-    public var ioError: String?
-    public var decodeFault: PWValidatorDecodeFault?
-    public var expectedProbes: [ValidatorProbe]?
-    public var readError: String?
-    public var stdoutCollectionStop: String?
-    public var expectedStepIds: [String]? { expectedProbes?.map { $0.stepId } }
-    public var probeBytesWritten: Int?
-    public var probeBytesExpected: Int?
+    var rawStdoutBytes: Int
+    var reaped: Bool?
+    var terminationRequest: PWRunnerTerminationRequest?
+    var waitErrors: [PWRunnerWaitError]?
+    var ioError: String?
+    var decodeFault: PWValidatorDecodeFault?
+    var expectedProbes: [ValidatorProbe]?
+    var readError: String?
+    var stdoutCollectionStop: String?
+    var expectedStepIds: [String]? { expectedProbes?.map { $0.stepId } }
+    var probeBytesWritten: Int?
+    var probeBytesExpected: Int?
 
-    public init(validatorPid: pid_t,
+    init(validatorPid: pid_t,
                 verdicts: [ValidatorVerdict],
                 exitCode: Int32? = nil,
                 termSignal: Int32? = nil,
@@ -100,7 +100,7 @@ public struct ValidatorOutput {
     }
 }
 
-public enum ValidatorClientError: Error, CustomStringConvertible {
+enum ValidatorClientError: Error, CustomStringConvertible {
     case pipeFailed(String)
     case spawnFailed(PWRunnerSpawnFailure)
     case probeWriteFailed(String)
@@ -109,7 +109,7 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
     case verdictParseFailed(line: String, why: String)
     case verdictDecodeFailed(PWValidatorDecodeFault)
 
-    public var description: String {
+    var description: String {
         switch self {
         case .pipeFailed(let why):                return "pipe: \(why)"
         case .spawnFailed(let failure):
@@ -125,7 +125,7 @@ public enum ValidatorClientError: Error, CustomStringConvertible {
     }
 }
 
-public enum ValidatorClientResult {
+enum ValidatorClientResult {
     case success(ValidatorOutput)
     /// On failure, the driver returns whatever partial state it captured
     /// before the error fired: the validator PID if posix_spawn
@@ -143,14 +143,14 @@ public enum ValidatorClientResult {
 
 // MARK: - Driver
 
-public struct ValidatorClientInput {
-    public var executablePath: String      // path to sb_api_validator
-    public var targetPid: pid_t            // the worker_pid to query
-    public var probes: [ValidatorProbe]
-    public var verdictReadTimeoutMs: Int   // read deadline
-    public var exitGraceMs: Int            // wait deadline before SIGKILL
+struct ValidatorClientInput {
+    var executablePath: String      // path to sb_api_validator
+    var targetPid: pid_t            // the worker_pid to query
+    var probes: [ValidatorProbe]
+    var verdictReadTimeoutMs: Int   // read deadline
+    var exitGraceMs: Int            // wait deadline before SIGKILL
 
-    public init(executablePath: String,
+    init(executablePath: String,
                 targetPid: pid_t,
                 probes: [ValidatorProbe],
                 verdictReadTimeoutMs: Int = 30_000,
@@ -163,7 +163,7 @@ public struct ValidatorClientInput {
     }
 }
 
-public func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult {
+func runValidator(_ input: ValidatorClientInput) -> ValidatorClientResult {
     runValidator(input, processCalls: ChildProcessCalls())
 }
 

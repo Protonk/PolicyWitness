@@ -218,7 +218,7 @@ final class PWRunnerAdmission {
     }
 }
 
-public final class PWRunnerService: NSObject, PWRunnerProtocol {
+final class PWRunnerService: NSObject, PWRunnerProtocol {
     private let admission: PWRunnerAdmission
     private let scheduleExit: () -> Void
     private let orchestrate: (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult
@@ -240,7 +240,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
         super.init()
     }
 
-    public func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
+    func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
         func replyAndExit(_ result: PWRunnerRunResult) {
             reply(pwRunnerReplyData(result))
             // Allow the XPC reply to flush before exiting the process.
@@ -378,9 +378,9 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
     }
 }
 
-public final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
+final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
     private let admission = PWRunnerAdmission()
-    public func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
+    func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
         if !authorizedCaller(newConnection) {
             return false
         }

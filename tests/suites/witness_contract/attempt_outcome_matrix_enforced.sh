@@ -26,7 +26,7 @@ index = Path(sys.argv[2]).read_text(encoding="utf-8")
 drift = Path(sys.argv[3]).read_text(encoding="utf-8")
 
 # 1. AttemptOutcome enum must exist in PWRunnerAPI.swift.
-if "public enum AttemptOutcome" not in api:
+if "enum AttemptOutcome" not in api:
     raise SystemExit(
         "AttemptOutcome enum is not defined in runner/Sources/PWRunnerCore/PWRunnerAPI.swift."
     )
@@ -44,11 +44,11 @@ if "AttemptOutcome" not in drift:
     )
 
 # 4. Every AttemptOutcome constant has a matrix row.
-enum_re = re.compile(r"public enum AttemptOutcome\s*\{(.*?)\n\}", re.DOTALL)
+enum_re = re.compile(r"(?:public\s+)?enum AttemptOutcome\s*\{(.*?)\n\}", re.DOTALL)
 match = enum_re.search(api)
 if match is None:
     raise SystemExit("AttemptOutcome enum declaration could not be parsed")
-constants = set(re.findall(r'public static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"', match.group(1)))
+constants = set(re.findall(r'(?:public\s+)?static let \w+\s*=\s*"([a-z_][a-z0-9_]*)"', match.group(1)))
 
 # Slice off just the matrix section.
 matrix_part = index.split("## Attempt outcome coverage matrix", 1)[1]
