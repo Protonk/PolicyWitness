@@ -19,6 +19,8 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 
 - `tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh`
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
+- `tests/suites/runner_byoxpc/opt_in/single_use.sh`
+- `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
 
 ## Artifacts
 

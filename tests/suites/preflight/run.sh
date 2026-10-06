@@ -44,6 +44,15 @@ if test_selected codesign.preflight; then
 bash "${ROOT_DIR}/tests/suites/preflight/preflight.sh"
 fi
 
+if test_selected byoxpc_verification_controls; then
+test_begin preflight byoxpc_verification_controls
+test_step verification "refuse installation of, and report validation failure for, a copy whose worker code changed after sealing"
+test_require_pw
+test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "BYOXPC verification controls failed" \
+  "${ROOT_DIR}/tests/suites/preflight/check_byoxpc_verification.py" "${PW_APP_DIR}" "${PW_TEST_ARTIFACTS}" "${PW_BIN}"
+test_pass "installation and validation verify the copied bundle recursively; a changed worker is refused and reported"
+fi
+
 if test_selected signed_artifact_controls; then
 test_begin preflight signed_artifact_controls
 test_step signing "inspect intact, damaged, and re-signed disposable app copies"

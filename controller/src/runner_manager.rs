@@ -1075,6 +1075,19 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "docs/BYOXPC-REMEDIATION-PLAN.md Group 3: a key present with value false must not satisfy a requirement"]
+    fn false_valued_key_does_not_satisfy_a_requirement() {
+        // The kernel grants a boolean entitlement only when its value is true.
+        // A plist that names the key with `false` denies it, so a selector
+        // requiring that key must not be satisfied by the key's presence.
+        let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": false}));
+        assert!(
+            !entitlements_superset(&["com.apple.security.cs.allow-jit".to_string()], &ent),
+            "a required key present with value false must be refused"
+        );
+    }
+
+    #[test]
     fn legacy_machme_kind_deserializes_as_byoxpc() {
         // Registry entries written by older builds may carry `"kind": "machme"`.
         // The serde alias on RunnerKind::Byoxpc must absorb them silently so

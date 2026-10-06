@@ -25,6 +25,14 @@
           ]
         },
         {
+          "id": "byoxpc_verification_controls",
+          "description": "Installation refuses, and validation reports, a never-launched copy whose worker code changed after sealing",
+          "default": false,
+          "requires": [
+            "app"
+          ]
+        },
+        {
           "id": "release_controls",
           "requires": [],
           "description": "Uncertain Apple replies stop continuation; archive checks use the extracted app and preserve inputs"
@@ -184,6 +192,18 @@
           "command": [
             "bash",
             "tests/suites/unit/observer_admission.sh"
+          ],
+          "requires": [
+            "cargo"
+          ]
+        },
+        {
+          "id": "rust.byoxpc_reds",
+          "description": "The BYOXPC remediation plan's selection controller tests by exact name (a required key present with value false is refused); red until Group 3 lands",
+          "default": false,
+          "command": [
+            "bash",
+            "tests/suites/unit/byoxpc_reds.sh"
           ],
           "requires": [
             "cargo"
@@ -1362,6 +1382,19 @@
           ]
         },
         {
+          "id": "entitlement_readback",
+          "description": "The supplied entitlements plist reaches the installed worker and the registry records every binary's read-back",
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh"
+          ]
+        },
+        {
           "id": "runner_auth_external",
           "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
           "requires": [
@@ -1503,7 +1536,10 @@
         "witness_contract/order_barrier_mutations",
         "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery",
-        "runner_byoxpc/single_use"
+        "runner_byoxpc/single_use",
+        "unit/rust.byoxpc_reds",
+        "preflight/byoxpc_verification_controls",
+        "runner_byoxpc/entitlement_readback"
       ]
     },
     "failure_boundaries": {

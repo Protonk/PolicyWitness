@@ -36,7 +36,7 @@ under `tests/out/runs/byoxpc-investigation-20261006/` and
 Planned; implementation has not started. Writing this plan credits no
 implementation or acceptance test below.
 
-- [ ] Establish the regression baseline and record the starting failures.
+- [x] Establish the regression baseline and record the starting failures.
 - [ ] Group 1: sign the embedded helpers at install and read all three back.
 - [ ] Group 2: verify recursively at install and in `runner validate`.
 - [ ] Group 3: select on true-valued keys in the worker's read-back.
@@ -250,4 +250,32 @@ then delete this plan. The records remain.
 
 ## Execution notes
 
-None yet.
+### Baseline (2026-10-06, starting commit 2b9a207)
+
+The four regressions exist and were recorded red before any product change:
+
+- `unit/rust.byoxpc_reds` selects `false_valued_key_does_not_satisfy_a_requirement`
+  (runner_manager) and `selection_refuses_a_false_valued_required_key`
+  (runner_select) by exact name; both carry `#[ignore]` with this plan as the
+  reason and failed with "a required key present with value false must be
+  refused".
+- `preflight/byoxpc_verification_controls` seals an owned ad-hoc copy, changes
+  one worker code byte after sealing, and requires `runner install` to refuse
+  it and `runner validate` to report a registered copy changed after
+  installation. Red: the corrupted copy installed with exit 0 while
+  `codesign --verify --deep --strict` and the worker's own verification
+  rejected it. The run also showed `entitlements_from_codesign` recording
+  `plutil failed` for a binary that carries no entitlements; Group 1 corrects
+  that read-back since the validator never carries any.
+- `runner_byoxpc/entitlement_readback` installs with a supplied plist
+  (`com.apple.security.cs.allow-jit`) and reads all three binaries back.
+  Red: the worker's read-back was empty.
+- Timing, not an assertion, with the generated plist carrying no
+  `ThrottleInterval` and launchd reporting `minimum runtime = 10`: a run 0.4 s
+  after the install's own verify took 9.3 s; a run 0.4 s after a run took
+  10.3 s; three serial runs with 0.4 s of consumer work between them took
+  21.4 s of wall time.
+
+Evidence: `tests/out/runs/byoxpc-remediation-baseline-reds` (dispatcher run
+`20261006T183314Z_84233c0f`) and `tests/out/runs/byoxpc-remediation-baseline`
+(`timing.py`, `before-group-4/`), both pinned in `tests/RETAINED.json`.

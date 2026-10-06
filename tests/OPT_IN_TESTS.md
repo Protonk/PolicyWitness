@@ -176,6 +176,50 @@ selection, deduplication, configuration validation, and complete accounting.
   invariant or equipment error never counts as detecting a mutation. The selected
   production app is inventoried before/after and is never patched or re-signed.
 
+### BYOXPC remediation reds
+
+- **Case:** `unit/rust.byoxpc_reds`
+- **Location:** `tests/suites/unit/byoxpc_reds.sh`
+- **Purpose:** Select the BYOXPC remediation plan's `#[ignore]`d selection
+  controller tests by exact name: a `required_entitlements` key present with the
+  value `false` must be refused, and the refusal must name the worker and the key.
+- **Opt-in reason:** Specified red for planned behavior
+  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 3); non-default until promoted.
+- **When to run:** After changing `entitlements_superset`,
+  `enforce_required_entitlements` or the registry record's read-back fields.
+- **Artifacts:** `<run>/suites/unit/rust.byoxpc_reds/artifacts/cargo-test-ignored.log`
+
+### BYOXPC verification controls
+
+- **Case:** `preflight/byoxpc_verification_controls`
+- **Location:** `tests/suites/preflight/check_byoxpc_verification.py`
+- **Purpose:** Copy the shipped XPC bundle to owned staging, seal it ad hoc, change
+  one worker code byte after sealing, and require `runner install` to refuse the
+  copy and `runner validate` to report a registered copy whose worker changed
+  after installation.
+- **Opt-in reason:** Specified red for planned behavior
+  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 2); non-default until promoted.
+- **Resource dependency:** Built app only. The installer runs with a fixture
+  registry and `HOME` supplied to its child process and never bootstraps; no
+  identity, launchd service or GUI session is used, and no copy is launched.
+- **Artifacts:** `<run>/suites/preflight/byoxpc_verification_controls/artifacts/`
+
+### BYOXPC entitlement read-back
+
+- **Case:** `runner_byoxpc/entitlement_readback`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
+- **Purpose:** Install an owned runner with a supplied entitlements plist and read
+  the host's, the worker's and the validator's entitlements and signatures back
+  from the installed copy and from the registry record. The worker must hold the
+  supplied plist; the validator must hold none; every binary carries the team's
+  signature.
+- **Opt-in reason:** Requires launchd service install/bootstrapping, a logged-in
+  GUI session and a matching Developer ID. Specified red for planned behavior
+  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 1) until promoted.
+- **Resource dependency:** Signed app, GUI session, matching identity; shared
+  session helper for ownership and verified removal.
+- **Artifacts:** `<run>/suites/runner_byoxpc/entitlement_readback/artifacts/`
+
 ## Adding a new opt-in test
 
 When you add an opt-in test, document it here with:

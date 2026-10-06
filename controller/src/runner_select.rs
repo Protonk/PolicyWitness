@@ -959,6 +959,38 @@ mod tests {
         let _ = fs::remove_file(&path);
     }
     #[test]
+    #[ignore = "docs/BYOXPC-REMEDIATION-PLAN.md Group 3: selection must refuse a required key whose recorded value is false"]
+    fn selection_refuses_a_false_valued_required_key() {
+        // An on-disk registry record whose read-back names the required key
+        // with the value false. Built from the codesign JSON the installer
+        // records, so the record carries the value, not only the key.
+        let mut record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &[]);
+        record.entitlements = runner_manager::entitlements_from_json(
+            &json!({"com.apple.security.cs.allow-jit": false}),
+        );
+        let path = registry_fixture(&registry_of(vec![record]));
+        let selector = selector_with(
+            Some(RunnerKind::Byoxpc),
+            &["com.apple.security.cs.allow-jit"],
+            true,
+        );
+        let outcome = resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Err(&"no manifest".to_string()),
+            &selector,
+            Some(&path),
+        );
+        let _ = fs::remove_file(&path);
+        match outcome {
+            Ok(_) => panic!("a required key present with value false must be refused"),
+            Err(e) => assert!(
+                e.contains("com.apple.security.cs.allow-jit") && e.contains("worker"),
+                "the refusal names the process and the key: {e}"
+            ),
+        }
+    }
+
+    #[test]
     fn pending_external_record_is_not_selectable() {
         let mut record = record_named("pending", "com.example.pending");
         record.state = runner_manager::RunnerState::Pending;

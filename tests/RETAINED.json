@@ -38,6 +38,20 @@
       "reason": "Three partial BYOXPC consumer workflows: specimen transfer, exec helpers and repeated use, including independent effects after a client timeout; all owned installations and fixtures cleaned up.",
       "source": "e6ea44b4e38b2c175429af93a3250deb99dc25b1",
       "app_inventory": "baseline/source-inventory.json"
+    },
+    {
+      "path": "runs/byoxpc-remediation-baseline-reds",
+      "run_id": "20261006T183314Z_84233c0f",
+      "reason": "BYOXPC remediation baseline: the three registered regressions (false-valued selection key, recursive verification, worker entitlement read-back) recorded red on the starting commit.",
+      "source": "2b9a207a92f5d3b53992549e16404ec2f830f714",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-remediation-baseline",
+      "run_id": "byoxpc-remediation-baseline",
+      "reason": "BYOXPC remediation timing measurement before and after the generated plist's ThrottleInterval; owned installations removed with absence verified.",
+      "source": "2b9a207a92f5d3b53992549e16404ec2f830f714",
+      "app_inventory": "before-group-4/source-before.json"
     }
   ]
 }

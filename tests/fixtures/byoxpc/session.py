@@ -43,6 +43,14 @@ def entitlements(target, out, label, invoke):
     return value
 
 
+HELPERS = ('PWRunner', 'pw-probe-runner', 'sb_api_validator')
+
+
+def binary_entitlements(bundle, out, label, invoke):
+    """The host's, the worker's and the validator's entitlements, read back separately."""
+    return {name: entitlements(bundle / 'Contents/MacOS' / name, out, f'{label}-{name}', invoke) for name in HELPERS}
+
+
 def service_present(state, out, label, invoke):
     rc, _, error = tool(out, label, ['/bin/launchctl', 'print', state['target']], invoke=invoke, check=False)
     if rc == 0:
@@ -75,7 +83,7 @@ def persist_state(state, receipt=None):
         save(receipt, state)
 
 
-def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team"):
+def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=None, variant="team", supplied_entitlements=None):
     receipt = out / 'session.json'
     assert not receipt.exists(), f'ownership receipt already exists: {receipt}'
     app = app.resolve()
@@ -104,6 +112,10 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     assert team not in ('', 'not set') and source_sig['TeamIdentifier'] == team, 'runner/client teams differ'
     assert not source_sig['adhoc'] and source_sig['runtime'], source_sig
     source_entitlements = entitlements(source, out, 'source-entitlements', invoke)
+    # The supplied plist is what the installer embeds; by default the source's
+    # own entitlements, otherwise the caller's dictionary, saved beside the receipts.
+    supplied = source_entitlements if supplied_entitlements is None else dict(supplied_entitlements)
+    save(out / 'supplied-entitlements.json', {'present': supplied is not None, 'value': supplied})
     # Reject path escapes before copying or signing; published runners have no
     # need for external symlinks. The signer must only encounter owned files.
     for path in source.rglob('*'):
@@ -126,9 +138,9 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     save(out / 'staged-info.json', info)
     argv = [pw, 'runner', 'install', '--bundle', bundle, '--kind', 'byoxpc', '--scope', 'user']
     argv += ['--identity', '-', '--allow-adhoc'] if variant == 'adhoc_noauth' else ['--identity', identity]
-    if source_entitlements is not None:
+    if supplied is not None:
         entitlement_path = staging / 'entitlements.plist'
-        entitlement_path.write_bytes(plistlib.dumps(source_entitlements))
+        entitlement_path.write_bytes(plistlib.dumps(supplied))
         argv += ['--entitlements', entitlement_path]
     # The public installer owns the one signing operation. It may bootstrap
     # after persisting pending ownership; arm cleanup before invoking it.
@@ -154,7 +166,7 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
         assert sig['adhoc'] and sig['TeamIdentifier'] == 'not set', sig
     else:
         assert sig['TeamIdentifier'] == team and not sig['adhoc'] and sig.get('Timestamp'), sig
-    assert entitlements(bundle, out, 'staged-entitlements', invoke) == source_entitlements, 'entitlements changed'
+    assert entitlements(bundle, out, 'staged-entitlements', invoke) == supplied, 'entitlements changed'
     current = inventory(bundle)
     for helper in ('pw-probe-runner', 'sb_api_validator'):
         key = 'Contents/MacOS/' + helper
@@ -229,8 +241,11 @@ def cleanup(pw, state_path, *, invoke=command, remove_tree=shutil.rmtree):
 
 if __name__ == '__main__':
     if sys.argv[1] in ('install', 'install-noauth'):
+        # An optional seventh argument names an entitlements plist to supply
+        # instead of the source's own.
+        supplied = plistlib.loads(Path(sys.argv[7]).read_bytes()) if len(sys.argv) > 7 else None
         install(sys.argv[2], Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5]), sys.argv[6],
-                variant='adhoc_noauth' if sys.argv[1] == 'install-noauth' else 'team')
+                variant='adhoc_noauth' if sys.argv[1] == 'install-noauth' else 'team', supplied_entitlements=supplied)
     elif sys.argv[1] == 'cleanup':
         cleanup(sys.argv[2], Path(sys.argv[3]))
     else:
