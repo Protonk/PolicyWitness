@@ -13,7 +13,7 @@ source "${ROOT_DIR}/tests/lib/testlib.sh"
 test_begin "unit" "rust.disposition_reds"
 
 LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-ignored.log"
-PREFIX="run_flow::tests::"
+PREFIX="disposition::tests::"
 # Exact test name -> the assertion message that identifies its expected red.
 declare -a TESTS=(
   "conflicting_status_representation_is_not_silently_resolved|exit_code 0 beside term_signal 9 is an invalid status pair; an unqualified disposition (signaled) resolves it silently"

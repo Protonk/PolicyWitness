@@ -7,6 +7,7 @@ mod app_layout;
 mod augments;
 mod bundle;
 mod cli;
+mod disposition;
 mod dossier;
 mod evidence;
 // Shared with the sbpl-check helper through #[path] includes.
@@ -17,6 +18,8 @@ mod log_capture;
 mod log_show;
 mod plist;
 mod policy_check;
+#[cfg(test)]
+mod reply_fixtures;
 mod request_patch;
 mod run_flow;
 mod runner_client;

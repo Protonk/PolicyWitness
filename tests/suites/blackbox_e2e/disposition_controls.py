@@ -11,7 +11,7 @@ import sys
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-TEST_NAME = 'run_flow::tests::conflicting_status_representation_is_not_silently_resolved'
+TEST_NAME = 'disposition::tests::conflicting_status_representation_is_not_silently_resolved'
 
 
 def capture_controls(out):
@@ -162,7 +162,7 @@ sys.exit(config['status'])
         line = line.strip()
         if line.startswith('"') and '|' in line and line.endswith('"'):
             name, message = line.strip('"').split('|', 1)
-            tests.append((f'run_flow::tests::{name}', message))
+            tests.append((f'disposition::tests::{name}', message))
     assert len(tests) == 4, tests
 
     def transcript(results):
@@ -190,7 +190,7 @@ sys.exit(config['status'])
         ('other_failure', 101, other, 'fail', 'without their expected assertion'),
         ('missing_cargo', 127, 'cargo: not found\n', 'fail', 'did not run'),
         ('empty', 0, 'running 0 tests\ntest result: ok. 0 passed; 0 failed; 0 ignored;\n', 'fail', 'did not run'),
-        ('wrong_test', 0, all_green.replace('run_flow::tests::', 'other::'), 'fail', 'did not run'),
+        ('wrong_test', 0, all_green.replace('disposition::tests::', 'other::'), 'fail', 'did not run'),
         ('green', 0, all_green, 'pass', 'disposition tests pass'),
     )
     records = []
