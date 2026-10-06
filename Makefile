@@ -64,8 +64,10 @@ build:
 # owned, unretained direct children of tests/out/runs/ and keeps release
 # acceptance, retained and unfinished output. dist/ and .tmp/ are untouched.
 # Older runs are otherwise retired only when a release is packaged (see release).
+# The phase line goes to stderr: stdout is the pruner's JSON report, which the
+# dispatcher retention control reads back.
 clean:
-	@echo "==> [clean] prune completed, owned, unretained runs under tests/out/runs"
+	@echo "==> [clean] prune completed, owned, unretained runs under tests/out/runs" >&2
 	@./tests/run.sh --prune --apply
 
 # test: the default battery against the built app, into tests/out/runs/default.
