@@ -151,6 +151,8 @@ Each item is one experiment with its receipts named. Order is by cost.
 4. [Ad-hoc behavior and a direct runtime control](../records/BYOXPC-ADHOC-BEHAVIOR.md).
 5. [Verification boundaries and mixed authorities](../records/BYOXPC-VERIFICATION-BOUNDARIES.md).
 6. [Respawn and retirement observations](../records/BYOXPC-RESPAWN-OBSERVATIONS.md).
+7. [Three partial consumer workflows](../records/BYOXPC-CONSUMER-PROBES.md):
+   specimen transfer, an exec helper and repeated use of one installation.
 
 ## Decision inputs
 
@@ -207,6 +209,30 @@ These are inputs for a later turn, not new registered tests or selected fixes.
 | Compare shallow, recursive and individual verification | Item 5's resealing and unlaunched corruption controls | Does not prove runtime acceptance of invalid code |
 | Follow a successful run with another at different intervals and budgets | Item 6's envelope, job state and monotonic timing | Assert observation integrity; do not freeze one race outcome |
 | Repeat a tiny workload from temporary and ordinary project locations | Initial Desktop failures and completed temporary controls | Collect the discrepancy before assigning a cause |
+
+## Consumer probe status
+
+The user authorized the first three proposed consumer workflows and deferred
+the project-location probe because GUI responses to privacy prompts may not
+be available. Specimen transfer, bringing a helper, and repeated use are
+complete as manual exploratory runs; all file-effect targets and experimental
+helper executables were in owned `/private/tmp` storage. The maintenance/reuse
+workflow was not run. No registered tests or product code changed.
+
+The report above records nine admitted transfer invocations and five
+missing-key controls, four helper configurations with twelve process reports,
+and six ordinary batch requests following `runner verify`. New observations
+include admission of a false-valued required host key and a file effect first
+observed after the creating request's CLI timeout. Their consumer implications
+are recorded without selecting remediation. Permanent test registration
+remains a separate decision.
+
+Evidence is under `tests/out/runs/byoxpc-consumer-probes-20261006/`, gitignored,
+local-only and pinned in `tests/RETAINED.json`. All 24 run envelopes validated;
+the eight external copies were removed with absence verified; no owned
+processes remained; and the source app inventory was unchanged. The checkout
+was `e6ea44b`, using the same existing build 435 artifact on macOS 14.8.9
+(23J631), arm64. Remediation remains paused for review.
 
 ## Execution notes
 

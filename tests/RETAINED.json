@@ -31,6 +31,13 @@
       "reason": "BYOXPC investigation receipts: signing, environment observation limits, entitlement effects, ad-hoc runtime control, verification boundaries and respawn behavior; manual observations with verified cleanup.",
       "source": "e2115cf38cdf486f50c6545e7c9b4a218aa11a35",
       "app_inventory": "baseline/source-inventory.json"
+    },
+    {
+      "path": "runs/byoxpc-consumer-probes-20261006",
+      "run_id": "byoxpc-consumer-probes-20261006",
+      "reason": "Three partial BYOXPC consumer workflows: specimen transfer, exec helpers and repeated use, including independent effects after a client timeout; all owned installations and fixtures cleaned up.",
+      "source": "e6ea44b4e38b2c175429af93a3250deb99dc25b1",
+      "app_inventory": "baseline/source-inventory.json"
     }
   ]
 }
