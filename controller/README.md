@@ -236,8 +236,9 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   `path`, `actual_sha256`, `baseline_sha256`, `verification` and `reason`. The
   guide's [dossier section](../docs/PolicyWitness.md#the-specimen-dossier)
   states each field's rule. The `xpc_error` path is the only one that triggers
-  a host-side `sbpl-check` compile (to populate `policy_check` and disambiguate
-  the failure).
+  a host-side `sbpl-check` compile, to populate `policy_check` with an
+  independent compile result; it establishes nothing about how far the runner
+  got.
 - `data.runner_sandbox_diagnostics`: process disposition and optional denial
   correlation, independent of outcome labels. `process_disposition` is
   `no_worker`, `unconfirmed`, `clean_exit`, `nonzero_exit`, `signaled`,

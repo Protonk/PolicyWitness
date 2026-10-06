@@ -282,7 +282,12 @@ def render_region(graph, document_name):
         "",
         f"*Figure: {graph['title'].lower()}. Generated from [{manifest}]({manifest}) by "
         f"[{generator}]({generator}); dot source in [{dot}]({dot}). The ids in the figure are the "
-        f"ids in the tables below, and each row names the source and the check that pin it.*",
+        f"ids in the tables below, and each row cites the source symbol that implements it and the "
+        f"check that exercises it.*",
+        "",
+        "<details>",
+        f"<summary>{graph['title']}: {len(graph['nodes'])} nodes and {len(graph['edges'])} edges, "
+        "with their citations</summary>",
         "",
         f"#### {nodes_heading(graph)}",
         "",
@@ -313,9 +318,10 @@ def render_region(graph, document_name):
     unpinned += [e["id"] for e in graph["edges"] if not e["checks"]]
     parts.append("")
     if unpinned:
-        parts.append("Claims without a pinning check: " + ", ".join(f"`{i}`" for i in unpinned) + ".")
+        parts.append("Claims without a cited check: " + ", ".join(f"`{i}`" for i in unpinned) + ".")
     else:
-        parts.append("Every node and edge above names at least one check.")
+        parts.append("Every node and edge above cites at least one check.")
+    parts += ["", "</details>"]
     return "\n".join(parts)
 
 

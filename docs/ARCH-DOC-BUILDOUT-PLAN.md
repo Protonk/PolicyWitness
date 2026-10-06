@@ -14,7 +14,7 @@ Started 2026-10-03 at v0.2.5.
 - [x] Step 2: carry out the eliminations chosen in step 1 (2026-10-05; gate: default battery under `tests/out/runs/arch-step2-gate`, dispatcher rerun under `arch-step2-gate-dispatcher` after an unrelated Makefile fix)
 - [x] Step 3a: the manifest, generator, figures and drift case, from source (2026-10-05)
 - [x] Step 3b: the prose and the ASCII timeline, from source (2026-10-05)
-- [ ] Step 4: review the draft with a human
+- [ ] Step 4: review the draft with a human (first pass 2026-10-05; its eleven documentation corrections were applied 2026-10-06 and are listed under Step 4 corrections; rows 17 to 19 await disposition; no remediation executed)
 - [ ] Step 5: integrate, verify, close out
 
 ## The document being built
@@ -200,12 +200,15 @@ survey saw; verify it before deciding.
 | 8 | BYOXPC management is a large share of the controller | [runner_manager.rs](../controller/src/runner_manager.rs), [runner_commands.rs](../controller/src/runner_commands.rs), `bundle.rs`, `plist.rs`, part of `runner_select.rs` | Production lines: `runner_manager.rs` about 1,050 (tests begin at 1,054), `runner_commands.rs` 986, `bundle.rs` 29, `plist.rs` 32; the nine Swift files under `runner/Sources/PWRunnerCore/` total 5,829, of which `PWRunnerAPI.swift` is 1,994. Registry schema, advisory lock, `pending` and `pending_cleanup` states, and report-only `reconcile`. The survey's spoken comparison overstated this; these are the numbers. The question is proportion, not correctness. | not a strain | Proportion is not the document's subject; section 8 describes BYOXPC as a variation on launch and selection and stays short. |
 | 9 | The "controller family frame" exists but is never named | [CONTRACT.md](CONTRACT.md); `json_contract.rs` shared by `#[path]` into both helper binaries | The same envelope number frames the controller's output, the observer report and the helper envelope, and CONTRACT.md describes it in a sentence each time. Naming the concept once would shorten several paragraphs. | eliminate | Name the shared outer object the envelope frame in CONTRACT.md's prose, in the controller README's observer paragraph and in the module doc of `json_contract.rs`; the document uses that name. |
 | 10 | Records may be linked only from plan files, and until this plan there were none | [records/AGENTS.md](../records/AGENTS.md) | `git ls-files` showed no `*-PLAN.md` before 2026-10-03, so the records there were unreachable by policy. This plan is not associated with that record and does not link it. Not a matter for the architecture doc; a matter for the records convention. | not a strain | Struck: a records-convention question, not the document's. |
-| 11 | The validator wire has no version marker and sits outside the worker identity | [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validator.c); `ValidatorClient.swift` | The identity digest covers `controller/tools/pw_probe_runner/` and `runner/Sources/`, not the validator source. The NDJSON contract is pinned by the `validator_batch_mode` suite and by co-shipping in one bundle. Every other boundary in the inventory carries a number or a digest. | footnote | The validator wire carries no version because the host and the validator are built, signed and shipped inside one XPC bundle, so no cross-version pairing can occur; the `validator_batch_mode` suite pins the NDJSON shape. |
+| 11 | The validator wire has no version marker and sits outside the worker identity | [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validator.c); `ValidatorClient.swift` | The identity digest covers `controller/tools/pw_probe_runner/` and `runner/Sources/`, not the validator source. The NDJSON contract is pinned by the `validator_batch_mode` suite and by co-shipping in one bundle. Every other boundary in the inventory carries a number or a digest. | footnote | The validator wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the `validator_batch_mode` suite checks the shape; the identity digest excludes the validator and the `validator_executable_path` test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard. |
 | 12 | The design principles live in AGENTS.md as operating instructions | "Core ideas" in [AGENTS.md](../AGENTS.md) | The architecture doc will restate the same six ideas as constraints paired with the mechanism that enforces each. Two copies of the principles would then exist. | not a strain | AGENTS.md keeps the six headlines as operating instructions; the document pairs each with its mechanism, and the step 5 router row links the two. |
-| 13 | The `already_ran` refusal and the host's 50 ms exit delay have no test | `didRun` and `milliseconds(50)` in [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [tests/COVERAGE.md](../tests/COVERAGE.md) | COVERAGE lists `already_ran` as out of scope because the service exits about 50 ms after replying and a second request is racy. The document states both facts from source; neither has a check. | found while drafting | Recommend footnote: the document says the path is untested and why; a test would need a connection that survives the exit race. |
+| 13 | The `already_ran` refusal and the host's 50 ms exit delay have no test | `didRun` and `milliseconds(50)` in [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [tests/COVERAGE.md](../tests/COVERAGE.md) | COVERAGE lists `already_ran` as out of scope because the service exits about 50 ms after replying and a second request is racy. First review also found that admission is per connection object; see row 17. | review pending | Settle coverage together with the process-wide admission issue in row 17; a footnote about the exit race alone does not resolve that issue. |
 | 14 | Caller authorization runs at connection acceptance, before `runSpecimen` | `PWRunnerSessionDelegate` and `authorizedCaller` in [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | The plan's phase list placed authorization inside host admission; the listener delegate decides it when the connection is offered, so an unauthorized caller never delivers a request. The document and the timeline say so. | found while drafting | Recommend not a strain: a correction to the plan, already reflected in the document. |
-| 15 | The validator is skipped entirely when no step has a predictable query | the `postApplied` hook in [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | When every step's operation/filter pair is in the prediction-unavailable set the hook returns without spawning; the barrier still closes and `proceed` is still stored. The plan's phase list did not mention it. | found while drafting | Recommend not a strain: the timeline carries it in one clause. |
+| 15 | The validator is skipped entirely when no step has a predictable query | the `postApplied` hook in [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | The planner runs before the spawn and excludes a query for an unavailable operation/filter pair or for a path that does not resolve on the host at planning time (`path_unresolved_at_planning`); when nothing remains the hook returns without spawning, and the barrier still closes. The plan's phase list did not mention planning. | found while drafting | Recommend not a strain: the timeline now carries planning before the spawn and the validator skip in one clause. |
 | 16 | The document is 510 lines against a 300 to 500 line target | [ARCHITECTURE.md](ARCHITECTURE.md) | The three generated regions account for about 180 of those lines; the prose is about 330. | found while drafting | Decide in review whether the node and edge tables should collapse (for example, sources and checks in one column). |
+| 17 | BYOXPC single-use admission is per connection object, while exit is process-wide | [Single use admission for external runner hosts](../records/BYOXPC-SINGLE-USE-ADMISSION.md); `PWRunnerSessionDelegate` and `PWRunnerService` | The delegate creates a fresh service object and `didRun` flag for every connection. Every accepted run schedules process exit. Overlapping requests or a request reaching a retiring host can therefore interfere. Source diagnosis; no live two-connection reproduction attached. | review pending | Proposed bounded remediation: one shared atomic request claim; only its owner schedules exit; other requests are refused without process work or exit scheduling. Queuing and readiness guarantees remain separate. A documentation-only deferral would explicitly retain the known limitation. |
+| 18 | Observer replies are interpreted without outer envelope admission | [Observer envelope admission before interpretation](../records/OBSERVER-ENVELOPE-ADMISSION.md); `parse_observer_output` and `parse_supervised_observer` | The receiver reads report fields without checking outer kind/version; its complete test fixture omits the outer version and expects captured. Inner-version checks do not admit the frame. | review pending | Proposed remediation: gate kind and exact frame version before report interpretation, preserve rejected payloads as opaque evidence, and align receiver/consumer controls while preserving transport and execution evidence. |
+| 19 | Worker entitlements under a BYOXPC install are the build's, not the installed plist's | `codesign_sign` in [runner_manager.rs](../controller/src/runner_manager.rs); the install path in [runner_commands.rs](../controller/src/runner_commands.rs); [build.sh](../build.sh) | The installer signs the XPC bundle without `--deep` and records entitlements read back from the host executable; build.sh signs the worker and validator with no entitlements. Verified 2026-10-06 by signing a copied bundle exactly as the installer does and reading back: the host executable carried the plist's entitlement, the worker carried none and kept its build signature. The worker is the process the specimen applies to. No record file; this row and the document's Known gap are the account. | review pending | Proposed remediation: at install, sign the embedded worker (and validator) with the supplied identity and entitlements before sealing the bundle, and record the worker's read-back beside the host's; or state in the README and the guide that installed entitlements describe the host only. |
 
 ## Proposed shape of the document
 
@@ -318,6 +321,44 @@ Size target: 300 to 500 lines. Current behavior only.
   also states, the two should either share text under a checked marker region
   or one should link the other.
 
+## Step 4 corrections
+
+The first review pass (2026-10-05) found eleven documentation problems and
+three implementation gaps. The gaps are register rows 17 to 19 and are stated
+in the document as "Known gap" paragraphs. The corrections, all applied
+2026-10-06:
+
+1. The dossier was described as proving which bytes answered; it records
+   hashes observed before invocation, and the document now states the guide's
+   limit. Done.
+2. The lifecycle read as conclusive; the timeline now says what a reply does
+   not establish (client timeout, failed cleanup and `execution_may_continue`,
+   uncontained descendants, no global deadline) and which budget covers which
+   phase. Done.
+3. The fallback was said to distinguish "no runner" from a non-compiling
+   policy; it supplies an independent compile result and establishes nothing
+   about the runner's progress. The controller README carried the same
+   overstatement and was corrected. Done.
+4. "Nothing else changes" for BYOXPC is now the actual list, including whose
+   entitlements the registry records. Done.
+5. Co-shipping was presented as preventing every validator pairing; the note
+   now names the test seam and the identity exclusion. Row 11's footnote text
+   was changed to match. Done.
+6. Query planning was missing; the timeline now carries it before the spawn,
+   with the unresolved-path exclusion, and row 15 was corrected. Done.
+7. The ownership table treated whole step objects as single-writer; it now
+   separates the native result from what the host adds. Done.
+8. The compiled-object receipt was absent; it is now a timeline line, a
+   seventh channel, and a boundary node with its own edge. Done.
+9. Citations were called pins; the prose, captions and generator now say the
+   check exercises the row, the introduction says what a citation proves, and
+   the broad citations were replaced with named tests. Done.
+10. The boundary introduction claimed three numbers and one digest were the
+    only versions; it now names the four local version fields. Done.
+11. The document graph table had two "Checks" columns; the fact is now
+    "Guards", and each table pair is inside a collapsed details block so the
+    figures and prose read continuously. Done.
+
 ## Drafting log
 
 Entries are added during step 3. Each names the claim, where it was pinned or
@@ -346,5 +387,12 @@ why it could not be, and any contradiction found with an existing document.
   authorization (runner README agrees). No contradiction was found. Every
   heading anchor the document links was checked by hand against the target
   file's headings; the drift suite checks file links only.
-- Open for step 4: rows 13 to 16; the figure labels (short labels in the
-  figure, full text in the table) and whether the tables should collapse.
+- Open for step 4: rows 13 and 17 to 19. The figure labels (short in the
+  figure, full in the table) and the collapsed tables were settled by the
+  first pass's corrections.
+- 2026-10-06, first review applied. The eleven corrections above were made in
+  the document, the manifest, the generator and the controller README; the
+  three implementation gaps are written where the promise they limit is
+  stated and indexed in the document's closing section. Row 19 was verified
+  by a signing read-back before it was written. The review report was retired
+  once this plan carried its substance; the two records it cited remain.

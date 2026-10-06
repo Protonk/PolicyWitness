@@ -54,11 +54,12 @@
           "id": "client", "label": "pw-runner-client", "kind": "executable",
           "facts": {"Language": "Swift", "Where": "app top level", "Started by": "the controller", "Sandboxed": "no", "Native sandbox API": "none", "Lifetime": "one run"},
           "sources": [{"path": "runner/Clients/PWRunnerClient/main.swift", "symbol": "readDataToEndOfFile"}, {"path": "runner/Clients/PWRunnerClient/main.swift", "symbol": "NSXPCConnection"}],
-          "checks": [{"path": "controller/src/runner_client.rs", "symbol": "mod tests"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "client_output_control"}]
+          "checks": [{"path": "controller/src/runner_client.rs", "symbol": "path_wire_fixtures_survive_capture_serialization_and_independent_consumer"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "client_output_control"}]
         },
         {
           "id": "host", "label": "PWRunner", "kind": "executable",
           "facts": {"Language": "Swift", "Where": "inside the XPC bundle", "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC", "Sandboxed": "no", "Native sandbox API": "none, by the invariance rule", "Lifetime": "one specimen; exits 50 ms after replying"},
+          "note": "Known gap: single-use admission is per connection object (the listener delegate creates a service object with its own didRun flag for every accepted connection) while any reply schedules the process-wide exit, so one specimen per external runner host is not enforced across connections.",
           "sources": [{"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener.service()"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "runSpecimen"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "milliseconds(50)"}],
           "checks": [{"path": "tests/lib/artifact.py", "symbol": "host_invariance"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance"}]
         },
@@ -70,7 +71,7 @@
         },
         {
           "id": "exec_child", "label": "exec helper children", "kind": "sandboxed",
-          "facts": {"Language": "caller-supplied", "Where": "the caller's path", "Started by": "the worker", "Sandboxed": "inherit the worker's sandbox", "Native sandbox API": "none of PolicyWitness's", "Lifetime": "bounded by the exec deadline and the attempt budget"},
+          "facts": {"Language": "caller-supplied", "Where": "the caller's path", "Started by": "the worker", "Sandboxed": "inherit the worker's sandbox", "Native sandbox API": "none of PolicyWitness's", "Lifetime": "the worker's waits are bounded by the exec deadline and the attempt budget; a descendant that leaves the child's process group is not contained"},
           "sources": [{"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_exec_spawn"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "exec_resources_acquire"}],
           "checks": [{"path": "tests/suites/runner_exec_lifecycle/run.sh", "symbol": "runner_exec_lifecycle"}, {"path": "tests/suites/runner_exec_inheritance/run.sh", "symbol": "contaminated_worker"}]
         },
@@ -84,7 +85,7 @@
           "id": "observer", "label": "sandbox-log-observer", "kind": "executable",
           "facts": {"Language": "Rust", "Where": "app top level", "Started by": "the controller, after execution completes, in its own process group", "Sandboxed": "no", "Native sandbox API": "none", "Lifetime": "one scan"},
           "sources": [{"path": "controller/src/sandbox_log.rs", "symbol": "capture_sandbox_logs_with_timeout"}, {"path": "controller/src/log_capture.rs", "symbol": "process_group"}],
-          "checks": [{"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "mod tests"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "def main"}]
+          "checks": [{"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "checked_reads"}]
         },
         {
           "id": "log_show", "label": "log show", "kind": "os",
@@ -114,7 +115,7 @@
         {
           "id": "T2", "from": "controller", "to": "client", "kind": "spawn", "label": "spawn; held request on stdin, read to EOF; reply on stdout", "short": "spawn; stdin, stdout",
           "sources": [{"path": "controller/src/runner_client.rs", "symbol": "run_pw_runner_client"}, {"path": "runner/Clients/PWRunnerClient/main.swift", "symbol": "readDataToEndOfFile"}],
-          "checks": [{"path": "controller/src/runner_client.rs", "symbol": "mod tests"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "client_output_control"}]
+          "checks": [{"path": "controller/src/runner_client.rs", "symbol": "path_wire_fixtures_survive_capture_serialization_and_independent_consumer"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "client_output_control"}]
         },
         {
           "id": "T3", "from": "client", "to": "host", "kind": "channel", "label": "NSXPC runSpecimen(Data) and its reply", "short": "NSXPC runSpecimen",
@@ -154,7 +155,7 @@
         {
           "id": "T10", "from": "controller", "to": "observer", "kind": "spawn", "label": "spawn in its own process group after execution; budget on argv; JSON report on stdout", "short": "spawn, own process group",
           "sources": [{"path": "controller/src/sandbox_log.rs", "symbol": "capture_sandbox_logs_with_timeout"}, {"path": "controller/src/log_capture.rs", "symbol": "capture_with_ops"}, {"path": "controller/src/log_capture.rs", "symbol": "process_group"}],
-          "checks": [{"path": "controller/src/log_capture.rs", "symbol": "both_raw_streams_are_bounded_at_exact_edges"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "def main"}]
+          "checks": [{"path": "controller/src/log_capture.rs", "symbol": "both_raw_streams_are_bounded_at_exact_edges"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "checked_reads"}]
         },
         {
           "id": "T11", "from": "observer", "to": "log_show", "kind": "spawn", "label": "log show over the padded client span; text on stdout, bounded", "short": "log show",
@@ -175,7 +176,7 @@
       "rankdir": "TB",
       "clusters": [
         {"id": "controller_side", "label": "controller", "nodes": ["held_request", "envelope", "observer_report", "helper_envelope"]},
-        {"id": "host_side", "label": "host", "nodes": ["run_spec", "shm_region", "validator_wire", "reply"]},
+        {"id": "host_side", "label": "host", "nodes": ["run_spec", "shm_region", "validator_wire", "reply", "profile_capture"]},
         {"id": "installed", "label": "built and installed", "nodes": ["evidence_manifest", "runner_registry"]}
       ],
       "nodes": [
@@ -208,13 +209,19 @@
           "facts": {"Owner": "host and validator, co-shipped in one bundle", "Form": "NDJSON; kind sb_api_validator_verdict; no version marker"},
           "sources": [{"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "sb_api_validator_verdict"}, {"path": "runner/Sources/PWRunnerCore/ValidatorClient.swift", "symbol": "decodeValidatorFrames"}, {"path": "controller/tools/sb_api_validator/sb_api_validator.c", "symbol": "sandbox_check"}],
           "checks": [{"path": "tests/suites/validator_batch_mode/run.sh", "symbol": "predictions_do_not_report"}, {"path": "tests/suites/failure_boundaries/check.py", "symbol": "validator_overlong_request"}],
-          "note": "The wire carries no version because the host and the validator are built, signed and shipped inside one XPC bundle, so no cross-version pairing can occur; the suite pins the shape."
+          "note": "The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard."
         },
         {
           "id": "reply", "label": "runner reply (PWRunnerRunResult)", "kind": "record",
           "facts": {"Owner": "the host", "Form": "response schema; shape golden"},
           "sources": [{"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "PWRunnerRunResult"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "PWContract"}],
           "checks": [{"path": "runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift", "symbol": "replyShapeDocuments"}, {"path": "tests/fixtures/contract/response_shape.json", "symbol": "schema_version"}]
+        },
+        {
+          "id": "profile_capture", "label": "compiled-object receipt (applied_profile)", "kind": "record",
+          "facts": {"Owner": "the worker, before apply; admitted by the host", "Form": "opt-in copy of the compiled object with a nonce; its own schema_version on AppliedProfileCapture"},
+          "sources": [{"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "pw_capture_profile"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "AppliedProfileCapture"}],
+          "checks": [{"path": "runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift", "symbol": "runAppliedProfileCaptureTests"}]
         },
         {
           "id": "envelope", "label": "controller envelope (kind run)", "kind": "record",
@@ -224,9 +231,9 @@
         },
         {
           "id": "observer_report", "label": "observer report (nested envelope)", "kind": "record",
-          "facts": {"Owner": "the observer", "Form": "envelope frame around observer_schema_version"},
+          "facts": {"Owner": "the observer", "Form": "envelope frame; its own observer_schema_version (OBSERVER_SCHEMA_VERSION) inside"},
           "sources": [{"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "OBSERVER_SCHEMA_VERSION"}],
-          "checks": [{"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "mod tests"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "def main"}]
+          "checks": [{"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims"}, {"path": "tests/suites/witness_contract/check_deny_capture_window.py", "symbol": "checked_reads"}]
         },
         {
           "id": "helper_envelope", "label": "sbpl-check envelope (nested)", "kind": "record",
@@ -236,14 +243,14 @@
         },
         {
           "id": "evidence_manifest", "label": "evidence manifest (in the app)", "kind": "record",
-          "facts": {"Owner": "the build", "Form": "hashes and entitlements of every shipped binary"},
+          "facts": {"Owner": "the build", "Form": "hashes and entitlements of every shipped binary; its own schema_version (EVIDENCE_SCHEMA_VERSION)"},
           "sources": [{"path": "tests/build-evidence.py", "symbol": "manifest.json"}, {"path": "controller/src/evidence.rs", "symbol": "EVIDENCE_SCHEMA_VERSION"}],
           "checks": [{"path": "tests/suites/preflight/run.sh", "symbol": "codesign.preflight"}, {"path": "tests/suites/witness_contract/check_dossier.py", "symbol": "VALIDATOR_REL"}]
         },
         {
           "id": "runner_registry", "label": "runner registry (BYOXPC installs)", "kind": "record",
-          "facts": {"Owner": "the runner commands", "Form": "additive-field loader; retired kind aliases kept for recovery"},
-          "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "load_registry"}, {"path": "controller/src/runner_manager.rs", "symbol": "alias = \"machme\""}],
+          "facts": {"Owner": "the runner commands", "Form": "additive-field loader; retired kind aliases kept for recovery; its own schema_version (RUNNER_REGISTRY_SCHEMA_VERSION)"},
+          "sources": [{"path": "controller/src/runner_manager.rs", "symbol": "load_registry"}, {"path": "controller/src/runner_manager.rs", "symbol": "RUNNER_REGISTRY_SCHEMA_VERSION"}, {"path": "controller/src/runner_manager.rs", "symbol": "alias = \"machme\""}],
           "checks": [{"path": "controller/src/runner_manager.rs", "symbol": "legacy_machme_kind_deserializes_as_byoxpc"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_byoxpc"}]
         }
       ],
@@ -285,6 +292,7 @@
         },
         {
           "id": "B8", "from": "observer_report", "to": "envelope", "kind": "guard", "label": "nested unchanged; log evidence never changes execution evidence", "short": "nested unchanged",
+         "note": "Known gap: parse_observer_output reads the report's fields before admitting the frame's kind and version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.",
           "sources": [{"path": "controller/src/run_flow.rs", "symbol": "attach_sandbox_logs"}, {"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "OBSERVER_SCHEMA_VERSION"}],
           "checks": [{"path": "controller/src/run_flow.rs", "symbol": "collector_states_preserve_the_serialized_execution_half"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_envelope"}]
         },
@@ -300,8 +308,14 @@
         },
         {
           "id": "B11", "from": "runner_registry", "to": "held_request", "kind": "guard", "label": "selection resolves a BYOXPC target; selector fields stripped before XPC", "short": "BYOXPC selection",
+         "note": "Known gap: the installer signs the XPC bundle without --deep, so the supplied entitlements are embedded in the host executable only and that is what the registry records; the embedded worker keeps its build signature, which carries no entitlements.",
           "sources": [{"path": "controller/src/runner_select.rs", "symbol": "resolve_runner_target_with_registry"}, {"path": "controller/src/runner_select.rs", "symbol": "strip_runner_selector"}, {"path": "controller/src/runner_manager.rs", "symbol": "load_registry"}],
           "checks": [{"path": "controller/src/runner_manager.rs", "symbol": "legacy_machme_kind_deserializes_as_byoxpc"}, {"path": "tests/suites/runner_byoxpc/run.sh", "symbol": "runner_byoxpc"}]
+        },
+        {
+          "id": "B12", "from": "profile_capture", "to": "reply", "kind": "guard", "label": "admitted only after successful application, worker completion, PID, nonce, input identity and payload integrity checks", "short": "admitted after apply and integrity",
+          "sources": [{"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "decodeProfileCapture"}],
+          "checks": [{"path": "runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift", "symbol": "runAppliedProfileCaptureTests"}]
         }
       ]
     },
@@ -319,7 +333,7 @@
       ],
       "nodes": [
         {"id": "contract_json", "label": "docs/contract.json", "kind": "manifest", "facts": {"Owns": "the request, response and envelope version numbers"},
-         "sources": [{"path": "docs/contract.json", "symbol": "controller_envelope"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/contract.json", "symbol": "controller_envelope"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "limits_json", "label": "docs/limits.json", "kind": "manifest", "facts": {"Owns": "every runtime limit with its source and check citations"},
          "sources": [{"path": "docs/limits.json", "symbol": "schema_version"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "matrix_json", "label": "tests/fixtures/comparison/matrix.json", "kind": "manifest", "facts": {"Owns": "the comparison scenario matrix"},
@@ -329,15 +343,15 @@
         {"id": "catalog_json", "label": "tests/catalog.json", "kind": "manifest", "facts": {"Owns": "the registered suites and cases"},
          "sources": [{"path": "tests/catalog.json", "symbol": "\"suites\""}], "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_index_vs_disk"}]},
         {"id": "gen_contract", "label": "generate_contract.py", "kind": "generator", "facts": {"Owns": "the generated contract-version regions"},
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "gen_limits", "label": "generate_limits.py", "kind": "generator", "facts": {"Owns": "the limits tables, the scenario matrix and the guide's copied regions"},
          "sources": [{"path": "docs/generate_limits.py", "symbol": "CONTRACT_NAME"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "gen_identity", "label": "generate_worker_identity.py", "kind": "generator", "facts": {"Owns": "the host/worker source identity regions"},
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "gen_architecture", "label": "generate_architecture.py", "kind": "generator", "facts": {"Owns": "these figures, their dot and SVG files and the tables beside them"},
          "sources": [{"path": "docs/generate_architecture.py", "symbol": "MANIFEST_NAME"}], "checks": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "ArchitectureDocumentationTests"}]},
         {"id": "contract_md", "label": "docs/CONTRACT.md", "kind": "document", "facts": {"Carries": "the version sentence and table"},
-         "sources": [{"path": "docs/CONTRACT.md", "symbol": "BEGIN GENERATED CONTRACT VERSIONS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/CONTRACT.md", "symbol": "BEGIN GENERATED CONTRACT VERSIONS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "limits_md", "label": "docs/LIMITS.md", "kind": "document", "facts": {"Carries": "the limits tables and coverage"},
          "sources": [{"path": "docs/LIMITS.md", "symbol": "BEGIN GENERATED LIMITS"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "guide", "label": "docs/PolicyWitness.md", "kind": "document", "facts": {"Carries": "copied limits, questions and reading rules; the version sentence; the only document that ships"},
@@ -361,9 +375,9 @@
         {"id": "api_swift", "label": "PWRunnerAPI.swift", "kind": "source", "facts": {"Carries": "the Swift contract versions and the outcome vocabularies"},
          "sources": [{"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "PWContract"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAPI.swift", "symbol": "NormalizedOutcome"}], "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_normalized_outcomes_have_matrix_rows"}]},
         {"id": "json_contract_rs", "label": "json_contract.rs", "kind": "source", "facts": {"Carries": "the Rust contract versions; the envelope frame"},
-         "sources": [{"path": "controller/src/json_contract.rs", "symbol": "SCHEMA_VERSION"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "controller/src/json_contract.rs", "symbol": "SCHEMA_VERSION"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "contract_py", "label": "tests/lib/contract.py", "kind": "source", "facts": {"Carries": "the Python contract versions and the worker identity"},
-         "sources": [{"path": "tests/lib/contract.py", "symbol": "CONTROLLER_ENVELOPE"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "tests/lib/contract.py", "symbol": "CONTROLLER_ENVELOPE"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "abi_header", "label": "pw_probe_runner_abi.h", "kind": "source", "facts": {"Carries": "the C identity region and the shared-region layout"},
          "sources": [{"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_WORKER_ABI_IDENTITY_HEX"}], "checks": [{"path": "tests/suites/runner_abi_layout/run.sh", "symbol": "runner_abi_layout"}]},
         {"id": "cworker_swift", "label": "CWorker.swift", "kind": "source", "facts": {"Carries": "the Swift identity region and the layout mirror"},
@@ -371,37 +385,37 @@
         {"id": "cli_rs", "label": "cli.rs", "kind": "source", "facts": {"Carries": "the usage text the controller README mirrors"},
          "sources": [{"path": "controller/src/cli.rs", "symbol": "pub fn run"}], "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_cli_surface_agreement"}]},
         {"id": "identity_sources", "label": "worker and runner sources", "kind": "source", "facts": {"Carries": "every byte the identity digest covers"},
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "suites", "label": "tests/suites/<name>/", "kind": "source", "facts": {"Carries": "one run.sh and README per suite"},
          "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "suites_with_run_sh"}], "checks": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_index_vs_disk"}]},
-        {"id": "drift_check", "label": "source_drift check.py", "kind": "check", "facts": {"Checks": "copies and vocabularies that are not generated"},
-         "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement"}], "checks": [{"path": "tests/suites/source_drift/check_planner.py", "symbol": "planner"}]},
-        {"id": "drift_limits", "label": "source_drift limits.py", "kind": "check", "facts": {"Checks": "the limits generator's copies and every local documentation link"},
+        {"id": "drift_check", "label": "source_drift check.py", "kind": "check", "facts": {"Guards": "copies and vocabularies that are not generated"},
+         "sources": [{"path": "tests/suites/source_drift/check.py", "symbol": "check_harness_note_agreement"}], "checks": [{"path": "tests/suites/source_drift/check_planner.py", "symbol": "scenarios"}]},
+        {"id": "drift_limits", "label": "source_drift limits.py", "kind": "check", "facts": {"Guards": "the limits generator's copies and every local documentation link"},
          "sources": [{"path": "tests/suites/source_drift/limits.py", "symbol": "broken_links"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
-        {"id": "drift_contract", "label": "source_drift contract.py", "kind": "check", "facts": {"Checks": "the contract and identity generators' copies"},
-         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
-        {"id": "drift_architecture", "label": "source_drift architecture.py", "kind": "check", "facts": {"Checks": "this manifest against its dot, SVG and document copies"},
+        {"id": "drift_contract", "label": "source_drift contract.py", "kind": "check", "facts": {"Guards": "the contract and identity generators' copies"},
+         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
+        {"id": "drift_architecture", "label": "source_drift architecture.py", "kind": "check", "facts": {"Guards": "this manifest against its dot, SVG and document copies"},
          "sources": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "ArchitectureDocumentationTests"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "architecture_documentation"}]},
-        {"id": "build", "label": "build.sh", "kind": "check", "facts": {"Checks": "runs the generators' checks before compiling and stages the guide"},
+        {"id": "build", "label": "build.sh", "kind": "check", "facts": {"Guards": "runs the generators' checks before compiling and stages the guide"},
          "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}, {"path": "build.sh", "symbol": "--stage-guide"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]}
       ],
       "edges": [
         {"id": "D1", "from": "contract_json", "to": "gen_contract", "kind": "reads", "label": "version numbers", "short": "versions",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D2", "from": "gen_contract", "to": "contract_md", "kind": "writes", "label": "version sentence and table", "short": "sentence, table",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D3", "from": "gen_contract", "to": "api_swift", "kind": "writes", "label": "PWContract", "short": "PWContract",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D4", "from": "gen_contract", "to": "json_contract_rs", "kind": "writes", "label": "SCHEMA_VERSION and the schema constants", "short": "constants",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D5", "from": "gen_contract", "to": "contract_py", "kind": "writes", "label": "version constants", "short": "constants",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D6", "from": "gen_contract", "to": "guide", "kind": "writes", "label": "version sentence", "short": "sentence",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D7", "from": "gen_contract", "to": "runner_readme", "kind": "writes", "label": "version sentence", "short": "sentence",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D8", "from": "gen_contract", "to": "controller_readme", "kind": "writes", "label": "version sentence", "short": "sentence",
-         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_contract.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D9", "from": "limits_json", "to": "gen_limits", "kind": "reads", "label": "limits with citations", "short": "limits",
          "sources": [{"path": "docs/generate_limits.py", "symbol": "load_limits"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "D10", "from": "matrix_json", "to": "gen_limits", "kind": "reads", "label": "scenario rows", "short": "matrix rows",
@@ -417,13 +431,13 @@
         {"id": "D15", "from": "gen_limits", "to": "guide", "kind": "writes", "label": "copied limits, questions and reading rules; staged copy at build", "short": "copies; staged at build",
          "sources": [{"path": "docs/generate_limits.py", "symbol": "GUIDE_START"}, {"path": "build.sh", "symbol": "--stage-guide"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "D16", "from": "identity_sources", "to": "gen_identity", "kind": "reads", "label": "sorted paths and contents, length-framed", "short": "source bytes",
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "SOURCE_DIRS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D17", "from": "gen_identity", "to": "abi_header", "kind": "writes", "label": "identity bytes", "short": "identity",
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D18", "from": "gen_identity", "to": "cworker_swift", "kind": "writes", "label": "identity bytes", "short": "identity",
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D19", "from": "gen_identity", "to": "contract_py", "kind": "writes", "label": "identity hex", "short": "identity",
-         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "docs/generate_worker_identity.py", "symbol": "TARGETS"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D20", "from": "architecture_json", "to": "gen_architecture", "kind": "reads", "label": "nodes, edges, styles and citations", "short": "nodes, edges",
          "sources": [{"path": "docs/generate_architecture.py", "symbol": "load_manifest"}], "checks": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "ArchitectureDocumentationTests"}]},
         {"id": "D21", "from": "gen_architecture", "to": "architecture_md", "kind": "writes", "label": "figure regions; dot and stamped SVG files beside the document", "short": "regions, dot, svg",
@@ -453,17 +467,17 @@
         {"id": "D33", "from": "drift_limits", "to": "gen_limits", "kind": "checks", "label": "--check, stale-copy and staging controls; every local link in docs/*.md", "short": "--check; links",
          "sources": [{"path": "tests/suites/source_drift/limits.py", "symbol": "broken_links"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "limits_documentation"}]},
         {"id": "D34", "from": "drift_contract", "to": "gen_contract", "kind": "checks", "label": "--check and generator controls", "short": "--check",
-         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
+         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
         {"id": "D35", "from": "drift_contract", "to": "gen_identity", "kind": "checks", "label": "regeneration, relocation and stale-value controls", "short": "identity controls",
-         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
+         "sources": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "contract_versions"}]},
         {"id": "D36", "from": "drift_architecture", "to": "gen_architecture", "kind": "checks", "label": "--check, citation, stale-copy and SVG-stamp controls", "short": "--check; stamps",
          "sources": [{"path": "tests/suites/source_drift/architecture.py", "symbol": "ArchitectureDocumentationTests"}], "checks": [{"path": "tests/suites/source_drift/run.sh", "symbol": "architecture_documentation"}]},
         {"id": "D37", "from": "build", "to": "gen_limits", "kind": "checks", "label": "--check before compiling; --stage-guide into dist", "short": "--check; stage",
          "sources": [{"path": "build.sh", "symbol": "--stage-guide"}], "checks": [{"path": "tests/suites/source_drift/limits.py", "symbol": "LimitsDocumentationTests"}]},
         {"id": "D38", "from": "build", "to": "gen_contract", "kind": "checks", "label": "--check before compiling", "short": "--check",
-         "sources": [{"path": "build.sh", "symbol": "generate_contract.py"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]},
+         "sources": [{"path": "build.sh", "symbol": "generate_contract.py"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]},
         {"id": "D39", "from": "build", "to": "gen_identity", "kind": "checks", "label": "regenerate before compiling; --check before signing", "short": "regenerate; --check",
-         "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "class "}]}
+         "sources": [{"path": "build.sh", "symbol": "generate_worker_identity.py"}], "checks": [{"path": "tests/suites/source_drift/contract.py", "symbol": "ContractVersionTests"}]}
       ]
     }
   ]

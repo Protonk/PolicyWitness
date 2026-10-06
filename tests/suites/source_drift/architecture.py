@@ -89,11 +89,11 @@ class ArchitectureDocumentationTests(unittest.TestCase):
                 self.assertIn(f"| {item['id']} |", region, (graph['id'], item['id']))
             unpinned = [i['id'] for i in graph['nodes'] + graph['edges'] if not i['checks']]
             if unpinned:
-                self.assertIn('Claims without a pinning check:', region)
+                self.assertIn('Claims without a cited check:', region)
                 for ident in unpinned:
-                    self.assertIn(f"`{ident}`", region.split('Claims without a pinning check:')[1])
+                    self.assertIn(f"`{ident}`", region.split('Claims without a cited check:')[1])
             else:
-                self.assertIn('Every node and edge above names at least one check.', region)
+                self.assertIn('Every node and edge above cites at least one check.', region)
 
     def test_svg_stamps_name_their_dot_text(self):
         document_name = self.document.name

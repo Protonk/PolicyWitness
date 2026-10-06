@@ -15,6 +15,7 @@ digraph boundaries {
         shm_region;
         validator_wire;
         reply;
+        profile_capture;
     }
     subgraph cluster_installed {
         label="built and installed"; style=dashed; color="#888888"; fontsize=10;
@@ -27,6 +28,7 @@ digraph boundaries {
     shm_region [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="shared region and policy pipe (worker ABI)\nshm_region", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="shm_region: shared region and policy pipe (worker ABI)"];
     validator_wire [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="validator NDJSON (probes and verdicts)\nvalidator_wire", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="validator_wire: validator NDJSON (probes and verdicts)"];
     reply [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="runner reply (PWRunnerRunResult)\nreply", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="reply: runner reply (PWRunnerRunResult)"];
+    profile_capture [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="compiled-object receipt (applied_profile)\nprofile_capture", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="profile_capture: compiled-object receipt (applied_profile)"];
     envelope [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="controller envelope (kind run)\nenvelope", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="envelope: controller envelope (kind run)"];
     observer_report [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="observer report (nested envelope)\nobserver_report", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="observer_report: observer report (nested envelope)"];
     helper_envelope [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="sbpl-check envelope (nested)\nhelper_envelope", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="helper_envelope: sbpl-check envelope (nested)"];
@@ -43,4 +45,5 @@ digraph boundaries {
     helper_envelope -> envelope [style="solid", color="#2f5597", label="B9 nested; admitted by kind", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B9: nested unchanged; admitted by kind and frame version"];
     evidence_manifest -> envelope [style="solid", color="#2f5597", label="B10 baselines by path and kind", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B10: dossier compares selected binaries with manifest baselines; lookup by exact path and kind"];
     runner_registry -> held_request [style="solid", color="#2f5597", label="B11 BYOXPC selection", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B11: selection resolves a BYOXPC target; selector fields stripped before XPC"];
+    profile_capture -> reply [style="solid", color="#2f5597", label="B12 admitted after apply and integrity", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B12: admitted only after successful application, worker completion, PID, nonce, input identity and payload integrity checks"];
 }
