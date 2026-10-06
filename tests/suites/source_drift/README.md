@@ -90,6 +90,7 @@ default to `tests/out/runs/direct`.
 - `<run>/suites/source_drift/runner_source_manifests_agree/artifacts/planner-controls/`
 - `<run>/suites/source_drift/limits_documentation/artifacts/limits.log`
 - `<run>/suites/source_drift/contract_versions/artifacts/contract.log`
+- `<run>/suites/source_drift/architecture_documentation/artifacts/architecture.log`
 
 ## Run
 
@@ -118,6 +119,17 @@ a disposable checkout with changed, stale, broken-marker and malformed inputs, a
 proves a stale copy stops the build before signing. Compiled values are compared
 elsewhere: `runner_abi_layout` (C), `runner_unit` (Swift) and the Rust unit tests.
 See [`docs/CONTRACT.md`](../../../docs/CONTRACT.md).
+
+The `architecture_documentation` case checks
+[`docs/architecture.json`](../../../docs/architecture.json) against the dot
+files, SVG stamps and generated table regions of
+[`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md). The generator refuses
+a node or edge whose cited source file or symbol does not exist, so every
+figure element is pinned to code and to a check; controls exercise broken
+citations, unknown references, duplicate ids, stale dot text, a stale table, a
+stale SVG stamp, regeneration without Graphviz, idempotence and refusal before
+any write. An SVG is checked by the stamp naming the hash of its dot text, so
+the check needs no Graphviz; rendering does.
 
 The same case checks the generated host/worker source identity and exercises
 relocation, deterministic regeneration, stale generated values, malformed

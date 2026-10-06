@@ -64,6 +64,10 @@
         {
           "id": "contract_versions",
           "description": "Contract version manifest and every generated copy agree; generator, stale-copy and build-refusal controls pass"
+        },
+        {
+          "id": "architecture_documentation",
+          "description": "Architecture manifest, dot files, SVG stamps and document regions agree; citation, stale-copy and refusal controls pass"
         }
       ]
     },

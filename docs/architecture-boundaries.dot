@@ -1,0 +1,46 @@
+digraph boundaries {
+    graph [rankdir=TB, bgcolor="white", fontname="Helvetica", fontsize=11, label="Boundaries and their guards", labelloc=t, pad=0.3, nodesep=0.35, ranksep=0.6];
+    node [fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+    subgraph cluster_controller_side {
+        label="controller"; style=dashed; color="#888888"; fontsize=10;
+        held_request;
+        envelope;
+        observer_report;
+        helper_envelope;
+    }
+    subgraph cluster_host_side {
+        label="host"; style=dashed; color="#888888"; fontsize=10;
+        run_spec;
+        shm_region;
+        validator_wire;
+        reply;
+    }
+    subgraph cluster_installed {
+        label="built and installed"; style=dashed; color="#888888"; fontsize=10;
+        evidence_manifest;
+        runner_registry;
+    }
+    request_file [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="request JSON\nrequest_file", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="request_file: request JSON"];
+    held_request [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="held request bytes\nheld_request", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="held_request: held request bytes"];
+    run_spec [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="decoded request (PWRunnerRunSpec)\nrun_spec", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="run_spec: decoded request (PWRunnerRunSpec)"];
+    shm_region [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="shared region and policy pipe (worker ABI)\nshm_region", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="shm_region: shared region and policy pipe (worker ABI)"];
+    validator_wire [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="validator NDJSON (probes and verdicts)\nvalidator_wire", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="validator_wire: validator NDJSON (probes and verdicts)"];
+    reply [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="runner reply (PWRunnerRunResult)\nreply", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="reply: runner reply (PWRunnerRunResult)"];
+    envelope [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="controller envelope (kind run)\nenvelope", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="envelope: controller envelope (kind run)"];
+    observer_report [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="observer report (nested envelope)\nobserver_report", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="observer_report: observer report (nested envelope)"];
+    helper_envelope [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="sbpl-check envelope (nested)\nhelper_envelope", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="helper_envelope: sbpl-check envelope (nested)"];
+    evidence_manifest [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="evidence manifest (in the app)\nevidence_manifest", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="evidence_manifest: evidence manifest (in the app)"];
+    runner_registry [shape="note", style="filled", fillcolor="#e8f0fe", color="#2f5597", label="runner registry (BYOXPC installs)\nrunner_registry", URL="ARCHITECTURE.md#boundaries-and-their-guards-nodes", tooltip="runner_registry: runner registry (BYOXPC installs)"];
+    request_file -> held_request [style="solid", color="#2f5597", label="B1 version gate; selectors; augments", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B1: request version gate; selector parse; augment resolution"];
+    held_request -> run_spec [style="solid", color="#2f5597", label="B2 authorize; decode; admit", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B2: caller authorization; closed-key decode; capacity, then meaning; policy hash"];
+    run_spec -> shm_region [style="solid", color="#2f5597", label="B3 identity; exit 4 on mismatch", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B3: host writes identity, counts, slots, params; worker refuses on magic or identity mismatch (exit 4)"];
+    shm_region -> reply [style="solid", color="#2f5597", label="B4 release/acquire; proceed first", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B4: release/acquire publication; proceed before attempts; disposition record from raw facts"];
+    run_spec -> validator_wire [style="solid", color="#2f5597", label="B5 plan; strict NDJSON", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B5: planned probes; strict NDJSON decode; association by unique id"];
+    validator_wire -> reply [style="solid", color="#2f5597", label="B6 join, or unavailable", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B6: verdict joined to its step, or an explicit unavailable prediction"];
+    reply -> envelope [style="solid", color="#2f5597", label="B7 exact version; projection", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B7: exact response version; disposition validated and projected; reply retained unread when refused"];
+    observer_report -> envelope [style="solid", color="#2f5597", label="B8 nested unchanged", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B8: nested unchanged; log evidence never changes execution evidence"];
+    helper_envelope -> envelope [style="solid", color="#2f5597", label="B9 nested; admitted by kind", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B9: nested unchanged; admitted by kind and frame version"];
+    evidence_manifest -> envelope [style="solid", color="#2f5597", label="B10 baselines by path and kind", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B10: dossier compares selected binaries with manifest baselines; lookup by exact path and kind"];
+    runner_registry -> held_request [style="solid", color="#2f5597", label="B11 BYOXPC selection", URL="ARCHITECTURE.md#boundaries-and-their-guards-edges", tooltip="B11: selection resolves a BYOXPC target; selector fields stripped before XPC"];
+}

@@ -1,0 +1,46 @@
+digraph topology {
+    graph [rankdir=TB, bgcolor="white", fontname="Helvetica", fontsize=11, label="Process topology", labelloc=t, pad=0.3, nodesep=0.35, ranksep=0.6];
+    node [fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+    subgraph cluster_app {
+        label="app top level"; style=dashed; color="#888888"; fontsize=10;
+        controller;
+        client;
+        observer;
+        sbpl_check;
+    }
+    subgraph cluster_xpc {
+        label="inside the XPC bundle"; style=dashed; color="#888888"; fontsize=10;
+        host;
+        worker;
+        validator;
+    }
+    subgraph cluster_os {
+        label="macOS"; style=dashed; color="#888888"; fontsize=10;
+        launchd;
+        log_show;
+    }
+    user [shape="plaintext", label="the caller\nuser", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="user: the caller"];
+    controller [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="policy-witness\ncontroller", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="controller: policy-witness"];
+    client [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="pw-runner-client\nclient", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="client: pw-runner-client"];
+    host [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="PWRunner\nhost", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="host: PWRunner"];
+    worker [shape="box", style="rounded,filled", fillcolor="#ffe2b8", color="#9a5b00", label="pw-probe-runner\nworker", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="worker: pw-probe-runner"];
+    exec_child [shape="box", style="rounded,filled", fillcolor="#ffe2b8", color="#9a5b00", label="exec helper children\nexec_child", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="exec_child: exec helper children"];
+    validator [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sb_api_validator\nvalidator", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="validator: sb_api_validator"];
+    observer [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sandbox-log-observer\nobserver", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="observer: sandbox-log-observer"];
+    log_show [shape="ellipse", style="dashed", color="#666666", label="log show\nlog_show", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="log_show: log show"];
+    sbpl_check [shape="box", style="rounded,filled", fillcolor="#f2f2f2", color="#444444", label="sbpl-check\nsbpl_check", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="sbpl_check: sbpl-check"];
+    launchd [shape="ellipse", style="dashed", color="#666666", label="launchd\nlaunchd", URL="ARCHITECTURE.md#process-topology-nodes", tooltip="launchd: launchd"];
+    user -> controller [style="dashed", color="#2f5597", label="T1 argv in, envelope out", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T1: argv in; one JSON envelope on stdout"];
+    controller -> client [style="bold", color="#222222", label="T2 spawn; stdin, stdout", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T2: spawn; held request on stdin, read to EOF; reply on stdout"];
+    client -> host [style="dashed", color="#2f5597", label="T3 NSXPC runSpecimen", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T3: NSXPC runSpecimen(Data) and its reply"];
+    launchd -> host [style="bold", color="#666666", arrowhead="vee", label="T4 launch", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T4: start on XPC lookup, or as a Mach service (BYOXPC)"];
+    host -> worker [style="bold", color="#222222", label="T5 posix_spawn; fds 0, 3, 4", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T5: posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe"];
+    host -> validator [style="bold", color="#222222", label="T6 posix_spawn --batch", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T6: posix_spawn --batch <pid>; NDJSON probes in, verdicts out"];
+    validator -> worker [style="dotted", color="#9a5b00", label="T7 sandbox_check(pid)", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T7: sandbox_check against the worker PID, with SANDBOX_CHECK_NO_REPORT"];
+    worker -> host [style="dashed", color="#2f5597", label="T8 shared-region evidence", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T8: evidence published in the shared region with release ordering; proceed waited for before attempts"];
+    worker -> exec_child [style="bold", color="#222222", label="T9 posix_spawn after apply", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T9: posix_spawn after apply; stdout and stderr pipes into bounded slot buffers"];
+    controller -> observer [style="bold", color="#222222", label="T10 spawn, own process group", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T10: spawn in its own process group after execution; budget on argv; JSON report on stdout"];
+    observer -> log_show [style="bold", color="#222222", label="T11 log show", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T11: log show over the padded client span; text on stdout, bounded"];
+    controller -> sbpl_check [style="bold", color="#222222", label="T12 spawn on xpc_error only", URL="ARCHITECTURE.md#process-topology-edges", tooltip="T12: spawn only for an admitted xpc_error reply; held request in; helper envelope out"];
+}

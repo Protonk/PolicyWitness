@@ -1,0 +1,125 @@
+digraph documents {
+    graph [rankdir=LR, bgcolor="white", fontname="Helvetica", fontsize=11, label="The document graph", labelloc=t, pad=0.3, nodesep=0.35, ranksep=0.6];
+    node [fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+    subgraph cluster_manifests {
+        label="hand-owned manifests"; style=dashed; color="#888888"; fontsize=10;
+        contract_json;
+        limits_json;
+        matrix_json;
+        architecture_json;
+        catalog_json;
+    }
+    subgraph cluster_generators {
+        label="generators"; style=dashed; color="#888888"; fontsize=10;
+        gen_contract;
+        gen_limits;
+        gen_identity;
+        gen_architecture;
+    }
+    subgraph cluster_docs {
+        label="documents"; style=dashed; color="#888888"; fontsize=10;
+        contract_md;
+        limits_md;
+        guide;
+        questions_md;
+        failure_contract;
+        architecture_md;
+        agents_md;
+        controller_readme;
+        runner_readme;
+        tests_readme;
+        coverage_md;
+    }
+    subgraph cluster_sources {
+        label="sources with generated or checked regions"; style=dashed; color="#888888"; fontsize=10;
+        api_swift;
+        json_contract_rs;
+        contract_py;
+        abi_header;
+        cworker_swift;
+        cli_rs;
+        identity_sources;
+        suites;
+    }
+    subgraph cluster_checks {
+        label="checks"; style=dashed; color="#888888"; fontsize=10;
+        drift_check;
+        drift_limits;
+        drift_contract;
+        drift_architecture;
+        build;
+    }
+    contract_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/contract.json\ncontract_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_json: docs/contract.json"];
+    limits_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/limits.json\nlimits_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="limits_json: docs/limits.json"];
+    matrix_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/fixtures/comparison/matrix.json\nmatrix_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="matrix_json: tests/fixtures/comparison/matrix.json"];
+    architecture_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="docs/architecture.json\narchitecture_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="architecture_json: docs/architecture.json"];
+    catalog_json [shape="folder", style="filled", fillcolor="#fff6c2", color="#8a7400", label="tests/catalog.json\ncatalog_json", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="catalog_json: tests/catalog.json"];
+    gen_contract [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_contract.py\ngen_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_contract: generate_contract.py"];
+    gen_limits [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_limits.py\ngen_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_limits: generate_limits.py"];
+    gen_identity [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_worker_identity.py\ngen_identity", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_identity: generate_worker_identity.py"];
+    gen_architecture [shape="component", style="filled", fillcolor="#e6f4ea", color="#2e7d32", label="generate_architecture.py\ngen_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="gen_architecture: generate_architecture.py"];
+    contract_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/CONTRACT.md\ncontract_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_md: docs/CONTRACT.md"];
+    limits_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/LIMITS.md\nlimits_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="limits_md: docs/LIMITS.md"];
+    guide [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/PolicyWitness.md\nguide", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="guide: docs/PolicyWitness.md"];
+    questions_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/QUESTIONS.md\nquestions_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="questions_md: docs/QUESTIONS.md"];
+    failure_contract [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/FAILURE-PROPAGATION-CONTRACT.md\nfailure_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="failure_contract: tests/FAILURE-PROPAGATION-CONTRACT.md"];
+    architecture_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="docs/ARCHITECTURE.md\narchitecture_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="architecture_md: docs/ARCHITECTURE.md"];
+    agents_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="AGENTS.md\nagents_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="agents_md: AGENTS.md"];
+    controller_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="controller/README.md\ncontroller_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="controller_readme: controller/README.md"];
+    runner_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="runner/README.md\nrunner_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="runner_readme: runner/README.md"];
+    tests_readme [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/README.md\ntests_readme", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="tests_readme: tests/README.md"];
+    coverage_md [shape="note", style="filled", fillcolor="#ffffff", color="#444444", label="tests/COVERAGE.md\ncoverage_md", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="coverage_md: tests/COVERAGE.md"];
+    api_swift [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="PWRunnerAPI.swift\napi_swift", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="api_swift: PWRunnerAPI.swift"];
+    json_contract_rs [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="json_contract.rs\njson_contract_rs", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="json_contract_rs: json_contract.rs"];
+    contract_py [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/lib/contract.py\ncontract_py", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="contract_py: tests/lib/contract.py"];
+    abi_header [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="pw_probe_runner_abi.h\nabi_header", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="abi_header: pw_probe_runner_abi.h"];
+    cworker_swift [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="CWorker.swift\ncworker_swift", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cworker_swift: CWorker.swift"];
+    cli_rs [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="cli.rs\ncli_rs", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="cli_rs: cli.rs"];
+    identity_sources [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="worker and runner sources\nidentity_sources", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="identity_sources: worker and runner sources"];
+    suites [shape="box", style="filled", fillcolor="#f2f2f2", color="#444444", label="tests/suites/<name>/\nsuites", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="suites: tests/suites/<name>/"];
+    drift_check [shape="octagon", style="dashed", color="#8e24aa", label="source_drift check.py\ndrift_check", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_check: source_drift check.py"];
+    drift_limits [shape="octagon", style="dashed", color="#8e24aa", label="source_drift limits.py\ndrift_limits", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_limits: source_drift limits.py"];
+    drift_contract [shape="octagon", style="dashed", color="#8e24aa", label="source_drift contract.py\ndrift_contract", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_contract: source_drift contract.py"];
+    drift_architecture [shape="octagon", style="dashed", color="#8e24aa", label="source_drift architecture.py\ndrift_architecture", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="drift_architecture: source_drift architecture.py"];
+    build [shape="octagon", style="dashed", color="#8e24aa", label="build.sh\nbuild", URL="ARCHITECTURE.md#the-document-graph-nodes", tooltip="build: build.sh"];
+    contract_json -> gen_contract [style="solid", color="#8a7400", label="D1 versions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D1: version numbers"];
+    gen_contract -> contract_md [style="bold", color="#2e7d32", label="D2 sentence, table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D2: version sentence and table"];
+    gen_contract -> api_swift [style="bold", color="#2e7d32", label="D3 PWContract", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D3: PWContract"];
+    gen_contract -> json_contract_rs [style="bold", color="#2e7d32", label="D4 constants", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D4: SCHEMA_VERSION and the schema constants"];
+    gen_contract -> contract_py [style="bold", color="#2e7d32", label="D5 constants", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D5: version constants"];
+    gen_contract -> guide [style="bold", color="#2e7d32", label="D6 sentence", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D6: version sentence"];
+    gen_contract -> runner_readme [style="bold", color="#2e7d32", label="D7 sentence", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D7: version sentence"];
+    gen_contract -> controller_readme [style="bold", color="#2e7d32", label="D8 sentence", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D8: version sentence"];
+    limits_json -> gen_limits [style="solid", color="#8a7400", label="D9 limits", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D9: limits with citations"];
+    matrix_json -> gen_limits [style="solid", color="#8a7400", label="D10 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D10: scenario rows"];
+    questions_md -> gen_limits [style="solid", color="#8a7400", label="D11 questions", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D11: shared questions"];
+    failure_contract -> gen_limits [style="solid", color="#8a7400", label="D12 reading rules", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D12: shared reading rules"];
+    gen_limits -> failure_contract [style="bold", color="#2e7d32", label="D13 matrix", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D13: scenario matrix"];
+    gen_limits -> limits_md [style="bold", color="#2e7d32", label="D14 tables", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D14: limits tables and coverage"];
+    gen_limits -> guide [style="bold", color="#2e7d32", label="D15 copies; staged at build", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D15: copied limits, questions and reading rules; staged copy at build"];
+    identity_sources -> gen_identity [style="solid", color="#8a7400", label="D16 source bytes", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D16: sorted paths and contents, length-framed"];
+    gen_identity -> abi_header [style="bold", color="#2e7d32", label="D17 identity", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D17: identity bytes"];
+    gen_identity -> cworker_swift [style="bold", color="#2e7d32", label="D18 identity", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D18: identity bytes"];
+    gen_identity -> contract_py [style="bold", color="#2e7d32", label="D19 identity", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D19: identity hex"];
+    architecture_json -> gen_architecture [style="solid", color="#8a7400", label="D20 nodes, edges", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D20: nodes, edges, styles and citations"];
+    gen_architecture -> architecture_md [style="bold", color="#2e7d32", label="D21 regions, dot, svg", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D21: figure regions; dot and stamped SVG files beside the document"];
+    agents_md -> runner_readme [style="dotted", color="#444444", label="D22 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D22: harness note, first paragraph"];
+    agents_md -> tests_readme [style="dotted", color="#444444", label="D23 harness note", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D23: harness note, first paragraph"];
+    cli_rs -> controller_readme [style="dotted", color="#444444", label="D24 usage text", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D24: usage text"];
+    api_swift -> coverage_md [style="dotted", color="#444444", label="D25 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D25: one matrix row per outcome constant"];
+    api_swift -> runner_readme [style="dotted", color="#444444", label="D26 seam table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D26: test-seam table from PWRunnerTestOverrides"];
+    suites -> tests_readme [style="dotted", color="#444444", label="D27 suite rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D27: one suite-table row per suite"];
+    suites -> catalog_json [style="dotted", color="#444444", label="D28 suite names", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D28: suite directories equal catalog suites"];
+    drift_check -> agents_md [style="dashed", color="#8e24aa", label="D29 note equality", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D29: harness note equality across three copies"];
+    drift_check -> controller_readme [style="dashed", color="#8e24aa", label="D30 CLI surface", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D30: CLI surface block equals cli.rs usage"];
+    drift_check -> coverage_md [style="dashed", color="#8e24aa", label="D31 matrix rows", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D31: every outcome constant has a row and every row a constant"];
+    drift_check -> tests_readme [style="dashed", color="#8e24aa", label="D32 suite table", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D32: suite table equals suites and catalog"];
+    drift_limits -> gen_limits [style="dashed", color="#8e24aa", label="D33 --check; links", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D33: --check, stale-copy and staging controls; every local link in docs/*.md"];
+    drift_contract -> gen_contract [style="dashed", color="#8e24aa", label="D34 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D34: --check and generator controls"];
+    drift_contract -> gen_identity [style="dashed", color="#8e24aa", label="D35 identity controls", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D35: regeneration, relocation and stale-value controls"];
+    drift_architecture -> gen_architecture [style="dashed", color="#8e24aa", label="D36 --check; stamps", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D36: --check, citation, stale-copy and SVG-stamp controls"];
+    build -> gen_limits [style="dashed", color="#8e24aa", label="D37 --check; stage", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D37: --check before compiling; --stage-guide into dist"];
+    build -> gen_contract [style="dashed", color="#8e24aa", label="D38 --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D38: --check before compiling"];
+    build -> gen_identity [style="dashed", color="#8e24aa", label="D39 regenerate; --check", URL="ARCHITECTURE.md#the-document-graph-edges", tooltip="D39: regenerate before compiling; --check before signing"];
+}
