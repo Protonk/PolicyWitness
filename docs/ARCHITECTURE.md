@@ -116,6 +116,7 @@ resolve their own helpers relative to their own bundle.
 Notes:
 
 - `host`: Known gap: single-use admission is per connection object (the listener delegate creates a service object with its own didRun flag for every accepted connection) while any reply schedules the process-wide exit, so one specimen per external runner host is not enforced across connections.
+- `T5`: Known gap: the policy is delivered with blocking writes and no deadline before any budget starts; a worker that keeps fd 0 open without draining stalls the host.
 
 Every node and edge above cites at least one check.
 
@@ -265,13 +266,28 @@ adds no global lifecycle deadline, so a reply, the end of observation and
 the end of execution are three different moments, and each record says
 which one it describes.
 
-Each budget covers one phase and no more. The ready window covers spawn to
-ready byte; the validator I/O deadline covers collection; the proceed budget
-covers the worker's wait for release; the sentinel deadline covers attempts
-through `done`; the grace timer covers exit request to kill; the exec
-deadline and attempt budget cover the worker's waits on exec children, per
-step and per plan; the log budget covers the observer. Their values and
-their checks are in [LIMITS.md](LIMITS.md).
+Each budget covers one phase and no more, and no budget covers policy
+delivery. The ready window covers only the wait for the ready byte after
+the policy has been written; the sentinel deadline covers application
+through `done`, less the collection interval, because the host runs the
+hook synchronously between polls and the hook's time is outside it; the
+validator I/O deadline covers collection; the proceed budget covers the
+worker's wait for release; the grace timer covers exit request to kill; the
+exec deadline and attempt budget cover the worker's waits on exec children,
+per step and per plan; the log budget covers the observer. The ready and
+sentinel budgets are iteration counts over a sleep interval, so their
+nominal durations are lower bounds. Their values and their checks are in
+[LIMITS.md](LIMITS.md).
+
+Known gap. The host delivers the policy with blocking writes and no
+deadline before any budget starts (the write loop in
+[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)); a worker
+that keeps the read end open without draining stalls the host, and the
+client's timeout cancels nothing in it. The shipped worker reads the policy
+immediately after mapping the region and checking identity, so the
+realistic triggers are a stopped worker or a substituted executable.
+Bounding the host wait for worker policy transfer is the rule the driver
+does not apply.
 
 ## Evidence channels and ownership
 
@@ -363,7 +379,7 @@ suite, or by being built and shipped together, and the edge table says which.
 Notes:
 
 - `validator_wire`: The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard.
-- `B8`: Known gap: parse_observer_output reads the report's fields before admitting the frame's kind and version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.
+- `B8`: Known gap: parse_observer_output reads the report's fields and never admits the frame's kind or version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.
 - `B11`: Known gap: the installer signs the XPC bundle without --deep, so the supplied entitlements are embedded in the host executable only and that is what the registry records; the embedded worker keeps its build signature, which carries no entitlements.
 
 Every node and edge above cites at least one check.
@@ -379,11 +395,11 @@ own number inside the frame.
 
 Known gap. The observer receiver, `parse_observer_output` in
 [sandbox_log.rs](../controller/src/sandbox_log.rs), reads the report's
-denial, window and blocked fields before admitting the frame's kind and
-version, and `parse_supervised_observer` checks only the inner report
-version; the helper receiver, `supported_outcome` in
-[policy_check.rs](../controller/src/policy_check.rs), admits kind and exact
-frame version before reading anything. The shipped observer is built from
+denial, window and blocked fields and never admits the frame's kind or
+version; `parse_supervised_observer` checks only the inner report version,
+so no outer admission happens at all. The helper receiver,
+`supported_outcome` in [policy_check.rs](../controller/src/policy_check.rs),
+admits kind and exact frame version before reading anything. The shipped observer is built from
 the same frame constant, so no shipped pairing is affected; the
 supplied-text replay path feeds the same parser, so a report with a wrong
 frame would be interpreted. Observer envelope admission before
@@ -406,9 +422,13 @@ has a mechanism that enforces it.
   listener delegate creates a service object with its own `didRun` flag for
   every connection it accepts, and any reply schedules the process-wide
   exit. Two connections to one BYOXPC host can therefore overlap, or the
-  second can reach a host that is retiring. One specimen per host holds
-  because the client opens one connection per run, not because the host
-  enforces it.
+  second can reach a host that is retiring. For an external runner host,
+  one specimen per host is therefore not enforced; it holds only while no
+  two runs reach the same host. The shipped flow relies on the client
+  opening one connection per run and the host exiting after its first
+  reply, and an external Mach service is shared by every client, so two
+  concurrent runs against one BYOXPC service are the case this gap
+  reaches.
 - **Host/worker split.** The host never links, loads or calls libsandbox.
   Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
   any binding under `runner/Sources/`, and `host_invariance` in
@@ -628,7 +648,9 @@ only points there.
 
 - [Single-use admission for an external runner host](#principles-as-enforced-constraints)
   is per connection object, while exit is process-wide.
-- [Observer envelope admission](#boundaries) happens after the receiver has
-  read the report, not before.
+- [Observer envelope admission](#boundaries) never happens; the receiver
+  interprets the report without it.
+- [The host wait for worker policy transfer](#one-run-in-time) has no
+  deadline; it precedes every budget.
 - [Worker entitlements under a BYOXPC install](#byoxpc-as-a-variation-on-launch-and-selection)
   are the build's; the installed plist reaches the host executable only.

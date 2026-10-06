@@ -129,6 +129,7 @@
         },
         {
           "id": "T5", "from": "host", "to": "worker", "kind": "spawn", "label": "posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe", "short": "posix_spawn; fds 0, 3, 4",
+          "note": "Known gap: the policy is delivered with blocking writes and no deadline before any budget starts; a worker that keeps fd 0 open without draining stalls the host.",
           "sources": [{"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "posix_spawn_file_actions_adddup2"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "F_SETNOSIGPIPE"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_ABI_MAGIC"}],
           "checks": [{"path": "tests/suites/runner_abi_layout/run.sh", "symbol": "runner_abi_layout"}, {"path": "tests/suites/runner_c_worker_harness/run.sh", "symbol": "exec_control_states"}]
         },
@@ -292,7 +293,7 @@
         },
         {
           "id": "B8", "from": "observer_report", "to": "envelope", "kind": "guard", "label": "nested unchanged; log evidence never changes execution evidence", "short": "nested unchanged",
-         "note": "Known gap: parse_observer_output reads the report's fields before admitting the frame's kind and version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.",
+         "note": "Known gap: parse_observer_output reads the report's fields and never admits the frame's kind or version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.",
           "sources": [{"path": "controller/src/run_flow.rs", "symbol": "attach_sandbox_logs"}, {"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "OBSERVER_SCHEMA_VERSION"}],
           "checks": [{"path": "controller/src/run_flow.rs", "symbol": "collector_states_preserve_the_serialized_execution_half"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_envelope"}]
         },

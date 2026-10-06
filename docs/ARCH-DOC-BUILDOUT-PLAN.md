@@ -14,7 +14,7 @@ Started 2026-10-03 at v0.2.5.
 - [x] Step 2: carry out the eliminations chosen in step 1 (2026-10-05; gate: default battery under `tests/out/runs/arch-step2-gate`, dispatcher rerun under `arch-step2-gate-dispatcher` after an unrelated Makefile fix)
 - [x] Step 3a: the manifest, generator, figures and drift case, from source (2026-10-05)
 - [x] Step 3b: the prose and the ASCII timeline, from source (2026-10-05)
-- [ ] Step 4: review the draft with a human (first pass 2026-10-05; its eleven documentation corrections were applied 2026-10-06 and are listed under Step 4 corrections; rows 17 to 19 await disposition; no remediation executed)
+- [ ] Step 4: review the draft with a human (first pass 2026-10-05 and second pass 2026-10-06, corrections applied and listed under Step 4 corrections; rows 13 and 17 to 20 await disposition; no remediation executed)
 - [ ] Step 5: integrate, verify, close out
 
 ## The document being built
@@ -196,7 +196,7 @@ survey saw; verify it before deciding.
 | 4 | Three outcome labels that no producer emits | `NormalizedOutcome` in [PWRunnerAPI.swift](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [tests/COVERAGE.md](../tests/COVERAGE.md) | `sandbox_apply_failed` and `runner_sandbox_denied` are "recognized constants that no producer emits"; `bad_policy` is reachable only defensively because public admission refuses the same inputs earlier as `bad_request`. The witness case `pre_apply_failure_reports_no_policy_verdict` asserts their absence. The question is whether negative pins need constants. | eliminate; footnote for `bad_policy` | Remove `sandbox_apply_failed` and `runner_sandbox_denied` from `NormalizedOutcome`, their coverage rows and the prose that explains their non-emission; negative pins keep string literals. Footnote: `bad_policy` is the host's defensive pre-spawn structural check; admission refuses the same inputs earlier as `bad_request`, so the label is reachable only through a defect in that check. |
 | 5 | Disposition validation and projection sit inside the orchestration module | [controller/src/run_flow.rs](../controller/src/run_flow.rs) | Production code ends near line 1,800 where `mod tests` begins. The `DISPOSITION_*` constants, `validate_disposition`, `project_disposition` and `execution_diagnostics` occupy roughly lines 900 to 1,700, about 800 of those production lines. The document would describe "the controller's disposition projection" and point at a unit that is not a module. | eliminate | Move the `DISPOSITION_*` constants, `validate_disposition`, `project_disposition`, `execution_diagnostics` and their unit tests into `controller/src/disposition.rs`, with the shared reply fixtures in a test-only module; no behavior change. |
 | 6 | The validator has a diagnostic copy at the app's top level; the worker does not | `build.sh`; README "What ships"; `EXECUTABLES` in [tests/lib/artifact.py](../tests/lib/artifact.py) | AGENTS.md already lists this under "Two conventions are not obvious". `tests/suites/validator_batch_mode/` and the witness harness invoke the top-level copy directly. Every inventory must footnote the asymmetry. | eliminate | Drop the app-level validator copy from `build.sh`, the `EXECUTABLES` list, the evidence helper list, the dispatcher fixture layout and the README inventory; repoint the three suites and two Swift test files that used it to the bundle-local copy. |
-| 7 | The `sbpl-check` fallback compiles only when no worker saw the policy | `fallback_policy_check` in [run_flow.rs](../controller/src/run_flow.rs) | The controller runs it only for an admitted `xpc_error` reply, to separate "runner unreachable" from "policy would not compile" in a nested sandbox. It is a side branch with its own 8 MiB capture budget and its own nested envelope. | not a strain | A feature with one trigger (an admitted `xpc_error` reply) and a unit-test pin; the document gives it one paragraph beside the sandboxed-harness note. |
+| 7 | The `sbpl-check` fallback runs only for an admitted `xpc_error` reply | `fallback_policy_check` in [run_flow.rs](../controller/src/run_flow.rs) | The controller runs it only for an admitted `xpc_error` reply, to supply an independent compile result when the client reported the runner unreachable; it establishes nothing about how far a host or worker progressed. It is a side branch with its own 8 MiB capture budget and its own nested envelope. | not a strain | A feature with one trigger and a unit-test pin; the document gives it one paragraph beside the sandboxed-harness note and says what it does not establish. |
 | 8 | BYOXPC management is a large share of the controller | [runner_manager.rs](../controller/src/runner_manager.rs), [runner_commands.rs](../controller/src/runner_commands.rs), `bundle.rs`, `plist.rs`, part of `runner_select.rs` | Production lines: `runner_manager.rs` about 1,050 (tests begin at 1,054), `runner_commands.rs` 986, `bundle.rs` 29, `plist.rs` 32; the nine Swift files under `runner/Sources/PWRunnerCore/` total 5,829, of which `PWRunnerAPI.swift` is 1,994. Registry schema, advisory lock, `pending` and `pending_cleanup` states, and report-only `reconcile`. The survey's spoken comparison overstated this; these are the numbers. The question is proportion, not correctness. | not a strain | Proportion is not the document's subject; section 8 describes BYOXPC as a variation on launch and selection and stays short. |
 | 9 | The "controller family frame" exists but is never named | [CONTRACT.md](CONTRACT.md); `json_contract.rs` shared by `#[path]` into both helper binaries | The same envelope number frames the controller's output, the observer report and the helper envelope, and CONTRACT.md describes it in a sentence each time. Naming the concept once would shorten several paragraphs. | eliminate | Name the shared outer object the envelope frame in CONTRACT.md's prose, in the controller README's observer paragraph and in the module doc of `json_contract.rs`; the document uses that name. |
 | 10 | Records may be linked only from plan files, and until this plan there were none | [records/AGENTS.md](../records/AGENTS.md) | `git ls-files` showed no `*-PLAN.md` before 2026-10-03, so the records there were unreachable by policy. This plan is not associated with that record and does not link it. Not a matter for the architecture doc; a matter for the records convention. | not a strain | Struck: a records-convention question, not the document's. |
@@ -209,6 +209,7 @@ survey saw; verify it before deciding.
 | 17 | BYOXPC single-use admission is per connection object, while exit is process-wide | [Single use admission for external runner hosts](../records/BYOXPC-SINGLE-USE-ADMISSION.md); `PWRunnerSessionDelegate` and `PWRunnerService` | The delegate creates a fresh service object and `didRun` flag for every connection. Every accepted run schedules process exit. Overlapping requests or a request reaching a retiring host can therefore interfere. Source diagnosis; no live two-connection reproduction attached. | review pending | Proposed bounded remediation: one shared atomic request claim; only its owner schedules exit; other requests are refused without process work or exit scheduling. Queuing and readiness guarantees remain separate. A documentation-only deferral would explicitly retain the known limitation. |
 | 18 | Observer replies are interpreted without outer envelope admission | [Observer envelope admission before interpretation](../records/OBSERVER-ENVELOPE-ADMISSION.md); `parse_observer_output` and `parse_supervised_observer` | The receiver reads report fields without checking outer kind/version; its complete test fixture omits the outer version and expects captured. Inner-version checks do not admit the frame. | review pending | Proposed remediation: gate kind and exact frame version before report interpretation, preserve rejected payloads as opaque evidence, and align receiver/consumer controls while preserving transport and execution evidence. |
 | 19 | Worker entitlements under a BYOXPC install are the build's, not the installed plist's | `codesign_sign` in [runner_manager.rs](../controller/src/runner_manager.rs); the install path in [runner_commands.rs](../controller/src/runner_commands.rs); [build.sh](../build.sh) | The installer signs the XPC bundle without `--deep` and records entitlements read back from the host executable; build.sh signs the worker and validator with no entitlements. Verified 2026-10-06 by signing a copied bundle exactly as the installer does and reading back: the host executable carried the plist's entitlement, the worker carried none and kept its build signature. The worker is the process the specimen applies to. No record file; this row and the document's Known gap are the account. | review pending | Proposed remediation: at install, sign the embedded worker (and validator) with the supplied identity and entitlements before sealing the bundle, and record the worker's read-back beside the host's; or state in the README and the guide that installed entitlements describe the host only. |
+| 20 | Policy delivery to the worker has no deadline and precedes every budget | [Bound the host wait for worker policy transfer](../records/WORKER-POLICY-TRANSFER-DEADLINE.md); the write loop in [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) | The host writes the whole policy with blocking `write` calls before the ready poll; the policy pipe's write end is never set nonblocking; the admitted policy limit exceeds a pipe's capacity; the client's timeout cancels nothing in the host. Existing tests cover a closed read end (`EPIPE`), not an open stalled one, and the pre-ready hang seam sits after the policy read. Source diagnosis; no stalled-reader reproduction attached. | review pending | Proposed remediation in the record: a monotonic delivery deadline with nonblocking writes, deadline exhaustion recorded distinctly from an errno, then the existing cleanup path; an additive contract change. |
 
 ## Proposed shape of the document
 
@@ -359,6 +360,25 @@ in the document as "Known gap" paragraphs. The corrections, all applied
     "Guards", and each table pair is inside a collapsed details block so the
     figures and prose read continuously. Done.
 
+The second review pass (2026-10-06) found four documentation problems and
+one more implementation gap, register row 20. The corrections, all applied
+2026-10-06:
+
+12. The single-use paragraph concluded that one specimen per host holds
+    because the client opens one connection per run; two runs can each open
+    one connection to the same external host. The paragraph now states the
+    limit and what the shipped flow relies on. Done.
+13. The budget paragraph put the ready window over spawn to ready byte and
+    the sentinel deadline over attempts only; the ready window starts after
+    delivery, the sentinel budget covers application through `done` less the
+    synchronous collection interval, and both are iteration counts, so their
+    nominal durations are lower bounds. Done.
+14. The observer gap was worded as late admission; there is no outer-frame
+    admission at all. The paragraph, the manifest note and the index say so.
+    Done.
+15. Register row 7 still carried the rejected fallback claim; rewritten to
+    the independent-compile-result wording. Done.
+
 ## Drafting log
 
 Entries are added during step 3. Each names the claim, where it was pinned or
@@ -387,7 +407,7 @@ why it could not be, and any contradiction found with an existing document.
   authorization (runner README agrees). No contradiction was found. Every
   heading anchor the document links was checked by hand against the target
   file's headings; the drift suite checks file links only.
-- Open for step 4: rows 13 and 17 to 19. The figure labels (short in the
+- Open for step 4: rows 13 and 17 to 20. The figure labels (short in the
   figure, full in the table) and the collapsed tables were settled by the
   first pass's corrections.
 - 2026-10-06, first review applied. The eleven corrections above were made in
@@ -396,3 +416,7 @@ why it could not be, and any contradiction found with an existing document.
   stated and indexed in the document's closing section. Row 19 was verified
   by a signing read-back before it was written. The review report was retired
   once this plan carried its substance; the two records it cited remain.
+- 2026-10-06, second review applied. Four corrections (12 to 15 above) and
+  one new gap stated in the timeline section and indexed with the others
+  (register row 20, with its record). The second review report was retired
+  once this plan carried its substance; its record remains.
