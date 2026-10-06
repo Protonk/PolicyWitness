@@ -88,7 +88,7 @@ impl SandboxLogWindow {
 /// Render a Unix second as the `%Y-%m-%d %H:%M:%S%z` form `log show` parses,
 /// always in UTC with an explicit offset so local time and DST never move the
 /// window. Fractional seconds are rejected by the tool, so none are emitted.
-pub fn log_show_timestamp(unix_seconds: i64) -> String {
+fn log_show_timestamp(unix_seconds: i64) -> String {
     let days = unix_seconds.div_euclid(86_400);
     let rem = unix_seconds.rem_euclid(86_400);
     let (hour, minute, second) = (rem / 3_600, (rem % 3_600) / 60, rem % 60);

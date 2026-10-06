@@ -39,7 +39,7 @@ use crate::sandbox_log::{
     worker_pid,
 };
 
-pub const DEFAULT_TIMEOUT_MS: u64 = 240_000;
+const DEFAULT_TIMEOUT_MS: u64 = 240_000;
 
 /// `data` of a `kind: "run"` envelope: the dossier plus the execution records.
 /// Execution keys are present on every run envelope; an uncollected record is
@@ -181,7 +181,7 @@ fn tool_error_envelope(
 /// What a run produces: the usage text request, or one rendered `kind: "run"`
 /// envelope with the process exit code it carries. `cmd_run` prints it; the
 /// controlled orchestration tests read it.
-pub enum RunOutput {
+enum RunOutput {
     Help,
     Envelope { text: String, exit_code: i32 },
 }
@@ -236,7 +236,7 @@ pub fn print_escaped_tool_error(error: String) -> Result<(), String> {
 /// is, how the evidence manifest is read, where the external registry lives
 /// and how the client is invoked. Production binds the real ones; a test binds
 /// counting or capturing closures around them and reads the rendered envelope.
-pub struct RunDependencies<'a> {
+struct RunDependencies<'a> {
     pub app_root: &'a dyn Fn() -> Result<PathBuf, String>,
     pub load_manifest: &'a dyn Fn(&Path) -> Result<EvidenceManifest, String>,
     /// `None` resolves the registry from `PW_RUNNER_REGISTRY` or `$HOME`.
@@ -535,7 +535,7 @@ pub fn cmd_run(args: &[OsString]) -> Result<i32, String> {
 /// One run through production orchestration: argument admission, one manifest
 /// load, runner selection, the dossier, the held request's delivery and the
 /// reply's admission. Every exit renders the uniform `kind: "run"` envelope.
-pub fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
+fn run(args: &[OsString], deps: &RunDependencies) -> Result<RunOutput, String> {
     let host = HostFacts::collect();
     let parsed = match parse_arguments(args) {
         Arguments::Help => return Ok(RunOutput::Help),
@@ -3694,6 +3694,51 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             (full_result(), data)
         }
 
+        /// Compare `current` with the golden at `golden_path`. Anything but `Ok`
+        /// writes the candidate beside the case artifacts and fails with the advice
+        /// the Swift reader gives: review the diff, then replace the golden, bumping
+        /// the manifest first when the verdict says so.
+        fn check_golden(
+            golden_path: &Path,
+            version_key: &str,
+            manifest_version: u64,
+            current: &crate::shape::Shape,
+            candidate_name: &str,
+        ) -> Result<(), String> {
+            let golden: Option<Value> = std::fs::read(golden_path)
+                .ok()
+                .and_then(|bytes| serde_json::from_slice(&bytes).ok());
+            let verdict =
+                crate::shape::classify(golden.as_ref(), version_key, current, manifest_version);
+            if verdict == crate::shape::Verdict::Ok {
+                return Ok(());
+            }
+            let artifacts = std::env::var_os("PW_TEST_ARTIFACTS")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(std::env::temp_dir);
+            let candidate_path = artifacts.join(candidate_name);
+            let candidate = serde_json::json!({ version_key: manifest_version, "shape": crate::shape::shape_to_value(current) });
+            let mut text = serde_json::to_string_pretty(&candidate).map_err(|e| e.to_string())?;
+            text.push('\n');
+            std::fs::write(&candidate_path, text)
+                .map_err(|e| format!("{}: {e}", candidate_path.display()))?;
+            let advice = format!(
+                "review the diff, then replace {} with {}",
+                golden_path.display(),
+                candidate_path.display()
+            );
+            Err(match verdict {
+                crate::shape::Verdict::Ok => unreachable!(),
+                crate::shape::Verdict::MissingGolden => format!("no shape golden; {advice}"),
+                crate::shape::Verdict::NeedsBump(detail) => {
+                    format!(
+                        "{detail}; bump {version_key} in docs/contract.json, regenerate, then {advice}"
+                    )
+                }
+                crate::shape::Verdict::Update(detail) => format!("{detail}; {advice}"),
+            })
+        }
+
         #[test]
         fn envelope_shape_golden_agrees_with_the_manifest() {
             let (result, data) = field_complete_run_envelope();
@@ -3717,7 +3762,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             assert!(!current.contains_key("envelope.data.runner_result"));
             let golden = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../tests/fixtures/contract/envelope_shape.json");
-            crate::shape::check_golden(
+            check_golden(
                 &golden,
                 "controller_envelope",
                 u64::from(json_contract::SCHEMA_VERSION),

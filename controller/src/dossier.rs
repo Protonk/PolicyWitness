@@ -197,7 +197,7 @@ pub struct Binaries {
 
 /// The echo bound the runner applies to override paths; longer strings are
 /// neither echoed nor read.
-pub const OVERRIDE_PATH_ECHO_BYTES: usize = 1023;
+const OVERRIDE_PATH_ECHO_BYTES: usize = 1023;
 
 /// Baseline hash for one role: the manifest entry at the role's fixed path with
 /// the required kind, whose `sha256` is 64 hexadecimal digits.

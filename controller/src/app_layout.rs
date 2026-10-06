@@ -37,7 +37,7 @@ pub const SHIPPED_VALIDATOR: ShippedBinary = ShippedBinary {
 pub const BUNDLE_WORKER_REL: &str = "Contents/MacOS/pw-probe-runner";
 pub const BUNDLE_VALIDATOR_REL: &str = "Contents/MacOS/sb_api_validator";
 
-pub fn validate_tool_name(tool_name: &str) -> Result<(), String> {
+fn validate_tool_name(tool_name: &str) -> Result<(), String> {
     let mut components = Path::new(tool_name).components();
     match (components.next(), components.next()) {
         (Some(Component::Normal(_)), None) => Ok(()),

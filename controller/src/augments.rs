@@ -47,7 +47,7 @@ pub enum AugmentResolution {
 /// Augment names are the one request string the controller itself echoes into
 /// an envelope diagnostic. Bound the echo like the runner's labels (127 bytes)
 /// so a refusal never repeats an unbounded value; the length still identifies it.
-pub(crate) const MAX_REPORTED_AUGMENT_NAME_BYTES: usize = 127;
+const MAX_REPORTED_AUGMENT_NAME_BYTES: usize = 127;
 
 fn reportable_name(name: &str) -> String {
     if name.len() <= MAX_REPORTED_AUGMENT_NAME_BYTES {

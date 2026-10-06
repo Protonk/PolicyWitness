@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    public static let abiIdentityHex = "0cc3dad9f1b50efa37e9a24fb17a87a9cd90168d37bc52aa37cc618363ad5dd8"
-    public static let abiIdentity: [UInt8] = [0x0c, 0xc3, 0xda, 0xd9, 0xf1, 0xb5, 0x0e, 0xfa, 0x37, 0xe9, 0xa2, 0x4f, 0xb1, 0x7a, 0x87, 0xa9, 0xcd, 0x90, 0x16, 0x8d, 0x37, 0xbc, 0x52, 0xaa, 0x37, 0xcc, 0x61, 0x83, 0x63, 0xad, 0x5d, 0xd8]
+    public static let abiIdentityHex = "7e789d3c2dfcd7c0fd5c550e9d6f0e05a8884b63c559a9b5484fa288c9ea0610"
+    public static let abiIdentity: [UInt8] = [0x7e, 0x78, 0x9d, 0x3c, 0x2d, 0xfc, 0xd7, 0xc0, 0xfd, 0x5c, 0x55, 0x0e, 0x9d, 0x6f, 0x0e, 0x05, 0xa8, 0x88, 0x4b, 0x63, 0xc5, 0x59, 0xa9, 0xb5, 0x48, 0x4f, 0xa2, 0x88, 0xc9, 0xea, 0x06, 0x10]
     // END GENERATED WORKER IDENTITY
 
     public static let abiMagic: UInt32 = 0x50574944
@@ -411,7 +411,7 @@ func decodeWorkerEvidence(_ base: UnsafePointer<UInt8>) -> PWWorkerEvidence? {
 }
 
 
-func profileSHA256(_ data: Data) -> String {
+func sha256Hex(_ data: Data) -> String {
     SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
 }
 
@@ -426,7 +426,7 @@ func consumedParamsDigest(_ params: [CWorkerParam]) -> String {
         let k = Data(p.key.utf8), v = Data(p.value.utf8)
         return Data(SHA256.hash(data: le(k.count) + k + le(v.count) + v))
     }.sorted { $0.lexicographicallyPrecedes($1) }
-    return profileSHA256(pairs.reduce(le(params.count), +))
+    return sha256Hex(pairs.reduce(le(params.count), +))
 }
 
 /// Called only for an opted-in run. A checksum, PID or actual-consumed-input
@@ -464,17 +464,17 @@ func decodeProfileCapture(_ base: UnsafePointer<UInt8>, workerPid: pid_t,
         return unavailable("capture_extent_or_type_invalid")
     }
     let bytes = Data(bytes: base.advanced(by: PWShmLayout.captureHeaderBytes), count: length)
-    guard profileSHA256(bytes) == digest(PWShmLayout.captureBytecodeSha256Offset) else {
+    guard sha256Hex(bytes) == digest(PWShmLayout.captureBytecodeSha256Offset) else {
         return unavailable("capture_bytecode_digest_mismatch")
     }
     guard word(PWShmLayout.captureSourceLengthOffset) == source.utf8.count
-        && digest(PWShmLayout.captureSourceSha256Offset) == profileSHA256(Data(source.utf8))
+        && digest(PWShmLayout.captureSourceSha256Offset) == sha256Hex(Data(source.utf8))
         && word(PWShmLayout.captureParamCountOffset) == params.count
         && digest(PWShmLayout.captureParamsSha256Offset) == consumedParamsDigest(params) else {
         return unavailable("capture_consumed_input_mismatch")
     }
     return AppliedProfileCapture(status: "captured", worker_pid: Int(workerPid), request_nonce: nonce, profile_type: 0,
-        bytecode_length: length, bytecode_sha256: profileSHA256(bytes), bytecode_b64: bytes.base64EncodedString(),
+        bytecode_length: length, bytecode_sha256: sha256Hex(bytes), bytecode_b64: bytes.base64EncodedString(),
         source_sha256: digest(PWShmLayout.captureSourceSha256Offset), source_length: source.utf8.count,
         params_sha256: digest(PWShmLayout.captureParamsSha256Offset), parameter_count: params.count)
 }

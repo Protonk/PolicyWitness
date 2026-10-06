@@ -33,7 +33,7 @@ pub struct JsonResult {
 /// from git (nearest `v*` tag, commit count, `git describe --dirty`, commit
 /// hash) and passes it to cargo; a plain `cargo build` reads "unknown". It is a
 /// coordinate, not a contract: the contract numbers say how to read the JSON.
-pub fn build_stamp() -> Value {
+fn build_stamp() -> Value {
     serde_json::json!({
         "version": option_env!("PW_BUILD_VERSION").unwrap_or("unknown"),
         "number": option_env!("PW_BUILD_NUMBER").unwrap_or("unknown"),

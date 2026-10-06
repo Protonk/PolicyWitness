@@ -23,8 +23,7 @@ use crate::sbpl_lex;
 // - Search-order between the two directories could not be confirmed by
 //   collision on this host (no overlapping filenames); the Profiles directory
 //   is tried first by convention (modern signed-by-Apple location).
-pub const IMPORT_SEARCH_PATHS: &[&str] =
-    &["/System/Library/Sandbox/Profiles", "/usr/share/sandbox"];
+const IMPORT_SEARCH_PATHS: &[&str] = &["/System/Library/Sandbox/Profiles", "/usr/share/sandbox"];
 
 pub const IMPORT_MAX_DEPTH: usize = 8;
 pub const IMPORT_MAX_COUNT: usize = 64;
@@ -66,7 +65,7 @@ pub fn sha256_hex(data: &str) -> String {
 
 /// Resolve a bare import name against `IMPORT_SEARCH_PATHS`. Absolute paths are
 /// returned as-is when the file exists. Returns the first match.
-pub fn resolve_import_path(name: &str) -> Option<PathBuf> {
+fn resolve_import_path(name: &str) -> Option<PathBuf> {
     if name.starts_with('/') {
         let abs = PathBuf::from(name);
         return if abs.exists() { Some(abs) } else { None };

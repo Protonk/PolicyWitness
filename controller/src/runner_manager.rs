@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
@@ -20,14 +20,14 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 /// moment. `runner remove` re-reads the service every poll interval until it
 /// is absent or this nominal allowance is spent, then judges completion from
 /// the last observation (docs/limits.json: `runner_remove_teardown_wait`).
-pub const TEARDOWN_WAIT_MS: u64 = 1_000;
-pub const TEARDOWN_POLL_INTERVAL_MS: u64 = 50;
+const TEARDOWN_WAIT_MS: u64 = 1_000;
+const TEARDOWN_POLL_INTERVAL_MS: u64 = 50;
 /// `ThrottleInterval` written into every generated launchd plist. The host
 /// exits after each specimen and launchd respawns the job at most once per
 /// interval; its default of ten seconds made every consecutive request to
 /// one installed runner wait for the remainder. Chosen by measurement
 /// (docs/limits.json: `byoxpc_throttle_interval`).
-pub const BYOXPC_THROTTLE_INTERVAL_SECONDS: u64 = 1;
+const BYOXPC_THROTTLE_INTERVAL_SECONDS: u64 = 1;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -354,16 +354,6 @@ pub fn entitlements_from_json(value: &Value) -> RunnerEntitlements {
         granted,
         error: None,
     }
-}
-
-/// Every required key is granted: present with the boolean value `true`.
-/// A read-back that failed grants nothing.
-pub fn entitlements_superset(required: &[String], entitlements: &RunnerEntitlements) -> bool {
-    if entitlements.error.is_some() {
-        return false;
-    }
-    let set: BTreeSet<&str> = entitlements.granted.iter().map(|s| s.as_str()).collect();
-    required.iter().all(|key| set.contains(key.as_str()))
 }
 
 fn plist_escape(value: &str) -> String {
@@ -833,7 +823,7 @@ pub struct PlistObservation {
     pub error: Option<String>,
 }
 
-pub fn classify_service_output(
+fn classify_service_output(
     success: bool,
     stdout: &str,
     stderr: &str,
@@ -1034,11 +1024,11 @@ pub fn service_ownership(record: &RunnerRecord, observation: &ServiceObservation
     }
 }
 
-pub fn cleanup_complete(service: &ServiceObservation, plist: &PlistObservation) -> bool {
+fn cleanup_complete(service: &ServiceObservation, plist: &PlistObservation) -> bool {
     service.presence == Presence::Absent && plist.presence == Presence::Absent
 }
 
-pub fn bootout_service(domain: &str, service: &str) -> Result<(), String> {
+fn bootout_service(domain: &str, service: &str) -> Result<(), String> {
     let out = Command::new("/bin/launchctl")
         .args(["bootout", &format!("{domain}/{service}")])
         .output()
@@ -1259,48 +1249,25 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn entitlements_superset_matches_keys() {
-        let ent = entitlements_from_json(&json!({
-            "com.apple.security.app-sandbox": true,
-            "com.apple.security.cs.allow-jit": true
-        }));
-        assert!(entitlements_superset(
-            &vec![
-                "com.apple.security.app-sandbox".to_string(),
-                "com.apple.security.cs.allow-jit".to_string()
-            ],
-            &ent
-        ));
-        assert!(!entitlements_superset(
-            &vec!["com.apple.security.files.user-selected.read-only".to_string()],
-            &ent
-        ));
-    }
-
-    #[test]
     fn false_valued_key_does_not_satisfy_a_requirement() {
         // The kernel grants a boolean entitlement only when its value is true.
-        // A plist that names the key with `false` denies it, so a selector
-        // requiring that key must not be satisfied by the key's presence.
+        // A plist that names the key with `false` denies it: the read-back
+        // records the key but does not grant it, and the selection gate
+        // (`enforce_required_entitlements` in runner_select) consults `granted`.
         let key = "com.apple.security.cs.allow-jit".to_string();
         let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": false}));
         assert_eq!(ent.keys, vec![key.clone()]);
-        assert!(ent.granted.is_empty());
         assert!(
-            !entitlements_superset(std::slice::from_ref(&key), &ent),
+            ent.granted.is_empty(),
             "a required key present with value false must be refused"
         );
         // Only the boolean true grants; strings and numbers do not.
         for value in [json!("true"), json!(1), json!([true]), json!(null)] {
             let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": value}));
-            assert!(
-                !entitlements_superset(std::slice::from_ref(&key), &ent),
-                "{value}"
-            );
+            assert!(ent.granted.is_empty(), "{value}");
         }
         let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": true}));
         assert_eq!(ent.granted, vec![key.clone()]);
-        assert!(entitlements_superset(std::slice::from_ref(&key), &ent));
         // A record written before values were recorded grants nothing until
         // it is re-read: `granted` defaults to empty.
         let old: RunnerEntitlements =

@@ -10,8 +10,8 @@ use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-pub const DEFAULT_LOG_TIMEOUT_MS: u64 = 10_000;
-pub const CLEANUP_GRACE_MS: u64 = 1_000;
+const DEFAULT_LOG_TIMEOUT_MS: u64 = 10_000;
+const CLEANUP_GRACE_MS: u64 = 1_000;
 // The log child stops this long before the shared deadline so the observer can
 // reap it and deliver its report before the controller's own deadline.
 pub const LOG_REPORT_RESERVE_MS: u64 = 1_000;
@@ -75,7 +75,7 @@ impl LogTimeout {
 
 // CLOCK_MONOTONIC's boot-relative nanoseconds are shared across processes.
 // Instant has no portable wire representation and wall time cannot be a timer.
-pub fn monotonic_ns() -> Result<u64, String> {
+fn monotonic_ns() -> Result<u64, String> {
     let mut ts = libc::timespec {
         tv_sec: 0,
         tv_nsec: 0,

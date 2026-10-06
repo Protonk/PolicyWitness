@@ -66,7 +66,7 @@ pub struct RunnerProvenance {
 }
 
 /// Controller-owned keys are consumed before the worker request is delivered.
-pub const SELECTOR_FIELDS: &[&str] = &[
+const SELECTOR_FIELDS: &[&str] = &[
     "runner",
     "runner_id",
     "runner_service",

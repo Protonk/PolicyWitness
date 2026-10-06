@@ -12,7 +12,6 @@
 
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
-use std::path::Path;
 
 pub type Shape = BTreeMap<String, BTreeMap<String, String>>;
 
@@ -72,7 +71,7 @@ pub fn collect(value: &Value, path: &str, opaque: &[&str], into: &mut Shape) -> 
     Ok(())
 }
 
-pub fn shape_from_value(value: &Value) -> Shape {
+fn shape_from_value(value: &Value) -> Shape {
     let mut shape = Shape::new();
     if let Some(paths) = value.as_object() {
         for (path, keys) in paths {
@@ -171,49 +170,6 @@ pub fn classify(
         ));
     }
     Verdict::Update("nullable fields changed their recorded type; no bump needed".to_string())
-}
-
-/// Compare `current` with the golden at `golden_path`. Anything but `Ok`
-/// writes the candidate beside the case artifacts and fails with the advice
-/// the Swift reader gives: review the diff, then replace the golden, bumping
-/// the manifest first when the verdict says so.
-pub fn check_golden(
-    golden_path: &Path,
-    version_key: &str,
-    manifest_version: u64,
-    current: &Shape,
-    candidate_name: &str,
-) -> Result<(), String> {
-    let golden: Option<Value> = std::fs::read(golden_path)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok());
-    let verdict = classify(golden.as_ref(), version_key, current, manifest_version);
-    if verdict == Verdict::Ok {
-        return Ok(());
-    }
-    let artifacts = std::env::var_os("PW_TEST_ARTIFACTS")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    let candidate_path = artifacts.join(candidate_name);
-    let candidate =
-        serde_json::json!({ version_key: manifest_version, "shape": shape_to_value(current) });
-    let mut text = serde_json::to_string_pretty(&candidate).map_err(|e| e.to_string())?;
-    text.push('\n');
-    std::fs::write(&candidate_path, text)
-        .map_err(|e| format!("{}: {e}", candidate_path.display()))?;
-    let advice = format!(
-        "review the diff, then replace {} with {}",
-        golden_path.display(),
-        candidate_path.display()
-    );
-    Err(match verdict {
-        Verdict::Ok => unreachable!(),
-        Verdict::MissingGolden => format!("no shape golden; {advice}"),
-        Verdict::NeedsBump(detail) => {
-            format!("{detail}; bump {version_key} in docs/contract.json, regenerate, then {advice}")
-        }
-        Verdict::Update(detail) => format!("{detail}; {advice}"),
-    })
 }
 
 /// The golden's entries at and under `prefix`, re-rooted at `root`, so a
