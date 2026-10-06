@@ -41,6 +41,10 @@ struct RunnerVerifyData {
 struct RunnerValidateData {
     updated: usize,
     missing: usize,
+    /// Records with at least one verification or read-back failure, and the
+    /// failures themselves, naming the record and the binary.
+    invalid: usize,
+    failures: Vec<runner_manager::ValidateFailure>,
 }
 
 #[derive(Serialize)]
@@ -728,15 +732,18 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
     Ok(0)
 }
 
-/// Walk the registry and re-read each runner's on-disk signature and
-/// entitlements. This is *registry-internal* validation — it does not
-/// reconcile against launchctl or LaunchAgents/. Callers wanting that
-/// use the report-only reconcile command.
+/// Walk the registry, verify each runner's bundle recursively and re-read
+/// the host's, the worker's and the validator's on-disk signatures and
+/// entitlements, reporting which failed. This is *registry-internal*
+/// validation — it does not reconcile against launchctl or LaunchAgents/.
+/// Callers wanting that use the report-only reconcile command.
 fn cmd_runner_validate() -> Result<i32, String> {
     let registry_path = runner_manager::runner_registry_path()?;
     let _registry_lock = runner_manager::lock_registry(&registry_path)?;
     let mut registry = runner_manager::load_registry(&registry_path)?;
     let mut missing = 0usize;
+    let mut invalid = 0usize;
+    let mut failures = Vec::new();
     for record in registry.runners.iter_mut() {
         let exec_path = Path::new(&record.executable_path);
         if !exec_path.exists() {
@@ -745,10 +752,16 @@ fn cmd_runner_validate() -> Result<i32, String> {
             record.entitlements.error = Some("executable missing".to_string());
             continue;
         }
-        if let Ok(sig) = runner_manager::codesign_metadata(exec_path) {
-            record.signature = sig;
+        let found = runner_manager::validate_record(
+            record,
+            &runner_manager::codesign_verify,
+            &runner_manager::codesign_verify_binary,
+            &runner_manager::read_back,
+        );
+        if !found.is_empty() {
+            invalid += 1;
+            failures.extend(found);
         }
-        record.entitlements = runner_manager::entitlements_from_codesign(exec_path);
         if record.kind.is_none() {
             record.kind = Some(infer_record_kind(record));
         }
@@ -756,7 +769,12 @@ fn cmd_runner_validate() -> Result<i32, String> {
     let updated = registry.runners.len();
     runner_manager::save_registry(&registry_path, &registry)?;
 
-    let data = RunnerValidateData { updated, missing };
+    let data = RunnerValidateData {
+        updated,
+        missing,
+        invalid,
+        failures,
+    };
     let result = json_contract::JsonResult {
         ok: true,
         rc: None,

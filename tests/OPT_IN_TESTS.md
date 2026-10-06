@@ -189,21 +189,6 @@ selection, deduplication, configuration validation, and complete accounting.
   `enforce_required_entitlements` or the registry record's read-back fields.
 - **Artifacts:** `<run>/suites/unit/rust.byoxpc_reds/artifacts/cargo-test-ignored.log`
 
-### BYOXPC verification controls
-
-- **Case:** `preflight/byoxpc_verification_controls`
-- **Location:** `tests/suites/preflight/check_byoxpc_verification.py`
-- **Purpose:** Copy the shipped XPC bundle to owned staging, seal it ad hoc, change
-  one worker code byte after sealing, and require `runner install` to refuse the
-  copy and `runner validate` to report a registered copy whose worker changed
-  after installation.
-- **Opt-in reason:** Specified red for planned behavior
-  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 2); non-default until promoted.
-- **Resource dependency:** Built app only. The installer runs with a fixture
-  registry and `HOME` supplied to its child process and never bootstraps; no
-  identity, launchd service or GUI session is used, and no copy is launched.
-- **Artifacts:** `<run>/suites/preflight/byoxpc_verification_controls/artifacts/`
-
 ### BYOXPC entitlement read-back
 
 - **Case:** `runner_byoxpc/entitlement_readback`

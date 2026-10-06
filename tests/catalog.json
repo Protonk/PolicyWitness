@@ -27,7 +27,6 @@
         {
           "id": "byoxpc_verification_controls",
           "description": "Installation refuses, and validation reports, a never-launched copy whose worker code changed after sealing",
-          "default": false,
           "requires": [
             "app"
           ]
@@ -1538,7 +1537,6 @@
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/single_use",
         "unit/rust.byoxpc_reds",
-        "preflight/byoxpc_verification_controls",
         "runner_byoxpc/entitlement_readback"
       ]
     },

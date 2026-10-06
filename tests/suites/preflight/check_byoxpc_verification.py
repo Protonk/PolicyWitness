@@ -108,13 +108,16 @@ def main(app, out, pw):
             validated = json.loads(cli('validated/validate', ['runner', 'validate'], code=0).stdout)
             data = validated['data']
             failures = data.get('failures')
-            assert data.get('invalid') == 1 and isinstance(failures, list) and len(failures) == 1, \
+            assert data.get('invalid') == 1 and isinstance(failures, list), \
                 ('runner validate must report the changed worker', data)
-            failure = failures[0]
-            assert failure['runner_id'] == runner_id and failure['service_name'] == service, failure
-            assert failure['binary'] == 'bundle' and 'codesign verify failed' in failure['error'], failure
+            assert [f['binary'] for f in failures] == ['bundle', 'worker'], failures
+            for failure in failures:
+                assert failure['runner_id'] == runner_id and failure['service_name'] == service, failure
+                assert 'codesign verify failed' in failure['error'], failure
             listed = json.loads(cli('validated/list', ['runner', 'list'], code=0).stdout)['data']['runners']
             assert listed[0]['id'] == runner_id and listed[0]['signature']['valid'] is False, listed
+            assert listed[0]['worker_signature']['valid'] is False, listed[0]['worker_signature']
+            assert listed[0]['validator_signature']['valid'] is True, listed[0]['validator_signature']
         finally:
             removed = json.loads(cli('validated/remove', ['runner', 'remove', '--id', runner_id, '--skip-bootout'], code=0).stdout)
             assert removed['data'].get('cleanup_retained') is not True, removed

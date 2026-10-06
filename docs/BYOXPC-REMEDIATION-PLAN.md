@@ -38,7 +38,7 @@ implementation or acceptance test below.
 
 - [x] Establish the regression baseline and record the starting failures.
 - [x] Group 1: sign the embedded helpers at install and read all three back.
-- [ ] Group 2: verify recursively at install and in `runner validate`.
+- [x] Group 2: verify recursively at install and in `runner validate`.
 - [ ] Group 3: select on true-valued keys in the worker's read-back.
 - [ ] Group 4: bound launchd's respawn wait in the generated plist.
 - [ ] Group 5: correct the guide and the README.
@@ -311,3 +311,28 @@ Gates: `byoxpc-g1-offline` (Rust batch, rustfmt, fake-tool ownership
 controls), `byoxpc-g1-live` (`entitlement_readback` promoted, BBX-001,
 BBX-002, `runner_auth_external`, `registry_recovery`), `byoxpc-g1-live-3`
 (`dossier_witness` and `dossier_witness_byoxpc`); all pinned.
+
+### Group 2 (2026-10-06)
+
+`codesign_verify` runs `--deep --strict` and is used at installation and by
+`runner validate`, which now verifies each record's bundle recursively, then
+each of the host, the worker and the validator on its own
+(`codesign_verify_binary`, non-recursive: a recursive verify of a bundle's
+main executable resolves to the bundle and would repeat its verdict), and
+re-reads every signature and entitlement set. The validate envelope gained
+`invalid` and `failures` rows naming the record and the binary (`bundle`,
+`host`, `worker` or `validator`); the host's recorded `signature.valid`
+follows the bundle's recursive check and each helper's follows its own.
+`validation_reports_the_bundle_and_each_binary_that_fails` pins the
+classification with injected verify and read-back operations.
+
+The offline control is promoted and, since it needs only the built app, is
+a default `preflight` case: installation refuses a copy whose worker code
+changed after sealing, and validation of a registered copy changed after
+installation reports `bundle` and `worker`. Every live install (team,
+ad-hoc, recovery) still passes under recursive verification.
+
+Gates: `byoxpc-g2-gates` (registry recovery, external-auth, read-back,
+BBX-001; the first validate report also listed `host`) and
+`byoxpc-g2-gates-2` (the promoted control beside `codesign.preflight` on the
+rebuilt app); both pinned.

@@ -532,9 +532,18 @@ pub fn codesign_metadata(target: &Path) -> Result<RunnerSignature, String> {
     })
 }
 
+/// Recursive, strict verification: nested code is checked as well as the
+/// enclosing seal, so a changed embedded worker fails here even when the
+/// bundle's own seal still verifies. Used at installation and by validate.
 pub fn codesign_verify(target: &Path) -> Result<(), String> {
     let out = Command::new("/usr/bin/codesign")
-        .args(["--verify", "--verbose=2", target.to_string_lossy().as_ref()])
+        .args([
+            "--verify",
+            "--deep",
+            "--strict",
+            "--verbose=2",
+            target.to_string_lossy().as_ref(),
+        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -573,6 +582,95 @@ pub fn sign_install_tree(
     sign(bundle, identity, entitlements)
 }
 
+/// One validation failure: the record it concerns and the binary that failed
+/// (`bundle` for the recursive check of the enclosing seal, otherwise `host`,
+/// `worker` or `validator` for that binary's own verification or read-back).
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ValidateFailure {
+    pub runner_id: String,
+    pub service_name: String,
+    pub binary: String,
+    pub error: String,
+}
+
+fn unreadable_signature() -> RunnerSignature {
+    RunnerSignature {
+        team_id: None,
+        identity: None,
+        cdhash: None,
+        valid: false,
+        adhoc: false,
+    }
+}
+
+/// Re-check one registry record against disk: the bundle recursively
+/// (`verify_bundle`), then each of the host, the worker and the validator
+/// on its own (`verify_binary`), re-reading every signature and
+/// entitlement set. The record's host `signature.valid` reports the
+/// bundle's recursive check; each helper's `valid` reports its own. The
+/// three operations are injectable so the classification is pinned
+/// without codesign.
+pub fn validate_record(
+    record: &mut RunnerRecord,
+    verify_bundle: &dyn Fn(&Path) -> Result<(), String>,
+    verify_binary: &dyn Fn(&Path) -> Result<(), String>,
+    read: &dyn Fn(&Path) -> Result<(RunnerSignature, RunnerEntitlements), String>,
+) -> Vec<ValidateFailure> {
+    let mut failures = Vec::new();
+    let mut fail = |binary: &str, error: String| {
+        failures.push(ValidateFailure {
+            runner_id: record.id.clone(),
+            service_name: record.service_name.clone(),
+            binary: binary.to_string(),
+            error,
+        });
+    };
+    let bundle = PathBuf::from(&record.bundle_path);
+    let bundle_ok = match verify_bundle(&bundle) {
+        Ok(()) => true,
+        Err(error) => {
+            fail("bundle", error);
+            false
+        }
+    };
+    let host = PathBuf::from(&record.executable_path);
+    let worker = bundle.join(crate::app_layout::BUNDLE_WORKER_REL);
+    let validator = bundle.join(crate::app_layout::BUNDLE_VALIDATOR_REL);
+    let mut observe = |role: &str, path: &Path| -> (RunnerSignature, RunnerEntitlements) {
+        let own = verify_binary(path);
+        let (mut signature, entitlements) = match read(path) {
+            Ok(read) => read,
+            Err(error) => {
+                fail(role, error);
+                return (
+                    unreadable_signature(),
+                    RunnerEntitlements {
+                        raw_plist: None,
+                        keys: Vec::new(),
+                        error: Some(format!("{role} read-back failed")),
+                    },
+                );
+            }
+        };
+        if let Err(error) = own {
+            fail(role, error);
+            signature.valid = false;
+        }
+        (signature, entitlements)
+    };
+    let (mut host_signature, host_entitlements) = observe("host", &host);
+    host_signature.valid = host_signature.valid && bundle_ok;
+    let (worker_signature, worker_entitlements) = observe("worker", &worker);
+    let (validator_signature, validator_entitlements) = observe("validator", &validator);
+    record.signature = host_signature;
+    record.entitlements = host_entitlements;
+    record.worker_signature = Some(worker_signature);
+    record.worker_entitlements = Some(worker_entitlements);
+    record.validator_signature = Some(validator_signature);
+    record.validator_entitlements = Some(validator_entitlements);
+    failures
+}
+
 /// A binary's signature metadata and entitlements as codesign reads them
 /// back. The metadata read is required; an entitlement read failure is
 /// recorded inside the entitlements.
@@ -580,6 +678,28 @@ pub fn read_back(target: &Path) -> Result<(RunnerSignature, RunnerEntitlements),
     let signature = codesign_metadata(target)
         .map_err(|e| format!("read-back of {} failed: {e}", target.display()))?;
     Ok((signature, entitlements_from_codesign(target)))
+}
+
+/// Non-recursive strict verification of one binary's own code. A bundle's
+/// main executable resolves to its bundle's seal, so this reports the
+/// seal without repeating the recursive verdict over the nested helpers.
+pub fn codesign_verify_binary(target: &Path) -> Result<(), String> {
+    let out = Command::new("/usr/bin/codesign")
+        .args([
+            "--verify",
+            "--strict",
+            "--verbose=2",
+            target.to_string_lossy().as_ref(),
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("failed to run codesign: {e}"))?;
+    if out.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    Err(format!("codesign verify failed: {stderr}"))
 }
 
 pub fn codesign_sign(
@@ -1228,6 +1348,84 @@ mod tests {
         assert!(err.contains("no embedded validator"), "{err}");
         assert_eq!(touched, 0);
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn validation_reports_the_bundle_and_each_binary_that_fails() {
+        let mut record: RunnerRecord = serde_json::from_value(json!({
+            "id": "runner-v", "service_name": "com.example.v", "bundle_path": "/v/Runner.xpc",
+            "executable_path": "/v/Runner.xpc/Contents/MacOS/PWRunner", "bundle_id": "com.example.v",
+            "scope": "user", "protocol_version": RUNNER_PROTOCOL_VERSION,
+            "signature": {"team_id": null, "identity": null, "cdhash": null, "valid": true, "adhoc": true},
+            "entitlements": {"raw_plist": null, "keys": [], "error": null},
+            "installed_at_unix_ms": 0, "kind": "byoxpc"
+        }))
+        .unwrap();
+        let good = |path: &Path| {
+            Ok((
+                RunnerSignature {
+                    team_id: Some("TEAM".into()),
+                    identity: Some(path.display().to_string()),
+                    cdhash: None,
+                    valid: true,
+                    adhoc: false,
+                },
+                entitlements_from_json(&json!({"k": path.ends_with("pw-probe-runner")})),
+            ))
+        };
+        // Intact: nothing fails and every binary's read-back lands on the record.
+        let failures = validate_record(&mut record, &|_| Ok(()), &|_| Ok(()), &good);
+        assert!(failures.is_empty(), "{failures:?}");
+        assert!(record.signature.valid);
+        let worker = record.worker_entitlements.as_ref().unwrap();
+        assert_eq!(worker.keys, vec!["k".to_string()]);
+        assert!(record.validator_signature.as_ref().unwrap().valid);
+        // A changed worker: the recursive bundle check and the worker's own
+        // check fail; the host and validator still verify individually, the
+        // host's recorded validity follows the bundle.
+        let changed = |path: &Path| {
+            if path.ends_with("Runner.xpc") || path.ends_with("pw-probe-runner") {
+                Err(format!("codesign verify failed: {}", path.display()))
+            } else {
+                Ok(())
+            }
+        };
+        let failures = validate_record(&mut record, &changed, &changed, &good);
+        let names: Vec<(&str, &str)> = failures
+            .iter()
+            .map(|f| (f.binary.as_str(), f.service_name.as_str()))
+            .collect();
+        assert_eq!(
+            names,
+            vec![("bundle", "com.example.v"), ("worker", "com.example.v")]
+        );
+        assert!(failures.iter().all(|f| f.runner_id == "runner-v"));
+        assert!(!record.signature.valid, "host validity follows the bundle");
+        assert!(!record.worker_signature.as_ref().unwrap().valid);
+        assert!(record.validator_signature.as_ref().unwrap().valid);
+        // An unreadable helper is its own failure with an unreadable signature.
+        let unreadable = |path: &Path| {
+            if path.ends_with("sb_api_validator") {
+                Err("read-back of validator failed".to_string())
+            } else {
+                good(path)
+            }
+        };
+        let failures = validate_record(&mut record, &|_| Ok(()), &|_| Ok(()), &unreadable);
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].binary, "validator");
+        let validator = record.validator_signature.as_ref().unwrap();
+        assert!(!validator.valid && validator.team_id.is_none());
+        assert_eq!(
+            record
+                .validator_entitlements
+                .as_ref()
+                .unwrap()
+                .error
+                .as_deref(),
+            Some("validator read-back failed")
+        );
+        assert!(record.signature.valid && record.worker_signature.as_ref().unwrap().valid);
     }
 
     #[test]
