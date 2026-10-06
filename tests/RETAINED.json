@@ -24,6 +24,13 @@
       "source": "f3a39f156e0fec02458bc9d28017b9f3dd3ec621",
       "app_inventory": "artifact-integrity/before.json",
       "release": "v0.2.6"
+    },
+    {
+      "path": "runs/byoxpc-investigation-20261006",
+      "run_id": "byoxpc-investigation-20261006",
+      "reason": "BYOXPC investigation receipts: signing, environment observation limits, entitlement effects, ad-hoc runtime control, verification boundaries and respawn behavior; manual observations with verified cleanup.",
+      "source": "e2115cf38cdf486f50c6545e7c9b4a218aa11a35",
+      "app_inventory": "baseline/source-inventory.json"
     }
   ]
 }

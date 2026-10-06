@@ -7,7 +7,7 @@ apparatus as built, witnessed answers to the questions below, and the
 decision inputs for whatever fix the entitlement gap turns out to need. The
 fix itself belongs to a separate plan.
 
-The starting point is the one Known gap left in
+The starting point is the host/worker entitlement Known gap in
 [ARCHITECTURE.md](ARCHITECTURE.md#known-gaps): the installer embeds the
 supplied entitlements in the host executable only, while the embedded worker,
 the process the specimen policy is applied to, keeps the signature the build
@@ -27,8 +27,15 @@ it is deleted when its questions have witnesses.
 
 - [x] Phase A: map the apparatus from source, as a generated figure
   (2026-10-06)
-- [ ] Phase B: witness each question below, cheapest first
-- [ ] Phase C: synthesize the findings and write the decision inputs
+- [x] Phase B: complete the six investigations and record their observation
+  limits (2026-10-06). Host-to-worker environment propagation remains
+  unobserved; the proposed exec-child witness cannot answer it.
+- [x] Phase C: synthesize the findings and write the decision inputs
+  (2026-10-06)
+
+Paused for review before remediation. No product code or registered tests
+changed. This plan remains on disk because not every original question has
+a witness; completed investigation does not mean complete behavioral coverage.
 
 ## Rules
 
@@ -86,14 +93,14 @@ Each item is one experiment with its receipts named. Order is by cost.
    record's `entitlements` field. This restates the gap as evidence and takes
    minutes.
 2. **The environment route.** `runner install --env` writes
-   `EnvironmentVariables` into the launchd plist, which reach the host. Whether
-   a `DYLD_*` variable survives the hardened-runtime spawn into the worker is
-   witnessable with an exec attempt that runs `/usr/bin/env` under an
-   allow-all policy, since the exec channel captures the child's stdout.
-   Receipt: the captured stdout in the envelope, with and without
+   `EnvironmentVariables` into the plist configuring the host's launch. Whether
+   a `DYLD_*` variable survives into the worker needs a process observation.
+   The proposed `/usr/bin/env` exec attempt cannot supply it: PW explicitly
+   empties the exec child's environment. Receipt: the launchd configuration,
+   captured exec result and the existing inspection fixture's explicit empty
+   environment report, with and without
    `com.apple.security.cs.allow-dyld-environment-variables` on the host.
-   Expected: the variable does not reach the worker, which makes this route
-   host-only as well.
+   Record the upstream observation gap without inferring a filtering cause.
 3. **Entitlement-dependent behavior.** The README's premise is that the same
    policy yields different kernel behavior under different entitlements. Find
    one entitlement and one operation whose result changes with it, and
@@ -103,9 +110,11 @@ Each item is one experiment with its receipts named. Order is by cost.
    the read-backs from item 1. If no pair is found in reasonable time, record
    that as the finding; it bears on the README's framing.
 4. **The ad-hoc path.** The guide's ad-hoc recipe assumes hardened-runtime
-   exception entitlements are honored on an ad-hoc signature. Witness it with
-   item 3's pair on an ad-hoc-signed copy. Receipt: the same pair of
-   envelopes and read-backs.
+   exception entitlements are honored on an ad-hoc signature. Repeat item 3's
+   pair on an ad-hoc-signed copy. Distinguish entitlement-conditioned SBPL
+   behavior from a runtime-exception effect. Receipt: the same pair of
+   envelopes and read-backs, plus any existing-fixture runtime control whose
+   narrower scope is stated explicitly.
 5. **Mixed authorities.** After a signed-path install the bundle holds a host
    signed by the user's identity and helpers signed by the build's.
    `codesign_verify` accepts it and launchd starts it. Record what
@@ -115,8 +124,9 @@ Each item is one experiment with its receipts named. Order is by cost.
 6. **The respawn throttle.** The generated plist sets no `ThrottleInterval`.
    Measure the wait a second run pays when issued within ten seconds of the
    previous launch and the failure an immediate run can see. Receipt: wall
-   times and the `xpc_error` envelope. The guide does not mention the wait;
-   whether it should is a Phase C question.
+   times, job state and the envelopes actually observed, without prescribing
+   an error class. The guide's Questions section mentions the throttle;
+   whether it sufficiently explains the behavior is a Phase C question.
 
 ## Phase C: synthesis
 
@@ -126,15 +136,77 @@ Each item is one experiment with its receipts named. Order is by cost.
   the embedded helpers with the supplied identity and entitlements at install
   and record every binary's read-back in the registry and the dossier; or
   state in the README and the guide that installed entitlements describe the
-  host only, and say what that makes BYOXPC good for. Item 3 decides which
-  is honest.
+  host only, and say what that makes BYOXPC good for. Item 3 supplies one
+  capability witness; it does not alone decide which processes should receive
+  which entitlements or which product promise to make.
 - Any new Known gap paragraph for the architecture document, and any
   correction the guide needs, listed for the plan that makes the fix.
 - Candidate tests, listed with the receipt each would pin, for that plan.
 
 ## Records
 
-None yet. Each Phase B item adds its record here when it has run.
+1. [Installation signature scope](../records/BYOXPC-SIGNATURE-SCOPE.md).
+2. [Environment observability](../records/BYOXPC-ENVIRONMENT-OBSERVABILITY.md).
+3. [Entitlement-conditioned behavior](../records/BYOXPC-ENTITLEMENT-BEHAVIOR.md).
+4. [Ad-hoc behavior and a direct runtime control](../records/BYOXPC-ADHOC-BEHAVIOR.md).
+5. [Verification boundaries and mixed authorities](../records/BYOXPC-VERIFICATION-BOUNDARIES.md).
+6. [Respawn and retirement observations](../records/BYOXPC-RESPAWN-OBSERVATIONS.md).
+
+## Decision inputs
+
+- **There is an observable worker capability at stake.** With identical SBPL,
+  changing the worker's entitlement changed a file-write query and attempt;
+  independent before/after bytes confirmed the effect. Host-only and
+  re-signed-empty-worker controls denied it. A host-only description would
+  accurately limit the existing installation route, but would not provide
+  that demonstrated capability. This does not decide whether to extend the
+  route, or justify giving the validator the worker's entitlements.
+- **Ad-hoc behavior has bounded positive evidence.** The SBPL pair worked
+  with an ad-hoc worker. Separately, the existing fixture directly launched
+  under an ad-hoc hardened signature retained a DYLD variable only when its
+  exception entitlement was present. Neither witness establishes JIT or
+  general exception support through the BYOXPC process chain.
+- **Recorded metadata and executable checks answer different questions.**
+  Host-only read-backs do not establish worker context. An ad-hoc worker
+  beneath a Developer ID host passed verification and ran. Ordinary outer
+  verification also accepted an offline copy with a corrupted worker code
+  byte that recursive and individual checks rejected. Actual launch of that
+  corrupted copy was deliberately not attempted.
+- **Environment propagation remains open.** Plist contents and exec-child
+  output cannot establish the host or worker's environment. No new product
+  observation code was added to obtain an answer.
+- **Repeated use needs investigation beyond one successful specimen.** The
+  same installed runner produced immediate `already_ran`, a delayed `ok`,
+  and `xpc_timeout` under a shorter client budget. These are measured cases,
+  not a timing guarantee or evidence that retrying timed-out work is safe.
+- **Location affected the experiments.** Re-signed workers stalled in an
+  `open` against the checkout's Desktop target, including under allow-all;
+  the corresponding temporary-target runs completed. An existing exec
+  observer also failed from Desktop and worked from `/private/tmp`. The
+  cause is unassigned. This is an input to consumer-like probes, not a
+  diagnosed sandbox or signing failure.
+
+Guide/README decisions for a separate turn: the scope of installed
+entitlements and `required_entitlements`; the distinction between supported
+worker operations and a separately signed exec helper; what `--env` is
+observed to establish; signature verification's scope; and the practical
+consequences of host retirement, respawn delay and client deadlines. The
+architecture's host-only Known gap is confirmed, and a Known gap now states
+the nested-code verification limit. No guide repair is made in this plan.
+
+## Candidate probes and tests
+
+These are inputs for a later turn, not new registered tests or selected fixes.
+
+| Candidate | Receipt or observation to preserve | Limit |
+| --- | --- | --- |
+| Read back host, worker and validator for a small signing matrix | Item 1's signatures and registry side by side | Metadata possession is not an operation effect |
+| Run a conditioned file write with an empty-worker control | Item 3's identical-policy pair and independent bytes | Deliberately chosen SBPL predicate, not general JIT support |
+| Exercise an existing consumer helper through exec | Item 2's explicit process report, child exit and PID | Reports the child, not its parent |
+| Check one actual runtime exception on an existing fixture | Item 4's direct two-variable control | Separate process and route from PW |
+| Compare shallow, recursive and individual verification | Item 5's resealing and unlaunched corruption controls | Does not prove runtime acceptance of invalid code |
+| Follow a successful run with another at different intervals and budgets | Item 6's envelope, job state and monotonic timing | Assert observation integrity; do not freeze one race outcome |
+| Repeat a tiny workload from temporary and ordinary project locations | Initial Desktop failures and completed temporary controls | Collect the discrepancy before assigning a cause |
 
 ## Execution notes
 
@@ -145,3 +217,28 @@ were read from `codesign_sign` in
 [runner_commands.rs](../controller/src/runner_commands.rs), and `sign_macho`
 in [build.sh](../build.sh); the signing read-back that first established the
 gap is restated as Phase B item 1 so that it enters a record.
+
+Phases B/C (2026-10-06): evidence is under
+`tests/out/runs/byoxpc-investigation-20261006/`, gitignored and local-only,
+pinned in `tests/RETAINED.json`. It includes orchestration scripts, specimens,
+command streams, signing read-backs, effect bytes, a stack sample, raw
+envelopes, source inventories and `SHA256.json`. No new native probe was
+written. The existing session cleanup helper verified removal of all 19
+installed copies; final registry/reconcile and owned-process observations
+confirmed no remaining experiment service, plist, registration or process.
+Fixture staging was also removed. All 24 envelopes validated, and the original
+app inventory was unchanged. The 21 completed manual observation cases are
+not a registered test-battery pass.
+
+The checkout was `e2115cf` on macOS 14.8.9 (23J631), arm64. The selected
+existing app reports `33ad847-dirty`, build 435; binary hashes identify the
+tested artifact, rather than a claim that its stamp proves a clean build of
+this checkout. Developer ID Team `42D369QV8E` matched the shipped client.
+Sandboxed codesign inspection failed and its unchanged-byte unsandboxed
+repeat passed. Live experiments ran outside the automation sandbox.
+
+Scope corrections: item 2 closes with an explicit observation gap rather than
+the originally proposed host-only inference. Item 4's SBPL pair and direct
+DYLD control answer separate questions. Item 6 records observed outcomes and
+recognizes the existing guide mention. Initial unsuccessful observations were
+retained; completed temporary-location controls did not replace their receipts.

@@ -710,6 +710,17 @@ different entitlements changes the host's, not the worker's. Read it back
 with `codesign -d --entitlements -` on the bundle's `pw-probe-runner` after
 an install.
 
+Known gap. Installation's `codesign_verify` in
+[runner_manager.rs](../controller/src/runner_manager.rs) invokes
+`codesign --verify --verbose=2` on the enclosing bundle, without recursive
+verification. A successful result does not establish integrity of the
+embedded worker's code pages: an offline copy with one changed worker code
+byte can pass that command while individual worker verification and
+`codesign --verify --deep --strict` reject it. This is a limit of the
+installation check, not evidence that macOS will execute the changed code.
+Signature validity also does not establish a common signing authority across
+host, worker and validator.
+
 ## Known gaps
 
 Each gap is stated in full where the promise it limits is stated; this list
@@ -717,3 +728,5 @@ only points there.
 
 - [Worker entitlements under a BYOXPC install](#byoxpc-as-a-variation-on-launch-and-selection)
   are the build's; the installed plist reaches the host executable only.
+- [Nested-code verification at installation](#byoxpc-as-a-variation-on-launch-and-selection)
+  does not recursively establish the embedded helpers' code integrity.
