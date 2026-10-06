@@ -95,8 +95,8 @@ STEP_REFERENCES = {
 REFERENCES = {**RUN_REFERENCES, **STEP_REFERENCES}
 
 # Raw host fact spellings.
-POLL_STOP_REASONS = ('done', 'sentinel_deadline', 'child_reaped', 'wait_error', 'policy_write_error')
-CLEANUP_TRIGGERS = ('deadline_expiry', 'completion', 'child_reaped', 'poll_wait_error', 'policy_transfer_error')
+POLL_STOP_REASONS = ('done', 'sentinel_deadline', 'child_reaped', 'wait_error', 'policy_write_error', 'policy_transfer_deadline')
+CLEANUP_TRIGGERS = ('deadline_expiry', 'completion', 'child_reaped', 'poll_wait_error', 'policy_transfer_error', 'policy_transfer_timeout')
 GRACE_ENDS = ('not_entered', 'reaped_during_grace', 'exhausted', 'wait_error')
 COLLECTION_BASES = ('after_confirmed_reap', 'execution_may_continue', 'unavailable')
 SLOT_STATES = ('completed', 'incomplete', 'absent')
@@ -106,7 +106,7 @@ ATTEMPT_SUPPORT = ('supported', 'unsupported')
 # trigger at the exit-request store; this is the expected correspondence).
 TRIGGER_FOR_STOP = {'sentinel_deadline': 'deadline_expiry', 'done': 'completion',
                     'child_reaped': 'child_reaped', 'wait_error': 'poll_wait_error',
-                    'policy_write_error': 'policy_transfer_error'}
+                    'policy_write_error': 'policy_transfer_error', 'policy_transfer_deadline': 'policy_transfer_timeout'}
 
 # Worker protocol positions (pw_probe_runner_abi.h). Temporal order is the
 # protocol's, not the numeric opcode's: proceed (11) precedes attempts (9).
@@ -284,7 +284,7 @@ CAUSE_UNKNOWN = 'unknown'
 CAUSE_FOR_TRIGGER = {'deadline_expiry': HOST_SENTINEL_DEADLINE,
                      'completion': 'host_exit_grace_exhausted',
                      'poll_wait_error': 'host_cleanup_after_wait_error',
-                     'policy_transfer_error': 'host_cleanup_after_transfer_error'}
+                     'policy_transfer_error': 'host_cleanup_after_transfer_error', 'policy_transfer_timeout': 'host_cleanup_after_transfer_timeout'}
 CAUSE_LABELS = tuple(CAUSE_FOR_TRIGGER.values())
 # runner_sandbox_diagnostics.disposition_integrity
 INTEGRITY_STATES = ('valid', 'invalid')

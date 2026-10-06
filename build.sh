@@ -33,6 +33,7 @@ XPC_RUNNER_SANDBOX_APPLY_FILE="${XPC_ROOT}/Sources/PWRunnerCore/SandboxApply.swi
 XPC_RUNNER_PROBE_RUNNER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ProbeRunner.swift"
 XPC_RUNNER_PATH_UTILS_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PathUtils.swift"
 XPC_RUNNER_CWORKER_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorker.swift"
+XPC_RUNNER_DEADLINE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/MonotonicDeadline.swift"
 XPC_RUNNER_VALIDATOR_CLIENT_FILE="${XPC_ROOT}/Sources/PWRunnerCore/ValidatorClient.swift"
 XPC_RUNNER_CWORKER_ORCH_FILE="${XPC_ROOT}/Sources/PWRunnerCore/CWorkerOrchestrator.swift"
 XPC_RUNNER_SERVICE_FILE="${XPC_ROOT}/Sources/PWRunnerCore/PWRunnerService.swift"
@@ -387,6 +388,7 @@ if [[ "${BUILD_XPC}" == "1" ]]; then
       "${XPC_RUNNER_PROBE_RUNNER_FILE}" \
       "${XPC_RUNNER_PATH_UTILS_FILE}" \
       "${XPC_RUNNER_CWORKER_FILE}" \
+      "${XPC_RUNNER_DEADLINE_FILE}" \
       "${XPC_RUNNER_VALIDATOR_CLIENT_FILE}" \
       "${XPC_RUNNER_CWORKER_ORCH_FILE}" \
       "${XPC_RUNNER_SERVICE_FILE}" \

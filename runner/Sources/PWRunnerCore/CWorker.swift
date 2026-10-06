@@ -48,8 +48,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 public enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    public static let abiIdentityHex = "4f9be600ad6493f3195a8781e34ebf3e84f45f045684d17f1719d13aeae24843"
-    public static let abiIdentity: [UInt8] = [0x4f, 0x9b, 0xe6, 0x00, 0xad, 0x64, 0x93, 0xf3, 0x19, 0x5a, 0x87, 0x81, 0xe3, 0x4e, 0xbf, 0x3e, 0x84, 0xf4, 0x5f, 0x04, 0x56, 0x84, 0xd1, 0x7f, 0x17, 0x19, 0xd1, 0x3a, 0xea, 0xe2, 0x48, 0x43]
+    public static let abiIdentityHex = "0cc3dad9f1b50efa37e9a24fb17a87a9cd90168d37bc52aa37cc618363ad5dd8"
+    public static let abiIdentity: [UInt8] = [0x0c, 0xc3, 0xda, 0xd9, 0xf1, 0xb5, 0x0e, 0xfa, 0x37, 0xe9, 0xa2, 0x4f, 0xb1, 0x7a, 0x87, 0xa9, 0xcd, 0x90, 0x16, 0x8d, 0x37, 0xbc, 0x52, 0xaa, 0x37, 0xcc, 0x61, 0x83, 0x63, 0xad, 0x5d, 0xd8]
     // END GENERATED WORKER IDENTITY
 
     public static let abiMagic: UInt32 = 0x50574944
@@ -219,6 +219,9 @@ public struct CWorkerParam {
 }
 
 public struct CWorkerInput {
+    public static let defaultPolicyTransferTimeoutMs = 5_000
+    // Internal test setting; never admitted from request JSON.
+    var policyTransferTimeoutMs = CWorkerInput.defaultPolicyTransferTimeoutMs
     public static let defaultSentinelTimeoutMs = 120_000
     public var workerExecutablePath: String
     public var policy: String
@@ -336,6 +339,7 @@ public struct CWorkerOutput {
     public var reaped: Bool? = nil
     public var waitErrors: [PWRunnerWaitError]? = nil
     public var workerEvidence: PWWorkerEvidence? = nil
+    public var policyTransferTimeout: PWWorkerPolicyTransferTimeout? = nil
     public var policyTransferError: PWWorkerPolicyTransferError? = nil
     public var hookInvoked: Bool = false
     public var proceedSet: Bool = false
@@ -483,6 +487,7 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     case pipeFailed(String)
     case spawnFailed(String)
     case policyWriteFailed(String)
+    case policyTransferTimedOut(String)
 
     /// Refusals decided from the request alone, before any shm, pipe or process
     /// work: nothing ran and nothing was observed, so the reply carries the
@@ -492,7 +497,7 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
     public var isPreSpawnRefusal: Bool {
         switch self {
         case .captureNonceInvalid, .admissionFailed, .execTargetNotAbsolute: return true
-        case .shmSetupFailed, .pipeFailed, .spawnFailed, .policyWriteFailed: return false
+        case .shmSetupFailed, .pipeFailed, .spawnFailed, .policyWriteFailed, .policyTransferTimedOut: return false
         }
     }
 
@@ -507,6 +512,7 @@ public enum CWorkerRunError: Error, CustomStringConvertible {
         case .shmSetupFailed(let why): return "shm setup: \(why)"
         case .pipeFailed(let why):     return "pipe: \(why)"
         case .spawnFailed(let why):    return "posix_spawn: \(why)"
+        case .policyTransferTimedOut(let why): return "policy transfer deadline: \(why)"
         case .policyWriteFailed(let why): return "write(policy_pipe): \(why)"
         }
     }
@@ -814,6 +820,12 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         close(readyPipe[0]); close(readyPipe[1]); close(policyPipe[0]); close(policyPipe[1])
         return .failure(.pipeFailed("F_SETNOSIGPIPE: \(String(cString: strerror(error)))"))
     }
+    let policyFlags = fcntl(policyPipe[1], F_GETFL, 0)
+    guard policyFlags >= 0, fcntl(policyPipe[1], F_SETFL, policyFlags | O_NONBLOCK) == 0 else {
+        let error = errno
+        for fd in readyPipe + policyPipe { close(fd) }
+        return .failure(.pipeFailed("policy O_NONBLOCK: \(String(cString: strerror(error)))"))
+    }
     // Original pipe descriptors close on exec; only the explicit dup2 targets
     // survive. An extra policy read end would keep a closed stdin pipe alive.
     for fd in readyPipe + policyPipe {
@@ -868,37 +880,37 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         close(readyPipe[0]); close(readyPipe[1])
         return .failure(.spawnFailed("\(String(cString: strerror(spawnRC)))"))
     }
+    let transferDeadline = MonotonicDeadline(milliseconds: input.policyTransferTimeoutMs)
     // Close parent-side ends that the child now owns.
     close(policyPipe[0])
     close(readyPipe[1])
     var process = ChildProcessState(pid: pid, calls: processCalls)
 
-    // ---- Write policy and close.
+    // ---- Deliver under one deadline established immediately after spawn.
     let policyBytes = Array(input.policy.utf8)
-    var policyWriteErrno: Int32 = 0
-    var policyWritten = 0
-    policyBytes.withUnsafeBufferPointer { buf in
-        guard let baseAddr = buf.baseAddress else { return }
-        while policyWritten < buf.count {
-            let n = Darwin.write(policyPipe[1], baseAddr.advanced(by: policyWritten),
-                                 buf.count - policyWritten)
-            if n < 0 {
-                let error = errno
-                if error == EINTR { continue }
-                policyWriteErrno = error
-                break
-            }
-            policyWritten += n
-        }
-    }
+    let transfer = writePolicy(policyBytes, fd: policyPipe[1], deadline: transferDeadline)
     close(policyPipe[1])
-    let transferError = policyWritten < policyBytes.count ? PWWorkerPolicyTransferError(
-        errno: policyWriteErrno, bytes_written: policyWritten, bytes_expected: policyBytes.count) : nil
+    var transferError: PWWorkerPolicyTransferError? = nil
+    var transferTimeout: PWWorkerPolicyTransferTimeout? = nil
+    var transferFailure: CWorkerRunError? = nil
+    switch transfer.stop {
+    case .complete: break
+    case .timeout(let elapsed):
+        transferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: input.policyTransferTimeoutMs,
+            elapsed_ms: elapsed, bytes_written: transfer.written, bytes_expected: policyBytes.count)
+        transferFailure = .policyTransferTimedOut("exceeded \(input.policyTransferTimeoutMs) ms; wrote \(transfer.written) of \(policyBytes.count) bytes")
+    case .writeError(let error):
+        transferError = PWWorkerPolicyTransferError(errno: error, bytes_written: transfer.written,
+            bytes_expected: policyBytes.count)
+        transferFailure = .policyWriteFailed("errno=\(error) (\(String(cString: strerror(error)))); wrote \(transfer.written) of \(policyBytes.count) bytes")
+    case .failed(let diagnostic):
+        transferFailure = .policyWriteFailed(diagnostic + "; wrote \(transfer.written) of \(policyBytes.count) bytes")
+    }
 
     // ---- Read pre-apply ready byte.
     var readyByte: UInt8 = 0
     var readyByteReceived = false
-    if transferError == nil {
+    if transferFailure == nil {
         let pollIntervalNs: UInt64 = 10_000_000   // 10 ms
         let deadlineIters = max(1, input.readyByteTimeoutMs * 1_000_000 / Int(pollIntervalNs))
         // Set the read end nonblocking so we don't pin the loop on a single read.
@@ -942,8 +954,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         if ack != 0 { orderingFaults.append("acknowledgement_before_release") }
         if completed || progress >> 24 == 9 { orderingFaults.append("attempt_before_release") }
     }
-    var pollStopReason = transferError == nil ? "sentinel_deadline" : "policy_write_error"
-    if transferError == nil {
+    var pollStopReason = transferFailure == nil ? "sentinel_deadline" : (transferTimeout == nil ? "policy_write_error" : "policy_transfer_deadline")
+    if transferFailure == nil {
         let pollIntervalNs: UInt64 = 2_000_000   // 2 ms
         let deadlineIters = max(1, input.sentinelTimeoutMs * 1_000_000 / Int(pollIntervalNs))
         // Probe for a dead worker only every ~50ms, not every 2ms: a
@@ -1135,6 +1147,7 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         reaped: process.status != nil,
         waitErrors: process.waitErrors,
         workerEvidence: decodeWorkerEvidence(rawBase),
+        policyTransferTimeout: transferTimeout,
         policyTransferError: transferError,
         hookInvoked: hookFired,
         proceedSet: proceedSet,
@@ -1145,9 +1158,8 @@ func runCWorker(_ input: CWorkerInput, processCalls: ChildProcessCalls,
         graceEnd: graceEnd,
         collectionBasis: collectionBasis
     )
-    if let error = transferError {
-        return .failure(.policyWriteFailed("errno=\(error.errno) (\(String(cString: strerror(error.errno)))); "
-            + "wrote \(error.bytes_written) of \(error.bytes_expected) bytes"), output)
+    if let failure = transferFailure {
+        return .failure(failure, output)
     }
     return .success(output)
 }

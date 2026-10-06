@@ -205,17 +205,49 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     return "request decode failed: \(kind) at \(parts.isEmpty ? "<root>" : parts.joined(separator: "."))"
 }
 
+/// One terminal claim per host, shared across NSXPC's per-connection queues.
+final class PWRunnerAdmission {
+    private let lock = NSLock()
+    private var claimed = false
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !claimed else { return false }
+        claimed = true
+        return true
+    }
+}
+
 public final class PWRunnerService: NSObject, PWRunnerProtocol {
-    private var didRun = false
+    private let admission: PWRunnerAdmission
+    private let scheduleExit: () -> Void
+    private let orchestrate: (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult
+
+    // These boundaries let tests observe entry and retirement without exiting
+    // the test host. No request selects them; test orchestration still executes
+    // the real driver against a controlled, nonexistent executable.
+    init(admission: PWRunnerAdmission,
+         scheduleExit: @escaping () -> Void = {
+             DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+         },
+         orchestrate: @escaping (PWRunnerRunSpec, String, String?, String, String) -> PWRunnerRunResult = {
+             CWorkerOrchestrator.run(parsed: $0, policyHash: $1, bundleId: $2,
+                 workerExecutablePath: $3, validatorExecutablePath: $4)
+         }) {
+        self.admission = admission
+        self.scheduleExit = scheduleExit
+        self.orchestrate = orchestrate
+        super.init()
+    }
 
     public func runSpecimen(_ request: Data, withReply reply: @escaping (Data) -> Void) {
         func replyAndExit(_ result: PWRunnerRunResult) {
             reply(pwRunnerReplyData(result))
             // Allow the XPC reply to flush before exiting the process.
-            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(50)) { exit(0) }
+            scheduleExit()
         }
 
-        if didRun {
+        if !admission.claim() {
             let resp = PWRunnerRunResult(
                 specimen_id: "<unknown>",
                 run_kind: nil,
@@ -227,10 +259,9 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
                 policy_format: "unknown",
                 steps: []
             )
-            replyAndExit(resp)
+            reply(pwRunnerReplyData(resp))
             return
         }
-        didRun = true
 
         let parsed: PWRunnerRunSpec
         do {
@@ -288,13 +319,7 @@ public final class PWRunnerService: NSObject, PWRunnerProtocol {
             ?? CWorkerOrchestrator.defaultWorkerExecutablePath()
         let validatorPath = parsed._test_overrides?.validator_executable_path
             ?? CWorkerOrchestrator.defaultValidatorExecutablePath()
-        let cResp = CWorkerOrchestrator.run(
-            parsed: parsed,
-            policyHash: policyHash,
-            bundleId: bundleString("CFBundleIdentifier"),
-            workerExecutablePath: workerPath,
-            validatorExecutablePath: validatorPath
-        )
+        let cResp = orchestrate(parsed, policyHash, bundleString("CFBundleIdentifier"), workerPath, validatorPath)
         // path_diagnostics enrichment is host-side; the host's
         // realpath(3) is not blocked by the worker's (deny default)
         // policy.
@@ -354,11 +379,12 @@ func enrichPathDiagnostics(steps: [PWRunnerStepResult]) -> [PWRunnerStepResult] 
 }
 
 public final class PWRunnerSessionDelegate: NSObject, NSXPCListenerDelegate {
+    private let admission = PWRunnerAdmission()
     public func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
         if !authorizedCaller(newConnection) {
             return false
         }
-        let exported = PWRunnerService()
+        let exported = PWRunnerService(admission: admission)
         newConnection.exportedInterface = NSXPCInterface(with: PWRunnerProtocol.self)
         newConnection.exportedObject = exported
         newConnection.resume()

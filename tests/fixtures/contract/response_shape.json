@@ -1,5 +1,5 @@
 {
-  "response_schema" : 14,
+  "response_schema" : 15,
   "shape" : {
     "reply" : {
       "admission_failure" : "object",
@@ -74,6 +74,7 @@
       "partial_steps" : "boolean",
       "pid" : "number",
       "policy_transfer_error" : "object",
+      "policy_transfer_timeout" : "object",
       "poll_stop_reason" : "string",
       "ready_byte_received" : "boolean",
       "reaped" : "boolean",
@@ -194,6 +195,12 @@
       "bytes_expected" : "number",
       "bytes_written" : "number",
       "errno" : "number"
+    },
+    "reply.runner_subprocess.policy_transfer_timeout" : {
+      "budget_ms" : "number",
+      "bytes_expected" : "number",
+      "bytes_written" : "number",
+      "elapsed_ms" : "number"
     },
     "reply.runner_subprocess.termination_request" : {
       "errno" : "number",

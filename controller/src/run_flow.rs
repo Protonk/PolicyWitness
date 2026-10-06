@@ -1138,6 +1138,78 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires real Swift driver receipts; default runner_unit invokes this exact test"]
+    fn policy_transfer_driver_replies_cross_assembly_and_consumer() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        let directory = std::env::var("PW_POLICY_TRANSFER_REPLIES")
+            .expect("runner_unit receipt directory required");
+        for name in ["timeout", "unconfirmed"] {
+            let reply: Value = serde_json::from_slice(
+                &std::fs::read(
+                    std::path::Path::new(&directory).join(format!("policy-transfer-{name}.json")),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(reply["normalized_outcome"], "runner_timeout");
+            let (result, data, code) = attach_sandbox_logs(
+                complete_execution(execution_data(Some(reply.clone()))),
+                &json!({"probe_plan":[]}),
+                true,
+                |_, _, _| panic!("logs disabled"),
+            );
+            assert_eq!(code, 1);
+            let wire: Value = serde_json::from_str(
+                &json_contract::render_envelope("run", result, &data).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(wire["data"]["runner_result"], reply);
+            let diagnostics = &wire["data"]["runner_sandbox_diagnostics"];
+            assert_eq!(diagnostics["stop_reason"], "policy_transfer_deadline");
+            assert_eq!(diagnostics["disposition_integrity"], "valid");
+            if name == "timeout" {
+                assert_eq!(
+                    diagnostics["termination_cause"],
+                    "host_cleanup_after_transfer_timeout"
+                );
+            } else {
+                assert!(
+                    reply["runner_subprocess"]["exit_code"].is_null()
+                        && reply["runner_subprocess"]["term_signal"].is_null()
+                );
+            }
+            let mut child = Command::new("/usr/bin/python3").args(["-B", "-c", r#"import json,sys
+sys.path.insert(0,sys.argv[1])
+from consumer import validate,lifecycle
+e=json.load(sys.stdin); errors=validate(e); assert not errors,errors
+sub=e['data']['runner_result']['runner_subprocess']
+assert sub.get('policy_transfer_error') is None and sub['policy_transfer_timeout']['bytes_written'] < sub['policy_transfer_timeout']['bytes_expected']
+assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
+"#]).arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/lib"))
+                .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(&serde_json::to_vec(&wire).unwrap())
+                .unwrap();
+            let output = child.wait_with_output().unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            std::fs::write(
+                std::path::Path::new(&directory)
+                    .join(format!("policy-transfer-{name}-envelope.json")),
+                serde_json::to_vec_pretty(&wire).unwrap(),
+            )
+            .unwrap();
+        }
+    }
+
+    #[test]
     fn collector_states_preserve_the_serialized_execution_half() {
         // Independent native observations with two indistinguishable candidates
         // and one permission failure that has no matching captured path.
@@ -1160,7 +1232,7 @@ mod tests {
             .unwrap()
             .remove("pid");
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response14/a1_expected.json"
+            "../../tests/fixtures/disposition/response15/a1_expected.json"
         ))
         .unwrap();
         let no_comparisons = reporting_failed(runner.clone());
@@ -1354,7 +1426,7 @@ mod tests {
     fn real_subprocess_failures_preserve_execution_and_withhold_associations() {
         use crate::log_capture::{self, Boundary, LogTimeout, TimeoutSource};
         let native: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response14/a1_expected.json"
+            "../../tests/fixtures/disposition/response15/a1_expected.json"
         ))
         .unwrap();
         let runner = native["data"]["runner_result"].clone();
@@ -1674,7 +1746,7 @@ mod tests {
                 vec![step("s", "open_write", "/attempt", "permission_failure")],
             );
             for (name, bounds, expected_status) in &replies {
-                let mut observer = json!({"data": bounds});
+                let mut observer = json!({"kind":"sandbox_log_observer_report", "schema_version":crate::json_contract::SCHEMA_VERSION, "data": bounds});
                 let mut capture = Some(if *expected_status == "invalid_window" {
                     capture_sandbox_logs(
                         42,
@@ -1683,6 +1755,7 @@ mod tests {
                     )
                     .unwrap()
                 } else {
+                    observer["data"]["observer_schema_version"] = json!(2);
                     observer["data"]["observed_deny"] = json!(true);
                     observer["data"]["deny_events"] = events.clone();
                     let out = Output {

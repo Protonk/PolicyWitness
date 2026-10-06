@@ -8,12 +8,12 @@
       "attempt": {
         "action": "open_read",
         "kind": "file",
-        "target": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt"
+        "target": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt"
       },
       "sandbox_check": {
         "filter": {
           "kind": "path",
-          "value": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt"
+          "value": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt"
         },
         "operation": "file-read-data"
       },
@@ -38,12 +38,12 @@
       "attempt": {
         "action": "open_read",
         "kind": "file",
-        "target": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt"
+        "target": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt"
       },
       "sandbox_check": {
         "filter": {
           "kind": "path",
-          "value": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt"
+          "value": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt"
         },
         "operation": "file-read-data"
       },

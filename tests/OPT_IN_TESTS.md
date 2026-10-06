@@ -192,3 +192,15 @@ When you add an opt-in test, document it here with:
 
 If the opt-in reason is removed (for example, you can make it stable without a
 PTY), move the test into the smoke suite and remove it from this registry.
+
+### BYOXPC single-use admission
+
+- **Case:** `runner_byoxpc/single_use`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/single_use.sh`
+- **Purpose:** Two authorized client processes contend for one held host;
+  refusal cannot execute a probe or retire its owner. A fresh host then succeeds.
+- **Equipment:** Signed app, matching Developer ID and GUI launchd session.
+- **Ownership:** Shared session helper; exact service/plist/registry removal
+  and unchanged source-app inventory are required before staging deletion.
+- **Artifacts:** Replies, specimens, file effects, PID receipts and cleanup
+  records under the case artifact directory.

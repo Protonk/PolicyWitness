@@ -59,9 +59,9 @@
         {
           "id": "host", "label": "PWRunner", "kind": "executable",
           "facts": {"Language": "Swift", "Where": "inside the XPC bundle", "Started by": "launchd: XPC service lookup, or a Mach service for BYOXPC", "Sandboxed": "no", "Native sandbox API": "none, by the invariance rule", "Lifetime": "one specimen; exits 50 ms after replying"},
-          "note": "Known gap: single-use admission is per connection object (the listener delegate creates a service object with its own didRun flag for every accepted connection) while any reply schedules the process-wide exit, so one specimen per external runner host is not enforced across connections.",
+          "note": "All authorized connections share one terminal, locked request claim. Only its owner schedules host exit; connections racing retirement can still fail before refusal.",
           "sources": [{"path": "runner/Services/PWRunner/main.swift", "symbol": "NSXPCListener.service()"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "runSpecimen"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerService.swift", "symbol": "milliseconds(50)"}],
-          "checks": [{"path": "tests/lib/artifact.py", "symbol": "host_invariance"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance"}]
+          "checks": [{"path": "tests/lib/artifact.py", "symbol": "host_invariance"}, {"path": "tests/suites/source_drift/check.py", "symbol": "check_host_invariance"}, {"path": "runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift", "symbol": "runServiceAdmissionTests"}, {"path": "tests/suites/runner_byoxpc/opt_in/single_use.py", "symbol": "worker_children"}]
         },
         {
           "id": "worker", "label": "pw-probe-runner", "kind": "sandboxed",
@@ -129,9 +129,9 @@
         },
         {
           "id": "T5", "from": "host", "to": "worker", "kind": "spawn", "label": "posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe", "short": "posix_spawn; fds 0, 3, 4",
-          "note": "Known gap: the policy is delivered with blocking writes and no deadline before any budget starts; a worker that keeps fd 0 open without draining stalls the host.",
-          "sources": [{"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "posix_spawn_file_actions_adddup2"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "F_SETNOSIGPIPE"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_ABI_MAGIC"}],
-          "checks": [{"path": "tests/suites/runner_abi_layout/run.sh", "symbol": "runner_abi_layout"}, {"path": "tests/suites/runner_c_worker_harness/run.sh", "symbol": "exec_control_states"}]
+          "note": "Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling.",
+          "sources": [{"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "posix_spawn_file_actions_adddup2"}, {"path": "runner/Sources/PWRunnerCore/CWorker.swift", "symbol": "F_SETNOSIGPIPE"}, {"path": "runner/Sources/PWRunnerCore/MonotonicDeadline.swift", "symbol": "writePolicy"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h", "symbol": "PW_SHM_ABI_MAGIC"}],
+          "checks": [{"path": "tests/suites/runner_abi_layout/run.sh", "symbol": "runner_abi_layout"}, {"path": "tests/suites/runner_c_worker_harness/run.sh", "symbol": "exec_control_states"}, {"path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift", "symbol": "runPolicyTransferTests"}]
         },
         {
           "id": "T6", "from": "host", "to": "validator", "kind": "spawn", "label": "posix_spawn --batch <pid>; NDJSON probes in, verdicts out", "short": "posix_spawn --batch",
@@ -228,7 +228,7 @@
           "id": "envelope", "label": "controller envelope (kind run)", "kind": "record",
           "facts": {"Owner": "the controller", "Form": "envelope frame; shape golden"},
           "sources": [{"path": "controller/src/json_contract.rs", "symbol": "SCHEMA_VERSION"}, {"path": "controller/src/json_contract.rs", "symbol": "render_envelope"}, {"path": "controller/src/run_flow.rs", "symbol": "complete_execution"}],
-          "checks": [{"path": "controller/src/run_flow.rs", "symbol": "envelope_shape_golden_agrees_with_the_manifest"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_envelope"}]
+          "checks": [{"path": "controller/src/run_flow.rs", "symbol": "envelope_shape_golden_agrees_with_the_manifest"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_observer_reply"}, {"path": "controller/src/sandbox_log.rs", "symbol": "observer_admission_precedes_all_body_interpretation"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "observer_controls"}]
         },
         {
           "id": "observer_report", "label": "observer report (nested envelope)", "kind": "record",
@@ -293,9 +293,9 @@
         },
         {
           "id": "B8", "from": "observer_report", "to": "envelope", "kind": "guard", "label": "nested unchanged; log evidence never changes execution evidence", "short": "nested unchanged",
-         "note": "Known gap: parse_observer_output reads the report's fields and never admits the frame's kind or version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.",
-          "sources": [{"path": "controller/src/run_flow.rs", "symbol": "attach_sandbox_logs"}, {"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "OBSERVER_SCHEMA_VERSION"}],
-          "checks": [{"path": "controller/src/run_flow.rs", "symbol": "collector_states_preserve_the_serialized_execution_half"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_envelope"}]
+         "note": "The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.",
+          "sources": [{"path": "controller/src/run_flow.rs", "symbol": "attach_sandbox_logs"}, {"path": "controller/src/sandbox_log.rs", "symbol": "admitted_observer"}, {"path": "controller/src/bin/sandbox-log-observer.rs", "symbol": "OBSERVER_SCHEMA_VERSION"}],
+          "checks": [{"path": "controller/src/run_flow.rs", "symbol": "collector_states_preserve_the_serialized_execution_half"}, {"path": "tests/lib/consumer.py", "symbol": "_validate_observer_reply"}, {"path": "controller/src/sandbox_log.rs", "symbol": "observer_admission_precedes_all_body_interpretation"}, {"path": "tests/suites/blackbox_e2e/checker_controls.py", "symbol": "observer_controls"}]
         },
         {
           "id": "B9", "from": "helper_envelope", "to": "envelope", "kind": "guard", "label": "nested unchanged; admitted by kind and frame version", "short": "nested; admitted by kind",

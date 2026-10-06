@@ -234,7 +234,7 @@ validity and encoding are documented in `PWRunnerAPI.swift`. Policy-write errors
 retain partial subprocess evidence and independent transfer observations.
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 14, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Readers accept exactly the current response schema; the Swift decoder and
@@ -378,8 +378,11 @@ defines milestones, native results, open numeric codes, and text availability.
 `runner_subprocess.worker_evidence` carries these publications through the normal
 reply. Policy-write errors retain partial output and host byte/errno evidence in
 `policy_transfer_error`; FD-scoped SIGPIPE suppression and close-on-exec source
-pipe descriptors make closed-input failure observable. An undrained open pipe
-still blocks before sentinel polling. Early stderr capture is not implemented.
+pipe descriptors make closed-input failure observable. Nonblocking delivery
+has a five-second absolute monotonic deadline starting after spawn. Expiry
+records `policy_transfer_timeout` without an errno, skips readiness/sentinel
+polling and enters ordinary cleanup. Final reap remains independently observed
+and is not bounded by the delivery deadline. Early stderr capture is not implemented.
 
 Host admission refusals share `admission_failure` with field, actual/maximum and
 `utf8_bytes`, `items` or `nul_bytes` units. Service and direct orchestration use

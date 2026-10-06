@@ -60,6 +60,26 @@ int main(void) {
             }
             return 23;
         }
+        if (strchr(mode, '\n') && !strncmp(mode, "hold_", 5)) {
+            pw_progress(pw_evidence(base), 2, PW_PROGRESS_STARTED, UINT32_MAX);
+            /* Independent watchdog: exit releases the pipe even for the old
+             * blocking host. Its status must fail the deadline control. */
+            alarm(5);
+            for (;;) pause();
+        }
+        if (strchr(mode, '\n') && !strncmp(mode, "drain_", 6)) {
+            const char *prefix = "drain_bytes\n";
+            size_t total = used;
+            if (memcmp(mode, prefix, strlen(prefix))) return 95;
+            for (size_t i = strlen(prefix); i < used; i++) if (mode[i] != 'x') return 95;
+            char bytes[4096];
+            while ((n = read(0, bytes, sizeof(bytes))) != 0) {
+                if (n < 0) { if (errno == EINTR) continue; return 93; }
+                for (ssize_t i = 0; i < n; i++) if (bytes[i] != 'x') return 95;
+                total += (size_t)n;
+            }
+            return total == strlen(prefix) + 200000 ? 24 : 95;
+        }
         if (used == sizeof(mode) - 1) return 94;
     }
     if (!strncmp(mode, "proceed_", 8) || !strncmp(mode, "signal_", 7) || !strncmp(mode, "ignore_proceed", 14)) {

@@ -77,3 +77,9 @@ inventory check remains in `runner_abi_layout`. A short worker-expiry scenario
 paired with longer validator I/O verifies that an over-budget override preserves
 received predictions and cannot revive attempts. The nominal budget relation
 applies to production defaults; the validator override intentionally has no cap.
+
+`hold_input` consumes only a short prefix, then leaves stdin open and undrained.
+An independent five-second alarm ends the fixture if the host fails to bound
+delivery; that intervention fails the control. `drain_bytes` checks the prefix,
+200,000 following `x` bytes and EOF, returning 24 only for exact delivery.
+Neither mode applies a policy.

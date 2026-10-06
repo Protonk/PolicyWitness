@@ -6,8 +6,9 @@ that state to schedule process exit. This establishes one accepted specimen
 per host while permitting explicit refusal of other requests. Reliable
 queuing and readiness for the next host remain separate concerns.
 
-Status: diagnosed from source; remediation is proposed, not implemented. No
-live two-connection reproduction is attached to this record.
+Status: resolved and validated 2026-10-06. Default service controls and their two narrow reversions pass; the live two-client BYOXPC control establishes the host/worker relationship independently and verifies removal.
+The final default battery passed 165/165 with no skips. The proposal and
+diagnosis below preserve the investigation’s original grounding.
 
 **Proposed change**
 

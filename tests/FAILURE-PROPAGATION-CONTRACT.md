@@ -118,7 +118,7 @@ record. Internal `CWorkerOutput` carries the same facts to the assembler.
 | `partial_steps` | Existing host summary of missing completed slots; does not prove an attempt never started |
 | `ready_byte_received` | Host boolean: a byte was actually read; false supplies no compile/apply result |
 | `done_observed` | Host boolean from the final acquire snapshot after cleanup |
-| `poll_stop_reason` | Host string: `done`, `child_reaped`, `sentinel_deadline`, `wait_error`, or `policy_write_error`; retains why polling stopped, regardless of subsequent publication/cleanup |
+| `poll_stop_reason` | Host string: `done`, `child_reaped`, `sentinel_deadline`, `wait_error`, `policy_write_error`, or `policy_transfer_deadline`; retains why polling stopped, regardless of subsequent publication/cleanup |
 | `exit_requested` | Host boolean: release-store to the exit-request flag occurred; not proof the worker acted on it |
 | `termination_request` | Optional host object with `signal` (integer), `rc` (signed syscall return), `errno` (integer only on failed kill, otherwise absent/null); absent/null means no request |
 | `reaped` | Host boolean: a wait call actually returned this PID; not inferred from kill success |
@@ -145,7 +145,7 @@ retains the existing blocking final wait, with finite EINTR retries if it fails.
 This bounds failed-call handling, not kernel exit latency or the whole lifecycle.
 An unreaped child or zombie may remain; no global reaper is introduced. Test
 equipment independently cleans up children it owns without changing the driver
-result. This contract adds no global lifecycle or policy-transfer deadline.
+result. The policy-transfer deadline does not establish a global lifecycle deadline.
 Policy-write failure retains the child's partial evidence. The final acquired
 snapshot follows cleanup, preserving late immutable publications. The write
 pipe suppresses SIGPIPE; original descriptors close on exec so only intended
@@ -179,7 +179,7 @@ acts, not conclusions reconstructed from a final status.
 
 | JSON location under `runner_subprocess` | Producer, type and validity |
 | --- | --- |
-| `cleanup_trigger` | Host string recorded at the exit-request store: `deadline_expiry`, `completion`, `child_reaped`, `poll_wait_error` or `policy_transfer_error`. It names why exit was requested; today it corresponds one-to-one with `poll_stop_reason`, and both are retained. |
+| `cleanup_trigger` | Host string recorded at the exit-request store: `deadline_expiry`, `completion`, `child_reaped`, `poll_wait_error` `policy_transfer_error` or `policy_transfer_timeout`. It names why exit was requested; today it corresponds one-to-one with `poll_stop_reason`, and both are retained. |
 | `grace_end` | Host string recorded when the exit-grace wait ends: `not_entered` (the poll loop already reaped the child), `reaped_during_grace`, `exhausted` (the host then requests termination) or `wait_error`. Never inferred from `done` plus a kill. |
 | `collection_basis` | Host string recorded at the final shared-memory reads: `after_confirmed_reap` (every relevant read followed a successful reap), `execution_may_continue` (the worker was not confirmed reaped when the reads happened, including after a failed kill) or `unavailable` (no usable mapping). A reap observed after the reads does not upgrade the basis. |
 
@@ -275,7 +275,7 @@ position at or after that step's `started` word.
 | --- | --- | --- | --- | --- |
 | Final status | exit code | successful reap with a valid exit-status representation and no signal representation | any | D1 |
 | | signal | successful reap with a valid signal representation and no exit-status representation | any | D1 |
-| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` | the host's poll-loop observation | any | D2 |
+| Stop reason | `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error`, `policy_transfer_deadline` | the host's poll-loop observation | any | D2 |
 | Cleanup trigger | deadline expiry; completion; child reaped during polling; poll wait error; policy transfer error | direct host observation of why exit was requested | any | D2 |
 | Grace end | not entered; reap during grace; exhaustion; wait error | direct host observation of how the exit-grace wait ended | any | D2 |
 | Kill request and result | none; requested, with `rc` and `errno` | explicit host observation that no request was issued; or direct observation of the request and its return | any | D2 |
@@ -329,6 +329,7 @@ attribution and never a sandbox cause.
 | `completion` | `host_exit_grace_exhausted` |
 | `poll_wait_error` | `host_cleanup_after_wait_error` |
 | `policy_transfer_error` | `host_cleanup_after_transfer_error` |
+| `policy_transfer_timeout` | `host_cleanup_after_transfer_timeout` |
 
 Otherwise the cause is null for a supported exit code 0, and `unknown` for a
 supported nonzero exit or signal without the full chain, an unresolved or
@@ -649,16 +650,36 @@ retains final acquired worker publications, slots, readiness, and cleanup/status
 `runner_subprocess.policy_transfer_error` is host-owned: Int32 `errno` captured
 immediately from failed write; nonnegative Swift Int/JSON integers `bytes_written`
 and `bytes_expected` count successful host writes and submitted UTF-8 bytes.
-Counts are not evidence of bytes consumed by the worker. Object omission means
-no observed transfer failure; it does not establish transfer success before spawn.
-A zero errno is retained if observed. No worker record is synthesized from it.
-The poll stop reason is `policy_write_error`; sentinel polling never began.
-The host suppresses SIGPIPE on this pipe's write FD using F_SETNOSIGPIPE before
-spawn, checking setup failure. After write failure it closes input, requests exit,
-and uses the [host observation](#host-observations) grace/termination/reaping contract. All evidence reaches the
-same partial-output assembly path. A worker failure summary takes precedence
-when published; host transfer error remains independently available and named.
-An open, undrained pipe is still a blocking pre-sentinel transfer with no deadline.
+Counts are not evidence of bytes consumed by the worker. Omission of this
+object means no failed write was recorded; it does not establish successful
+delivery. No worker record is synthesized from it.
+
+`runner_subprocess.policy_transfer_timeout` independently records expiry of
+the host's absolute monotonic delivery deadline. Its integer `budget_ms`,
+`elapsed_ms`, `bytes_written` and `bytes_expected` identify the allowance,
+observed elapsed time and transfer progress. It carries no errno. The stop
+reason is `policy_transfer_deadline`, cleanup trigger `policy_transfer_timeout`,
+and the summary is `runner_timeout` unless a published worker failure takes
+precedence. A confirmed cleanup signal can project
+`host_cleanup_after_transfer_timeout`; neither timeout nor a kill request alone
+establishes a successful reap or any sandbox cause.
+
+The five-second production deadline starts immediately after spawn. The
+write endpoint is nonblocking and protected by F_SETNOSIGPIPE, with setup
+checked before spawning. Partial writes, EINTR and backpressure consume the
+same deadline. Zero-progress writes, clock failure or poll failure close
+transfer with a host diagnostic and `policy_write_error`; only an actual
+failed write supplies `policy_transfer_error.errno`.
+
+On any transfer failure the host closes input, skips ready/sentinel polling,
+requests exit and uses the [host observation](#host-observations)
+grace/termination/reaping contract. Partial publications and independent
+cleanup observations reach the ordinary assembly path. Published worker
+failure retains summary precedence; the transfer observation stays available.
+Successful transfer begins the separate readiness wait. The deadline does
+not bound final blocking reap, cancel an earlier client timeout, or contain
+all descendants. Response schema 15 requires readers to consider the timeout
+object and stop reason as well as the errno-bearing write-error object.
 
 ## Admission and validator/controller receiver contract
 
@@ -774,7 +795,7 @@ the stopped producer might have emitted. No JSON fragment recovery is attempted.
 An intact failed reply can retain diagnostic events, without correlation. These
 are stream and derived-data bounds, not a peak-process-memory guarantee.
 
-Readiness, blocking policy transfer, the nominal 120s worker polling budget,
+Readiness, bounded policy transfer, the nominal 120s worker polling budget,
 synchronous 30s validator I/O and default 240s client timeout remain separate
 phases. The worker has a separate local exec attempt budget; no end-to-end
 worker deadline is implied. Failed cleanup can leave an unreaped child. Exec

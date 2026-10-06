@@ -497,6 +497,17 @@ fn cutoff_status(report: &Supervision) -> &'static str {
     }
 }
 
+/// Admission is independent of body shape and transport completion. Rejected
+/// JSON is retained, but nothing beneath its markers supplies evidence.
+fn admitted_observer(value: &Value) -> bool {
+    value["kind"].as_str() == Some("sandbox_log_observer_report")
+        && value["schema_version"].as_u64() == Some(crate::json_contract::SCHEMA_VERSION.into())
+        && value
+            .pointer("/data/observer_schema_version")
+            .and_then(Value::as_u64)
+            == Some(2)
+}
+
 pub(crate) fn parse_supervised_observer(
     raw: ProcessCapture,
     window: SandboxLogWindow,
@@ -529,7 +540,11 @@ pub(crate) fn parse_supervised_observer(
     }
     // Shape-valid, intact replies remain diagnostic evidence even after a failed
     // wait, interrupted pipe or inner query. No extraction from JSON fragments.
-    let data = capture.observer.as_ref().and_then(|o| o.get("data"));
+    let data = capture
+        .observer
+        .as_ref()
+        .filter(|o| admitted_observer(o))
+        .and_then(|o| o.get("data"));
     let inner = data
         .and_then(|d| d.get("collection"))
         .and_then(|v| serde_json::from_value::<Supervision>(v.clone()).ok());
@@ -687,25 +702,20 @@ pub(crate) fn parse_observer_output(
         );
     }
 
-    let observed_deny = parsed
-        .as_ref()
-        .and_then(observed_deny_from_observer_envelope);
-    let observer_log_error = parsed.as_ref().and_then(observer_log_error);
-    let blocked_reason = parsed.as_ref().and_then(observer_blocked_reason);
-    let deny_events = parsed
-        .as_ref()
+    let admitted = parsed.as_ref().filter(|o| admitted_observer(o));
+    let observed_deny = admitted.and_then(observed_deny_from_observer_envelope);
+    let observer_log_error = admitted.and_then(observer_log_error);
+    let blocked_reason = admitted.and_then(observer_blocked_reason);
+    let deny_events = admitted
         .filter(|v| {
             v.pointer("/data/deny_events")
                 .and_then(Value::as_array)
                 .is_none_or(|events| events.len() <= log_capture::MAX_DENY_EVENTS)
         })
         .and_then(observer_deny_events);
-    let window_mirrored = parsed
-        .as_ref()
-        .is_some_and(|obj| observer_window_matches(obj, &window));
+    let window_mirrored = admitted.is_some_and(|obj| observer_window_matches(obj, &window));
 
-    if parsed
-        .as_ref()
+    if admitted
         .and_then(|v| v.pointer("/data/deny_events"))
         .and_then(Value::as_array)
         .is_some_and(|events| events.len() > log_capture::MAX_DENY_EVENTS)
@@ -714,7 +724,7 @@ pub(crate) fn parse_observer_output(
             "event_overflow",
             "deny_events",
             log_capture::MAX_DENY_EVENTS,
-            parsed.as_ref().unwrap()["data"]["deny_events"]
+            admitted.unwrap()["data"]["deny_events"]
                 .as_array()
                 .unwrap()
                 .len(),
@@ -728,6 +738,8 @@ pub(crate) fn parse_observer_output(
         "capture_error".to_string()
     } else if output.stdout_parse_error.is_some() {
         "parse_error".to_string()
+    } else if parsed.is_some() && admitted.is_none() {
+        "invalid_reply".to_string()
     } else if blocked_reason.is_some() {
         "blocked".to_string()
     } else if observer_log_error.is_some() {
@@ -767,6 +779,74 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn observer_admission_precedes_all_body_interpretation() {
+        let window = SandboxLogWindow::runner_client_span(0, 1);
+        let good = json!({"kind":"sandbox_log_observer_report",
+            "schema_version":crate::json_contract::SCHEMA_VERSION,
+            "data":{"observer_schema_version":2, "start":window.start,"end":window.end,
+                "observed_deny":true,"deny_events":[{"pid":42,"path":"/attempt"}]}});
+        let receive = |body: &Value| {
+            parse_observer_output(
+                &crate::utils::receiver_fixture(
+                    &body.to_string(),
+                    "valid",
+                    crate::utils::OBSERVER_CAPTURE_BYTES,
+                ),
+                window.clone(),
+            )
+        };
+        assert_eq!(receive(&good).capture_status, "captured");
+        let mut rejected = Vec::new();
+        for key in ["kind", "schema_version"] {
+            let mut v = good.clone();
+            v.as_object_mut().unwrap().remove(key);
+            rejected.push(v);
+        }
+        for version in [
+            json!(null),
+            json!("7"),
+            json!(true),
+            json!(7.0),
+            json!(crate::json_contract::SCHEMA_VERSION - 1),
+            json!(crate::json_contract::SCHEMA_VERSION + 1),
+        ] {
+            let mut v = good.clone();
+            v["schema_version"] = version;
+            rejected.push(v);
+        }
+        let mut v = good.clone();
+        v["kind"] = json!("wrong");
+        rejected.push(v);
+        for version in [
+            json!(null),
+            json!(true),
+            json!("2"),
+            json!(2.0),
+            json!(1),
+            json!(3),
+        ] {
+            let mut v = good.clone();
+            v["data"]["observer_schema_version"] = version;
+            rejected.push(v);
+        }
+        for mut body in rejected {
+            body["data"]["blocked_reason"] = json!("cannot run while sandboxed");
+            body["data"]["collection"] = json!(["unfamiliar", false]);
+            let capture = receive(&body);
+            assert_eq!(
+                capture.capture_status, "invalid_reply",
+                "inadmissible observer body was interpreted: {body}"
+            );
+            assert_eq!(capture.observer.as_ref(), Some(&body));
+            assert!(
+                capture.observed_deny.is_none()
+                    && capture.deny_events.is_none()
+                    && capture.blocked_reason.is_none()
+            );
+        }
+    }
+
+    #[test]
     fn supervised_receiver_retains_failed_inner_evidence_and_rejects_bad_shapes() {
         let line = "Sandbox: pw-probe-runner(42) deny(1) file-write-data /attempt";
         for scenario in [
@@ -797,7 +877,7 @@ mod tests {
                 log_capture::LOG_REPORT_RESERVE_MS,
             );
             let window = SandboxLogWindow::runner_client_span(1000, 2500);
-            let mut body = json!({"kind":"sandbox_log_observer_report", "data": {
+            let mut body = json!({"kind":"sandbox_log_observer_report", "schema_version":crate::json_contract::SCHEMA_VERSION, "data": {
                 "observer_schema_version":2, "mode":"show", "pid":42, "process_name":"pw-probe-runner",
                 "start":window.start, "end":window.end, "last":null,
                 "log_rc":inner.supervision.process.exit_code, "log_error":inner.supervision.cutoff.as_ref().map(|c| &c.reason),
@@ -1021,7 +1101,7 @@ mod tests {
     #[test]
     fn unfamiliar_diagnostics_survive_observer_capture() {
         let records = crate::utils::transport_diagnostics();
-        let original = serde_json::json!({"data": {"diagnostics": records,
+        let original = serde_json::json!({"kind":"sandbox_log_observer_report", "schema_version":crate::json_contract::SCHEMA_VERSION, "data": {"observer_schema_version":2, "diagnostics": records,
             "observed_deny": false, "deny_events": [], "log_error": "independent collection failure"}});
         for mode in ["valid", "oversized"] {
             let output = crate::utils::receiver_fixture(
@@ -1059,8 +1139,11 @@ mod tests {
             ("missing", "invalid_reply"),
         ] {
             let original = receiver_fixture(
-                r#"{"data":{"observed_deny":true,"deny_events":[],"code":97319,
-                    "start":"1969-12-31 23:59:58+0000","end":"1970-01-01 00:00:03+0000","last":null}}"#,
+                &format!(
+                    r#"{{"kind":"sandbox_log_observer_report","schema_version":{},"data":{{"observer_schema_version":2,"observed_deny":true,"deny_events":[],"code":97319,
+                    "start":"1969-12-31 23:59:58+0000","end":"1970-01-01 00:00:03+0000","last":null}}}}"#,
+                    crate::json_contract::SCHEMA_VERSION
+                ),
                 mode,
                 crate::utils::OBSERVER_CAPTURE_BYTES,
             );
@@ -1558,8 +1641,10 @@ mod tests {
             ),
             (r#""last":"10s""#, "window_mismatch"),
         ] {
-            let body =
-                format!(r#"{{"data":{{"observed_deny":true,"deny_events":[{event}],{reply}}}}}"#);
+            let body = format!(
+                r#"{{"kind":"sandbox_log_observer_report","schema_version":{},"data":{{"observer_schema_version":2,"observed_deny":true,"deny_events":[{event}],{reply}}}}}"#,
+                crate::json_contract::SCHEMA_VERSION
+            );
             let capture = parse_observer_output(
                 &receiver_fixture(&body, "valid", crate::utils::OBSERVER_CAPTURE_BYTES),
                 window.clone(),

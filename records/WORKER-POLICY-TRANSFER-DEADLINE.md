@@ -6,8 +6,9 @@ within that budget, close the pipe and enter the host's child-cleanup path,
 preserving partial transfer and process evidence. Keep readiness, validator
 collection and sentinel polling as separate phases.
 
-Status: a resilience gap identified from source. The stalled-reader
-reproduction below is proposed, not an observed live failure.
+Status: resolved and validated 2026-10-06. Real stalled/draining pipes, deadline edge cases, failed cleanup, and actual driver replies through Rust/Python readers pass under response schema 15.
+The final default battery passed 165/165 with no skips. The proposal and
+diagnosis below preserve the investigation’s original grounding.
 
 **Proposed change**
 

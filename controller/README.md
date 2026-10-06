@@ -177,7 +177,7 @@ Keep this list current when a run-path helper gains a read or a launch.
 ### Output contract
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 14, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 The controller forwards the runner reply without version coercion and
@@ -222,7 +222,7 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   worker's progress or the cause of a lost reply. Worker failures use `runner_failed`;
   worker operation/result evidence identifies compilation, setup and application
   independently. The controller retains `runner_subprocess.worker_evidence` and
-  `policy_transfer_error` without interpreting their diagnostic codes.
+  `policy_transfer_error` and `policy_transfer_timeout` without interpreting their diagnostic codes.
 - `data.specimen`: the dossier, present on every run envelope. `request_path`;
   `policy.augmentation` (`status` of `not_requested`, `applied`, `failed` or
   `not_applicable`, applied names, `original_sha256`, `applied_sha256`, `error`)
@@ -496,7 +496,7 @@ their stored fixtures. Consumers outside this checkout were not audited.
 | [lifecycle_adapter.py](../tests/lib/lifecycle_adapter.py), [lifecycle_contract.py](../tests/lib/lifecycle_contract.py), [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py) | The adapter selects only the execution diagnostic keys enumerated by `DIAGNOSTICS_KEYS`. Contract projections and oracle checks use worker records/raw facts and those execution projections. Constructed oracle envelopes supply disabled log fields; log evidence does not decide a lifecycle claim. |
 | [blackbox.py](../tests/lib/blackbox.py), [validate_run.py](../tests/suites/blackbox_e2e/validate_run.py) | Validate runner shape and native steps through `consumer.validate`; expectations read runner step fields, not the optional log channel. |
 | [checker_controls.py](../tests/suites/blackbox_e2e/checker_controls.py) | Constructs log captures to verify consumer retention, candidate provenance and distinct availability states. Separately checks comparison records and the shape allowlists: an unknown key at a recorded path and a present key of another type are rejected under the envelope golden and under the reply golden (`tests/fixtures/contract/`). |
-| [disposition_controls.py](../tests/suites/blackbox_e2e/disposition_controls.py), [disposition fixtures](../tests/fixtures/disposition/) | Validate execution projections, including rejection of a replaced termination cause. `response14/a1_expected.json` and the preserved `a1_known_loss.json` carry disabled capture; neither supplies log evidence for the worker cause. |
+| [disposition_controls.py](../tests/suites/blackbox_e2e/disposition_controls.py), [disposition fixtures](../tests/fixtures/disposition/) | Validate execution projections, including rejection of a replaced termination cause. `response15/a1_expected.json` and the preserved `a1_known_loss.json` carry disabled capture; neither supplies log evidence for the worker cause. |
 | [check_termination_correlation.py](../tests/suites/witness_contract/check_termination_correlation.py) | Checks native denied writes and self-signal/clean-exit disposition independently; then checks capture state, window, candidates and missing-record diagnostics. |
 | [check_deny_capture_window.py](../tests/suites/witness_contract/check_deny_capture_window.py) | Checks native execution, timestamps, padded/mirrored bounds and collection facts. Completed-query records and candidate references are checked conditionally; early/late availability is diagnostic, and independent queries need not return the same records. |
 | [check_max_target_reply.py](../tests/suites/witness_contract/check_max_target_reply.py) | Separately checks runner-reply retention and optional observer transport retention. No log-derived native outcome. |

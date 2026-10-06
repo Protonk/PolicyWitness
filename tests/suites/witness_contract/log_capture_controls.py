@@ -38,7 +38,7 @@ def complete(which=('early', 'late')):
     inner = supervision('log_show')
     raw = '\n'.join(e['raw_line'] for e in events)
     inner['stdout'].update(bytes_read=len(raw), bytes_retained=len(raw))
-    observer = dict(kind='sandbox_log_observer_report', data=dict(observer_schema_version=2, mode='show', pid=42,
+    observer = dict(kind='sandbox_log_observer_report', schema_version=contract.CONTROLLER_ENVELOPE, data=dict(observer_schema_version=2, mode='show', pid=42,
         process_name='pw-probe-runner', start=window['start'], end=window['end'], last=None,
         log_rc=0, log_stdout=raw, log_stderr='', log_error=None, blocked_reason=None,
         log_truncated=False, observed_deny=bool(events), deny_events=events, collection=inner))
@@ -178,6 +178,9 @@ def main():
     # Unsupported statuses cannot borrow an unavailable projection as an excuse.
     for status in ('requested_unavailable','blocked','invalid_reply','window_mismatch','parse_error','capture_error','error','disabled'):
         e=complete(); unavailable(e,status); check('reject_'+status,e,rejection='unexpected live capture status')
+    for version in (None, True, '7', 7.0, contract.CONTROLLER_ENVELOPE-1, contract.CONTROLLER_ENVELOPE+1):
+        e=complete(); e['data']['sandbox_log_capture']['observer']['schema_version']=version
+        check('outer_version_'+repr(version),e,rejection='unsupported observer envelope')
     faults=[
         ('no_cutoff',lambda e:unavailable(e,'timeout'),'budget status without a cutoff'),
         ('missing_report',lambda e:e['data']['sandbox_log_capture'].update(observer=None,deny_events=None,observed_deny=None),'complete observer reply missing'),

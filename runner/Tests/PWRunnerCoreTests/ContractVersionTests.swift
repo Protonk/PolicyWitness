@@ -137,7 +137,13 @@ private func shapeWorkerOutputs() -> [(CWorkerOutput, [PWRunnerProbeStep])] {
     crashed.cleanupTrigger = "child_reaped"
     crashed.graceEnd = "not_entered"
     crashed.workerEvidence?.progress = shapeProgress(9, 1, index: 0)
+    var transferTimedOut = signalled
+    transferTimedOut.policyTransferError = nil
+    transferTimedOut.policyTransferTimeout = PWWorkerPolicyTransferTimeout(budget_ms: 5000, elapsed_ms: 5001, bytes_written: 8192, bytes_expected: 200000)
+    transferTimedOut.pollStopReason = "policy_transfer_deadline"
+    transferTimedOut.cleanupTrigger = "policy_transfer_timeout"
     return [
+        (transferTimedOut, [shapeProbe("first")]),
         (conflict, [shapeProbe("first"), shapeProbe("second")]),
         (signalled, [shapeProbe("first")]),
         (unusable, [shapeProbe("first")]),
@@ -259,6 +265,7 @@ func runContractVersionTests(_ tk: TestKit) {
             for (path, key) in [("reply", "reporting_failure"), ("reply.steps[].attempt", "missing_reason"),
                                 ("reply.validator_subprocess", "term_signal"), ("reply.runner_subprocess", "exit_code"),
                                 ("reply.runner_subprocess", "term_signal"), ("reply.runner_subprocess", "policy_transfer_error"),
+                                ("reply.runner_subprocess", "policy_transfer_timeout"),
                                 ("reply.runner_subprocess.worker_evidence", "failure"),
                                 ("reply.runner_subprocess.disposition.issues[]", "rule"),
                                 ("reply.runner_subprocess.disposition.steps[].questions.step_result_published", "issue"),

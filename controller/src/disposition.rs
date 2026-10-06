@@ -63,6 +63,10 @@ const CAUSE_FOR_TRIGGER: &[(&str, &str)] = &[
     ("completion", "host_exit_grace_exhausted"),
     ("poll_wait_error", "host_cleanup_after_wait_error"),
     ("policy_transfer_error", "host_cleanup_after_transfer_error"),
+    (
+        "policy_transfer_timeout",
+        "host_cleanup_after_transfer_timeout",
+    ),
 ];
 
 struct DispositionProjection {
@@ -800,6 +804,7 @@ fn project_disposition(
                     "child_reaped",
                     "wait_error",
                     "policy_write_error",
+                    "policy_transfer_deadline",
                 ]
                 .contains(s)
             })
@@ -1064,7 +1069,7 @@ mod tests {
     #[test]
     fn disposition_checks_step_proofs_issues_and_projection_copies() {
         let envelope: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/disposition/response14/a1_expected.json"
+            "../../tests/fixtures/disposition/response15/a1_expected.json"
         ))
         .unwrap();
         let base = &envelope["data"]["runner_result"];

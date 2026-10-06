@@ -657,6 +657,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
+| Worker policy delivery (`worker_policy_transfer`) | 5,000 milliseconds | One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it. Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. | Fixed; internal driver controls may shorten it. |
 | Worker readiness hint wait (`worker_ready_wait`) | 1,000 milliseconds | Nominal wait for the worker readiness hint. Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues. | Fixed. |
 | Worker publication wait (`worker_sentinel_wait`) | 120,000 milliseconds | Nominal wait for worker results after the readiness-hint wait. Validator collection is outside this allowance; the listed duration is not a total runtime limit. Expiry can yield `runner_timeout` with partial evidence and reported cleanup results. | Fixed. |
 | Worker exit grace (`worker_exit_grace`) | 1,000 milliseconds | Nominal wait for worker exit after an exit request. Expiry requests `SIGKILL`. Termination and reap failures remain reported. | Fixed. |
@@ -676,7 +677,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Limit | Value | Counting and consequence | Control |
 | --- | --- | --- | --- |
 | Validator query payload (`validator_query_payload`) | 65,534 bytes | Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size. An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit. | Fixed. |
-| Informative reply size bound (`runner_reply_maximum`) | 24,825,335 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
+| Informative reply size bound (`runner_reply_maximum`) | 24,825,461 bytes | Upper bound on the encoded size of one runner JSON reply for this build. No reply is refused at this size; retained output is bounded by `controller_output`. | Not enforced; it sizes `controller_output`. |
 | Runner client output (`controller_output`) | 75,497,472 bytes | Captured bytes per stdout or stderr stream from the runner client, before text decoding. Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply. | Derived: three times `runner_reply_maximum`, rounded up to a whole 4 MiB; no flag. |
 | Log observer stdout (`log_observer_output`) | 33,554,432 bytes | Raw observer stdout bytes, including the JSON report and final newline. Stderr has a separate cap. Overflow retains a bounded raw prefix, with unavailable parsing and correlation. | Fixed. |
 | Log show stdout (`log_show_stdout`) | 1,048,576 bytes | Raw bytes from `log show` stdout, before text decoding. Overflow stops collection, retains a bounded prefix and withholds correlation. Cleanup results remain reported. | Fixed. |
@@ -784,7 +785,7 @@ contract versions below are.
 ### Shape and schema_version
 
 <!-- BEGIN GENERATED CONTRACT VERSIONS (docs/contract.json via docs/generate_contract.py) -->
-Current wire contracts: request schema 4, response schema 14, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
+Current wire contracts: request schema 4, response schema 15, controller envelope 7. Each number is a separate contract. `docs/contract.json` owns these numbers; the internal host/worker boundary uses a generated source identity.
 <!-- END GENERATED CONTRACT VERSIONS -->
 
 Two documents carry these numbers. The runner reply is the JSON that
@@ -809,7 +810,8 @@ the host or client when no worker metadata exists.
 `runner_subprocess` retains PID, exit/signal and partial-step status, plus
 `ready_byte_received`, `done_observed`, `poll_stop_reason`, `exit_requested`,
 `termination_request`, `reaped`, and `wait_errors`. Polling reasons are `done`,
-`child_reaped`, `sentinel_deadline`, or `wait_error`. Termination requests record
+`child_reaped`, `sentinel_deadline`, `wait_error`, `policy_write_error`, or
+`policy_transfer_deadline`. Termination requests record
 signal, syscall return and errno only on failure. Exit/signal values require a
 successful reap; both are absent/null when disposition is unconfirmed. Wait
 errors retain their phase and native return/errno, including recovered EINTR.
@@ -817,7 +819,7 @@ Application remains independently reported by `sandboxed_after_apply`.
 
 `runner_subprocess` also records three host facts where the host acts:
 `cleanup_trigger` (why exit was requested: `deadline_expiry`, `completion`,
-`child_reaped`, `poll_wait_error` or `policy_transfer_error`), `grace_end` (how
+`child_reaped`, `poll_wait_error`, `policy_transfer_error` or `policy_transfer_timeout`), `grace_end` (how
 the exit-grace wait ended: `not_entered`, `reaped_during_grace`, `exhausted` or
 `wait_error`) and `collection_basis` (whether the final shared-memory reads
 followed a confirmed reap: `after_confirmed_reap`, `execution_may_continue` or
@@ -950,6 +952,14 @@ cleanup. `poll_stop_reason` retains an earlier deadline even if the worker
 finishes during grace. On a failed policy write, `policy_transfer_error` records
 the host's errno and written/expected UTF-8 byte counts, while worker evidence
 and process status remain available. Written bytes do not prove child receipt.
+Policy delivery has a five-second absolute monotonic deadline starting after
+worker spawn. Expiry records `policy_transfer_timeout` with `budget_ms`,
+`elapsed_ms`, `bytes_written` and `bytes_expected`; it invents no write errno.
+The host closes input and enters cleanup without starting readiness/sentinel
+polling. Omission of the write-error object alone does not mean delivery
+succeeded. A transfer timeout ordinarily yields `runner_timeout`; published
+worker failure retains precedence, and cleanup/status observations remain
+independent. The deadline does not bound final reap or cancel a client timeout.
 
 Both step channels carry `result_source` and, when no result exists,
 `missing_reason`; the query channel also carries `native_rc`. A missing

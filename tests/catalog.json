@@ -177,6 +177,17 @@
           "requires": [
             "cargo"
           ]
+        },
+        {
+          "id": "rust.observer_admission",
+          "description": "Observer admission before interpretation, promoted regression control",
+          "command": [
+            "bash",
+            "tests/suites/unit/observer_admission.sh"
+          ],
+          "requires": [
+            "cargo"
+          ]
         }
       ]
     },
@@ -203,12 +214,24 @@
       ],
       "requires": [
         "swift",
-        "clang"
+        "clang",
+        "cargo"
       ],
       "cases": [
         {
           "id": "pwrunner_core_unit_executable",
           "description": "Swift runner unit-test batch"
+        },
+        {
+          "id": "service_admission_controls",
+          "description": "Service seams detect original per-connection admission and refusal exit defects in disposable source copies",
+          "command": [
+            "bash",
+            "tests/suites/runner_unit/service_admission_controls.sh"
+          ],
+          "requires": [
+            "swift"
+          ]
         }
       ]
     },
@@ -1326,6 +1349,19 @@
       ],
       "cases": [
         {
+          "id": "single_use",
+          "description": "Two authorized clients share one host claim; owner-only retirement and fresh host",
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/single_use.sh"
+          ]
+        },
+        {
           "id": "runner_auth_external",
           "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
           "requires": [
@@ -1466,7 +1502,8 @@
         "runner_byoxpc/BBX-002",
         "witness_contract/order_barrier_mutations",
         "witness_contract/dossier_witness_byoxpc",
-        "runner_byoxpc/registry_recovery"
+        "runner_byoxpc/registry_recovery",
+        "runner_byoxpc/single_use"
       ]
     },
     "failure_boundaries": {

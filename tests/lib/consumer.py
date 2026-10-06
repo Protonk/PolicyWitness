@@ -234,6 +234,27 @@ def _validate_policy_check_reply(capture, path, shape, errors):
     validate_shape(reply, path, shape, errors)
 
 
+def _observer_admitted(reply):
+    data = reply.get('data') if isinstance(reply, dict) else None
+    return isinstance(reply, dict) and reply.get('kind') == 'sandbox_log_observer_report' and \
+        type(reply.get('schema_version')) is int and reply['schema_version'] == contract.CONTROLLER_ENVELOPE and \
+        isinstance(data, dict) and type(data.get('observer_schema_version')) is int and data['observer_schema_version'] == 2
+
+
+def _validate_observer_reply(capture, path, shape, errors):
+    reply = capture['observer']
+    if reply is None:
+        return
+    admitted = _observer_admitted(reply)
+    if not admitted:
+        if capture.get('capture_status') not in ('invalid_reply', 'timeout', 'overflow', 'error'):
+            errors.append('sandbox_log_capture status requires an admitted observer')
+        if any(capture.get(key) is not None for key in ('observed_deny', 'deny_events', 'blocked_reason', 'step_denies')):
+            errors.append('inadmissible observer cannot supply log claims')
+        return
+    validate_shape(reply, path, shape, errors)
+
+
 def validate_shape(value, path, shape, errors):
     """Check one object and everything under it against the golden for its path.
 
@@ -253,6 +274,9 @@ def validate_shape(value, path, shape, errors):
         child_path = f'{path}.{key}'
         if child_path == 'envelope.data.policy_check.envelope':
             _validate_policy_check_reply(value, child_path, shape, errors)
+            continue
+        if child_path == 'envelope.data.sandbox_log_capture.observer':
+            _validate_observer_reply(value, child_path, shape, errors)
             continue
         actual = _json_type(child)
         if child is not None and allowed[key] != 'null' and actual != allowed[key]:
@@ -403,6 +427,15 @@ def _validate_reply(runner):
     if not failed_reporting:
         errors.extend(_validate_ordering(runner))
     sub = runner.get('runner_subprocess')
+    if isinstance(sub, dict) and sub.get('policy_transfer_timeout') is not None:
+        timeout = sub['policy_transfer_timeout']
+        if not isinstance(timeout, dict) or any(type(timeout.get(k)) is not int or timeout[k] < 0
+                for k in ('budget_ms','elapsed_ms','bytes_written','bytes_expected')) or \
+                timeout['budget_ms'] <= 0 or timeout['elapsed_ms'] < timeout['budget_ms'] or \
+                timeout['bytes_written'] > timeout['bytes_expected']:
+            errors.append('invalid policy_transfer_timeout observation')
+        if sub.get('policy_transfer_error') is not None or sub.get('poll_stop_reason') != 'policy_transfer_deadline':
+            errors.append('policy_transfer_timeout conflicts with transfer stop/error')
     if isinstance(sub, dict) and not failed_reporting and sub.get(lifecycle_contract.RECORD_KEY) is None:
         errors.append('worker subprocess without runner_subprocess.disposition')
     return errors
@@ -507,6 +540,11 @@ def _validate_envelope(document):
     diagnostics = data.get('runner_sandbox_diagnostics')
     if diagnostics is not None and not isinstance(diagnostics, dict):
         errors.append('data.runner_sandbox_diagnostics is not an object')
+    capture = data.get('sandbox_log_capture')
+    if isinstance(capture, dict) and capture.get('observer') is not None and not _observer_admitted(capture['observer']):
+        if isinstance(diagnostics, dict) and (diagnostics.get('correlation_status') not in (None,'unavailable') or
+                diagnostics.get('permission_failures_without_record') is not None):
+            errors.append('inadmissible observer cannot supply correlation or missing-record claims')
     return errors
 
 
@@ -610,8 +648,9 @@ def denials(document):
     data = document.get('data') or {}
     capture = data.get('sandbox_log_capture') or {}
     diagnostics = data.get('runner_sandbox_diagnostics') or {}
-    events = capture.get('deny_events')
-    associations = capture.get('step_denies')
+    rejected = capture.get('observer') is not None and not _observer_admitted(capture['observer'])
+    events = None if rejected else capture.get('deny_events')
+    associations = None if rejected else capture.get('step_denies')
     candidates = None
     if associations is not None:
         candidates = []
@@ -621,8 +660,8 @@ def denials(document):
             candidates.append(dict(association, event=event))
     return deepcopy({
         'capture_status': capture.get('capture_status', 'not_reported') if data.get('sandbox_log_capture') is not None else 'not_reported',
-        'correlation_status': diagnostics.get('correlation_status', 'not_reported'),
-        'permission_failures_without_record': diagnostics.get('permission_failures_without_record'),
+        'correlation_status': 'unavailable' if rejected else diagnostics.get('correlation_status', 'not_reported'),
+        'permission_failures_without_record': None if rejected else diagnostics.get('permission_failures_without_record'),
         'window': capture.get('window'), 'events': events, 'candidates': candidates,
         'event_reporting': 'reported' if events is not None else 'not_reported',
         'association_reporting': 'reported' if associations is not None else 'not_reported',

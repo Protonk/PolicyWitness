@@ -1,9 +1,9 @@
 {
   "build": {
-    "commit": "076ec253bc6618d1c5e15182daf2b79b25027dd6",
-    "describe": "v0.2.4-80-g076ec25-dirty",
-    "number": "401",
-    "version": "0.2.4"
+    "commit": "33ad8472f507d6cc653f0ae8dafafe463ffa0aad",
+    "describe": "v0.2.6-24-g33ad847-dirty",
+    "number": "435",
+    "version": "0.2.6"
   },
   "data": {
     "policy_check": null,
@@ -18,13 +18,13 @@
         "com.yourteam.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 75497472,
-      "ended_at_unix_ms": 1791066555581,
+      "ended_at_unix_ms": 1791300766464,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1857,
         "error": null
       },
-      "started_at_unix_ms": 1791066555458,
+      "started_at_unix_ms": 1791300766401,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -39,7 +39,7 @@
     "runner_result": {
       "bundle_id": "com.yourteam.policy-witness.PWRunner",
       "normalized_outcome": "ok",
-      "pid": 85086,
+      "pid": 50667,
       "policy_format": "sbpl",
       "policy_sha256": "cede8db45e6e2ec342277c02ff7b70064fa3aaab05f7b8f08a032070361810f8",
       "rc": 0,
@@ -216,13 +216,13 @@
           "worker_lifetime_established": true
         },
         "partial_steps": false,
-        "pid": 85086,
+        "pid": 50667,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "7d4d9e1cdb1cfc76fa478a3507b25e96cc51fe2e718447db38d39e67b1766f79",
+          "abi_identity": "4698c192c9f9efa6c18be59467337279b5eb81d94bb05995cc8f263398917c5f",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -240,7 +240,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 14,
+      "schema_version": 15,
       "specimen_id": "BBX-001",
       "steps": [
         {
@@ -266,10 +266,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
@@ -280,7 +280,7 @@
             "rc": 0,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -296,20 +296,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
             "native_rc": 0,
             "operation": "file-write-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
                 "realpath_resolved"
               ]
             },
-            "pid": 85086,
+            "pid": 50667,
             "rc": 0,
             "result_source": "validator"
           },
@@ -342,7 +342,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
@@ -353,7 +353,7 @@
             "rc": 1,
             "requested_action": "open_write",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -369,20 +369,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
             "native_rc": 1,
             "operation": "file-write-data",
             "outcome": "deny",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-              "input": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
+              "input": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
                 "realpath_resolved"
               ]
             },
-            "pid": 85086,
+            "pid": 50667,
             "rc": 1,
             "result_source": "validator"
           },
@@ -437,7 +437,7 @@
             "native_rc": 1,
             "operation": "mach-lookup",
             "outcome": "deny",
-            "pid": 85086,
+            "pid": 50667,
             "rc": 1,
             "result_source": "validator"
           },
@@ -452,7 +452,7 @@
           "fs_write_denied",
           "mach_lookup_denied"
         ],
-        "pid": 85087,
+        "pid": 50668,
         "probe_bytes_expected": 444,
         "probe_bytes_written": 444,
         "reaped": true,
@@ -461,10 +461,10 @@
             "errno": 0,
             "filter_type": "PATH",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt",
             "operation": "file-write-data",
             "outcome": "allow",
-            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.EeEWAz/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_allowed\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.oNGlCJ/allow-write/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
             "rc": 0,
             "step_id": "fs_write_allowed"
           },
@@ -472,10 +472,10 @@
             "errno": 0,
             "filter_type": "PATH",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
             "operation": "file-write-data",
             "outcome": "deny",
-            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_write_denied\",\"operation\":\"file-write-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
             "rc": 1,
             "step_id": "fs_write_denied"
           },
@@ -512,48 +512,34 @@
       "deny_events": [
         {
           "operation": "file-write-data",
-          "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-          "pid": 85086,
+          "path": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
+          "pid": 50667,
           "process": "pw-probe-runner",
-          "raw_line": "2026-10-03 15:29:15.625665-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
+          "raw_line": "2026-10-06 08:32:46.522535-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) file-write-data /private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt"
         },
         {
           "operation": "mach-lookup",
           "path": "com.apple.cfprefsd.xpc.daemon",
-          "pid": 85086,
+          "pid": 50667,
           "process": "pw-probe-runner",
-          "raw_line": "2026-10-03 15:29:15.625790-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
-        },
-        {
-          "operation": "file-write-data",
-          "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-          "pid": 85086,
-          "process": "pw-probe-runner",
-          "raw_line": "2026-10-03 15:29:15.628928-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
-        },
-        {
-          "operation": "mach-lookup",
-          "path": "com.apple.cfprefsd.xpc.daemon",
-          "pid": 85086,
-          "process": "pw-probe-runner",
-          "raw_line": "2026-10-03 15:29:15.629665-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
+          "raw_line": "2026-10-06 08:32:46.522604-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
         }
       ],
       "observed_deny": true,
       "observer": {
         "build": {
-          "commit": "076ec253bc6618d1c5e15182daf2b79b25027dd6",
-          "describe": "v0.2.4-80-g076ec25-dirty",
-          "number": "401",
-          "version": "0.2.4"
+          "commit": "33ad8472f507d6cc653f0ae8dafafe463ffa0aad",
+          "describe": "v0.2.6-24-g33ad847-dirty",
+          "number": "435",
+          "version": "0.2.6"
         },
         "data": {
           "blocked_reason": null,
           "collection": {
             "boundary": "log_show",
             "budget": {
-              "deadline_monotonic_ns": 430972941660000,
-              "started_monotonic_ns": 430962941660000,
+              "deadline_monotonic_ns": 85279671225000,
+              "started_monotonic_ns": 85269671225000,
               "timeout_ms": 10000,
               "timeout_source": "default"
             },
@@ -568,14 +554,14 @@
               "signal": null,
               "signal_before_reap": false,
               "signal_result": null,
-              "target": 85089
+              "target": 50670
             },
             "cutoff": null,
-            "elapsed_ms": 294,
+            "elapsed_ms": 186,
             "process": {
               "exit_code": 0,
               "exit_observed": true,
-              "pid": 85089,
+              "pid": 50670,
               "reaped": true,
               "term_signal": null,
               "wait_error": null
@@ -590,8 +576,8 @@
               "truncated": false
             },
             "stdout": {
-              "bytes_read": 5631,
-              "bytes_retained": 5631,
+              "bytes_read": 368,
+              "bytes_retained": 368,
               "eof": true,
               "limit_bytes": 1048576,
               "read_error": null,
@@ -602,54 +588,40 @@
           "deny_events": [
             {
               "operation": "file-write-data",
-              "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-              "pid": 85086,
+              "path": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
+              "pid": 50667,
               "process": "pw-probe-runner",
-              "raw_line": "2026-10-03 15:29:15.625665-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
+              "raw_line": "2026-10-06 08:32:46.522535-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) file-write-data /private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt"
             },
             {
               "operation": "mach-lookup",
               "path": "com.apple.cfprefsd.xpc.daemon",
-              "pid": 85086,
+              "pid": 50667,
               "process": "pw-probe-runner",
-              "raw_line": "2026-10-03 15:29:15.625790-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
-            },
-            {
-              "operation": "file-write-data",
-              "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-              "pid": 85086,
-              "process": "pw-probe-runner",
-              "raw_line": "2026-10-03 15:29:15.628928-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt"
-            },
-            {
-              "operation": "mach-lookup",
-              "path": "com.apple.cfprefsd.xpc.daemon",
-              "pid": 85086,
-              "process": "pw-probe-runner",
-              "raw_line": "2026-10-03 15:29:15.629665-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
+              "raw_line": "2026-10-06 08:32:46.522604-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon"
             }
           ],
           "duration_ms": null,
-          "end": "2026-10-03 22:29:18+0000",
+          "end": "2026-10-06 15:32:49+0000",
           "last": null,
           "log_error": null,
           "log_rc": 0,
           "log_stderr": "",
-          "log_stdout": "Timestamp                       (process)[PID]    \n2026-10-03 15:29:15.625665-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt\n2026-10-03 15:29:15.625790-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\n2026-10-03 15:29:15.628928-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt\nViolation:       deny(1) file-write-data /private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt\nProcess:         pw-probe-runner [85086]\nPath:            /Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\nLoad Address:    0x10068c000\nIdentifier:      ???\nVersion:         ??? (???)\nCode Type:       arm64 (Native)\nParent Process:  pw-probe-runner [85085]\nResponsible:     /System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal\nUser ID:         501\n\nDate/Time:       2026-10-03 15:29:15.564 PDT\nOS Version:      macOS 14.8.3 (23J220)\nRelease Type:    User\nReport Version:  8\n\nMetaData: {\"process_path\":[\"Users\",\"achyland\",\"Desktop\",\"Security\",\"PolicyWitness\",\"dist\",\"PolicyWitness.app\",\"Contents\",\"XPCServices\",\"PWRunner.xpc\",\"Contents\",\"MacOS\",\"pw-probe-runner\"],\"errno\":1,\"profile-in-collection\":false,\"sandbox_checker\":\"sb_api_validator\",\"profile-flags\":0,\"signing-id\":\"pw-probe-runner\",\"pid\":85086,\"platform-policy\":false,\"checker-pid\":85087,\"vnode-type\":\"REGULAR-FILE\",\"flags\":5,\"platform-binary\":false,\"build\":\"macOS 14.8.3 (23J220)\",\"checker\":\"sb_api_validator\",\"action\":\"deny\",\"primary-filter\":\"path\",\"mount-flags\":76583040,\"process\":\"pw-probe-runner\",\"normalized_target\":[\"private\",\"tmp\",\"pw-bbx.EeEWAz\",\"deny-write\",\"existing.txt\"],\"summary\":\"deny(1) file-write-data \\/private\\/tmp\\/pw-bbx.EeEWAz\\/deny-write\\/existing.txt\",\"responsible-process-path\":\"\\/System\\/Applications\\/Utilities\\/Terminal.app\\/Contents\\/MacOS\\/Terminal\",\"apple-internal\":false,\"hardware\":\"J313\",\"rdev\":0,\"responsible-process-signing-id\":\"com.apple.Terminal\",\"team-id\":\"42D369QV8E\",\"hardlinked\":false,\"policy-description\":\"Sandbox\",\"operation\":\"file-write-data\",\"path\":\"\\/private\\/tmp\\/pw-bbx.EeEWAz\\/deny-write\\/existing.txt\",\"uid\":501,\"apfs-synthetic\":false,\"process-path\":\"\\/Users\\/achyland\\/Desktop\\/Security\\/PolicyWitness\\/dist\\/PolicyWitness.app\\/Contents\\/XPCServices\\/PWRunner.xpc\\/Contents\\/MacOS\\/pw-probe-runner\",\"primary-filter-value\":\"\\/private\\/tmp\\/pw-bbx.EeEWAz\\/deny-write\\/existing.txt\",\"file-flags\":0,\"target\":\"\\/private\\/tmp\\/pw-bbx.EeEWAz\\/deny-write\\/existing.txt\",\"file-mode\":420,\"binary-in-trust-cache\":false,\"platform_binary\":\"no\",\"release-type\":\"User\"}\n\nThread 0 (id: 5992401):\n0   pw-probe-runner               \t0x000000010069144c wait_for_proceed + 160\n1   pw-probe-runner               \t0x00000001006906b8 main + 4312\n2   dyld                          \t0x0000000191e8f154 start + 2476\n\nBinary Images:\n       0x10068c000 -        0x10068f5df  pw-probe-runner <31ec43a9-6564-306a-bafa-65b7c32bd847> /Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\n       0x191e89000 -        0x191e89fff  com.apple.darwin.ignition (1.0.0 - 56) <28499b2a-5c35-38d3-9bf7-a867e16db2ba> /usr/lib/dyld\n2026-10-03 15:29:15.629665-0700  localhost sandboxd[386]: [com.apple.sandbox.reporting:violation] Sandbox: pw-probe-runner(85086) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\nViolation:       deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\nProcess:         pw-probe-runner [85086]\nPath:            /Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\nLoad Address:    0\nIdentifier:      ???\nVersion:         ??? (???)\nCode Type:       unknown (Native)\nParent Process:  ??? [-1]\nResponsible:     /System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal\nUser ID:         -1\n\nDate/Time:       2026-10-03 15:29:15.567 PDT\nOS Version:      macOS 14.8.3 (23J220)\nRelease Type:    User\nReport Version:  8\n\nMetaData: {\"process_path\":[\"Users\",\"achyland\",\"Desktop\",\"Security\",\"PolicyWitness\",\"dist\",\"PolicyWitness.app\",\"Contents\",\"XPCServices\",\"PWRunner.xpc\",\"Contents\",\"MacOS\",\"pw-probe-runner\"],\"errno\":1,\"profile-in-collection\":false,\"sandbox_checker\":\"sb_api_validator\",\"profile-flags\":0,\"signing-id\":\"pw-probe-runner\",\"pid\":85086,\"platform-policy\":false,\"checker-pid\":85087,\"flags\":5,\"platform-binary\":false,\"build\":\"macOS 14.8.3 (23J220)\",\"checker\":\"sb_api_validator\",\"action\":\"deny\",\"primary-filter\":\"global-name\",\"process\":\"pw-probe-runner\",\"normalized_target\":[\"com.apple.cfprefsd.xpc.daemon\"],\"summary\":\"deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\",\"responsible-process-path\":\"\\/System\\/Applications\\/Utilities\\/Terminal.app\\/Contents\\/MacOS\\/Terminal\",\"apple-internal\":false,\"hardware\":\"J313\",\"responsible-process-signing-id\":\"com.apple.Terminal\",\"team-id\":\"42D369QV8E\",\"mach_namespace\":1,\"policy-description\":\"Sandbox\",\"operation\":\"mach-lookup\",\"uid\":501,\"process-path\":\"\\/Users\\/achyland\\/Desktop\\/Security\\/PolicyWitness\\/dist\\/PolicyWitness.app\\/Contents\\/XPCServices\\/PWRunner.xpc\\/Contents\\/MacOS\\/pw-probe-runner\",\"primary-filter-value\":\"com.apple.cfprefsd.xpc.daemon\",\"global-name\":\"com.apple.cfprefsd.xpc.daemon\",\"target\":\"com.apple.cfprefsd.xpc.daemon\",\"binary-in-trust-cache\":false,\"platform_binary\":\"no\",\"release-type\":\"User\"}\n\nFailed to symbolicate: NULL symbolicator\n",
+          "log_stdout": "Timestamp                       (process)[PID]    \n2026-10-06 08:32:46.522535-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) file-write-data /private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt\n2026-10-06 08:32:46.522604-0700  localhost kernel[0]: (Sandbox) Sandbox: pw-probe-runner(50667) deny(1) mach-lookup com.apple.cfprefsd.xpc.daemon\n",
           "log_truncated": false,
           "mode": "show",
           "observed_deny": true,
-          "observed_lines": 43,
+          "observed_lines": 3,
           "observer_schema_version": 2,
-          "pid": 85086,
+          "pid": 50667,
           "plan_id": null,
-          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(85086\\\\)([ \\\\t]+.*)?\"",
+          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(50667\\\\)([ \\\\t]+.*)?\"",
           "process_name": "pw-probe-runner",
           "row_id": null,
-          "start": "2026-10-03 22:29:13+0000",
+          "start": "2026-10-06 15:32:44+0000",
           "stop_on_pid_exit": false
         },
-        "generated_at_unix_ms": 1791066555876,
+        "generated_at_unix_ms": 1791300766651,
         "kind": "sandbox_log_observer_report",
         "result": {
           "errno": null,
@@ -668,8 +640,8 @@
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 9909,
-      "stdout_bytes_retained": 9909,
+      "stdout_bytes_received": 3459,
+      "stdout_bytes_retained": 3459,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
@@ -685,7 +657,7 @@
             {
               "operation": "file-write-data",
               "operation_source": "submitted_attempt",
-              "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
+              "path": "/private/tmp/pw-bbx.oNGlCJ/deny-write/existing.txt",
               "path_sources": [
                 "submitted_attempt.target",
                 "attempt.requested_path",
@@ -718,57 +690,13 @@
               "step_id": "mach_lookup_denied"
             }
           ]
-        },
-        {
-          "association": "candidate",
-          "candidate_step_ids": [
-            "fs_write_denied"
-          ],
-          "event_index": 2,
-          "matching_evidence": [
-            {
-              "operation": "file-write-data",
-              "operation_source": "submitted_attempt",
-              "path": "/private/tmp/pw-bbx.EeEWAz/deny-write/existing.txt",
-              "path_sources": [
-                "submitted_attempt.target",
-                "attempt.requested_path",
-                "runner_host.after_orchestration.realpath_resolved",
-                "runner_host.after_orchestration.parent_realpath_resolved"
-              ],
-              "requested_action": "open_write",
-              "requested_kind": "file",
-              "step_id": "fs_write_denied"
-            }
-          ]
-        },
-        {
-          "association": "candidate",
-          "candidate_step_ids": [
-            "mach_lookup_denied"
-          ],
-          "event_index": 3,
-          "matching_evidence": [
-            {
-              "operation": "mach-lookup",
-              "operation_source": "submitted_attempt",
-              "path": "com.apple.cfprefsd.xpc.daemon",
-              "path_sources": [
-                "submitted_attempt.target",
-                "attempt.requested_path"
-              ],
-              "requested_action": "bootstrap_look_up",
-              "requested_kind": "mach_lookup",
-              "step_id": "mach_lookup_denied"
-            }
-          ]
         }
       ],
       "supervision": {
         "boundary": "observer",
         "budget": {
-          "deadline_monotonic_ns": 430972941660000,
-          "started_monotonic_ns": 430962941660000,
+          "deadline_monotonic_ns": 85279671225000,
+          "started_monotonic_ns": 85269671225000,
           "timeout_ms": 10000,
           "timeout_source": "default"
         },
@@ -789,14 +717,14 @@
             "errno": 1,
             "rc": -1
           },
-          "target": 85088
+          "target": 50669
         },
         "cutoff": null,
-        "elapsed_ms": 296,
+        "elapsed_ms": 189,
         "process": {
           "exit_code": 0,
           "exit_observed": true,
-          "pid": 85088,
+          "pid": 50669,
           "reaped": true,
           "term_signal": null,
           "wait_error": null
@@ -811,8 +739,8 @@
           "truncated": false
         },
         "stdout": {
-          "bytes_read": 9909,
-          "bytes_retained": 9909,
+          "bytes_read": 3459,
+          "bytes_retained": 3459,
           "eof": true,
           "limit_bytes": 33554432,
           "read_error": null,
@@ -821,12 +749,12 @@
       },
       "tool_exit_code": 0,
       "window": {
-        "end": "2026-10-03 22:29:18+0000",
-        "ended_at_unix_ms": 1791066555581,
+        "end": "2026-10-06 15:32:49+0000",
+        "ended_at_unix_ms": 1791300766464,
         "kind": "runner_client_span",
         "pad_seconds": 2,
-        "start": "2026-10-03 22:29:13+0000",
-        "started_at_unix_ms": 1791066555458
+        "start": "2026-10-06 15:32:44+0000",
+        "started_at_unix_ms": 1791300766401
       }
     },
     "specimen": {
@@ -842,8 +770,8 @@
       "host": {
         "arch": "arm64",
         "kernel_release": "23.6.0",
-        "macos_build": "23J220",
-        "macos_version": "14.8.3"
+        "macos_build": "23J631",
+        "macos_version": "14.8.9"
       },
       "policy": {
         "augmentation": {
@@ -862,7 +790,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/sbpl-fixture-refresh-live-02/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
+      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/arch-remediation-focused/suites/blackbox_e2e/BBX-001/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -880,7 +808,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791066555878,
+  "generated_at_unix_ms": 1791300766654,
   "kind": "run",
   "result": {
     "errno": null,

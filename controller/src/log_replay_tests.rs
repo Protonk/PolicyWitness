@@ -87,7 +87,7 @@ if fault == 'nonzero': sys.exit(7)
                     stderr: None,
                     stdout: None,
                 };
-                let text = json_contract::render_envelope_limited(
+                let mut text = json_contract::render_envelope_limited(
                     "sandbox_log_observer_report",
                     result,
                     &payload,
@@ -95,6 +95,14 @@ if fault == 'nonzero': sys.exit(7)
                     log_capture::OBSERVER_STDOUT_BYTES - 1,
                 )
                 .unwrap();
+                if fault.starts_with("rejected_") {
+                    let mut v: Value = serde_json::from_str(&text).unwrap();
+                    if fault != "rejected_inner" { v["schema_version"] = json!(0); }
+                    else { v["data"]["observer_schema_version"] = json!(99); }
+                    v["data"]["collection"] = json!({"unfamiliar":[true, null]});
+                    v["data"]["blocked_reason"] = json!("cannot run while sandboxed");
+                    text = v.to_string();
+                }
                 // File-backed transport avoids argv-size ceilings for capacity and
                 // overflow diagnostics. The supervised pipe is the receiver input.
                 let file = std::env::temp_dir().join(format!(
@@ -112,7 +120,13 @@ if fault == 'nonzero': sys.exit(7)
                     },
                 )
                 .unwrap();
-                let mut observer = if fault == "outer_prefix" {
+                let mut observer = if fault == "rejected_timeout" || fault == "rejected_overflow" {
+                    let mut command = Command::new("/usr/bin/python3");
+                    command.args(["-c", if fault == "rejected_timeout" {
+                        "import os,sys,time; os.write(1,open(sys.argv[1],'rb').read()); time.sleep(60)"
+                    } else { "import os,sys; os.write(1,open(sys.argv[1],'rb').read()); os.write(2,b'x'*131073)" }]);
+                    command
+                } else if fault == "outer_prefix" {
                     let mut command = Command::new("/usr/bin/python3");
                     command.args(["-c", "import os,sys,time; raw=open(sys.argv[1],'rb').read(); os.write(1,raw[:len(raw)//2]); time.sleep(60)"]);
                     command
@@ -253,12 +267,18 @@ for e in json.load(sys.stdin):
             ("unavailable", "requested_unavailable"),
             ("wrong_window", "window_mismatch"),
             ("malformed", "parse_error"),
+            ("rejected_frame", "invalid_reply"),
+            ("rejected_inner", "invalid_reply"),
+            ("rejected_timeout", "timeout"),
+            ("rejected_overflow", "overflow"),
             ("outer_prefix", "timeout"),
             ("nonzero", "error"),
             ("inner_stdout", "overflow"),
             ("inner_stderr", "overflow"),
         ] {
-            let timeout = if fault == "outer_prefix" {
+            let timeout = if fault == "rejected_timeout" {
+                LogTimeout::parse("1500").unwrap()
+            } else if fault == "outer_prefix" {
                 LogTimeout::parse("500").unwrap()
             } else {
                 LogTimeout::default()
@@ -284,6 +304,10 @@ for e in json.load(sys.stdin):
             if ["wrong_window", "nonzero", "inner_stdout", "inner_stderr"].contains(&fault) {
                 assert_eq!(c["deny_events"].as_array().unwrap().len(), lines.len());
                 assert_eq!(c["observer"]["data"]["deny_events"], c["deny_events"]);
+            }
+            if fault.starts_with("rejected_") {
+                assert!(c["observed_deny"].is_null() && c["deny_events"].is_null() && c["blocked_reason"].is_null());
+                assert_eq!(c["observer"]["data"]["deny_events"].as_array().unwrap().len(), lines.len());
             }
             if fault == "outer_prefix" {
                 assert!(c["observer"].is_null() && c["deny_events"].is_null());

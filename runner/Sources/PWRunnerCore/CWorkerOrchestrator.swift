@@ -944,6 +944,7 @@ func buildWorkerSubprocess(_ out: CWorkerOutput, disposition: PWDispositionRecor
     )
     result.worker_evidence = out.workerEvidence
     result.policy_transfer_error = out.policyTransferError
+    result.policy_transfer_timeout = out.policyTransferTimeout
     result.cleanup_trigger = out.cleanupTrigger
     result.grace_end = out.graceEnd
     result.collection_basis = out.collectionBasis
@@ -1164,6 +1165,8 @@ func classify(
         case .captureNonceInvalid, .admissionFailed, .execTargetNotAbsolute:
             return ClassifiedRun(outcome: NormalizedOutcome.badRequest,
                                  rc: 1, error: err.description)
+        case .policyTransferTimedOut:
+            return ClassifiedRun(outcome: NormalizedOutcome.runnerTimeout, rc: 1, error: err.description)
         case .shmSetupFailed, .pipeFailed, .policyWriteFailed:
             return ClassifiedRun(outcome: NormalizedOutcome.runnerFailed,
                                  rc: 1, error: err.description)

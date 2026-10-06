@@ -1,9 +1,9 @@
 {
   "build": {
-    "commit": "076ec253bc6618d1c5e15182daf2b79b25027dd6",
-    "describe": "v0.2.4-80-g076ec25-dirty",
-    "number": "401",
-    "version": "0.2.4"
+    "commit": "33ad8472f507d6cc653f0ae8dafafe463ffa0aad",
+    "describe": "v0.2.6-24-g33ad847-dirty",
+    "number": "435",
+    "version": "0.2.6"
   },
   "data": {
     "policy_check": null,
@@ -18,13 +18,13 @@
         "com.yourteam.policy-witness.PWRunner"
       ],
       "capture_limit_bytes": 75497472,
-      "ended_at_unix_ms": 1791066556372,
+      "ended_at_unix_ms": 1791300766995,
       "exit_code": 0,
       "request_delivery": {
         "bytes_written": 1397,
         "error": null
       },
-      "started_at_unix_ms": 1791066556304,
+      "started_at_unix_ms": 1791300766935,
       "stderr": "",
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
@@ -39,7 +39,7 @@
     "runner_result": {
       "bundle_id": "com.yourteam.policy-witness.PWRunner",
       "normalized_outcome": "ok",
-      "pid": 85144,
+      "pid": 50723,
       "policy_format": "sbpl",
       "policy_sha256": "cc62de644e7d1a9524ca536a2b040597918c0de536c96add0a8cd15b9c161eeb",
       "rc": 0,
@@ -216,13 +216,13 @@
           "worker_lifetime_established": true
         },
         "partial_steps": false,
-        "pid": 85144,
+        "pid": 50723,
         "poll_stop_reason": "done",
         "ready_byte_received": true,
         "reaped": true,
         "wait_errors": [],
         "worker_evidence": {
-          "abi_identity": "7d4d9e1cdb1cfc76fa478a3507b25e96cc51fe2e718447db38d39e67b1766f79",
+          "abi_identity": "4698c192c9f9efa6c18be59467337279b5eb81d94bb05995cc8f263398917c5f",
           "diagnostic": {
             "state": 0,
             "status": "absent"
@@ -240,7 +240,7 @@
         }
       },
       "sandboxed_after_apply": true,
-      "schema_version": 14,
+      "schema_version": 15,
       "specimen_id": "BBX-002",
       "steps": [
         {
@@ -270,7 +270,7 @@
             "observed_path": null,
             "outcome": "open_failed",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "realpath_resolved": null,
@@ -281,7 +281,7 @@
             "rc": 1,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt",
+            "requested_path": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -296,23 +296,23 @@
           },
           "sandbox_check": {
             "errno": null,
-            "error": "target path /private/tmp/pw-bbx.OGgs57/does-not-exist.txt did not resolve on the host when the query was planned",
+            "error": "target path /private/tmp/pw-bbx.jHwns0/does-not-exist.txt did not resolve on the host when the query was planned",
             "filter_kind": "path",
             "filter_type_id": null,
-            "filter_value": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt",
+            "filter_value": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt",
             "missing_reason": "query_not_requested",
             "native_rc": null,
             "operation": "file-read-data",
             "outcome": "prediction_unavailable",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.OGgs57/does-not-exist.txt",
-              "input": "/private/tmp/pw-bbx.OGgs57/does-not-exist.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.jHwns0/does-not-exist.txt",
+              "input": "/private/tmp/pw-bbx.jHwns0/does-not-exist.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "realpath_resolved": null,
               "same_as_input": []
             },
-            "pid": 85144,
+            "pid": 50723,
             "rc": -1,
             "result_source": "synthetic"
           },
@@ -367,7 +367,7 @@
             "native_rc": 0,
             "operation": "mach-lookup",
             "outcome": "allow",
-            "pid": 85144,
+            "pid": 50723,
             "rc": 0,
             "result_source": "validator"
           },
@@ -396,10 +396,10 @@
               },
               "summary": "completed"
             },
-            "observed_path": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+            "observed_path": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
             "outcome": "ok",
             "path_diagnostics": {
-              "input": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
@@ -410,7 +410,7 @@
             "rc": 0,
             "requested_action": "open_read",
             "requested_kind": "file",
-            "requested_path": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+            "requested_path": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
             "result_source": "worker"
           },
           "comparison": {
@@ -426,20 +426,20 @@
             "error": null,
             "filter_kind": "path",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
             "native_rc": 0,
             "operation": "file-read-data",
             "outcome": "allow",
             "path_diagnostics": {
-              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
-              "input": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
+              "input": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
               "observer": "runner_host",
               "phase": "after_orchestration",
               "same_as_input": [
                 "realpath_resolved"
               ]
             },
-            "pid": 85144,
+            "pid": 50723,
             "rc": 0,
             "result_source": "validator"
           },
@@ -453,7 +453,7 @@
           "mach_lookup_invalid",
           "fs_read_allowed"
         ],
-        "pid": 85145,
+        "pid": 50724,
         "probe_bytes_expected": 292,
         "probe_bytes_written": 292,
         "reaped": true,
@@ -473,10 +473,10 @@
             "errno": 0,
             "filter_type": "PATH",
             "filter_type_id": 1,
-            "filter_value": "/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt",
+            "filter_value": "/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt",
             "operation": "file-read-data",
             "outcome": "allow",
-            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.OGgs57/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+            "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"fs_read_allowed\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-bbx.jHwns0/allow-read/existing.txt\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
             "rc": 0,
             "step_id": "fs_read_allowed"
           }
@@ -503,18 +503,18 @@
       "observed_deny": false,
       "observer": {
         "build": {
-          "commit": "076ec253bc6618d1c5e15182daf2b79b25027dd6",
-          "describe": "v0.2.4-80-g076ec25-dirty",
-          "number": "401",
-          "version": "0.2.4"
+          "commit": "33ad8472f507d6cc653f0ae8dafafe463ffa0aad",
+          "describe": "v0.2.6-24-g33ad847-dirty",
+          "number": "435",
+          "version": "0.2.6"
         },
         "data": {
           "blocked_reason": null,
           "collection": {
             "boundary": "log_show",
             "budget": {
-              "deadline_monotonic_ns": 430973732437000,
-              "started_monotonic_ns": 430963732437000,
+              "deadline_monotonic_ns": 85280201884000,
+              "started_monotonic_ns": 85270201884000,
               "timeout_ms": 10000,
               "timeout_source": "default"
             },
@@ -529,14 +529,14 @@
               "signal": null,
               "signal_before_reap": false,
               "signal_result": null,
-              "target": 85147
+              "target": 50726
             },
             "cutoff": null,
-            "elapsed_ms": 163,
+            "elapsed_ms": 98,
             "process": {
               "exit_code": 0,
               "exit_observed": true,
-              "pid": 85147,
+              "pid": 50726,
               "reaped": true,
               "term_signal": null,
               "wait_error": null
@@ -562,7 +562,7 @@
           "correlation_id": null,
           "deny_events": [],
           "duration_ms": null,
-          "end": "2026-10-03 22:29:19+0000",
+          "end": "2026-10-06 15:32:49+0000",
           "last": null,
           "log_error": null,
           "log_rc": 0,
@@ -573,15 +573,15 @@
           "observed_deny": false,
           "observed_lines": 1,
           "observer_schema_version": 2,
-          "pid": 85144,
+          "pid": 50723,
           "plan_id": null,
-          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(85144\\\\)([ \\\\t]+.*)?\"",
+          "predicate": "eventMessage MATCHES[c] \"(?s).*Sandbox:[ \\\\t]+pw-probe-runner\\\\(50723\\\\)([ \\\\t]+.*)?\"",
           "process_name": "pw-probe-runner",
           "row_id": null,
-          "start": "2026-10-03 22:29:14+0000",
+          "start": "2026-10-06 15:32:44+0000",
           "stop_on_pid_exit": false
         },
-        "generated_at_unix_ms": 1791066556535,
+        "generated_at_unix_ms": 1791300767094,
         "kind": "sandbox_log_observer_report",
         "result": {
           "errno": null,
@@ -600,8 +600,8 @@
       "stderr_bytes_received": 0,
       "stderr_bytes_retained": 0,
       "stderr_truncated": false,
-      "stdout_bytes_received": 2427,
-      "stdout_bytes_retained": 2427,
+      "stdout_bytes_received": 2424,
+      "stdout_bytes_retained": 2424,
       "stdout_capture_error": null,
       "stdout_parse_error": null,
       "stdout_raw": null,
@@ -610,8 +610,8 @@
       "supervision": {
         "boundary": "observer",
         "budget": {
-          "deadline_monotonic_ns": 430973732437000,
-          "started_monotonic_ns": 430963732437000,
+          "deadline_monotonic_ns": 85280201884000,
+          "started_monotonic_ns": 85270201884000,
           "timeout_ms": 10000,
           "timeout_source": "default"
         },
@@ -632,14 +632,14 @@
             "errno": 1,
             "rc": -1
           },
-          "target": 85146
+          "target": 50725
         },
         "cutoff": null,
-        "elapsed_ms": 165,
+        "elapsed_ms": 101,
         "process": {
           "exit_code": 0,
           "exit_observed": true,
-          "pid": 85146,
+          "pid": 50725,
           "reaped": true,
           "term_signal": null,
           "wait_error": null
@@ -654,8 +654,8 @@
           "truncated": false
         },
         "stdout": {
-          "bytes_read": 2427,
-          "bytes_retained": 2427,
+          "bytes_read": 2424,
+          "bytes_retained": 2424,
           "eof": true,
           "limit_bytes": 33554432,
           "read_error": null,
@@ -664,12 +664,12 @@
       },
       "tool_exit_code": 0,
       "window": {
-        "end": "2026-10-03 22:29:19+0000",
-        "ended_at_unix_ms": 1791066556372,
+        "end": "2026-10-06 15:32:49+0000",
+        "ended_at_unix_ms": 1791300766995,
         "kind": "runner_client_span",
         "pad_seconds": 2,
-        "start": "2026-10-03 22:29:14+0000",
-        "started_at_unix_ms": 1791066556304
+        "start": "2026-10-06 15:32:44+0000",
+        "started_at_unix_ms": 1791300766935
       }
     },
     "specimen": {
@@ -685,8 +685,8 @@
       "host": {
         "arch": "arm64",
         "kernel_release": "23.6.0",
-        "macos_build": "23J220",
-        "macos_version": "14.8.3"
+        "macos_build": "23J631",
+        "macos_version": "14.8.9"
       },
       "policy": {
         "augmentation": {
@@ -705,7 +705,7 @@
           "status": "complete"
         }
       },
-      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/sbpl-fixture-refresh-live-02/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
+      "request_path": "/Users/achyland/Desktop/Security/PolicyWitness/tests/out/runs/arch-remediation-focused/suites/blackbox_e2e/BBX-002/artifacts/specimen.rendered.json",
       "runner_provenance": {
         "runner_bundle_id": "com.yourteam.policy-witness.PWRunner",
         "runner_bundle_path": "/Users/achyland/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
@@ -723,7 +723,7 @@
     },
     "timeout_ms": 240000
   },
-  "generated_at_unix_ms": 1791066556538,
+  "generated_at_unix_ms": 1791300767097,
   "kind": "run",
   "result": {
     "errno": null,

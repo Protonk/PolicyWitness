@@ -6,6 +6,10 @@ The real tool's timestamp acceptance is covered by the live witness case.
 """
 import argparse
 import json
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/"lib"))
+import contract
 from datetime import datetime
 
 parser = argparse.ArgumentParser()
@@ -33,6 +37,6 @@ selected = [{'pid': args.pid, 'process': args.process_name,
              'raw_line': f'fixture event at {at} ms: {path}'}
             for at, path in events
             if milliseconds(args.start) <= at <= milliseconds(args.end)]
-print(json.dumps({'data': {'start': args.start, 'end': args.end, 'last': None,
+print(json.dumps({'kind':'sandbox_log_observer_report','schema_version':contract.CONTROLLER_ENVELOPE,'data': {'observer_schema_version':2, 'start': args.start, 'end': args.end, 'last': None,
                           'observed_deny': bool(selected), 'deny_events': selected,
                           'log_rc': 0, 'log_error': None}}))

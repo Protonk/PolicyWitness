@@ -96,3 +96,12 @@ publication gates. Its validator control preserves both unfamiliar diagnostics
 and a known UTF-8 decoder fault through the actual subprocess encoder. The CLI
 transport witness separately exercises C publication and client/controller
 forwarding; these unit inputs do not establish native failure attribution.
+
+`ServiceAdmissionTests` checks host-wide admission and owner-only retirement.
+`service_admission_controls` restores per-connection claims and refusal exits
+separately in a disposable source copy; each must restore its specific failure.
+`PolicyTransferTests` checks real stalled/draining pipes, partial and interrupted
+writes, zero progress, clock loss and failed cleanup. Its actual encoded replies
+are replayed through Rust assembly and the Python consumer by the wrapper.
+The exact Rust replay is ignored in standalone Cargo runs because it requires
+those fresh driver receipts; it is mandatory in the default `runner_unit` case.

@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response14/missing_path_run.json"
+BASELINE = ROOT / "tests/fixtures/blackbox_e2e/checker/response15/missing_path_run.json"
 
 
 def main():

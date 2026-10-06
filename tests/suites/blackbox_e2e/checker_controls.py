@@ -28,6 +28,44 @@ from path_diagnostics_contract import check_cases
 from worker_exit_witness import worker_exit_witness
 
 
+def observer_controls(run):
+    base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
+        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure', 'steps': []}, ok=False)
+    good = dict(kind='sandbox_log_observer_report', schema_version=contract.CONTROLLER_ENVELOPE,
+                data=dict(observer_schema_version=2, observed_deny=True, deny_events=[]))
+    def wrapped(reply, status='invalid_reply'):
+        d=copy.deepcopy(base)
+        d['data']['sandbox_log_capture']=dict(observer=reply, capture_status=status,
+            observed_deny=None, deny_events=None, blocked_reason=None, step_denies=None)
+        return d
+    run('observer_admitted',wrapped(copy.deepcopy(good),'captured'))
+    faults=[('kind',None),('kind','wrong'),('schema_version',None),('schema_version',True),
+        ('schema_version','7'),('schema_version',7.0),('schema_version',contract.CONTROLLER_ENVELOPE-1),
+        ('schema_version',contract.CONTROLLER_ENVELOPE+1),('inner',3),('inner',True),('inner','2')]
+    for i,(key,value) in enumerate(faults):
+        p=copy.deepcopy(good)
+        if key=='inner': p['data']['observer_schema_version']=value
+        elif value is None: p.pop(key)
+        else: p[key]=value
+        p['data'].update(collection=['unknown',False],observed_deny='poison',blocked_reason={'unknown':0})
+        for status in ('invalid_reply','timeout','overflow','error'):
+            d=wrapped(p,status); before=copy.deepcopy(d)
+            run(f'observer_opaque_{i}_{status}',d)
+            assert d==before
+        d=wrapped(p,'captured'); run(f'observer_bad_status_{i}',d,rejected_by='status requires an admitted observer')
+        d=wrapped(p); d['data']['sandbox_log_capture']['deny_events']=[]
+        run(f'observer_bad_claim_{i}',d,rejected_by='inadmissible observer cannot supply log claims')
+        d['data']['runner_sandbox_diagnostics']=dict(correlation_status='pid_match',permission_failures_without_record=['invented'])
+        got=denials(d)
+        assert got['events'] is None and got['candidates'] is None and got['permission_failures_without_record'] is None
+        assert got['correlation_status']=='unavailable' and got['capture']==d['data']['sandbox_log_capture']
+        run(f'observer_bad_correlation_{i}',d,rejected_by='cannot supply correlation or missing-record claims')
+    p=copy.deepcopy(good); p['data']['observed_deny']='poison'
+    run('observer_admitted_bad_body',wrapped(p,'captured'),rejected_by='observed_deny is string')
+    d=wrapped({'unknown':True}); d['data']['sandbox_log_capture']['tool_exit_code']='poison'
+    run('observer_bad_wrapper',d,rejected_by='tool_exit_code is string')
+
+
 def policy_check_controls(run):
     """Constructed captures distinguish rejected payloads from admitted helper data."""
     base = envelope_skeleton({'schema_version': contract.RESPONSE_SCHEMA,
@@ -181,6 +219,7 @@ def consumer_controls(artifacts, current):
     assert len(errors) == 1 and 'unsupported controller envelope' in errors[0], errors
     run('previous_envelope_rejected', previous, rejected_by='unsupported controller envelope')
     policy_check_controls(run)
+    observer_controls(run)
 
     # Attempt forms have their own compact contract beside the query forms.
     resolved = copy.deepcopy(current)
@@ -542,7 +581,7 @@ def main():
     artifacts = Path(sys.argv[1])
     artifacts.mkdir(parents=True, exist_ok=True)
     check_cases(json.loads((ROOT / 'tests/fixtures/contract/path_diagnostics.json').read_text()))
-    baseline = json.loads((FIXTURES / "checker/response14/valid_run.json").read_text())
+    baseline = json.loads((FIXTURES / "checker/response15/valid_run.json").read_text())
     prediction_error = "fs_write_allowed: expected sandbox_check allow"
     later_attempt_error = "mach_lookup_denied: expected attempt_ok=False"
     failures = []
@@ -618,7 +657,7 @@ def main():
     broken["data"]["runner_result"]["steps"].reverse()
     check("reordered_steps", broken, ("expected step IDs in order",))
 
-    missing = json.loads((FIXTURES / "checker/response14/missing_path_run.json").read_text())
+    missing = json.loads((FIXTURES / "checker/response15/missing_path_run.json").read_text())
     check("expected_unavailable", missing, case="BBX-002")
 
     broken = copy.deepcopy(missing)

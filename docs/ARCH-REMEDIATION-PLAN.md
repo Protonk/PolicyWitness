@@ -14,14 +14,16 @@ closeout; this plan owns implementation and acceptance for the rows below.
 
 ## Status
 
-Planned; implementation has not started. Writing and committing this plan
-does not credit any implementation or acceptance test below.
+Completed 2026-10-06, starting from `33ad847`. All implementation and
+acceptance gates below passed, and the work was reviewed and committed the
+same day; the review's own gate runs are listed at the end of the execution
+notes.
 
-- [ ] Establish regression controls and record the baseline failures.
-- [ ] Implement and validate observer admission.
-- [ ] Implement and validate process-wide single-use admission.
-- [ ] Implement and validate bounded policy delivery.
-- [ ] Reconcile contracts, documentation and plan dispositions; pass the
+- [x] Establish regression controls and record the baseline failures.
+- [x] Implement and validate observer admission.
+- [x] Implement and validate process-wide single-use admission.
+- [x] Implement and validate bounded policy delivery.
+- [x] Reconcile contracts, documentation and plan dispositions; pass the
   final acceptance gates.
 
 ## Scope and retained limits
@@ -193,18 +195,23 @@ after apply for up to a minute; send the second while it is held. Require
 the second's refusal, let the hang expire, and require the first to finish
 successfully.
 
-The receipts are in the replies: both carry the host's `pid`, which
-establishes that one host served both connections; the refusal carries a
-null `runner_subprocess` and no steps, which establishes that it entered no
-specimen work; the owner's reply carries its worker evidence and its file
-effects. Preserve the inspected app's bytes. After the owner's host has
-retired, wait out launchd's default respawn throttle before the next step:
-the generated plist sets no `ThrottleInterval`, so a run issued within about
-ten seconds of the previous launch waits for the remainder, and an immediate
-one can fail with XPC error 4097, which inside that window is not a
-regression. A fresh host must then serve a normal request. Transport failure
-during retirement remains permitted and does not justify resubmitting a
-specimen of unknown execution.
+The live control records the exact owned launchd service's PID and its
+worker-child relationship while the owner's file effect is present and the
+owner remains held. The refusal's host PID must match that observation; the
+owner's `runner_subprocess.pid` must match the independently observed child.
+The refusal has a null subprocess, no steps and no second file effect.
+Service unit counters separately establish no orchestration entry.
+
+Correction to the planned oracle: successful top-level `pid` names the
+worker, while a pre-worker refusal's `pid` names the host. Equal top-level
+reply PIDs cannot establish shared-host service. This changes the receipt
+source, preserving the required same-host and no-second-execution checks.
+
+Preserve the inspected app's bytes. After observed host retirement, wait
+beyond launchd's default respawn throttle before the independent normal
+request. A fresh host must serve it successfully. Transport failure during
+retirement remains permitted; neither a timing window nor error 4097 alone
+excuses an acceptance failure or permits resubmitting an unknown execution.
 
 The current
 [Mach-service liveness test](../tests/suites/runner_mach_service_liveness/README.md)
@@ -359,6 +366,101 @@ temporary plan or the investigation records.
 
 ## Execution notes
 
-No implementation or acceptance results recorded yet. Add material budget and
-wire decisions, baseline regression evidence, test commands/results, retained
-artifact paths and any unfulfilled gate as the work proceeds.
+Starting point: `33ad847`, macOS 14.8.9 (23J631) on arm64 with Apple Command Line Tools and
+Developer ID Application signing identity `42D369QV8E`. Changes remain in the
+working tree. The signed build uses `YOLO=1 make build`; build and native test
+commands require execution outside the automation sandbox for keychain,
+Swift module cache, XPC and native sandbox access.
+
+Decisions: policy delivery has a fixed 5,000 ms production allowance and an
+internal driver-only test setting. It starts immediately after successful
+spawn, before the first write; readiness has its own later allowance. The
+budget fits within the default 240,000 ms client wait, but an arbitrarily
+short client override still cancels nothing. `MonotonicDeadline` is shared
+with validator collection and caps poll waits to the remaining allowance.
+Response schema 15 adds `policy_transfer_timeout` (budget, elapsed time and
+accepted/expected byte counts), stop `policy_transfer_deadline`, cleanup
+trigger `policy_transfer_timeout`, and the supported cleanup cause
+`host_cleanup_after_transfer_timeout`. Write errors retain their actual errno.
+Clock/poll failure or zero progress retains a host diagnostic without an
+invented errno. The normal timeout summary is `runner_timeout`; published
+worker failure retains precedence.
+
+Regression evidence (under `tests/out/runs/`):
+
+- `arch-observer-red`: exact ignored Rust test failed because a rejected
+  observer frame supplied a blocked status. It is now promoted to default.
+- `arch-transfer-red`: the temporarily registered stalled-reader test failed
+  because the old blocking writer reached the fixture's five-second watchdog.
+  The new service controls passed in that run. Sixteen unrelated real-worker
+  controls also failed against the then-stale ABI build; they are not credited
+  as regressions or acceptance evidence.
+- `arch-remediation-gates`, `runner_unit/service_admission_controls`: service
+  tests need the new scheduler/orchestration seams. A disposable source copy
+  passed all three fixed controls; restoring per-service admission and
+  refusal-triggered exit separately restored their specific failures.
+  Neither reversion touched the inspected app.
+- `arch-remediation-focused`: signed build, source drift, Rust and Python
+  controls, worker harness and live BBX/A1 fixture refresh passed. Swift was
+  384/385: the new timeout shape needed its constructed producer example.
+- `arch-remediation-gates`: Swift 385/385 and actual driver replies through
+  Rust assembly/Python passed, as did service reversions, caller authorization
+  and the mandatory order-barrier mutations. The Rust batch exposed a control
+  budget shorter than the observer's reserved reporting interval; its outer
+  timeout case was corrected to leave time for a real inner report.
+
+`arch-byoxpc-gate` passed the Rust and Python controls and the live BYOXPC
+two-client case, including independent held-host/worker receipts, fresh-host
+success and verified removal. The earlier failed live check in
+`arch-remediation-gates` retained a fully completed owner and refusal, and
+verified removal; its PID-oracle correction is explained above.
+
+Final combined acceptance: **165/165 default cases passed, zero failures,
+zero skips, zero unrun cases**, with no harness errors. All 385 Swift tests
+passed; the wrapper also required the real-driver Rust/Python replay. The
+signed app remained unchanged through the run. Evidence:
+
+- `tests/out/runs/arch-remediation-final/run.json`: complete default battery,
+  selected through `PW_TEST_QUIET=1 PW_TEST_OUT_DIR=tests/out/runs/arch-remediation-final tests/run.sh`
+  outside the automation sandbox; 379,614 ms.
+- `tests/out/runs/arch-remediation-final/source-state.json`: SHA-256 snapshot
+  of 550 repository files, excluding these mutable plans and investigation
+  records, based on `33ad847` (the file records the full base commit).
+- Final signed build: `YOLO=1 make build`, version `0.2.6 (435)`, description
+  `v0.2.6-24-g33ad847-dirty`, worker identity
+  `a321f402f7aca50d8537a7892fbda157e17c741085ce8bfa4634a6c43e2576fa`.
+- `tests/out/runs/arch-remediation-gates`: passing caller authorization,
+  service mutation controls and `witness_contract/order_barrier_mutations`;
+  the two failures and their corrections are accounted for above.
+- `tests/out/runs/arch-byoxpc-gate`: corrected live BYOXPC gate plus Rust and
+  Python controls, all passing. Both this installation and the earlier failed
+  control's installation have `removed: true` ownership receipts; no test-owned
+  external service or staging is left behind.
+- Active response-15 BBX and disposition fixtures were copied unchanged with
+  their exact specimens from passing live cases in `arch-remediation-focused`.
+  Historical evidence and the response-9 known-loss fixture were preserved.
+
+Generated architecture, contract, limits and worker-identity checks pass; the
+reviewed response shape includes the timeout object. Parent rows 13, 17, 18
+and 20 are resolved, and their investigation statuses are updated. No acceptance
+gate is deferred. The entitlement question (row 19), retirement transport race,
+blocking final reap and descendant limits remain outside this remediation.
+The parent still owns its remaining prose corrections and integration closeout.
+
+Review gate runs (2026-10-06, after the review's edits; worker identity
+`0cc3dad9f1b50efa37e9a24fb17a87a9cd90168d37bc52aa37cc618363ad5dd8`):
+
+- The review changed the write loop to decide completion before consulting
+  the clock, so a transfer whose last write lands as the allowance runs out
+  is complete rather than timed out, and an empty policy never touches the
+  buffer; the architecture document and manifest name the budget by its
+  limit rather than its value.
+- `tests/out/runs/arch-remediation-review`: default battery, 165/165, no
+  skips, no harness errors, against the rebuilt signed app.
+- `tests/out/runs/arch-remediation-review-optin`:
+  `witness_contract/order_barrier_mutations` and `runner_byoxpc/single_use`
+  both pass; the single-use receipts record one shared host, its one held
+  worker, the refused client's absent effect and a fresh worker afterwards;
+  no test-owned service remains loaded.
+- Generator checks (contract, limits, architecture, worker identity), Rust
+  formatting and the Rust unit tests pass on the committed tree.

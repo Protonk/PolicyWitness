@@ -37,3 +37,8 @@ Run:
 ```
 ./tests/run.sh --suite unit
 ```
+
+`rust.observer_admission` selects the promoted observer marker regression by
+exact name. The default Rust batch also carries rejected-frame and inner-version
+receipts through real supervised pipes, assembly and independent consumers,
+including outer timeout/overflow without semantic use of the rejected body.

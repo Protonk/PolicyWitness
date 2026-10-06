@@ -234,7 +234,7 @@ def expected_fixture_controls(out):
     from consumer import validate
     out.mkdir(parents=True, exist_ok=True)
     fixtures = ROOT / 'tests/fixtures/disposition'
-    expected = json.loads((fixtures / 'response14/a1_expected.json').read_text())
+    expected = json.loads((fixtures / 'response15/a1_expected.json').read_text())
     known = json.loads((fixtures / 'a1_known_loss.json').read_text())
     records = []
     assert not O.check_record(expected), O.check_record(expected)

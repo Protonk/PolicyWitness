@@ -87,7 +87,7 @@ resolve their own helpers relative to their own bundle.
 | user | the caller | person | a shell or a harness | owns the request file and reads the envelope |  |  |  |  | [`pub fn run`](../controller/src/cli.rs) | [`check_cli_surface_agreement`](../tests/suites/source_drift/check.py) |
 | controller | policy-witness | executable | app top level | one run | Rust | the caller | no | none | [`fn main`](../controller/src/main.rs); [`cmd_run`](../controller/src/run_flow.rs) | [`consumer_controls`](../tests/suites/blackbox_e2e/checker_controls.py); [`EXECUTABLES`](../tests/lib/artifact.py) |
 | client | pw-runner-client | executable | app top level | one run | Swift | the controller | no | none | [`readDataToEndOfFile`](../runner/Clients/PWRunnerClient/main.swift); [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift) | [`path_wire_fixtures_survive_capture_serialization_and_independent_consumer`](../controller/src/runner_client.rs); [`client_output_control`](../tests/suites/blackbox_e2e/checker_controls.py) |
-| host | PWRunner | executable | inside the XPC bundle | one specimen; exits 50 ms after replying | Swift | launchd: XPC service lookup, or a Mach service for BYOXPC | no | none, by the invariance rule | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`milliseconds(50)`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`host_invariance`](../tests/lib/artifact.py); [`check_host_invariance`](../tests/suites/source_drift/check.py) |
+| host | PWRunner | executable | inside the XPC bundle | one specimen; exits 50 ms after replying | Swift | launchd: XPC service lookup, or a Mach service for BYOXPC | no | none, by the invariance rule | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`milliseconds(50)`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`host_invariance`](../tests/lib/artifact.py); [`check_host_invariance`](../tests/suites/source_drift/check.py); [`runServiceAdmissionTests`](../runner/Tests/PWRunnerCoreTests/ServiceAdmissionTests.swift); [`worker_children`](../tests/suites/runner_byoxpc/opt_in/single_use.py) |
 | worker | pw-probe-runner | sandboxed | inside the XPC bundle | until the host requests exit; spins after done | C | the host | yes; applies the specimen policy to itself | sandbox_compile_string, params, sandbox_apply | [`sandbox_compile_string`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`sandbox_apply`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`CWorkerOrchestrator`](../tests/suites/runner_use_c_worker/run.sh) |
 | exec_child | exec helper children | sandboxed | the caller's path | the worker's waits are bounded by the exec deadline and the attempt budget; a descendant that leaves the child's process group is not contained | caller-supplied | the worker | inherit the worker's sandbox | none of PolicyWitness's | [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`exec_resources_acquire`](../controller/tools/pw_probe_runner/pw_probe_runner.c) | [`runner_exec_lifecycle`](../tests/suites/runner_exec_lifecycle/run.sh); [`contaminated_worker`](../tests/suites/runner_exec_inheritance/run.sh) |
 | validator | sb_api_validator | executable | inside the XPC bundle | one batch | C | the host, after applied | no | sandbox_check | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c); [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`bothBinariesExist`](../runner/Tests/PWRunnerCoreTests/CWorkerValidatorTests.swift) |
@@ -104,7 +104,7 @@ resolve their own helpers relative to their own bundle.
 | T2 | controller | client | spawn | spawn; held request on stdin, read to EOF; reply on stdout | [`run_pw_runner_client`](../controller/src/runner_client.rs); [`readDataToEndOfFile`](../runner/Clients/PWRunnerClient/main.swift) | [`path_wire_fixtures_survive_capture_serialization_and_independent_consumer`](../controller/src/runner_client.rs); [`client_output_control`](../tests/suites/blackbox_e2e/checker_controls.py) |
 | T3 | client | host | channel | NSXPC runSpecimen(Data) and its reply | [`NSXPCConnection`](../runner/Clients/PWRunnerClient/main.swift); [`runSpecimen`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`CWorkerOrchestrator`](../tests/suites/runner_use_c_worker/run.sh); [`accepted_input_contract`](../tests/suites/runner_outcome_bad_request/run.sh) |
 | T4 | launchd | host | launch | start on XPC lookup, or as a Mach service (BYOXPC) | [`NSXPCListener.service()`](../runner/Services/PWRunner/main.swift); [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`launchctl_bootstrap`](../controller/src/runner_manager.rs) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh); [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
-| T5 | host | worker | spawn | posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe | [`posix_spawn_file_actions_adddup2`](../runner/Sources/PWRunnerCore/CWorker.swift); [`F_SETNOSIGPIPE`](../runner/Sources/PWRunnerCore/CWorker.swift); [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`runner_abi_layout`](../tests/suites/runner_abi_layout/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh) |
+| T5 | host | worker | spawn | posix_spawn; fd 0 policy pipe, fd 3 shared region, fd 4 ready pipe | [`posix_spawn_file_actions_adddup2`](../runner/Sources/PWRunnerCore/CWorker.swift); [`F_SETNOSIGPIPE`](../runner/Sources/PWRunnerCore/CWorker.swift); [`writePolicy`](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift); [`PW_SHM_ABI_MAGIC`](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h) | [`runner_abi_layout`](../tests/suites/runner_abi_layout/run.sh); [`exec_control_states`](../tests/suites/runner_c_worker_harness/run.sh); [`runPolicyTransferTests`](../runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift) |
 | T6 | host | validator | spawn | posix_spawn --batch <pid>; NDJSON probes in, verdicts out | [`runValidator`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh) |
 | T7 | validator | worker | native | sandbox_check against the worker PID, with SANDBOX_CHECK_NO_REPORT | [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c); [`SANDBOX_CHECK_NO_REPORT`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`independent_worker_and_host_queries`](../tests/suites/runner_live_worker_identity/run.sh) |
 | T8 | worker | host | channel | evidence published in the shared region with release ordering; proceed waited for before attempts | [`wait_for_proceed`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`run_attempt`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`CWorkerStepResult`](../runner/Sources/PWRunnerCore/CWorker.swift); [`proceedOffset`](../runner/Sources/PWRunnerCore/CWorker.swift) | [`signal_while_waiting`](../runner/Tests/PWRunnerCoreTests/OrderingTests.swift); [`order_barrier_mutations`](../tests/suites/witness_contract/opt_in/mutations.sh) |
@@ -115,8 +115,8 @@ resolve their own helpers relative to their own bundle.
 
 Notes:
 
-- `host`: Known gap: single-use admission is per connection object (the listener delegate creates a service object with its own didRun flag for every accepted connection) while any reply schedules the process-wide exit, so one specimen per external runner host is not enforced across connections.
-- `T5`: Known gap: the policy is delivered with blocking writes and no deadline before any budget starts; a worker that keeps fd 0 open without draining stalls the host.
+- `host`: All authorized connections share one terminal, locked request claim. Only its owner schedules host exit; connections racing retirement can still fail before refusal.
+- `T5`: Policy delivery uses nonblocking writes under one absolute monotonic deadline (the worker_policy_transfer limit) beginning after spawn. Expiry closes input and enters cleanup before readiness or sentinel polling.
 
 Every node and edge above cites at least one check.
 
@@ -266,8 +266,9 @@ adds no global lifecycle deadline, so a reply, the end of observation and
 the end of execution are three different moments, and each record says
 which one it describes.
 
-Each budget covers one phase and no more, and no budget covers policy
-delivery. The ready window covers only the wait for the ready byte after
+Each budget covers one phase and no more. Policy delivery has its own
+absolute monotonic deadline, started immediately after the spawn; the ready
+window covers only the wait for the ready byte after
 the policy has been written; the sentinel deadline covers application
 through `done`, less the collection interval, because the host runs the
 hook synchronously between polls and the hook's time is outside it; the
@@ -275,19 +276,21 @@ validator I/O deadline covers collection; the proceed budget covers the
 worker's wait for release; the grace timer covers exit request to kill; the
 exec deadline and attempt budget cover the worker's waits on exec children,
 per step and per plan; the log budget covers the observer. The ready and
-sentinel budgets are iteration counts over a sleep interval, so their
-nominal durations are lower bounds. Their values and their checks are in
+sentinel budgets are iteration counts over a sleep interval, not wall-clock
+guarantees in either direction. Their values and their checks are in
 [LIMITS.md](LIMITS.md).
 
-Known gap. The host delivers the policy with blocking writes and no
-deadline before any budget starts (the write loop in
-[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift)); a worker
-that keeps the read end open without draining stalls the host, and the
-client's timeout cancels nothing in it. The shipped worker reads the policy
-immediately after mapping the region and checking identity, so the
-realistic triggers are a stopped worker or a substituted executable.
-Bounding the host wait for worker policy transfer is the rule the driver
-does not apply.
+The host sends policy bytes through a nonblocking pipe under the delivery
+deadline (`writePolicy` and `MonotonicDeadline` in
+[MonotonicDeadline.swift](../runner/Sources/PWRunnerCore/MonotonicDeadline.swift)).
+Partial writes, interruptions and backpressure consume the same allowance.
+Expiry records `policy_transfer_timeout` separately from any write errno,
+closes input and enters cleanup without starting readiness or sentinel polling.
+Counts describe accepted writes, not child receipt. `PolicyTransferTests`
+checks a stalled reader, exact draining delivery, deadline edge cases and
+cleanup failures; the actual driver replies pass through controller assembly
+and the independent consumer. The deadline does not bound final reap or cancel
+an earlier client timeout.
 
 ## Evidence channels and ownership
 
@@ -353,7 +356,7 @@ suite, or by being built and shipped together, and the edge table says which.
 | validator_wire | validator NDJSON (probes and verdicts) | record | host and validator, co-shipped in one bundle | NDJSON; kind sb_api_validator_verdict; no version marker | [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift); [`sandbox_check`](../controller/tools/sb_api_validator/sb_api_validator.c) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`validator_overlong_request`](../tests/suites/failure_boundaries/check.py) |
 | reply | runner reply (PWRunnerRunResult) | record | the host | response schema; shape golden | [`PWRunnerRunResult`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift); [`PWContract`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`replyShapeDocuments`](../runner/Tests/PWRunnerCoreTests/ContractVersionTests.swift); [`schema_version`](../tests/fixtures/contract/response_shape.json) |
 | profile_capture | compiled-object receipt (applied_profile) | record | the worker, before apply; admitted by the host | opt-in copy of the compiled object with a nonce; its own schema_version on AppliedProfileCapture | [`pw_capture_profile`](../controller/tools/pw_probe_runner/pw_probe_runner.c); [`AppliedProfileCapture`](../runner/Sources/PWRunnerCore/PWRunnerAPI.swift) | [`runAppliedProfileCaptureTests`](../runner/Tests/PWRunnerCoreTests/AppliedProfileCaptureTests.swift) |
-| envelope | controller envelope (kind run) | record | the controller | envelope frame; shape golden | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`render_envelope`](../controller/src/json_contract.rs); [`complete_execution`](../controller/src/run_flow.rs) | [`envelope_shape_golden_agrees_with_the_manifest`](../controller/src/run_flow.rs); [`_validate_envelope`](../tests/lib/consumer.py) |
+| envelope | controller envelope (kind run) | record | the controller | envelope frame; shape golden | [`SCHEMA_VERSION`](../controller/src/json_contract.rs); [`render_envelope`](../controller/src/json_contract.rs); [`complete_execution`](../controller/src/run_flow.rs) | [`envelope_shape_golden_agrees_with_the_manifest`](../controller/src/run_flow.rs); [`_validate_observer_reply`](../tests/lib/consumer.py); [`observer_admission_precedes_all_body_interpretation`](../controller/src/sandbox_log.rs); [`observer_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |
 | observer_report | observer report (nested envelope) | record | the observer | envelope frame; its own observer_schema_version (OBSERVER_SCHEMA_VERSION) inside | [`OBSERVER_SCHEMA_VERSION`](../controller/src/bin/sandbox-log-observer.rs) | [`parsed_event_retains_pid_operation_and_raw_line_without_temporal_claims`](../controller/src/bin/sandbox-log-observer.rs); [`checked_reads`](../tests/suites/witness_contract/check_deny_capture_window.py) |
 | helper_envelope | sbpl-check envelope (nested) | record | sbpl-check | envelope frame; kind sbpl_check | [`run_policy_check`](../controller/src/policy_check.rs); [`sandbox_compile_string`](../controller/src/bin/sbpl-check.rs) | [`_validate_policy_check_reply`](../tests/lib/consumer.py); [`policy_check_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |
 | evidence_manifest | evidence manifest (in the app) | record | the build | hashes and entitlements of every shipped binary; its own schema_version (EVIDENCE_SCHEMA_VERSION) | [`manifest.json`](../tests/build-evidence.py); [`EVIDENCE_SCHEMA_VERSION`](../controller/src/evidence.rs) | [`codesign.preflight`](../tests/suites/preflight/run.sh); [`VALIDATOR_REL`](../tests/suites/witness_contract/check_dossier.py) |
@@ -370,7 +373,7 @@ suite, or by being built and shipped together, and the edge table says which.
 | B5 | run_spec | validator_wire | guard | planned probes; strict NDJSON decode; association by unique id | [`planValidatorQueries`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`decodeValidatorFrames`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`predictions_do_not_report`](../tests/suites/validator_batch_mode/run.sh); [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh) |
 | B6 | validator_wire | reply | guard | verdict joined to its step, or an explicit unavailable prediction | [`ComparisonEvidence`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift); [`sb_api_validator_verdict`](../runner/Sources/PWRunnerCore/ValidatorClient.swift) | [`transcript_controls`](../tests/suites/runner_validator_failure/run.sh); [`CWorkerOrchestrator`](../tests/suites/runner_use_c_worker/run.sh) |
 | B7 | reply | envelope | guard | exact response version; disposition validated and projected; reply retained unread when refused | [`reply_version`](../controller/src/run_flow.rs); [`complete_execution`](../controller/src/run_flow.rs); [`execution_diagnostics`](../controller/src/disposition.rs); [`validate_disposition`](../controller/src/disposition.rs) | [`reply_versions_are_gated_exactly`](../controller/src/run_flow.rs); [`disposition::tests::`](../tests/suites/blackbox_e2e/disposition_controls.py) |
-| B8 | observer_report | envelope | guard | nested unchanged; log evidence never changes execution evidence | [`attach_sandbox_logs`](../controller/src/run_flow.rs); [`OBSERVER_SCHEMA_VERSION`](../controller/src/bin/sandbox-log-observer.rs) | [`collector_states_preserve_the_serialized_execution_half`](../controller/src/run_flow.rs); [`_validate_envelope`](../tests/lib/consumer.py) |
+| B8 | observer_report | envelope | guard | nested unchanged; log evidence never changes execution evidence | [`attach_sandbox_logs`](../controller/src/run_flow.rs); [`admitted_observer`](../controller/src/sandbox_log.rs); [`OBSERVER_SCHEMA_VERSION`](../controller/src/bin/sandbox-log-observer.rs) | [`collector_states_preserve_the_serialized_execution_half`](../controller/src/run_flow.rs); [`_validate_observer_reply`](../tests/lib/consumer.py); [`observer_admission_precedes_all_body_interpretation`](../controller/src/sandbox_log.rs); [`observer_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |
 | B9 | helper_envelope | envelope | guard | nested unchanged; admitted by kind and frame version | [`fallback_policy_check`](../controller/src/run_flow.rs); [`_validate_policy_check_reply`](../tests/lib/consumer.py) | [`fallback_compilation_is_requested_only_for_an_admitted_xpc_error`](../controller/src/run_flow.rs); [`policy_check_controls`](../tests/suites/blackbox_e2e/checker_controls.py) |
 | B10 | evidence_manifest | envelope | guard | dossier compares selected binaries with manifest baselines; lookup by exact path and kind | [`unique_typed_entry`](../controller/src/evidence.rs); [`pub struct Binaries`](../controller/src/dossier.rs) | [`codesign.preflight`](../tests/suites/preflight/run.sh); [`VALIDATOR_REL`](../tests/suites/witness_contract/check_dossier.py) |
 | B11 | runner_registry | held_request | guard | selection resolves a BYOXPC target; selector fields stripped before XPC | [`resolve_runner_target_with_registry`](../controller/src/runner_select.rs); [`strip_runner_selector`](../controller/src/runner_select.rs); [`load_registry`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
@@ -379,7 +382,7 @@ suite, or by being built and shipped together, and the edge table says which.
 Notes:
 
 - `validator_wire`: The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard.
-- `B8`: Known gap: parse_observer_output reads the report's fields and never admits the frame's kind or version, and parse_supervised_observer checks the inner report version only; the helper receiver admits kind and frame version first.
+- `B8`: The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.
 - `B11`: Known gap: the installer signs the XPC bundle without --deep, so the supplied entitlements are embedded in the host executable only and that is what the registry records; the embedded worker keeps its build signature, which carries no entitlements.
 
 Every node and edge above cites at least one check.
@@ -393,17 +396,16 @@ The three nested envelopes (`data.policy_check.envelope`,
 number covers the controller family, and the observer's report carries its
 own number inside the frame.
 
-Known gap. The observer receiver, `parse_observer_output` in
-[sandbox_log.rs](../controller/src/sandbox_log.rs), reads the report's
-denial, window and blocked fields and never admits the frame's kind or
-version; `parse_supervised_observer` checks only the inner report version,
-so no outer admission happens at all. The helper receiver,
-`supported_outcome` in [policy_check.rs](../controller/src/policy_check.rs),
-admits kind and exact frame version before reading anything. The shipped observer is built from
-the same frame constant, so no shipped pairing is affected; the
-supplied-text replay path feeds the same parser, so a report with a wrong
-frame would be interpreted. Observer envelope admission before
-interpretation is the rule the receiver does not apply.
+The observer receiver in [sandbox_log.rs](../controller/src/sandbox_log.rs)
+admits `sandbox_log_observer_report`, the exact envelope version and the
+supported inner report version before reading report semantics. Rejected
+JSON remains under `observer` as opaque evidence. An intact, completely
+delivered rejected report yields `invalid_reply`; independent transport
+failure keeps its own precedence. No rejected body supplies events, blocked
+reasons, correlation or missing-record conclusions. Rust receiver/assembly
+controls and Python consumer controls check these boundaries while preserving
+serialized execution fields. The helper receiver follows its corresponding
+kind/version gate in [policy_check.rs](../controller/src/policy_check.rs).
 
 ## Principles as enforced constraints
 
@@ -411,24 +413,17 @@ The six core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
 instructions. Each is also a constraint on a particular phase above, and each
 has a mechanism that enforces it.
 
-- **One-way sandbox per process.** The host serves one `runSpecimen` and
-  exits; a second request on the same connection is refused as
-  `already_ran` (`didRun` in
-  [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)).
-  The worker is spawned per run and never reused. Checked by the single-use
-  shape of every live suite; the `already_ran` path itself has no test, as
-  [COVERAGE.md](../tests/COVERAGE.md) records. Known gap. Single-use
-  admission for an external runner host is per connection object: the
-  listener delegate creates a service object with its own `didRun` flag for
-  every connection it accepts, and any reply schedules the process-wide
-  exit. Two connections to one BYOXPC host can therefore overlap, or the
-  second can reach a host that is retiring. For an external runner host,
-  one specimen per host is therefore not enforced; it holds only while no
-  two runs reach the same host. The shipped flow relies on the client
-  opening one connection per run and the host exiting after its first
-  reply, and an external Mach service is shared by every client, so two
-  concurrent runs against one BYOXPC service are the case this gap
-  reaches.
+- **One-way sandbox per process.** Every authorized connection shares the
+  host's `PWRunnerAdmission` in
+  [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift).
+  Its locked claim is terminal from the first request's entry, including a
+  malformed or refused request. Later requests receive `already_ran` without
+  orchestration or exit scheduling. Only the owner schedules exit after the
+  normal 50 ms reply-flush delay. Service tests observe entry and retirement
+  separately; `runner_byoxpc/single_use` checks two shipped clients, the held
+  host's worker relationship, refusal without a file effect, owner completion
+  and successful service from a fresh host. A connection racing retirement
+  can still fail before refusal; no queue or automatic retry is promised.
 - **Host/worker split.** The host never links, loads or calls libsandbox.
   Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
   any binding under `runner/Sources/`, and `host_invariance` in
@@ -646,11 +641,5 @@ an install.
 Each gap is stated in full where the promise it limits is stated; this list
 only points there.
 
-- [Single-use admission for an external runner host](#principles-as-enforced-constraints)
-  is per connection object, while exit is process-wide.
-- [Observer envelope admission](#boundaries) never happens; the receiver
-  interprets the report without it.
-- [The host wait for worker policy transfer](#one-run-in-time) has no
-  deadline; it precedes every budget.
 - [Worker entitlements under a BYOXPC install](#byoxpc-as-a-variation-on-launch-and-selection)
   are the build's; the installed plist reaches the host executable only.

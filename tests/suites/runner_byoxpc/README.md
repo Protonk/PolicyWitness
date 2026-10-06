@@ -80,3 +80,10 @@ Rust unit controls separately exercise the production removal transaction with
 supplied launchd observations: bootout/unlink failures, unknown/unowned state,
 process loss after bootout, and failed retirement persistence. These controls
 establish state transitions; the opt-in case supplies actual launchd evidence.
+
+`single_use` uses the owned team-matched session helper and two shipped CLI
+clients. The owner creates a unique file before a controlled post-attempt hold.
+The second client must receive `already_ran` from the same host PID without
+creating its own file; the owner must finish. After observed host retirement
+and the launchd respawn allowance, a fresh host must serve a normal request.
+This case verifies removal before deleting its staging and recovery record.

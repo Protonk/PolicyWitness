@@ -14,7 +14,7 @@ pub const SCHEMA_VERSION: u32 = 7;
 /// The accepted request contract, independent of implementation revisions.
 pub const REQUEST_SCHEMA_VERSION: u32 = 4;
 /// The one runner response schema this controller reads; any other version is refused.
-pub const RESPONSE_SCHEMA_VERSION: u32 = 14;
+pub const RESPONSE_SCHEMA_VERSION: u32 = 15;
 // END GENERATED CONTRACT VERSIONS
 
 #[derive(Serialize, Clone)]

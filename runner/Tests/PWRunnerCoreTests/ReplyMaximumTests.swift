@@ -125,6 +125,8 @@ private func addAbsentOptionalFields(_ reply: inout [String: Any]) {
     evidence["diagnostic"] = ["state": 2, "status": "truncated", "length": PWShmLayout.diagnosticBytes - 1,
                               "text": maximal(PWShmLayout.diagnosticBytes - 1)]
     subprocess["worker_evidence"] = evidence
+    subprocess["policy_transfer_timeout"] = ["budget_ms": 5000, "elapsed_ms": UInt64.max,
+        "bytes_written": 262143, "bytes_expected": 262143] as [String: Any]
     reply["runner_subprocess"] = subprocess
 
     var validator = reply["validator_subprocess"] as! [String: Any]

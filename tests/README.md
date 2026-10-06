@@ -293,6 +293,12 @@ Scratch contents follow [.tmp/AGENTS.md](../.tmp/AGENTS.md) and are outside this
 
 ## Suite coverage
 
+The default `runner_unit` cases also enforce host-wide single-use admission,
+owner-only retirement and bounded policy delivery. Real transfer receipts pass
+through Rust assembly and the shared Python consumer; disposable service-source
+reversions must restore the original defects. `runner_byoxpc/single_use` is the
+explicit live two-client acceptance gate, with owned installation and cleanup.
+
 This is the canonical map of what each suite covers, what you can claim when it
 passes, and when it legitimately skips. For exact invariants and fixtures, see
 the per-suite README files under `tests/suites/<suite>/`. For the per-outcome

@@ -138,8 +138,9 @@ def check_observer_report(observer, pid, start, end, *, timeout_ms=10000, timeou
     """Validate one standalone or embedded observer invocation on its own facts."""
     now_ns = time.clock_gettime_ns(time.CLOCK_MONOTONIC) if now_ns is None else now_ns
     require(isinstance(observer, dict) and observer.get('kind') == 'sandbox_log_observer_report', 'missing observer report')
+    require(type(observer.get('schema_version')) is int and observer['schema_version'] == contract.CONTROLLER_ENVELOPE, 'unsupported observer envelope')
     data = observer.get('data')
-    require(isinstance(data, dict) and data.get('observer_schema_version') == 2 and data.get('mode') == 'show', 'malformed observer reply')
+    require(isinstance(data, dict) and type(data.get('observer_schema_version')) is int and data['observer_schema_version'] == 2 and data.get('mode') == 'show', 'malformed observer reply')
     require(data.get('pid') == pid and data.get('process_name') == 'pw-probe-runner', 'wrong observer identity')
     require((data.get('start'), data.get('end'), data.get('last')) == (start, end, None), 'wrong observer query bounds')
     require(data.get('blocked_reason') is None, 'required unified-log access blocked; see tests/README.md sandboxed-harness procedure')

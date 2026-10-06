@@ -153,7 +153,7 @@ public enum SandboxCheckOutcome {
 /// Wire contract versions. Edit docs/contract.json and regenerate; never edit here.
 public enum PWContract {
     public static let requestSchema: Int = 4
-    public static let responseSchema: Int = 14
+    public static let responseSchema: Int = 15
 }
 // END GENERATED CONTRACT VERSIONS
 
@@ -1117,6 +1117,13 @@ public struct PWRunnerWaitError: Codable {
 
 /// Host-observed UTF-8 policy transfer failure; counts are writes, not child reads.
 /// See tests/FAILURE-PROPAGATION-CONTRACT.md for field validity and JSON semantics.
+/// Timer observation; byte counts are writes accepted, not child reads.
+public struct PWWorkerPolicyTransferTimeout: Codable {
+    public var budget_ms: Int
+    public var elapsed_ms: UInt64
+    public var bytes_written: Int
+    public var bytes_expected: Int
+}
 public struct PWWorkerPolicyTransferError: Codable {
     public var errno: Int32
     public var bytes_written: Int
@@ -1190,13 +1197,14 @@ public struct PWRunnerSubprocess: Codable {
     /// Worker publication snapshot; absent before spawn.
     public var worker_evidence: PWWorkerEvidence? = nil
     /// Host transfer observation independent of any child publication.
+    public var policy_transfer_timeout: PWWorkerPolicyTransferTimeout? = nil
     public var policy_transfer_error: PWWorkerPolicyTransferError? = nil
     /// Host read of the ready byte; false does not prove compilation failed.
     public var ready_byte_received: Bool?
     /// Final acquire observation of done after cleanup, not successful application.
     /// poll_stop_reason separately retains the reason the polling phase ended.
     public var done_observed: Bool?
-    /// Host string: done, child_reaped, sentinel_deadline, wait_error, or policy_write_error.
+    /// Host string: done, child_reaped, sentinel_deadline, wait_error, policy_write_error, or policy_transfer_deadline.
     /// Identifies why polling stopped; later cleanup must not rewrite it.
     /// Only sentinel_deadline establishes exhaustion of the polling budget.
     /// Unknown strings survive decoding; they do not imply a known condition.
@@ -1260,12 +1268,12 @@ public enum PWDisposition {
     public static let stepQuestions = ["step_boundary_reached", "step_result_published",
                                        "step_requested_operation_applicability"]
     public static let cleanupTriggers = ["deadline_expiry", "completion", "child_reaped", "poll_wait_error",
-                                         "policy_transfer_error"]
+                                         "policy_transfer_error", "policy_transfer_timeout"]
     public static let graceEnds = ["not_entered", "reaped_during_grace", "exhausted", "wait_error"]
     public static let collectionBases = ["after_confirmed_reap", "execution_may_continue", "unavailable"]
     public static let triggerForStop: [String: String] = [
         "sentinel_deadline": "deadline_expiry", "done": "completion", "child_reaped": "child_reaped",
-        "wait_error": "poll_wait_error", "policy_write_error": "policy_transfer_error"]
+        "wait_error": "poll_wait_error", "policy_write_error": "policy_transfer_error", "policy_transfer_deadline": "policy_transfer_timeout"]
     public static let slotStates = ["completed", "incomplete", "absent"]
     public static let attemptSupport = ["supported", "unsupported"]
     public static let summaries = ["completed", "started_without_result", "not_reached", "unsupported",
@@ -1276,7 +1284,7 @@ public enum PWDisposition {
         "conflicting": "attempt:lifecycle_conflicting"]
     public static let causeForTrigger: [String: String] = [
         "deadline_expiry": "host_sentinel_deadline", "completion": "host_exit_grace_exhausted",
-        "poll_wait_error": "host_cleanup_after_wait_error", "policy_transfer_error": "host_cleanup_after_transfer_error"]
+        "poll_wait_error": "host_cleanup_after_wait_error", "policy_transfer_error": "host_cleanup_after_transfer_error", "policy_transfer_timeout": "host_cleanup_after_transfer_timeout"]
     public static let notRecorded = "not_recorded"
     /// Temporal order of worker operations (pw_probe_runner_abi.h): proceed (11)
     /// precedes the indexed attempts (9); completion (10) follows them.

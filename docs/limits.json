@@ -587,6 +587,35 @@
       "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
     },
     {
+      "id": "worker_policy_transfer",
+      "section": "execution",
+      "title": "Worker policy delivery",
+      "value": 5000,
+      "unit": "milliseconds",
+      "counting": "One absolute monotonic deadline starting immediately after spawn; partial writes and interrupted calls do not restart it.",
+      "effect": "Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented.",
+      "control": "Fixed; internal driver controls may shorten it.",
+      "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "CWorkerInput.defaultPolicyTransferTimeoutMs"
+        }
+      ],
+      "checks": [
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/LimitsContractTests.swift",
+          "symbol": "runLimitsContractTests",
+          "kind": "value"
+        },
+        {
+          "path": "runner/Tests/PWRunnerCoreTests/PolicyTransferTests.swift",
+          "symbol": "runPolicyTransferTests",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Real stalled and draining pipes plus deterministic interrupted, partial and zero-progress writes. Readiness wait starts only after successful delivery. The production budget fits within the default client wait; a shorter client override is independent and does not cancel the host."
+    },
+    {
       "id": "worker_ready_wait",
       "section": "execution",
       "title": "Worker readiness hint wait",
@@ -1022,7 +1051,7 @@
       "id": "runner_reply_maximum",
       "section": "transport",
       "title": "Informative reply size bound",
-      "value": 24825335,
+      "value": 24825461,
       "unit": "bytes",
       "counting": "Upper bound on the encoded size of one runner JSON reply for this build.",
       "effect": "No reply is refused at this size; retained output is bounded by `controller_output`.",

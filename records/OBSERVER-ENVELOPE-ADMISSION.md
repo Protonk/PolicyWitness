@@ -6,9 +6,9 @@ as opaque evidence, produce no derived denial observations from them, and
 preserve execution results independently. This is a bounded receiver change
 with direct regression controls.
 
-Status: diagnosed from source and existing test expectations; remediation is
-proposed, not implemented. No new executable reproduction was run for this
-record.
+Status: resolved and validated 2026-10-06. Observer receiver, supervised timeout/overflow, assembly and independent consumer controls pass.
+The final default battery passed 165/165 with no skips. The proposal and
+diagnosis below preserve the investigation’s original grounding.
 
 **Proposed change**
 

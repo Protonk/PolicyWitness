@@ -264,27 +264,19 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
     var ioError: ValidatorClientError? = nil
     var readError: ValidatorClientError? = nil
     var collectionStop = "eof"
-    func monotonicNanoseconds() -> UInt64? {
-        var ts = timespec()
-        guard clock_gettime(CLOCK_MONOTONIC, &ts) == 0 else { return nil }
-        return UInt64(ts.tv_sec) * 1_000_000_000 + UInt64(ts.tv_nsec)
-    }
-    let started = monotonicNanoseconds()
-    // Very large test overrides must not trap during unit conversion.
-    let milliseconds = UInt64(max(0, input.verdictReadTimeoutMs))
-    let budget = min(milliseconds, UInt64.max / 1_000_000) * 1_000_000
+    let deadline = MonotonicDeadline(milliseconds: input.verdictReadTimeoutMs)
 
     // Interleave writes (payload → validator stdin) with reads
     // (validator stdout → stdoutBytes). poll() returns when either FD
     // is ready or the 100 ms tick fires (whichever first) so the
     // deadline check stays sharp.
     while stdinOpen || stdoutOpen {
-        guard let start = started, let now = monotonicNanoseconds() else {
+        guard let sample = deadline.sample() else {
             collectionStop = "clock_error"
             readError = .verdictReadFailed("CLOCK_MONOTONIC unavailable; collection closed")
             break
         }
-        if now - start >= budget {
+        if sample.remaining == 0 {
             collectionStop = stdoutOpen ? "deadline" : "eof"
             readError = .verdictReadFailed(
                 "exceeded \(input.verdictReadTimeoutMs) ms I/O deadline; "
@@ -308,7 +300,7 @@ func runValidator(_ input: ValidatorClientInput, processCalls: ChildProcessCalls
 
         let pollRC = pfds.withUnsafeMutableBufferPointer { buf -> Int32 in
             guard let base = buf.baseAddress else { return 0 }
-            return poll(base, nfds_t(buf.count), 100)
+            return poll(base, nfds_t(buf.count), MonotonicDeadline.pollMilliseconds(sample.remaining))
         }
         if pollRC < 0 {
             if errno == EINTR { continue }
