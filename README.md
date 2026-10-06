@@ -72,6 +72,7 @@ All of the code here was written by AI coding agents (Claude and ChatGPT), inclu
 - Implementation details:
   - CLI contract and controller behavior: [controller/README.md](controller/README.md)
   - Runner service architecture: [runner/README.md](runner/README.md)
+  - Architecture tour (one run in time, boundaries, the document graph): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Contributing:
   - Repo orientation: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)

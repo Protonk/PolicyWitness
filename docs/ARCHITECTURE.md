@@ -444,7 +444,8 @@ has a mechanism that enforces it.
   facts support it (`CAUSE_FOR_TRIGGER` in
   [disposition.rs](../controller/src/disposition.rs)). Log correlation is a
   separate observation with its own `correlation_status`. The pre-apply
-  witness case forbids `ok`, `bad_policy` and the two retired spellings
+  witness case forbids `ok`, `bad_policy` and the two spellings no constant
+  defines,
   outright.
 - **Runner simplicity.** Host orchestration is `PWRunnerService.swift` and
   `CWorkerOrchestrator.swift`; everything after apply is the C worker, which
