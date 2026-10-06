@@ -37,7 +37,7 @@ Planned; implementation has not started. Writing this plan credits no
 implementation or acceptance test below.
 
 - [x] Establish the regression baseline and record the starting failures.
-- [ ] Group 1: sign the embedded helpers at install and read all three back.
+- [x] Group 1: sign the embedded helpers at install and read all three back.
 - [ ] Group 2: verify recursively at install and in `runner validate`.
 - [ ] Group 3: select on true-valued keys in the worker's read-back.
 - [ ] Group 4: bound launchd's respawn wait in the generated plist.
@@ -279,3 +279,35 @@ The four regressions exist and were recorded red before any product change:
 Evidence: `tests/out/runs/byoxpc-remediation-baseline-reds` (dispatcher run
 `20261006T183314Z_84233c0f`) and `tests/out/runs/byoxpc-remediation-baseline`
 (`timing.py`, `before-group-4/`), both pinned in `tests/RETAINED.json`.
+
+### Group 1 (2026-10-06)
+
+`sign_install_tree` signs the embedded worker with the identity and the
+supplied plist, the validator with the identity alone, then the bundle;
+`install_signing_signs_helpers_before_the_bundle` pins the order with a
+recording signer and the refusal of an incomplete copy. The registry record,
+the runner target and the dossier's runner provenance gained
+`worker_signature`, `worker_entitlements`, `validator_signature` and
+`validator_entitlements` (additive; the envelope shape golden learned the
+twenty keys through its candidate flow, no bump). The built-in target reads
+the helpers' entitlements from their manifest entries and records no
+signature metadata for them. `entitlements_from_codesign` now records a
+signature that carries no entitlements as none rather than as a `plutil`
+failure, since the validator never carries any.
+
+Test machinery: the session helper reads all three binaries back and checks
+the registry record against them instead of requiring unchanged helper
+bytes (the installer now changes them); its fake tools fail recursive
+verification for a changed helper and reply with a verify PID. Two latent
+test defects surfaced under the live gate and were fixed in the machinery:
+the session helper now waits for the host that its own `runner verify`
+consumed to retire before handing the runner over (the first request
+otherwise met that host's `already_ran`), and the dossier checker's
+held-request length now strips the controller-consumed selector fields, as
+the controller does before delivery; the BYOXPC variant of that checker had
+not been run since the assertion was written.
+
+Gates: `byoxpc-g1-offline` (Rust batch, rustfmt, fake-tool ownership
+controls), `byoxpc-g1-live` (`entitlement_readback` promoted, BBX-001,
+BBX-002, `runner_auth_external`, `registry_recovery`), `byoxpc-g1-live-3`
+(`dossier_witness` and `dossier_witness_byoxpc`); all pinned.

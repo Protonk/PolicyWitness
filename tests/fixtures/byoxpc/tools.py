@@ -1,5 +1,6 @@
 """Independent fake OS/CLI commands with durable receipts; never calls real tools."""
 import json
+import os
 from pathlib import Path
 import plistlib
 import shutil
@@ -37,10 +38,14 @@ if argv[0] == '/usr/bin/ditto':
 if argv[0] == '/usr/bin/codesign':
     assert '-s' not in argv, 'fixture must delegate signing to the public installer'
     target = Path(argv[-1])
-    staged = target == bundle
+    staged = target == bundle or target.is_relative_to(bundle)
     if '--verify' in argv:
         if mode == 'bad_source_signature' and not staged:
             finish(7)
+        if mode == 'helper_changed' and staged and '--deep' in argv:
+            # A helper changed after sealing fails recursive verification.
+            print('nested code is modified or invalid', file=sys.stderr)
+            finish(1)
         finish()
     if '--xml' in argv:
         if mode == 'entitlement_diagnostic' and not staged:
@@ -52,6 +57,9 @@ if argv[0] == '/usr/bin/codesign':
         ent = config['entitlements']
         if mode == 'changed_entitlements' and staged:
             ent = {'unexpected': True}
+        if target.name == 'sb_api_validator':
+            # The installer signs the validator with the identity alone.
+            ent = None
         if ent is not None:
             sys.stdout.buffer.write(plistlib.dumps(ent))
             sys.stdout.buffer.flush()
@@ -98,7 +106,11 @@ if argv[2] == 'install':
     executable.write_bytes(executable.read_bytes() + b' signed')
     if mode == 'helper_changed':
         (bundle / 'Contents/MacOS/pw-probe-runner').write_bytes(b'changed helper')
-    record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending'}
+    embedded = receipt.get('entitlements')
+    read_back = lambda value: {'raw_plist': None, 'keys': sorted(value) if value else [], 'error': None}
+    record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending',
+              'entitlements': read_back(embedded), 'worker_entitlements': read_back(embedded),
+              'validator_entitlements': read_back(None)}
     state['runners'].append(record)
     plist.parent.mkdir(parents=True, exist_ok=True)
     plist.write_bytes(plistlib.dumps({'Label': service, 'ProgramArguments': [str(executable), '--mach-service', service],
@@ -117,7 +129,9 @@ if argv[2] == 'install':
         finish()
     reply({'runner': record, 'plist_path': str(plist)})
 if argv[2] == 'verify':
-    reply({}, ok=mode != 'connection_failure')
+    # The fake host is this process: it has exited by the time the helper
+    # polls the PID, as a real verified host retires after its reply.
+    reply({'runner_pid': os.getpid()}, ok=mode != 'connection_failure')
 assert argv[2:] == ['remove', '--id', 'owned-id'], 'removal did not target the owned registration'
 if mode == 'remove_failure':
     finish(17)

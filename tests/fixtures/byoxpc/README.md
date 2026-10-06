@@ -8,10 +8,15 @@ aliases and paths escaping the bundle are rejected before signing.
 
 The ordinary variant preserves caller-auth keys and uses a matching Developer
 ID. `install-noauth` removes those keys and requests ad-hoc signing through the
-public installer. Both preserve extracted entitlements and embedded helper bytes;
-only `runner install` signs the copy. Signature, runtime and connection checks
-must succeed before the wrapper receives its runner environment. Installation
-failure is a failed case.
+public installer. Both supply the source's extracted entitlements unless the
+caller passes a plist of its own (an optional seventh argument); only
+`runner install` signs the copy, and it signs the embedded worker with those
+entitlements and the validator with the identity alone before sealing the
+bundle. After installation the helper reads the host's, the worker's and the
+validator's entitlements and signatures back separately and checks the registry
+record against them. Signature, runtime and connection checks must succeed
+before the wrapper receives its runner environment. Installation failure is a
+failed case.
 
 The wrapper arms cleanup before setup. Staging contains durable `session.json`
 with its service, bundle/plist paths, domain, source inventory, installation

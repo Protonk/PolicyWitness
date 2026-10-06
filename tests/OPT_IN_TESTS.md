@@ -214,8 +214,7 @@ selection, deduplication, configuration validation, and complete accounting.
   supplied plist; the validator must hold none; every binary carries the team's
   signature.
 - **Opt-in reason:** Requires launchd service install/bootstrapping, a logged-in
-  GUI session and a matching Developer ID. Specified red for planned behavior
-  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 1) until promoted.
+  GUI session and a matching Developer ID.
 - **Resource dependency:** Signed app, GUI session, matching identity; shared
   session helper for ownership and verified removal.
 - **Artifacts:** `<run>/suites/runner_byoxpc/entitlement_readback/artifacts/`

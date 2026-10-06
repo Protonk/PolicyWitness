@@ -2689,6 +2689,10 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 entitlements: entitlements(keys),
                 installed_at_unix_ms: 1,
                 kind: Some(RunnerKind::Byoxpc),
+                worker_signature: Some(signature()),
+                worker_entitlements: Some(entitlements(keys)),
+                validator_signature: Some(signature()),
+                validator_entitlements: Some(entitlements(&[])),
             }
         }
 
@@ -3084,6 +3088,23 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             assert_eq!(
                 provenance["runner_entitlements"],
                 serde_json::to_value(&record.entitlements).unwrap()
+            );
+            // The helpers' read-backs travel from the registry record as recorded.
+            assert_eq!(
+                provenance["runner_worker_entitlements"],
+                serde_json::to_value(&record.worker_entitlements).unwrap()
+            );
+            assert_eq!(
+                provenance["runner_worker_signature"],
+                serde_json::to_value(&record.worker_signature).unwrap()
+            );
+            assert_eq!(
+                provenance["runner_validator_entitlements"],
+                serde_json::to_value(&record.validator_entitlements).unwrap()
+            );
+            assert_eq!(
+                provenance["runner_validator_signature"],
+                serde_json::to_value(&record.validator_signature).unwrap()
             );
             // The binary records compare the bundle copies with the baselines
             // the one loaded manifest carries.
@@ -3513,6 +3534,30 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec!["com.apple.security.app-sandbox".into()],
+                    error: Some("constructed".into()),
+                }),
+                worker_signature: Some(RunnerSignature {
+                    team_id: Some("TEAM123456".into()),
+                    identity: Some("constructed".into()),
+                    cdhash: Some("cd".repeat(20)),
+                    valid: true,
+                    adhoc: false,
+                }),
+                worker_entitlements: Some(RunnerEntitlements {
+                    raw_plist: Some("<plist/>".into()),
+                    keys: vec!["com.apple.security.cs.allow-jit".into()],
+                    error: Some("constructed".into()),
+                }),
+                validator_signature: Some(RunnerSignature {
+                    team_id: Some("TEAM123456".into()),
+                    identity: Some("constructed".into()),
+                    cdhash: Some("ef".repeat(20)),
+                    valid: true,
+                    adhoc: false,
+                }),
+                validator_entitlements: Some(RunnerEntitlements {
+                    raw_plist: Some("<plist/>".into()),
+                    keys: vec![],
                     error: Some("constructed".into()),
                 }),
             };

@@ -644,6 +644,10 @@ mod tests {
             registry_id: Some("runner-ext".into()),
             signature: None,
             entitlements: None,
+            worker_signature: None,
+            worker_entitlements: None,
+            validator_signature: None,
+            validator_entitlements: None,
         };
         (bundle, target)
     }

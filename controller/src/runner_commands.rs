@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+use crate::app_layout::{BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
 use crate::json_contract;
 use crate::runner_client::run_pw_runner_client;
@@ -275,9 +276,10 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         ));
     }
 
-    // The XPC bundle is the signing/launchctl target; codesign treats it as
-    // a single unit and the inner binary's signature is derived from the
-    // bundle's seal.
+    // The XPC bundle is the launchctl target and the enclosing seal. The
+    // embedded worker and validator are signed first, as nested code, so the
+    // seal records their hashes and the worker holds the supplied
+    // entitlements; see `sign_install_tree`.
     let sign_target = bundle_path.clone();
 
     // Resolve the service name early so we can fail fast on registry conflicts
@@ -322,19 +324,31 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
         Err(e) => return Err(format!("cannot inspect launchd plist: {e}")),
     }
-    // Re-sign the bundle (or its inner binary) when the caller supplied a
-    // signing flag. The two modes are:
+    // Re-sign the bundle tree when the caller supplied a signing flag. The
+    // two modes are:
     //   --identity <id>      : sign with the named identity, optionally
     //                          embedding --entitlements.
     //   --allow-adhoc + --entitlements : ad-hoc re-sign so the embedded
     //                                    entitlements actually match the
     //                                    plist (registry would otherwise lie).
+    // Either way the embedded worker receives the entitlements and the
+    // validator the identity alone, before the enclosing bundle is sealed.
     // Passing --entitlements without either flag silently used to leave the
     // existing signature untouched; that footgun is now rejected.
     if let Some(identity) = identity.as_ref() {
-        runner_manager::codesign_sign(&sign_target, identity, entitlements_path.as_deref())?;
+        runner_manager::sign_install_tree(
+            &sign_target,
+            identity,
+            entitlements_path.as_deref(),
+            &mut runner_manager::codesign_sign,
+        )?;
     } else if allow_adhoc && entitlements_path.is_some() {
-        runner_manager::codesign_sign(&sign_target, "-", entitlements_path.as_deref())?;
+        runner_manager::sign_install_tree(
+            &sign_target,
+            "-",
+            entitlements_path.as_deref(),
+            &mut runner_manager::codesign_sign,
+        )?;
     } else if entitlements_path.is_some() {
         return Err(
             "--entitlements requires --identity <id> or --allow-adhoc to re-sign the binary; \
@@ -348,9 +362,15 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         return Err("runner is ad-hoc signed; pass --allow-adhoc to accept".to_string());
     }
 
-    // Always read entitlements from the binary so the registry reflects what
+    // Always read entitlements from the binaries so the registry reflects what
     // the kernel will actually enforce, not what the caller's plist asked for.
+    // The host, the worker and the validator are read back separately: the
+    // worker is the process the specimen policy applies to.
     let entitlements = runner_manager::entitlements_from_codesign(&executable_path);
+    let (worker_signature, worker_entitlements) =
+        runner_manager::read_back(&bundle_path.join(BUNDLE_WORKER_REL))?;
+    let (validator_signature, validator_entitlements) =
+        runner_manager::read_back(&bundle_path.join(BUNDLE_VALIDATOR_REL))?;
 
     let plist_path = runner_manager::launchd_plist_path(&service_name, scope)?;
     if !env.contains_key("XPC_SERVICE_PATH") {
@@ -387,6 +407,10 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
         entitlements,
         installed_at_unix_ms: now_unix_ms(),
         kind: Some(kind),
+        worker_signature: Some(worker_signature),
+        worker_entitlements: Some(worker_entitlements),
+        validator_signature: Some(validator_signature),
+        validator_entitlements: Some(validator_entitlements),
     };
 
     let record = runner_manager::install_record(&registry_path, &mut registry, record, || {

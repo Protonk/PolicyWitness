@@ -481,7 +481,11 @@
       "runner_kind": "string",
       "runner_registry_id": "string",
       "runner_service_name": "string",
-      "runner_signature": "object"
+      "runner_signature": "object",
+      "runner_validator_entitlements": "object",
+      "runner_validator_signature": "object",
+      "runner_worker_entitlements": "object",
+      "runner_worker_signature": "object"
     },
     "envelope.data.specimen.runner_provenance.runner_entitlements": {
       "error": "string",
@@ -489,6 +493,30 @@
       "raw_plist": "string"
     },
     "envelope.data.specimen.runner_provenance.runner_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.data.specimen.runner_provenance.runner_validator_entitlements": {
+      "error": "string",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_validator_signature": {
+      "adhoc": "boolean",
+      "cdhash": "string",
+      "identity": "string",
+      "team_id": "string",
+      "valid": "boolean"
+    },
+    "envelope.data.specimen.runner_provenance.runner_worker_entitlements": {
+      "error": "string",
+      "keys": "array",
+      "raw_plist": "string"
+    },
+    "envelope.data.specimen.runner_provenance.runner_worker_signature": {
       "adhoc": "boolean",
       "cdhash": "string",
       "identity": "string",

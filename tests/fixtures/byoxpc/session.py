@@ -59,6 +59,20 @@ def service_present(state, out, label, invoke):
     return False
 
 
+def retire_host(pid, out, timeout=5.0):
+    """Wait for the host a verify or run reached to exit; a PID is required."""
+    assert isinstance(pid, int) and pid > 0, ('verify reported no host PID', pid)
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+        assert time.monotonic() < deadline, f'host {pid} did not retire within {timeout} s'
+        time.sleep(0.02)
+    save(out / 'verify-host-retired.json', {'pid': pid, 'retired': True})
+
+
 def registry(pw, out, label, invoke):
     data = envelope(out, label, [pw, 'runner', 'list'], invoke)
     return data['runners'] + data.get('pending_cleanup', [])
@@ -167,12 +181,29 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     else:
         assert sig['TeamIdentifier'] == team and not sig['adhoc'] and sig.get('Timestamp'), sig
     assert entitlements(bundle, out, 'staged-entitlements', invoke) == supplied, 'entitlements changed'
-    current = inventory(bundle)
+    # The installer signs the embedded worker with the supplied entitlements
+    # and the validator with the identity alone before sealing the bundle, so
+    # their bytes change; read each binary back separately instead.
+    embedded = binary_entitlements(bundle, out, 'staged', invoke)
+    assert embedded['PWRunner'] == supplied, ('host entitlements', embedded['PWRunner'])
+    assert embedded['pw-probe-runner'] == supplied, ('worker entitlements', embedded['pw-probe-runner'])
+    assert embedded['sb_api_validator'] is None, ('validator entitlements', embedded['sb_api_validator'])
     for helper in ('pw-probe-runner', 'sb_api_validator'):
-        key = 'Contents/MacOS/' + helper
-        assert current[key] == copied[key], f'installer changed embedded helper: {helper}'
+        helper_sig = signature(bundle / 'Contents/MacOS' / helper, out / ('staged-signature-' + helper), invoke=invoke)
+        if variant == 'adhoc_noauth':
+            assert helper_sig['adhoc'], (helper, helper_sig)
+        else:
+            assert helper_sig['TeamIdentifier'] == team and not helper_sig['adhoc'], (helper, helper_sig)
+    for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None)):
+        keys = sorted(expected) if expected else []
+        assert record[field]['keys'] == keys and record[field]['error'] is None, (field, record.get(field))
     # A connection failure here is a failed case, never an automatic skip.
-    envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
+    verified = envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
+    # The verify request consumed a host. Until that host has exited, a
+    # connection can still reach it and meet its terminal claim (already_ran),
+    # so wait for its retirement before handing the runner to the caller; the
+    # next request then only waits for launchd's respawn throttle.
+    retire_host(verified.get('runner_pid'), out)
     assert inventory(app) == json.loads((out / 'source-before.json').read_text()), 'setup changed selected app'
     save(env_path, {'runner_id': record['id'], 'service_name': service})
 

@@ -31,6 +31,12 @@ pub const SHIPPED_VALIDATOR: ShippedBinary = ShippedBinary {
     kind: "xpc-embedded-helper",
 };
 
+/// The worker and validator inside any XPC service bundle, relative to the
+/// bundle root: the host resolves them at these paths relative to its own
+/// bundle, and the installer signs and reads them back at the same paths.
+pub const BUNDLE_WORKER_REL: &str = "Contents/MacOS/pw-probe-runner";
+pub const BUNDLE_VALIDATOR_REL: &str = "Contents/MacOS/sb_api_validator";
+
 pub fn validate_tool_name(tool_name: &str) -> Result<(), String> {
     let mut components = Path::new(tool_name).components();
     match (components.next(), components.next()) {
@@ -70,4 +76,20 @@ pub fn resolve_contents_macos_tool(tool_name: &str) -> Result<PathBuf, String> {
         "embedded tool not found in Contents/MacOS: {tool_name:?} (expected: {})",
         candidate.display()
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bundle_relative_helper_paths_agree_with_the_shipped_layout() {
+        for (bundle_rel, shipped) in [
+            (BUNDLE_WORKER_REL, &SHIPPED_WORKER),
+            (BUNDLE_VALIDATOR_REL, &SHIPPED_VALIDATOR),
+        ] {
+            let expected = format!("Contents/XPCServices/PWRunner.xpc/{bundle_rel}");
+            assert_eq!(shipped.rel_path, expected);
+        }
+    }
 }

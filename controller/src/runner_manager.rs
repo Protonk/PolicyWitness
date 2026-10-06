@@ -129,6 +129,17 @@ pub struct RunnerRecord {
     pub installed_at_unix_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<RunnerKind>,
+    /// The embedded worker's and validator's signatures and entitlements, read
+    /// back after installation. Absent in records written before the
+    /// installer signed and read back the helpers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worker_signature: Option<RunnerSignature>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worker_entitlements: Option<RunnerEntitlements>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validator_signature: Option<RunnerSignature>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validator_entitlements: Option<RunnerEntitlements>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -462,6 +473,14 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
             error: Some(format!("codesign failed: {stderr}")),
         };
     }
+    // codesign writes nothing for a signature that carries no entitlements.
+    if out.stdout.iter().all(u8::is_ascii_whitespace) {
+        return RunnerEntitlements {
+            raw_plist: None,
+            keys: Vec::new(),
+            error: None,
+        };
+    }
     match plutil_json_from_bytes(&out.stdout) {
         Ok(value) => {
             let mut ent = entitlements_from_json(&value);
@@ -525,6 +544,42 @@ pub fn codesign_verify(target: &Path) -> Result<(), String> {
     }
     let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
     Err(format!("codesign verify failed: {stderr}"))
+}
+
+/// Sign an XPC bundle for installation: the embedded worker with the identity
+/// and the supplied entitlements, the embedded validator with the identity
+/// alone, then the enclosing bundle with the identity and the entitlements.
+/// Nested code is signed before the enclosing seal records its hashes; the
+/// order is part of the contract and `sign` is injectable so a test pins it
+/// without an identity.
+pub fn sign_install_tree(
+    bundle: &Path,
+    identity: &str,
+    entitlements: Option<&Path>,
+    sign: &mut dyn FnMut(&Path, &str, Option<&Path>) -> Result<(), String>,
+) -> Result<(), String> {
+    let worker = bundle.join(crate::app_layout::BUNDLE_WORKER_REL);
+    let validator = bundle.join(crate::app_layout::BUNDLE_VALIDATOR_REL);
+    for (role, path) in [("worker", &worker), ("validator", &validator)] {
+        if !path.is_file() {
+            return Err(format!(
+                "bundle has no embedded {role} at {}; external runners must carry the complete copy",
+                path.display()
+            ));
+        }
+    }
+    sign(&worker, identity, entitlements)?;
+    sign(&validator, identity, None)?;
+    sign(bundle, identity, entitlements)
+}
+
+/// A binary's signature metadata and entitlements as codesign reads them
+/// back. The metadata read is required; an entitlement read failure is
+/// recorded inside the entitlements.
+pub fn read_back(target: &Path) -> Result<(RunnerSignature, RunnerEntitlements), String> {
+    let signature = codesign_metadata(target)
+        .map_err(|e| format!("read-back of {} failed: {e}", target.display()))?;
+    Ok((signature, entitlements_from_codesign(target)))
 }
 
 pub fn codesign_sign(
@@ -1084,6 +1139,131 @@ mod tests {
         assert!(
             !entitlements_superset(&["com.apple.security.cs.allow-jit".to_string()], &ent),
             "a required key present with value false must be refused"
+        );
+    }
+
+    #[test]
+    fn install_signing_signs_helpers_before_the_bundle() {
+        // The worker takes the entitlements, the validator the identity
+        // alone, and the enclosing bundle is sealed last so it records the
+        // helpers' new hashes. Pinned with a recording signer; no codesign.
+        let root = std::env::temp_dir().join(format!(
+            "pw-sign-order-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let bundle = root.join("Runner.xpc");
+        let macos = bundle.join("Contents/MacOS");
+        fs::create_dir_all(&macos).unwrap();
+        for name in ["PWRunner", "pw-probe-runner", "sb_api_validator"] {
+            fs::write(macos.join(name), name).unwrap();
+        }
+        let plist = root.join("entitlements.plist");
+        fs::write(&plist, "<plist/>").unwrap();
+        let mut calls: Vec<(PathBuf, String, Option<PathBuf>)> = Vec::new();
+        sign_install_tree(
+            &bundle,
+            "Developer ID",
+            Some(&plist),
+            &mut |target, identity, ent| {
+                calls.push((
+                    target.to_path_buf(),
+                    identity.to_string(),
+                    ent.map(Path::to_path_buf),
+                ));
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            calls,
+            vec![
+                (
+                    macos.join("pw-probe-runner"),
+                    "Developer ID".to_string(),
+                    Some(plist.clone())
+                ),
+                (
+                    macos.join("sb_api_validator"),
+                    "Developer ID".to_string(),
+                    None
+                ),
+                (
+                    bundle.clone(),
+                    "Developer ID".to_string(),
+                    Some(plist.clone())
+                ),
+            ]
+        );
+        // A failing helper signature stops before the bundle is sealed.
+        let mut sealed = Vec::new();
+        let err = sign_install_tree(&bundle, "-", None, &mut |target, _, _| {
+            sealed.push(target.to_path_buf());
+            if target.ends_with("sb_api_validator") {
+                Err("controlled".into())
+            } else {
+                Ok(())
+            }
+        })
+        .unwrap_err();
+        assert_eq!(err, "controlled");
+        assert_eq!(
+            sealed,
+            vec![
+                macos.join("pw-probe-runner"),
+                macos.join("sb_api_validator")
+            ]
+        );
+        // An incomplete copy is refused before any signing.
+        fs::remove_file(macos.join("sb_api_validator")).unwrap();
+        let mut touched = 0;
+        let err = sign_install_tree(&bundle, "-", None, &mut |_, _, _| {
+            touched += 1;
+            Ok(())
+        })
+        .unwrap_err();
+        assert!(err.contains("no embedded validator"), "{err}");
+        assert_eq!(touched, 0);
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn registry_records_without_helper_read_backs_still_load() {
+        // Records written before the installer read the helpers back carry no
+        // worker or validator fields; the additive loader keeps them, and a
+        // record that carries them round-trips unchanged.
+        let text = serde_json::to_string(&json!({
+            "schema_version": RUNNER_REGISTRY_SCHEMA_VERSION,
+            "runners": [{
+                "id": "runner-old", "service_name": "com.example.old", "bundle_path": "/old/Runner.xpc",
+                "executable_path": "/old/Runner.xpc/Contents/MacOS/PWRunner", "bundle_id": "com.example.old",
+                "scope": "user", "protocol_version": RUNNER_PROTOCOL_VERSION,
+                "signature": {"team_id": null, "identity": null, "cdhash": null, "valid": true, "adhoc": true},
+                "entitlements": {"raw_plist": null, "keys": [], "error": null},
+                "installed_at_unix_ms": 0, "kind": "byoxpc"
+            }]
+        }))
+        .unwrap();
+        let registry: RunnerRegistry = serde_json::from_str(&text).unwrap();
+        let record = &registry.runners[0];
+        assert!(record.worker_signature.is_none() && record.worker_entitlements.is_none());
+        assert!(record.validator_signature.is_none() && record.validator_entitlements.is_none());
+        let wire = serde_json::to_value(record).unwrap();
+        assert!(
+            wire.get("worker_entitlements").is_none(),
+            "absent fields stay absent: {wire}"
+        );
+        let mut carried = record.clone();
+        carried.worker_entitlements = Some(entitlements_from_json(&json!({"a": true})));
+        let wire = serde_json::to_value(&carried).unwrap();
+        assert_eq!(wire["worker_entitlements"]["keys"], json!(["a"]));
+        let again: RunnerRecord = serde_json::from_value(wire).unwrap();
+        assert_eq!(
+            again.worker_entitlements.unwrap().keys,
+            vec!["a".to_string()]
         );
     }
 

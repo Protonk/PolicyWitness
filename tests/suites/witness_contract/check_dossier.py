@@ -36,9 +36,16 @@ def sha256_text(text):
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+# Controller-owned runner selector fields, consumed before XPC delivery
+# (`SELECTOR_FIELDS` in controller/src/runner_select.rs).
+SELECTOR_FIELDS = ('runner', 'runner_id', 'runner_service', 'required_entitlements', 'runner_mode')
+
+
 def held_bytes(request):
-    """The controller serializes the resolved request once: sorted keys, two-space pretty JSON."""
-    return len(json.dumps(request, indent=2, sort_keys=True, ensure_ascii=False).encode())
+    """The controller serializes the resolved request once, after stripping the
+    runner selector fields: sorted keys, two-space pretty JSON."""
+    held = {key: value for key, value in request.items() if key not in SELECTOR_FIELDS}
+    return len(json.dumps(held, indent=2, sort_keys=True, ensure_ascii=False).encode())
 
 
 def host_facts():
@@ -346,6 +353,13 @@ class Witness:
         provenance = specimen['runner_provenance']
         assert provenance['runner_kind'] == 'byoxpc' and provenance['runner_service_name'] == self.byoxpc['service_name'], provenance
         assert provenance['runner_registry_id'] == self.byoxpc['runner_id'], provenance
+        listing = json.loads(subprocess.run([self.pw, 'runner', 'list'], capture_output=True, check=True, timeout=30).stdout)
+        record = next(r for r in listing['data']['runners'] if r['id'] == self.byoxpc['runner_id'])
+        for field in ('signature', 'entitlements', 'worker_signature', 'worker_entitlements',
+                      'validator_signature', 'validator_entitlements'):
+            assert provenance['runner_' + field] == record[field], (field, provenance.get('runner_' + field), record.get(field))
+        assert provenance['runner_worker_entitlements']['keys'] == provenance['runner_entitlements']['keys'], provenance
+        assert provenance['runner_validator_entitlements'] == {'raw_plist': None, 'keys': [], 'error': None}, provenance
         for role, rel, name in (('service', SERVICE_REL, 'PWRunner'), ('worker', WORKER_REL, 'pw-probe-runner'),
                                 ('validator', VALIDATOR_REL, 'sb_api_validator')):
             record = specimen['binaries'][role]

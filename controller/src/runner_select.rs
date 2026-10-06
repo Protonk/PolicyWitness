@@ -8,7 +8,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-use crate::app_layout::SHIPPED_SERVICE;
+use crate::app_layout::{SHIPPED_SERVICE, SHIPPED_VALIDATOR, SHIPPED_WORKER, ShippedBinary};
 use crate::evidence::{self, EvidenceManifest};
 use crate::request_patch::RequestError;
 use crate::runner_manager::{
@@ -40,6 +40,13 @@ pub struct RunnerTarget {
     pub registry_id: Option<String>,
     pub signature: Option<RunnerSignature>,
     pub entitlements: Option<RunnerEntitlements>,
+    /// The embedded worker's and validator's read-backs: from the registry
+    /// record for an external runner, from the evidence manifest's helper
+    /// entries for the built-in one (which records no signature metadata).
+    pub worker_signature: Option<RunnerSignature>,
+    pub worker_entitlements: Option<RunnerEntitlements>,
+    pub validator_signature: Option<RunnerSignature>,
+    pub validator_entitlements: Option<RunnerEntitlements>,
 }
 
 #[derive(Serialize, Clone)]
@@ -52,6 +59,10 @@ pub struct RunnerProvenance {
     runner_executable_path: Option<String>,
     runner_signature: Option<RunnerSignature>,
     runner_entitlements: Option<RunnerEntitlements>,
+    runner_worker_signature: Option<RunnerSignature>,
+    runner_worker_entitlements: Option<RunnerEntitlements>,
+    runner_validator_signature: Option<RunnerSignature>,
+    runner_validator_entitlements: Option<RunnerEntitlements>,
 }
 
 /// Controller-owned keys are consumed before the worker request is delivered.
@@ -296,6 +307,27 @@ fn builtin_runner_target(
         entry.entitlements.as_ref(),
         entry.entitlements_error.as_ref(),
     ));
+    // The helpers' entitlements come from their own manifest entries. A
+    // missing or ambiguous entry is recorded as a read-back error, so a
+    // selector that requires entitlements is refused with the reason while
+    // a selector that requires none still reaches the built-in runner.
+    let helper_entitlements = |role: &ShippedBinary| match evidence::unique_typed_entry(
+        manifest,
+        role.rel_path,
+        role.kind,
+    ) {
+        Ok(entry) => entitlements_from_manifest_value(
+            entry.entitlements.as_ref(),
+            entry.entitlements_error.as_ref(),
+        ),
+        Err(error) => RunnerEntitlements {
+            raw_plist: None,
+            keys: Vec::new(),
+            error: Some(unavailable(error)),
+        },
+    };
+    let worker_entitlements = Some(helper_entitlements(&SHIPPED_WORKER));
+    let validator_entitlements = Some(helper_entitlements(&SHIPPED_VALIDATOR));
 
     Ok(RunnerTarget {
         kind,
@@ -307,6 +339,10 @@ fn builtin_runner_target(
         registry_id: None,
         signature: None,
         entitlements,
+        worker_signature: None,
+        worker_entitlements,
+        validator_signature: None,
+        validator_entitlements,
     })
 }
 
@@ -442,6 +478,10 @@ fn resolve_external_target(
         registry_id: Some(record.id.clone()),
         signature: Some(record.signature.clone()),
         entitlements: Some(record.entitlements.clone()),
+        worker_signature: record.worker_signature.clone(),
+        worker_entitlements: record.worker_entitlements.clone(),
+        validator_signature: record.validator_signature.clone(),
+        validator_entitlements: record.validator_entitlements.clone(),
     })
 }
 
@@ -458,6 +498,10 @@ pub fn runner_provenance_from_target(target: &RunnerTarget) -> RunnerProvenance 
             .map(|p| p.display().to_string()),
         runner_signature: target.signature.clone(),
         runner_entitlements: target.entitlements.clone(),
+        runner_worker_signature: target.worker_signature.clone(),
+        runner_worker_entitlements: target.worker_entitlements.clone(),
+        runner_validator_signature: target.validator_signature.clone(),
+        runner_validator_entitlements: target.validator_entitlements.clone(),
     }
 }
 
@@ -540,6 +584,10 @@ mod tests {
             entitlements: ent(ent_keys),
             installed_at_unix_ms: 0,
             kind,
+            worker_signature: None,
+            worker_entitlements: None,
+            validator_signature: None,
+            validator_entitlements: None,
         }
     }
 

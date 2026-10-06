@@ -52,6 +52,34 @@
       "reason": "BYOXPC remediation timing measurement before and after the generated plist's ThrottleInterval; owned installations removed with absence verified.",
       "source": "2b9a207a92f5d3b53992549e16404ec2f830f714",
       "app_inventory": "before-group-4/source-before.json"
+    },
+    {
+      "path": "runs/byoxpc-g1-offline",
+      "run_id": "20261006T183936Z_eec9c8c5",
+      "reason": "BYOXPC remediation Group 1 offline gates: Rust unit batch with the additive envelope shape golden, rustfmt and the fake-tool ownership controls.",
+      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-g1-live",
+      "run_id": "20261006T184032Z_21fa002d",
+      "reason": "BYOXPC remediation Group 1 live gates: entitlement read-back promoted, BBX-001/002, external-auth and registry recovery under the signed build; the dossier witness met the verify host's retirement race.",
+      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-g1-live-2",
+      "run_id": "20261006T184139Z_b5ea13d6",
+      "reason": "BYOXPC remediation Group 1: ownership controls with the fake verify PID and the dossier witness after the session helper waits for the verify host to retire; the checker's held-request length still counted selector fields.",
+      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-g1-live-3",
+      "run_id": "20261006T184325Z_8e5513c3",
+      "reason": "BYOXPC remediation Group 1 live gates: both dossier witness cases pass once the checker strips selector fields from the held-request length.",
+      "source": "5240a6a892ed32adfa9e807e76f3affd965080f1",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }
