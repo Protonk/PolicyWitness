@@ -39,7 +39,7 @@ implementation or acceptance test below.
 - [x] Establish the regression baseline and record the starting failures.
 - [x] Group 1: sign the embedded helpers at install and read all three back.
 - [x] Group 2: verify recursively at install and in `runner validate`.
-- [ ] Group 3: select on true-valued keys in the worker's read-back.
+- [x] Group 3: select on true-valued keys in the worker's read-back.
 - [ ] Group 4: bound launchd's respawn wait in the generated plist.
 - [ ] Group 5: correct the guide and the README.
 - [ ] Reconcile the architecture document and the records; pass the final
@@ -311,6 +311,62 @@ Gates: `byoxpc-g1-offline` (Rust batch, rustfmt, fake-tool ownership
 controls), `byoxpc-g1-live` (`entitlement_readback` promoted, BBX-001,
 BBX-002, `runner_auth_external`, `registry_recovery`), `byoxpc-g1-live-3`
 (`dossier_witness` and `dossier_witness_byoxpc`); all pinned.
+
+### Group 3 contract reading (2026-10-06, before its first code change)
+
+The guide's sentence, quoted from its External runners section: "`runner.mode`
+is optional; when present it must equal `byoxpc` for external runners. Valid
+modes: `standard`, `byoxpc`. `required_entitlements` enforces a superset check
+before dispatch." The controller README's: "If `required_entitlements` is
+present, the controller enforces a **superset** check against the runner's
+recorded entitlements before dispatch." Neither sentence says true-valued or
+names the worker. The reading that the defect row applies rests on the
+documented purpose around them: the guide's install notes refuse an install
+that "would otherwise record entitlements that the kernel will not enforce",
+and the README frames entitlements as what a process is "granted". A key
+present with the value `false` is not granted by the kernel, so admitting it
+is a defect against the documented meaning, and the request contract value is
+kept. The user confirmed this reading on 2026-10-06.
+
+### Group 3 (2026-10-06)
+
+`RunnerEntitlements` gained `granted` (the keys whose value is the boolean
+`true`; additive, `#[serde(default)]`, so a record written before it grants
+nothing until re-read), and `entitlements_superset` tests membership in it.
+`enforce_required_entitlements` consults the worker's read-back only: a
+record without one is refused with a reinstall message when any entitlement
+is required and selects as before when none is; a read-back error is
+refused with the error; a key absent, or present with any value other than
+`true`, is refused naming the process and the key. The built-in path reads
+the worker's manifest entry the same way, so `required_entitlements` against
+the standard runner is satisfied only by what its worker holds. The two reds
+are promoted and `unit/rust.byoxpc_reds` is a default case; the selection
+tests cover true, false, absent, host-only, pre-Group-1 records and the
+manifest path. The envelope shape golden learned the three `granted` keys
+through its candidate flow, no bump.
+
+The live transfer case adapts the plan's "host-only copy": after Group 1 the
+installer embeds the same plist in the host and the worker, so the refused
+member is a copy installed with the key set to `false`. It is refused by
+name before any host is reached, its conditioned write is denied when
+selected without a requirement, and the `true` copy completes the write
+with the file's bytes read independently. The host-only and pre-Group-1
+refusals are pinned by unit tests.
+
+The first gate run refused two live installs with `already_ran` from a
+fresh host. The unified log shows two `pw-runner-client` processes adopted
+by launchd ("removing child: pid/32673") connecting before the install's
+own verify: one to the built-in service (`Service stub created for
+com.yourteam.policy-witness.PWRunner`, 11:55:08.101) and one to the new
+service (`peer[32681]`, 11:55:08.318, 28 ms after its listener activated).
+Their parent could not be attributed from the retained evidence; the same
+three cases passed in the same order on the next run. The session helper
+now records a process snapshot before every verify so a recurrence names
+the parent.
+
+Gates: `byoxpc-g3-gates` (Rust reds promoted, Rust batch, fake-tool and
+verification controls) and `byoxpc-g3-repro` (dossier witness, read-back,
+transfer); both pinned.
 
 ### Group 2 (2026-10-06)
 

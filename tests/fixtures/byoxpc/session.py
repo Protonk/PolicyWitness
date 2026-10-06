@@ -197,6 +197,9 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     for field, expected in (('entitlements', supplied), ('worker_entitlements', supplied), ('validator_entitlements', None)):
         keys = sorted(expected) if expected else []
         assert record[field]['keys'] == keys and record[field]['error'] is None, (field, record.get(field))
+    # Record every runner-related process alive before the connection, so a
+    # host claimed by a foreign client is attributable from the artifacts.
+    tool(out, 'processes-before-verify', ['/bin/ps', '-axo', 'pid=,ppid=,lstart=,comm='], invoke=invoke, check=False)
     # A connection failure here is a failed case, never an automatic skip.
     verified = envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
     # The verify request consumed a host. Until that host has exited, a

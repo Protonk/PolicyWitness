@@ -94,6 +94,20 @@
       "reason": "BYOXPC remediation Group 2: the offline verification control promoted (install refuses, validate reports bundle and worker) beside codesign.preflight on the rebuilt app.",
       "source": "7421101ccebf50d8b6beb1c3db3a7f2a97acdb79",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-g3-gates",
+      "run_id": "20261006T185358Z_e9b4260b",
+      "reason": "BYOXPC remediation Group 3 gates, first run: the promoted Rust reds, the Rust batch, the fake-tool and verification controls pass; two live installs were refused already_ran by orphaned clients that reached the fresh host before verify (unified-log receipts quoted in the plan), and the dossier checker lacked the granted key.",
+      "source": "af523f4d1984551a3cfac4a0a770afe46c6a6f27",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-g3-repro",
+      "run_id": "20261006T185955Z_813d90fe",
+      "reason": "BYOXPC remediation Group 3 live gates: dossier witness, entitlement read-back and entitlement transfer pass in the previously failing order, with a process snapshot before each verify.",
+      "source": "af523f4d1984551a3cfac4a0a770afe46c6a6f27",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

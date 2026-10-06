@@ -359,7 +359,7 @@ class Witness:
                       'validator_signature', 'validator_entitlements'):
             assert provenance['runner_' + field] == record[field], (field, provenance.get('runner_' + field), record.get(field))
         assert provenance['runner_worker_entitlements']['keys'] == provenance['runner_entitlements']['keys'], provenance
-        assert provenance['runner_validator_entitlements'] == {'raw_plist': None, 'keys': [], 'error': None}, provenance
+        assert provenance['runner_validator_entitlements'] == {'raw_plist': None, 'keys': [], 'granted': [], 'error': None}, provenance
         for role, rel, name in (('service', SERVICE_REL, 'PWRunner'), ('worker', WORKER_REL, 'pw-probe-runner'),
                                 ('validator', VALIDATOR_REL, 'sb_api_validator')):
             record = specimen['binaries'][role]

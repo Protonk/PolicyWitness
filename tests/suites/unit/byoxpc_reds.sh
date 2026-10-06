@@ -4,12 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/testlib.sh"
 
-# Non-default case: the BYOXPC remediation plan's #[ignore]d Rust reds.
-# rust.unit runs the whole crate, so these carry #[ignore] with the plan's
-# reason and run explicitly here, keeping the default battery green while --all
-# and --suite opt_in still exercise them. Each is selected by its exact name with
-# --include-ignored, so the same selector keeps running it after promotion.
-# Red by design until Group 3 of docs/BYOXPC-REMEDIATION-PLAN.md lands.
+# The BYOXPC remediation plan's selection controller tests, promoted from red.
+# rust.unit runs the whole crate too; this case keeps them individually
+# selectable by exact name (with --include-ignored, so the selector was the
+# same while they carried #[ignore]) and classifies build, equipment and
+# unrelated failures separately from their own assertions.
 test_begin "unit" "rust.byoxpc_reds"
 
 LOG_PATH="${PW_TEST_ARTIFACTS}/cargo-test-ignored.log"
@@ -46,7 +45,7 @@ if [[ "${UNEXPECTED}" -ne 0 ]]; then
   test_fail "BYOXPC selection test(s) failed without their expected assertion (${UNEXPECTED}); build, equipment or unrelated failure" "{\"log_path\":\"${LOG_PATH}\"}"
 fi
 if [[ "${RED}" -ne 0 ]]; then
-  test_fail "behavioral reds still open: ${RED} of ${#TESTS[@]} (${GREEN} promoted); expected until Group 3 of the BYOXPC remediation plan lands" "{\"log_path\":\"${LOG_PATH}\"}"
+  test_fail "behavioral reds still open: ${RED} of ${#TESTS[@]} (${GREEN} promoted); they were promoted and must stay green" "{\"log_path\":\"${LOG_PATH}\"}"
 fi
 if [[ "${status}" -ne 0 ]]; then
   test_fail "cargo exited ${status} although every BYOXPC selection test passed" "{\"log_path\":\"${LOG_PATH}\"}"

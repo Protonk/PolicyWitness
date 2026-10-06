@@ -176,19 +176,6 @@ selection, deduplication, configuration validation, and complete accounting.
   invariant or equipment error never counts as detecting a mutation. The selected
   production app is inventoried before/after and is never patched or re-signed.
 
-### BYOXPC remediation reds
-
-- **Case:** `unit/rust.byoxpc_reds`
-- **Location:** `tests/suites/unit/byoxpc_reds.sh`
-- **Purpose:** Select the BYOXPC remediation plan's `#[ignore]`d selection
-  controller tests by exact name: a `required_entitlements` key present with the
-  value `false` must be refused, and the refusal must name the worker and the key.
-- **Opt-in reason:** Specified red for planned behavior
-  (`docs/BYOXPC-REMEDIATION-PLAN.md`, Group 3); non-default until promoted.
-- **When to run:** After changing `entitlements_superset`,
-  `enforce_required_entitlements` or the registry record's read-back fields.
-- **Artifacts:** `<run>/suites/unit/rust.byoxpc_reds/artifacts/cargo-test-ignored.log`
-
 ### BYOXPC entitlement read-back
 
 - **Case:** `runner_byoxpc/entitlement_readback`
@@ -203,6 +190,22 @@ selection, deduplication, configuration validation, and complete accounting.
 - **Resource dependency:** Signed app, GUI session, matching identity; shared
   session helper for ownership and verified removal.
 - **Artifacts:** `<run>/suites/runner_byoxpc/entitlement_readback/artifacts/`
+
+### BYOXPC entitlement transfer
+
+- **Case:** `runner_byoxpc/entitlement_transfer`
+- **Location:** `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
+- **Purpose:** Install two owned runners, one whose supplied plist sets a key
+  `true` and one that sets it `false`. A selector requiring the key is admitted
+  by the first and completes an entitlement-conditioned write, with the file's
+  bytes read independently; the second is refused before any host is reached,
+  naming the worker and the key, and without a requirement its conditioned
+  write is denied by the kernel.
+- **Opt-in reason:** Requires launchd service install/bootstrapping, a logged-in
+  GUI session and a matching Developer ID.
+- **Resource dependency:** Signed app, GUI session, matching identity; owned
+  temporary targets under `/private/tmp`; shared session helper per copy.
+- **Artifacts:** `<run>/suites/runner_byoxpc/entitlement_transfer/artifacts/`
 
 ## Adding a new opt-in test
 

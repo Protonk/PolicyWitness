@@ -82,7 +82,12 @@ pub struct RunnerSignature {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerEntitlements {
     pub raw_plist: Option<String>,
+    /// Every key the plist names, whatever its value.
     pub keys: Vec<String>,
+    /// The keys whose value is the boolean `true`: the entitlements the kernel
+    /// treats as held. A key present with any other value is not granted.
+    #[serde(default)]
+    pub granted: Vec<String>,
     pub error: Option<String>,
 }
 
@@ -323,26 +328,35 @@ pub fn random_id() -> Result<String, String> {
 }
 
 pub fn entitlements_from_json(value: &Value) -> RunnerEntitlements {
-    let keys = match value {
+    let (keys, granted) = match value {
         Value::Object(map) => {
             let mut keys: Vec<String> = map.keys().cloned().collect();
             keys.sort();
-            keys
+            let mut granted: Vec<String> = map
+                .iter()
+                .filter(|(_, value)| matches!(value, Value::Bool(true)))
+                .map(|(key, _)| key.clone())
+                .collect();
+            granted.sort();
+            (keys, granted)
         }
-        _ => Vec::new(),
+        _ => (Vec::new(), Vec::new()),
     };
     RunnerEntitlements {
         raw_plist: None,
         keys,
+        granted,
         error: None,
     }
 }
 
+/// Every required key is granted: present with the boolean value `true`.
+/// A read-back that failed grants nothing.
 pub fn entitlements_superset(required: &[String], entitlements: &RunnerEntitlements) -> bool {
     if entitlements.error.is_some() {
         return false;
     }
-    let set: BTreeSet<&str> = entitlements.keys.iter().map(|s| s.as_str()).collect();
+    let set: BTreeSet<&str> = entitlements.granted.iter().map(|s| s.as_str()).collect();
     required.iter().all(|key| set.contains(key.as_str()))
 }
 
@@ -461,6 +475,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
             return RunnerEntitlements {
                 raw_plist: None,
                 keys: Vec::new(),
+                granted: Vec::new(),
                 error: Some(format!("failed to run codesign: {err}")),
             };
         }
@@ -470,6 +485,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
         return RunnerEntitlements {
             raw_plist: None,
             keys: Vec::new(),
+            granted: Vec::new(),
             error: Some(format!("codesign failed: {stderr}")),
         };
     }
@@ -478,6 +494,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
         return RunnerEntitlements {
             raw_plist: None,
             keys: Vec::new(),
+            granted: Vec::new(),
             error: None,
         };
     }
@@ -490,6 +507,7 @@ pub fn entitlements_from_codesign(target: &Path) -> RunnerEntitlements {
         Err(err) => RunnerEntitlements {
             raw_plist: String::from_utf8(out.stdout).ok(),
             keys: Vec::new(),
+            granted: Vec::new(),
             error: Some(err),
         },
     }
@@ -647,6 +665,7 @@ pub fn validate_record(
                     RunnerEntitlements {
                         raw_plist: None,
                         keys: Vec::new(),
+                        granted: Vec::new(),
                         error: Some(format!("{role} read-back failed")),
                     },
                 );
@@ -1250,16 +1269,35 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "docs/BYOXPC-REMEDIATION-PLAN.md Group 3: a key present with value false must not satisfy a requirement"]
     fn false_valued_key_does_not_satisfy_a_requirement() {
         // The kernel grants a boolean entitlement only when its value is true.
         // A plist that names the key with `false` denies it, so a selector
         // requiring that key must not be satisfied by the key's presence.
+        let key = "com.apple.security.cs.allow-jit".to_string();
         let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": false}));
+        assert_eq!(ent.keys, vec![key.clone()]);
+        assert!(ent.granted.is_empty());
         assert!(
-            !entitlements_superset(&["com.apple.security.cs.allow-jit".to_string()], &ent),
+            !entitlements_superset(std::slice::from_ref(&key), &ent),
             "a required key present with value false must be refused"
         );
+        // Only the boolean true grants; strings and numbers do not.
+        for value in [json!("true"), json!(1), json!([true]), json!(null)] {
+            let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": value}));
+            assert!(
+                !entitlements_superset(std::slice::from_ref(&key), &ent),
+                "{value}"
+            );
+        }
+        let ent = entitlements_from_json(&json!({"com.apple.security.cs.allow-jit": true}));
+        assert_eq!(ent.granted, vec![key.clone()]);
+        assert!(entitlements_superset(std::slice::from_ref(&key), &ent));
+        // A record written before values were recorded grants nothing until
+        // it is re-read: `granted` defaults to empty.
+        let old: RunnerEntitlements =
+            serde_json::from_value(json!({"raw_plist": null, "keys": [key], "error": null}))
+                .unwrap();
+        assert!(old.granted.is_empty());
     }
 
     #[test]

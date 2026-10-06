@@ -248,6 +248,7 @@ fn entitlements_from_manifest_value(
             .unwrap_or(RunnerEntitlements {
                 raw_plist: None,
                 keys: Vec::new(),
+                granted: Vec::new(),
                 error: None,
             });
     if entitlements.raw_plist.is_none() {
@@ -323,6 +324,7 @@ fn builtin_runner_target(
         Err(error) => RunnerEntitlements {
             raw_plist: None,
             keys: Vec::new(),
+            granted: Vec::new(),
             error: Some(unavailable(error)),
         },
     };
@@ -350,23 +352,46 @@ pub fn infer_record_kind(record: &RunnerRecord) -> RunnerKind {
     record.kind.unwrap_or(RunnerKind::Byoxpc)
 }
 
-/// Fail fast when a selected runner doesn't carry the entitlements the
-/// caller required. Shared by the built-in and external resolution paths
-/// so the enforcement (a security gate — it blocks the launch) lives in
-/// one tested place. `subject` names the runner in the error so the two
-/// call sites keep their distinct messages ("built-in runner ...",
-/// "external runner ...").
+/// Fail fast when the selected runner's worker does not hold the
+/// entitlements the caller required. The worker is the process the specimen
+/// policy applies to, so its read-back is the one consulted; the host's
+/// entitlements are recorded beside it and never admit a runner. A key is
+/// held only when it is present with the boolean value `true`. Shared by
+/// the built-in and external resolution paths so the enforcement (a
+/// security gate — it blocks the launch) lives in one tested place.
+/// `subject` names the runner in the error so the two call sites keep their
+/// distinct messages ("built-in runner ...", "external runner ...").
 fn enforce_required_entitlements(
     required: &[String],
-    entitlements: Option<&RunnerEntitlements>,
+    worker: Option<&RunnerEntitlements>,
     subject: &str,
 ) -> Result<(), String> {
     if required.is_empty() {
         return Ok(());
     }
-    let ent = entitlements.ok_or_else(|| format!("{subject} entitlements unavailable"))?;
-    if !runner_manager::entitlements_superset(required, ent) {
-        return Err(format!("{subject} does not satisfy required entitlements"));
+    let worker = worker.ok_or_else(|| {
+        format!(
+            "{subject} has no worker entitlement read-back; reinstall it with this \
+             policy-witness so selection can check the worker"
+        )
+    })?;
+    if let Some(error) = worker.error.as_deref() {
+        return Err(format!(
+            "{subject} worker entitlements unavailable: {error}"
+        ));
+    }
+    for key in required {
+        if worker.granted.contains(key) {
+            continue;
+        }
+        let state = if worker.keys.contains(key) {
+            "present with a value other than true"
+        } else {
+            "absent"
+        };
+        return Err(format!(
+            "{subject} worker does not hold required entitlement {key:?}: {state}"
+        ));
     }
     Ok(())
 }
@@ -395,7 +420,7 @@ pub fn resolve_runner_target_with_registry(
         let target = builtin_runner_target(app_root, manifest, kind)?;
         enforce_required_entitlements(
             &selector.required_entitlements,
-            target.entitlements.as_ref(),
+            target.worker_entitlements.as_ref(),
             "built-in runner",
         )?;
         return Ok(target);
@@ -455,7 +480,7 @@ fn resolve_external_target(
 
     enforce_required_entitlements(
         &selector.required_entitlements,
-        Some(&record.entitlements),
+        record.worker_entitlements.as_ref(),
         "external runner",
     )?;
 
@@ -551,10 +576,12 @@ mod tests {
 
     // ---- builders -----------------------------------------------------------
 
+    /// Entitlements that name `keys`, each granted (present with `true`).
     fn ent(keys: &[&str]) -> RunnerEntitlements {
         RunnerEntitlements {
             raw_plist: None,
             keys: keys.iter().map(|s| s.to_string()).collect(),
+            granted: keys.iter().map(|s| s.to_string()).collect(),
             error: None,
         }
     }
@@ -585,9 +612,10 @@ mod tests {
             installed_at_unix_ms: 0,
             kind,
             worker_signature: None,
-            worker_entitlements: None,
+            // The installer embeds the same plist in the host and the worker.
+            worker_entitlements: Some(ent(ent_keys)),
             validator_signature: None,
-            validator_entitlements: None,
+            validator_entitlements: Some(ent(&[])),
         }
     }
 
@@ -792,15 +820,184 @@ mod tests {
         .unwrap_err();
         assert_eq!(
             err,
-            "external runner does not satisfy required entitlements"
+            "external runner worker does not hold required entitlement \"B\": absent"
         );
     }
 
     #[test]
     fn entitlement_gate_blocks_when_entitlements_unavailable() {
+        // No worker read-back at all: the record predates the installer
+        // reading the helpers back, and the caller is told to reinstall.
         let err =
             enforce_required_entitlements(&["A".to_string()], None, "built-in runner").unwrap_err();
-        assert_eq!(err, "built-in runner entitlements unavailable");
+        assert!(
+            err.starts_with("built-in runner has no worker entitlement read-back")
+                && err.contains("reinstall"),
+            "{err}"
+        );
+        // A read-back that failed grants nothing and says why.
+        let mut failed = ent(&["A"]);
+        failed.error = Some("codesign failed: controlled".into());
+        let err =
+            enforce_required_entitlements(&["A".to_string()], Some(&failed), "external runner")
+                .unwrap_err();
+        assert_eq!(
+            err,
+            "external runner worker entitlements unavailable: codesign failed: controlled"
+        );
+    }
+
+    #[test]
+    fn entitlement_gate_consults_the_worker_not_the_host() {
+        // The host holds A; the worker holds nothing. Admission would apply
+        // the policy to a process without the entitlement, so it is refused,
+        // naming the worker.
+        let mut record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &["A"]);
+        record.worker_entitlements = Some(ent(&[]));
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &["A"], true);
+        let err = err_of(resolve_external_target(&record, &selector));
+        assert_eq!(
+            err,
+            "external runner worker does not hold required entitlement \"A\": absent"
+        );
+        // The worker holds A and the host does not: admitted. The host's
+        // entitlements are recorded, not consulted.
+        let mut record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &[]);
+        record.worker_entitlements = Some(ent(&["A"]));
+        let target = resolve_external_target(&record, &selector).expect("worker holds A");
+        assert_eq!(
+            target.entitlements.as_ref().unwrap().granted,
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            target.worker_entitlements.as_ref().unwrap().granted,
+            vec!["A".to_string()]
+        );
+    }
+
+    #[test]
+    fn record_without_worker_read_back_refuses_requirements_only() {
+        // A registry record written before the installer read the helpers
+        // back: selectable without requirements, refused with a reinstall
+        // message when any entitlement is required.
+        let mut record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &["A"]);
+        record.worker_entitlements = None;
+        record.validator_entitlements = None;
+        let path = registry_fixture(&registry_of(vec![record]));
+        let plain = selector_with(Some(RunnerKind::Byoxpc), &[], true);
+        let target = resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Err(&"no manifest".to_string()),
+            &plain,
+            Some(&path),
+        )
+        .expect("no requirement, no read-back needed");
+        assert!(target.worker_entitlements.is_none());
+        let requiring = selector_with(Some(RunnerKind::Byoxpc), &["A"], true);
+        let err = err_of(resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Err(&"no manifest".to_string()),
+            &requiring,
+            Some(&path),
+        ));
+        let _ = fs::remove_file(&path);
+        assert!(
+            err.starts_with("external runner has no worker entitlement read-back")
+                && err.contains("reinstall"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn builtin_selection_checks_the_manifest_worker_entry() {
+        use crate::evidence::{EVIDENCE_SCHEMA_VERSION, EvidenceEntry, EvidenceManifest};
+        let entry = |role: &ShippedBinary, id: &str, entitlements: Value| EvidenceEntry {
+            id: id.to_string(),
+            kind: role.kind.to_string(),
+            bundle_id: (role.kind == "xpc-service").then(|| "com.example.pw.PWRunner".to_string()),
+            rel_path: role.rel_path.to_string(),
+            sha256: Some("a".repeat(64)),
+            lc_uuid: None,
+            entitlements: Some(entitlements),
+            entitlements_error: None,
+        };
+        // The host holds A; the worker holds B true and C false.
+        let manifest = EvidenceManifest {
+            schema_version: EVIDENCE_SCHEMA_VERSION,
+            entries: vec![
+                entry(&SHIPPED_SERVICE, "service", json!({"A": true})),
+                entry(&SHIPPED_WORKER, "worker", json!({"B": true, "C": false})),
+                entry(&SHIPPED_VALIDATOR, "validator", json!({})),
+            ],
+            notes: None,
+        };
+        let resolve = |required: &[&str]| {
+            resolve_runner_target_with_registry(
+                Path::new("/unused"),
+                Ok(&manifest),
+                &selector_with(None, required, false),
+                None,
+            )
+        };
+        let target = resolve(&["B"]).expect("the worker holds B");
+        assert_eq!(
+            target.entitlements.as_ref().unwrap().granted,
+            vec!["A".to_string()]
+        );
+        assert_eq!(
+            target.worker_entitlements.as_ref().unwrap().granted,
+            vec!["B".to_string()]
+        );
+        assert_eq!(
+            target.worker_entitlements.as_ref().unwrap().keys,
+            vec!["B".to_string(), "C".to_string()]
+        );
+        assert!(
+            target
+                .validator_entitlements
+                .as_ref()
+                .unwrap()
+                .granted
+                .is_empty()
+        );
+        assert_eq!(
+            err_of(resolve(&["A"])),
+            "built-in runner worker does not hold required entitlement \"A\": absent"
+        );
+        assert_eq!(
+            err_of(resolve(&["C"])),
+            "built-in runner worker does not hold required entitlement \"C\": present with a value other than true"
+        );
+        // A manifest without the worker's entry: the runner still serves a
+        // selector that requires nothing, and a requiring selector is told why.
+        let hostless = EvidenceManifest {
+            schema_version: EVIDENCE_SCHEMA_VERSION,
+            entries: vec![entry(&SHIPPED_SERVICE, "service", json!({"A": true}))],
+            notes: None,
+        };
+        let plain = resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Ok(&hostless),
+            &selector_with(None, &[], false),
+            None,
+        )
+        .expect("no requirement");
+        let worker = plain.worker_entitlements.as_ref().unwrap();
+        assert!(
+            worker.error.as_deref().unwrap().contains("has no entry at"),
+            "{worker:?}"
+        );
+        let err = err_of(resolve_runner_target_with_registry(
+            Path::new("/unused"),
+            Ok(&hostless),
+            &selector_with(None, &["B"], false),
+            None,
+        ));
+        assert!(
+            err.starts_with("built-in runner worker entitlements unavailable:")
+                && err.contains("has no entry at"),
+            "{err}"
+        );
     }
 
     // ---- external target resolution (mode/kind, connection, gate) -----------
@@ -850,7 +1047,7 @@ mod tests {
         let err = err_of(resolve_external_target(&record, &selector));
         assert_eq!(
             err,
-            "external runner does not satisfy required entitlements"
+            "external runner worker does not hold required entitlement \"B\": absent"
         );
     }
 
@@ -973,7 +1170,7 @@ mod tests {
         ));
         assert_eq!(
             err,
-            "external runner does not satisfy required entitlements"
+            "external runner worker does not hold required entitlement \"B\": absent"
         );
         let _ = fs::remove_file(&path);
     }
@@ -1007,15 +1204,16 @@ mod tests {
         let _ = fs::remove_file(&path);
     }
     #[test]
-    #[ignore = "docs/BYOXPC-REMEDIATION-PLAN.md Group 3: selection must refuse a required key whose recorded value is false"]
     fn selection_refuses_a_false_valued_required_key() {
-        // An on-disk registry record whose read-back names the required key
+        // An on-disk registry record whose read-backs name the required key
         // with the value false. Built from the codesign JSON the installer
         // records, so the record carries the value, not only the key.
         let mut record = external_record(Some(RunnerKind::Byoxpc), RunnerScope::User, &[]);
-        record.entitlements = runner_manager::entitlements_from_json(
+        let false_valued = runner_manager::entitlements_from_json(
             &json!({"com.apple.security.cs.allow-jit": false}),
         );
+        record.entitlements = false_valued.clone();
+        record.worker_entitlements = Some(false_valued);
         let path = registry_fixture(&registry_of(vec![record]));
         let selector = selector_with(
             Some(RunnerKind::Byoxpc),
@@ -1031,9 +1229,11 @@ mod tests {
         let _ = fs::remove_file(&path);
         match outcome {
             Ok(_) => panic!("a required key present with value false must be refused"),
-            Err(e) => assert!(
-                e.contains("com.apple.security.cs.allow-jit") && e.contains("worker"),
-                "the refusal names the process and the key: {e}"
+            Err(e) => assert_eq!(
+                e,
+                "external runner worker does not hold required entitlement \
+                 \"com.apple.security.cs.allow-jit\": present with a value other than true",
+                "the refusal names the process and the key"
             ),
         }
     }

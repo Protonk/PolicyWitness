@@ -2670,6 +2670,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
             RunnerEntitlements {
                 raw_plist: Some("<plist version=\"1.0\"><dict/></plist>".into()),
                 keys: keys.iter().map(|k| k.to_string()).collect(),
+                granted: keys.iter().map(|k| k.to_string()).collect(),
                 error: None,
             }
         }
@@ -3223,7 +3224,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 (
                     "entitlement shortfall",
                     json!({"id": "runner-ext", "mode": "byoxpc", "required_entitlements": ["A", "B"]}),
-                    "external runner does not satisfy required entitlements",
+                    "external runner worker does not hold required entitlement \"B\": absent",
                 ),
                 (
                     "unknown id",
@@ -3534,6 +3535,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec!["com.apple.security.app-sandbox".into()],
+                    granted: vec!["com.apple.security.app-sandbox".into()],
                     error: Some("constructed".into()),
                 }),
                 worker_signature: Some(RunnerSignature {
@@ -3546,6 +3548,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 worker_entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec!["com.apple.security.cs.allow-jit".into()],
+                    granted: vec!["com.apple.security.cs.allow-jit".into()],
                     error: Some("constructed".into()),
                 }),
                 validator_signature: Some(RunnerSignature {
@@ -3558,6 +3561,7 @@ assert lifecycle(e)['projections']['stop_reason']=='policy_transfer_deadline'
                 validator_entitlements: Some(RunnerEntitlements {
                     raw_plist: Some("<plist/>".into()),
                     keys: vec![],
+                    granted: vec![],
                     error: Some("constructed".into()),
                 }),
             };

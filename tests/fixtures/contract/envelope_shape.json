@@ -489,6 +489,7 @@
     },
     "envelope.data.specimen.runner_provenance.runner_entitlements": {
       "error": "string",
+      "granted": "array",
       "keys": "array",
       "raw_plist": "string"
     },
@@ -501,6 +502,7 @@
     },
     "envelope.data.specimen.runner_provenance.runner_validator_entitlements": {
       "error": "string",
+      "granted": "array",
       "keys": "array",
       "raw_plist": "string"
     },
@@ -513,6 +515,7 @@
     },
     "envelope.data.specimen.runner_provenance.runner_worker_entitlements": {
       "error": "string",
+      "granted": "array",
       "keys": "array",
       "raw_plist": "string"
     },

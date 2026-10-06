@@ -23,6 +23,7 @@ smoke and blackbox scripts through `runner.mode=byoxpc`, and validates
 - `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh`
 - `tests/suites/runner_byoxpc/opt_in/single_use.sh`
 - `tests/suites/runner_byoxpc/opt_in/entitlement_readback.sh`
+- `tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh`
 
 ## Artifacts
 

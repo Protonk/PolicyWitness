@@ -38,6 +38,10 @@ assert record['worker_entitlements']['keys'] == expected_keys and record['worker
     ('the registry must record the worker read-back', record.get('worker_entitlements'))
 assert record['validator_entitlements']['keys'] == [] and record['validator_entitlements']['error'] is None, \
     record.get('validator_entitlements')
+granted = sorted(key for key, value in supplied.items() if value is True)
+for field in ('entitlements', 'worker_entitlements'):
+    assert record[field]['granted'] == granted, (field, record[field])
+assert record['validator_entitlements']['granted'] == [], record['validator_entitlements']
 for field in ('signature', 'worker_signature', 'validator_signature'):
     assert record[field]['team_id'] == team and record[field]['valid'] is True and record[field]['adhoc'] is False, \
         (field, record.get(field))

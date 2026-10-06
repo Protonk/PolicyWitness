@@ -107,7 +107,8 @@ if argv[2] == 'install':
     if mode == 'helper_changed':
         (bundle / 'Contents/MacOS/pw-probe-runner').write_bytes(b'changed helper')
     embedded = receipt.get('entitlements')
-    read_back = lambda value: {'raw_plist': None, 'keys': sorted(value) if value else [], 'error': None}
+    read_back = lambda value: {'raw_plist': None, 'keys': sorted(value) if value else [],
+                               'granted': sorted(k for k, v in (value or {}).items() if v is True), 'error': None}
     record = {'id': 'owned-id', 'service_name': service, 'scope': 'user', 'bundle_path': str(bundle), 'state': 'pending',
               'entitlements': read_back(embedded), 'worker_entitlements': read_back(embedded),
               'validator_entitlements': read_back(None)}

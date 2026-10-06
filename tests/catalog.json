@@ -198,8 +198,7 @@
         },
         {
           "id": "rust.byoxpc_reds",
-          "description": "The BYOXPC remediation plan's selection controller tests by exact name (a required key present with value false is refused); red until Group 3 lands",
-          "default": false,
+          "description": "The BYOXPC remediation plan's selection controller tests by exact name (a required key present with value false is refused, naming the worker and the key); promoted from red",
           "command": [
             "bash",
             "tests/suites/unit/byoxpc_reds.sh"
@@ -1394,6 +1393,19 @@
           ]
         },
         {
+          "id": "entitlement_transfer",
+          "description": "required_entitlements admits the worker that holds the key true, refuses the false-valued one by name, and only the admitted worker completes the conditioned write",
+          "requires": [
+            "app",
+            "gui",
+            "identity"
+          ],
+          "command": [
+            "bash",
+            "tests/suites/runner_byoxpc/opt_in/entitlement_transfer.sh"
+          ]
+        },
+        {
           "id": "runner_auth_external",
           "description": "Runner with caller-auth keys removed installs and verifies through the normal client",
           "requires": [
@@ -1536,8 +1548,8 @@
         "witness_contract/dossier_witness_byoxpc",
         "runner_byoxpc/registry_recovery",
         "runner_byoxpc/single_use",
-        "unit/rust.byoxpc_reds",
-        "runner_byoxpc/entitlement_readback"
+        "runner_byoxpc/entitlement_readback",
+        "runner_byoxpc/entitlement_transfer"
       ]
     },
     "failure_boundaries": {
