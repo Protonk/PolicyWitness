@@ -122,6 +122,27 @@
       "reason": "BYOXPC remediation Group 5: source drift, limits, contract and architecture checks and a smoke run against the regenerated documents.",
       "source": "7de5062c7c962d34051b9a629e4527fe8a9b3fec",
       "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-final-default",
+      "run_id": "20261006T191816Z_f8d03fbf",
+      "reason": "BYOXPC remediation final gate: the default battery, 167 of 167 cases, against the signed build stamped v0.2.6-38-g0865136.",
+      "source": "08651368504d302c4257e1a2261b7050bd642c64",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-final-optin",
+      "run_id": "20261006T195217Z_ba3ea082",
+      "reason": "BYOXPC remediation final gate, first opt-in run: all 17 runner_byoxpc cases pass; the BYOXPC dossier witness met the verified host still retiring because the session helper had waited on the worker's PID (the served reply's pid), not the host's.",
+      "source": "08651368504d302c4257e1a2261b7050bd642c64",
+      "app_inventory": "artifact-integrity/before.json"
+    },
+    {
+      "path": "runs/byoxpc-final-optin-2",
+      "run_id": "20261006T195539Z_a3900021",
+      "reason": "BYOXPC remediation final gate, opt-in rerun after the session helper waits for the host launchd lists: fake-tool ownership controls, dossier witness, entitlement read-back and transfer, single-use and BBX-001 pass.",
+      "source": "08651368504d302c4257e1a2261b7050bd642c64",
+      "app_inventory": "artifact-integrity/before.json"
     }
   ]
 }

@@ -42,7 +42,7 @@ implementation or acceptance test below.
 - [x] Group 3: select on true-valued keys in the worker's read-back.
 - [x] Group 4: bound launchd's respawn wait in the generated plist.
 - [x] Group 5: correct the guide and the README.
-- [ ] Reconcile the architecture document and the records; pass the final
+- [x] Reconcile the architecture document and the records; pass the final
   gates; retire this plan.
 
 ## Decisions, recorded up front
@@ -367,6 +367,37 @@ the parent.
 Gates: `byoxpc-g3-gates` (Rust reds promoted, Rust batch, fake-tool and
 verification controls) and `byoxpc-g3-repro` (dossier witness, read-back,
 transfer); both pinned.
+
+### Final gates (2026-10-06)
+
+Source snapshot: commit 0865136 (records closed), built as
+`v0.2.6-38-g0865136` with `YOLO=1 ./build.sh`.
+
+- Gate 2, default battery: `byoxpc-final-default`
+  (`20261006T191816Z_f8d03fbf`), 167 of 167 cases, no skips.
+- Gate 3, opt-ins: `byoxpc-final-optin` (`20261006T195217Z_ba3ea082`), all
+  17 `runner_byoxpc` cases pass (BBX-001, BBX-002, the eight menagerie
+  members, the smoke specimen, `single_use`, `registry_recovery`,
+  `runner_auth_external`, `entitlement_readback`, `entitlement_transfer`);
+  `dossier_witness_byoxpc` was refused `already_ran` by the host its
+  install's verify had reached 300 ms earlier. Cause, established from the
+  log and the artifacts: a served reply's `pid` names the worker
+  (`topPid` in CWorkerOrchestrator.swift, documented in the runner README),
+  so the Group 1 retirement wait polled a process that had already exited
+  and never waited for the host. The helper now reads the host from
+  `launchctl print` and waits until launchd lists none; the earlier
+  post-verify refusals in the Group 4 measurements had the same wait and
+  are explained the same way. Rerun `byoxpc-final-optin-2`
+  (`20261006T195539Z_a3900021`): fake-tool ownership controls, dossier
+  witness, read-back, transfer, single-use and BBX-001 pass; the registry
+  holds no runner and no pending cleanup afterwards.
+- Gate 4: source drift, generated contract, limits and architecture checks
+  pass inside the default battery; the anchor check by hand (every Markdown
+  fragment link across the tracked documents) found one stale anchor
+  unrelated to this plan, fixed in the runner README.
+- The guide's verify sentence now says which PID `runner_pid` names.
+
+All three runs are pinned in `tests/RETAINED.json`.
 
 ### Group 4 (2026-10-06)
 

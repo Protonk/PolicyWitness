@@ -1850,9 +1850,10 @@ $PW runner verify --service-name <service-name>
 ```
 
 `runner verify` sends a fixed allow-all specimen with no probe steps to the
-runner on the client's stdin, as a run does, and reports the runner's PID and
-outcome. It defaults to a 5-second timeout; pass `--timeout-ms <n>` for slow
-cold-spawn cases.
+runner on the client's stdin, as a run does, and reports the outcome and the
+PID the reply names as `runner_pid`: the worker that served the request, or
+the host when the host refused it (the reply's `pid` rule). It defaults to a
+5-second timeout; pass `--timeout-ms <n>` for slow cold-spawn cases.
 
 Verification consumes the host it reaches: every host serves one request and
 exits. The next request starts a fresh host once launchd allows a launch,

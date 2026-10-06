@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import re
 import secrets
 import shutil
 import sys
@@ -59,18 +60,33 @@ def service_present(state, out, label, invoke):
     return False
 
 
-def retire_host(pid, out, timeout=5.0):
-    """Wait for the host a verify or run reached to exit; a PID is required."""
-    assert isinstance(pid, int) and pid > 0, ('verify reported no host PID', pid)
+def retire_host(state, out, invoke, timeout=5.0):
+    """Wait until launchd lists no running host for the owned service.
+
+    A served reply's `pid` names the worker, not the host, so the host is
+    read from launchd's own listing: while it reports a PID, wait for that
+    process to exit, then re-read. On-demand launches need a connection, so
+    the loop ends once the retiring host is gone.
+    """
     deadline = time.monotonic() + timeout
+    observed = []
+    attempt = 0
     while True:
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
+        attempt += 1
+        rc, raw, _ = tool(out, f'host-retirement-{attempt}', ['/bin/launchctl', 'print', state['target']], invoke=invoke, check=False)
+        match = re.search(r'^\s*pid = (\d+)\s*$', raw.decode('utf-8', 'replace'), re.M) if rc == 0 else None
+        if match is None:
             break
-        assert time.monotonic() < deadline, f'host {pid} did not retire within {timeout} s'
-        time.sleep(0.02)
-    save(out / 'verify-host-retired.json', {'pid': pid, 'retired': True})
+        pid = int(match[1])
+        observed.append(pid)
+        while True:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            assert time.monotonic() < deadline, f'host {pid} did not retire within {timeout} s'
+            time.sleep(0.02)
+    save(out / 'verify-host-retired.json', {'hosts': observed, 'retired': True})
 
 
 def registry(pw, out, label, invoke):
@@ -201,12 +217,12 @@ def install(pw, app, out, env_path, identity, *, invoke=command, launch_agents=N
     # host claimed by a foreign client is attributable from the artifacts.
     tool(out, 'processes-before-verify', ['/bin/ps', '-axo', 'pid=,ppid=,lstart=,comm='], invoke=invoke, check=False)
     # A connection failure here is a failed case, never an automatic skip.
-    verified = envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
+    envelope(out, 'verify-connection', [pw, 'runner', 'verify', '--service-name', service], invoke)
     # The verify request consumed a host. Until that host has exited, a
     # connection can still reach it and meet its terminal claim (already_ran),
     # so wait for its retirement before handing the runner to the caller; the
     # next request then only waits for launchd's respawn throttle.
-    retire_host(verified.get('runner_pid'), out)
+    retire_host(state, out, invoke)
     assert inventory(app) == json.loads((out / 'source-before.json').read_text()), 'setup changed selected app'
     save(env_path, {'runner_id': record['id'], 'service_name': service})
 
