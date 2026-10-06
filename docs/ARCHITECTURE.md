@@ -4,17 +4,65 @@ A tour of the internals at the level between the [README](../README.md)'s
 Flow paragraph and the directory READMEs: how one run unfolds in time and the
 boundaries it crosses. It is for a developer or agent who has read the README
 and is about to open a directory. It is not a field reference, a contract, a
-module list, a test map or a build guide; each of those exists and is linked.
+module list, a test map or a build guide; each of those exists and is linked
+from the section that would otherwise restate it.
 
 The three figures are generated from [architecture.json](architecture.json)
 by [generate_architecture.py](generate_architecture.py). Every node and edge in
 a figure has an id, and the table beside the figure names, for that id, the
 source symbol that implements it and the check that pins it. A node or edge
-is chased by its id, not by prose.
+is chased by its id, not by prose. The one figure that is not a graph, the
+run timeline, is drawn by hand below and cites its sources the same way.
 
 ## Why these processes exist
 
+Two facts about the macOS sandbox shape everything. `sandbox_check` answers
+for a live process, and `sandbox_apply` is one-way: a process that has applied
+a profile cannot shed it. A specimen therefore needs a process that applies
+the policy and then stays alive long enough to be queried and to attempt
+things, and that process cannot serve the next specimen. PolicyWitness spawns
+one worker per specimen, applies the policy inside it, and queries it from
+outside.
+
+The reply path must stay outside the policy under test. A `(deny default)`
+profile can deny the worker's own writes and even its exit, so the worker
+never reports over a pipe after applying. It publishes into a shared region
+the host mapped and pre-touched before the spawn, and the host, which never
+applies anything, assembles the reply. The same split makes the worker's exit
+status the source of truth about what happened to it, which is what the
+[disposition record](../tests/FAILURE-PROPAGATION-CONTRACT.md#worker-disposition-record)
+is built from.
+
+The host is an XPC service that launchd starts for one specimen and that exits
+shortly after replying, so no host state outlives a run. The controller is a
+separate process so that an envelope is printed whatever the host does,
+including never answering. The controller is Rust and `NSXPCConnection` is an
+Objective-C API, so a small Swift client owns the connection
+([why the launcher shells out](../controller/README.md#why-the-rust-launcher-still-shells-out)).
+
+The validator is its own process so that `sandbox_check` runs unsandboxed
+against the worker's PID while the worker is held between applying and
+attempting. The observer runs the unified-log query in its own process group
+under a budget, so a stalled `log show` is cut off and cleaned up without
+touching execution evidence
+([log collection budgets](../controller/README.md#log-collection-budgets-and-cleanup)).
+`sbpl-check` compiles the policy on its own only when no runner answered, to
+tell "no runner" from "the policy would not compile" inside an
+[automation sandbox](../AGENTS.md#sandboxed-automation-harnesses).
+
+Exactly three processes call native sandbox APIs: the worker (compile and
+apply), the validator (`sandbox_check`) and `sbpl-check` (compile only). The
+controller, the client, the host and the observer do not, and for the host
+that is enforced rather than assumed (see [Principles](#principles-as-enforced-constraints)).
+
 ## Process topology
+
+Who starts whom, over what channel, with what lifetime. Locations are given
+at the granularity of "app top level" and "inside the XPC bundle"; the exact
+bundle paths are the contract in the README's
+[What ships](../README.md#what-ships). The C worker and the validator sit
+inside the XPC bundle so that the built-in runner and a BYOXPC copy each
+resolve their own helpers relative to their own bundle.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH topology -->
 ![Process topology](architecture-topology.svg)
@@ -59,9 +107,155 @@ Every node and edge above names at least one check.
 
 ## One run in time
 
+The spine of the architecture is temporal. The host releases the worker's
+attempts only after the validator's collection has closed, so every
+prediction is made before any attempt is tried; that interval is the only
+thing `comparison.order: "query_first"` claims
+([the record](../tests/FAILURE-PROPAGATION-CONTRACT.md#the-record)). The
+timeline below is the host driver's step list in
+[CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift), the worker's
+`main` in
+[pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c) and
+the controller's `run` in [run_flow.rs](../controller/src/run_flow.rs), laid
+side by side.
+
+```text
+controller / client            host (PWRunner)                  worker (pw-probe-runner)      validator
+-------------------            ---------------                  ------------------------      ---------
+read the request; version
+gate; select the runner;
+resolve augments; dossier;
+strip selectors; serialize
+the held bytes once
+   |
+   | client reads stdin to
+   | EOF, then NSXPC
+   | runSpecimen(Data)
+   |-------------------------->| accept only an authorized caller
+                               | decode with closed keys; capacity,
+                               | then meaning; policy hash
+                               | zero the region; identity, counts,
+                               | slots, params; pre-touch; prepared=1
+                               | ready + policy pipes (CLOEXEC, NOSIGPIPE)
+                               |-- posix_spawn, fds 0/3/4 -------->| map the region; refuse on magic
+                               |-- policy bytes on fd 0 ---------->| or identity mismatch (exit 4);
+                               |                                   | read the policy to EOF; params;
+                               |                                   | compile
+                               |<--------- ready byte (fd 4) ------|
+                               |                                   | sandbox_apply; applied=1
+                               | acquire applied (apply_rc 0,      |
+                               | identity match)                   |
+                               |-- posix_spawn --batch <pid> --------------------------------->|
+                               |-- probes on stdin ------------------------------------------->| sandbox_check
+                               |<--------------------------------------------- verdicts (NDJSON)| per probe
+                               | hook returns; collection closed;  |
+                               | proceed=1 (release)               |
+                               |                                   | wait_for_proceed (budget;
+                               |                                   | failure code 8 on expiry)
+                               |                                   | proceed_observed=1
+                               |                                   | attempts in plan order; exec
+                               |                                   | children are spawned here;
+                               |                                   | completed=1 per slot (release)
+                               |                                   | done=1; spin
+                               | poll: done, reaped, sentinel      |
+                               | deadline, or wait error           |
+                               | exit_requested=1 ---------------->| _exit(0)
+                               | grace; SIGKILL fallback; waitpid  |
+                               | final acquire snapshot; decode
+                               | evidence; classify; disposition
+                               | record; ordering; per-step query,
+                               | attempt and comparison; encode,
+                               | degrading if the reply cannot be
+                               | built
+   |<--------------------------| reply; exit 50 ms later
+   | admit the reply version
+   | sbpl-check, only for xpc_error
+   | complete execution (the
+   | disposition projection)
+   | observer over the padded client
+   | span, in its own process group,
+   | runs log show; correlation
+   | envelope on stdout
+```
+
+Where each phase is pinned:
+
+- **Controller admission and selection.** `run` in
+  [run_flow.rs](../controller/src/run_flow.rs): the manifest is loaded once,
+  then `parse_request`, `validate_request_version`, selector parsing,
+  `resolve_runner_target_with_registry`, `resolve_augments`, the dossier, and
+  `strip_runner_selector` before the held bytes are serialized. Pinned by the
+  `orchestration` tests in the same file.
+- **Caller authorization.** `authorizedCaller` runs when the connection is
+  accepted, before any request is read
+  ([PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)).
+- **Host admission.** `runSpecimen` decodes with closed keys, then
+  `admissionFailure(for:)` (capacity), `requestMeaningFailure` (meaning) and
+  `computePolicyHash`, in that order; a refusal replies without spawning
+  anything. Pinned by `runner_outcome_bad_request` and `failure_boundaries`.
+- **Spawn and apply.** Steps 1 to 8 of the driver's comment in
+  [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift) and steps 2 to
+  7 of the worker's. The ready byte has its own window
+  (`readyByteTimeoutMs`); `runner_ready_byte_resilience` pins it.
+- **The barrier.** The validator runs inside the `postApplied` hook of
+  [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift)
+  with the worker's PID, or not at all when no step has a predictable
+  query. `proceed` is stored when the hook returns; the worker's
+  `wait_for_proceed` refuses to attempt anything before it. `PWRunnerOrdering`
+  records what was observed. Pinned by `OrderingTests` and the opt-in
+  `witness_contract/order_barrier_mutations` control
+  ([OPT_IN_TESTS.md](../tests/OPT_IN_TESTS.md)).
+- **Attempts and publication.** `run_attempt` writes each slot and releases
+  `completed`; an exec attempt acquires its pipes and spawn handles after
+  apply and releases them before its slot completes. Pinned by
+  `runner_c_worker_harness` and `runner_exec_lifecycle`.
+- **Exit, grace and kill.** Steps 9 to 11 of the driver's comment;
+  `runner_outcome_runner_timeout/host_kills_hung_worker` pins the kill path
+  and `runner_use_c_worker` the ordinary one.
+- **Reply and envelope.** `reply_version` admits the reply or retains it
+  unread; `fallback_policy_check` runs only for an admitted `xpc_error`;
+  `complete_execution` projects the disposition; `attach_sandbox_logs` adds
+  log evidence without touching execution fields. Pinned by the Rust unit
+  tests named in the boundary tables below.
+
+Budgets named above (the ready window, the proceed budget, the sentinel
+deadline, the grace timer, the exec deadlines, the log budget) are limits,
+and [LIMITS.md](LIMITS.md) owns their values and their checks.
+
 ## Evidence channels and ownership
 
+Six channels reach the envelope. Each has one writer, and nothing downstream
+rewrites it.
+
+| Channel | Written by | Where it lands | What it is |
+| --- | --- | --- | --- |
+| Prediction | the validator, through the host | `steps[].sandbox_check` | one `sandbox_check` verdict per predictable step, or an explicit `prediction_unavailable` observation |
+| Attempt | the worker, through the shared region | `steps[].attempt` | the attempted operation's own result, with `rc`, `errno` and the lifecycle copies |
+| Comparison | the host | `steps[].comparison` | the attempt's classified observation, the submitted-scope relations, the order established, and the limitations |
+| Disposition | the host, projected by the controller | `runner_subprocess.disposition`; `data.runner_sandbox_diagnostics` (execution fields) | what happened to the worker process, answered only from raw facts the record cites |
+| Dossier | the controller | `data.specimen` | the request as submitted, augmentation and imports, host facts, runner and app provenance, binary baselines |
+| Log capture | the observer, through the controller | `data.sandbox_log_capture`; `data.runner_sandbox_diagnostics` (log fields) | deny records the unified log showed in the padded window, with candidate associations; never a verdict |
+
+The rule that holds the channels apart: log evidence never changes execution
+evidence. The assembly seam is `attach_sandbox_logs` in
+[run_flow.rs](../controller/src/run_flow.rs), where the collector receives
+read-only execution evidence and returns only log-owned fields; the unit test
+`collector_states_preserve_the_serialized_execution_half` pins it, and the
+controller README's
+[ownership table](../controller/README.md#execution-and-log-evidence-ownership)
+names the owner of every field. No record asserts agreement or disagreement
+between the prediction and attempt channels; the reading rules for the
+comparison record are in the
+[failure evidence contract](../tests/FAILURE-PROPAGATION-CONTRACT.md#comparison-record).
+The normative semantics of the reply live in that contract, under `tests/`;
+this document links it wherever it needs a rule and never restates one.
+
 ## Boundaries
+
+Each node below is a record that crosses from one owner to another, and each
+edge is the guard that lets it cross. Three numbers and one digest are the
+only versions ([CONTRACT.md](CONTRACT.md)); every other boundary is pinned by
+a golden, a suite, or by co-shipping, and the edge table says which.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH boundaries -->
 ![Boundaries and their guards](architecture-boundaries.svg)
@@ -107,9 +301,103 @@ Notes:
 Every node and edge above names at least one check.
 <!-- END GENERATED ARCHITECTURE GRAPH boundaries -->
 
+The three nested envelopes (`data.policy_check.envelope`,
+`data.sandbox_log_capture.observer` and the controller's own) share the
+[envelope frame](CONTRACT.md#what-each-number-identifies), so one version
+number covers the controller family, and the observer's report carries its
+own number inside the frame.
+
 ## Principles as enforced constraints
 
+The six core ideas in [AGENTS.md](../AGENTS.md#core-ideas) are operating
+instructions. Each is also a constraint on a particular phase above, and each
+has a mechanism that enforces it.
+
+- **One-way sandbox per process.** The host serves one `runSpecimen` and
+  exits; a second request on the same connection is refused as
+  `already_ran` (`didRun` in
+  [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift)).
+  The worker is spawned per run and never reused. Pinned by the single-use
+  shape of every live suite; the `already_ran` path itself has no test, as
+  [COVERAGE.md](../tests/COVERAGE.md) records.
+- **Host/worker split.** The host never links, loads or calls libsandbox.
+  Enforced twice: `check_host_invariance` in the `source_drift` suite rejects
+  any binding under `runner/Sources/`, and `host_invariance` in
+  [artifact.py](../tests/lib/artifact.py) runs `nm -u` on the shipped host
+  before any app-dependent suite runs.
+- **Witness over interpretation.** An attempt's `rc` is never the claim; the
+  comparison record names its `observation_basis`, and
+  [consumer.py](../tests/lib/consumer.py) re-derives every step's expected
+  observation from the raw channels before accepting an envelope.
+- **Predictions precede attempts.** `proceed` and `proceed_observed` in the
+  shared region, `collection_closed_before_proceed` in `PWRunnerOrdering`,
+  and the worker's `wait_for_proceed`. Pinned by `OrderingTests` and the
+  opt-in order-barrier mutation control, which must be rerun whenever the
+  wait, the release store or the eligibility rule changes.
+- **No dishonest attribution.** No outcome spelling claims a sandbox cause: a
+  signal is `runner_failed` with the signal preserved, and
+  `termination_cause` is projected only from a disposition record whose cited
+  facts support it (`CAUSE_FOR_TRIGGER` in
+  [disposition.rs](../controller/src/disposition.rs)). Log correlation is a
+  separate observation with its own `correlation_status`. The pre-apply
+  witness case forbids `ok`, `bad_policy` and the two retired spellings
+  outright.
+- **Runner simplicity.** Host orchestration is `PWRunnerService.swift` and
+  `CWorkerOrchestrator.swift`; everything after apply is the C worker, which
+  allocates nothing after `sandbox_apply` because the host pre-touched every
+  page of the region before the spawn. Hidden pre-sandbox acquisition is the
+  thing the exec attempt machinery avoids: its pipes and spawn handles are
+  acquired after apply, inside the attempt, and released before the slot
+  completes.
+
 ## How the system verifies itself
+
+The suites are listed in [tests/README.md](../tests/README.md#suite-coverage);
+this section names the mechanisms they are built from.
+
+- **Goldens.** `response_shape.json` and `envelope_shape.json` under
+  `tests/fixtures/contract/` record every key a reply or envelope can carry
+  and its type, collected from field-complete fixtures; they are also the
+  readers' allowlists. `abi_layout.txt` is the compiled harvest of the
+  worker ABI's sizes and offsets. A difference writes a candidate; replacing
+  the golden with the reviewed candidate is the acknowledgement
+  ([shape goldens](CONTRACT.md#shape-goldens)).
+- **Generators with marked regions.** Four manifests own numbers, limits,
+  figures and the identity; four generators copy them into marked regions of
+  documents and sources, and each has a check mode that the build or a
+  drift case runs. Nothing reads a manifest at run time.
+- **Source-drift rules.** Mechanical checks over text that is not generated:
+  the host invariance rule, the sandboxed-harness note carried in three
+  places, the CLI surface block against the usage text, one coverage row per
+  outcome constant, the suite table against the suite directories and the
+  catalog, and the test-seam table against `PWRunnerTestOverrides`.
+- **The consumer.** [consumer.py](../tests/lib/consumer.py) gates an
+  envelope on exact versions, validates every step against its raw channel
+  fields through the goldens, and selects steps by field; it is the reader
+  the suites share and the reader an external consumer is expected to copy.
+- **The test seam.** `_test_overrides` is the only way a test reaches inside
+  a run: deadlines, hangs, a self-signal, and replacement worker or
+  validator executables, each honored and echoed in the reply. The supported
+  keys are the table in [runner/README.md](../runner/README.md), locked to
+  the Swift type by a drift rule, and the four-assertion recipe for using
+  them is in [runner/AGENTS.md](../runner/AGENTS.md).
+- **The C harness.** `runner_c_worker_harness` drives the real worker
+  through the shared-memory ABI from a C program with no host, so the
+  worker's publication and failure paths are pinned independently of the
+  Swift driver.
+- **The lifecycle oracle.** [lifecycle_oracle.py](../tests/lib/lifecycle_oracle.py)
+  constructs envelopes from worker records and raw facts and checks that the
+  disposition projection says only what those facts support, with disabled
+  log fields so no log evidence can decide a lifecycle claim.
+- **The dispatcher's artifact check.** Before any app-dependent case runs,
+  the dispatcher verifies the bundle layout against `EXECUTABLES`, the
+  signatures, the embedded evidence hashes and the host's undefined symbols;
+  fixture bundles with a damaged seal or a sandbox-importing host prove the
+  check refuses them.
+
+The last figure is the graph those generators and rules draw over the
+documents: which manifest feeds which generator, which regions it writes,
+which copies a rule keeps equal, and where the build runs the checks.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH documents -->
 ![The document graph](architecture-documents.svg)
@@ -202,3 +490,21 @@ Every node and edge above names at least one check.
 <!-- END GENERATED ARCHITECTURE GRAPH documents -->
 
 ## BYOXPC as a variation on launch and selection
+
+A BYOXPC runner is a copy of the XPC bundle registered as a launchd Mach
+service, in user or system scope, by the `runner` subcommands
+([controller/README.md](../controller/README.md#runner-external-runner-manager)).
+Nothing else changes. The client connects with
+`NSXPCConnection(machServiceName:)` instead of a bundle lookup; the host binds
+`NSXPCListener(machServiceName:)` instead of `NSXPCListener.service()` and
+resolves its worker and validator relative to its own bundle, exactly as the
+built-in one does. The request names the runner through the selector fields
+the controller strips before XPC delivery, and the registry supplies the
+service name, scope and entitlements; the dossier then compares the bundle's
+copies with the manifest baselines, so a BYOXPC run says which bytes answered
+(`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`
+in [run_flow.rs](../controller/src/run_flow.rs)). The registry is read by an
+additive loader that still accepts retired kind spellings so an old install
+can be listed and removed; recovery of a half-removed install is the
+[registry ownership](../controller/README.md#registry-ownership-and-recovery)
+procedure, not a run-time concern.

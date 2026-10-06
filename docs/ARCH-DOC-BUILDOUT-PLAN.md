@@ -12,8 +12,8 @@ Started 2026-10-03 at v0.2.5.
 - [x] Step 0: survey the repository (2026-10-03)
 - [x] Step 1: triage conversation over the strain register (2026-10-05)
 - [x] Step 2: carry out the eliminations chosen in step 1 (2026-10-05; gate: default battery under `tests/out/runs/arch-step2-gate`, dispatcher rerun under `arch-step2-gate-dispatcher` after an unrelated Makefile fix)
-- [ ] Step 3a: the manifest, generator, figures and drift case, from source
-- [ ] Step 3b: the prose and the ASCII timeline, from source
+- [x] Step 3a: the manifest, generator, figures and drift case, from source (2026-10-05)
+- [x] Step 3b: the prose and the ASCII timeline, from source (2026-10-05)
 - [ ] Step 4: review the draft with a human
 - [ ] Step 5: integrate, verify, close out
 
@@ -202,6 +202,10 @@ survey saw; verify it before deciding.
 | 10 | Records may be linked only from plan files, and until this plan there were none | [records/AGENTS.md](../records/AGENTS.md) | `git ls-files` showed no `*-PLAN.md` before 2026-10-03, so the records there were unreachable by policy. This plan is not associated with that record and does not link it. Not a matter for the architecture doc; a matter for the records convention. | not a strain | Struck: a records-convention question, not the document's. |
 | 11 | The validator wire has no version marker and sits outside the worker identity | [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validator.c); `ValidatorClient.swift` | The identity digest covers `controller/tools/pw_probe_runner/` and `runner/Sources/`, not the validator source. The NDJSON contract is pinned by the `validator_batch_mode` suite and by co-shipping in one bundle. Every other boundary in the inventory carries a number or a digest. | footnote | The validator wire carries no version because the host and the validator are built, signed and shipped inside one XPC bundle, so no cross-version pairing can occur; the `validator_batch_mode` suite pins the NDJSON shape. |
 | 12 | The design principles live in AGENTS.md as operating instructions | "Core ideas" in [AGENTS.md](../AGENTS.md) | The architecture doc will restate the same six ideas as constraints paired with the mechanism that enforces each. Two copies of the principles would then exist. | not a strain | AGENTS.md keeps the six headlines as operating instructions; the document pairs each with its mechanism, and the step 5 router row links the two. |
+| 13 | The `already_ran` refusal and the host's 50 ms exit delay have no test | `didRun` and `milliseconds(50)` in [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [tests/COVERAGE.md](../tests/COVERAGE.md) | COVERAGE lists `already_ran` as out of scope because the service exits about 50 ms after replying and a second request is racy. The document states both facts from source; neither has a check. | found while drafting | Recommend footnote: the document says the path is untested and why; a test would need a connection that survives the exit race. |
+| 14 | Caller authorization runs at connection acceptance, before `runSpecimen` | `PWRunnerSessionDelegate` and `authorizedCaller` in [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | The plan's phase list placed authorization inside host admission; the listener delegate decides it when the connection is offered, so an unauthorized caller never delivers a request. The document and the timeline say so. | found while drafting | Recommend not a strain: a correction to the plan, already reflected in the document. |
+| 15 | The validator is skipped entirely when no step has a predictable query | the `postApplied` hook in [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | When every step's operation/filter pair is in the prediction-unavailable set the hook returns without spawning; the barrier still closes and `proceed` is still stored. The plan's phase list did not mention it. | found while drafting | Recommend not a strain: the timeline carries it in one clause. |
+| 16 | The document is 510 lines against a 300 to 500 line target | [ARCHITECTURE.md](ARCHITECTURE.md) | The three generated regions account for about 180 of those lines; the prose is about 330. | found while drafting | Decide in review whether the node and edge tables should collapse (for example, sources and checks in one column). |
 
 ## Proposed shape of the document
 
@@ -318,3 +322,29 @@ Size target: 300 to 500 lines. Current behavior only.
 
 Entries are added during step 3. Each names the claim, where it was pinned or
 why it could not be, and any contradiction found with an existing document.
+
+- 2026-10-05, step 3a. Every node and edge of the three graphs cites a source
+  symbol the generator verified in the named file and at least one check; the
+  generated regions report no claim without a pinning check. Citations that
+  needed substitutes during drafting: the order-barrier control lives in
+  `witness_contract/opt_in/mutations.sh`, not the suite's `run.sh`; the
+  `bad_policy` pin is `NormalizedOutcome.badPolicy` in
+  `EnvelopeInvariantTests.swift`; the BYOXPC suite's `run.sh` names no
+  launchctl symbol, so the suite name is the citation.
+- 2026-10-05, step 3b. The timeline was drawn from the driver's step list in
+  `CWorker.swift`, the worker's header in `pw_probe_runner.c`, `runSpecimen`
+  and the controller's `run`; the admission order in `runSpecimen` (decode,
+  capacity, meaning, policy hash) and the placement of caller authorization
+  were read from source rather than taken from the plan (register row 14).
+  Budget values are not repeated; the timeline names the budgets and links
+  LIMITS.md.
+- 2026-10-05, contradiction scan. The existing documents were searched for
+  the claims most likely to conflict: the 50 ms exit (COVERAGE says ~50ms,
+  source says 50), the observer's process group (stated nowhere else), the
+  validator's post-apply hook (runner README agrees), the `xpc_error`
+  fallback (controller README agrees in four places) and caller
+  authorization (runner README agrees). No contradiction was found. Every
+  heading anchor the document links was checked by hand against the target
+  file's headings; the drift suite checks file links only.
+- Open for step 4: rows 13 to 16; the figure labels (short labels in the
+  figure, full text in the table) and whether the tables should collapse.
