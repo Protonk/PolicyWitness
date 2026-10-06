@@ -230,7 +230,8 @@ The controller prints one JSON envelope to stdout (`kind="run"`). It contains:
   the `sbpl-check` search paths and bounds: `status`, `closure_sha256`,
   `records`, `cycle`, `exceeded`, `failure`); `host` facts (`macos_version`,
   `macos_build`, `kernel_release`, `arch`); `runner_provenance` (runner identity
-  and entitlements metadata); `app_provenance` (`evidence_manifest_path` and the
+  and the host's, worker's and validator's signature and entitlement
+  read-backs, each entitlement object listing `keys` and `granted`); `app_provenance` (`evidence_manifest_path` and the
   optional `evidence_verify` report); and `binaries.{service,worker,validator}`,
   null when the selected binary is the manifest's entry for that role, otherwise
   `path`, `actual_sha256`, `baseline_sha256`, `verification` and `reason`. The
@@ -517,8 +518,15 @@ take precedence per field, including an empty `required_entitlements` list;
 null means absent. Even shadowed aliases are validated. The controller consumes
 these fields before XPC delivery; they are not runner-executed request options.
 
-If `required_entitlements` is present, the controller enforces a **superset**
-check against the runner’s recorded entitlements before dispatch.
+If `required_entitlements` is present, the controller requires every listed key
+to be **granted** by the selected runner's worker: present in the worker's
+recorded read-back with the value `true` (`worker_entitlements.granted`; the
+built-in runner's worker is read from the evidence manifest). The host's
+entitlements are recorded, not consulted. A key that is absent, or present with
+any other value, refuses the run before any host is reached and the refusal
+names the worker and the key; a registry record written before the installer
+read the worker back is refused with a reinstall message whenever anything is
+required, and selects as before when nothing is.
 
 The only built-in mode is `standard` (default). If `runner.mode` is
 present and an external runner is selected, it must equal `byoxpc` —
@@ -556,17 +564,22 @@ Notes:
   bundle's `CFBundleIdentifier`. The executable is derived from
   `<bundle>/Contents/MacOS/<CFBundleExecutable>`.
 - `--entitlements` requires either `--identity <id>` or `--allow-adhoc`. Without one of those the supplied entitlements would not be embedded into the binary, so the call is rejected up front.
+- Signing covers the bundle tree in order: the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle (`sign_install_tree`). The sealed bundle is then verified recursively (`codesign --verify --deep --strict`), and the host, the worker and the validator are read back separately into the record. A copy missing either helper is refused.
+- The generated launchd plist sets `ThrottleInterval` to one second (`docs/LIMITS.md`, `byoxpc_throttle_interval`), so a request after the previous host's launch waits at most that long instead of launchd's ten-second default.
 - A BYOXPC runner copied from the shipped `PWRunner.xpc` inherits its signed-caller check (`PWRunnerRequireSignedCaller`): sign it with a Developer ID whose Team ID matches the caller (`--identity`), or remove those Info.plist keys for an ad-hoc/local runner. An ad-hoc runner that keeps the keys has no Team ID and is rejected at connect time (`xpc_error`). See docs/PolicyWitness.md → "Caller authentication and ad-hoc signing".
 - `runner verify` delivers its fixed allow-all verification request on the client's stdin, as a run does; no temporary request file is written. It defaults to a 5-second timeout (override with `--timeout-ms`).
 - `runner remove` first atomically moves ownership into `pending_cleanup`. Launchd/plist failures appear in `data.warnings`; `cleanup_retained: true` and `retained_record` identify recovery state. The record is retired only after service and plist absence are verified and retirement is saved; after a bootout it issued, remove re-reads the service every 50 ms for up to 1 s of launchd teardown before judging presence, and the cleanup observation records the reads and the wait. `--skip-bootout` retains recovery while the service is present or unknown.
 - `runner status`, `runner verify`, and `runner remove` emit an envelope with the operation's `kind` and `result.normalized_outcome = "not_found"` (exit code 2) when the lookup key is not in the registry, instead of plain-text stderr.
-- `runner validate` re-reads each registry entry's on-disk signature and entitlements. It does not reconcile against launchctl or `LaunchAgents/`.
+- `runner validate` verifies each registry entry's bundle recursively, then the host, the worker and the validator individually, re-reads every signature and entitlement set, and reports `data.invalid` (records with a failure) and `data.failures` rows (`runner_id`, `service_name`, `binary` as `bundle`, `host`, `worker` or `validator`, `error`). The host's `signature.valid` follows the recursive check; each helper's follows its own. It does not reconcile against launchctl or `LaunchAgents/`.
 
 ### Registry ownership and recovery
 
 Schema 1 accepts additive fields: `RunnerRecord.state` defaults to `installed`
-for older records, `ownership` is optional, and `pending_cleanup` defaults to an
-empty collection. Ownership records keep absolute bundle/executable/plist paths,
+for older records, `ownership` is optional, `pending_cleanup` defaults to an
+empty collection, the per-helper read-backs (`worker_signature`,
+`worker_entitlements`, `validator_signature`, `validator_entitlements`) are
+optional and absent in records written before the installer read the helpers
+back, and each entitlement object's `granted` list defaults to empty. Ownership records keep absolute bundle/executable/plist paths,
 launchd domain, installer UID and the expected plist hash. Cleanup records retain
 that identity plus before/after observations, so recovery does not depend on test
 output. Installation checks service, bundle and executable identities against

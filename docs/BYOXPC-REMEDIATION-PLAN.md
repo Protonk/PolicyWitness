@@ -40,8 +40,8 @@ implementation or acceptance test below.
 - [x] Group 1: sign the embedded helpers at install and read all three back.
 - [x] Group 2: verify recursively at install and in `runner validate`.
 - [x] Group 3: select on true-valued keys in the worker's read-back.
-- [ ] Group 4: bound launchd's respawn wait in the generated plist.
-- [ ] Group 5: correct the guide and the README.
+- [x] Group 4: bound launchd's respawn wait in the generated plist.
+- [x] Group 5: correct the guide and the README.
 - [ ] Reconcile the architecture document and the records; pass the final
   gates; retire this plan.
 
@@ -367,6 +367,54 @@ the parent.
 Gates: `byoxpc-g3-gates` (Rust reds promoted, Rust batch, fake-tool and
 verification controls) and `byoxpc-g3-repro` (dossier witness, read-back,
 transfer); both pinned.
+
+### Group 4 (2026-10-06)
+
+Measured on one owned installation with the plist rewritten per candidate
+(`tests/out/runs/byoxpc-remediation-baseline/candidates/measurement.json`;
+launchd's listing reported `minimum runtime` equal to each value):
+
+| ThrottleInterval | verify, retire, 0.4 s, run | run, 0.4 s, run | third run |
+| --- | --- | --- | --- |
+| none (default 10) | 9.23 s | 10.25 s | 10.28 s |
+| 1 | 0.27 s | 1.27 s | 1.27 s |
+| 2 | 0.80 s, `already_ran` | 2.27 s | 2.31 s |
+| 5 | 4.25 s | 5.27 s | 5.30 s |
+
+`build_launchd_plist` writes `ThrottleInterval` 1
+(`BYOXPC_THROTTLE_INTERVAL_SECONDS`, documented as the limit
+`byoxpc_throttle_interval`). With the generated plist
+(`after-group-4/measurement.json`): a run 0.4 s after a run took 1.52 s
+(10.29 s before), three serial runs 3.84 s of wall time (21.40 s before),
+and the run 0.4 s after the install's verify was refused `already_ran` in
+0.09 s. In that refusal and in the 2-second candidate's, the host that
+answered had accepted two client connections within 8 ms, the second being
+the measured run's own client; the first could not be attributed from the
+unified log (its process logged nothing and launchd started the host on
+demand for it). The refusal executed nothing, so the guide says such a
+request can be sent again, and the single-use case derives its waits from
+the installed plist's value plus a margin. Gate: `byoxpc-g4-gates`
+(single-use, BBX-002, registry recovery, Rust batch), pinned.
+
+### Group 5 (2026-10-06)
+
+The README's entitlement framing, the guide's install recipe, verify, use,
+validate, dossier, exec-helper and budget passages, the Questions note and
+the controller README now describe the shipped behavior: which processes
+the installed entitlements reach and what the registry records for each;
+`required_entitlements` as true-valued keys on the worker, with the refusal
+naming the worker and the key and the reinstall case for older records;
+verify consuming a host and the one-second wait, with `already_ran` as a
+refusal that executed nothing; a timed-out request possibly completing its
+effects, not to be resent blindly; a helper's three descriptors and empty
+environment, its failure not changing the run summary; owned temporary
+targets instead of privacy-mediated folders. The architecture document's
+three BYOXPC Known gap paragraphs and index lines are removed, the figure's
+`signing`, `selector`, `worker`, `validator`, `plist`, `launchd`, `verify`
+and `validate` entries describe the mechanism with citations to the new
+symbols and tests, the `--env` statement stays, and the Known gaps section
+records that none is open. Gate: `byoxpc-g5-docs` (source drift, limits,
+contract and architecture checks, smoke), pinned.
 
 ### Group 2 (2026-10-06)
 

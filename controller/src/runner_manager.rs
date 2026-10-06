@@ -22,6 +22,12 @@ pub const RUNNER_PROTOCOL_VERSION: u32 = 1;
 /// the last observation (docs/limits.json: `runner_remove_teardown_wait`).
 pub const TEARDOWN_WAIT_MS: u64 = 1_000;
 pub const TEARDOWN_POLL_INTERVAL_MS: u64 = 50;
+/// `ThrottleInterval` written into every generated launchd plist. The host
+/// exits after each specimen and launchd respawns the job at most once per
+/// interval; its default of ten seconds made every consecutive request to
+/// one installed runner wait for the remainder. Chosen by measurement
+/// (docs/limits.json: `byoxpc_throttle_interval`).
+pub const BYOXPC_THROTTLE_INTERVAL_SECONDS: u64 = 1;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -414,9 +420,12 @@ pub fn build_launchd_plist(
   </dict>
 {env_block}  <key>RunAtLoad</key>
   <true/>
+  <key>ThrottleInterval</key>
+  <integer>{throttle}</integer>
 </dict>
 </plist>
 "#,
+        throttle = BYOXPC_THROTTLE_INTERVAL_SECONDS,
     )
 }
 
@@ -1566,6 +1575,43 @@ mod tests {
             plist.contains("<key>MachServices</key>"),
             "byoxpc plist must register a MachServices entry"
         );
+    }
+
+    #[test]
+    fn byoxpc_plist_sets_the_respawn_throttle() {
+        // Every generated plist bounds launchd's respawn wait; without the
+        // key launchd applies its ten-second default between launches.
+        let plist = build_launchd_plist(
+            "com.x.PWRunner",
+            Path::new("/tmp/PWRunner.xpc/Contents/MacOS/PWRunner"),
+            None,
+            RunnerKind::Byoxpc,
+        );
+        let expected = format!(
+            "  <key>ThrottleInterval</key>\n  <integer>{BYOXPC_THROTTLE_INTERVAL_SECONDS}</integer>\n"
+        );
+        assert!(
+            plist.contains(&expected),
+            "plist must set ThrottleInterval; got:\n{plist}"
+        );
+        assert_eq!(plist.matches("ThrottleInterval").count(), 1);
+    }
+
+    #[test]
+    fn documented_throttle_interval() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../docs/limits.json")).unwrap();
+        let row = manifest["limits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "byoxpc_throttle_interval")
+            .expect("limits.json documents the generated plist's ThrottleInterval");
+        assert_eq!(
+            row["value"].as_u64(),
+            Some(BYOXPC_THROTTLE_INTERVAL_SECONDS)
+        );
+        assert_eq!(row["unit"], "seconds");
     }
 
     #[test]

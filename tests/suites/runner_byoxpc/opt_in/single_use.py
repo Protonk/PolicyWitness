@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+import plistlib
 import signal
 import subprocess
 import sys
@@ -16,6 +17,11 @@ from consumer import validate
 pw, directory = sys.argv[1:]
 out = Path(directory)
 service = json.loads((out / 'runner_env.json').read_text())['service_name']
+state = json.loads(Path(json.loads((out / 'session.json').read_text())['state_path']).read_text())
+# launchd respawns the job at most once per ThrottleInterval (its default is
+# ten seconds when the plist sets none); wait that out plus a margin before
+# a request that must reach a fresh host.
+respawn_wait = plistlib.loads(Path(state['plist_path']).read_bytes()).get('ThrottleInterval', 10) + 1
 processes = []
 
 def launch(name, hang=0):
@@ -41,9 +47,9 @@ def receive(process, name, code):
     return doc['data']['runner_result']
 
 try:
-    # Installation's verify call consumes a host. Wait beyond launchd's respawn
+    # Installation's verify call consumed a host. Wait beyond launchd's respawn
     # throttle before issuing this independent specimen; do not retry execution.
-    time.sleep(11)
+    time.sleep(respawn_wait)
     first, marker = launch('owner', 15000)
     deadline = time.monotonic() + 20
     while not marker.exists():
@@ -86,7 +92,7 @@ try:
         except ProcessLookupError: break
         assert time.monotonic() < deadline, 'owner host did not retire'
         time.sleep(.02)
-    time.sleep(11)
+    time.sleep(respawn_wait)
     third, marker = launch('fresh')
     fresh = receive(third, 'fresh', 0)
     assert fresh['normalized_outcome'] == 'ok' and marker.exists(), fresh

@@ -1010,6 +1010,40 @@
       "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
     },
     {
+      "id": "byoxpc_throttle_interval",
+      "section": "execution",
+      "title": "External runner respawn throttle",
+      "value": 1,
+      "unit": "seconds",
+      "counting": "`ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit.",
+      "effect": "A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that.",
+      "control": "Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement.",
+      "sources": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "BYOXPC_THROTTLE_INTERVAL_SECONDS"
+        }
+      ],
+      "checks": [
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "documented_throttle_interval",
+          "kind": "value"
+        },
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "byoxpc_plist_sets_the_respawn_throttle",
+          "kind": "boundary"
+        },
+        {
+          "path": "tests/suites/runner_byoxpc/opt_in/single_use.py",
+          "symbol": "respawn_wait",
+          "kind": "boundary"
+        }
+      ],
+      "behavior": "Measured on one owned installation (macOS 14.8, user scope) with the plist rewritten per candidate: with no key a run 0.4 s after the previous one took about 10.3 s and a run after the install's own verify about 9.2 s; with the interval at one second those took about 1.3 s and 0.3 s. The single-use live case reads the installed plist's value and waits it out plus a margin before requiring a fresh host."
+    },
+    {
       "id": "validator_query_payload",
       "section": "transport",
       "title": "Validator query payload",

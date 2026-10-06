@@ -383,7 +383,6 @@ Notes:
 
 - `validator_wire`: The wire carries no version marker. In the shipped bundle the host and validator are built and signed together and the validator_batch_mode suite checks the shape; the identity digest excludes the validator and the validator_executable_path test seam can pair the host with another validator, so co-shipping is the arrangement, not a guard.
 - `B8`: The receiver admits the exact kind, outer envelope version and inner report version before interpretation. Rejected JSON remains opaque; independent transport and execution evidence survive.
-- `B11`: Known gap: the installer signs the XPC bundle without --deep, so the supplied entitlements are embedded in the host executable only and that is what the registry records; the embedded worker keeps its build signature, which carries no entitlements.
 
 Every node and edge above cites at least one check.
 
@@ -609,11 +608,14 @@ Four things change and nothing else. The client connects with
 resolves its worker and validator relative to its own bundle, exactly as the
 built-in one does. The request names the runner through the selector fields
 the controller strips before XPC delivery, and the registry supplies the
-service name and scope. The installer signs the bundle with the supplied
-identity and entitlements plist, and the registry records the entitlements
-it reads back from the host executable. The dossier records the hashes of
-the bundle's service, worker and validator files as observed before
-invocation and compares them with the manifest baselines
+service name and scope. The installer signs the copy's embedded worker with
+the supplied identity and entitlements plist, the validator with the identity
+alone, then the enclosing bundle, verifies the seal recursively, and the
+registry records each binary's signature and entitlements as read back
+(`sign_install_tree`, `read_back` in
+[runner_manager.rs](../controller/src/runner_manager.rs)). The dossier
+records the hashes of the bundle's service, worker and validator files as
+observed before invocation and compares them with the manifest baselines
 (`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`
 in [run_flow.rs](../controller/src/run_flow.rs)); the
 [guide](PolicyWitness.md#the-specimen-dossier) states the limit of that
@@ -624,12 +626,17 @@ and removed; recovery of a half-removed install is the
 [registry ownership](../controller/README.md#registry-ownership-and-recovery)
 procedure, not a run-time concern.
 
+`--env` configures the host's launchd environment and nothing records the
+environment the worker itself holds; the worker spawns exec children with
+an empty environment, so no shipped path reads it back.
+
 The apparatus itself, from the copied bundle to the processes the policy
 reaches, is the fourth figure. Two of its facts are easy to miss from the
 guide's install recipe: `runner verify` sends a real request, so it consumes
 the host it reaches, and the next request meets that host's terminal claim
-or waits for launchd's respawn throttle; and a selector's
-`required_entitlements` is checked by key presence in the host's read-back.
+or waits for the generated plist's one-second `ThrottleInterval`; and a
+selector's `required_entitlements` is satisfied only by keys the worker's
+read-back records with the value `true`, never by the host's.
 
 <!-- BEGIN GENERATED ARCHITECTURE GRAPH byoxpc -->
 ![The BYOXPC apparatus](architecture-byoxpc.svg)
@@ -641,25 +648,25 @@ or waits for launchd's respawn throttle; and a selector's
 
 #### The BYOXPC apparatus nodes
 
-| Id | Node | Kind | Who | Supplies | Owner | Holds | Reaches | Does | Signs | Leaves | Carries | Where | States | Records | Starts | Throttle | Bound by | Signature | Resolves helpers | Connects | Rule | Keys | Names | Checked | Stripped | Applies the policy under | Consumes | Sources | Checks |
+| Id | Node | Kind | Who | Supplies | Owner | Holds | Reaches | Does | Signs | Verifies | Carries | Where | States | Records | Starts | Throttle | Bound by | Signature | Resolves helpers | Connects | Rule | Keys | Names | Checked | Stripped | Applies the policy under | Consumes | Sources | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | user | the installer | person | a person or a harness | a bundle copy, an identity, an entitlements plist, a scope |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`Install a BYOXPC runner`](../docs/PolicyWitness.md) | [`install`](../tests/fixtures/byoxpc/session.py) |
-| bundle_copy | copied XPC bundle | record |  |  | the installer | the host and the build-signed worker and validator; CFBundleIdentifier is the service name |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`Install a BYOXPC runner`](../docs/PolicyWitness.md); [`sign_macho`](../build.sh) | [`owned_bundle`](../tests/fixtures/byoxpc/session.py) |
-| entitlements_plist | the installer's entitlements plist | record |  |  | the installer |  | the host executable only |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`--entitlements`](../controller/src/runner_commands.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| install | runner install | command |  |  |  |  |  | signs the bundle, writes the launchd plist, bootstraps, records the runner; with --env, adds EnvironmentVariables |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_install`](../controller/src/runner_commands.rs); [`--env`](../controller/src/runner_commands.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh); [`install`](../tests/fixtures/byoxpc/session.py) |
-| signing | codesign of the bundle | command |  |  |  |  |  |  | the bundle's main executable and seal, with the supplied identity and entitlements; no --deep | the embedded worker and validator under the build's signatures, which carry no entitlements |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`codesign_sign`](../controller/src/runner_manager.rs); [`codesign_verify`](../controller/src/runner_manager.rs); [`sign_macho`](../build.sh) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| plist | LaunchAgent or LaunchDaemon plist | record |  |  |  |  |  |  |  |  | MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env; no ThrottleInterval | the user's LaunchAgents or /Library/LaunchDaemons |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`build_launchd_plist`](../controller/src/runner_manager.rs); [`MachServices`](../controller/src/runner_manager.rs); [`EnvironmentVariables`](../controller/src/runner_manager.rs); [`launchd_plist_path`](../controller/src/runner_manager.rs) | [`main`](../tests/suites/shell_helpers/check_byoxpc_setup.py); [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
-| registry | runner registry | record |  |  |  |  |  |  |  |  |  |  | pending, installed, pending_cleanup | service name, scope, bundle path, the host's signature and entitlements as read back |  |  |  |  |  |  |  |  |  |  |  |  |  | [`install_record`](../controller/src/runner_manager.rs); [`RunnerState`](../controller/src/runner_manager.rs); [`PendingCleanup`](../controller/src/runner_manager.rs); [`entitlements_from_codesign`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh) |
-| launchd | launchd | os |  |  |  |  |  |  |  |  |  |  |  |  | the host on demand for its Mach service | the default respawn throttle, since no ThrottleInterval is set |  |  |  |  |  |  |  |  |  |  |  | [`launchctl_bootstrap`](../controller/src/runner_manager.rs); [`launchctl_target`](../controller/src/runner_manager.rs) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh); [`service_present`](../tests/fixtures/byoxpc/session.py) |
+| bundle_copy | copied XPC bundle | record |  |  | the installer | the host, the worker and the validator, each with the build's signature until the installer re-signs them; CFBundleIdentifier is the service name |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`Install a BYOXPC runner`](../docs/PolicyWitness.md); [`sign_macho`](../build.sh) | [`owned_bundle`](../tests/fixtures/byoxpc/session.py) |
+| entitlements_plist | the installer's entitlements plist | record |  |  | the installer |  | the host executable and the embedded worker, the process the policy is applied to |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`--entitlements`](../controller/src/runner_commands.rs) | [`binary_entitlements`](../tests/fixtures/byoxpc/session.py) |
+| install | runner install | command |  |  |  |  |  | signs the worker, the validator and then the bundle, verifies the seal recursively, writes the launchd plist, bootstraps, records the runner with every binary's read-back; with --env, adds EnvironmentVariables |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_install`](../controller/src/runner_commands.rs); [`--env`](../controller/src/runner_commands.rs); [`sign_install_tree`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh); [`install`](../tests/fixtures/byoxpc/session.py); [`binary_entitlements`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.py) |
+| signing | codesign of the bundle tree | command |  |  |  |  |  |  | the embedded worker with the identity and the supplied entitlements, the validator with the identity alone, then the enclosing bundle with the identity and the entitlements | the sealed bundle recursively (--deep --strict) before anything is recorded |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`codesign_sign`](../controller/src/runner_manager.rs); [`codesign_verify`](../controller/src/runner_manager.rs) | [`install_signing_signs_helpers_before_the_bundle`](../controller/src/runner_manager.rs); [`refused`](../tests/suites/preflight/check_byoxpc_verification.py); [`binary_entitlements`](../tests/fixtures/byoxpc/session.py) |
+| plist | LaunchAgent or LaunchDaemon plist | record |  |  |  |  |  |  |  |  | MachServices, RunAtLoad, ProgramArguments with --mach-service, EnvironmentVariables from --env, ThrottleInterval of one second | the user's LaunchAgents or /Library/LaunchDaemons |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`build_launchd_plist`](../controller/src/runner_manager.rs); [`MachServices`](../controller/src/runner_manager.rs); [`EnvironmentVariables`](../controller/src/runner_manager.rs); [`launchd_plist_path`](../controller/src/runner_manager.rs); [`BYOXPC_THROTTLE_INTERVAL_SECONDS`](../controller/src/runner_manager.rs) | [`main`](../tests/suites/shell_helpers/check_byoxpc_setup.py); [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh); [`byoxpc_plist_sets_the_respawn_throttle`](../controller/src/runner_manager.rs) |
+| registry | runner registry | record |  |  |  |  |  |  |  |  |  |  | pending, installed, pending_cleanup | service name, scope, bundle path, and the host's, the worker's and the validator's signatures and entitlements as read back separately, each entitlement set with its keys and the keys granted (value true) |  |  |  |  |  |  |  |  |  |  |  |  |  | [`install_record`](../controller/src/runner_manager.rs); [`RunnerState`](../controller/src/runner_manager.rs); [`PendingCleanup`](../controller/src/runner_manager.rs); [`entitlements_from_codesign`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`legacy_machme_kind_deserializes_as_byoxpc`](../controller/src/runner_manager.rs); [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh); [`registry_records_without_helper_read_backs_still_load`](../controller/src/runner_manager.rs) |
+| launchd | launchd | os |  |  |  |  |  |  |  |  |  |  |  |  | the host on demand for its Mach service | one launch per ThrottleInterval, one second in the generated plist; launchd's default without the key is ten seconds |  |  |  |  |  |  |  |  |  |  |  | [`launchctl_bootstrap`](../controller/src/runner_manager.rs); [`launchctl_target`](../controller/src/runner_manager.rs) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh); [`service_present`](../tests/fixtures/byoxpc/session.py) |
 | host | PWRunner as a Mach service | executable |  |  |  |  |  |  |  |  |  |  |  |  |  |  | NSXPCListener(machServiceName:) from --mach-service | the installed identity and entitlements | relative to its own bundle |  |  |  |  |  |  |  |  | [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift); [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh); [`worker_children`](../tests/suites/runner_byoxpc/opt_in/single_use.py) |
 | client | pw-runner-client --mach-service | executable |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | NSXPCConnection(machServiceName:), with the privileged option for system scope |  |  |  |  |  |  |  | [`--mach-service`](../runner/Clients/PWRunnerClient/main.swift); [`--privileged`](../runner/Clients/PWRunnerClient/main.swift) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 | caller_auth | caller authorization | check |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the caller's Team ID equals the host's; an optional identifier allowlist | PWRunnerRequireSignedCaller and PWRunnerAllowedIdentifiers in the host's Info.plist, inherited by a copy |  |  |  |  |  | [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerRequireSignedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`PWRunnerAllowedIdentifiers`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runner_auth_external`](../tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh) |
-| selector | request runner selector | record |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the runner by id or service, with mode and required_entitlements | required entitlements by key presence in the registry's recorded host entitlements, regardless of the key's value | before XPC delivery |  |  | [`parse_runner_selector_value`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs); [`entitlements_superset`](../controller/src/runner_manager.rs); [`strip_runner_selector`](../controller/src/runner_select.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs) |
-| provenance | runner provenance and binary baselines | record |  |  |  |  |  |  |  |  |  |  |  | runner kind, service name, registry id, the host's entitlements; hashes of the bundle's service, worker and validator files as observed before invocation |  |  |  |  |  |  |  |  |  |  |  |  |  | [`runner_provenance_from_target`](../controller/src/runner_select.rs); [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs); [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py); [`dossier_witness_byoxpc`](../tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh) |
-| worker | pw-probe-runner in the copy | sandboxed |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the build's, with no entitlements |  |  |  |  |  |  |  | the build's entitlements, not the installed plist's |  | [`sign_macho`](../build.sh); [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`worker_children`](../tests/suites/runner_byoxpc/opt_in/single_use.py) |
-| validator | sb_api_validator in the copy | executable |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the build's |  |  |  |  |  |  |  |  |  | [`sign_macho`](../build.sh); [`defaultValidatorExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
-| verify | runner verify | command |  |  |  |  |  | sends a fixed allow-all request through the client and waits five seconds by default |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for launchd's respawn throttle | [`cmd_runner_verify`](../controller/src/runner_commands.rs); [`verify_request`](../controller/src/runner_commands.rs); [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`verification_request_is_the_fixed_allow_all_specimen`](../controller/src/runner_commands.rs) |
-| validate | runner validate | command |  |  |  |  |  | re-reads each record's signature and entitlements from disk; consults no launchctl |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_validate`](../controller/src/runner_commands.rs); [`codesign_metadata`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
+| selector | request runner selector | record |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the runner by id or service, with mode and required_entitlements | every required key present with the value true in the worker's recorded read-back; the host's entitlements are recorded, not consulted; a record without a worker read-back is refused with a reinstall message when anything is required | before XPC delivery |  |  | [`parse_runner_selector_value`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs); [`entitlements_superset`](../controller/src/runner_manager.rs); [`strip_runner_selector`](../controller/src/runner_select.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs); [`selection_refuses_a_false_valued_required_key`](../controller/src/runner_select.rs); [`entitlement_gate_consults_the_worker_not_the_host`](../controller/src/runner_select.rs) |
+| provenance | runner provenance and binary baselines | record |  |  |  |  |  |  |  |  |  |  |  | runner kind, service name, registry id, and the host's, the worker's and the validator's signatures and entitlements; hashes of the bundle's service, worker and validator files as observed before invocation |  |  |  |  |  |  |  |  |  |  |  |  |  | [`runner_provenance_from_target`](../controller/src/runner_select.rs); [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs); [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py); [`dossier_witness_byoxpc`](../tests/suites/witness_contract/opt_in/dossier_witness_byoxpc.sh) |
+| worker | pw-probe-runner in the copy | sandboxed |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the installed identity and the supplied entitlements, signed before the bundle seal |  |  |  |  |  |  |  | the installed plist's entitlements; a require-entitlement rule consults this process |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`worker_children`](../tests/suites/runner_byoxpc/opt_in/single_use.py); [`granted-required`](../tests/suites/runner_byoxpc/opt_in/entitlement_transfer.py) |
+| validator | sb_api_validator in the copy | executable |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the installed identity alone, no entitlements |  |  |  |  |  |  |  |  |  | [`sign_install_tree`](../controller/src/runner_manager.rs); [`defaultValidatorExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh); [`sb_api_validator`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.py) |
+| verify | runner verify | command |  |  |  |  |  | sends a fixed allow-all request through the client and waits five seconds by default |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | the host it reaches: an immediately following request meets that host's terminal claim (already_ran) or waits for the generated plist's one-second ThrottleInterval; a refusal executed nothing and the request can be sent again | [`cmd_runner_verify`](../controller/src/runner_commands.rs); [`verify_request`](../controller/src/runner_commands.rs); [`PWRunnerAdmission`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`verification_request_is_the_fixed_allow_all_specimen`](../controller/src/runner_commands.rs) |
+| validate | runner validate | command |  |  |  |  |  | verifies each record's bundle recursively and the host, worker and validator individually, re-reads every signature and entitlement set, reports failures by record and binary; consults no launchctl |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_validate`](../controller/src/runner_commands.rs); [`codesign_metadata`](../controller/src/runner_manager.rs); [`validate_record`](../controller/src/runner_manager.rs) | [`validation_reports_the_bundle_and_each_binary_that_fails`](../controller/src/runner_manager.rs); [`validated`](../tests/suites/preflight/check_byoxpc_verification.py); [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 | remove | runner remove | command |  |  |  |  |  | moves ownership to pending_cleanup, boots the service out, removes the plist, retires the record after verified absence |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_remove`](../controller/src/runner_commands.rs); [`bootout_service`](../controller/src/runner_manager.rs); [`cleanup_complete`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh); [`cleanup`](../tests/fixtures/byoxpc/session.py) |
 | reconcile | runner reconcile | command |  |  |  |  |  | reports launchd services and plists that look owned, changing nothing |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [`cmd_runner_reconcile`](../controller/src/runner_commands.rs); [`inspect_service`](../controller/src/runner_manager.rs); [`inspect_plist`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 
@@ -670,81 +677,41 @@ or waits for launchd's respawn throttle; and a selector's
 | X1 | user | bundle_copy | copies | copies the shipped PWRunner.xpc | [`Install a BYOXPC runner`](../docs/PolicyWitness.md) | [`owned_bundle`](../tests/fixtures/byoxpc/session.py) |
 | X2 | user | install | channel | runner install with --bundle, --identity, --entitlements, --scope and optional --env | [`cmd_runner_install`](../controller/src/runner_commands.rs) | [`install`](../tests/fixtures/byoxpc/session.py) |
 | X3 | entitlements_plist | signing | reads | supplied entitlements | [`--entitlements`](../controller/src/runner_commands.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| X4 | install | signing | spawn | codesign --force --options runtime -s identity --entitlements plist bundle | [`codesign_sign`](../controller/src/runner_manager.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| X5 | signing | host | writes | the host executable carries the identity and entitlements; read back by entitlements_from_codesign | [`entitlements_from_codesign`](../controller/src/runner_manager.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| X6 | bundle_copy | worker | copies | the worker arrives with the build's signature and is not re-signed | [`sign_macho`](../build.sh); [`codesign_sign`](../controller/src/runner_manager.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
-| X7 | bundle_copy | validator | copies | the validator arrives with the build's signature and is not re-signed | [`sign_macho`](../build.sh); [`codesign_sign`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
+| X4 | install | signing | spawn | sign_install_tree: codesign the worker with --entitlements, the validator, then the bundle; codesign --verify --deep --strict | [`sign_install_tree`](../controller/src/runner_manager.rs); [`codesign_verify`](../controller/src/runner_manager.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
+| X5 | signing | host | writes | the host executable carries the identity and entitlements; read back by entitlements_from_codesign and codesign_metadata | [`entitlements_from_codesign`](../controller/src/runner_manager.rs) | [`entitlements`](../tests/fixtures/byoxpc/session.py) |
+| X6 | signing | worker | writes | the worker carries the identity and the supplied entitlements; read back by read_back | [`sign_install_tree`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`pw-probe-runner`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.py) |
+| X7 | signing | validator | writes | the validator carries the identity alone; read back by read_back | [`sign_install_tree`](../controller/src/runner_manager.rs); [`read_back`](../controller/src/runner_manager.rs) | [`sb_api_validator`](../tests/suites/runner_byoxpc/opt_in/entitlement_readback.py) |
 | X8 | install | plist | writes | build_launchd_plist and write_launchd_plist | [`build_launchd_plist`](../controller/src/runner_manager.rs); [`write_launchd_plist`](../controller/src/runner_manager.rs) | [`main`](../tests/suites/shell_helpers/check_byoxpc_setup.py) |
 | X9 | plist | launchd | launch | launchctl bootstrap into the gui or system domain | [`launchctl_bootstrap`](../controller/src/runner_manager.rs); [`launchctl_target`](../controller/src/runner_manager.rs) | [`service_present`](../tests/fixtures/byoxpc/session.py) |
-| X10 | launchd | host | launch | start on demand for the Mach service; default respawn throttle between launches | [`MachServices`](../controller/src/runner_manager.rs); [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh) |
+| X10 | launchd | host | launch | start on demand for the Mach service; one launch per ThrottleInterval (one second) between launches | [`MachServices`](../controller/src/runner_manager.rs); [`NSXPCListener(machServiceName:`](../runner/Services/PWRunner/main.swift) | [`runner_mach_service_liveness`](../tests/suites/runner_mach_service_liveness/run.sh) |
 | X11 | install | registry | writes | install_record: pending before the plist, installed after the bootstrap | [`install_record`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh) |
 | X12 | user | selector | channel | the specimen's runner field: mode, id or service, required_entitlements | [`parse_runner_selector_value`](../controller/src/runner_select.rs) | [`parses_runner_selector_from_nested_runner`](../controller/src/runner_select.rs) |
-| X13 | selector | registry | reads | resolve by id or service; required entitlements must be a subset of the recorded host entitlements | [`resolve_runner_target_with_registry`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs); [`entitlements_superset`](../controller/src/runner_manager.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs) |
-| X14 | registry | provenance | reads | runner_provenance_from_target copies kind, service, id and the host's entitlements | [`runner_provenance_from_target`](../controller/src/runner_select.rs) | [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py) |
+| X13 | selector | registry | reads | resolve by id or service; every required entitlement must be granted (value true) in the worker's recorded read-back | [`resolve_runner_target_with_registry`](../controller/src/runner_select.rs); [`enforce_required_entitlements`](../controller/src/runner_select.rs); [`entitlements_superset`](../controller/src/runner_manager.rs) | [`malformed_selection_never_falls_back_or_discards_entitlements`](../controller/src/runner_select.rs); [`selection_refuses_a_false_valued_required_key`](../controller/src/runner_select.rs) |
+| X14 | registry | provenance | reads | runner_provenance_from_target copies kind, service, id and each binary's signature and entitlements | [`runner_provenance_from_target`](../controller/src/runner_select.rs) | [`byoxpc_binaries`](../tests/suites/witness_contract/check_dossier.py) |
 | X15 | bundle_copy | provenance | reads | Binaries::observe hashes the service, worker and validator files before invocation | [`observe`](../controller/src/dossier.rs) | [`byoxpc_run_with_a_manifest_compares_the_bundle_copies_with_its_baselines`](../controller/src/run_flow.rs) |
 | X16 | client | caller_auth | channel | NSXPCConnection(machServiceName:), privileged for system scope | [`--mach-service`](../runner/Clients/PWRunnerClient/main.swift) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 | X17 | caller_auth | host | guard | shouldAcceptNewConnection: the caller's Team ID equals the host's, and the identifier allowlist if present | [`shouldAcceptNewConnection`](../runner/Sources/PWRunnerCore/PWRunnerService.swift); [`authorizedCaller`](../runner/Sources/PWRunnerCore/PWRunnerService.swift) | [`runner_auth_external`](../tests/suites/runner_byoxpc/opt_in/runner_auth_external.sh) |
 | X18 | host | worker | spawn | posix_spawn of the copy's own worker | [`defaultWorkerExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`worker_children`](../tests/suites/runner_byoxpc/opt_in/single_use.py) |
 | X19 | host | validator | spawn | posix_spawn of the copy's own validator | [`defaultValidatorExecutablePath`](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 | X20 | verify | client | channel | a fixed allow-all request on the client's stdin | [`verify_request`](../controller/src/runner_commands.rs) | [`verification_request_is_the_fixed_allow_all_specimen`](../controller/src/runner_commands.rs) |
-| X21 | validate | registry | checks | re-reads signature and entitlements from the recorded path | [`cmd_runner_validate`](../controller/src/runner_commands.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
+| X21 | validate | registry | checks | verifies the bundle recursively and each binary on its own, re-reads every signature and entitlement set, reports failures | [`cmd_runner_validate`](../controller/src/runner_commands.rs); [`validate_record`](../controller/src/runner_manager.rs) | [`validated`](../tests/suites/preflight/check_byoxpc_verification.py) |
 | X22 | remove | launchd | launch | bootout, then re-read for up to one second of teardown | [`bootout_service`](../controller/src/runner_manager.rs) | [`cleanup`](../tests/fixtures/byoxpc/session.py) |
 | X23 | remove | registry | writes | pending_cleanup first; retired only after verified absence of service and plist | [`PendingCleanup`](../controller/src/runner_manager.rs); [`cleanup_complete`](../controller/src/runner_manager.rs) | [`registry_recovery`](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh) |
 | X24 | reconcile | launchd | checks | inspect_service lists candidate services without changes | [`inspect_service`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
 | X25 | reconcile | plist | checks | inspect_plist lists candidate plists without changes | [`inspect_plist`](../controller/src/runner_manager.rs) | [`runner_byoxpc`](../tests/suites/runner_byoxpc/run.sh) |
-
-Notes:
-
-- `signing`: Known gap: the supplied entitlements reach the host executable only; the worker, the process the policy is applied to, keeps the build's signature.
-- `selector`: Known gap: required_entitlements is satisfied by key presence in the host's read-back, so a key whose value is false admits the runner, and the check says nothing about the worker, the process the policy is applied to.
 
 Every node and edge above cites at least one check.
 
 </details>
 <!-- END GENERATED ARCHITECTURE GRAPH byoxpc -->
 
-Known gap. The installer's `codesign_sign` in
-[runner_manager.rs](../controller/src/runner_manager.rs) signs the XPC
-bundle without `--deep`, so the supplied entitlements are embedded in the
-host executable only; the embedded worker and validator keep the
-signatures the build gave them, which carry no entitlements. The worker is
-the process the specimen policy applies to, so worker entitlements under a
-BYOXPC install are the build's, not the installed plist's, and the
-[README](../README.md#entitlements--sbpl)'s route to observing a policy under
-different entitlements changes the host's, not the worker's. Read it back
-with `codesign -d --entitlements -` on the bundle's `pw-probe-runner` after
-an install.
-
-Known gap. Installation's `codesign_verify` in
-[runner_manager.rs](../controller/src/runner_manager.rs) invokes
-`codesign --verify --verbose=2` on the enclosing bundle, without recursive
-verification. A successful result does not establish integrity of the
-embedded worker's code pages: an offline copy with one changed worker code
-byte can pass that command while individual worker verification and
-`codesign --verify --deep --strict` reject it. This is a limit of the
-installation check, not evidence that macOS will execute the changed code.
-Signature validity also does not establish a common signing authority across
-host, worker and validator.
-
-Known gap. Selection by `required_entitlements` (`enforce_required_entitlements`
-in [runner_select.rs](../controller/src/runner_select.rs), through
-`entitlements_superset` in
-[runner_manager.rs](../controller/src/runner_manager.rs)) tests that each
-required key is present in the registry's read-back of the host executable's
-entitlements. It does not read the key's value, so a key set to `false`
-admits the runner, and it describes the host, not the worker the policy is
-applied to. Admission therefore establishes neither a true entitlement nor
-the worker's possession of it.
-
 ## Known gaps
 
 Each gap is stated in full where the promise it limits is stated; this list
-only points there.
+only points there. No paragraph in this document currently opens with
+"Known gap": the three BYOXPC gaps once listed here (installed entitlements
+reaching the host only, non-recursive installation verification, selection by
+key presence in the host's read-back) were closed by the installer's helper
+signing, recursive verification and worker-based selection described in the
+[BYOXPC section](#byoxpc-as-a-variation-on-launch-and-selection).
 
-- [Worker entitlements under a BYOXPC install](#byoxpc-as-a-variation-on-launch-and-selection)
-  are the build's; the installed plist reaches the host executable only.
-- [Nested-code verification at installation](#byoxpc-as-a-variation-on-launch-and-selection)
-  does not recursively establish the embedded helpers' code integrity.
-- [Selection by required entitlements](#byoxpc-as-a-variation-on-launch-and-selection)
-  checks key presence in the host's read-back, not the key's value and not
-  the worker.

@@ -132,7 +132,7 @@ One runner client span plus, by default, one unified-log scan, plus the controll
 
 ### Can I evaluate specimens in parallel?
 
-Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) queue behind launchd's respawn throttle.
+Yes and no. Each specimen is evaluated in its own runner and worker processes, but PolicyWitness does not guarantee relative scheduling between concurrent runs or complete denial-log evidence. If an experiment depends on timing or log availability, run the specimens separately. N.B. Runs through one installed [external runner](#external-runners-byoxpc) are serial and queue behind launchd's respawn throttle, which the generated plist sets to one second.
 
 <!-- END COPIED QUESTIONS -->
 
@@ -671,6 +671,7 @@ code 2 and `result.normalized_outcome: "tool_error"`, with an error beginning
 | Exec child reap grace (`exec_reap_grace`) | 1,000 milliseconds | Elapsed monotonic allowance to confirm an exec child's exit after observation ends. Expiry, clock failure or a wait error leaves reaping unconfirmed and supplies no invented exit status. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit. | Fixed. |
 | Runner RPC wait (`client_rpc_wait`) | 240,000 milliseconds | Default wait for the runner reply. The reply records the actual span as `data.runner_client.started_at_unix_ms` and `ended_at_unix_ms`. An expired wait yields `xpc_timeout`; it does not expand the inner worker or validator budgets. | Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted. |
 | Runner removal teardown wait (`runner_remove_teardown_wait`) | 1,000 milliseconds | Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait. A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery. | Fixed. No wait when the removal issued no bootout. |
+| External runner respawn throttle (`byoxpc_throttle_interval`) | 1 seconds | `ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit. A request to an installed external runner that arrives within the interval of the previous launch waits for the remainder before a host serves it. Without the key launchd applies its ten-second default. A request that reaches a host which is still retiring after its reply meets that host's `already_ran`; the interval does not change that. | Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement. |
 
 ### Queries and transport
 
@@ -1062,8 +1063,14 @@ source or parameter values.
   `hw.machine`; null when a read fails. These are environment context. They do
   not identify the sandbox libraries the worker or the validator loaded.
 - `runner_provenance`: the selected runner's `runner_kind`, bundle identity
-  and path, service name, executable path, entitlements and signature
-  metadata, and `runner_registry_id` for an installed BYOXPC runner.
+  and path, service name, executable path, `runner_registry_id` for an
+  installed BYOXPC runner, and the host's, the worker's and the validator's
+  signature metadata and entitlements read back separately
+  (`runner_signature`/`runner_entitlements`, `runner_worker_signature`/
+  `runner_worker_entitlements`, `runner_validator_signature`/
+  `runner_validator_entitlements`). Each entitlement object lists `keys` and
+  `granted`, the keys whose value is `true`. The built-in runner's helpers are
+  described from the evidence manifest and carry no signature metadata.
 - `app_provenance`: `evidence_manifest_path`, the app evidence manifest the
   built-in runner and the binary baselines were selected from, and
   `evidence_verify`, the verification report when `PW_VERIFY_EVIDENCE`
@@ -1537,7 +1544,12 @@ combinations:
   The helper is spawned with `POSIX_SPAWN_CLOEXEC_DEFAULT` (so it inherits only
   the runner's stdin=/dev/null + stdout/stderr pipes — no shm fd,
   no policy fd, no other exec slots' pipes) and an empty
-  environment.
+  environment. A helper therefore sees exactly three descriptors and no
+  environment variables, whatever `EnvironmentVariables` an external runner's
+  launchd plist gave the host, and nothing records the environment the worker
+  itself holds. The helper's own failure is the attempt's record
+  (`child_exit_code` and its bounded output); it does not change the run's
+  `normalized_outcome`.
 
   Exec children have their own PIDs; deny-log correlation covers the worker
   PID only (see [Denial-log correlation](#denial-log-correlation)).
@@ -1776,14 +1788,37 @@ Notes:
   supplied entitlements are actually re-embedded into the binary. Passing
   `--entitlements` without one of those is rejected — the registry would
   otherwise record entitlements that the kernel will not enforce.
+- The installer signs the copy's embedded worker
+  (`Contents/MacOS/pw-probe-runner`) with the identity and the supplied plist,
+  its validator (`Contents/MacOS/sb_api_validator`) with the identity alone,
+  and then the enclosing bundle with both. The worker is the process the
+  specimen policy is applied to, so the plist you supply is what the kernel
+  consults for that policy's `require-entitlement` rules. A copy missing
+  either helper is refused.
+- Installation verifies the sealed bundle recursively
+  (`codesign --verify --deep --strict`): a copy whose embedded code changed
+  after sealing is refused.
+- Point specimen attempts at files you own under a temporary directory (for
+  example under `/private/tmp`). Attempts against targets under
+  privacy-mediated folders such as Desktop or Documents can stall on consent
+  mediation, and such a stall is not a sandbox verdict.
 
 The install command saves a `pending` registry record before writing its launchd
 plist, then bootstraps and marks the record `installed`. With `--skip-bootstrap`,
 plist creation completes installation; loaded state is reported separately.
 Errors after the pending save retain ownership for recovery. Pending runners
-can be listed, inspected and removed, but cannot be selected for specimens. The registry's `entitlements` field always
-reflects what's embedded in the binary (read back via `codesign -d --entitlements`),
-not what was supplied on the command line.
+can be listed, inspected and removed, but cannot be selected for specimens.
+
+The registry record reads each binary back separately (`codesign -d
+--entitlements` and `codesign -dv`), never from the command line: `signature`
+and `entitlements` describe the host executable, `worker_signature` and
+`worker_entitlements` the worker, `validator_signature` and
+`validator_entitlements` the validator. Each entitlement object lists `keys`
+(every key the plist names) and `granted` (the keys whose value is `true`).
+A record written by an earlier policy-witness carries no worker read-back: it
+can be listed, validated and removed, and it serves specimens that require no
+entitlements, but a specimen with `required_entitlements` is refused until the
+runner is reinstalled.
 
 ### Caller authentication and ad-hoc signing
 
@@ -1819,11 +1854,24 @@ runner on the client's stdin, as a run does, and reports the runner's PID and
 outcome. It defaults to a 5-second timeout; pass `--timeout-ms <n>` for slow
 cold-spawn cases.
 
+Verification consumes the host it reaches: every host serves one request and
+exits. The next request starts a fresh host once launchd allows a launch,
+which the installed plist's `ThrottleInterval` bounds at one second after the
+previous launch. A request that reaches the verified host while it is still
+retiring, or a fresh host that another connection reached first, is refused
+with `normalized_outcome: already_ran`. Such a refusal executed nothing
+(`steps` is empty and there is no `runner_subprocess`), so the request can be
+sent again; in the project's own measurements a run issued half a second
+after verification completed in about 0.3 s when admitted.
+
 ### Use the runner in a specimen
 
-Consecutive runs through one installed runner are paced by launchd: the runner
-exits after each specimen, and launchd spawns a job at most once every 10
-seconds by default, so a run requested sooner waits for the remainder.
+Consecutive runs through one installed runner are serial and paced by launchd:
+the runner exits after each specimen, and the generated plist sets
+`ThrottleInterval` to one second, so a run requested sooner than a second after
+the previous host's launch waits for the remainder (launchd's default without
+the key is ten seconds). Three serial runs with a short pause between them
+took about four seconds of wall time in the project's measurement.
 
 Preferred: include a `runner` object:
 
@@ -1847,8 +1895,13 @@ Alternative: select by service name:
 ```
 
 `runner.mode` is optional; when present it must equal `byoxpc` for external
-runners. Valid modes: `standard`, `byoxpc`. `required_entitlements` enforces
-a superset check before dispatch.
+runners. Valid modes: `standard`, `byoxpc`. `required_entitlements` is
+satisfied only by keys the selected runner's worker holds with the value
+`true`, as recorded in the registry's `worker_entitlements.granted` (for the
+built-in runner, its worker's evidence-manifest entry). A key that is absent,
+or present with any other value, refuses the run before any host is reached,
+and the refusal names the worker and the key. The host's entitlements are
+recorded beside the worker's and are not consulted.
 
 Quick smoke request (save as `/tmp/pw_byoxpc_smoke.json`):
 
@@ -1906,9 +1959,13 @@ Modifying commands use a stable advisory lock beside the registry and atomic
 JSON replacement. One registry admits one modifier at a time; read-only commands
 remain available. Never remove the lock file while a command might hold it.
 
-`runner validate` re-reads each registry entry's on-disk signature and
-entitlements (registry-internal only — it does not reconcile against launchctl
-or `LaunchAgents/`).
+`runner validate` verifies each registry entry's bundle recursively, then the
+host, the worker and the validator individually, re-reads every signature and
+entitlement set, and reports `invalid` (records with a failure) and `failures`
+rows naming the record and the binary (`bundle`, `host`, `worker` or
+`validator`). The host's recorded `signature.valid` follows the recursive
+check; each helper's follows its own. This is registry-internal only — it does
+not reconcile against launchctl or `LaunchAgents/`.
 
 `runner status`, `runner verify`, and `runner remove` emit an envelope with
 `result.normalized_outcome = "not_found"` and exit code 2 when the lookup key
